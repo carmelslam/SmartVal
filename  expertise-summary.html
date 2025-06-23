@@ -80,7 +80,7 @@
     <div class="logo"><img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo"/></div>
     <div class="title" style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">ירון כיוף - פורטל שמאות</div>
     <div class="subtitle" style="font-size: 18px; color: #666; margin-bottom: 20px;">שמאות והערכת נזקי רכב ורכוש</div>
-    <h2 id="pageTitle">סיכום האקספרטיזה לרכב מס׳ ...</h2>
+    <h2 id="pageTitle">סיום האקספרטיזה לרכב מס׳ ...</h2>
 
     <label for="directive">הנחיית תיק / סטטוס תיק</label>
     <select id="directive">
@@ -116,37 +116,12 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
 
-  <script src="webhook.js"></script>
   <script>
     const plate = sessionStorage.getItem('plate') || 'לא ידוע';
     const date = new Date().toLocaleDateString('he-IL');
     document.getElementById('pageTitle').innerText = `סיום האקספרטיזה לרכב מס׳ ${plate}`;
     document.getElementById('platePreview').innerText = plate;
     document.getElementById('datePreview').innerText = date;
-
-    // --- Helper update logic ---
-    function updateHelper() {
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      helper.expertise_summary = {
-        plate,
-        directive: document.getElementById('directive').value,
-        technician: document.getElementById('technician').value,
-        license: document.getElementById('license').value,
-        summaryNotes: document.getElementById('summaryNotes').value,
-        date
-      };
-      sessionStorage.setItem("helper", JSON.stringify(helper));
-    }
-
-    // Update helper on every relevant input change
-    ["directive", "technician", "license", "summaryNotes"].forEach(id => {
-      document.getElementById(id).addEventListener("change", updateHelper);
-      document.getElementById(id).addEventListener("input", updateHelper);
-    });
-
-    // Initial helper population
-    updateHelper();
 
     document.getElementById('confirmBtn').addEventListener('click', () => {
       document.getElementById('finalNote').style.display = 'block';
@@ -155,18 +130,16 @@
     });
 
     document.getElementById('finalSend').addEventListener('click', () => {
-      updateHelper(); // Ensure latest data
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      // Engines will always read from helper
       const payload = {
         plate,
-        date,
-        expertise_summary: helper.expertise_summary,
-        helper // send full helper for engines/backoffice
+        directive: document.getElementById('directive').value,
+        technician: document.getElementById('technician').value,
+        summaryNotes: document.getElementById('summaryNotes').value,
+        submittedAt: new Date().toISOString(),
+        context: Object.fromEntries(Object.entries(sessionStorage))
       };
 
-      fetch(window.webhooks.expertiseSummary, {
+      fetch("webhook.js", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -133,17 +133,11 @@
       <button class="home-btn" onclick="window.location.href='selection.html'">עמוד הבית</button>
       <button class="logout-btn">יציאה</button>
     </div>
+
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
-<script src="webhook.js"></script>
-  <script>
-  // --- Add session authentication check ---
-  const userAuthToken = sessionStorage.getItem('auth');
-  if (!userAuthToken) {
-    alert("הגישה חסומה - אנא התחבר דרך דף הבית");
-    window.location.href = "index.html";
-  }
 
+<script>
   document.addEventListener("DOMContentLoaded", function () {
     const plate = sessionStorage.getItem("plate");
     const owner = sessionStorage.getItem("owner");
@@ -165,13 +159,12 @@
       }
     });
 
-    // Save plate/owner/pass to sessionStorage on submit for cross-module use
     document.getElementById("form").addEventListener("submit", function () {
       const formData = new FormData(this);
       const status = document.getElementById("status");
       status.innerText = "";
 
-      fetch(window.webhooks.uploadLevi, {
+      fetch("https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9", {
         method: "POST",
         body: formData
       })
@@ -181,11 +174,6 @@
           status.classList.remove("status-error");
           this.reset();
           preview.style.display = "none";
-          // --- Update helper object in sessionStorage ---
-          let helper = {};
-          try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-          helper.levi_report = { uploaded: true, date: new Date().toISOString() };
-          sessionStorage.setItem("helper", JSON.stringify(helper));
         } else {
           status.innerText = "❌ השליחה נכשלה.";
           status.classList.add("status-error");
@@ -195,10 +183,6 @@
         status.innerText = "❌ שגיאת רשת.";
         status.classList.add("status-error");
       });
-
-      sessionStorage.setItem("plate", document.getElementById("plate").value);
-      sessionStorage.setItem("owner", document.getElementById("owner").value);
-      sessionStorage.setItem("ycPass", document.getElementById("pass").value);
     });
 
     document.querySelector(".logout-btn").addEventListener("click", () => {
@@ -206,6 +190,6 @@
       window.location.href = "index.html";
     });
   });
-  </script>
+</script>
 </body>
 </html>

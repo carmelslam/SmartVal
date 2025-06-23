@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>חלקים נדרשים - ירון כיוף</title>
-  <meta http-equiv="refresh" content="0; url=damage-center-flow.html">
-</head>
-<body>
-<!-- דף זה הועבר למוקד נזק המאוחד. מעביר אוטומטית... -->
-</body>
-</html>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f6fb;
       margin: 0;
       padding: 30px;
       display: flex;
@@ -200,7 +200,6 @@ form button {
       text-align: right;
     }
   </style>
-  <script src="webhook.js"></script>
 </head>
 <body>
   <div class="container">
@@ -223,6 +222,12 @@ form button {
     </div>
       
     <form id="partsForm">
+      <div id="carDetailsBox" style="display:none;">
+        <input id="inputPlate" placeholder="מספר רכב" type="text" />
+        <input id="inputManufacturer" placeholder="יצרן" type="text" />
+        <input id="inputModel" placeholder="דגם" type="text" />
+        <input id="inputYear" placeholder="שנה" type="number" />
+      </div>
       <div id="partsList">
         <div class="row">
           <div class="input-wrap">
@@ -293,6 +298,7 @@ form button {
     document.getElementById("partsForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const allParts = [];
+
       document.querySelectorAll("#partsList .row").forEach(row => {
         const name = row.querySelector(".name").value.trim();
         const desc = row.querySelector(".desc").value.trim();
@@ -302,89 +308,70 @@ form button {
         }
       });
 
-      // Save to helper
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      if (!helper.damage_sections) helper.damage_sections = [];
-      // You may want to push a new section or update the current one
-      helper.damage_sections.push({ parts: allParts });
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // Detect mode: wizard (default) or standalone (from nav)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isStandalone = urlParams.get('standalone') === '1';
 
-      sessionStorage.setItem(`phase2_${plate}_parts`, JSON.stringify(allParts));
-      window.location.href = "work.html";
+    if (isStandalone) {
+        // Standalone: just show results or allow export, do not save to helper
+        alert("חלקים נאספו (מצב עצמאי):\n" + allParts.map(p => p.part).join(", "));
+        // Optionally: display results below or allow export
+      } else {
+        // Wizard: save to helper.damage_center_draft.parts and go to next bulk
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        helper.damage_center_draft = helper.damage_center_draft || {};
+        helper.damage_center_draft.parts = allParts;
+        sessionStorage.setItem("helper", JSON.stringify(helper));
+        window.location.href = "damage-center-repairs.html";
+      }
     });
-function suggestPart(input) {
-  const query = input.value.trim();
 
-  // Get car info from helper
-  let helper = {};
-  try {
-    helper = JSON.parse(sessionStorage.getItem("helper") || '{}');
-  } catch (e) {}
-  const car = helper.car_details || {};
-  const plate = car.plate || '';
-  const manufacturer = car.manufacturer || '';
-  const model = car.model || '';
-  const year = car.year || '';
+    // Detect mode: wizard (default) or standalone (from nav)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isStandalone = urlParams.get('standalone') === '1';
 
-  // Basic validation
-  if (!plate || !manufacturer || !model || !year) {
-    console.warn("❌ Missing car details in helper", { plate, manufacturer, model, year });
-    return;
-  }
-
-  // Find the .suggestions box in the same row
-  const row = input.closest(".row");
-  const box = row.querySelector(".suggestions");
-  box.innerHTML = ""; // clear before new results
-
-  // Only fetch if user typed 2+ chars
-  if (query.length < 2) return;
-
-  console.log("📡 Sending to webhook:", { plate, manufacturer, model, year, query });
-
-  fetch(window.webhooks.partsSuggest, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plate, manufacturer, model, year, query })
-  })
-  .then(res => {
-    if (!res.ok) throw new Error(`Webhook error: ${res.status}`);
-    return res.json();
-  })
-  .then(data => {
-    console.log("✅ Got webhook response:", data);
-
-    if (!Array.isArray(data) || data.length === 0) {
-      box.innerHTML = "<div style='padding:8px;color:#999;'>אין תוצאות</div>";
-      return;
+    // Show car details input if standalone
+    if (isStandalone) {
+      document.getElementById('carDetailsBox').style.display = '';
+      document.getElementById('pageTitle').innerText = "מודול חלקים - חיפוש עצמאי";
+    } else {
+      // ...existing code to set pageTitle from session...
     }
 
-    data.forEach(suggestion => {
-      const item = document.createElement("div");
-      item.textContent = suggestion.name || suggestion;
-      item.onclick = () => {
-        input.value = suggestion.name || suggestion;
-        box.innerHTML = "";
-      };
-      box.appendChild(item);
-    });
-  })
-  .catch(err => {
-    console.error("❌ Fetch failed:", err);
-    box.innerHTML = "<div style='padding:8px;color:red;'>שגיאת חיבור</div>";
-  });
-}
+    function getCarDetails() {
+      if (isStandalone) {
+        return {
+          plate: document.getElementById("inputPlate").value.trim(),
+          manufacturer: document.getElementById("inputManufacturer").value.trim(),
+          model: document.getElementById("inputModel").value.trim(),
+          year: document.getElementById("inputYear").value.trim()
+        };
+      } else {
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        const car = helper.car_details || {};
+        return {
+          plate: car.plate || sessionStorage.getItem("plate") || "",
+          manufacturer: car.manufacturer || sessionStorage.getItem("manufacturer") || "",
+          model: car.model || sessionStorage.getItem("model") || "",
+          year: car.year || sessionStorage.getItem("year") || ""
+        };
+      }
+    }
 
     function suggestPart(input) {
       const query = input.value.trim();
-      const parent = input.closest(".input-wrap");
-      const box = parent.querySelector(".suggestions");
+      const { plate, manufacturer, model, year } = getCarDetails();
+      // ...existing code for validation and fetch...
+    }
 
-      box.innerHTML = "";
-      if (query.length < 2) return;
-
-      fetch(window.webhooks.partsSuggest, {
+    // ...existing code for addPart, etc...
+  </script>
+  <script src="car-details-float.js"></script>
+</body>
+</html>
+      fetch("https://hook.eu2.make.com/c7wh7j366oahodi9qcw1ob1waotten7c", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plate, manufacturer, model, year, query })
