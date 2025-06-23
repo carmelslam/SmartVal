@@ -205,10 +205,19 @@
         }
       }
 
-      sessionStorage.setItem("phase2_zone", zone);
-      sessionStorage.setItem("phase2_description", desc);
+      // Save to helper as draft for this damage center
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      helper.damage_center_draft = helper.damage_center_draft || {};
+      helper.damage_center_draft.description = [{ zone, desc }];
+      sessionStorage.setItem("helper", JSON.stringify(helper));
 
-      window.location.href = "repairs-parts.html";
+      // Optionally: clear old phase2_ keys if present
+      sessionStorage.removeItem("phase2_zone");
+      sessionStorage.removeItem("phase2_description");
+
+      // Go to next bulk (e.g., works)
+      window.location.href = "damage-center-works.html";
     });
   </script>
 <script>

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>תיקונים נדרשים - ירון כיוף</title>
-  <meta http-equiv="refresh" content="0; url=damage-center-flow.html">
-</head>
-<body>
-<!-- דף זה הועבר למוקד נזק המאוחד. מעביר אוטומטית... -->
-</body>
-</html>
+  <link rel="icon" href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f6fb;
       margin: 0;
       display: flex;
       justify-content: center;
@@ -34,19 +34,23 @@
     .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
     .subtitle { font-size: 18px; color: #666; margin-bottom: 20px; }
     h2 { font-size: 20px; color: #007bff; margin-bottom: 15px; }
-    textarea {
+    label { display: block; text-align: right; margin-top: 10px; font-size: 14px; }
+    select, textarea, input {
       width: 100%;
       padding: 10px;
       font-size: 16px;
       border-radius: 8px;
       border: 1px solid #ccc;
       box-sizing: border-box;
-      margin-bottom: 10px;
+      margin-top: 5px;
+    }
+    textarea {
+      height: 120px;
       resize: vertical;
       font-family: sans-serif;
     }
     button {
-      margin-top: 15px;
+      margin-top: 20px;
       width: 100%;
       padding: 12px;
       font-size: 16px;
@@ -54,9 +58,9 @@
       color: white;
       border: none;
       border-radius: 8px;
-      cursor: pointer;
-
-     .btn-vehiclePopup {
+      cursor: pointer
+     }
+   .button-vehiclePopup {
     display: flex;
     gap: 10px;
     margin-top: 20px;
@@ -64,11 +68,8 @@
     margin-top: 10px;
     margin-bottom: 10px;
   }
-    }
-    .btn-secondary {
-      background-color: #6c757d;
-      margin-top: 10px;
-    }
+   
+    .footer { margin-top: 30px; font-size: 12px; color: #999; }
     .top-bar {
       display: flex;
       justify-content: space-between;
@@ -81,8 +82,7 @@
     .logout-btn {
       background-color: #dc3545 !important;
     }
-    .footer { margin-top: 30px; font-size: 12px; color: #999; }
- #vehiclePopup {
+    #vehiclePopup {
       background: #f1f1f1;
       padding: 10px;
       border-radius: 10px;
@@ -91,8 +91,7 @@
       font-size: 14px;
       text-align: right;
     }
-
- </style>
+  </style>
 </head>
 <body>
   <div class="container">
@@ -112,12 +111,12 @@
       <button class="logout-btn" onclick="logout()">התנתק</button>
     </div>
 
-    <form id="fixesForm">
-      <div id="fixesList">
+    <form id="repairsForm">
+      <div id="repairsList">
         <textarea placeholder="פרט את התיקונים הנדרשים לרכב" required></textarea>
       </div>
 
-      <button type="button" class="btn-secondary" onclick="addFix()">הוסף תיקון</button>
+      <button type="button" class="btn-secondary" onclick="addRepair()">הוסף תיקון</button>
       <button type="submit">המשך</button>
     </form>
 
@@ -141,29 +140,33 @@
       window.location.href = "index.html";
     }
 
-    function addFix() {
+    function addRepair() {
       const div = document.createElement("div");
       div.innerHTML = `<textarea placeholder="פרט תיקון נוסף" required></textarea>`;
-      document.getElementById("fixesList").appendChild(div);
+      document.getElementById("repairsList").appendChild(div);
     }
 
-    document.getElementById("fixesForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const allFixes = Array.from(document.querySelectorAll('#fixesList textarea'))
-        .map(el => el.value.trim())
-        .filter(txt => txt.length > 0);
+    document.getElementById("repairsForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const repairs = [...]; // collect repairs as array
+  let helper = {};
+  try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+  helper.damage_center_draft = helper.damage_center_draft || {};
+  helper.damage_center_draft.repairs = repairs;
 
-      // Save to helper
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      if (!helper.damage_sections) helper.damage_sections = [];
-      // You may want to push a new section or update the current one
-      helper.damage_sections.push({ repairs: allFixes });
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+  // Now push the full draft to damage_sections
+  helper.damage_sections = helper.damage_sections || [];
+  helper.damage_sections.push(helper.damage_center_draft);
+  delete helper.damage_center_draft;
+  sessionStorage.setItem("helper", JSON.stringify(helper));
 
-      sessionStorage.setItem("phase2_fixes", JSON.stringify(allFixes));
-      window.location.href = "next-module.html"; // Change when next module is ready
-    });
+  // Offer to add another or finish
+  if (confirm("להוסיף מוקד נזק נוסף?")) {
+    window.location.href = "damage-description.html";
+  } else {
+    window.location.href = "expertise-summary.html";
+  }
+});
   </script>
 <script src="car-details-float.js"></script>
 
