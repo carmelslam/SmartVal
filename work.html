@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>עבודות נדרשות - ירון כיוף</title>
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <link rel="icon" href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">type="image/webp">
+  <!-- Only HTML from <style> onward is different -->
+<style>
+  body {
+    font-family: sans-serif;
+    background: #f3f6fb;
+    margin: 0;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .container {
+      max-width: 500px;
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      text-align: center;
+      position: relative;
+    }
+
+  .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    .subtitle { font-size: 18px; color: #666; margin-bottom: 5px; }
+    .legal-note {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    h2 {
+      font-size: 20px;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+
+  .logo img {
+      width: 120px;
+      opacity: 0.9;
+      margin-bottom: 15px;
+    }
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+   .top-bar button {
+      width: 48%;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+  .logout-btn {
+      background-color: #dc3545 !important;
+    }
+  .home-btn { background: #6c757d; }
+
+.row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .row select, .row input {
+   flex: 2  ;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+  select, #takana389 {
+    width:70%;
+  }
+  select, input {
+    width: 70%;
+  }
+
+  #takana389 {
+    margin-bottom: 20px;
+    padding: 30px;
+    width: 20%;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+
+      .btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .button-vehiclePopup {
+    display: flex;
+    Width: 100%;
+    gap: 10px;
+    margin-top: 10px;
+    Align-right
+    margin-bottom: 10px;
+  }
+
+
+  .add-btn { background: #6c757d; }
+  .submit-btn { background: #007bff; }
+
+  button {
+     margin-top: 10px;
+      width: 40%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      background-color: #007bff;
+      cursor: pointer;
+
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #aaa;
+  }
+
+ #vehiclePopup {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 10px;
+      margin: 10px 0;
+      display: none;
+      font-size: 14px;
+      text-align: right;
+    }
+</style>
+
+</head>
+<body>
+   <div class="container">
+    <div class="logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="Logo">
+    </div>
+    <div class="title">ירון כיוף שמאות - פורטל</div>
+    <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
+    <div class="legal-note">מפרט תיקון - הערכת נזק (מבלי לפגוע בזכויות)</div>
+    <h2 id="pageTitle">רכב מס. ...: עבודות נדרשות</h2>
+   
+    <button onclick="toggleVehicle()">פרטי הרכב</button>
+       <div id="vehiclePopup"></div>    
+     <div class="top-bar">
+      
+      <button onclick="window.location.href='selection.html'">עמוד הבית</button>
+      <button class="logout-btn" onclick="logout()">התנתק</button>
+    </div>
+      
+
+    <form id="workForm">
+      <div>
+        <label for="takana389"><strong>האם תקנה 389 חלה?</strong></label>
+        <select id="takana389" required>
+          <option value="">בחר</option>
+          <option>כן</option>
+          <option>לא</option>
+          <option>לא רלוונטי</option>
+        </select>
+      </div>
+
+      <div id="worksList">
+        <!-- work rows go here -->
+      </div>
+
+      <button type="button" class="add-btn" onclick="addWorkRow()">הוסף עבודה</button>
+      <button type="submit" class="submit-btn">המשך</button>
+    </form>
+
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+  </div>
+
+  <script>
+    const plate = sessionStorage.getItem("plate");
+     document.getElementById("pageTitle").innerText = `רכב מס. ${plate}: עבודות נדרשות`;
+    const manufacturer = sessionStorage.getItem("manufacturer");
+    const model = sessionStorage.getItem("model");
+    const year = sessionStorage.getItem("year");
+
+    if (!plate || !manufacturer || !model || !year) {
+      alert("שגיאה: חסר מידע קריטי.");
+ }
+
+function logout() {
+  sessionStorage.clear();
+  location.href = "index.html";
+}
+
+const workOptions = [
+"כל עבודות הפחחות כולל פירוקים והרכבות", "עבודות צבע", "עבודות חשמל", "עבודות מכונאות", "עבודות מזגן", "עבודות ריפוד",
+  "עבודות זגגות", "איטום וזיפות", "בדיקת מתלה",
+  "כיול רדאר", "העברת חיישנים", "אחר"
+];
+
+function addWorkRow() {
+  const row = document.createElement("div");
+  row.className = "row";
+ 
+const select = document.createElement("select");
+  select.innerHTML = `<option value="">בחר סוג עבודה</option>` + workOptions.map(opt => `<option>${opt}</option>`).join("");
+
+  const input = document.createElement("input");
+  input.placeholder = "הערה / פירוט";
+  input.style.display = "none";
+
+  select.onchange = () => {
+    input.style.display = select.value === "אחר" ? "block" : "none";
+  };
+
+  row.appendChild(select);
+  row.appendChild(input);
+  document.getElementById("worksList").appendChild(row);
+}
+
+addWorkRow(); // first default
+
+document.getElementById("workForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const takana = document.getElementById("takana389").value;
+  const works = [];
+  document.querySelectorAll("#worksList .row").forEach(row => {
+    const select = row.querySelector("select").value;
+    const note = row.querySelector("input").value;
+    if (select) {
+      works.push({ category: select, note });
+    }
+  });
+
+    // Save to helper
+    let helper = {};
+    try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    if (!helper.damage_sections) helper.damage_sections = [];
+    // You may want to push a new section or update the current one
+    helper.damage_sections.push({ takana389: takana, works });
+    sessionStorage.setItem("helper", JSON.stringify(helper));
+
+    sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+    location.href = "general-comments.html";
+});
+  </script>
+<script src="car-details-float.js"></script>
+</body>
+</html>

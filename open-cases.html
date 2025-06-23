@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>פתיחת תיק חדש</title>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant&display=swap" />
+  <style>
+    body {
+      font-family: 'Assistant', sans-serif;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f3f6fb;
+      padding: 30px;
+    }
+    .container {
+      max-width: 480px;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      width: 100%;
+    }
+    .logo {
+      margin-bottom: 20px;
+    }
+    .logo img {
+      width: 120px;
+      opacity: 0.8;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #999;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+  </style>
+  <script src="webhook.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
+    </div>
+    <div class="title">ירון כיוף - פתיחת תיק חדש</div>
+    <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
+    <div id="err" class="error"></div>
+
+    <input id="plate" type="text" placeholder="מספר רכב" />
+    <input id="owner" type="text" placeholder="שם בעל הרכב" />
+    <input id="date" type="date" />
+    <input id="location" type="text" placeholder="מקום בדיקה" />
+
+    <button id="submitBtn">פתח תיק</button>
+
+    <div class="footer">© כל הזכויות שמורות לקרמל כיוף</div>
+  </div>
+
+  <script>
+    document.getElementById("date").value = new Date().toISOString().split("T")[0];
+
+    const password = sessionStorage.getItem("auth");
+    if (!password) {
+      alert("גישה חסומה. התחבר קודם דרך הדף הראשי.");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", async function () {
+      const plate = document.getElementById("plate").value.trim();
+      const owner = document.getElementById("owner").value.trim();
+      const date = document.getElementById("date").value.trim();
+      const location = document.getElementById("location").value.trim();
+
+      if (!plate || !owner || !date || !location) {
+        document.getElementById("err").innerText = "נא למלא את כל השדות";
+        return;
+      }
+
+      const payload = {
+        plate,
+        owner,
+        date,
+        location,
+        password
+      };
+
+      try {
+        const res = await fetch(window.webhooks.openCases, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const content = await res.text();
+        if (!res.ok) {
+          document.getElementById("err").innerText = "שגיאה: " + content;
+          return;
+        }
+
+        let parsed;
+        try {
+          parsed = JSON.parse(content);
+        } catch (e) {
+          console.error("Parsing error:", e, content);
+        }
+
+        if (parsed) {
+          sessionStorage.setItem("carData", JSON.stringify(parsed));
+          sessionStorage.setItem("plate", parsed.plate);
+          sessionStorage.setItem("owner", parsed.owner);
+          sessionStorage.setItem("date", parsed.date);
+
+          // Save to helper
+          let helper = {};
+          try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+          helper.contact = { plate_number: parsed.plate, owner_name: parsed.owner, date: parsed.date, location: parsed.location };
+          sessionStorage.setItem("helper", JSON.stringify(helper));
+
+          alert("🚗 התיק נפתח בהצלחה ✅");
+        }
+      } catch (err) {
+        document.getElementById("err").innerText = "שגיאה בשליחה: " + err;
+      }
+    });
+  </script>
+</body>
+</html>

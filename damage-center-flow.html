@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8"/>
+  <title>מוקד נזק - תהליך</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { font-family: sans-serif; background: #f8fafc; margin: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 0 10px #0001; padding: 32px; }
+    h2 { margin-top: 0; }
+    .actions { margin-top: 24px; display: flex; gap: 12px; }
+    button { padding: 10px 18px; border-radius: 8px; border: none; font-size: 16px; cursor: pointer; }
+    .add { background: #007bff; color: #fff; }
+    .next { background: #28a745; color: #fff; }
+    .finish { background: #dc3545; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2 id="step-title"></h2>
+  <div id="step-content"></div>
+  <div class="actions">
+    <button class="add" onclick="addItem()">הוסף</button>
+    <button class="next" onclick="nextStep()">המשך</button>
+    <button class="finish" onclick="finishCenters()" style="display:none">סיים והמשך לסיכום</button>
+  </div>
+</div>
+<script>
+const steps = [
+  { title: "תיאור מוקד נזק", placeholder: "הזן תיאור..." },
+  { title: "עבודות נדרשות", placeholder: "הוסף עבודה..." },
+  { title: "חלקים נדרשים", placeholder: "הוסף חלק..." },
+  { title: "תיקונים נדרשים", placeholder: "הוסף תיקון..." }
+];
+let currentStep = 0;
+let damageCenters = [];
+let currentCenter = { description: [], works: [], parts: [], repairs: [] };
+
+function renderStep() {
+  document.getElementById('step-title').innerText = steps[currentStep].title;
+  let html = `<ul id="items-list"></ul>
+    <input id="item-input" type="text" placeholder="${steps[currentStep].placeholder}" style="width:80%;margin-top:10px"/>`;
+  document.getElementById('step-content').innerHTML = html;
+  updateItemsList();
+  document.querySelector('.finish').style.display = (currentStep === steps.length - 1) ? '' : 'none';
+}
+
+function addItem() {
+  const val = document.getElementById('item-input').value.trim();
+  if (!val) return;
+  if (currentStep === 0) currentCenter.description.push(val);
+  if (currentStep === 1) currentCenter.works.push(val);
+  if (currentStep === 2) currentCenter.parts.push(val);
+  if (currentStep === 3) currentCenter.repairs.push(val);
+  document.getElementById('item-input').value = '';
+  updateItemsList();
+}
+
+function updateItemsList() {
+  let items = [];
+  if (currentStep === 0) items = currentCenter.description;
+  if (currentStep === 1) items = currentCenter.works;
+  if (currentStep === 2) items = currentCenter.parts;
+  if (currentStep === 3) items = currentCenter.repairs;
+  document.getElementById('items-list').innerHTML = items.map(i => `<li>${i}</li>`).join('');
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) {
+    currentStep++;
+    renderStep();
+  }
+}
+
+function finishCenters() {
+  damageCenters.push({...currentCenter});
+  if (confirm("להוסיף מוקד נזק נוסף?")) {
+    currentCenter = { description: [], works: [], parts: [], repairs: [] };
+    currentStep = 0;
+    renderStep();
+  } else {
+    // Save to sessionStorage or send to server as needed
+    sessionStorage.setItem('damageCenters', JSON.stringify(damageCenters));
+    window.location.href = "damage-summary.html";
+  }
+}
+
+window.onload = renderStep;
+</script>
+</body>
+</html>

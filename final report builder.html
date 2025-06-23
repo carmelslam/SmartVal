@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      direction: rtl;
+      margin: 20px;
+    }
+    h1, h2, h3 {
+      color: #003366;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      border: 3px solid #003366 !important;
+    }
+    th, td {
+      padding: 8px;
+      text-align: right;
+      border: 1px solid #aaa;
+    }
+    th {
+      color: #003366 !important;
+      background: #fff8e1 !important;
+      border-bottom: 3px solid #003366 !important;
+      text-align: center !important;
+    }
+    .section {
+      margin-bottom: 30px;
+      page-break-after: always;
+    }
+    .signature-stamp {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+    }
+    .signature-stamp img {
+      height: 100px;
+    }
+    .signature-stamp .center-text {
+      flex-grow: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .car-details {
+      border: 2px solid #000;
+      border-radius: 25px;
+      padding: 20px;
+      margin-bottom: 40px;
+    }
+    .car-details-title {
+      color: #003366;
+      font-weight: bold;
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .car-details-table {
+      width: 100%;
+      border: none;
+      font-size: 16px;
+    }
+    .car-details-table td {
+      padding: 5px 10px;
+    }
+    .intellectual-box {
+      border: 2px solid #000;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    .buttons {
+      text-align: center;
+      margin-top: 40px;
+    }
+    .buttons button {
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+  <script src="/core/math-preview.js"></script>
+</head>
+<body>
+  <div id="report-output"></div>
+
+  <div class="buttons">
+    <button onclick="finalReport.print()">🖨️ הדפס</button>
+    <button onclick="finalReport.export()">📤 שלח דו"ח</button>
+  </div>
+
+  <template id="template-html">
+   
+  <!-- Section 1 -->
+  <div class="report-header">
+    <div class="report-title">{{meta.report_type_display}}</div>
+    <table style="width: 100%; margin-top: 10px;">
+      <tr>
+        <td style="width: 40%; text-align: right;">
+          <p>לכבוד:<br>{{meta.client_name}}<br>{{meta.address}}</p>
+        </td>
+        <td style="width: 20%;"></td>
+        <td style="width: 40%; text-align: right;">
+          <p>תאריך: {{meta.today}}</p>
+          <p>תיק מספר: YC/{{meta.plate}}/2025</p>
+          <p>עוסק מורשה: 02921217</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="car-details">
+    <div class="car-details-title">חוות דעת מומחה</div>
+    <table class="car-details-table">
+    <tbody>
+      <tr>
+        <td><strong>בעל הרכב:</strong> {{meta.client_name}}</td>
+        <td><strong>דגם:</strong> {{helper.vehicle.model}}</td>
+      </tr>
+      <tr>
+        <td><strong>מספר טלפון:</strong> {{meta.phone_number}}</td>
+        <td><strong>מספר שלדה:</strong> {{helper.vehicle.chassis}}</td>
+      </tr>
+      <tr>
+        <td><strong>תאריך הבדיקה:</strong> {{meta.inspection_date}}</td>
+        <td><strong>שנת יצור:</strong> {{helper.vehicle.year}}</td>
+      </tr>
+      <tr>
+        <td><strong>מקום הבדיקה:</strong> {{meta.location}}</td>
+        <td><strong>מד אוץ:</strong> {{helper.vehicle.km}}</td>
+      </tr>
+      <tr>
+        <td><strong>מספר רישוי:</strong> {{meta.plate}}</td>
+        <td><strong>סוג הרכב:</strong> {{helper.vehicle.ownership}}</td>
+      </tr>
+      <tr>
+        <td><strong>יצרן:</strong> {{helper.vehicle.manufacturer}}</td>
+        <td><strong>סוג הנזק:</strong> {{meta.damage}}</td>
+      </tr>
+    </tbody>
+    </table>
+  </div>
+
+  <div class="car-details">
+    <div class="car-details-title">חשבונית עסקה מס׳ {{meta.case_id}}</div>
+    <table class="car-details-table">
+      <thead>
+        <tr>
+          <th>רכיב</th>
+          <th>עלות</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>צילומים ({{helper.fees.photo_count}})</td>
+          <td>{{money helper.fees.photos}}</td>
+        </tr>
+        <tr>
+          <td>משרד</td>
+          <td>{{money helper.fees.office}}</td>
+        </tr>
+        <tr>
+          <td>מסי נסיעות (ביקורים) {{helper.fees.travel_count}}</td>
+          <td>{{money helper.fees.travel}}</td>
+        </tr>
+        <tr>
+          <td>סה"כ לפני מע"מ</td>
+          <td>{{money helper.fees.subtotal}}</td>
+        </tr>
+        <tr>
+          <td>מע"מ</td>
+          <td>{{helper.fees.vat_percent}}%</td>
+        </tr>
+        <tr>
+          <td><strong>סה"כ כולל מע"מ</strong></td>
+          <td><strong>{{money helper.fees.total}}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      {{lookup vault.legal_basis 'final'}}
+    </p>
+    <div class="intellectual-box">
+      {{lookup vault.intellectual_property 'final'}}
+    </div>
+    <div class="signature-stamp">
+      <div class="center-text">בכבוד רב,</div>
+      <br><br>
+      <br><br>
+      </div>
+      <div style="margin-top: 40px; text-align: left;">
+    
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
+  </div>
+    </div>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section">
+    {{> report_header}}
+    {{> car_details_intro}}
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      {{lookup vault.assessor_introduction 'final'}}
+    </p>
+    <p style="font-size: 16px;">
+      {{lookup vault.assessor_qualifications 'final'}}
+    </p>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section" style="page-break-before: always;">
+    <p style="font-size: 16px;">
+      בהתאם להוראותכם, בדקנו את נזקי הרכב הנדון כפי שהוצגו לפנינו והערכנו אותם כמפורט להלן:
+    </p>
+    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">תיאור הנזק:</p>
+    <p style="font-size: 16px;">
+      {{helper.damage.description}}
+    </p>
+    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">הערכת הנזק:</p>
+    <p style="font-size: 16px;">
+      החלקים הרשומים ברשימת החלקים נפגעו ללא אפשרות תיקון ו/או כדרישות תיקון והיה צורך להחליפם. הערכתנו כדלקמן:
+    </p>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section">
+    {{#each helper.damage_blocks}}
+      <div class="car-details">
+        <div class="car-details-title">מוקד {{this.label}}</div>
+        {{{this.table}}}
+      </div>
+    {{/each}}
+  </div>
+
+ 
+  {{#if (gt (length helper.damage_blocks) 1)}}
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">חלוקה למוקדים</div>
+      <table class="car-details-table">
+        <thead>
+          <tr>
+            <th>מוקד</th>
+            <th>עלות</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each helper.damage_summary}}
+          <tr>
+            <td>{{this.label}}</td>
+            <td>{{money this.total}}</td>
+          </tr>
+          {{/each}}
+          <tr>
+            <td><strong>סה"כ כלל המוקדים כולל מע"מ</strong></td>
+            <td><strong>{{money helper.damage_total}}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{/if}}
+
+
+  <!-- Section 5 - Levi Adjustments (bulk two) -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">אחוז הנזק הגולמי</div>
+      <table class="car-details-table">
+        <tr><th>תיאור</th><th>ערך</th></tr>
+        <tr><td>סה"כ הנזק כולל מע"מ</td><td>{{money helper.calculations.total_damage}}</td></tr>
+        <tr><td>ערך הרכב לנזק גולמי כולל מע"מ</td><td>{{money helper.calculations.vehicle_value_gross}}</td></tr>
+        <tr><td><strong>אחוז הנזק הגולמי</strong></td><td><strong>{{percent helper.calculations.damage_percent}}</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 5 - Levi Adjustments (bulk three) -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">חישוב ערך השוק של הרכב</div>
+      <table class="car-details-table">
+        <tr><th>תיאור</th><th>ערך</th></tr>
+        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>{{money helper.vehicle_value_base}}</td></tr>
+        {{#each helper.levi.adjustments}}
+          <tr><td>{{this.label}}</td><td>{{money this.amount}}</td></tr>
+        {{/each}}
+        <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 6 - Depreciation Opening Block -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">ירידת ערך</div>
+      <p style="font-size: 18px; font-weight: bold;">
+        מממצאי בדיקתנו עולה כי הרכב נפגע והיה צורך בעבודות ותיקונים הבאים:
+      </p>
+      <table class="car-details-table">
+        <tr><th>מוקד נזק</th><th>עבודות / תיקונים</th></tr>
+        {{#each helper.damage_blocks}}
+          <tr>
+            <td>{{this.center}}</td>
+            <td>
+              {{#each this.repairs}}{{this}}, {{/each}}
+              {{#each this.works}}{{this}}, {{/each}}
+            </td>
+          </tr>
+        {{/each}}
+      </table>
+      <p style="font-size: 18px; font-weight: bold;">
+        אנו בדעה כי ממצאים אלה ייגרמו להפחתות ערכו המסחרי של הרכב לעומת רכב זהה מאותו תוצרת, דגם ושנת ייצור שלא עבר תאונות דרכים.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 6 - Depreciation Bulk 2 -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
+      <table class="car-details-table">
+        <tr><th>החלק הניזוק</th><th>מהות התיקון</th><th>% ירידת ערך</th><th>מוקד</th></tr>
+        {{#each helper.depreciation_centers}}
+          <tr>
+            <td>{{this.part}}</td>
+            <td>{{this.repair}}</td>
+            <td>{{percent this.percent}}</td>
+            <td>{{this.center}}</td>
+          </tr>
+        {{/each}}
+      </table>
+      <p style="font-size: 18px; font-weight: bold;">
+        ערך השוק של הרכב הינו {{money helper.calculations.market_value}} ש"ח כולל מע"מ, לפיכך הפיצוי לירידת הערך יהיה {{percent helper.depreciation.global_percent}} = {{money helper.depreciation.global_amount}} ש"ח
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 6 - Depreciation Bulk 3 (Final Summary) -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">סיכום חוות הדעת</div>
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>סה"כ תביעה שהוגשה</td>
+          <td>{{money helper.calculations.total_damage}}</td>
+        </tr>
+        <tr>
+          <td>פיצוי בגין ירידת ערך</td>
+          <td>{{money helper.depreciation.global_amount}}</td>
+        </tr>
+        <tr>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה"כ נכלל בחוות הדעת</strong></td>
+          <td><strong>{{money helper.calculations.total_compensation}}</strong></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+<!-- Section 7 – Final Legal Paragraph -->
+<div class="section">
+  <div style="font-size: 16px; line-height: 1.8;">
+    <strong>הערות:</strong><br>
+    {{lookup vault.legal_summary.private 'final'
+      percent=helper.depreciation.global_percent
+      work_days=helper.depreciation.work_days
+    }}<br><br>
+
+    <strong>הצהרת שמאי:</strong><br>
+    {{lookup vault.legal_declaration 'final'}}<br><br>
+
+    <strong>לוטה:</strong><br>
+    תצלומי הרכב הניזוק<br>
+    חשבוניות תיקון<br>
+    ערך רכב ממוחשב<br>
+    חיפוש חלפים משומשים<br>
+    צילום רישיון הרכב<br>
+    שח״ט
+  </div>
+
+  <div class="signature-stamp" style="margin-top: 40px;">
+    <div class="center-text" style="font-size: 18px; font-weight: bold;">בכבוד רב,</div>
+  </div>
+
+  <div style="margin-top: 40px; text-align: left;">
+    <br><br>
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
+  </div>
+<div id="math-preview" style="margin-top: 20px;"></div>
+</div>
+
+</template>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.finalReport?.inject) finalReport.inject();
+    });
+  </script>
+</body>
+</html>
+    });
+  </script>
+</body>
+</html>

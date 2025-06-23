@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תיקונים נדרשים - ירון כיוף</title>
+   <link rel="icon" href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">type="image/webp">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f6fb;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 30px;
+    }
+    .container {
+      max-width: 500px;
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      text-align: center;
+      position: relative;
+    }
+    .logo img {
+      width: 120px;
+      opacity: 0.9;
+      margin-bottom: 15px;
+    }
+    .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    .subtitle { font-size: 18px; color: #666; margin-bottom: 20px; }
+    h2 { font-size: 20px; color: #007bff; margin-bottom: 15px; }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      resize: vertical;
+      font-family: sans-serif;
+    }
+    button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+
+     .btn-vehiclePopup {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    Align-right
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+    }
+    .btn-secondary {
+      background-color: #6c757d;
+      margin-top: 10px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .top-bar button {
+      width: 48%;
+      background-color: #6c757d;
+    }
+    .logout-btn {
+      background-color: #dc3545 !important;
+    }
+    .footer { margin-top: 30px; font-size: 12px; color: #999; }
+ #vehiclePopup {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 10px;
+      margin: 10px 0;
+      display: none;
+      font-size: 14px;
+      text-align: right;
+    }
+
+ </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="Logo"/></div>
+    <div class="title">ירון כיוף שמאות - פורטל</div>
+    <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
+    <h2 id="pageTitle">רכב מס. ...: תיקונים נדרשים</h2>
+    <div style="color: red; font-weight: bold; margin-bottom: 15px;">
+ לזמן שמאי לאחר פירוקים ולפני צבע
+ 
+  <button onclick="toggleVehicle()">פרטי הרכב</button>
+       <div id="vehiclePopup"></div>
+</div>
+
+   <div class="top-bar">
+      <button onclick="window.location.href='selection.html'">עמוד הבית</button>
+      <button class="logout-btn" onclick="logout()">התנתק</button>
+    </div>
+
+    <form id="fixesForm">
+      <div id="fixesList">
+        <textarea placeholder="פרט את התיקונים הנדרשים לרכב" required></textarea>
+      </div>
+
+      <button type="button" class="btn-secondary" onclick="addFix()">הוסף תיקון</button>
+      <button type="submit">המשך</button>
+    </form>
+
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+  </div>
+
+  <script>
+    const plate = sessionStorage.getItem("plate");
+    const owner = sessionStorage.getItem("owner");
+    const date = sessionStorage.getItem("date");
+
+    if (!plate || !owner || !date) {
+      alert("שגיאה: חסר מידע קריטי. חזרה לעמוד הראשי.");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("pageTitle").innerText = `רכב מס. ${plate}: תיקונים נדרשים`;
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+
+    function addFix() {
+      const div = document.createElement("div");
+      div.innerHTML = `<textarea placeholder="פרט תיקון נוסף" required></textarea>`;
+      document.getElementById("fixesList").appendChild(div);
+    }
+
+    document.getElementById("fixesForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const allFixes = Array.from(document.querySelectorAll('#fixesList textarea'))
+        .map(el => el.value.trim())
+        .filter(txt => txt.length > 0);
+
+      // Save to helper
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      if (!helper.damage_sections) helper.damage_sections = [];
+      // You may want to push a new section or update the current one
+      helper.damage_sections.push({ repairs: allFixes });
+      sessionStorage.setItem("helper", JSON.stringify(helper));
+
+      sessionStorage.setItem("phase2_fixes", JSON.stringify(allFixes));
+      window.location.href = "next-module.html"; // Change when next module is ready
+    });
+  </script>
+<script src="car-details-float.js"></script>
+
+</body>
+</html>

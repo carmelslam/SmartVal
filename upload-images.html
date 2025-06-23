@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8"/>
+<title>העלאת תמונות</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
+    body { font-family: sans-serif; background: #f0f4ff; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .container { max-width: 400px; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+    .logo { width: 100px; margin-bottom: 20px; }
+    h2 { font-size: 20px; margin-bottom: 20px; }
+    input { width: 100%; padding: 10px; font-size: 16px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; }
+    .btn { width: 100%; padding: 12px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+    .footer-btns { display: flex; justify-content: space-between; margin-top: 20px; }
+    .footer-btns button { width: 48%; padding: 10px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; }
+    .home-btn { background-color: #6c757d; color: white; }
+    .logout-btn { background-color: #dc3545; color: white; }
+    .footer { font-size: 12px; color: #aaa; margin-top: 15px; }
+  </style>
+<link href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" rel="icon" type="image/webp"/><link href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" rel="shortcut icon"/><link href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" rel="apple-touch-icon"/></head>
+<body>
+<div class="container">
+<img class="logo" src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp"/>
+<h2>העלאת תמונות - ירון כיוף</h2>
+<form id="form" method="POST" onsubmit="return false;">
+  <input name="plate" placeholder="הזן מס רכב" required="" type="text"/>
+  <input name="owner" placeholder="הזן שם בעל הרכב" required="" type="text"/>
+  <input accept="image/*" multiple="" name="images" required="" type="file" id="imageInput"/>
+  <input name="pass" placeholder="סיסמא" required="" type="password"/>
+  <button class="btn" type="submit" id="submitBtn" disabled>שלח תמונות</button>
+  <div id="preview-container" style="margin-top:10px; padding:10px; border:1px solid #ccc; display:flex; flex-wrap:wrap; gap:10px; max-height:200px; overflow:auto;"></div>
+  <div id="statusMsg" style="margin-top:10px; font-size:15px;"></div>
+</form>
+<div style="margin-top:25px;">
+  <button id="moreOptionsBtn" class="btn" type="button" style="background:#6c757d;">אפשרויות נוספות</button>
+  <div id="moreOptions" style="display:none; margin-top:15px;">
+    <button id="optimizeBtn" class="btn" type="button" style="background:#28a745;">בצע אופטימיזציה לתמונה</button>
+    <button id="createPdfBtn" class="btn" type="button" style="background:#17a2b8;">צור PDF מוקד נזק</button>
+  </div>
+</div>
+<div class="footer-btns">
+<button class="home-btn" onclick="window.location.href='selection.html'">לעמוד הבית</button>
+<button class="logout-btn">יציאה מהמערכת</button>
+</div>
+<div class="footer">All rights reserved © Carmel Cayouf</div>
+</div>
+<script>
+// --- Add session authentication check ---
+const userAuthToken = sessionStorage.getItem('auth');
+if (!userAuthToken) {
+  alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+  window.location.href = "index.html";
+}
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Pre-fill plate/owner/pass from sessionStorage
+        const plate = sessionStorage.getItem("plate");
+        const owner = sessionStorage.getItem("owner");
+        const pass = sessionStorage.getItem("ycPass");
+        if (plate) document.querySelector("input[name='plate']").value = plate;
+        if (owner) document.querySelector("input[name='owner']").value = owner;
+        if (pass) document.querySelector("input[type='password']").value = pass;
+    });
+    </script><script src="webhook.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const fileInput = document.getElementById("imageInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    let allFiles = [];
+
+    function updateSubmitState() {
+      submitBtn.disabled = allFiles.length === 0;
+    }
+
+    fileInput.addEventListener("change", function () {
+        allFiles = [...allFiles, ...Array.from(fileInput.files)];
+        const dataTransfer = new DataTransfer();
+        allFiles.forEach(f => dataTransfer.items.add(f));
+        fileInput.files = dataTransfer.files;
+        renderPreviews();
+        updateSubmitState();
+    });
+
+    function renderPreviews() {
+        const previewContainer = document.getElementById("preview-container");
+        previewContainer.innerHTML = "";
+        allFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const wrapper = document.createElement("div");
+                wrapper.style.position = "relative";
+                const img = document.createElement("img");
+                img.src = e.target.result;
+                img.style.width = "60px";
+                img.style.height = "60px";
+                img.style.objectFit = "cover";
+                img.style.border = "1px solid #ccc";
+                img.style.borderRadius = "4px";
+                const delBtn = document.createElement("button");
+                delBtn.textContent = "✕";
+                delBtn.style.position = "absolute";
+                delBtn.style.top = "0";
+                delBtn.style.right = "0";
+                delBtn.style.background = "rgba(255,0,0,0.7)";
+                delBtn.style.color = "white";
+                delBtn.style.border = "none";
+                delBtn.style.borderRadius = "50%";
+                delBtn.style.cursor = "pointer";
+                delBtn.onclick = function () {
+                    allFiles.splice(index, 1);
+                    const dt = new DataTransfer();
+                    allFiles.forEach(f => dt.items.add(f));
+                    fileInput.files = dt.files;
+                    renderPreviews();
+                    updateSubmitState();
+                };
+                wrapper.appendChild(img);
+                wrapper.appendChild(delBtn);
+                previewContainer.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Enable/disable submit on load
+    updateSubmitState();
+
+    // Submit handler
+    document.getElementById("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        statusMsg.textContent = "";
+        if (allFiles.length === 0) {
+          statusMsg.textContent = "יש להעלות לפחות תמונה אחת.";
+          statusMsg.style.color = "red";
+          return;
+        }
+        const form = this;
+        sessionStorage.setItem("plate", form.querySelector("input[name='plate']").value);
+        sessionStorage.setItem("owner", form.querySelector("input[name='owner']").value);
+        sessionStorage.setItem("ycPass", form.querySelector("input[type='password']").value);
+        const formData = new FormData(form);
+        fetch(window.webhooks.uploadImages, {
+            method: "POST",
+            body: formData
+        }).then(res => {
+            if (res.ok) {
+                statusMsg.textContent = "✅ התמונות נשלחו בהצלחה!";
+                statusMsg.style.color = "green";
+                form.reset();
+                allFiles = [];
+                renderPreviews();
+                updateSubmitState();
+
+                // Save to helper
+                let helper = {};
+                try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+                helper.files = helper.files || [];
+                // Optionally, store file names or a flag
+                helper.files.push("images_uploaded");
+                sessionStorage.setItem("helper", JSON.stringify(helper));
+            } else {
+                statusMsg.textContent = "❌ שליחת התמונות נכשלה.";
+                statusMsg.style.color = "red";
+            }
+        }).catch(() => {
+            statusMsg.textContent = "❌ שגיאת רשת בשליחת התמונות.";
+            statusMsg.style.color = "red";
+        });
+    });
+
+    // More options toggle
+    document.getElementById("moreOptionsBtn").addEventListener("click", function() {
+      const more = document.getElementById("moreOptions");
+      more.style.display = more.style.display === "none" ? "block" : "none";
+    });
+
+    // Optimize Picture
+    document.getElementById("optimizeBtn").addEventListener("click", function() {
+      statusMsg.textContent = "";
+      if (allFiles.length === 0) {
+        statusMsg.textContent = "יש להעלות לפחות תמונה אחת לאופטימיזציה.";
+        statusMsg.style.color = "red";
+        return;
+      }
+      const form = document.getElementById("form");
+      const formData = new FormData(form);
+      // Only send the first image for optimization (or adjust as needed)
+      formData.set("image", allFiles[0]);
+      fetch(window.webhooks.optimizeImage, {
+        method: "POST",
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          statusMsg.textContent = "✅ האופטימיזציה בוצעה בהצלחה!";
+          statusMsg.style.color = "green";
+        } else {
+          statusMsg.textContent = "❌ האופטימיזציה נכשלה.";
+          statusMsg.style.color = "red";
+        }
+      }).catch(() => {
+        statusMsg.textContent = "❌ שגיאת רשת באופטימיזציה.";
+        statusMsg.style.color = "red";
+      });
+    });
+
+    // Create Damage Center PDF
+    document.getElementById("createPdfBtn").addEventListener("click", function() {
+      statusMsg.textContent = "";
+      if (allFiles.length === 0) {
+        statusMsg.textContent = "יש להעלות לפחות תמונה אחת ליצירת PDF.";
+        statusMsg.style.color = "red";
+        return;
+      }
+      const form = document.getElementById("form");
+      const formData = new FormData(form);
+      // Send all images for PDF creation
+      allFiles.forEach((file, idx) => formData.append("images[]", file));
+      fetch(window.webhooks.createDamageCenterPdf, {
+        method: "POST",
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          statusMsg.textContent = "✅ PDF מוקד נזק נוצר בהצלחה!";
+          statusMsg.style.color = "green";
+        } else {
+          statusMsg.textContent = "❌ יצירת PDF נכשלה.";
+          statusMsg.style.color = "red";
+        }
+      }).catch(() => {
+        statusMsg.textContent = "❌ שגיאת רשת ביצירת PDF.";
+        statusMsg.style.color = "red";
+      });
+    });
+});
+</script><script>
+document.addEventListener("DOMContentLoaded", function () {
+  const logoutBtn = document.querySelector(".logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    });
+  }
+});
+</script></body>
+</html>

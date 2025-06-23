@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>סיום האקספרטיזה - ירון כיוף</title>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
+  <style>
+    body {
+      font-family: 'Assistant', sans-serif;
+      background: #f3f6fb;
+      margin: 0;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .logo img {
+      width: 120px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 22px;
+      color: #007bff;
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
+      text-align: right;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    select, input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    textarea { resize: vertical; height: 60px; }
+    button {
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+      border: none;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #999;
+    }
+    .note-box {
+      background: #f4f4f4;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      text-align: right;
+      margin-top: 25px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo"/></div>
+    <div class="title" style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">ירון כיוף - פורטל שמאות</div>
+    <div class="subtitle" style="font-size: 18px; color: #666; margin-bottom: 20px;">שמאות והערכת נזקי רכב ורכוש</div>
+    <h2 id="pageTitle">סיכום האקספרטיזה לרכב מס׳ ...</h2>
+
+    <label for="directive">הנחיית תיק / סטטוס תיק</label>
+    <select id="directive">
+      <option value="">ללא סטטוס</option>
+      <option>לתיקון</option>
+      <option>טוטאלוס TL</option>
+      <option>לא לתיקון בשלב זה להכין הצעת מחיר</option>
+      <option>אובדן להלכה</option>
+      <option>מכירה במצבו הניזוק</option>
+      <option>להכין הצעת מחיר</option>
+    </select>
+
+    <label for="technician">שם השמאי:</label>
+    <select id="technician">
+      <option>ירון כיוף</option>
+    </select>
+
+    <label for="license">מספר רישיון:</label>
+    <select id="license">
+      <option>1097</option>
+    </select>
+
+    <label for="summaryNotes">הערות נוספות:</label>
+    <textarea id="summaryNotes" placeholder="תיאור, המלצות, הערות כלליות"></textarea>
+
+    <div class="note-box" id="finalNote">
+      פעולה זו תסגור את האקספרטיזה, תשלח אימייל למוסך ותיצור טיוטת חוות דעת לרכב מס׳ <strong id="platePreview"></strong> בתאריך <strong id="datePreview"></strong>.
+    </div>
+
+    <button id="confirmBtn">סיים ופתח טיוטת חוות דעת</button>
+    <button id="finalSend" style="display:none; background:#28a745;">אישור סופי ושליחה</button>
+
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+  </div>
+
+  <script src="webhook.js"></script>
+  <script>
+    const plate = sessionStorage.getItem('plate') || 'לא ידוע';
+    const date = new Date().toLocaleDateString('he-IL');
+    document.getElementById('pageTitle').innerText = `סיום האקספרטיזה לרכב מס׳ ${plate}`;
+    document.getElementById('platePreview').innerText = plate;
+    document.getElementById('datePreview').innerText = date;
+
+    // --- Helper update logic ---
+    function updateHelper() {
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      helper.expertise_summary = {
+        plate,
+        directive: document.getElementById('directive').value,
+        technician: document.getElementById('technician').value,
+        license: document.getElementById('license').value,
+        summaryNotes: document.getElementById('summaryNotes').value,
+        date
+      };
+      sessionStorage.setItem("helper", JSON.stringify(helper));
+    }
+
+    // Update helper on every relevant input change
+    ["directive", "technician", "license", "summaryNotes"].forEach(id => {
+      document.getElementById(id).addEventListener("change", updateHelper);
+      document.getElementById(id).addEventListener("input", updateHelper);
+    });
+
+    // Initial helper population
+    updateHelper();
+
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+      document.getElementById('finalNote').style.display = 'block';
+      document.getElementById('finalSend').style.display = 'block';
+      document.getElementById('confirmBtn').style.display = 'none';
+    });
+
+    document.getElementById('finalSend').addEventListener('click', () => {
+      updateHelper(); // Ensure latest data
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      // Engines will always read from helper
+      const payload = {
+        plate,
+        date,
+        expertise_summary: helper.expertise_summary,
+        helper // send full helper for engines/backoffice
+      };
+
+      fetch(window.webhooks.expertiseSummary, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => alert("האקספרטיזה נסגרה ונשלחה למערכת."))
+      .catch(() => alert("שגיאה בשליחה."));
+    });
+  </script>
+  <script src="car-details-float.js"></script>
+</body>
+</html>
