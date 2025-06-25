@@ -141,8 +141,7 @@ form button {
   gap: 10px;
     }
 
-
-    button {add button
+    button {
       width: 50%;
       padding: 12px;
       font-size: 16px;
@@ -171,12 +170,11 @@ form button {
 .button-vehiclePopup {
     display: flex;
     gap: 10px;
-    Width: 100%;
+    width: 100%;
     margin-top: 20px;
-    Align-right
-    margin-top: 10px;
     margin-bottom: 10px;
-  }
+    /* align-items: flex-end;  Uncomment or adjust as needed */
+}
 
 .suggestions div {
   padding: 10px;
@@ -219,40 +217,41 @@ form button {
     </div>
       
     <form id="partsForm">
-  <div id="carDetailsBox" style="display:none;">
-    <input id="inputPlate" placeholder="מספר רכב" type="text" />
-    <input id="inputManufacturer" placeholder="יצרן" type="text" />
-    <input id="inputModel" placeholder="דגם" type="text" />
-    <input id="inputYear" placeholder="שנה" type="number" />
-  </div>
-  <div id="partsList">
-    <div class="row">
-      <div class="input-wrap">
-        <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
-        <div class="suggestions"></div>
+      <div id="carDetailsBox" style="display:none;">
+        <input id="inputPlate" placeholder="מספר רכב" type="text" />
+        <input id="inputManufacturer" placeholder="יצרן" type="text" />
+        <input id="inputModel" placeholder="דגם" type="text" />
+        <input id="inputYear" placeholder="שנה" type="number" />
       </div>
-      <input type="text" class="desc" placeholder="תיאור" required>
-      <select class="source" required>
-        <option value="">מקור</option>
-        <option value="חליפי/מקורי">חליפי/מקורי</option>
-        <option value="חליפי/משומש">חליפי/משומש</option>
-        <option value="חדש מקורי">חדש מקורי</option>
-        <option value="חליפי">חליפי</option>
-        <option value="משומש">משומש</option>
-        <option value="ריק">ריק</option>
-      </select>
-    </div>
-  </div>
-  <div class="button-row">
-    <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
-    <button type="submit">המשך</button>
-  </div>
-</form>
-
+      <div id="partsList">
+        <div class="row">
+          <div class="input-wrap">
+            <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+            <div class="suggestions"></div>
+          </div>
+          <input type="text" class="desc" placeholder="תיאור" required>
+          <input type="text" class="price" placeholder="מחיר" required>
+          <select class="source" required>
+            <option value="">מקור</option>
+            <option value="חליפי/מקורי">חליפי/מקורי</option>
+            <option value="חליפי/משומש">חליפי/משומש</option>
+            <option value="חדש מקורי">חדש מקורי</option>
+            <option value="חליפי">חליפי</option>
+            <option value="משומש">משומש</option>
+            <option value="ריק">ריק</option>
+          </select>
+        </div>
+      </div>
+      <div class="button-row">
+        <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
+        <button type="submit">המשך</button>
+      </div>
+    </form>
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
+  <script type="module">
+    import { sendPartSearch } from './webhook.js';
 
-  <script>
     const plate = sessionStorage.getItem("plate");
     const manufacturer = sessionStorage.getItem("manufacturer");
     const model = sessionStorage.getItem("model");
@@ -269,50 +268,48 @@ form button {
       window.location.href = "index.html";
     }
 
-  function addPart() {
-  const row = document.createElement("div");
-  row.className = "row";
-  row.innerHTML = `
-    <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
-    <input type="text" class="desc" placeholder="תיאור" required>
-    <select class="source" required>
-      <option value="">מקור</option>
-      <option value="חליפי/מקורי">חליפי/מקורי</option>
-      <option value="חליפי/משומש">חליפי/משומש</option>
-      <option value="חדש מקורי">חדש מקורי</option>
-      <option value="חליפי">חליפי</option>
-      <option value="משומש">משומש</option>
-      <option value="ריק">ריק</option>
-    </select>
-    <div class="suggestions"></div>
-  `;
-  document.getElementById("partsList").appendChild(row);
-}
-
+    function addPart() {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="input-wrap">
+          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+          <div class="suggestions"></div>
+        </div>
+        <input type="text" class="desc" placeholder="תיאור" required>
+        <input type="text" class="price" placeholder="מחיר" required>
+        <select class="source" required>
+          <option value="">מקור</option>
+          <option value="חליפי/מקורי">חליפי/מקורי</option>
+          <option value="חליפי/משומש">חליפי/משומש</option>
+          <option value="חדש מקורי">חדש מקורי</option>
+          <option value="חליפי">חליפי</option>
+          <option value="משומש">משומש</option>
+          <option value="ריק">ריק</option>
+        </select>
+      `;
+      document.getElementById("partsList").appendChild(row);
+    }
 
     document.getElementById("partsForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const allParts = [];
-
       document.querySelectorAll("#partsList .row").forEach(row => {
         const name = row.querySelector(".name").value.trim();
         const desc = row.querySelector(".desc").value.trim();
+        const price = row.querySelector(".price").value.trim();
         const source = row.querySelector(".source").value;
-        if (name && desc && source) {
-          allParts.push({ part: name, desc, source });
+        if (name && desc && price && source) {
+          allParts.push({ part: name, desc, price, source });
         }
       });
 
-      // Detect mode: wizard (default) or standalone (from nav)
-    const urlParams = new URLSearchParams(window.location.search);
-    const isStandalone = urlParams.get('standalone') === '1';
+      const urlParams = new URLSearchParams(window.location.search);
+      const isStandalone = urlParams.get('standalone') === '1';
 
-    if (isStandalone) {
-        // Standalone: just show results or allow export, do not save to helper
+      if (isStandalone) {
         alert("חלקים נאספו (מצב עצמאי):\n" + allParts.map(p => p.part).join(", "));
-        // Optionally: display results below or allow export
       } else {
-        // Wizard: save to helper.damage_center_draft.parts and go to next bulk
         let helper = {};
         try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
         helper.damage_center_draft = helper.damage_center_draft || {};
@@ -322,16 +319,12 @@ form button {
       }
     });
 
-    // Detect mode: wizard (default) or standalone (from nav)
+    // Show car details input if standalone
     const urlParams = new URLSearchParams(window.location.search);
     const isStandalone = urlParams.get('standalone') === '1';
-
-    // Show car details input if standalone
     if (isStandalone) {
       document.getElementById('carDetailsBox').style.display = '';
       document.getElementById('pageTitle').innerText = "מודול חלקים - חיפוש עצמאי";
-    } else {
-      // ...existing code to set pageTitle from session...
     }
 
     function getCarDetails() {
@@ -355,11 +348,10 @@ form button {
       }
     }
 
-    function suggestPart(input) {
+    window.suggestPart = function(input) {
       const query = input.value.trim();
       const { plate, manufacturer, model, year } = getCarDetails();
       if (query.length < 2) return;
-      // Only text-based search (no image)
       sendPartSearch({ plate, manufacturer, model, year, query })
         .then(results => {
           const box = input.parentElement.querySelector('.suggestions');
@@ -372,6 +364,7 @@ form button {
                 input.value = suggestion.name || suggestion;
                 const row = input.closest(".row");
                 if (row && row.querySelector(".desc")) row.querySelector(".desc").value = suggestion.desc || "";
+                if (row && row.querySelector(".price")) row.querySelector(".price").value = suggestion.price || "";
                 if (row && row.querySelector(".source")) row.querySelector(".source").value = suggestion.source || "";
                 box.innerHTML = "";
               };
@@ -385,56 +378,8 @@ form button {
           const box = input.parentElement.querySelector('.suggestions');
           box.innerHTML = "<div>שגיאה בחיפוש</div>";
         });
-    }
-
-    // Image search logic
-const imageInput = document.getElementById('partImageInput');
-const searchByImageBtn = document.getElementById('searchByImageBtn');
-const imageStatus = document.getElementById('imageSearchStatus');
-const imageSuggestions = document.getElementById('imageSuggestions');
-
-searchByImageBtn.onclick = async function() {
-  imageStatus.textContent = "";
-  imageSuggestions.innerHTML = "";
-  const file = imageInput.files && imageInput.files[0];
-  if (!file) {
-    imageStatus.textContent = "בחר תמונה תחילה";
-    return;
-  }
-  const { plate, manufacturer, model, year } = getCarDetails();
-  imageStatus.textContent = "מחפש חלקים לפי תמונה...";
-  try {
-    const results = await sendPartSearch({ plate, manufacturer, model, year, imageFile: file });
-    imageStatus.textContent = "הצעות שהתקבלו:";
-    if (Array.isArray(results) && results.length) {
-      results.forEach(suggestion => {
-        const item = document.createElement("div");
-        item.textContent = suggestion.name || suggestion;
-        item.onclick = () => {
-          // Autofill first empty part row
-          const row = document.querySelector("#partsList .row .name:placeholder-shown")?.closest('.row') ||
-                      document.querySelector("#partsList .row");
-          if (row) {
-            row.querySelector(".name").value = suggestion.name || suggestion;
-            if (row.querySelector(".desc")) row.querySelector(".desc").value = suggestion.desc || "";
-            if (row.querySelector(".source")) row.querySelector(".source").value = suggestion.source || "";
-          }
-          imageSuggestions.innerHTML = "";
-        };
-        imageSuggestions.appendChild(item);
-      });
-    } else {
-      imageSuggestions.innerHTML = "<div>לא נמצאו תוצאות</div>";
-    }
-  } catch (e) {
-    imageStatus.textContent = "שגיאה בחיפוש לפי תמונה";
-  }
-};
-
-// ...existing code...
+    };
   </script>
   <script src="car-details-float.js"></script>
-</body>
-</html>
 </body>
 </html>
