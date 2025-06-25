@@ -1,4 +1,4 @@
-// 🧱 HELPER.EXPERTISE.LEVI_REPORT AND PARTS .HELPER AND IMAGE COUNT 
+// 🧱 HELPER.EXPERTISE.LEVI_REPORT.PARTS.IMAGE COUNT 
 
 import { helper, updateHelper, saveHelperToStorage } from './helper.js';
 import { ROUTER } from './router.js';
@@ -69,7 +69,7 @@ updateHelper('expertise', {
       //   notes: ''
       // }
     ]
-  }
+  }, // <-- Added missing comma here
   image_upload: {
     plate: '', // will be filled when car is initialized
     total_uploaded: 0 // accumulates with each upload until session reset

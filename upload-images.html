@@ -4,6 +4,7 @@
 <html dir="rtl" lang="he">
 <head>
 <meta charset="utf-8"/>
+<script type="module" src="./webhook.js"></script>
 <title>העלאת תמונות</title>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <style>
@@ -29,7 +30,13 @@
 <input name="owner" placeholder="הזן שם בעל הרכב" required="" type="text"/>
 <input accept="image/*" multiple="" name="images" required="" type="file"/><input name="pass" placeholder="סיסמא" required="" type="password"/>
 <button class="btn" type="submit">שלח תמונות</button>
-<div id="preview-container" style="margin-top:10px; padding:10px; border:1px solid #ccc; display:flex; flex-wrap:wrap; gap:10px; max-height:200px; overflow:auto;"></div></form>
+<div id="preview-container" style="margin-top:10px; padding:10px; border:1px solid #ccc; display:flex; flex-wrap:wrap; gap:10px; max-height:200px; overflow:auto;"></div>
+<div class="toggle-link" onclick="toggleMoreOptions()" style="color:#007BFF;cursor:pointer;margin:10px 0;">אפשרויות נוספות ⬇️</div>
+<div id="more-options" style="display:none;margin-bottom:15px;">
+  <button class="btn" type="button" onclick="sendExtraWebhook('TRANSFORM_PICTURES')">📸 בצע עיבוד תמונות</button>
+  <button class="btn" type="button" onclick="sendExtraWebhook('CREATE_PDF')">📄 צור PDF מהתמונות</button>
+</div>
+</form>
 <div class="footer-btns">
 <button class="home-btn" onclick="window.location.href='selection.html'">לעמוד הבית</button>
 <button class="logout-btn">יציאה מהמערכת</button>
@@ -44,31 +51,9 @@
             passInput.value = savedPass;
         }
     });
-    </script><script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const form = document.querySelector("form");
-        if (form) {
-            const submitButton = form.querySelector("button[type='submit']");
-            if (submitButton) {
-                submitButton.addEventListener("click", function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(form);
-                    fetch("https://hook.eu2.make.com/o6lzg98bepsxulwlxhgkepikypyhetfl", {
-                        method: "POST",
-                        body: formData
-                    }).then(res => {
-                        if (res.ok) {
-                            alert("Submission successful!");
-                            form.reset();
-                        } else {
-                            alert("Failed to submit.");
-                        }
-                    }).catch(() => alert("Error sending data."));
-                });
-            }
-        }
-    });
-    </script><script>
+    </script>
+
+   <script>
 document.addEventListener("DOMContentLoaded", function () {
   const logoutBtn = document.querySelector(".logout-btn");
   if (logoutBtn) {
@@ -151,5 +136,48 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
-</script></body>
+</script>
+ <script type="module">
+    import { getWebhook } from './webhook.js';
+
+    document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const plate = document.getElementById("plate").value;
+      const files = document.getElementById("images").files;
+      const formData = new FormData();
+      formData.append("plate", plate);
+      for (const file of files) {
+        formData.append("images[]", file);
+      }
+      const res = await fetch(getWebhook("UPLOAD_PICTURES"), { method: "POST", body: formData });
+      alert(res.ok ? "✅ התמונות נשלחו בהצלחה" : "❌ שגיאה בשליחת התמונות");
+    });
+
+    window.sendToWebhook = function(type) {
+      const plate = document.getElementById("plate").value;
+      const formData = new FormData();
+      formData.append("plate", plate);
+      const webhook = type === 'transform' ? getWebhook("TRANSFORM_PICTURES") : getWebhook("CREATE_PDF");
+      fetch(webhook, { method: "POST", body: formData })
+        .then(res => alert(res.ok ? `✅ פעולה '${type}' הושלמה` : `❌ שגיאה בביצוע '${type}'`));
+    }
+
+    document.getElementById("toggle-options").addEventListener("click", () => {
+      const el = document.getElementById("more-options");
+      el.style.display = el.style.display === "none" ? "block" : "none";
+    });
+  </script>
+<script>
+  window.toggleMoreOptions = function () {
+    const box = document.getElementById("more-options");
+    if (box) {
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+  };
+</script>
+
+
+
+
+</body>
 </html>
