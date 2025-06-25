@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>חלקים נדרשים - ירון כיוף</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href=" https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
   <style>
     body {
       font-family: sans-serif;
@@ -16,8 +16,8 @@
       align-items: center;
       min-height: 100vh;
     }
-   .container {
-      max-width: 600px;
+    .container {
+      max-width: 700px;
       background: #fff;
       padding: 30px;
       border-radius: 16px;
@@ -25,6 +25,8 @@
       width: 100%;
       text-align: center;
       position: relative;
+      box-sizing: border-box;
+      overflow-x: auto;
     }
     .logo img {
       width: 120px;
@@ -80,39 +82,60 @@ form button {
   gap: 10px;
 }
 
-   .row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  align-items: stretch;
-  position: relative;
-}
-
-.row input.name {
-  Flex:non;
-  padding: 10px;
-  font-size: 14px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: stretch;
+      position: relative;
+      flex-wrap: wrap;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .row .input-wrap {
+      flex: 2 1 160px;
+      min-width: 120px;
+      box-sizing: border-box;
+    }
+    .row input.name {
+      Flex:non;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+      min-width: 80px;
+      box-sizing: border-box;
+    }
 
 .row input.desc {
-  flex: auto ;
+  flex: 2 1 120px;
+  min-width: 80px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px;
   font-size: 14px;
   border-radius: 8px;
   border: 1px solid #ccc;
 }
 .row input.price {
-  flex: 0 ;
+  flex: 0 0 70px;
+  width: 70px;
+  min-width: 50px;
+  max-width: 90px;
+  box-sizing: border-box;
   padding: 10px;
   font-size: 14px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  text-align: left;
 }
 
 .row select.source {
-  Flex:0;
+  flex: 1 1 100px;
+  min-width: 80px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px;
   font-size: 14px;
   border-radius: 8px;
@@ -234,9 +257,9 @@ form button {
         <div class="row">
           <div class="input-wrap">
             <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
-            <div class="suggestions"></div>
+            <select class="suggest-dropdown" style="display:none;"></select>
           </div>
-          <input type="text" class="desc" placeholder="תיאור" required>
+          <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)">
           <input type="text" class="price" placeholder="מחיר" required>
           <select class="source" required>
             <option value="">מקור</option>
@@ -281,19 +304,21 @@ form button {
   const row = document.createElement("div");
   row.className = "row";
   row.innerHTML = `
-    <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
-    <input type="text" class="desc" placeholder="תיאור" required>
-    <input type="text" class="price" placeholder="מחיר" required>
-    <select class="source" required>
-      <option value="">מקור</option>
-      <option value="חליפי/מקורי">חליפי/מקורי</option>
-      <option value="חליפי/משומש">חליפי/משומש</option>
-      <option value="חדש מקורי">חדש מקורי</option>
-      <option value="חליפי">חליפי</option>
-      <option value="משומש">משומש</option>
-      <option value="ריק">ריק</option>
-    </select>
-    <div class="suggestions"></div>
+    <div class="input-wrap">
+          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+          <select class="suggest-dropdown" style="display:none;"></select>
+        </div>
+        <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)">
+        <input type="text" class="price" placeholder="מחיר" required>
+        <select class="source" required>
+          <option value="">מקור</option>
+          <option value="חליפי/מקורי">חליפי/מקורי</option>
+          <option value="חליפי/משומש">חליפי/משומש</option>
+          <option value="חדש מקורי">חדש מקורי</option>
+          <option value="חליפי">חליפי</option>
+          <option value="משומש">משומש</option>
+          <option value="ריק">ריק</option>
+        </select>
   `;
   document.getElementById("partsList").appendChild(row);
 }
@@ -365,17 +390,25 @@ form button {
       }
     }
 
+    // --- Suggestion logic with dropdown ---
     function suggestPart(input) {
+      const row = input.closest('.row');
+      const nameInput = row.querySelector('.name');
+      const descInput = row.querySelector('.desc');
+      const priceInput = row.querySelector('.price');
+      const sourceSelect = row.querySelector('.source');
+      const dropdown = row.querySelector('.suggest-dropdown');
+
+      // Use the value of the input that triggered the event
       const query = input.value.trim();
       const { plate, manufacturer, model, year } = getCarDetails();
-      // ...existing code for validation and fetch...
-    }
 
-    // ...existing code for addPart, etc...
-  </script>
-  <script src="car-details-float.js"></script>
-</body>
-</html>
+      if (!query || query.length < 2) {
+        dropdown.style.display = "none";
+        return;
+      }
+
+      // Fetch suggestions from server
       fetch("https://hook.eu2.make.com/c7wh7j366oahodi9qcw1ob1waotten7c", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -383,22 +416,32 @@ form button {
       })
       .then(res => res.json())
       .then(data => {
-        if (!Array.isArray(data)) return;
-        data.forEach(suggestion => {
-          const item = document.createElement("div");
-          item.textContent = suggestion.name || suggestion;
-          item.onclick = () => {
-            input.value = suggestion.name || suggestion;
-            box.innerHTML = "";
-          };
-          box.appendChild(item);
-        });
+        if (!Array.isArray(data) || data.length === 0) {
+          dropdown.style.display = "none";
+          return;
+        }
+        dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
+          data.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
+        dropdown.style.display = "";
+        // Store suggestions on the dropdown for later use
+        dropdown._suggestions = data;
       })
-      .catch(err => console.error("Make webhook failed", err));
-    }
-   addPart(); 
+      .catch(() => { dropdown.style.display = "none"; });
 
+      // On select, fill all fields
+      dropdown.onchange = function () {
+        const idx = this.value;
+        if (!this._suggestions || !this._suggestions[idx]) return;
+        const suggestion = this._suggestions[idx];
+        nameInput.value = suggestion.name || suggestion.desc || "";
+        descInput.value = suggestion.desc || suggestion.name || "";
+        priceInput.value = suggestion.price || "";
+        if (suggestion.source) sourceSelect.value = suggestion.source;
+        dropdown.style.display = "none";
+      };
+    }
+    // ...existing code for addPart, etc...
   </script>
-<script src="car-details-float.js"></script>
+  <script src="car-details-float.js"></script>
 </body>
 </html>
