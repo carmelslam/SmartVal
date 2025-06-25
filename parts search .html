@@ -2,9 +2,13 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>מודול חיפוש חלקים</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  <title>חיפוש חלפים</title>
+  <script type="module" src="./parts.js"></script>
+  <script type="module" src="./webhook.js"></script>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
   <style>
     body {
       font-family: sans-serif;
@@ -67,108 +71,221 @@
     .home-btn { background-color: #6c757d; color: white; }
     .logout-btn { background-color: #dc3545; color: white; }
     .footer { font-size: 12px; color: #aaa; margin-top: 15px; }
-    .suggestions {
-      text-align: left;
-      margin-top: 10px;
-      background: #f9f9f9;
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .row input {
+      flex: 1;
+      margin-right: 10px;
+    }
+    .btn-secondary {
+      flex: 0 0 48%;
       padding: 10px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
       border-radius: 8px;
+      cursor: pointer;
+    }
+    #searchStatus {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #searchSuggestions {
+      margin-top: 5px;
+      background: #f9f9f9;
       border: 1px solid #ddd;
+      border-radius: 8px;
+      max-height: 150px;
+      overflow-y: auto;
+      text-align: right;
+    }
+    #searchSuggestions div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    #searchSuggestions div:hover {
+      background: #e9ecef;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>מודול חיפוש חלקים</h2>
-    <form id="searchForm">
-      <input id="inputPlate" placeholder="מספר רכב" type="text" />
-      <input id="inputManufacturer" placeholder="יצרן" type="text" />
-      <input id="inputModel" placeholder="דגם" type="text" />
-      <input id="inputYear" placeholder="שנה" type="number" />
+<div class="container">
+  <img class="logo" src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" />
+  <h2>חיפוש חלפים לרכב</h2>
+  <form id="searchForm" autocomplete="off">
+    <input type="text" id="plate" name="plate" placeholder="מספר רישוי" required>
+    <input type="text" id="manufacturer" name="manufacturer" placeholder="יצרן" required>
+    <input type="text" id="model" name="model" placeholder="דגם" required>
+    <input type="text" id="trim" name="trim" placeholder="רמת גימור" required>
+    <input type="text" id="year" name="year" placeholder="שנה" required>
+    <input type="text" id="engine_volume" name="engine_volume" placeholder="נפח מנוע" required>
+    <input type="text" id="engine_code" name="engine_code" placeholder="דגם מנוע">
+    <input type="text" id="engine_type" name="engine_type" placeholder="סוג מנוע">
+    <input type="text" id="vin" name="vin" placeholder="מספר שלדה">
+    <select id="part_group" required></select>
+    <select id="part_name" required></select>
+    <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
+    <div class="row">
+      <input type="file" id="partImageInput" accept="image/*" multiple>
+    </div>
+    <div class="row">
       <input id="partQuery" placeholder="חפש חלק (טקסט)" type="text" />
-      <button type="button" id="searchTextBtn">חפש לפי טקסט</button>
-      <br>
-      <label style="font-weight:bold;">או העלה תמונה (חיפוש OCR):</label>
-      <input type="file" id="partImageInput" accept="image/*" style="margin-top:8px;">
-      <button type="button" id="searchByImageBtn" style="margin-top:8px;">חפש לפי תמונה</button>
-      <div id="searchStatus" style="margin-top:8px; color:#007bff;"></div>
-      <div id="searchSuggestions" class="suggestions"></div>
-    </form>
+      <button type="button" class="btn-primary" id="searchTextBtn">שלח בקשה</button>
+    </div>
+    <div id="imagePreviewRow" class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
+    <div id="searchStatus" style="margin-top:8px; color:#007bff;"></div>
+    <div id="searchSuggestions" class="suggestions"></div>
+  </form>
+  <div class="footer-btns">
+    <button class="home-btn" onclick="window.location.href='selection.html'">לעמוד הבית</button>
+    <button class="logout-btn">יציאה מהמערכת</button>
   </div>
-  <script type="module">
-    import { sendPartSearch } from './webhook.js';
+  <div class="footer">All rights reserved © Carmel Cayouf</div>
+</div>
+<script type="module">
+  import { PARTS_BANK } from './parts.js';
+  import { sendPartSearch } from './webhook.js';
 
-    function getCarDetails() {
-      return {
-        plate: document.getElementById("inputPlate").value.trim(),
-        manufacturer: document.getElementById("inputManufacturer").value.trim(),
-        model: document.getElementById("inputModel").value.trim(),
-        year: document.getElementById("inputYear").value.trim()
+  const groupSelect = document.getElementById('part_group');
+  const nameSelect = document.getElementById('part_name');
+
+  for (const group in PARTS_BANK) {
+    const option = document.createElement('option');
+    option.value = group;
+    option.textContent = group;
+    groupSelect.appendChild(option);
+  }
+
+  groupSelect.addEventListener('change', () => {
+    nameSelect.innerHTML = '';
+    const parts = PARTS_BANK[groupSelect.value];
+    parts.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      nameSelect.appendChild(opt);
+    });
+  });
+
+  document.getElementById('searchForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const payload = {
+      plate: plate.value.trim(),
+      manufacturer: manufacturer.value.trim(),
+      model: model.value.trim(),
+      trim: trim.value.trim(),
+      year: year.value.trim(),
+      engine_volume: engine_volume.value.trim(),
+      engine_code: engine_code.value.trim(),
+      engine_type: engine_type.value.trim(),
+      vin: vin.value.trim(),
+      part_group: part_group.value,
+      part_name: part_name.value,
+      free_query: free_query.value.trim()
+    };
+    sendPartSearch(payload);
+  });
+
+  // Thumbnail preview for uploaded images
+  const imageInput = document.getElementById('partImageInput');
+  const imagePreviewRow = document.getElementById('imagePreviewRow');
+  imageInput.addEventListener('change', function() {
+    imagePreviewRow.innerHTML = "";
+    Array.from(imageInput.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        img.style.width = "48px";
+        img.style.height = "48px";
+        img.style.objectFit = "cover";
+        img.style.border = "1px solid #ccc";
+        img.style.borderRadius = "4px";
+        img.style.marginLeft = "4px";
+        imagePreviewRow.appendChild(img);
       };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  // Unified search button for both text and image
+  document.getElementById('searchTextBtn').onclick = async function() {
+    const { plate, manufacturer, model, year } = getCarDetails();
+    const query = document.getElementById("partQuery").value.trim();
+    const status = document.getElementById("searchStatus");
+    const suggestions = document.getElementById("searchSuggestions");
+    const files = imageInput.files;
+    status.textContent = "מחפש חלקים...";
+    suggestions.innerHTML = "";
+
+    try {
+      let results = [];
+      if (files && files.length > 0) {
+        // If images are uploaded, send each image as a search
+        for (let i = 0; i < files.length; i++) {
+          const imgResults = await sendPartSearch({ plate, manufacturer, model, year, imageFile: files[i] });
+          if (Array.isArray(imgResults)) results = results.concat(imgResults);
+        }
+      }
+      if (query.length > 1) {
+        const textResults = await sendPartSearch({ plate, manufacturer, model, year, query });
+        if (Array.isArray(textResults)) results = results.concat(textResults);
+      }
+      status.textContent = "הצעות שהתקבלו:";
+      if (Array.isArray(results) && results.length) {
+        suggestions.innerHTML = "";
+        results.forEach(suggestion => {
+          const item = document.createElement("div");
+          item.textContent = suggestion.name || suggestion;
+          item.onclick = () => {
+            document.getElementById("partName").value = suggestion.name || "";
+            document.getElementById("partDesc").value = suggestion.desc || "";
+            document.getElementById("partSource").value = suggestion.source || "";
+            document.getElementById("partPrice").value = suggestion.price || "";
+            suggestions.innerHTML = "";
+          };
+          suggestions.appendChild(item);
+        });
+      } else {
+        suggestions.innerHTML = "<div>לא נמצאו תוצאות</div>";
+      }
+    } catch (e) {
+      status.textContent = "שגיאה בחיפוש";
     }
+  };
 
-    document.getElementById('searchTextBtn').onclick = async function() {
-      const { plate, manufacturer, model, year } = getCarDetails();
-      const query = document.getElementById("partQuery").value.trim();
-      const status = document.getElementById("searchStatus");
-      const suggestions = document.getElementById("searchSuggestions");
-      status.textContent = "מחפש חלקים...";
-      suggestions.innerHTML = "";
-      try {
-        const results = await sendPartSearch({ plate, manufacturer, model, year, query });
-        status.textContent = "הצעות שהתקבלו:";
-        if (Array.isArray(results) && results.length) {
-          results.forEach(suggestion => {
-            const item = document.createElement("div");
-            item.textContent = suggestion.name || suggestion;
-            item.onclick = () => {
-              // Optionally: autofill or export logic
-              suggestions.innerHTML = "";
-            };
-            suggestions.appendChild(item);
-          });
-        } else {
-          suggestions.innerHTML = "<div>לא נמצאו תוצאות</div>";
-        }
-      } catch (e) {
-        status.textContent = "שגיאה בחיפוש";
-      }
-    };
-
-    document.getElementById('searchByImageBtn').onclick = async function() {
-      const { plate, manufacturer, model, year } = getCarDetails();
-      const file = document.getElementById('partImageInput').files[0];
-      const status = document.getElementById("searchStatus");
-      const suggestions = document.getElementById("searchSuggestions");
-      if (!file) {
-        status.textContent = "בחר תמונה תחילה";
-        return;
-      }
-      status.textContent = "מחפש חלקים לפי תמונה...";
-      suggestions.innerHTML = "";
-      try {
-        const results = await sendPartSearch({ plate, manufacturer, model, year, imageFile: file });
-        status.textContent = "הצעות שהתקבלו:";
-        if (Array.isArray(results) && results.length) {
-          results.forEach(suggestion => {
-            const item = document.createElement("div");
-            item.textContent = suggestion.name || suggestion;
-            item.onclick = () => {
-              // Optionally: autofill or export logic
-              suggestions.innerHTML = "";
-            };
-            suggestions.appendChild(item);
-          });
-        } else {
-          suggestions.innerHTML = "<div>לא נמצאו תוצאות</div>";
-        }
-      } catch (e) {
-        status.textContent = "שגיאה בחיפוש לפי תמונה";
-      }
-    };
-  </script>
-</body>
-</html>
+  // Autofill from session if inside case
+  const autofillFields = [
+    'plate', 'manufacturer', 'model', 'trim', 'year', 'engine_volume', 'engine_code', 'engine_type', 'vin'
+  ];
+  autofillFields.forEach(key => {
+    const val = sessionStorage.getItem(key);
+    if (val) {
+      const input = document.getElementById(key);
+      input.value = val;
+      input.readOnly = true;
+    }
+  });
+</script>
+<script>
+  const auth = sessionStorage.getItem("auth");
+  if (!auth) {
+    alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+    window.location.href = "index.html";
+  }
+</script>
+<script>
+  const logoutBtn = document.querySelector(".logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      sessionStorage.clear();
+      window.location.href = "index.html";
     });
   }
 </script>
