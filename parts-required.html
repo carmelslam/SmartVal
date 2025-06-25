@@ -103,6 +103,13 @@ form button {
   border-radius: 8px;
   border: 1px solid #ccc;
 }
+.row input.price {
+  flex: 0 ;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
 
 .row select.source {
   Flex:0;
@@ -141,6 +148,7 @@ form button {
   gap: 10px;
     }
 
+
     button {
       width: 50%;
       padding: 12px;
@@ -171,9 +179,8 @@ form button {
     display: flex;
     gap: 10px;
     width: 100%;
-    margin-top: 20px;
+    margin-top: 10px;
     margin-bottom: 10px;
-    /* align-items: flex-end;  Uncomment or adjust as needed */
 }
 
 .suggestions div {
@@ -199,7 +206,7 @@ form button {
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="Logo">
     </div>
     <div class="title">ירון כיוף שמאות - פורטל</div>
     <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
@@ -242,16 +249,18 @@ form button {
           </select>
         </div>
       </div>
-      <div class="button-row">
-        <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
-        <button type="submit">המשך</button>
-      </div>
+
+    <div class="button-row">
+  <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
+  <button type="submit">המשך</button>
+</div>
+
     </form>
+
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
-  <script type="module">
-    import { sendPartSearch } from './webhook.js';
 
+  <script>
     const plate = sessionStorage.getItem("plate");
     const manufacturer = sessionStorage.getItem("manufacturer");
     const model = sessionStorage.getItem("model");
@@ -268,48 +277,52 @@ form button {
       window.location.href = "index.html";
     }
 
-    function addPart() {
-      const row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML = `
-        <div class="input-wrap">
-          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
-          <div class="suggestions"></div>
-        </div>
-        <input type="text" class="desc" placeholder="תיאור" required>
-        <input type="text" class="price" placeholder="מחיר" required>
-        <select class="source" required>
-          <option value="">מקור</option>
-          <option value="חליפי/מקורי">חליפי/מקורי</option>
-          <option value="חליפי/משומש">חליפי/משומש</option>
-          <option value="חדש מקורי">חדש מקורי</option>
-          <option value="חליפי">חליפי</option>
-          <option value="משומש">משומש</option>
-          <option value="ריק">ריק</option>
-        </select>
-      `;
-      document.getElementById("partsList").appendChild(row);
-    }
+  function addPart() {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `
+    <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+    <input type="text" class="desc" placeholder="תיאור" required>
+    <input type="text" class="price" placeholder="מחיר" required>
+    <select class="source" required>
+      <option value="">מקור</option>
+      <option value="חליפי/מקורי">חליפי/מקורי</option>
+      <option value="חליפי/משומש">חליפי/משומש</option>
+      <option value="חדש מקורי">חדש מקורי</option>
+      <option value="חליפי">חליפי</option>
+      <option value="משומש">משומש</option>
+      <option value="ריק">ריק</option>
+    </select>
+    <div class="suggestions"></div>
+  `;
+  document.getElementById("partsList").appendChild(row);
+}
+
 
     document.getElementById("partsForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const allParts = [];
+
       document.querySelectorAll("#partsList .row").forEach(row => {
         const name = row.querySelector(".name").value.trim();
         const desc = row.querySelector(".desc").value.trim();
         const price = row.querySelector(".price").value.trim();
         const source = row.querySelector(".source").value;
-        if (name && desc && price && source) {
+        if (name && desc && source) {
           allParts.push({ part: name, desc, price, source });
         }
       });
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const isStandalone = urlParams.get('standalone') === '1';
+      // Detect mode: wizard (default) or standalone (from nav)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isStandalone = urlParams.get('standalone') === '1';
 
-      if (isStandalone) {
+    if (isStandalone) {
+        // Standalone: just show results or allow export, do not save to helper
         alert("חלקים נאספו (מצב עצמאי):\n" + allParts.map(p => p.part).join(", "));
+        // Optionally: display results below or allow export
       } else {
+        // Wizard: save to helper.damage_center_draft.parts and go to next bulk
         let helper = {};
         try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
         helper.damage_center_draft = helper.damage_center_draft || {};
@@ -319,12 +332,16 @@ form button {
       }
     });
 
-    // Show car details input if standalone
+    // Detect mode: wizard (default) or standalone (from nav)
     const urlParams = new URLSearchParams(window.location.search);
     const isStandalone = urlParams.get('standalone') === '1';
+
+    // Show car details input if standalone
     if (isStandalone) {
       document.getElementById('carDetailsBox').style.display = '';
       document.getElementById('pageTitle').innerText = "מודול חלקים - חיפוש עצמאי";
+    } else {
+      // ...existing code to set pageTitle from session...
     }
 
     function getCarDetails() {
@@ -348,38 +365,40 @@ form button {
       }
     }
 
-    window.suggestPart = function(input) {
+    function suggestPart(input) {
       const query = input.value.trim();
       const { plate, manufacturer, model, year } = getCarDetails();
-      if (query.length < 2) return;
-      sendPartSearch({ plate, manufacturer, model, year, query })
-        .then(results => {
-          const box = input.parentElement.querySelector('.suggestions');
-          box.innerHTML = "";
-          if (Array.isArray(results) && results.length) {
-            results.forEach(suggestion => {
-              const item = document.createElement("div");
-              item.textContent = suggestion.name || suggestion;
-              item.onclick = () => {
-                input.value = suggestion.name || suggestion;
-                const row = input.closest(".row");
-                if (row && row.querySelector(".desc")) row.querySelector(".desc").value = suggestion.desc || "";
-                if (row && row.querySelector(".price")) row.querySelector(".price").value = suggestion.price || "";
-                if (row && row.querySelector(".source")) row.querySelector(".source").value = suggestion.source || "";
-                box.innerHTML = "";
-              };
-              box.appendChild(item);
-            });
-          } else {
-            box.innerHTML = "<div>לא נמצאו תוצאות</div>";
-          }
-        })
-        .catch(() => {
-          const box = input.parentElement.querySelector('.suggestions');
-          box.innerHTML = "<div>שגיאה בחיפוש</div>";
-        });
-    };
+      // ...existing code for validation and fetch...
+    }
+
+    // ...existing code for addPart, etc...
   </script>
   <script src="car-details-float.js"></script>
+</body>
+</html>
+      fetch("https://hook.eu2.make.com/c7wh7j366oahodi9qcw1ob1waotten7c", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plate, manufacturer, model, year, query })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        data.forEach(suggestion => {
+          const item = document.createElement("div");
+          item.textContent = suggestion.name || suggestion;
+          item.onclick = () => {
+            input.value = suggestion.name || suggestion;
+            box.innerHTML = "";
+          };
+          box.appendChild(item);
+        });
+      })
+      .catch(err => console.error("Make webhook failed", err));
+    }
+   addPart(); 
+
+  </script>
+<script src="car-details-float.js"></script>
 </body>
 </html>
