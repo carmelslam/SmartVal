@@ -80,9 +80,6 @@ form button {
   gap: 10px;
 }
 
-.
-
-
    .row {
   display: flex;
   gap: 20px;
@@ -204,7 +201,7 @@ form button {
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="Logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo">
     </div>
     <div class="title">ירון כיוף שמאות - פורטל</div>
     <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
@@ -363,37 +360,81 @@ form button {
     function suggestPart(input) {
       const query = input.value.trim();
       const { plate, manufacturer, model, year } = getCarDetails();
-      // ...existing code for validation and fetch...
+      if (query.length < 2) return;
+      // Only text-based search (no image)
+      sendPartSearch({ plate, manufacturer, model, year, query })
+        .then(results => {
+          const box = input.parentElement.querySelector('.suggestions');
+          box.innerHTML = "";
+          if (Array.isArray(results) && results.length) {
+            results.forEach(suggestion => {
+              const item = document.createElement("div");
+              item.textContent = suggestion.name || suggestion;
+              item.onclick = () => {
+                input.value = suggestion.name || suggestion;
+                const row = input.closest(".row");
+                if (row && row.querySelector(".desc")) row.querySelector(".desc").value = suggestion.desc || "";
+                if (row && row.querySelector(".source")) row.querySelector(".source").value = suggestion.source || "";
+                box.innerHTML = "";
+              };
+              box.appendChild(item);
+            });
+          } else {
+            box.innerHTML = "<div>לא נמצאו תוצאות</div>";
+          }
+        })
+        .catch(() => {
+          const box = input.parentElement.querySelector('.suggestions');
+          box.innerHTML = "<div>שגיאה בחיפוש</div>";
+        });
     }
 
-    // ...existing code for addPart, etc...
+    // Image search logic
+const imageInput = document.getElementById('partImageInput');
+const searchByImageBtn = document.getElementById('searchByImageBtn');
+const imageStatus = document.getElementById('imageSearchStatus');
+const imageSuggestions = document.getElementById('imageSuggestions');
+
+searchByImageBtn.onclick = async function() {
+  imageStatus.textContent = "";
+  imageSuggestions.innerHTML = "";
+  const file = imageInput.files && imageInput.files[0];
+  if (!file) {
+    imageStatus.textContent = "בחר תמונה תחילה";
+    return;
+  }
+  const { plate, manufacturer, model, year } = getCarDetails();
+  imageStatus.textContent = "מחפש חלקים לפי תמונה...";
+  try {
+    const results = await sendPartSearch({ plate, manufacturer, model, year, imageFile: file });
+    imageStatus.textContent = "הצעות שהתקבלו:";
+    if (Array.isArray(results) && results.length) {
+      results.forEach(suggestion => {
+        const item = document.createElement("div");
+        item.textContent = suggestion.name || suggestion;
+        item.onclick = () => {
+          // Autofill first empty part row
+          const row = document.querySelector("#partsList .row .name:placeholder-shown")?.closest('.row') ||
+                      document.querySelector("#partsList .row");
+          if (row) {
+            row.querySelector(".name").value = suggestion.name || suggestion;
+            if (row.querySelector(".desc")) row.querySelector(".desc").value = suggestion.desc || "";
+            if (row.querySelector(".source")) row.querySelector(".source").value = suggestion.source || "";
+          }
+          imageSuggestions.innerHTML = "";
+        };
+        imageSuggestions.appendChild(item);
+      });
+    } else {
+      imageSuggestions.innerHTML = "<div>לא נמצאו תוצאות</div>";
+    }
+  } catch (e) {
+    imageStatus.textContent = "שגיאה בחיפוש לפי תמונה";
+  }
+};
+
+// ...existing code...
   </script>
   <script src="car-details-float.js"></script>
-</body>
-</html>
-      fetch("https://hook.eu2.make.com/c7wh7j366oahodi9qcw1ob1waotten7c", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plate, manufacturer, model, year, query })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!Array.isArray(data)) return;
-        data.forEach(suggestion => {
-          const item = document.createElement("div");
-          item.textContent = suggestion.name || suggestion;
-          item.onclick = () => {
-            input.value = suggestion.name || suggestion;
-            box.innerHTML = "";
-          };
-          box.appendChild(item);
-        });
-      })
-      .catch(err => console.error("Make webhook failed", err));
-    }
-   addPart(); 
-
-  </script>
-<script src="car-details-float.js"></script>
 </body>
 </html>
