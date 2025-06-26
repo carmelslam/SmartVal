@@ -52,12 +52,7 @@ function getReplacementMap() {
 }
 
 // --- Render Handlerbar-like Tokens ---
-function renderHTMLBlock(html, map) {
-  return html.replace(/{{([^}]+)}}/g, (match, key) => {
-    const val = key.split('.').reduce((o, k) => (o ? o[k] : ''), map);
-    return val !== undefined ? val : match;
-  });
-}
+import { renderHTMLBlock } from "./render-html-block.js";
 
 // --- Watermark Handling ---
 function applyDraftWatermark(html) {
