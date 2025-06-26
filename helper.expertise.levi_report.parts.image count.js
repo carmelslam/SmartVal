@@ -81,4 +81,3 @@ export function damageCenters() {
   console.log('🧩 Foundation structures: helper.expertise.levi_report + parts_search + image_upload');
 }
 
-ROUTER.register('damage-centers', damageCenters);
