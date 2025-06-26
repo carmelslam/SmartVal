@@ -97,7 +97,7 @@ function exportFinalReport() {
 
   sessionStorage.setItem("helper", JSON.stringify(helper));
 
-  sendToWebhook('FINAL_REPORT', {
+  sendToWebhook('SUBMIT_FINAL_REPORT', {
     html,
     meta: helper.meta,
     report_type: reportType,
