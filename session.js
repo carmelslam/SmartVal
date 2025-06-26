@@ -1,6 +1,6 @@
 // session.js — Manages report state, flow, and integrity
 
-const SessionEngine = {
+export const sessionEngine = {
   helper: {},
 
   init() {
@@ -49,7 +49,7 @@ const SessionEngine = {
   }
 };
 
-window.sessionEngine = SessionEngine;
-document.addEventListener('DOMContentLoaded', () => SessionEngine.init());
+window.sessionEngine = sessionEngine;
+document.addEventListener('DOMContentLoaded', () => sessionEngine.init());
 
 console.log('✅ session.js loaded');
