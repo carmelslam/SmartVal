@@ -91,7 +91,8 @@
     <div class="footer">© כל הזכויות שמורות לקרמל כיוף</div>
   </div>
 
-  <script>
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
     const password = sessionStorage.getItem("auth");
@@ -120,29 +121,9 @@
       };
 
       try {
-        const res = await fetch("webhook.js", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const content = await res.text();
-        if (!res.ok) {
-          document.getElementById("err").innerText = "שגיאה: " + content;
-          return;
-        }
-
-        let parsed;
-        try {
-          parsed = JSON.parse(content);
-        } catch (e) {
-          console.error("Parsing error:", e, content);
-        }
-
-        if (parsed) {
-          sessionStorage.setItem("carData", JSON.stringify(parsed));
-          alert("🚗 התיק נפתח בהצלחה ✅");
-        }
+        await sendToWebhook('OPEN_CASE_UI', payload);
+        sessionStorage.setItem("carData", JSON.stringify(payload));
+        alert("🚗 התיק נפתח בהצלחה ✅");
       } catch (err) {
         document.getElementById("err").innerText = "שגיאה בשליחה: " + err;
       }
