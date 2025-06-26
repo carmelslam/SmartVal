@@ -7,8 +7,8 @@ const ValidationEngine = {
     const reportType = meta.report_type || 'unknown';
 
     // --- Basic Required Info (global) ---
-    if (!helper.contact?.plate_number) errors.push("מספר רכב חסר");
-    if (!helper.contact?.owner_name) errors.push("שם בעל הרכב חסר");
+    if (!helper.vehicle?.plate_number) errors.push("מספר רכב חסר");
+    if (!helper.client?.name) errors.push("שם בעל הרכב חסר");
 
     // --- Bulk Screen: Car Details ---
     const car = helper.car_details || {};
