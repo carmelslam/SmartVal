@@ -778,3 +778,6 @@ export const PARTS_BANK = {
 ]
 };
 
+// Expose the parts bank globally for non-module scripts
+window.PARTS_BANK = PARTS_BANK;
+
