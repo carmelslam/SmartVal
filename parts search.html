@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>חיפוש חלפים</title>
   <script src="./parts.js"></script>
-  <script type="module" src="./webhook.js"></script>
+
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
   <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
@@ -46,6 +46,13 @@
       color: #007bff;
       margin-bottom: 20px;
     }
+  .right-small-heading {
+    text-align: right;
+    font-size: 18px;
+    color: #007bff;
+   margin-bottom: 18px;
+  }
+
     input, select {
       width: 100%;
       padding: 10px;
@@ -64,6 +71,7 @@
       border-radius: 8px;
       cursor: pointer;
       margin-top: 10px;
+      Margin-bottom: 10px;
     }
     .footer-btns {
       display: flex;
@@ -108,17 +116,34 @@
     <input type="text" id="engine_code" name="engine_code" placeholder="דגם מנוע">
     <input type="text" id="engine_type" name="engine_type" placeholder="סוג מנוע">
     <input type="text" id="vin" name="vin" placeholder="מספר שלדה">
+ <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
+<h2 class="right-small-heading">העלה/צלם תמונה לחיפוש</h2>
+    <input type="file" id="part_image" accept="image/*" capture="environment" required>
+    <img id="previewImage" />
     <select id="part_group" required>
       <option value="" disabled selected hidden>בחר קבוצת חלקים</option>
     </select>
     <select id="part_name" required>
       <option value="" disabled selected hidden>בחר חלק</option>
     </select>
-    <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
-    <label for="part_image">העלה/צלם תמונה לחיפוש</label>
-    <input type="file" id="part_image" accept="image/*" capture="environment" required>
-    <img id="previewImage" />
-    <button class="btn" type="submit">שלח בקשה</button>
+<select id="part_source" required>
+  <option value="" disabled selected hidden>בחר מקור</option>
+  <option value="מקורי">מקורי</option>
+  <option value="תחליפי">תחליפי</option>
+  <option value="משומש">משומש</option>
+  <option value="הכל">הכל</option>
+</select>
+<input type="number" id="part_quantity" placeholder="כמות" min="1" value="1" required>
+
+<button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
+<ul id="selected_parts_list" style="text-align:right; padding-right: 0; font-size: 14px;"></ul>
+<h2 style="text-align: right; font-size: 18px;">חיפוש חלפים באתר</h2>
+<button type="button" class="btn" onclick="openSearchSite()">פתח אתר car-part לחיפוש</button>
+ <label for="resultFileUpload">העלה תוצאת חיפוש (PDF/תמונה)</label>
+<input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html">
+<button type="button" class="btn" id="sendResultToOCRBtn">שלח תוצאת חיפוש לניתוח</button>
+<h2 style="text-align: right; font-size: 18px;">חיפוש חלפים במערכת</h2>
+     <button class="btn" type="submit">התחל חיפוש אוטומטי</button>
   </form>
   <div class="footer-btns">
     <button class="home-btn" onclick="window.location.href='selection.html'">לעמוד הבית</button>
@@ -168,7 +193,46 @@
     };
     reader.readAsDataURL(file);
   });
+</script>
+<script>
+  const selectedParts = [];
+  const listUI = document.getElementById('selected_parts_list');
 
+  function addFullPart() {
+    const group = document.getElementById('part_group').value;
+    const name = document.getElementById('part_name').value;
+    const qty = document.getElementById('part_quantity').value;
+    const source = document.getElementById('part_source').value;
+
+    if (!group || !name || !qty || !source) {
+      alert("יש למלא את כל פרטי החלק לפני ההוספה");
+      return;
+    }
+
+    const item = { group, name, qty, source };
+    selectedParts.push(item);
+
+    const li = document.createElement('li');
+    li.textContent = `${group} - ${name} | כמות: ${qty} | מקור: ${source}`;
+    li.style.cursor = "pointer";
+    li.title = "לחץ להסרה";
+    li.onclick = () => {
+      const index = selectedParts.indexOf(item);
+      if (index !== -1) {
+        selectedParts.splice(index, 1);
+        li.remove();
+      }
+    };
+
+    listUI.appendChild(li);
+
+    document.getElementById('part_name').value = '';
+    document.getElementById('part_quantity').value = '1';
+    document.getElementById('part_source').value = '';
+  }
+</script>
+
+<script>
   document.getElementById('partSearchForm').addEventListener('submit', e => {
     e.preventDefault();
     const payload = {
@@ -188,9 +252,46 @@
     };
     sendPartSearch(payload);
   });
+</script>
+<script>
+document.getElementById('sendResultToOCRBtn').addEventListener('click', function () {
+  const fileInput = document.getElementById('resultFileUpload');
+  const file = fileInput.files[0];
+  if (!file) {
+    alert('אנא העלה קובץ חיפוש לפני השליחה');
+    return;
+  }
+
+  sendSearchResultFile(file, {
+    plate: sessionStorage.getItem('plate') || '',
+    model: sessionStorage.getItem('model') || ''
+  });
+});
+
+</script>
+<script type="module">
+  import { sendPartSearch, sendSearchResultFile } from './webhook.js';
+  import { dev_credentials } from './credentials vault.js';
+
+  window.sendPartSearch = sendPartSearch;
+  window.sendSearchResultFile = sendSearchResultFile;
+  window.dev_credentials = dev_credentials;
+
+  window.openSearchSite = function () {
+    const url = 'https://www.car-part.co.il/Include/Generic/AccessSystem.jsp';
+    window.open(url, '_blank');
+
+    const creds = dev_credentials?.carPart;
+    if (creds) {
+      alert(`📋 פרטי גישה לאתר Car-Part:\nשם משתמש: ${creds.username}\nסיסמה: ${creds.password}`);
+    } else {
+      alert('⚠️ לא נמצאו פרטי התחברות');
+    }
+  };
 
   const autofillFields = [
-    'plate', 'manufacturer', 'model', 'trim', 'year', 'engine_volume', 'engine_code', 'engine_type', 'vin'
+    'plate', 'manufacturer', 'model', 'trim', 'year',
+    'engine_volume', 'engine_code', 'engine_type', 'vin'
   ];
   autofillFields.forEach(key => {
     const val = sessionStorage.getItem(key);
@@ -200,15 +301,13 @@
       input.readOnly = true;
     }
   });
-</script>
-<script>
+
   const auth = sessionStorage.getItem("auth");
   if (!auth) {
     alert("הגישה חסומה - אנא התחבר דרך דף הבית");
     window.location.href = "index.html";
   }
-</script>
-<script>
+
   const logoutBtn = document.querySelector(".logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {
@@ -218,5 +317,6 @@
     });
   }
 </script>
+
 </body>
 </html>

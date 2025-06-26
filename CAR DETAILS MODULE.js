@@ -16,6 +16,7 @@ export function carDetails() {
       <label>רמת גימור: <input type="text" id="trim" value="${vehicle.trim || ''}" /></label><br/>
       <label>מספר שילדה: <input type="text" id="chassis" value="${vehicle.chassis || ''}" /></label><br/>
       <label>שנת ייצור: <input type="number" id="year" value="${vehicle.year || ''}" /></label><br/>
+     <label>קוד משרד התחבורה: <input type="text" id="office_code" value="${vehicle.office_code || ''}" /></label><br/>
       <label>סוג הדגם: <input type="text" id="model_type" value="${vehicle.model_type || ''}" /></label><br/>
       <label>מד אוץ (קילומטראז׳): <input type="number" id="km" value="${vehicle.km || ''}" /></label><br/>
       <label>תאריך נזק: <input type="date" id="damage_date" value="${helper.meta?.damage_date || ''}" /></label><br/>
@@ -62,7 +63,8 @@ export function carDetails() {
       fuel_type: document.getElementById('fuel_type').value.trim(),
       engine_model: document.getElementById('engine_model').value.trim(),
       drive: document.getElementById('drive').value.trim(),
-      base_price: document.getElementById('base_price').value.trim()
+      base_price: document.getElementById('base_price').value.trim(),
+      office_code: document.getElementById('office_code').value.trim()
     });
     updateHelper('meta', {
       plate: document.getElementById('plate').value.trim(),

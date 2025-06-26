@@ -37,3 +37,49 @@ export async function sendToWebhook(id, payload) {
     console.error(`❌ Failed sending [${id}]`, err);
   }
 }
+
+export function sendPartSearch(data) {
+  fetch(WEBHOOKS.PARTS_SEARCH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      task: 'part_search',
+      payload: data
+    })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('Request failed');
+      return res.json();
+    })
+    .then(response => {
+      console.log('✅ Part search request sent:', response);
+      alert('הבקשה נשלחה בהצלחה!');
+    })
+    .catch(err => {
+      console.error('❌ Error sending part search:', err);
+      alert('שגיאה בשליחת הבקשה');
+    });
+}
+
+export function sendSearchResultFile(file, meta = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('meta', JSON.stringify(meta));
+
+  fetch(WEBHOOKS.INTERNAL_PARTS_OCR, {
+    method: 'POST',
+    body: formData
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('Upload failed');
+      return res.json();
+    })
+    .then(response => {
+      console.log('✅ Search result uploaded:', response);
+      alert('קובץ נשלח לניתוח בהצלחה');
+    })
+    .catch(err => {
+      console.error('❌ Failed to send result file:', err);
+      alert('שגיאה בשליחת קובץ החיפוש');
+    });
+}

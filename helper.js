@@ -1,6 +1,8 @@
 // 🧠 Centralized Helper Metadata Store
 // Stores all dynamic session data for reports, Make.com exports, and resume-after-reload
 
+import { calculate } from './math.js';
+
 export const helper = {
   meta: {
     case_id: '',
@@ -19,6 +21,7 @@ export const helper = {
     model: '',
     trim: '',
     model_code: '',
+    office_code: '',
     model_version: '',
     year: '',
     km: '',
@@ -201,5 +204,35 @@ export async function sendHelperToMake(taskLabel = 'generic') {
     console.error('❌ Failed to send helper to Make.com', err);
   }
 }
+
+export function updateCalculations() {
+  const baseDamage = parseFloat(helper.expertise.damage_summary?.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0)) || 0;
+  const depreciation = parseFloat(helper.expertise.depreciation?.global_amount) || 0;
+  const marketValue = parseFloat(helper.expertise.levi_report?.final_price) || 0;
+  const shavehPercent = parseFloat(helper.vehicle?.shaveh_percent) || 0;
+  const vatRate = parseFloat(helper.fees?.vat_percent) || 17;
+
+  const fees = {
+    photos: parseFloat(helper.fees?.photos) || 0,
+    office: parseFloat(helper.fees?.office) || 0,
+    transport: parseFloat(helper.fees?.travel) || 0
+  };
+
+  const result = calculate({
+    baseDamage,
+    depreciation,
+    fees,
+    marketValue,
+    shavehPercent,
+    vatRate
+  });
+
+  helper.expertise.calculations = {
+    ...result,
+    vehicle_value_base: marketValue,
+    total_damage: baseDamage
+  };
+}
+
 
 window.addEventListener('DOMContentLoaded', loadHelperFromStorage);

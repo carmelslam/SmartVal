@@ -46,4 +46,9 @@ export const MathEngine = {
   }
 };
 
+// ✅ Fix: provide a standalone export for compatibility
+export const calculate = (params) => {
+  return MathEngine.calculateAll(params);
+};
+
 console.log('✅ math.js loaded');
