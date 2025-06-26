@@ -146,26 +146,30 @@
     }
 
     document.getElementById("repairsForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const repairs = [...]; // collect repairs as array
-  let helper = {};
-  try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-  helper.damage_center_draft = helper.damage_center_draft || {};
-  helper.damage_center_draft.repairs = repairs;
+      e.preventDefault();
+      // FIX: Collect textarea values as array
+      const repairs = Array.from(document.querySelectorAll('#repairsList textarea'))
+        .map(el => el.value.trim())
+        .filter(txt => txt.length > 0);
 
-  // Now push the full draft to damage_sections
-  helper.damage_sections = helper.damage_sections || [];
-  helper.damage_sections.push(helper.damage_center_draft);
-  delete helper.damage_center_draft;
-  sessionStorage.setItem("helper", JSON.stringify(helper));
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      helper.damage_center_draft = helper.damage_center_draft || {};
+      helper.damage_center_draft.repairs = repairs;
 
-  // Offer to add another or finish
-  if (confirm("להוסיף מוקד נזק נוסף?")) {
-    window.location.href = "damage-description.html";
-  } else {
-    window.location.href = "expertise-summary.html";
-  }
-});
+      // Now push the full draft to damage_sections
+      helper.damage_sections = helper.damage_sections || [];
+      helper.damage_sections.push(helper.damage_center_draft);
+      delete helper.damage_center_draft;
+      sessionStorage.setItem("helper", JSON.stringify(helper));
+
+      // Offer to add another or finish
+      if (confirm("להוסיף מוקד נזק נוסף?")) {
+        window.location.href = "damage-description.html";
+      } else {
+        window.location.href = "expertise-summary.html";
+      }
+    });
   </script>
 <script src="car-details-float.js"></script>
 
