@@ -57,9 +57,23 @@ const ROUTER = (function () {
     // Future: pull helper state from saved session
   }
 
+  // 🌐 Navigate to another registered module
+  function navigate(name) {
+    if (!modules[name]) {
+      console.warn(`❌ ROUTER: cannot navigate to [${name}] - not registered.`);
+      return;
+    }
+    if (current === name) {
+      console.log(`ℹ️ ROUTER: already at [${name}]`);
+      return;
+    }
+    init(name);
+  }
+
   return {
     register,
     init,
+    navigate,
     autoDetectAndInit,
     onSubmit,
     onRestore,

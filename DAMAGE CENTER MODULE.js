@@ -143,7 +143,7 @@ export function damageCenters() {
       });
 
       saveHelperToStorage();
-      ROUTER.navigate('next-module');
+      ROUTER.navigate('upload-images');
     };
   }
 
