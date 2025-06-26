@@ -83,3 +83,9 @@ export function sendSearchResultFile(file, meta = {}) {
       alert('שגיאה בשליחת קובץ החיפוש');
     });
 }
+export { sendToWebhook as sendExtraWebhook };
+export function getWebhook(key) {
+  return WEBHOOKS[key] || '';
+}
+
+
