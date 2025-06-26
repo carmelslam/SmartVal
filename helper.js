@@ -3,6 +3,36 @@
 
 import { calculate } from './math.js';
 
+const CAR_DETAILS_TEMPLATE = {
+  plate: '',
+  owner: '',
+  manufacturer: '',
+  model: '',
+  year: '',
+  trim: '',
+  chassis: '',
+  model_code: '',
+  model_type: '',
+  ownership_type: '',
+  ownership: '',
+  km: '',
+  market_value: '',
+  shaveh_percent: '',
+  garageName: '',
+  garagePhone: '',
+  garageEmail: '',
+  agentName: '',
+  agentPhone: '',
+  agentEmail: '',
+  insuranceCompany: '',
+  insuranceEmail: '',
+  odo: '',
+  damageDate: '',
+  ownerPhone: '',
+  ownerAddress: '',
+  damageType: ''
+};
+
 export const helper = {
   meta: {
     case_id: '',
@@ -36,6 +66,8 @@ export const helper = {
     garage_email: '',
     garage_phone: '',
   },
+
+  car_details: { ...CAR_DETAILS_TEMPLATE },
 
   client: {
     name: '',
@@ -171,6 +203,8 @@ export function saveHelperToStorage() {
 export function loadHelperFromStorage() {
   const data = localStorage.getItem('helper_data');
   if (data) Object.assign(helper, JSON.parse(data));
+  // Ensure car_details object exists with all fields
+  helper.car_details = { ...CAR_DETAILS_TEMPLATE, ...(helper.car_details || {}) };
 }
 
 export function initHelper(meta = {}) {
@@ -184,6 +218,8 @@ export function initHelper(meta = {}) {
       helper[k] = '';
     }
   });
+  // Recreate template objects
+  helper.car_details = { ...CAR_DETAILS_TEMPLATE };
   helper.meta = { ...helper.meta, ...meta };
   saveHelperToStorage();
 }
