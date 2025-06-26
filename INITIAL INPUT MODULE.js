@@ -33,7 +33,7 @@ export function initialInput() {
     // 🔁 Trigger webhook centrally
     await sendToWebhook('OPEN_CASE_UI', { plate: meta.plate });
 
-    ROUTER.navigate('next-module'); // Replace when next module is registered
+    ROUTER.navigate('car-details');
   };
 }
 

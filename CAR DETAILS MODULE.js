@@ -85,7 +85,7 @@ export function carDetails() {
       inspection_location: document.getElementById('inspection_location').value.trim()
     });
     saveHelperToStorage();
-    ROUTER.navigate('next-module');
+    ROUTER.navigate('damage-centers');
   }
 }
 
