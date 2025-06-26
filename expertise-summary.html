@@ -116,7 +116,8 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
 
-  <script>
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
     const plate = sessionStorage.getItem('plate') || 'לא ידוע';
     const date = new Date().toLocaleDateString('he-IL');
     document.getElementById('pageTitle').innerText = `סיום האקספרטיזה לרכב מס׳ ${plate}`;
@@ -139,13 +140,9 @@
         context: Object.fromEntries(Object.entries(sessionStorage))
       };
 
-      fetch("webhook.js", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(() => alert("האקספרטיזה נסגרה ונשלחה למערכת."))
-      .catch(() => alert("שגיאה בשליחה."));
+      sendToWebhook('LAUNCH_EXPERTISE', payload)
+        .then(() => alert("האקספרטיזה נסגרה ונשלחה למערכת."))
+        .catch(() => alert("שגיאה בשליחה."));
     });
   </script>
   <script src="car-details-float.js"></script>
