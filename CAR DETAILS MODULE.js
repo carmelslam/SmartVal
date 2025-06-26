@@ -39,7 +39,7 @@ export function carDetails() {
       <label>מחיר בסיס: <input type="text" id="base_price" value="${vehicle.base_price || ''}" /></label><br/>
       <label>נפח מנוע: <input type="text" id="engine_volume" value="${vehicle.engine_volume || ''}" /></label><br/>
       <label>סוג דלק: <input type="text" id="fuel_type" value="${vehicle.fuel_type || ''}" /></label><br/>
-      <label>מספר דגם הרכב: <input type="text" id="model_code" value="${vehicle.model_code || ''}" /></label><br/>
+      <label>מספר דגם הרכב: <input type="text" id="model_code_number" value="${vehicle.model_code_number || ''}" /></label><br/>
       <label>דגם מנוע: <input type="text" id="engine_model" value="${vehicle.engine_model || ''}" /></label><br/>
       <label>הנעה: <input type="text" id="drive" value="${vehicle.drive || ''}" /></label><br/>
 

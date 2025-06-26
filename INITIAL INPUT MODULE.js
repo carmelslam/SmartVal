@@ -31,7 +31,7 @@ export function initialInput() {
     sessionStorage.setItem('carData', JSON.stringify(meta));
 
     // 🔁 Trigger webhook centrally
-    await sendToWebhook('START_CASE', { plate: meta.plate });
+    await sendToWebhook('OPEN_CASE_UI', { plate: meta.plate });
 
     ROUTER.navigate('next-module'); // Replace when next module is registered
   };
