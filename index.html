@@ -121,7 +121,8 @@
     .then(async res => {
       const text = await res.text();
       if (res.status === 200 || text.includes("success")) {
-        sessionStorage.setItem("auth", pass);
+        const encryptedPass = await encryptPassword(pass);
+        sessionStorage.setItem("auth", encryptedPass);
         sessionStorage.setItem("sessionStart", Date.now().toString());
         try { await ferrariSound.play(); } catch(e) {}
         await initPush();
@@ -147,6 +148,25 @@
     document.addEventListener(evt, resetTimer, true);
   });
   resetTimer();
+  async function encryptPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const key = await crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // Initialization vector
+    const encrypted = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data
+    );
+    return JSON.stringify({
+      iv: Array.from(iv),
+      encrypted: Array.from(new Uint8Array(encrypted))
+    });
+  }
   </script>
 </body>
 </html>
