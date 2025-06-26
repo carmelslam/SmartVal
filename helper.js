@@ -83,6 +83,11 @@ export const helper = {
   expertise: {
     damage_type: '',
     description: '',
+    summary: {
+      status: '',
+      legal_disclaimer: '',
+      general_assessment: ''
+    },
     damage_blocks: [
       // Example structure per block:
       // {
