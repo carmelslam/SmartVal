@@ -1,7 +1,7 @@
 // math-preview.js — Preview math values in draft/estimate UI
 
 function renderMathPreview() {
-  const helper = JSON.parse(sessionStorage.getItem("expertise")) || {};
+  const helper = JSON.parse(sessionStorage.getItem("helper")) || {};
   const m = helper.invoice_uploaded ? helper.invoice_calculations : helper.calculations;
   if (!m) return;
 
