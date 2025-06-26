@@ -4,7 +4,7 @@ import { ROUTER } from './router.js';
 
 export function damageCenters() {
   const container = document.getElementById('app');
-  const currentDamageBlocks = helper.damage_blocks || [];
+  const currentDamageBlocks = helper.expertise.damage_blocks || [];
 
   function renderDamageCenter(index) {
     const center = currentDamageBlocks[index] || { center: '', description: '', repairs: [], parts: [], works: [] };
@@ -131,15 +131,19 @@ export function damageCenters() {
           }))
         };
       });
-      updateHelper('damage_blocks', updated);
+      updateHelper('expertise', { damage_blocks: updated });
 
       // ⬇️ Save fixed legal disclaimer + status field to helper
-      updateHelper('expertise_summary', {
-        legal_disclaimer: `כדי למנוע אי הבנה- שים לב להערות הר״מ:               יש להודיע לשמאי על כל נזק נוסף שיתגלה במהלך התיקון ולקבל אישור בכתב להוספתו.
+
+      updateHelper('expertise', {
+        summary: {
+          legal_disclaimer: `כדי למנוע אי הבנה- שים לב להערות הר״מ:
+יש להודיע לשמאי על כל נזק נוסף שיתגלה במהלך התיקון ולקבל אישור בכתב להוספתו.
 הצעת תיקון זו כפופה לעיון בטופס התביעה.
 החלקים שיפורקו מהרכב יעמדו לרשות חברת הביטוח.
 הצעה זו אינה מחייבת את חברת הביטוח לתשלום כלשהו.`,
-        status: ''
+          status: ''
+        }
       });
 
       saveHelperToStorage();
