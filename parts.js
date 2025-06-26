@@ -778,3 +778,8 @@ export const PARTS_BANK = {
 ]
 };
 
+// Expose PARTS_BANK to non-module scripts
+if (typeof window !== 'undefined') {
+  window.PARTS_BANK = PARTS_BANK;
+}
+
