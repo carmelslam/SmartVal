@@ -52,7 +52,7 @@ function getReplacementMap() {
 }
 
 // --- Render Handlerbar-like Tokens ---
-import { renderHTMLBlock } from "./render-html-block.js";
+import { renderHTMLBlock, sanitizeHTML } from "./render-html-block.js";
 
 // --- Watermark Handling ---
 function applyDraftWatermark(html) {
@@ -77,7 +77,8 @@ function injectReportHTML() {
 
   const map = { helper, vault: vaultBlocks, meta: helper.meta, title: getReportTitle() };
   const rendered = renderHTMLBlock(htmlTemplate, map);
-  container.innerHTML = applyDraftWatermark(rendered);
+  const safeHTML = sanitizeHTML(rendered);
+  container.innerHTML = applyDraftWatermark(safeHTML);
 }
 
 // --- Export Report ---

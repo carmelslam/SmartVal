@@ -92,14 +92,34 @@
   </div>
 
   <script type="module">
-    import { WEBHOOKS } from './webhook.js';
+    import { sendToWebhook } from './webhook.js';
+ main
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-    const password = sessionStorage.getItem("auth");
-    if (!password) {
+    async function decryptPassword(encryptedPassword) {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode("encryption-key"), // Replace with a secure key
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"]
+      );
+      const iv = new Uint8Array(12); // Replace with the actual IV used during encryption
+      const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        key,
+        new Uint8Array(JSON.parse(encryptedPassword))
+      );
+      return new TextDecoder().decode(decrypted);
+    }
+
+    const encryptedPassword = sessionStorage.getItem("auth");
+    if (!encryptedPassword) {
       alert("גישה חסומה. התחבר קודם דרך הדף הראשי.");
       window.location.href = "index.html";
     }
+
+    const password = await decryptPassword(encryptedPassword);
 
     document.getElementById("submitBtn").addEventListener("click", async function () {
       const plate = document.getElementById("plate").value.trim();
@@ -121,29 +141,15 @@
       };
 
       try {
-        const res = await fetch(WEBHOOKS.OPEN_CASE_UI, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+await sendToWebhook('OPEN_CASE_UI', payload);
+const encryptedPassword = await encryptPassword(payload.password);
+const encryptedPayload = JSON.stringify({
+  ...payload,
+  password: encryptedPassword
+});
+sessionStorage.setItem("carData", encryptedPayload);
+alert("🚘 תיק נפתח בהצלחה ✅");
 
-        const content = await res.text();
-        if (!res.ok) {
-          document.getElementById("err").innerText = "שגיאה: " + content;
-          return;
-        }
-
-        let parsed;
-        try {
-          parsed = JSON.parse(content);
-        } catch (e) {
-          console.error("Parsing error:", e, content);
-        }
-
-        if (parsed) {
-          sessionStorage.setItem("carData", JSON.stringify(parsed));
-          alert("🚗 התיק נפתח בהצלחה ✅");
-        }
       } catch (err) {
         document.getElementById("err").innerText = "שגיאה בשליחה: " + err;
       }
