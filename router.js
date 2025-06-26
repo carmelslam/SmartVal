@@ -5,7 +5,11 @@ const ROUTER = (function () {
   let current = null;
 
   // 🧠 Register a module with optional rules
-  function register(name, configOrFn) {
+  function register(name, configOrFn, { force = false } = {}) {
+    if (modules[name] && !force) {
+      console.warn(`⚠️ ROUTER: [${name}] already registered. Skipping.`);
+      return;
+    }
     const config = typeof configOrFn === 'function' ? { init: configOrFn } : configOrFn;
     modules[name] = {
       init: config.init || (() => console.warn(`⚠️ No init() for ${name}`)),
@@ -70,6 +74,10 @@ const ROUTER = (function () {
     init(name);
   }
 
+  function listRegisteredModules() {
+    console.table(Object.keys(modules));
+  }
+
   return {
     register,
     init,
@@ -78,11 +86,34 @@ const ROUTER = (function () {
     onSubmit,
     onRestore,
     getCurrentModule,
-    list: () => Object.keys(modules)
+    list: () => Object.keys(modules),
+    listRegisteredModules
   };
 })();
 
 window.ROUTER = ROUTER;
+
+// Registered modules and their sources
+/*
+| Module Name          | Registered In                             |
+|----------------------|-------------------------------------------|
+| initial-input        | INITIAL INPUT MODULE.js                   |
+| car-details          | CAR DETAILS MODULE.js                     |
+| damage-centers       | DAMAGE CENTER MODULE.js                   |
+| depreciation-capture | DEPRECIATION + FEE DATA CAPTURE MODULE.js |
+| expertise-builder    | router.js                                 |
+| estimate-builder     | router.js                                 |
+| final-report         | router.js                                 |
+| upload-images        | router.js (stub)                          |
+| invoice-summary      | router.js (stub)                          |
+| depreciation         | router.js (stub)                          |
+| parts-search         | router.js (stub)                          |
+| general-info         | router.js (stub)                          |
+| manual-details       | router.js (stub)                          |
+| report-type-selector | router.js (stub)                          |
+| admin-panel          | router.js                                 |
+| dev-panel            | router.js                                 |
+*/
 
 // 🔌 Register all known modules (with metadata rules where needed)
 ROUTER.register('expertise-builder', { label: 'Expertise Builder', init: () => console.log('🧱 Expertise Builder started') });
@@ -100,7 +131,6 @@ ROUTER.register('final-report', {
 });
 
 // 🔄 Submodules
-ROUTER.register('damage-centers', () => console.log('🔧 Damage Centers started'));
 ROUTER.register('upload-images', () => console.log('📷 Upload Images initialized'));
 ROUTER.register('invoice-summary', () => console.log('🧾 Invoice Summary initialized'));
 ROUTER.register('depreciation', () => console.log('📉 Depreciation module initialized'));
