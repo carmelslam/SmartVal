@@ -13,3 +13,11 @@ export function renderHTMLBlock(html, map) {
     return val !== undefined ? escapeHTML(val) : match;
   });
 }
+
+// Basic sanitization to strip script tags and event attributes
+export function sanitizeHTML(html) {
+  return String(html)
+    .replace(/<script[^>]*>.*?<\/script>/gis, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '');
+}
