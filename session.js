@@ -17,7 +17,8 @@ export const sessionEngine = {
   },
 
   validate() {
-    if (!this.helper.contact?.plate_number || !this.helper.meta?.report_stage) {
+    // use updated vehicle structure instead of legacy contact property
+    if (!this.helper.vehicle?.plate_number || !this.helper.meta?.report_stage) {
       return this.reset();
     }
   },
