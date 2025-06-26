@@ -84,7 +84,7 @@ window.expertiseEngine = {
   updateSummary(summary) {
     helper.summary = summary;
   },
-  exportExpertise
+  exportExpertise: exportExpertise
 };
 
 console.log("✅ expertise.js loaded with math.js integration");
