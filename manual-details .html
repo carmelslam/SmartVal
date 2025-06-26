@@ -138,8 +138,6 @@
     document.getElementById("submitBtn").addEventListener("click", () => {
       const carData = JSON.parse(sessionStorage.getItem("carData") || '{}');
       const details = {
-        plate: carData.plate || '',
-        owner: carData.owner || '',
         garageName: document.getElementById("garageName").value.trim(),
         garagePhone: document.getElementById("garagePhone").value.trim(),
         garageEmail: document.getElementById("garageEmail").value.trim(),
@@ -160,7 +158,23 @@
       try {
         helper = JSON.parse(sessionStorage.getItem("helper") || '{}');
       } catch (e) {}
-      helper.car_details = details;
+      helper.car_details = helper.car_details || {};
+      helper.contact = helper.contact || {};
+      helper.meta = helper.meta || {};
+
+      helper.car_details.km = details.odo;
+      helper.meta.damage_date = details.damageDate;
+      helper.car_details.garage_name = details.garageName;
+      helper.car_details.garage_phone = details.garagePhone;
+      helper.car_details.garage_email = details.garageEmail;
+      helper.contact.insurance_agent = details.agentName;
+      helper.contact.insurance_agent_phone = details.agentPhone;
+      helper.contact.insurance_agent_email = details.agentEmail;
+      helper.contact.insurance_company = details.insuranceCompany;
+      helper.contact.insurance_email = details.insuranceEmail;
+      helper.contact.phone_number = details.ownerPhone;
+      helper.contact.address = details.ownerAddress;
+
       sessionStorage.setItem("helper", JSON.stringify(helper));
 
       alert("✅ פרטים נשמרו בהצלחה");

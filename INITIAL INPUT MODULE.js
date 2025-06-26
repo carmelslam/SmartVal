@@ -1,5 +1,5 @@
 // 📥 INITIAL INPUT MODULE
-import { helper, initHelper, saveHelperToStorage } from './helper.js';
+import { helper, initHelper, saveHelperToStorage, updateHelper } from './helper.js';
 import { ROUTER } from './router.js';
 import { sendToWebhook } from './webhook.js';
 
@@ -20,13 +20,18 @@ export function initialInput() {
   document.getElementById('start-case').onclick = async () => {
     const meta = {
       plate: document.getElementById('plate').value.trim(),
-      client_name: document.getElementById('owner').value.trim(),
       inspection_date: document.getElementById('inspection_date').value,
       location: document.getElementById('location').value.trim()
+    };
+    const plateVal = document.getElementById('plate').value.trim();
+    const contact = {
+      name: document.getElementById('owner').value.trim(),
+      plate_number: plateVal
     };
 
     // Save to both helper and carData for downstream compatibility
     initHelper(meta);
+    updateHelper('contact', contact);
     saveHelperToStorage();
     sessionStorage.setItem('carData', JSON.stringify(meta));
 
