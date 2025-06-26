@@ -15,7 +15,7 @@ export const helper = {
     location: '',
   },
 
-  vehicle: {
+  car_details: {
     plate_number: '',
     manufacturer: '',
     model: '',
@@ -37,7 +37,7 @@ export const helper = {
     garage_phone: '',
   },
 
-  client: {
+  contact: {
     name: '',
     address: '',
     phone_number: '',
@@ -209,7 +209,7 @@ export function updateCalculations() {
   const baseDamage = parseFloat(helper.expertise.damage_summary?.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0)) || 0;
   const depreciation = parseFloat(helper.expertise.depreciation?.global_amount) || 0;
   const marketValue = parseFloat(helper.expertise.levi_report?.final_price) || 0;
-  const shavehPercent = parseFloat(helper.vehicle?.shaveh_percent) || 0;
+  const shavehPercent = parseFloat(helper.car_details?.shaveh_percent) || 0;
   const vatRate = parseFloat(helper.fees?.vat_percent) || 17;
 
   const fees = {

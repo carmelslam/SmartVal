@@ -8,7 +8,7 @@ const ValidationEngine = {
 
     // --- Basic Required Info (global) ---
     if (!helper.contact?.plate_number) errors.push("מספר רכב חסר");
-    if (!helper.contact?.owner_name) errors.push("שם בעל הרכב חסר");
+    if (!helper.contact?.name) errors.push("שם בעל הרכב חסר");
 
     // --- Bulk Screen: Car Details ---
     const car = helper.car_details || {};
