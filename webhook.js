@@ -1,7 +1,6 @@
-// 🔗 Centralized Webhook Handler – Aligned with Make.com URLs
-
 import { updateHelper } from './helper.js';
 
+// ✅ Centralized Webhook Handler – Clean + Unified
 export const WEBHOOKS = {
   PASSWORD_PAGE: 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk',
   OPEN_CASE_UI: 'https://hook.eu2.make.com/zhvqbvx2yp69rikm6euv0r2du8l6sh61',
@@ -21,9 +20,10 @@ export const WEBHOOKS = {
   INTERNAL_PARTS_OCR: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6'
 };
 
-// Explicit export for the search assistant webhook URL
+// Explicit export for search assistant usage
 export const SEARCH_MODULE = WEBHOOKS.SEARCH_MODULE;
 
+// General JSON payload webhook sender
 export async function sendToWebhook(id, payload) {
   const url = WEBHOOKS[id];
   if (!url) {
@@ -43,6 +43,7 @@ export async function sendToWebhook(id, payload) {
   }
 }
 
+// Specialized part search function
 export function sendPartSearch(data) {
   fetch(WEBHOOKS.PARTS_SEARCH, {
     method: 'POST',
@@ -76,6 +77,7 @@ export function sendPartSearch(data) {
     });
 }
 
+// File upload webhook for internal OCR flow
 export function sendSearchResultFile(file, meta = {}) {
   const formData = new FormData();
   formData.append('file', file);
@@ -98,9 +100,9 @@ export function sendSearchResultFile(file, meta = {}) {
       alert('שגיאה בשליחת קובץ החיפוש');
     });
 }
+
 export { sendToWebhook as sendExtraWebhook };
+
 export function getWebhook(key) {
   return WEBHOOKS[key] || '';
 }
-
-
