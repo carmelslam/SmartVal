@@ -95,7 +95,8 @@
     <div class="watermark">ירון כיוף - שמאות והערכת נזקי רכב ורכוש</div>
   </div>
 
-  <script>
+  <script type="module">
+  import { encryptPassword } from './auth.js';
   async function initPush() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     return new Promise(resolve => {
@@ -133,6 +134,7 @@
     })
     .catch(err => alert("שגיאת חיבור מול Make.com ❌\n" + err));
   }
+  window.login = login;
 
   // Idle logout timer (10 min)
   let logoutTimer;
@@ -148,25 +150,6 @@
     document.addEventListener(evt, resetTimer, true);
   });
   resetTimer();
-  async function encryptPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const key = await crypto.subtle.generateKey(
-      { name: "AES-GCM", length: 256 },
-      true,
-      ["encrypt", "decrypt"]
-    );
-    const iv = crypto.getRandomValues(new Uint8Array(12)); // Initialization vector
-    const encrypted = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      key,
-      data
-    );
-    return JSON.stringify({
-      iv: Array.from(iv),
-      encrypted: Array.from(new Uint8Array(encrypted))
-    });
-  }
   </script>
 </body>
 </html>
