@@ -39,6 +39,13 @@ const leviResult = validationEngine.validate(missingLevi);
 assert.strictEqual(leviResult.valid, false);
 assert.ok(leviResult.errors.includes('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 \u05d3\u05d5\u05d7 \u05dc\u05d5\u05d9 \u05d9\u05e6\u05d7\u05e7'));
 
+// Missing damage sections should fail
+const missingDamage = JSON.parse(JSON.stringify(baseHelper));
+missingDamage.damage_sections = [];
+const damageResult = validationEngine.validate(missingDamage);
+assert.strictEqual(damageResult.valid, false);
+assert.ok(damageResult.errors.includes('\u05d0\u05d9\u05df \u05d0\u05d6\u05d5\u05e8\u05d9 \u05e0\u05d6\u05e7 \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd (\u05de\u05e1\u05da \u05de\u05e8\u05db\u05d6 \u05e0\u05d6\u05e7)'));
+
 // Invoice uploaded without summary
 const missingInvoice = JSON.parse(JSON.stringify(baseHelper));
 missingInvoice.invoice_uploaded = true;
