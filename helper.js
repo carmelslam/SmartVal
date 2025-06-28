@@ -174,7 +174,18 @@ export const helper = {
   image_upload: {
     plate: '',
     total_uploaded: 0
-  }
+  },
+
+  assistant_history: [],
+
+  saveAssistantReply(question, answer) {
+    this.assistant_history.push({
+      question,
+      answer,
+      timestamp: new Date().toISOString()
+    });
+  },
+
 };
 
 // Deep merge helper for updateHelper (shallow for objects, not arrays)

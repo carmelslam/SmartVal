@@ -409,24 +409,23 @@ form button {
       }
 
       // Fetch suggestions from server
-      fetch("https://hook.eu2.make.com/c7wh7j366oahodi9qcw1ob1waotten7c", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plate, manufacturer, model, year, query })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-          dropdown.style.display = "none";
-          return;
-        }
-        dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
-          data.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
-        dropdown.style.display = "";
-        // Store suggestions on the dropdown for later use
-        dropdown._suggestions = data;
-      })
-      .catch(() => { dropdown.style.display = "none"; });
+    const storedHelper = JSON.parse(localStorage.getItem("helper_data") || '{}');
+const allResults = storedHelper?.parts_search?.results || [];
+
+const matches = allResults.filter(s => {
+  const label = (s.name || s.desc || '').toLowerCase();
+  return label.includes(query.toLowerCase());
+});
+
+if (matches.length === 0) {
+  dropdown.style.display = "none";
+  return;
+}
+
+dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
+  matches.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
+dropdown.style.display = "";
+dropdown._suggestions = matches;
 
       // On select, fill all fields
       dropdown.onchange = function () {

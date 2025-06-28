@@ -1,5 +1,7 @@
 // 🔗 Centralized Webhook Handler – Aligned with Make.com URLs
 
+import { updateHelper } from './helper.js';
+
 export const WEBHOOKS = {
   PASSWORD_PAGE: 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk',
   OPEN_CASE_UI: 'https://hook.eu2.make.com/zhvqbvx2yp69rikm6euv0r2du8l6sh61',
@@ -54,6 +56,16 @@ export function sendPartSearch(data) {
     .then(response => {
       console.log('✅ Part search request sent:', response);
       alert('הבקשה נשלחה בהצלחה!');
+
+      if (Array.isArray(response.results)) {
+        updateHelper("parts_search", {
+          summary: {
+            total_results: response.results.length,
+            recommended: response.recommended || ''
+          },
+          results: response.results
+        });
+      }
     })
     .catch(err => {
       console.error('❌ Error sending part search:', err);
