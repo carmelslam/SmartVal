@@ -1,35 +1,57 @@
 import assert from 'assert';
 
-// setup global window for validation.js
-global.window = {};
-// stub alert to avoid errors
-global.alert = function() {};
+// Ensure browser-style global for validation.js
+globalThis.window = globalThis;
 
-const validationModule = await import('../validation.js');
-const { validate } = window.validationEngine;
+// Load the validation engine which attaches itself to `window`
+await import('../validation.js');
+const validationEngine = globalThis.validationEngine;
 
+// Base valid helper object
 const baseHelper = {
-  meta: { report_type: 'final', status: 'final', legal_block: 'x' },
-  vehicle: { plate: '123' },
-  client: { name: 'John' },
-  car_details: { manufacturer: 'Mazda', model: '3', year: '2020', market_value: 1000 },
-  damage_sections: [ { works: [1], repairs: [1], parts: [1] } ],
-  depreciation: { global_amount: 1 },
-  files: [1],
-  levi_report: { model_code: 'ABC' }
+  vehicle: { plate_number: '123' },
+  client: { name: 'Alice' },
+  car_details: { make: 'Toyota', model: 'Corolla', year: 2020, market_value: 5000 },
+  damage_sections: [{ works: ['w'], repairs: ['r'], parts: ['p'] }],
+  depreciation: { global_amount: 1000 },
+  meta: { legal_block: 'text', report_type: 'final', status: 'final' },
+  files: ['image.png'],
+  levi_report: { adjustments: ['a'] },
+  invoice_uploaded: false
 };
 
-let res = validate(baseHelper);
-assert.equal(res.valid, true);
+// Valid helper should pass
+const validResult = validationEngine.validate(baseHelper);
+assert.strictEqual(validResult.valid, true);
+assert.deepEqual(validResult.errors, []);
 
-res = validate({ ...baseHelper, levi_report: null });
-assert.equal(res.valid, false);
-assert.ok(res.errors.includes('לא צורף דוח לוי יצחק'));
+// Missing car detail should fail
+const missingCar = JSON.parse(JSON.stringify(baseHelper));
+missingCar.car_details.make = '';
+const carResult = validationEngine.validate(missingCar);
+assert.strictEqual(carResult.valid, false);
+assert.ok(carResult.errors.includes('פרט רכב חסר: make (מסך פרטי רכב)'));
 
-res = validate({ ...baseHelper, levi_report: {} });
-assert.equal(res.valid, false);
+// Missing Levi report should fail
+const missingLevi = JSON.parse(JSON.stringify(baseHelper));
+missingLevi.levi_report = { adjustments: [] };
+const leviResult = validationEngine.validate(missingLevi);
+assert.strictEqual(leviResult.valid, false);
+assert.ok(leviResult.errors.includes('לא צורף דוח לוי יצחק'));
 
-res = validate({ ...baseHelper, levi_report: { model_code: 'XYZ' } });
-assert.equal(res.valid, true);
+// Missing damage sections should fail
+const missingDamage = JSON.parse(JSON.stringify(baseHelper));
+missingDamage.damage_sections = [];
+const damageResult = validationEngine.validate(missingDamage);
+assert.strictEqual(damageResult.valid, false);
+assert.ok(damageResult.errors.includes('אין אזורי נזק מתועדים (מסך מרכז נזק)'));
 
-console.log('Validation tests passed');
+// Invoice uploaded without summary
+const missingInvoice = JSON.parse(JSON.stringify(baseHelper));
+missingInvoice.invoice_uploaded = true;
+const invoiceResult = validationEngine.validate(missingInvoice);
+assert.strictEqual(invoiceResult.valid, false);
+assert.ok(invoiceResult.errors.includes('סך נזק מתוקן חסר'));
+assert.ok(invoiceResult.errors.includes('נתוני חשבונית לא חושבו'));
+
+console.log('validation.test.js passed');
