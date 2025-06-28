@@ -43,6 +43,7 @@ export const helper = {
     damage_date: '',
     submission_date: '',
     location: '',
+    status: '',
   },
 
   vehicle: {
@@ -84,7 +85,6 @@ export const helper = {
     damage_type: '',
     description: '',
     summary: {
-      status: '',
       legal_disclaimer: '',
       general_assessment: ''
     },
