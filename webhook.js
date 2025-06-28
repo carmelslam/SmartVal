@@ -24,13 +24,13 @@ export const WEBHOOKS = {
 
 // ✅ ADMIN + DEV HUB ADDITIONS — Confirmed by User
 
- ADMIN_FETCH_CASE: 'https://hook.eu2.make.com/diap4e9rewewyfjbwn6dypse9t16l8r9';
- ADMIN_FETCH_TRACKING_TABLE: 'https://hook.eu2.make.com/5x25yesk4fwh4mp13yku95f4xld196v9';
- ADMIN_CREATE_REMINDER:'https://hook.eu2.make.com/9ifgnde1twem4bov64gy1vi5bfvesj0m';
- AUTH_VERIFY_USER:'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn';
+ ADMIN_FETCH_CASE: 'https://hook.eu2.make.com/diap4e9rewewyfjbwn6dypse9t16l8r9',
+ ADMIN_FETCH_TRACKING_TABLE: 'https://hook.eu2.make.com/5x25yesk4fwh4mp13yku95f4xld196v9',
+ ADMIN_CREATE_REMINDER:'https://hook.eu2.make.com/9ifgnde1twem4bov64gy1vi5bfvesj0m',
+ AUTH_VERIFY_USER:'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn',
 
 // Used by Make automations to push notifications to user system
- PUSH_NOTIFICATION :'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd';
+ PUSH_NOTIFICATION :'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
 
 
 };
