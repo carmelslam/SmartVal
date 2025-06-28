@@ -22,7 +22,7 @@ export function carDetails() {
       <label>תאריך נזק: <input type="date" id="damage_date" value="${helper.meta?.damage_date || ''}" /></label><br/>
       <label>תאריך בדיקה: <input type="date" id="inspection_date" value="${helper.meta?.inspection_date || ''}" /></label><br/>
       <label>קוד דגם: <input type="text" id="model_code" value="${vehicle.model_code || ''}" /></label><br/>
-      <label>סוג הרכב: <input type="text" id="ownership" value="${vehicle.ownership || ''}" /></label><br/>
+      <label>סוג הרכב: <input type="text" id="ownership" value="${vehicle.ownership_type || ''}" /></label><br/>
       <label>שם בעל הרכב: <input type="text" id="owner_name" value="${helper.meta?.owner_name || ''}" /></label><br/>
       <label>כתובת: <input type="text" id="address" value="${helper.meta?.address || ''}" /></label><br/>
       <label>טלפון: <input type="text" id="phone" value="${helper.meta?.phone || ''}" /></label><br/>
@@ -49,7 +49,7 @@ export function carDetails() {
 
   document.getElementById('save-car').onclick = () => {
     updateHelper('vehicle', {
-      plate: document.getElementById('plate').value.trim(),
+      plate_number: document.getElementById('plate').value.trim(),
       manufacturer: document.getElementById('manufacturer').value.trim(),
       model: document.getElementById('model').value.trim(),
       model_type: document.getElementById('model_type').value.trim(),
@@ -58,7 +58,7 @@ export function carDetails() {
       km: +document.getElementById('km').value,
       trim: document.getElementById('trim').value.trim(),
       model_code: document.getElementById('model_code').value.trim(),
-      ownership: document.getElementById('ownership').value.trim(),
+      ownership_type: document.getElementById('ownership').value.trim(),
       engine_volume: document.getElementById('engine_volume').value.trim(),
       fuel_type: document.getElementById('fuel_type').value.trim(),
       engine_model: document.getElementById('engine_model').value.trim(),

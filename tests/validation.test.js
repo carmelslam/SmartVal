@@ -30,29 +30,28 @@ const missingCar = JSON.parse(JSON.stringify(baseHelper));
 missingCar.car_details.make = '';
 const carResult = validationEngine.validate(missingCar);
 assert.strictEqual(carResult.valid, false);
-assert.ok(carResult.errors.includes('\u05e4\u05e8\u05d8 \u05e8\u05db\u05d1 \u05d7\u05e1\u05e8: make (\u05de\u05e1\u05da \u05e4\u05e8\u05d8\u05d9 \u05e8\u05db\u05d1)'));
+assert.ok(carResult.errors.includes('פרט רכב חסר: make (מסך פרטי רכב)'));
 
 // Missing Levi report should fail
 const missingLevi = JSON.parse(JSON.stringify(baseHelper));
 missingLevi.levi_report = { adjustments: [] };
 const leviResult = validationEngine.validate(missingLevi);
 assert.strictEqual(leviResult.valid, false);
-assert.ok(leviResult.errors.includes('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 \u05d3\u05d5\u05d7 \u05dc\u05d5\u05d9 \u05d9\u05e6\u05d7\u05e7'));
+assert.ok(leviResult.errors.includes('לא צורף דוח לוי יצחק'));
 
 // Missing damage sections should fail
 const missingDamage = JSON.parse(JSON.stringify(baseHelper));
 missingDamage.damage_sections = [];
 const damageResult = validationEngine.validate(missingDamage);
 assert.strictEqual(damageResult.valid, false);
-assert.ok(damageResult.errors.includes('\u05d0\u05d9\u05df \u05d0\u05d6\u05d5\u05e8\u05d9 \u05e0\u05d6\u05e7 \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd (\u05de\u05e1\u05da \u05de\u05e8\u05db\u05d6 \u05e0\u05d6\u05e7)'));
+assert.ok(damageResult.errors.includes('אין אזורי נזק מתועדים (מסך מרכז נזק)'));
 
 // Invoice uploaded without summary
 const missingInvoice = JSON.parse(JSON.stringify(baseHelper));
 missingInvoice.invoice_uploaded = true;
 const invoiceResult = validationEngine.validate(missingInvoice);
 assert.strictEqual(invoiceResult.valid, false);
-assert.ok(invoiceResult.errors.includes('\u05e1\u05da \u05e0\u05d6\u05e7 \u05de\u05ea\u05d5\u05da \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea \u05d7\u05e1\u05e8'));
-assert.ok(invoiceResult.errors.includes('\u05e0\u05ea\u05d5\u05e0\u05d9 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea \u05dc\u05d0 \u05d7\u05d5\u05e9\u05d1\u05d5'));
+assert.ok(invoiceResult.errors.includes('סך נזק מתוקן חסר'));
+assert.ok(invoiceResult.errors.includes('נתוני חשבונית לא חושבו'));
 
 console.log('validation.test.js passed');
-
