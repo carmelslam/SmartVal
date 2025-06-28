@@ -7,12 +7,13 @@ const ValidationEngine = {
     const reportType = meta.report_type || 'unknown';
 
     // --- Basic Required Info (global) ---
-    if (!(helper.vehicle?.plate || meta.plate)) errors.push("מספר רכב חסר");
+    const plate = helper.vehicle?.plate || helper.vehicle?.plate_number || meta.plate;
+    if (!plate) errors.push("מספר רכב חסר");
     if (!helper.client?.name) errors.push("שם בעל הרכב חסר");
 
     // --- Bulk Screen: Car Details ---
     const car = helper.car_details || {};
-    const requiredCarFields = ["manufacturer", "model", "year", "market_value"];
+    const requiredCarFields = ["make", "model", "year", "market_value"];
     requiredCarFields.forEach(key => {
       if (!car[key]) errors.push(`פרט רכב חסר: ${key} (מסך פרטי רכב)`);
     });
@@ -44,12 +45,12 @@ const ValidationEngine = {
     if (!helper.files || helper.files.length < 1) errors.push("לא צורפו תמונות");
 
     // --- Levi Report ---
-    if (!helper.levi_report || !helper.levi_report.model_code)
+    if (!helper.levi_report || !helper.levi_report.adjustments?.length)
       errors.push("לא צורף דוח לוי יצחק");
 
     // --- Invoice Logic ---
     if (helper.invoice_uploaded) {
-      if (!helper.invoice_summary?.total_damage) errors.push("סך נזק מתוך חשבונית חסר");
+      if (!helper.invoice_summary?.total_damage) errors.push("סך נזק מתוקן חסר");
       if (!helper.invoice_calculations) errors.push("נתוני חשבונית לא חושבו");
     }
 
