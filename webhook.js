@@ -21,6 +21,9 @@ export const WEBHOOKS = {
   INTERNAL_PARTS_OCR: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6'
 };
 
+// Explicit export for the search assistant webhook URL
+export const SEARCH_MODULE = WEBHOOKS.SEARCH_MODULE;
+
 export async function sendToWebhook(id, payload) {
   const url = WEBHOOKS[id];
   if (!url) {
