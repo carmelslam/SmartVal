@@ -36,8 +36,8 @@ function buildVaultBlocks() {
 
 // --- Value Mapping Logic ---
 function getReplacementMap() {
-  const m = isInvoiceOverride ? helper.invoice_calculations : helper.calculations || {};
-  const d = isInvoiceOverride ? helper.invoice_depreciation : helper.depreciation || {};
+  const m = isInvoiceOverride ? helper.invoice_calculations : helper.expertise?.calculations || {};
+  const d = isInvoiceOverride ? helper.invoice_depreciation : helper.expertise?.depreciation || {};
   const f = isInvoiceOverride ? helper.invoice_fees : helper.fees || {};
 
   return {

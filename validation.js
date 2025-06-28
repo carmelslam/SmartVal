@@ -31,7 +31,7 @@ const ValidationEngine = {
     }
 
     // --- Bulk Screen: Depreciation ---
-    const dep = helper.depreciation || {};
+    const dep = helper.expertise?.depreciation || {};
     if (!dep.global_amount || dep.global_amount <= 0) {
       errors.push("נתוני ירידת ערך חסרים או לא חוקיים (מסך ירידת ערך)");
     }
