@@ -124,40 +124,6 @@
   </style>
 
 </head>
-<script type="module">
-  const WEBHOOKS = window.WEBHOOKS;
-
-  window.loadSection = function(id) {
-    const content = document.getElementById('adminContent');
-    content.innerHTML = `<p>טוען ${id}...</p>`;
-  };
-
-  window.verifyDevAccess = () => {
-    const password = prompt("Enter developer password:");
-    if (!password) return;
-
-    const url = WEBHOOKS.DEV_HUB;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data?.role === 'dev') {
-          window.loadSection('dev');
-        } else {
-          alert('Access denied: incorrect password');
-        }
-      })
-      .catch(err => {
-        console.error('Dev login failed:', err);
-        alert('Error connecting to verification server');
-      });
-  };
-</script>
-
-
 <body>
   <div class="container">
     <div class="logo" style="margin-bottom: 1px;">
@@ -197,35 +163,40 @@
 
     <div class="footer">All rights reserved © Carmel Cayouf</div>
 
-    <script>
+    <script type="module">
+      // Ensure WEBHOOKS is available from webhook.js
+      // Wait for DOMContentLoaded to ensure elements exist
+      document.addEventListener('DOMContentLoaded', () => {
+        // Assign WEBHOOKS from window (populated by webhook.js)
+        const WEBHOOKS = window.WEBHOOKS;
 
-      function loadSection(id) {
-        const content = document.getElementById('adminContent');
-        content.innerHTML = `<p>טוען ${id}...</p>`;
-      }
+        window.loadSection = function(id) {
+          const content = document.getElementById('adminContent');
+          content.innerHTML = `<p>טוען ${id}...</p>`;
+        };
 
-      // Show Developer Panel button if user is developer
-      function verifyDevAccess() {
-  const password = prompt("Enter developer password:");
-  if (!password) return;
-  fetch(WEBHOOKS.DEV_HUB, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.role === 'dev') {
-        loadSection('dev');
-      } else {
-        alert('Access denied: incorrect password');
-      }
-    })
-    .catch(err => {
-      console.error('Dev login failed:', err);
-      alert('Error connecting to verification server');
-    });
-}
+        window.verifyDevAccess = function() {
+          const password = prompt("Enter developer password:");
+          if (!password) return;
+          fetch(WEBHOOKS.DEV_HUB, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.role === 'dev') {
+                window.loadSection('dev');
+              } else {
+                alert('Access denied: incorrect password');
+              }
+            })
+            .catch(err => {
+              console.error('Dev login failed:', err);
+              alert('Error connecting to verification server');
+            });
+        };
+      });
     </script>
   </div>
 </body>
