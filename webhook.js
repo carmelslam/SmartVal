@@ -17,17 +17,20 @@ export const WEBHOOKS = {
 
   SEARCH_MODULE: 'https://hook.eu2.make.com/n3bbnj3izbymrmq6baj0vgaqhhin9fmd',
   PARTS_SEARCH: 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58',
-  INTERNAL_PARTS_OCR: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6'
+  INTERNAL_PARTS_OCR: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6',
+  DEV_HUB: 'https://hook.eu2.make.com/cg8j5gu0wyum6yrbl4rz2myd0pew3znt',
+  ADMIN_HUB: 'https://hook.eu2.make.com/xwr4rxw9sp1v16ihuw4ldgyxa312hg2p',
+
 
 // ✅ ADMIN + DEV HUB ADDITIONS — Confirmed by User
 
- ADMIN_FETCH_CASE = 'https://hook.eu2.make.com/diap4e9rewewyfjbwn6dypse9t16l8r9';
- ADMIN_FETCH_TRACKING_TABLE = 'https://hook.eu2.make.com/5x25yesk4fwh4mp13yku95f4xld196v9';
- ADMIN_CREATE_REMINDER = 'https://hook.eu2.make.com/9ifgnde1twem4bov64gy1vi5bfvesj0m';
- AUTH_VERIFY_USER = 'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn';
+ ADMIN_FETCH_CASE: 'https://hook.eu2.make.com/diap4e9rewewyfjbwn6dypse9t16l8r9';
+ ADMIN_FETCH_TRACKING_TABLE: 'https://hook.eu2.make.com/5x25yesk4fwh4mp13yku95f4xld196v9';
+ ADMIN_CREATE_REMINDER:'https://hook.eu2.make.com/9ifgnde1twem4bov64gy1vi5bfvesj0m';
+ AUTH_VERIFY_USER:'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn';
 
 // Used by Make automations to push notifications to user system
- PUSH_NOTIFICATION = 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd';
+ PUSH_NOTIFICATION :'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd';
 
 
 };
@@ -118,3 +121,4 @@ export { sendToWebhook as sendExtraWebhook };
 export function getWebhook(key) {
   return WEBHOOKS[key] || '';
 }
+window.WEBHOOKS = WEBHOOKS;

@@ -7,6 +7,32 @@
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp"/>
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"/>
   <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"/>
+  <script type="module">
+    import { WEBHOOKS } from './webhook.js';
+
+    window.verifyAdminAccess = function () {
+      const password = prompt("Enter admin password:");
+      if (!password) return;
+
+      fetch(WEBHOOKS.ADMIN_HUB, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data?.role === 'admin') {
+            window.location.href = 'admin.html';
+          } else {
+            alert('Access denied: incorrect password');
+          }
+        })
+        .catch(err => {
+          console.error('Admin login failed:', err);
+          alert('Error connecting to verification server');
+        });
+    }
+  </script>
   <style>
     body {
       font-family: sans-serif;
@@ -68,7 +94,7 @@
 <body>
 <div class="container">
   <img class="logo" src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo"/>
-  <h1>ירון כיוף</h1>
+  <h1>ירון כיוף שמאות - פורטל</h1>
   <h2>שמאות והערכת נזקי רכב ורכוש</h2>
   <button class="nav-button" onclick="navigate('report-new.html')">התחלת דו"ח חדש</button>
   <button class="nav-button" onclick="navigate('manual-details.html')">פרטי רכב כלליים</button>
@@ -79,7 +105,7 @@
   <button class="nav-button" onclick="navigate('invoice-submission.html')">העלאת חשבונית</button>
   <button class="nav-button" onclick="navigate('depreciation-module.html')">מודול ירידת ערך</button>
   <button class="nav-button" onclick="navigate('fee-module.html')">מודול שכר טרחה</button>
-  <button class="nav-button" onclick="navigate('admin.html')">ניהול מערכת (Admin)</button>
+  <button class="nav-button" onclick="verifyAdminAccess()">ניהול מערכת (Admin)</button>
   <button class="nav-button" onclick="navigate('report-selection.html')">בחר דו"ח להפקה</button>
   <button class="nav-button logout" onclick="logout()">יציאה מהמערכת</button>
   <div class="footer">All rights reserved © Carmel Cayouf</div>

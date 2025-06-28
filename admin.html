@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>מרכז ניהול - ירון כיוף</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css">
+  <script type="module" src="./admin.js"></script>
+  <script type="module" src="./helper.js"></script>
+  <script type="module" src="./webhook.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f4ff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: right;
+      min-height: 80vh;
+    }
+    .container {
+      max-width: 550px;
+      width: 100%;
+      background: #fff;
+      padding: 10px 10px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
+    }
+    header {
+      background-color: #004b91;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+    }
+    .admin-container {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      min-height: 80vh;
+    }
+    .logo img {
+      width: 100px;
+    }
+    .title { font-size: 24px; font-weight: bold; }
+    .subtitle { font-size: 18px; color: #666; margin-bottom: 5px; }
+    .legal-note {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    h1 {
+      font-size: 24px;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 20px;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    nav {
+      background: #e9f0ff;
+      padding: 20px;
+      border-left: 3px solid #004b91;
+    }
+    nav button {
+      display: block;
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    main {
+      padding: 30px;
+    }
+    .notification-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      max-width: 320px;
+      background: #fff;
+      border: 1px solid #aaa;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      padding: 10px;
+      z-index: 1000;
+      font-size: 14px;
+    }
+    .notification-panel h4 { margin: 0 0 8px 0; font-size: 16px; }
+    .notification-item {
+      background: #f6f6f6;
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 6px;
+    }
+    .notification-actions button {
+      margin-top: 5px;
+      margin-right: 5px;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+    .devButton {
+  background-color: #c0392b !important;
+  color: white;
+  border: 1px solid #922b21;
+  font-weight: bold;
+}
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 30px;
+      color: #999;
+    }
+  </style>
+<script type="module" src="./admin-init.js"></script>
+
+</head>
+<script type="module">
+  const WEBHOOKS = window.WEBHOOKS;
+
+  window.loadSection = function(id) {
+    const content = document.getElementById('adminContent');
+    content.innerHTML = `<p>טוען ${id}...</p>`;
+  };
+
+  window.verifyDevAccess = () => {
+    const password = prompt("Enter developer password:");
+    if (!password) return;
+
+    const url = WEBHOOKS.DEV_HUB;
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data?.role === 'dev') {
+          window.loadSection('dev');
+        } else {
+          alert('Access denied: incorrect password');
+        }
+      })
+      .catch(err => {
+        console.error('Dev login failed:', err);
+        alert('Error connecting to verification server');
+      });
+  };
+</script>
+
+
+<body>
+  <div class="container">
+    <div class="logo" style="margin-bottom: 1px;">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
+    </div>
+    <div class="title">ירון כיוף שמאות - פורטל</div>
+    <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
+    <header>מרכז ניהול - ירון כיוף</header>
+    <div class="admin-container">
+      <nav>
+        <button onclick="loadSection('caseStatus')">סטטוס תיקים</button>
+        <button onclick="loadSection('tracking')">סקירה לפי שדות</button>
+        <button onclick="loadSection('reminders')">רשימת תזכורות</button>
+        <button onclick="loadSection('override')">שינוי נתונים</button>
+        <button onclick="loadSection('logView')">יומן פעולות</button>
+        <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">
+          כניסה לתיקים פתוחים
+        </button>
+        <button id="devButton" class="devButton" onclick="verifyDevAccess()">Developer Panel</button>
+      </nav>
+      <main id="adminContent">
+        <p>בחר פעולה מהתפריט הימני כדי להתחיל.</p>
+      </main>
+    </div>
+
+    <div id="notificationPanel" class="notification-panel" style="display:none;">
+      <h4>הודעות מערכת</h4>
+      <div id="notificationList"></div>
+    </div>
+
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+
+    <script>
+
+      function loadSection(id) {
+        const content = document.getElementById('adminContent');
+        content.innerHTML = `<p>טוען ${id}...</p>`;
+      }
+
+      // Show Developer Panel button if user is developer
+      function verifyDevAccess() {
+  const password = prompt("Enter developer password:");
+  if (!password) return;
+  fetch(WEBHOOKS.DEV_HUB, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.role === 'dev') {
+        loadSection('dev');
+      } else {
+        alert('Access denied: incorrect password');
+      }
+    })
+    .catch(err => {
+      console.error('Dev login failed:', err);
+      alert('Error connecting to verification server');
+    });
+}
+    </script>
+  </div>
+</body>
+</html>
