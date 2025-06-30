@@ -8,6 +8,19 @@ import { sessionEngine } from './session.js';
 
 let helper = sessionEngine.getDataSourceForFinal();
 
+function buildFeeSummary() {
+  const base = helper.expertise?.depreciation_and_fees || {};
+  const fees = base.fees || {};
+  const travel = parseFloat(fees.travel) || 0;
+  const media = parseFloat(fees.photography) || 0;
+  const office = parseFloat(fees.office) || 0;
+  const vatRate = parseFloat(base.vat_rate) || 0;
+  const subtotal = MathEngine.round(travel + media + office);
+  const vat = MathEngine.round(subtotal * vatRate / 100);
+  const total = MathEngine.round(subtotal + vat);
+  return { travel, media, office, vat_rate: vatRate, vat, subtotal, total };
+}
+
 // --- Determine Report Type and Draft Mode ---
 const reportType = helper.meta?.report_type || 'unknown';
 const isDraft = helper.meta?.status === 'draft';
@@ -75,7 +88,8 @@ function injectReportHTML() {
   const htmlTemplate = document.getElementById("template-html").innerHTML;
   const vaultBlocks = buildVaultBlocks();
 
-  const map = { helper, vault: vaultBlocks, meta: helper.meta, title: getReportTitle() };
+  const feeSummary = buildFeeSummary();
+  const map = { helper, vault: vaultBlocks, meta: helper.meta, title: getReportTitle(), fees: feeSummary };
   const rendered = renderHTMLBlock(htmlTemplate, map);
   const safeHTML = sanitizeHTML(rendered);
   container.innerHTML = applyDraftWatermark(safeHTML);
@@ -116,4 +130,4 @@ window.finalReport = {
   print: printReport
 };
 
-console.log('✅ final_report.js loaded with session logic, watermark, and vault rendering');
+console.log('✅ final_report.js loaded with session logic, fees, watermark, and vault rendering');
