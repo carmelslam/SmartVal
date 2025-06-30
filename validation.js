@@ -13,7 +13,7 @@ const ValidationEngine = {
 
     // --- Bulk Screen: Car Details ---
     const car = helper.car_details || {};
-    const requiredCarFields = ["make", "model", "year", "market_value"];
+    const requiredCarFields = ["manufacturer", "model", "year", "market_value"];
     requiredCarFields.forEach(key => {
       if (!car[key]) errors.push(`פרט רכב חסר: ${key} (מסך פרטי רכב)`);
     });
@@ -31,7 +31,7 @@ const ValidationEngine = {
     }
 
     // --- Bulk Screen: Depreciation ---
-    const dep = helper.depreciation || {};
+    const dep = helper.expertise?.depreciation || {};
     if (!dep.global_amount || dep.global_amount <= 0) {
       errors.push("נתוני ירידת ערך חסרים או לא חוקיים (מסך ירידת ערך)");
     }
@@ -50,7 +50,7 @@ const ValidationEngine = {
 
     // --- Invoice Logic ---
     if (helper.invoice_uploaded) {
-      if (!helper.invoice_summary?.total_damage) errors.push("סך נזק מתוקן חסר");
+      if (!helper.invoice_summary?.total_damage) errors.push("סך נזק מתוך חשבונית חסר");
       if (!helper.invoice_calculations) errors.push("נתוני חשבונית לא חושבו");
     }
 

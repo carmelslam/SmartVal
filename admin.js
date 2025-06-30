@@ -67,12 +67,34 @@ const AdminPanel = {
 
   // --- User Management ---
 
-  addUser(email, password) {
-    this.state.users[email] = { password, created_at: new Date().toISOString() };
+  async hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   },
 
-  updatePassword(email, newPassword) {
-    if (this.state.users[email]) this.state.users[email].password = newPassword;
+  async addUser(email, password) {
+    const hashed = await this.hashPassword(password);
+    this.state.users[email] = {
+      password: hashed,
+      created_at: new Date().toISOString()
+    };
+  },
+
+  async updatePassword(email, newPassword) {
+    if (this.state.users[email]) {
+      const hashed = await this.hashPassword(newPassword);
+      this.state.users[email].password = hashed;
+    }
+  },
+
+  async verifyPassword(email, password) {
+    const user = this.state.users[email];
+    if (!user) return false;
+    const hashed = await this.hashPassword(password);
+    return hashed === user.password;
   },
 
   deleteUser(email) {
