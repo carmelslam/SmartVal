@@ -134,6 +134,8 @@ ROUTER.register('final-report', {
 ROUTER.register('upload-images', () => console.log('📷 Upload Images initialized'));
 ROUTER.register('invoice-summary', () => console.log('🧾 Invoice Summary initialized'));
 ROUTER.register('depreciation', () => console.log('📉 Depreciation module initialized'));
+// Fee module placeholder so fee-module.html auto-loads correctly
+ROUTER.register('fee-module', () => console.log('💸 Fee Module initialized'));
 ROUTER.register('parts-search', () => console.log('🔍 Parts search active'));
 ROUTER.register('general-info', () => console.log('📋 General Info loaded'));
 ROUTER.register('manual-details', () => console.log('📘 Manual Details ready'));
