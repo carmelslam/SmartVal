@@ -7,7 +7,8 @@ const ValidationEngine = {
     const reportType = meta.report_type || 'unknown';
 
     // --- Basic Required Info (global) ---
-    if (!(helper.vehicle?.plate || meta.plate)) errors.push("מספר רכב חסר");
+    const plate = helper.vehicle?.plate || helper.vehicle?.plate_number || meta.plate;
+    if (!plate) errors.push("מספר רכב חסר");
     if (!helper.client?.name) errors.push("שם בעל הרכב חסר");
 
     // --- Bulk Screen: Car Details ---
@@ -30,7 +31,7 @@ const ValidationEngine = {
     }
 
     // --- Bulk Screen: Depreciation ---
-    const dep = helper.depreciation || {};
+    const dep = helper.expertise?.depreciation || {};
     if (!dep.global_amount || dep.global_amount <= 0) {
       errors.push("נתוני ירידת ערך חסרים או לא חוקיים (מסך ירידת ערך)");
     }
@@ -44,7 +45,7 @@ const ValidationEngine = {
     if (!helper.files || helper.files.length < 1) errors.push("לא צורפו תמונות");
 
     // --- Levi Report ---
-    if (!helper.levi_report || !helper.levi_report.model_code)
+    if (!helper.levi_report || !helper.levi_report.adjustments?.length)
       errors.push("לא צורף דוח לוי יצחק");
 
     // --- Invoice Logic ---

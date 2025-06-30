@@ -12,11 +12,11 @@ if (mode === 'wizard') {
 }
 
 function renderPartsModule() {
-  // ...render car details (autofilled or editable), parts form, and floating results...
-  // ...on input, trigger both car-part.co.il and Make.com search, show suggestions...
-  // ...on select, autofill all fields...
-  // ...on submit, export to helper (wizard) or allow export/save (standalone)...
-  // ...store all search results in metadata...
+  const root = document.getElementById('parts-module-root');
+  if (root) {
+    root.innerHTML = '<div style="padding:40px;text-align:center;font-size:20px;color:#007bff;">מודול חלקים בבניה</div>';
+  }
 }
 
+document.addEventListener('DOMContentLoaded', renderPartsModule);
 document.addEventListener('DOMContentLoaded', renderPartsModule);

@@ -9,14 +9,14 @@ const validationEngine = globalThis.validationEngine;
 
 // Base valid helper object
 const baseHelper = {
-  vehicle: { plate_number: '123' },
+  vehicle: { plate: '123' },
   client: { name: 'Alice' },
-  car_details: { make: 'Toyota', model: 'Corolla', year: 2020, market_value: 5000 },
+  car_details: { manufacturer: 'Toyota', model: 'Corolla', year: 2020, market_value: 5000 },
   damage_sections: [{ works: ['w'], repairs: ['r'], parts: ['p'] }],
-  depreciation: { global_amount: 1000 },
+  expertise: { depreciation: { global_amount: 1000 } },
   meta: { legal_block: 'text', report_type: 'final', status: 'final' },
   files: ['image.png'],
-  levi_report: { adjustments: ['a'] },
+  levi_report: { model_code: 'M', adjustments: ['a'] },
   invoice_uploaded: false
 };
 
@@ -27,10 +27,10 @@ assert.deepEqual(validResult.errors, []);
 
 // Missing car detail should fail
 const missingCar = JSON.parse(JSON.stringify(baseHelper));
-missingCar.car_details.make = '';
+missingCar.car_details.manufacturer = '';
 const carResult = validationEngine.validate(missingCar);
 assert.strictEqual(carResult.valid, false);
-assert.ok(carResult.errors.includes('פרט רכב חסר: make (מסך פרטי רכב)'));
+assert.ok(carResult.errors.includes('פרט רכב חסר: manufacturer (מסך פרטי רכב)'));
 
 // Missing Levi report should fail
 const missingLevi = JSON.parse(JSON.stringify(baseHelper));
@@ -51,7 +51,7 @@ const missingInvoice = JSON.parse(JSON.stringify(baseHelper));
 missingInvoice.invoice_uploaded = true;
 const invoiceResult = validationEngine.validate(missingInvoice);
 assert.strictEqual(invoiceResult.valid, false);
-assert.ok(invoiceResult.errors.includes('סך נזק מתוקן חסר'));
+assert.ok(invoiceResult.errors.includes('סך נזק מתוך חשבונית חסר'));
 assert.ok(invoiceResult.errors.includes('נתוני חשבונית לא חושבו'));
 
 console.log('validation.test.js passed');

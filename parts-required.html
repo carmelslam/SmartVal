@@ -409,23 +409,29 @@ form button {
       }
 
       // Fetch suggestions from server
-    const storedHelper = JSON.parse(localStorage.getItem("helper_data") || '{}');
-const allResults = storedHelper?.parts_search?.results || [];
+      let storedHelper = {};
+      try {
+        storedHelper = JSON.parse(localStorage.getItem("helper_data") || '{}');
+      } catch (e) {
+        storedHelper = {};
+      }
+      const allResults = storedHelper?.parts_search?.results || [];
 
-const matches = allResults.filter(s => {
-  const label = (s.name || s.desc || '').toLowerCase();
-  return label.includes(query.toLowerCase());
-});
+      const matches = allResults.filter(s => {
+        const label = (s.name || s.desc || '').toLowerCase();
+        return label.includes(query.toLowerCase());
+      });
 
-if (matches.length === 0) {
-  dropdown.style.display = "none";
-  return;
-}
+      if (matches.length === 0) {
+        dropdown.innerHTML = '';
+        dropdown.style.display = "none";
+        return;
+      }
 
-dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
-  matches.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
-dropdown.style.display = "";
-dropdown._suggestions = matches;
+      dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
+        matches.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
+      dropdown.style.display = "";
+      dropdown._suggestions = matches;
 
       // On select, fill all fields
       dropdown.onchange = function () {

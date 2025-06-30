@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link href="https://fonts.googleapis.com/css2?family=Assistant&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="styles.css">
   <script type="module" src="./admin.js"></script>
   <script type="module" src="./helper.js"></script>
   <script type="module" src="./webhook.js"></script>
@@ -80,6 +80,30 @@
       font-size: 14px;
       cursor: pointer;
     }
+    .vat-config {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .vat-config label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    .vat-config input {
+      width: 80%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .vat-config button {
+      padding: 8px 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
     main {
       padding: 30px;
     }
@@ -110,11 +134,11 @@
       padding: 4px 8px;
     }
     .devButton {
-  background-color: #c0392b !important;
-  color: white;
-  border: 1px solid #922b21;
-  font-weight: bold;
-}
+      background-color: #c0392b !important;
+      color: white;
+      border: 1px solid #922b21;
+      font-weight: bold;
+    }
     .footer {
       text-align: center;
       font-size: 12px;
@@ -122,43 +146,7 @@
       color: #999;
     }
   </style>
-<script type="module" src="./admin-init.js"></script>
-
 </head>
-<script type="module">
-  const WEBHOOKS = window.WEBHOOKS;
-
-  window.loadSection = function(id) {
-    const content = document.getElementById('adminContent');
-    content.innerHTML = `<p>טוען ${id}...</p>`;
-  };
-
-  window.verifyDevAccess = () => {
-    const password = prompt("Enter developer password:");
-    if (!password) return;
-
-    const url = WEBHOOKS.DEV_HUB;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data?.role === 'dev') {
-          window.loadSection('dev');
-        } else {
-          alert('Access denied: incorrect password');
-        }
-      })
-      .catch(err => {
-        console.error('Dev login failed:', err);
-        alert('Error connecting to verification server');
-      });
-  };
-</script>
-
-
 <body>
   <div class="container">
     <div class="logo" style="margin-bottom: 1px;">
@@ -174,9 +162,12 @@
         <button onclick="loadSection('reminders')">רשימת תזכורות</button>
         <button onclick="loadSection('override')">שינוי נתונים</button>
         <button onclick="loadSection('logView')">יומן פעולות</button>
-        <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">
-          כניסה לתיקים פתוחים
-        </button>
+        <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
+        <div class="vat-config">
+          <label for="vat-input">מע"מ גלובלי (%)</label>
+          <input id="vat-input" type="number" step="0.01" placeholder="18">
+          <button id="save-admin-settings">שמור מע"מ</button>
+        </div>
         <button id="devButton" class="devButton" onclick="verifyDevAccess()">Developer Panel</button>
       </nav>
       <main id="adminContent">
@@ -191,43 +182,52 @@
         <div id="legal-preview"></div>
       </section>
     </div>
-
     <div id="notificationPanel" class="notification-panel" style="display:none;">
       <h4>הודעות מערכת</h4>
       <div id="notificationList"></div>
     </div>
-
     <div class="footer">All rights reserved © Carmel Cayouf</div>
-
-    <script>
-
-      function loadSection(id) {
-        const content = document.getElementById('adminContent');
-        content.innerHTML = `<p>טוען ${id}...</p>`;
-      }
-
-      // Show Developer Panel button if user is developer
-      function verifyDevAccess() {
-  const password = prompt("Enter developer password:");
-  if (!password) return;
-  fetch(WEBHOOKS.DEV_HUB, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.role === 'dev') {
-        loadSection('dev');
-      } else {
-        alert('Access denied: incorrect password');
-      }
-    })
-    .catch(err => {
-      console.error('Dev login failed:', err);
-      alert('Error connecting to verification server');
-    });
-}
+    <script type="module">
+      import { MathEngine } from './math.js';
+      document.getElementById('save-admin-settings').addEventListener('click', () => {
+        const vat = parseFloat(document.getElementById('vat-input').value);
+        if (!isNaN(vat) && vat >= 0 && vat <= 100) {
+          MathEngine.setVatRate(vat);
+          alert(`מע"מ עודכן ל-${vat}% במערכת`);
+        } else {
+          alert('ערך מע"מ לא חוקי');
+        }
+      });
+    </script>
+    <script type="module">
+      document.addEventListener('DOMContentLoaded', () => {
+        const WEBHOOKS = window.WEBHOOKS;
+        window.loadSection = function(id) {
+          const content = document.getElementById('adminContent');
+          content.innerHTML = `<p>טוען ${id}...</p>`;
+        };
+        window.verifyDevAccess = function() {
+          const password = prompt("Enter developer password:");
+          if (!password) return;
+          fetch(WEBHOOKS.DEV_HUB, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.role === 'dev') {
+                window.loadSection('dev');
+              } else {
+                alert('Access denied: incorrect password');
+              }
+            })
+            .catch(err => {
+              console.error('Dev login failed:', err);
+              alert('Error connecting to verification server');
+            });
+        };
+      });
     </script>
   </div>
 </body>
