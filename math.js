@@ -1,5 +1,7 @@
 // math.js — Core Calculation Engine for Report Values
 
+let _vatRate = 18; // default system VAT rate
+
 export const MathEngine = {
   round(num) {
     return Math.round((parseFloat(num) || 0) * 100) / 100;
@@ -26,7 +28,18 @@ export const MathEngine = {
   },
 
   applyVAT(value, vatRate) {
-    return MathEngine.round(value * (1 + (vatRate || 0) / 100));
+    const rate = (typeof vatRate === 'number') ? vatRate : _vatRate;
+    return MathEngine.round(value * (1 + rate / 100));
+  },
+
+  getVatRate() {
+    return _vatRate;
+  },
+
+  setVatRate(rate) {
+    if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
+      _vatRate = rate;
+    }
   },
 
   calculateAll({ baseDamage, depreciation, fees, marketValue, shavehPercent, vatRate }) {
@@ -46,9 +59,8 @@ export const MathEngine = {
   }
 };
 
-// ✅ Fix: provide a standalone export for compatibility
 export const calculate = (params) => {
   return MathEngine.calculateAll(params);
 };
 
-console.log('✅ math.js loaded');
+console.log('✅ math.js loaded with system VAT support');
