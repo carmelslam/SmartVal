@@ -9,7 +9,7 @@ import { sessionEngine } from './session.js';
 let helper = sessionEngine.getDataSourceForFinal();
 
 function buildFeeSummary() {
-  const fees = helper.fee || {};
+  const fees = helper.fees || {};
   const travel = parseFloat(fees.travel_fee) || 0;
   const media = parseFloat(fees.media_fee) || 0;
   const office = parseFloat(fees.office_fee) || 0;
