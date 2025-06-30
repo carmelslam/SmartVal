@@ -48,7 +48,7 @@ function calculateFees() {
 function saveFees() {
   calculateFees();
 
-  helper.fee = {
+  helper.fees = {
     case_number: $('caseNumber').innerText,
     issue_date: $('issueDate').innerText,
     contact: {
