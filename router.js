@@ -119,12 +119,11 @@ window.ROUTER = ROUTER;
 ROUTER.register('expertise-builder', { label: 'Expertise Builder', init: () => console.log('🧱 Expertise Builder started') });
 ROUTER.register('estimate-builder', {
   label: 'Estimate Builder',
-  requires: ['expertise-builder', 'levi-report'],
+  requires: ['expertise-builder'],
   init: () => console.log('📐 Estimate Builder started')
 });
 ROUTER.register('final-report', {
   label: 'Final Report',
-  requires: ['draft-builder'],
   optional: ['estimate-builder'],
   validate: () => console.log('✅ Final Report validation passed'),
   init: () => console.log('📄 Final Report started')
