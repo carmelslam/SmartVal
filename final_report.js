@@ -9,12 +9,11 @@ import { sessionEngine } from './session.js';
 let helper = sessionEngine.getDataSourceForFinal();
 
 function buildFeeSummary() {
-  const base = helper.expertise?.depreciation_and_fees || {};
-  const fees = base.fees || {};
-  const travel = parseFloat(fees.travel) || 0;
-  const media = parseFloat(fees.photography) || 0;
-  const office = parseFloat(fees.office) || 0;
-  const vatRate = parseFloat(base.vat_rate) || 0;
+  const fees = helper.fee || {};
+  const travel = parseFloat(fees.travel_fee) || 0;
+  const media = parseFloat(fees.media_fee) || 0;
+  const office = parseFloat(fees.office_fee) || 0;
+  const vatRate = parseFloat(fees.vat_rate) || helper.vat || 18;
   const subtotal = MathEngine.round(travel + media + office);
   const vat = MathEngine.round(subtotal * vatRate / 100);
   const total = MathEngine.round(subtotal + vat);
