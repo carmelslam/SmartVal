@@ -76,8 +76,10 @@ function speakResponse(text) {
   })
     .then(res => res.json())
     .then(data => {
-      const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
-      audio.play();
+      if (data.audioContent) {
+        const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
+        audio.play();
+      }
     })
     .catch(console.error);
 }

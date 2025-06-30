@@ -43,6 +43,7 @@ export const helper = {
     damage_date: '',
     submission_date: '',
     location: '',
+    status: '',
   },
 
   vehicle: {
@@ -84,7 +85,6 @@ export const helper = {
     damage_type: '',
     description: '',
     summary: {
-      status: '',
       legal_disclaimer: '',
       general_assessment: ''
     },
@@ -258,7 +258,7 @@ export async function sendHelperToMake(taskLabel = 'generic') {
 }
 
 export function updateCalculations() {
-  const baseDamage = parseFloat(helper.expertise.damage_summary?.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0)) || 0;
+  const baseDamage = parseFloat((helper.expertise.damage_summary || []).reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0)) || 0;
   const depreciation = parseFloat(helper.expertise.depreciation?.global_amount) || 0;
   const marketValue = parseFloat(helper.expertise.levi_report?.final_price) || 0;
   const shavehPercent = parseFloat(helper.vehicle?.shaveh_percent) || 0;

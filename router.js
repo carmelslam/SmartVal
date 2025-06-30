@@ -119,12 +119,11 @@ window.ROUTER = ROUTER;
 ROUTER.register('expertise-builder', { label: 'Expertise Builder', init: () => console.log('🧱 Expertise Builder started') });
 ROUTER.register('estimate-builder', {
   label: 'Estimate Builder',
-  requires: ['expertise-builder', 'levi-report'],
+  requires: ['expertise-builder'],
   init: () => console.log('📐 Estimate Builder started')
 });
 ROUTER.register('final-report', {
   label: 'Final Report',
-  requires: ['draft-builder'],
   optional: ['estimate-builder'],
   validate: () => console.log('✅ Final Report validation passed'),
   init: () => console.log('📄 Final Report started')
@@ -134,6 +133,8 @@ ROUTER.register('final-report', {
 ROUTER.register('upload-images', () => console.log('📷 Upload Images initialized'));
 ROUTER.register('invoice-summary', () => console.log('🧾 Invoice Summary initialized'));
 ROUTER.register('depreciation', () => console.log('📉 Depreciation module initialized'));
+// Fee module placeholder so fee-module.html auto-loads correctly
+ROUTER.register('fee-module', () => console.log('💸 Fee Module initialized'));
 ROUTER.register('parts-search', () => console.log('🔍 Parts search active'));
 ROUTER.register('general-info', () => console.log('📋 General Info loaded'));
 ROUTER.register('manual-details', () => console.log('📘 Manual Details ready'));
