@@ -39,6 +39,10 @@ export const MathEngine = {
   setVatRate(rate) {
     if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
       _vatRate = rate;
+      sessionStorage.setItem('globalVAT', rate);
+      if (window.Helper?.updateMeta) {
+        Helper.updateMeta({ global_vat: rate });
+      }
     }
   },
 
