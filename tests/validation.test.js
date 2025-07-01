@@ -13,10 +13,10 @@ const baseHelper = {
   client: { name: 'Alice' },
   car_details: { manufacturer: 'Toyota', model: 'Corolla', year: 2020, market_value: 5000 },
   damage_sections: [{ works: ['w'], repairs: ['r'], parts: ['p'] }],
-  depreciation: { global_amount: 1000 },
+  expertise: { depreciation: { global_amount: 1000 } },
   meta: { legal_block: 'text', report_type: 'final', status: 'final' },
   files: ['image.png'],
-  levi_report: { model_code: 'X' },
+  levi_report: { model_code: 'M', adjustments: ['a'] }, // ✅ Merged cleanly
   invoice_uploaded: false
 };
 
