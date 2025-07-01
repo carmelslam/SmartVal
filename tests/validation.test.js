@@ -16,7 +16,7 @@ const baseHelper = {
   expertise: { depreciation: { global_amount: 1000 } },
   meta: { legal_block: 'text', report_type: 'final', status: 'final' },
   files: ['image.png'],
-  levi_report: { model_code: 'M', adjustments: ['a'] },
+  levi_report: { model_code: 'M', adjustments: ['a'] }, // ✅ Merged cleanly
   invoice_uploaded: false
 };
 
@@ -34,7 +34,7 @@ assert.ok(carResult.errors.includes('פרט רכב חסר: manufacturer (מסך 
 
 // Missing Levi report should fail
 const missingLevi = JSON.parse(JSON.stringify(baseHelper));
-missingLevi.levi_report = { adjustments: [] };
+missingLevi.levi_report = { model_code: '' };
 const leviResult = validationEngine.validate(missingLevi);
 assert.strictEqual(leviResult.valid, false);
 assert.ok(leviResult.errors.includes('לא צורף דוח לוי יצחק'));
