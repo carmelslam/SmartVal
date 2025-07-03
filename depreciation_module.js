@@ -7,7 +7,41 @@ function $(id) {
 
 function init() {
   const meta = helper.meta || {};
+  const vehicle = helper.vehicle || {};
+  const client = helper.client || {};
+  const levi = helper.expertise?.levi_report || {};
+  const calc = helper.expertise?.calculations || {};
   const dep = helper.expertise?.depreciation || {};
+
+  if ($('pageTitle')) $('pageTitle').innerText = `רכב מס. ${meta.plate || '...'}`;
+  if ($('carPlate')) $('carPlate').innerText = meta.plate || vehicle.plate_number || '';
+  if ($('carManufacturer')) $('carManufacturer').innerText = vehicle.manufacturer || '';
+  if ($('carModel')) $('carModel').innerText = vehicle.model || '';
+  if ($('carYear')) $('carYear').innerText = vehicle.year || '';
+  if ($('carBasePrice')) $('carBasePrice').innerText = levi.base_price || '';
+  if ($('carReportDate')) $('carReportDate').innerText = levi.report_date || '';
+
+  if ($('totalClaim')) $('totalClaim').innerText = calc.total_damage || '';
+  if ($('grossPercent')) $('grossPercent').innerText = calc.damage_percent ? `${calc.damage_percent}%` : '';
+  if ($('authorizedClaim')) $('authorizedClaim').innerText = calc.total_damage || '';
+  if ($('finalMarketValue')) $('finalMarketValue').innerText = levi.final_price || calc.market_value || '';
+
+  if ($('leviPriceList')) {
+    const adj = levi.adjustments || {};
+    const parts = Object.keys(adj).map(k => {
+      const a = adj[k] || {}; return a.percent ? `${k}:${a.percent}%(${a.value})` : '';
+    }).filter(Boolean);
+    $('leviPriceList').innerText = parts.join(', ');
+  }
+
+  if ($('ownerName')) $('ownerName').innerText = client.name || '';
+  if ($('ownerAddress')) $('ownerAddress').innerText = client.address || '';
+  if ($('ownerPhone')) $('ownerPhone').innerText = client.phone_number || '';
+  if ($('insuranceCompany')) $('insuranceCompany').innerText = client.insurance_company || '';
+  if ($('insuranceEmail')) $('insuranceEmail').innerText = client.insurance_email || '';
+  if ($('insuranceAgent')) $('insuranceAgent').innerText = client.insurance_agent || '';
+  if ($('agentPhone')) $('agentPhone').innerText = client.insurance_agent_phone || '';
+  if ($('agentEmail')) $('agentEmail').innerText = client.insurance_agent_email || '';
 
   // report type select
   if ($('reportType')) {
@@ -16,6 +50,7 @@ function init() {
       const sel = $('reportType');
       updateHelper('meta', { report_type_display: sel.value });
       saveAndRefresh();
+      updateSummaryVisibility();
     });
   }
 
@@ -49,6 +84,7 @@ function init() {
   renderDifferentials(dep.differentials || []);
 
   refreshSummary();
+  updateSummaryVisibility();
 }
 
 function collectDepCenters() {
@@ -146,6 +182,27 @@ function toggleDifferentials() {
   if (summary) summary.style.display = show ? 'block' : 'none';
 }
 
+function updateSummaryVisibility() {
+  const type = $('reportType')?.value || 'חוות דעת פרטית';
+  const map = {
+    'חוות דעת פרטית': 'summaryPrivate',
+    'חוות דעת גלובלית': 'summaryGlobal',
+    'חוות דעת מכירה מצבו הניזוק': 'summaryDamage',
+    'חוות דעת טוטלוסט': 'summaryTotalLoss',
+    'חוות דעת אובדן להלכה': 'summaryLegalLoss'
+  };
+  Object.values(map).forEach(id => {
+    const el = $(id); if (el) el.style.display = 'none';
+  });
+  const active = map[type];
+  if (active && $(active)) $(active).style.display = 'block';
+
+  const depSec = $('depreciationSection');
+  if (depSec) {
+    depSec.style.display = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק') ? 'none' : 'block';
+  }
+}
+
 function saveAndRefresh() {
   updateHelper('expertise', {
     depreciation: {
@@ -164,6 +221,7 @@ function saveAndRefresh() {
   saveHelperToStorage();
   updateCalculations();
   refreshSummary();
+  updateSummaryVisibility();
 }
 
 function calculateGlobalAmount() {
@@ -183,6 +241,7 @@ function refreshSummary() {
 window.addDepField = addDepField;
 window.addSummaryRow = addSummaryRow;
 window.toggleSection = toggleSection;
+window.updateSummaryVisibility = updateSummaryVisibility;
 
 window.generateAdditionalReport = () => {};
 
