@@ -80,7 +80,7 @@ function getReportTitle() {
 }
 
 // --- Inject Final Report ---
-ffunction injectReportHTML() {
+function injectReportHTML() {
   const container = document.getElementById("report-output");
   if (!container) return;
 
