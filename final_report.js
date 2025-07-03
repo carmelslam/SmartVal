@@ -80,19 +80,30 @@ function getReportTitle() {
 }
 
 // --- Inject Final Report ---
-function injectReportHTML() {
+ffunction injectReportHTML() {
   const container = document.getElementById("report-output");
   if (!container) return;
 
+  if (!helper || !helper.meta) {
+    container.innerHTML = `
+      <div style="border: 2px solid red; padding: 20px; font-size: 18px; color: red; text-align: center;">
+        ⚠️ אין נתונים זמינים להצגת הדו"ח.<br>
+        ודא שהוזן מידע קודם דרך שלב האקספרטיזה או שטעינת הנתונים הצליחה.
+      </div>
+    `;
+    return;
+  }
+
   const htmlTemplate = document.getElementById("template-html").innerHTML;
   const vaultBlocks = buildVaultBlocks();
-
   const feeSummary = buildFeeSummary();
   const map = { helper, vault: vaultBlocks, meta: helper.meta, title: getReportTitle(), fees: feeSummary };
+
   const rendered = renderHTMLBlock(htmlTemplate, map);
   const safeHTML = sanitizeHTML(rendered);
   container.innerHTML = applyDraftWatermark(safeHTML);
 }
+
 
 // --- Export Report ---
 function exportFinalReport() {
