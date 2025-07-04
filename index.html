@@ -9,9 +9,15 @@
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" />
   <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" />
-  <meta name="theme-color" content="#1e3a8a">
+  
+  <!-- OneSignal Push -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- OneSignal Push SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
   <style>
     body {
@@ -98,11 +104,42 @@
 
   <script type="module">
   import { encryptPassword } from './auth.js';
+  import { WEBHOOKS } from './webhook.js';
   
   async function initPush() {
-    // Skip push notifications to avoid errors
-    console.log("📱 Push notifications skipped");
-    return Promise.resolve();
+    try {
+      console.log("📱 Initializing OneSignal push notifications...");
+      
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      
+      return new Promise((resolve, reject) => {
+        OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            await OneSignal.init({
+              appId: "3b924b99-c302-4919-a97e-baf909394696",
+            });
+            
+            console.log("📱 OneSignal initialized successfully");
+            
+            // Show subscription prompt after successful login
+            try {
+              await OneSignal.showSlidedownPrompt();
+              console.log("📱 Push notification prompt shown");
+            } catch(promptError) {
+              console.log("📱 Push prompt already shown or blocked:", promptError.message);
+            }
+            
+            resolve();
+          } catch(error) {
+            console.error("📱 OneSignal init error:", error);
+            reject(error);
+          }
+        });
+      });
+    } catch(error) {
+      console.error("📱 Push notification setup error:", error);
+      throw error;
+    }
   }
 
   // Use a simpler success sound or skip audio
@@ -129,7 +166,7 @@
 
     try {
       console.log("📡 Sending webhook request to Make.com...");
-      const response = await fetch("https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk", {
+      const response = await fetch(WEBHOOKS.PASSWORD_PAGE, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
