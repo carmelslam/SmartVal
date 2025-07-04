@@ -61,7 +61,9 @@ export const MathEngine = {
 
   // Fee Calculations
   calculateFeesSubtotal(fees = {}) {
-    const travel = MathEngine.parseNumber(fees.travel_fee || fees.travel);
+    const travel = MathEngine.parseNumber(
+      fees.travel_fee || fees.travel || fees.transport
+    );
     const media = MathEngine.parseNumber(fees.media_fee || fees.photos);
     const office = MathEngine.parseNumber(fees.office_fee || fees.office);
     return MathEngine.round(travel + media + office);
