@@ -149,12 +149,27 @@
     }
   }
 
-  // Ferrari engine success sound
+  // Sports car engine success sound - trying multiple sources
   let successSound = null;
-  try {
-    successSound = new Audio("https://cdn.pixabay.com/download/audio/2021/09/09/audio_ee1f52a9df.mp3?filename=ferrari-engine-sound-starting-7320.mp3");
-  } catch(e) {
-    console.log("🔊 Audio skipped due to browser restrictions");
+  const carSounds = [
+    "https://www.soundjay.com/misc/sounds/car-engine-2.mp3",
+    "https://www.freesoundslibrary.com/wp-content/uploads/2018/05/car-engine-sound.mp3", 
+    "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
+    "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuZ3fPHdSYE"
+  ];
+  
+  // Try each sound source until one works
+  for (let soundUrl of carSounds) {
+    try {
+      successSound = new Audio(soundUrl);
+      successSound.addEventListener('error', () => {
+        console.log("🔊 Sound source failed:", soundUrl);
+      });
+      console.log("🔊 Trying sound source:", soundUrl);
+      break;
+    } catch(e) {
+      console.log("🔊 Audio source failed:", soundUrl, e.message);
+    }
   }
 
   async function login() {
