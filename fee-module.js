@@ -74,7 +74,18 @@ function saveFees() {
     hour_rate: parseFloat($('hour_rate').value) || 0
   };
 
-  alert('נתוני שכר הטרחה נשמרו בהצלחה');
+  showSuccessAndValidation();
+}
+
+function showSuccessAndValidation() {
+  // Hide the save button and show success section
+  $('saveBtn').style.display = 'none';
+  $('successSection').style.display = 'block';
+  
+  // Add validation button functionality
+  $('validateBtn').addEventListener('click', function() {
+    window.location.href = 'validation-workflow.html';
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

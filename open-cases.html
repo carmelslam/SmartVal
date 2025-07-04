@@ -87,6 +87,14 @@
     <input id="location" type="text" placeholder="מקום בדיקה" />
 
     <button id="submitBtn">פתח תיק</button>
+    
+    <!-- Success message and continue button (hidden initially) -->
+    <div id="successSection" style="display: none; margin-top: 20px;">
+      <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin-bottom: 15px; color: #155724;">
+        🚘 תיק נפתח בהצלחה ✅
+      </div>
+      <button id="continueBtn" style="background: #28a745; width: 100%;">המשך למילוי פרטים כלליים</button>
+    </div>
 
     <div class="footer">© כל הזכויות שמורות לקרמל כיוף</div>
   </div>
@@ -124,19 +132,32 @@
       };
 
       try {
-await sendToWebhook('OPEN_CASE_UI', payload);
-const encryptedPassword = await encryptPassword(payload.password);
-const encryptedPayload = JSON.stringify({
-  ...payload,
-  password: encryptedPassword
-});
-sessionStorage.setItem("carData", encryptedPayload);
-alert("🚘 תיק נפתח בהצלחה ✅");
+        await sendToWebhook('OPEN_CASE_UI', payload);
+        const encryptedPassword = await encryptPassword(payload.password);
+        const encryptedPayload = JSON.stringify({
+          ...payload,
+          password: encryptedPassword
+        });
+        sessionStorage.setItem("carData", encryptedPayload);
+        
+        // Show success message and continue button
+        showSuccessAndContinue();
 
       } catch (err) {
         document.getElementById("err").innerText = "שגיאה בשליחה: " + err;
       }
     });
+
+    function showSuccessAndContinue() {
+      // Hide the form and show success section
+      document.getElementById("submitBtn").style.display = "none";
+      document.getElementById("successSection").style.display = "block";
+      
+      // Add continue button functionality
+      document.getElementById("continueBtn").addEventListener("click", function() {
+        window.location.href = "general_info.html";
+      });
+    }
   </script>
 </body>
 </html>
