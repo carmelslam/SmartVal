@@ -1,18 +1,27 @@
-// depreciation_module.js - handles depreciation inputs and summary
-import { helper, updateHelper, updateCalculations, saveHelperToStorage } from './helper.js';
+// depreciation_module.js - Fixed implementation with proper functionality
+import { helper, updateHelper, updateCalculations, saveHelperToStorage, getVehicleData, getDamageData, getValuationData, syncLeviData } from './helper.js';
 
 function $(id) {
   return document.getElementById(id);
 }
 
 function init() {
+  console.log('Depreciation module initializing...');
+  
+  // Use standardized data access
   const meta = helper.meta || {};
-  const vehicle = helper.vehicle || {};
+  const vehicleData = getVehicleData();
+  const damageData = getDamageData();
+  const valuationData = getValuationData();
   const client = helper.client || {};
-  const levi = helper.expertise?.levi_report || {};
+  
+  // Fallback to legacy paths for compatibility
+  const vehicle = vehicleData || helper.vehicle || {};
+  const levi = valuationData || helper.expertise?.levi_report || {};
   const calc = helper.expertise?.calculations || {};
   const dep = helper.expertise?.depreciation || {};
 
+  // Populate fixed data
   if ($('pageTitle')) $('pageTitle').innerText = `רכב מס. ${meta.plate || '...'}`;
   if ($('carPlate')) $('carPlate').innerText = meta.plate || vehicle.plate_number || '';
   if ($('carManufacturer')) $('carManufacturer').innerText = vehicle.manufacturer || '';
@@ -43,18 +52,19 @@ function init() {
   if ($('agentPhone')) $('agentPhone').innerText = client.insurance_agent_phone || '';
   if ($('agentEmail')) $('agentEmail').innerText = client.insurance_agent_email || '';
 
-  // report type select
+  // FIXED: Report type select with proper event handling
   if ($('reportType')) {
-    $('reportType').value = meta.report_type_display || $('reportType').value;
-    $('reportType').addEventListener('change', () => {
-      const sel = $('reportType');
-      updateHelper('meta', { report_type_display: sel.value });
-      saveAndRefresh();
+    $('reportType').value = meta.report_type_display || 'חוות דעת פרטית';
+    $('reportType').addEventListener('change', function() {
+      const selectedType = this.value;
+      console.log('Report type changed to:', selectedType);
+      updateHelper('meta', { report_type_display: selectedType });
       updateSummaryVisibility();
+      saveAndRefresh();
     });
   }
 
-  // company client select
+  // Company client select
   if ($('isCompanyClient')) {
     $('isCompanyClient').value = helper.client?.is_company_client ? 'yes' : 'no';
     $('isCompanyClient').addEventListener('change', () => {
@@ -63,28 +73,42 @@ function init() {
     });
   }
 
-  // depreciation bulk table and global percent
+  // Depreciation table and global percent
   renderDepTable(dep.centers || []);
-  $('globalDep1').value = dep.global_percent || '';
-  $('globalDep1').addEventListener('input', saveAndRefresh);
+  if ($('globalDep1')) {
+    $('globalDep1').value = dep.global_percent || '';
+    $('globalDep1').addEventListener('input', saveAndRefresh);
+  }
 
-  // work days, agreement
-  $('workDays').value = dep.work_days || '';
-  $('workDays').addEventListener('input', saveAndRefresh);
-  $('isAgreement').checked = !!dep.is_agreement;
-  $('isAgreement').addEventListener('change', saveAndRefresh);
+  // Work days, agreement
+  if ($('workDays')) {
+    $('workDays').value = dep.work_days || '';
+    $('workDays').addEventListener('input', saveAndRefresh);
+  }
+  if ($('isAgreement')) {
+    $('isAgreement').checked = !!dep.is_agreement;
+    $('isAgreement').addEventListener('change', saveAndRefresh);
+  }
 
-  // differentials
-  $('hasDifferentials').checked = !!dep.has_differentials;
-  $('hasDifferentials').addEventListener('change', () => {
-    toggleDifferentials();
-    saveAndRefresh();
-  });
+  // FIXED: Differentials with proper checkbox handling
+  if ($('hasDifferentials')) {
+    $('hasDifferentials').checked = !!dep.has_differentials;
+    $('hasDifferentials').addEventListener('change', function() {
+      console.log('Differentials checkbox changed:', this.checked);
+      toggleDifferentials();
+      saveAndRefresh();
+    });
+  }
+  
+  // Initialize differentials display
   toggleDifferentials();
   renderDifferentials(dep.differentials || []);
 
+  // Initial summary setup
   refreshSummary();
   updateSummaryVisibility();
+  
+  console.log('Depreciation module initialized successfully');
 }
 
 function collectDepCenters() {
@@ -107,12 +131,16 @@ function renderDepTable(list) {
 
 function createDepRow(data = {}) {
   const div = document.createElement('div');
-  div.className = 'form-row dep-row';
+  div.className = 'dep-row';
+  div.style.display = 'grid';
+  div.style.gridTemplateColumns = '1fr 1fr 120px 80px';
+  div.style.gap = '14px';
+  div.style.marginBottom = '10px';
   div.innerHTML = `
-    <input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.part || ''}">
-    <input type="text" class="dep-repair" placeholder="מהות התיקון" value="${data.repair || ''}">
-    <input type="number" class="dep-percent" placeholder="% ירידת ערך" value="${data.percent || ''}">
-    <button type="button" class="btn remove">✕</button>
+    <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.part || ''}"></div>
+    <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${data.repair || ''}"></div>
+    <div><input type="number" class="dep-percent" placeholder="%" value="${data.percent || ''}"></div>
+    <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
   div.querySelector('.remove').addEventListener('click', () => {
     div.remove();
@@ -126,124 +154,233 @@ function createDepRow(data = {}) {
 
 export function addDepField() {
   const table = $('depreciationBulkTable');
-  table.appendChild(createDepRow());
+  if (table) {
+    table.appendChild(createDepRow());
+  }
 }
 
 function collectDifferentials() {
-  return Array.from(document.querySelectorAll('#differentialsTable .diff-row')).map(row => ({
+  return Array.from(document.querySelectorAll('#differentialsRows .diff-row')).map(row => ({
     desc: row.querySelector('.diff-desc').value.trim(),
     amount: parseFloat(row.querySelector('.diff-amount').value) || 0
   }));
 }
 
 function renderDifferentials(list) {
-  const table = $('differentialsTable');
-  if (!table) return;
-  table.innerHTML = '';
+  const container = $('differentialsRows');
+  if (!container) return;
+  container.innerHTML = '';
   list.forEach(item => {
     const row = createDiffRow(item);
-    table.appendChild(row);
+    container.appendChild(row);
   });
+  updateDifferentialsSummary();
 }
 
 function createDiffRow(data = {}) {
   const div = document.createElement('div');
-  div.className = 'form-row diff-row';
+  div.className = 'diff-row';
+  div.style.display = 'grid';
+  div.style.gridTemplateColumns = '1fr 120px 80px';
+  div.style.gap = '14px';
+  div.style.marginBottom = '10px';
   div.innerHTML = `
-    <input type="text" class="diff-desc" placeholder="תיאור" value="${data.desc || ''}">
-    <input type="number" class="diff-amount" placeholder="ש"ח" value="${data.amount || ''}">
-    <button type="button" class="btn remove">✕</button>
+    <div><input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}"></div>
+    <div><input type="number" class="diff-amount" placeholder="סכום" value="${data.amount || ''}"></div>
+    <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
   div.querySelector('.remove').addEventListener('click', () => {
     div.remove();
     saveAndRefresh();
+    updateDifferentialsSummary();
   });
   ['diff-desc','diff-amount'].forEach(cls => {
-    div.querySelector('.' + cls).addEventListener('input', saveAndRefresh);
+    div.querySelector('.' + cls).addEventListener('input', () => {
+      saveAndRefresh();
+      updateDifferentialsSummary();
+    });
   });
   return div;
 }
 
-export function addSummaryRow() {
-  const table = $('differentialsTable');
-  table.appendChild(createDiffRow());
+function updateDifferentialsSummary() {
+  const differentials = collectDifferentials();
+  const total = differentials.reduce((sum, diff) => sum + diff.amount, 0);
+  
+  if ($('totalDifferentials')) {
+    $('totalDifferentials').innerText = `₪${total.toLocaleString()}`;
+  }
+  
+  // Calculate final total with differentials
+  const baseTotal = parseFloat(helper.expertise?.calculations?.total_compensation || 0);
+  const finalTotal = baseTotal + total;
+  
+  if ($('finalTotalWithDifferentials')) {
+    $('finalTotalWithDifferentials').innerText = `₪${finalTotal.toLocaleString()}`;
+  }
 }
 
+export function addDifferentialRow() {
+  const container = $('differentialsRows');
+  if (container) {
+    container.appendChild(createDiffRow());
+  }
+}
+
+export function addSummaryRow() {
+  // Legacy function for compatibility
+  addDifferentialRow();
+}
+
+// FIXED: Collapsible section toggle
 export function toggleSection(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el) {
+    const isHidden = el.style.display === 'none';
+    el.style.display = isHidden ? 'block' : 'none';
+    console.log(`Toggled section ${id}: ${isHidden ? 'shown' : 'hidden'}`);
+  }
 }
 
+// FIXED: Differentials toggle
 function toggleDifferentials() {
+  const checkbox = $('hasDifferentials');
   const table = $('differentialsTable');
   const summary = $('differentialsSummary');
-  const show = $('hasDifferentials').checked;
+  
+  if (!checkbox) return;
+  
+  const show = checkbox.checked;
+  console.log('Toggling differentials:', show);
+  
   if (table) table.style.display = show ? 'block' : 'none';
   if (summary) summary.style.display = show ? 'block' : 'none';
+  
+  // Add initial row if showing for first time
+  if (show && $('differentialsRows') && $('differentialsRows').children.length === 0) {
+    addDifferentialRow();
+  }
 }
 
+// FIXED: Summary visibility with proper mapping
 function updateSummaryVisibility() {
   const type = $('reportType')?.value || 'חוות דעת פרטית';
+  console.log('Updating summary visibility for type:', type);
+  
   const map = {
     'חוות דעת פרטית': 'summaryPrivate',
-    'חוות דעת גלובלית': 'summaryGlobal',
+    'חוות דעת גלובלית': 'summaryGlobal', 
     'חוות דעת מכירה מצבו הניזוק': 'summaryDamage',
     'חוות דעת טוטלוסט': 'summaryTotalLoss',
     'חוות דעת אובדן להלכה': 'summaryLegalLoss'
   };
+  
+  // Hide all summary blocks
   Object.values(map).forEach(id => {
-    const el = $(id); if (el) el.style.display = 'none';
+    const el = $(id); 
+    if (el) {
+      el.style.display = 'none';
+      console.log(`Hidden summary: ${id}`);
+    }
   });
+  
+  // Show active summary
   const active = map[type];
-  if (active && $(active)) $(active).style.display = 'block';
+  if (active && $(active)) {
+    $(active).style.display = 'block';
+    console.log(`Showing summary: ${active}`);
+  }
 
+  // Control depreciation section visibility
   const depSec = $('depreciationSection');
   if (depSec) {
-    depSec.style.display = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק') ? 'none' : 'block';
+    const hideDepreciation = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק');
+    depSec.style.display = hideDepreciation ? 'none' : 'block';
+    console.log(`Depreciation section: ${hideDepreciation ? 'hidden' : 'shown'}`);
   }
 }
 
 function saveAndRefresh() {
-  updateHelper('expertise', {
-    depreciation: {
-      centers: collectDepCenters(),
-      global_percent: parseFloat($('globalDep1').value) || 0,
-      work_days: $('workDays').value || '',
-      is_agreement: $('isAgreement').checked,
-      has_differentials: $('hasDifferentials').checked,
-      differentials: collectDifferentials(),
-      global_amount: calculateGlobalAmount()
-    }
-  });
+  const depreciationData = {
+    centers: collectDepCenters(),
+    global_percent: parseFloat($('globalDep1')?.value || 0),
+    work_days: $('workDays')?.value || '',
+    is_agreement: $('isAgreement')?.checked || false,
+    has_differentials: $('hasDifferentials')?.checked || false,
+    differentials: collectDifferentials(),
+    global_amount: calculateGlobalAmount()
+  };
+  
+  updateHelper('expertise', { depreciation: depreciationData });
+  
   if ($('isCompanyClient')) {
     updateHelper('client', { is_company_client: $('isCompanyClient').value === 'yes' });
   }
+  
   saveHelperToStorage();
   updateCalculations();
   refreshSummary();
-  updateSummaryVisibility();
+  updateDifferentialsSummary();
 }
 
 function calculateGlobalAmount() {
   const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
-  const percent = parseFloat($('globalDep1').value) || 0;
+  const percent = parseFloat($('globalDep1')?.value || 0);
   return Math.round((marketValue * percent) / 100);
 }
 
 function refreshSummary() {
   const calc = helper.expertise?.calculations || {};
-  $('sumMarketValue').value = calc.market_value || '';
-  $('sumClaim').value = calc.total_damage || '';
-  $('depCompensation').value = helper.expertise?.depreciation?.global_amount || '';
-  $('sumTotal').value = calc.total_compensation || '';
+  const dep = helper.expertise?.depreciation || {};
+  
+  // Update all summary fields across all report types
+  const summaryFields = [
+    'sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 
+    'sumMarketValueTotal', 'sumMarketValueLegal'
+  ];
+  summaryFields.forEach(id => {
+    if ($(id)) $(id).value = calc.market_value || '';
+  });
+  
+  const claimFields = [
+    'sumClaim', 'sumClaimGlobal'
+  ];
+  claimFields.forEach(id => {
+    if ($(id)) $(id).value = calc.total_damage || '';
+  });
+  
+  const depFields = [
+    'depCompensation', 'depCompensationGlobal'
+  ];
+  depFields.forEach(id => {
+    if ($(id)) $(id).value = dep.global_amount || '';
+  });
+  
+  const totalFields = [
+    'sumTotal', 'sumTotalGlobal', 'afterSaleDamage', 'afterSaleTotal', 'afterSaleLegal'
+  ];
+  totalFields.forEach(id => {
+    if ($(id)) $(id).value = calc.total_compensation || '';
+  });
+  
+  // Specific fields for different report types
+  if ($('saleValueDamage')) $('saleValueDamage').value = calc.sale_value_damaged || '';
+  if ($('salvageValueTotal')) $('salvageValueTotal').value = calc.salvage_value || '';
+  if ($('salvageValueLegal')) $('salvageValueLegal').value = calc.salvage_value || '';
+  if ($('storageValueTotal')) $('storageValueTotal').value = calc.storage_value || '';
 }
 
+// Global function exports
 window.addDepField = addDepField;
+window.addDifferentialRow = addDifferentialRow;
 window.addSummaryRow = addSummaryRow;
 window.toggleSection = toggleSection;
 window.updateSummaryVisibility = updateSummaryVisibility;
 
-window.generateAdditionalReport = () => {};
+// Generate report function placeholder
+window.generateAdditionalReport = () => {
+  console.log('Generating additional report...');
+  // This will integrate with final report builder
+};
 
 document.addEventListener('DOMContentLoaded', init);
-

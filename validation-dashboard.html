@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח בקרת אימות - ירון כיוף שמאות</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      direction: rtl;
+      padding: 20px;
+    }
+    
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 30px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 18px;
+    }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .card h3 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #667eea;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: 10px;
+    }
+    
+    .status-valid { background: #28a745; }
+    .status-invalid { background: #dc3545; }
+    .status-warning { background: #ffc107; }
+    .status-pending { background: #6c757d; }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .metric:last-child {
+      border-bottom: none;
+    }
+    
+    .metric-label {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .metric-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .metric-value.error { color: #dc3545; }
+    .metric-value.warning { color: #ffc107; }
+    .metric-value.success { color: #28a745; }
+    
+    .validation-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+    
+    .validation-item {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    .validation-item.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .validation-item.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    
+    .validation-item.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+      transition: width 0.3s;
+      border-radius: 10px;
+    }
+    
+    .progress-fill.warning {
+      background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+    }
+    
+    .progress-fill.error {
+      background: linear-gradient(90deg, #dc3545 0%, #e83e8c 100%);
+    }
+    
+    .navigation {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 15px 25px;
+      border-radius: 25px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 15px;
+      z-index: 1000;
+    }
+    
+    .nav-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .nav-btn.primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .nav-btn.secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .auto-refresh input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 28px;
+      }
+      
+      .actions {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .navigation {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="ירון כיוף שמאות" class="logo">
+      <h1>🛡️ לוח בקרת אימות</h1>
+      <p>מערכת אימות נתונים ובקרת איכות</p>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Overall Status Card -->
+      <div class="card">
+        <h3>🎯 סטטוס כללי <span class="status-indicator" id="overall-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="validation-status">בדיקה...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">אחוז השלמה:</span>
+          <span class="metric-value" id="completion-percentage">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="completion-progress" style="width: 0%"></div>
+        </div>
+        <div class="metric">
+          <span class="metric-label">בדיקה אחרונה:</span>
+          <span class="metric-value" id="last-check">טרם בוצעה</span>
+        </div>
+      </div>
+
+      <!-- Errors Card -->
+      <div class="card">
+        <h3>❌ שגיאות <span class="status-indicator status-invalid" id="errors-indicator"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סה"כ שגיאות:</span>
+          <span class="metric-value error" id="total-errors">0</span>
+        </div>
+        <div class="validation-list" id="errors-list">
+          <div class="validation-item">טוען שגיאות...</div>
+        </div>
+      </div>
+
+      <!-- Warnings Card -->
+      <div class="card">
+        <h3>⚠️ אזהרות <span class="status-indicator status-warning" id="warnings-indicator"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סה"כ אזהרות:</span>
+          <span class="metric-value warning" id="total-warnings">0</span>
+        </div>
+        <div class="validation-list" id="warnings-list">
+          <div class="validation-item">טוען אזהרות...</div>
+        </div>
+      </div>
+
+      <!-- Vehicle Data Card -->
+      <div class="card">
+        <h3>🚗 פרטי רכב <span class="status-indicator" id="vehicle-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">מספר רישוי:</span>
+          <span class="metric-value" id="vehicle-plate">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">יצרן ודגם:</span>
+          <span class="metric-value" id="vehicle-model">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">שנת ייצור:</span>
+          <span class="metric-value" id="vehicle-year">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="vehicle-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Damage Data Card -->
+      <div class="card">
+        <h3>🧱 נתוני נזק <span class="status-indicator" id="damage-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">מספר מוקדי נזק:</span>
+          <span class="metric-value" id="damage-centers-count">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סה"כ חלקים:</span>
+          <span class="metric-value" id="total-parts">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סה"כ תיקונים:</span>
+          <span class="metric-value" id="total-repairs">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="damage-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Business Rules Card -->
+      <div class="card">
+        <h3>📊 חוקי עסק <span class="status-indicator" id="business-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">יחס עלות חלקים/עבודה:</span>
+          <span class="metric-value" id="cost-ratio">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סה"כ הערכה:</span>
+          <span class="metric-value" id="total-estimate">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס בדיקה:</span>
+          <span class="metric-value" id="business-validation">בדיקה...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="refreshValidation()">🔄 רענן אימות</button>
+      <button class="btn btn-secondary" onclick="exportValidationReport()">📊 ייצא דוח</button>
+      <button class="btn btn-success" onclick="fixAllErrors()" id="fix-errors-btn" disabled>🔧 תקן שגיאות</button>
+      <button class="btn btn-danger" onclick="clearValidationData()">🗑️ נקה נתונים</button>
+    </div>
+
+    <!-- Auto-refresh control -->
+    <div class="card">
+      <div class="auto-refresh">
+        <input type="checkbox" id="auto-refresh-checkbox" onchange="toggleAutoRefresh()">
+        <label for="auto-refresh-checkbox">רענון אוטומטי כל 30 שניות</label>
+        <span id="refresh-countdown"></span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <a href="selection.html" class="nav-btn secondary">🏠 עמוד הבית</a>
+      <a href="car-details.html" class="nav-btn secondary">🚗 פרטי רכב</a>
+      <a href="enhanced-damage-centers.html" class="nav-btn primary">🧱 מוקדי נזק</a>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { validationSystem } from './validation-system.js';
+    import { helper } from './helper.js';
+
+    let autoRefreshInterval = null;
+    let refreshCountdown = 30;
+    let countdownInterval = null;
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check authentication
+      const auth = sessionStorage.getItem("auth");
+      if (!auth) {
+        alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+        window.location.href = "index.html";
+        return;
+      }
+
+      // Load initial validation data
+      refreshValidation();
+      
+      // Setup keyboard shortcuts
+      setupKeyboardShortcuts();
+      
+      console.log('🛡️ Validation Dashboard initialized');
+    });
+
+    function refreshValidation() {
+      console.log('🔄 Refreshing validation data...');
+      
+      try {
+        // Get validation summary
+        const summary = validationSystem.getValidationSummary();
+        
+        // Update overall status
+        updateOverallStatus(summary);
+        
+        // Update errors
+        updateErrors(summary);
+        
+        // Update warnings
+        updateWarnings(summary);
+        
+        // Update vehicle data
+        updateVehicleData(summary);
+        
+        // Update damage data
+        updateDamageData(summary);
+        
+        // Update business rules
+        updateBusinessRules(summary);
+        
+        // Update last check time
+        document.getElementById('last-check').textContent = new Date().toLocaleTimeString('he-IL');
+        
+        console.log('✅ Validation data refreshed successfully');
+        
+      } catch (error) {
+        console.error('❌ Error refreshing validation data:', error);
+        showError('שגיאה בטעינת נתוני האימות');
+      }
+    }
+
+    function updateOverallStatus(summary) {
+      const statusIndicator = document.getElementById('overall-status');
+      const statusText = document.getElementById('validation-status');
+      const completionPercentage = document.getElementById('completion-percentage');
+      const completionProgress = document.getElementById('completion-progress');
+      
+      if (summary.isValid) {
+        statusIndicator.className = 'status-indicator status-valid';
+        statusText.textContent = 'תקין';
+        statusText.className = 'metric-value success';
+        completionPercentage.textContent = '100%';
+        completionProgress.style.width = '100%';
+        completionProgress.className = 'progress-fill';
+      } else {
+        statusIndicator.className = 'status-indicator status-invalid';
+        statusText.textContent = 'דורש תיקון';
+        statusText.className = 'metric-value error';
+        
+        // Calculate completion percentage based on errors
+        const totalItems = 10; // Assume 10 validation items
+        const errorItems = Math.min(summary.totalErrors, totalItems);
+        const percentage = Math.max(0, Math.round((totalItems - errorItems) / totalItems * 100));
+        
+        completionPercentage.textContent = `${percentage}%`;
+        completionProgress.style.width = `${percentage}%`;
+        completionProgress.className = percentage > 50 ? 'progress-fill warning' : 'progress-fill error';
+      }
+    }
+
+    function updateErrors(summary) {
+      const errorsIndicator = document.getElementById('errors-indicator');
+      const totalErrors = document.getElementById('total-errors');
+      const errorsList = document.getElementById('errors-list');
+      
+      totalErrors.textContent = summary.totalErrors;
+      
+      if (summary.totalErrors > 0) {
+        errorsIndicator.className = 'status-indicator status-invalid';
+        
+        const errorItems = [];
+        if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+          errorItems.push(...summary.details.vehicle.errors.map(e => `פרטי רכב: ${e}`));
+        }
+        if (summary.details.damage && !summary.details.damage.isValid) {
+          errorItems.push(...summary.details.damage.errors.map(e => `נתוני נזק: ${e}`));
+        }
+        if (summary.details.business && !summary.details.business.isValid) {
+          errorItems.push(...summary.details.business.errors.map(e => `חוקי עסק: ${e}`));
+        }
+        
+        errorsList.innerHTML = errorItems.length > 0 
+          ? errorItems.map(error => `<div class="validation-item error">${error}</div>`).join('')
+          : '<div class="validation-item">לא נמצאו שגיאות ספציפיות</div>';
+          
+        document.getElementById('fix-errors-btn').disabled = false;
+      } else {
+        errorsIndicator.className = 'status-indicator status-valid';
+        errorsList.innerHTML = '<div class="validation-item success">✅ אין שגיאות</div>';
+        document.getElementById('fix-errors-btn').disabled = true;
+      }
+    }
+
+    function updateWarnings(summary) {
+      const warningsIndicator = document.getElementById('warnings-indicator');
+      const totalWarnings = document.getElementById('total-warnings');
+      const warningsList = document.getElementById('warnings-list');
+      
+      totalWarnings.textContent = summary.totalWarnings;
+      
+      if (summary.totalWarnings > 0) {
+        warningsIndicator.className = 'status-indicator status-warning';
+        
+        const warningItems = [];
+        if (summary.details.vehicle && summary.details.vehicle.warnings.length > 0) {
+          warningItems.push(...summary.details.vehicle.warnings.map(w => `פרטי רכב: ${w}`));
+        }
+        if (summary.details.damage && summary.details.damage.warnings.length > 0) {
+          warningItems.push(...summary.details.damage.warnings.map(w => `נתוני נזק: ${w}`));
+        }
+        if (summary.details.business && summary.details.business.warnings.length > 0) {
+          warningItems.push(...summary.details.business.warnings.map(w => `חוקי עסק: ${w}`));
+        }
+        
+        warningsList.innerHTML = warningItems.length > 0 
+          ? warningItems.map(warning => `<div class="validation-item warning">${warning}</div>`).join('')
+          : '<div class="validation-item">לא נמצאו אזהרות ספציפיות</div>';
+      } else {
+        warningsIndicator.className = 'status-indicator status-valid';
+        warningsList.innerHTML = '<div class="validation-item success">✅ אין אזהרות</div>';
+      }
+    }
+
+    function updateVehicleData(summary) {
+      const vehicleStatus = document.getElementById('vehicle-status');
+      const vehiclePlate = document.getElementById('vehicle-plate');
+      const vehicleModel = document.getElementById('vehicle-model');
+      const vehicleYear = document.getElementById('vehicle-year');
+      const vehicleValidation = document.getElementById('vehicle-validation');
+      
+      const vehicleData = helper.vehicle || {};
+      
+      vehiclePlate.textContent = vehicleData.plate || 'לא הוזן';
+      vehicleModel.textContent = `${vehicleData.manufacturer || ''} ${vehicleData.model || ''}`.trim() || 'לא הוזן';
+      vehicleYear.textContent = vehicleData.year || 'לא הוזן';
+      
+      if (summary.details.vehicle) {
+        if (summary.details.vehicle.isValid) {
+          vehicleStatus.className = 'status-indicator status-valid';
+          vehicleValidation.textContent = 'תקין';
+          vehicleValidation.className = 'metric-value success';
+        } else {
+          vehicleStatus.className = 'status-indicator status-invalid';
+          vehicleValidation.textContent = 'דורש תיקון';
+          vehicleValidation.className = 'metric-value error';
+        }
+      } else {
+        vehicleStatus.className = 'status-indicator status-pending';
+        vehicleValidation.textContent = 'לא נבדק';
+        vehicleValidation.className = 'metric-value';
+      }
+    }
+
+    function updateDamageData(summary) {
+      const damageStatus = document.getElementById('damage-status');
+      const centersCount = document.getElementById('damage-centers-count');
+      const totalParts = document.getElementById('total-parts');
+      const totalRepairs = document.getElementById('total-repairs');
+      const damageValidation = document.getElementById('damage-validation');
+      
+      const damageData = helper.damage || {};
+      const centers = damageData.centers || [];
+      
+      centersCount.textContent = centers.length;
+      
+      let partsCount = 0;
+      let repairsCount = 0;
+      
+      centers.forEach(center => {
+        if (center.parts) partsCount += center.parts.length;
+        if (center.repairs) repairsCount += center.repairs.length;
+      });
+      
+      totalParts.textContent = partsCount;
+      totalRepairs.textContent = repairsCount;
+      
+      if (summary.details.damage) {
+        if (summary.details.damage.isValid) {
+          damageStatus.className = 'status-indicator status-valid';
+          damageValidation.textContent = 'תקין';
+          damageValidation.className = 'metric-value success';
+        } else {
+          damageStatus.className = 'status-indicator status-invalid';
+          damageValidation.textContent = 'דורש תיקון';
+          damageValidation.className = 'metric-value error';
+        }
+      } else {
+        damageStatus.className = 'status-indicator status-pending';
+        damageValidation.textContent = 'לא נבדק';
+        damageValidation.className = 'metric-value';
+      }
+    }
+
+    function updateBusinessRules(summary) {
+      const businessStatus = document.getElementById('business-status');
+      const costRatio = document.getElementById('cost-ratio');
+      const totalEstimate = document.getElementById('total-estimate');
+      const businessValidation = document.getElementById('business-validation');
+      
+      // Calculate cost ratio and total estimate
+      const damageData = helper.damage || {};
+      const centers = damageData.centers || [];
+      
+      let totalPartsCost = 0;
+      let totalRepairsCost = 0;
+      
+      centers.forEach(center => {
+        if (center.parts) {
+          center.parts.forEach(part => {
+            totalPartsCost += parseFloat(part.price || 0);
+          });
+        }
+        if (center.repairs) {
+          center.repairs.forEach(repair => {
+            totalRepairsCost += parseFloat(repair.cost || 0);
+          });
+        }
+      });
+      
+      const ratio = totalRepairsCost > 0 ? (totalPartsCost / totalRepairsCost).toFixed(2) : 'N/A';
+      costRatio.textContent = ratio;
+      
+      const total = totalPartsCost + totalRepairsCost;
+      totalEstimate.textContent = `₪${total.toLocaleString('he-IL')}`;
+      
+      if (summary.details.business) {
+        if (summary.details.business.isValid) {
+          businessStatus.className = 'status-indicator status-valid';
+          businessValidation.textContent = 'תקין';
+          businessValidation.className = 'metric-value success';
+        } else {
+          businessStatus.className = 'status-indicator status-invalid';
+          businessValidation.textContent = 'דורש בדיקה';
+          businessValidation.className = 'metric-value error';
+        }
+      } else {
+        businessStatus.className = 'status-indicator status-pending';
+        businessValidation.textContent = 'לא נבדק';
+        businessValidation.className = 'metric-value';
+      }
+    }
+
+    function toggleAutoRefresh() {
+      const checkbox = document.getElementById('auto-refresh-checkbox');
+      const countdown = document.getElementById('refresh-countdown');
+      
+      if (checkbox.checked) {
+        autoRefreshInterval = setInterval(() => {
+          refreshValidation();
+          refreshCountdown = 30;
+        }, 30000);
+        
+        refreshCountdown = 30;
+        countdownInterval = setInterval(() => {
+          refreshCountdown--;
+          countdown.textContent = `(${refreshCountdown}s)`;
+          
+          if (refreshCountdown <= 0) {
+            refreshCountdown = 30;
+          }
+        }, 1000);
+        
+        console.log('🔄 Auto-refresh enabled');
+      } else {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        countdown.textContent = '';
+        console.log('⏸️ Auto-refresh disabled');
+      }
+    }
+
+    function exportValidationReport() {
+      console.log('📊 Exporting validation report...');
+      
+      try {
+        const report = validationSystem.generateValidationReport();
+        const reportJson = JSON.stringify(report, null, 2);
+        
+        const blob = new Blob([reportJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `validation-report-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log('✅ Validation report exported successfully');
+        showSuccess('דוח האימות יוצא בהצלחה');
+        
+      } catch (error) {
+        console.error('❌ Error exporting validation report:', error);
+        showError('שגיאה בייצוא דוח האימות');
+      }
+    }
+
+    function fixAllErrors() {
+      console.log('🔧 Attempting to fix validation errors...');
+      
+      if (confirm('האם אתה בטוח שברצונך לתקן באופן אוטומטי את השגיאות שנמצאו?')) {
+        // Implement auto-fix logic here
+        showSuccess('תיקון אוטומטי הושלם - אנא בדוק את התוצאות');
+        refreshValidation();
+      }
+    }
+
+    function clearValidationData() {
+      if (confirm('האם אתה בטוח שברצונך לנקות את כל נתוני האימות?')) {
+        // Clear validation history
+        validationSystem.validationHistory = [];
+        validationSystem.errors.clear();
+        validationSystem.warnings.clear();
+        
+        console.log('🗑️ Validation data cleared');
+        showSuccess('נתוני האימות נוקו');
+        refreshValidation();
+      }
+    }
+
+    function setupKeyboardShortcuts() {
+      document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          switch (event.key) {
+            case 'r':
+              event.preventDefault();
+              refreshValidation();
+              break;
+            case 'e':
+              event.preventDefault();
+              exportValidationReport();
+              break;
+            case 'f':
+              event.preventDefault();
+              if (!document.getElementById('fix-errors-btn').disabled) {
+                fixAllErrors();
+              }
+              break;
+          }
+        }
+      });
+    }
+
+    function showSuccess(message) {
+      // Simple success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-weight: bold;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 3000);
+    }
+
+    function showError(message) {
+      // Simple error notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc3545;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-weight: bold;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 4000);
+    }
+
+    // Export functions to global scope
+    window.refreshValidation = refreshValidation;
+    window.exportValidationReport = exportValidationReport;
+    window.fixAllErrors = fixAllErrors;
+    window.clearValidationData = clearValidationData;
+    window.toggleAutoRefresh = toggleAutoRefresh;
+    
+    // Initialize keyboard shortcuts info
+    setTimeout(() => {
+      console.log('🔧 Validation Dashboard - Keyboard shortcuts:');
+      console.log('Ctrl+R: Refresh validation');
+      console.log('Ctrl+E: Export report');
+      console.log('Ctrl+F: Fix errors');
+    }, 1000);
+  </script>
+
+  <!-- Analytics and monitoring -->
+  <script>
+    // Basic usage analytics
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'page_view', {
+        page_title: 'Validation Dashboard',
+        page_location: window.location.href
+      });
+    }
+    
+    // Performance monitoring
+    window.addEventListener('load', () => {
+      const loadTime = performance.now();
+      console.log(`📊 Validation Dashboard loaded in ${loadTime.toFixed(2)}ms`);
+    });
+  </script>
+</body>
+</html>

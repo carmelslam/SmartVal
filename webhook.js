@@ -21,6 +21,9 @@ export const WEBHOOKS = {
   DEV_HUB: 'https://hook.eu2.make.com/cg8j5gu0wyum6yrbl4rz2myd0pew3znt',
   ADMIN_HUB: 'https://hook.eu2.make.com/xwr4rxw9sp1v16ihuw4ldgyxa312hg2p',
 
+  // Estimate and Case Management Webhooks
+  SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
+  ESTIMATE_EXPORT: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p',
 
 // ✅ ADMIN + DEV HUB ADDITIONS — Confirmed by User
 

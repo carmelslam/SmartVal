@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>חיפוש חלפים</title>
+  <title>ירון כיוף שמאות - פורטל - חיפוש חלפים</title>
   <script type="module" src="./parts.js"></script>
   <script type="module" src="./webhook.js"></script>
 
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
-  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
-  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f0f4ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #64748b 100%);
       margin: 0;
       padding: 0;
       display: flex;
@@ -35,8 +35,8 @@
       width: 120px;
       margin-bottom: 15px;
     }
-    .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-    .subtitle { font-size: 18px; color: #666; margin-bottom: 5px; }
+    .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #1e3a8a; }
+    .subtitle { font-size: 18px; color: #64748b; margin-bottom: 5px; }
     .legal-note {
       color: red;
       font-weight: bold;
@@ -44,13 +44,13 @@
     }
     h2 {
       font-size: 20px;
-      color: #007bff;
+      color: #1e3a8a;
       margin-bottom: 20px;
     }
   .right-small-heading {
     text-align: right;
     font-size: 18px;
-    color: #007bff;
+    color: #1e3a8a;
    margin-bottom: 18px;
   }
 
@@ -66,7 +66,7 @@
       width: 100%;
       padding: 12px;
       font-size: 16px;
-      background-color: #007bff;
+      background-color: #3b82f6;
       color: white;
       border: none;
       border-radius: 8px;
@@ -89,7 +89,7 @@
     }
     .home-btn { background-color: #6c757d; color: white; }
     .logout-btn { background-color: #dc3545; color: white; }
-    .footer { font-size: 12px; color: #aaa; margin-top: 15px; }
+    .footer { font-size: 12px; color: #475569; margin-top: 15px; text-align: center; }
     #previewImage {
       display: none;
       max-width: 100%;
@@ -105,7 +105,7 @@
       <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo">
     </div>
     <div class="title">ירון כיוף שמאות - פורטל</div>
-    <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
+    <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
   <h2>חיפוש חלפים לרכב</h2>
   <form id="partSearchForm">
     <input type="text" id="plate" name="plate" placeholder="מספר רישוי" required>
@@ -138,6 +138,14 @@
 
 <button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
 <ul id="selected_parts_list" style="text-align:right; padding-right: 0; font-size: 14px;"></ul>
+
+<!-- Enhanced Search Results Display -->
+<div id="search_results_display" style="display: none; margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+  <h3 style="color: #007bff; margin-bottom: 10px;">תוצאות חיפוש</h3>
+  <div id="search_results_content"></div>
+  <button type="button" class="btn" onclick="clearSearchResults()" style="background: #6c757d; margin-top: 10px;">נקה תוצאות</button>
+</div>
+
 <h2 style="text-align: right; font-size: 18px;">חיפוש חלפים באתר</h2>
 <button type="button" class="btn" onclick="openSearchSite()">פתח אתר car-part לחיפוש</button>
  <label for="resultFileUpload">העלה תוצאת חיפוש (PDF/תמונה)</label>
@@ -145,6 +153,12 @@
 <button type="button" class="btn" id="sendResultToOCRBtn">שלח תוצאת חיפוש לניתוח</button>
 <h2 style="text-align: right; font-size: 18px;">חיפוש חלפים במערכת</h2>
      <button class="btn" type="submit">התחל חיפוש אוטומטי</button>
+
+<!-- Enhanced Part Management -->
+<div style="margin-top: 20px;">
+  <button type="button" class="btn" onclick="exportSelectedParts()" style="background: #28a745;">📄 ייצא חלקים לאקסל</button>
+  <button type="button" class="btn" onclick="saveToSession()" style="background: #ffc107; color: #000;">💾 שמור להמשך באשף</button>
+</div>
   </form>
   <div class="footer-btns">
     <button class="home-btn" onclick="window.location.href='selection.html'">לעמוד הבית</button>
@@ -221,7 +235,7 @@
       const index = selectedParts.indexOf(item);
       if (index !== -1) {
         selectedParts.splice(index, 1);
-        li.remove();
+        updateSelectedPartsList();
       }
     };
 
@@ -236,6 +250,12 @@
 <script>
   document.getElementById('partSearchForm').addEventListener('submit', e => {
     e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'מחפש...';
+    submitBtn.disabled = true;
+    
     const payload = {
       plate: plate.value.trim(),
       manufacturer: manufacturer.value.trim(),
@@ -249,9 +269,77 @@
       part_group: part_group.value,
       part_name: part_name.value,
       free_query: free_query.value.trim(),
-      part_image_base64: imageBase64 || null
+      part_image_base64: imageBase64 || null,
+      selectedParts: selectedParts || []
     };
-    sendPartSearch(payload);
+    
+    sendPartSearch(payload).then(results => {
+      if (results && results.parts && results.parts.length > 0) {
+        displaySearchResults(results.parts);
+        alert(`✅ נמצאו ${results.parts.length} חלקים`);
+        
+        // Save ALL results to helper for future use (including unselected)
+        try {
+          const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+          helper.parts_search = helper.parts_search || { 
+            results: [],
+            search_history: [],
+            all_results: []
+          };
+          
+          // Save search context and parameters
+          const searchContext = {
+            query: {
+              plate: plate.value.trim(),
+              manufacturer: manufacturer.value.trim(),
+              model: model.value.trim(),
+              part_group: part_group.value,
+              part_name: part_name.value,
+              free_query: free_query.value.trim()
+            },
+            timestamp: new Date().toISOString(),
+            results_count: results.parts.length
+          };
+          
+          // Save search to history
+          helper.parts_search.search_history.unshift(searchContext);
+          if (helper.parts_search.search_history.length > 10) {
+            helper.parts_search.search_history = helper.parts_search.search_history.slice(0, 10);
+          }
+          
+          // Mark all results as unselected initially and save them
+          const markedResults = results.parts.map(part => ({
+            ...part,
+            selected: false,
+            search_timestamp: new Date().toISOString(),
+            search_query: searchContext.query
+          }));
+          
+          // Add to all results (preserve existing + add new)
+          helper.parts_search.all_results = [...(helper.parts_search.all_results || []), ...markedResults];
+          
+          // Update summary
+          helper.parts_search.summary = {
+            total_searches: helper.parts_search.search_history.length,
+            total_results: helper.parts_search.all_results.length,
+            last_search: new Date().toISOString()
+          };
+          
+          localStorage.setItem('helper_data', JSON.stringify(helper));
+          console.log(`✅ Saved ${markedResults.length} search results (including unselected) to helper`);
+        } catch (e) {
+          console.warn('Could not save search results:', e);
+        }
+      } else {
+        alert('לא נמצאו תוצאות מתאימות');
+      }
+    }).catch(error => {
+      console.error('Search error:', error);
+      alert('שגיאה בחיפוש חלקים');
+    }).finally(() => {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    });
   });
 </script>
 <script>
@@ -263,9 +351,28 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     return;
   }
 
+  // Show processing indicator
+  const btn = document.getElementById('sendResultToOCRBtn');
+  const originalText = btn.textContent;
+  btn.textContent = 'מעבד...';
+  btn.disabled = true;
+
   sendSearchResultFile(file, {
     plate: sessionStorage.getItem('plate') || '',
     model: sessionStorage.getItem('model') || ''
+  }).then(results => {
+    if (results && results.parts && results.parts.length > 0) {
+      displaySearchResults(results.parts);
+      alert(`✅ נמצאו ${results.parts.length} חלקים בקובץ`);
+    } else {
+      alert('לא נמצאו חלקים בקובץ או שגיאה בעיבוד');
+    }
+  }).catch(error => {
+    console.error('OCR processing error:', error);
+    alert('שגיאה בעיבוד הקובץ');
+  }).finally(() => {
+    btn.textContent = originalText;
+    btn.disabled = false;
   });
 });
 
@@ -278,17 +385,182 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   window.sendSearchResultFile = sendSearchResultFile;
   window.dev_credentials = dev_credentials;
 
+  // Enhanced search site opening with better UX
   window.openSearchSite = function () {
+    const vehicleData = {
+      manufacturer: document.getElementById('manufacturer').value,
+      model: document.getElementById('model').value,
+      year: document.getElementById('year').value
+    };
+    
     const url = 'https://www.car-part.co.il/Include/Generic/AccessSystem.jsp';
-    window.open(url, '_blank');
+    const newWindow = window.open(url, '_blank');
 
     const creds = dev_credentials?.carPart;
     if (creds) {
-      alert(`📋 פרטי גישה לאתר Car-Part:\nשם משתמש: ${creds.username}\nסיסמה: ${creds.password}`);
+      const message = `📋 פרטי גישה לאתר Car-Part:\nשם משתמש: ${creds.username}\nסיסמה: ${creds.password}\n\n🚗 פרטי הרכב לחיפוש:\n${vehicleData.manufacturer} ${vehicleData.model} ${vehicleData.year}`;
+      
+      // Copy credentials to clipboard if possible
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(`${creds.username}\t${creds.password}`).then(() => {
+          alert(message + '\n\n✅ פרטי הגישה הועתקו ללוח');
+        }).catch(() => {
+          alert(message);
+        });
+      } else {
+        alert(message);
+      }
     } else {
       alert('⚠️ לא נמצאו פרטי התחברות');
     }
   };
+  
+  // Enhanced result display function
+  window.displaySearchResults = function(results) {
+    const container = document.getElementById('search_results_display');
+    const content = document.getElementById('search_results_content');
+    
+    if (!results || results.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    content.innerHTML = results.map((result, index) => `
+      <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px; background: white; cursor: pointer;" 
+           onclick="selectSearchResult(${index})">
+        <strong>${result.name || result.description || 'חלק ללא שם'}</strong>
+        ${result.description ? `<br><small>${result.description}</small>` : ''}
+        ${result.price ? `<br>מחיר: <span style="color: #28a745; font-weight: bold;">₪${result.price}</span>` : ''}
+        ${result.source ? `<br>מקור: ${result.source}` : ''}
+        ${result.supplier ? `<br>ספק: ${result.supplier}` : ''}
+        <br><small style="color: #007bff;">לחץ להוספה לרשימה</small>
+      </div>
+    `).join('');
+    
+    container.style.display = 'block';
+    window.currentSearchResults = results;
+  };
+  
+  window.selectSearchResult = function(index) {
+    const result = window.currentSearchResults[index];
+    if (!result) return;
+    
+    // Auto-fill form with selected result
+    document.getElementById('part_name').value = result.name || result.description || '';
+    if (result.source) {
+      document.getElementById('part_source').value = result.source;
+    }
+    
+    // Add to selected parts
+    const item = { 
+      group: result.category || 'מחיפוש', 
+      name: result.name || result.description || '', 
+      qty: 1, 
+      source: result.source || 'תחליפי',
+      price: result.price || '',
+      supplier: result.supplier || ''
+    };
+    selectedParts.push(item);
+    updateSelectedPartsList();
+    
+    alert('✅ החלק נוסף לרשימה');
+  };
+  
+  window.clearSearchResults = function() {
+    document.getElementById('search_results_display').style.display = 'none';
+    window.currentSearchResults = [];
+  };
+  
+  window.exportSelectedParts = function() {
+    if (selectedParts.length === 0) {
+      alert('אין חלקים לייצוא');
+      return;
+    }
+    
+    const csv = generatePartsCSV(selectedParts);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `parts_search_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  window.saveToSession = function() {
+    if (selectedParts.length === 0) {
+      alert('אין חלקים לשמירה');
+      return;
+    }
+    
+    try {
+      const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+      helper.parts_search = helper.parts_search || { 
+        results: [], 
+        all_results: [], 
+        search_history: [] 
+      };
+      
+      // Mark selected parts in all_results
+      if (helper.parts_search.all_results) {
+        helper.parts_search.all_results.forEach(result => {
+          const isSelected = selectedParts.some(selected => 
+            (selected.name === result.name || selected.name === result.description) &&
+            selected.source === result.source
+          );
+          if (isSelected) {
+            result.selected = true;
+            result.selected_timestamp = new Date().toISOString();
+          }
+        });
+      }
+      
+      // Save selected parts to results (for backward compatibility)
+      helper.parts_search.results = [...(helper.parts_search.results || []), ...selectedParts];
+      helper.parts_search.summary = {
+        total_results: helper.parts_search.results.length,
+        total_all_results: helper.parts_search.all_results?.length || 0,
+        selected_count: selectedParts.length,
+        last_updated: new Date().toISOString()
+      };
+      localStorage.setItem('helper_data', JSON.stringify(helper));
+      
+      alert(`✅ נשמרו ${selectedParts.length} חלקים להמשך באשף`);
+    } catch (e) {
+      console.error('Error saving to session:', e);
+      alert('שגיאה בשמירה');
+    }
+  };
+  
+  function generatePartsCSV(parts) {
+    const headers = ['קטגוריה', 'שם החלק', 'כמות', 'מקור', 'מחיר', 'ספק'];
+    const rows = parts.map(part => [
+      part.group || '',
+      part.name || '',
+      part.qty || 1,
+      part.source || '',
+      part.price || '',
+      part.supplier || ''
+    ]);
+    
+    return [headers, ...rows].map(row => 
+      row.map(field => `"${field}"`).join(',')
+    ).join('\n');
+  }
+  
+  function updateSelectedPartsList() {
+    const listUI = document.getElementById('selected_parts_list');
+    listUI.innerHTML = selectedParts.map((item, index) => `
+      <li style="margin-bottom: 5px; padding: 5px; background: #f0f0f0; border-radius: 3px;">
+        ${item.group} - ${item.name} | כמות: ${item.qty} | מקור: ${item.source}
+        ${item.price ? ` | מחיר: ₪${item.price}` : ''}
+        <button onclick="selectedParts.splice(${index}, 1); updateSelectedPartsList();" 
+                style="margin-right: 10px; background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer;">✕</button>
+      </li>
+    `).join('');
+  }
 
   const autofillFields = [
     'plate', 'manufacturer', 'model', 'trim', 'year',

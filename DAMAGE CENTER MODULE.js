@@ -1,10 +1,12 @@
-// 🧱 DAMAGE CENTER MODULE
-import { helper, updateHelper, saveHelperToStorage } from './helper.js';
+// 🧱 DAMAGE CENTER MODULE - Enhanced with Parts Search Integration
+import { helper, updateHelper, saveHelperToStorage, getDamageData, syncDamageData } from './helper.js';
 import { ROUTER } from './router.js';
+import { PARTS_BANK } from './parts.js';
 
 export function damageCenters() {
   const container = document.getElementById('app');
-  const currentDamageBlocks = helper.expertise.damage_blocks || [];
+  const damageData = getDamageData();
+  const currentDamageBlocks = damageData.centers || [];
 
   function renderDamageCenter(index) {
     const center = currentDamageBlocks[index] || { center: '', description: '', repairs: [], parts: [], works: [] };
@@ -19,9 +21,11 @@ export function damageCenters() {
 
     const renderParts = center.parts.map((p, i) => `
       <div class="part-item">
-        <input type="text" class="part-name" placeholder="שם חלק" value="${p.name}" />
+        <input type="text" class="part-name" placeholder="שם חלק" value="${p.name}" data-suggestions="true" />
         <input type="text" class="part-desc" placeholder="תיאור" value="${p.description}" />
         <input type="text" class="part-source" placeholder="מקור" value="${p.source}" />
+        <input type="number" class="part-price" placeholder="מחיר" value="${p.price || ''}" />
+        <button class="remove-part" onclick="removePart(${index}, ${i})">🗑️</button>
       </div>
     `).join('');
 
@@ -67,6 +71,7 @@ export function damageCenters() {
 
         <div class="parts">${renderParts}</div>
         <button class="add-part">➕ הוסף חלק</button>
+        <button class="import-search-parts" onclick="importSearchResults(${index})">📋 ייבא מתוצאות חיפוש</button>
 
         <div class="works">${renderWorks}</div>
         <button class="add-work">➕ הוסף עבודה</button>
@@ -99,10 +104,13 @@ export function damageCenters() {
     });
     document.querySelectorAll('.add-part').forEach((btn, i) => {
       btn.onclick = () => {
-        currentDamageBlocks[i].parts.push({ name: '', description: '', source: '' });
+        currentDamageBlocks[i].parts.push({ name: '', description: '', source: '', price: 0 });
         renderAll();
       };
     });
+    
+    // Add parts search suggestions
+    setupPartsSuggestions();
     document.querySelectorAll('.add-work').forEach((btn, i) => {
       btn.onclick = () => {
         currentDamageBlocks[i].works.push({ type: '', note: '' });
@@ -123,7 +131,8 @@ export function damageCenters() {
           parts: Array.from(block.querySelectorAll('.part-item')).map(p => ({
             name: p.querySelector('.part-name').value,
             description: p.querySelector('.part-desc').value,
-            source: p.querySelector('.part-source').value
+            source: p.querySelector('.part-source').value,
+            price: parseFloat(p.querySelector('.part-price').value) || 0
           })),
           works: Array.from(block.querySelectorAll('.work-item')).map(w => ({
             type: w.querySelector('.work-type').value,
@@ -131,7 +140,8 @@ export function damageCenters() {
           }))
         };
       });
-      updateHelper('expertise', { damage_blocks: updated });
+      // Update using synchronized data flow
+      syncDamageData({ centers: updated });
 
       // ⬇️ Save fixed legal disclaimer + status field to helper
 
@@ -153,5 +163,165 @@ export function damageCenters() {
 
   renderAll();
 }
+
+// Parts search integration functions
+function setupPartsSuggestions() {
+  document.querySelectorAll('input[data-suggestions="true"]').forEach(input => {
+    input.addEventListener('input', function() {
+      const query = this.value;
+      if (query.length > 2) {
+        showPartsSuggestions(this, query);
+      }
+    });
+  });
+}
+
+function showPartsSuggestions(input, query) {
+  const suggestions = getPartsSuggestions(query);
+  
+  // Remove existing suggestions
+  const existingSuggestions = document.querySelector('.parts-suggestions');
+  if (existingSuggestions) {
+    existingSuggestions.remove();
+  }
+  
+  if (suggestions.length > 0) {
+    const suggestionsList = document.createElement('div');
+    suggestionsList.className = 'parts-suggestions';
+    suggestionsList.style.cssText = `
+      position: absolute;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    `;
+    
+    suggestions.slice(0, 10).forEach(suggestion => {
+      const item = document.createElement('div');
+      item.className = 'suggestion-item';
+      item.style.cssText = 'padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;';
+      item.textContent = `${suggestion.name} - ${suggestion.description || ''}`;
+      
+      item.addEventListener('click', () => {
+        input.value = suggestion.name;
+        const partItem = input.closest('.part-item');
+        if (partItem) {
+          const descInput = partItem.querySelector('.part-desc');
+          const sourceInput = partItem.querySelector('.part-source');
+          const priceInput = partItem.querySelector('.part-price');
+          
+          if (descInput) descInput.value = suggestion.description || '';
+          if (sourceInput) sourceInput.value = suggestion.source || '';
+          if (priceInput) priceInput.value = suggestion.price || '';
+        }
+        suggestionsList.remove();
+      });
+      
+      suggestionsList.appendChild(item);
+    });
+    
+    input.parentNode.style.position = 'relative';
+    input.parentNode.appendChild(suggestionsList);
+  }
+}
+
+function getPartsSuggestions(query) {
+  const suggestions = [];
+  
+  // Search in PARTS_BANK
+  if (window.PARTS_BANK) {
+    Object.keys(window.PARTS_BANK).forEach(category => {
+      window.PARTS_BANK[category].forEach(part => {
+        if (part.toLowerCase().includes(query.toLowerCase())) {
+          suggestions.push({
+            name: part,
+            description: category,
+            source: 'מקורי'
+          });
+        }
+      });
+    });
+  }
+  
+  // Search in all stored search results (including unselected)
+  try {
+    const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+    const allResults = helper.parts_search?.all_results || helper.parts_search?.results || [];
+    allResults.forEach(result => {
+      if ((result.name || '').toLowerCase().includes(query.toLowerCase()) ||
+          (result.description || result.desc || '').toLowerCase().includes(query.toLowerCase())) {
+        suggestions.push({
+          name: result.name || result.description || result.desc,
+          description: result.description || result.desc || result.name,
+          price: result.price,
+          source: result.source || 'תחליפי',
+          fromAllResults: true
+        });
+      }
+    });
+  } catch (e) {
+    console.warn('Error loading stored search results:', e);
+  }
+  
+  return suggestions;
+}
+
+function importSearchResults(centerIndex) {
+  try {
+    const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+    const allResults = helper.parts_search?.all_results || helper.parts_search?.results || [];
+    
+    if (allResults.length === 0) {
+      alert('לא נמצאו תוצאות חיפוש לייבוא');
+      return;
+    }
+    
+    // Show selection dialog for importing specific results
+    const selectedResults = allResults.filter((result, index) => {
+      return confirm(`האם לייבא: ${result.name || result.description || `חלק ${index + 1}`}?`);
+    });
+    
+    if (selectedResults.length === 0) {
+      alert('לא נבחרו חלקים לייבוא');
+      return;
+    }
+    
+    const center = currentDamageBlocks[centerIndex];
+    if (!center.parts) center.parts = [];
+    
+    selectedResults.forEach(result => {
+      center.parts.push({
+        name: result.name || result.description || result.desc || '',
+        description: result.description || result.desc || result.name || '',
+        source: result.source || 'תחליפי',
+        price: parseFloat(result.price) || 0
+      });
+      
+      // Mark as selected in helper
+      result.selected = true;
+      result.used_in_center = centerIndex;
+    });
+    
+    // Update helper with selection status
+    localStorage.setItem('helper_data', JSON.stringify(helper));
+    
+    renderAll();
+    alert(`✅ יובאו ${selectedResults.length} חלקים מתוצאות החיפוש`);
+  } catch (e) {
+    console.error('Error importing search results:', e);
+    alert('שגיאה בייבוא תוצאות החיפוש');
+  }
+}
+
+function removePart(centerIndex, partIndex) {
+  currentDamageBlocks[centerIndex].parts.splice(partIndex, 1);
+  renderAll();
+}
+
+window.importSearchResults = importSearchResults;
+window.removePart = removePart;
 
 ROUTER.register('damage-centers', damageCenters);

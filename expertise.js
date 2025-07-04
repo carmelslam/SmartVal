@@ -2,6 +2,7 @@
 
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
+import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
 
 const helper = JSON.parse(sessionStorage.getItem("expertise")) || {
   meta: {},
@@ -17,12 +18,18 @@ const helper = JSON.parse(sessionStorage.getItem("expertise")) || {
 };
 
 function updateCalculations() {
-  const baseDamage = helper.summary?.total_damage || 0;
-  const depreciation = helper.depreciation?.global_amount || 0;
-  const fees = helper.fees || {};
-  const marketValue = helper.car_details?.market_value || 0;
+  // Use standardized data access
+  const vehicleData = getVehicleData();
+  const damageData = getDamageData();
+  const valuationData = getValuationData();
+  const financialData = getFinancialData();
+  
+  const baseDamage = helper.summary?.total_damage || damageData.summary?.total_damage_amount || 0;
+  const depreciation = helper.depreciation?.global_amount || valuationData.depreciation?.global_amount || 0;
+  const fees = helper.fees || financialData.fees || {};
+  const marketValue = helper.car_details?.market_value || vehicleData.market_value || 0;
   const shavehPercent = helper.car_details?.shaveh_percent || 0;
-  const vatRate = helper.meta?.vat_rate || 17;
+  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || MathEngine.getVatRate();
 
   helper.calculations = MathEngine.calculateAll({
     baseDamage,
@@ -37,12 +44,16 @@ function updateCalculations() {
 function updateInvoiceCalculations() {
   if (!helper.invoice_uploaded) return;
 
-  const baseDamage = helper.invoice_summary?.total_damage || 0;
+  // Use standardized data access for invoice calculations
+  const vehicleData = getVehicleData();
+  const financialData = getFinancialData();
+  
+  const baseDamage = helper.invoice_summary?.total_damage || financialData.costs?.subtotal || 0;
   const depreciation = helper.invoice_depreciation?.global_amount || 0;
-  const fees = helper.invoice_fees || {};
-  const marketValue = helper.car_details?.market_value || 0;
+  const fees = helper.invoice_fees || financialData.fees || {};
+  const marketValue = helper.car_details?.market_value || vehicleData.market_value || 0;
   const shavehPercent = helper.car_details?.shaveh_percent || 0;
-  const vatRate = helper.meta?.vat_rate || 17;
+  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || MathEngine.getVatRate();
 
   helper.invoice_calculations = MathEngine.calculateAll({
     baseDamage,

@@ -31,13 +31,16 @@ function init() {
 }
 
 function calculateFees() {
-  const travel = parseFloat($('travel_fee').value) || 0;
-  const media = parseFloat($('media_fee').value) || 0;
-  const office = parseFloat($('office_fee').value) || 0;
-  const vatRate = parseFloat($('vat_rate').value) || 18;
+  const fees = {
+    travel_fee: parseFloat($('travel_fee').value) || 0,
+    media_fee: parseFloat($('media_fee').value) || 0,
+    office_fee: parseFloat($('office_fee').value) || 0
+  };
+  const vatRate = parseFloat($('vat_rate').value) || MathEngine.getVatRate();
 
-  const subtotal = MathEngine.round(travel + media + office);
-  const vatAmount = MathEngine.round(subtotal * vatRate / 100);
+  // Use MathEngine for consistent calculations
+  const subtotal = MathEngine.calculateFeesSubtotal(fees);
+  const vatAmount = MathEngine.calculateVatAmount(subtotal, vatRate);
   const total = MathEngine.round(subtotal + vatAmount);
 
   $('total_before_vat').value = subtotal;

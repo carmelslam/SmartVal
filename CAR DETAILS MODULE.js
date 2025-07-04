@@ -1,10 +1,10 @@
 // 🚗 CAR DETAILS MODULE (Full Map Integration)
-import { helper, updateHelper, saveHelperToStorage } from './helper.js';
+import { helper, updateHelper, saveHelperToStorage, getVehicleData, syncVehicleData } from './helper.js';
 import { ROUTER } from './router.js';
 
 export function carDetails() {
   const container = document.getElementById('app');
-  const vehicle = helper.vehicle || {};
+  const vehicle = getVehicleData();
 
   container.innerHTML = `
     <div class="module">
@@ -48,8 +48,9 @@ export function carDetails() {
   `;
 
   document.getElementById('save-car').onclick = () => {
-    updateHelper('vehicle', {
-      plate_number: document.getElementById('plate').value.trim(),
+    // Use synchronized vehicle data update
+    const vehicleData = {
+      plate: document.getElementById('plate').value.trim(),
       manufacturer: document.getElementById('manufacturer').value.trim(),
       model: document.getElementById('model').value.trim(),
       model_type: document.getElementById('model_type').value.trim(),
@@ -65,9 +66,11 @@ export function carDetails() {
       drive: document.getElementById('drive').value.trim(),
       base_price: document.getElementById('base_price').value.trim(),
       office_code: document.getElementById('office_code').value.trim()
-    });
+    };
+    syncVehicleData(vehicleData);
+    
+    // Update meta with additional case information
     updateHelper('meta', {
-      plate: document.getElementById('plate').value.trim(),
       inspection_date: document.getElementById('inspection_date').value,
       damage_date: document.getElementById('damage_date').value,
       owner_name: document.getElementById('owner_name').value.trim(),

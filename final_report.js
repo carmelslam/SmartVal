@@ -2,22 +2,37 @@
 
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
+import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
 
 const vault = window.vaultTexts || {};
 import { sessionEngine } from './session.js';
 
 let helper = sessionEngine.getDataSourceForFinal();
 
+// Use standardized data access functions
+const vehicleData = getVehicleData();
+const damageData = getDamageData();
+const valuationData = getValuationData();
+const financialData = getFinancialData();
+
 function buildFeeSummary() {
   const fees = helper.fees || {};
-  const travel = parseFloat(fees.travel_fee) || 0;
-  const media = parseFloat(fees.media_fee) || 0;
-  const office = parseFloat(fees.office_fee) || 0;
-  const vatRate = parseFloat(fees.vat_rate) || helper.vat || 18;
-  const subtotal = MathEngine.round(travel + media + office);
-  const vat = MathEngine.round(subtotal * vatRate / 100);
+  const vatRate = parseFloat(fees.vat_rate) || MathEngine.getVatRate();
+  
+  // Use MathEngine for consistent calculations
+  const subtotal = MathEngine.calculateFeesSubtotal(fees);
+  const vat = MathEngine.calculateVatAmount(subtotal, vatRate);
   const total = MathEngine.round(subtotal + vat);
-  return { travel, media, office, vat_rate: vatRate, vat, subtotal, total };
+  
+  return { 
+    travel: MathEngine.parseNumber(fees.travel_fee), 
+    media: MathEngine.parseNumber(fees.media_fee), 
+    office: MathEngine.parseNumber(fees.office_fee), 
+    vat_rate: vatRate, 
+    vat, 
+    subtotal, 
+    total 
+  };
 }
 
 // --- Determine Report Type and Draft Mode ---
@@ -48,18 +63,19 @@ function buildVaultBlocks() {
 
 // --- Value Mapping Logic ---
 function getReplacementMap() {
+  // Use standardized data access
   const m = isInvoiceOverride ? helper.invoice_calculations : helper.expertise?.calculations || {};
-  const d = isInvoiceOverride ? helper.invoice_depreciation : helper.expertise?.depreciation || {};
-  const f = isInvoiceOverride ? helper.invoice_fees : helper.fees || {};
+  const d = isInvoiceOverride ? helper.invoice_depreciation : valuationData.depreciation || {};
+  const f = isInvoiceOverride ? helper.invoice_fees : financialData.fees || {};
 
   return {
-    "שווי_פיצוי": MathEngine.formatCurrency(m.total_compensation),
-    "אחוז_נזק": `${MathEngine.round(m.damage_percent)}%`,
-    "ירידת_ערך": MathEngine.formatCurrency(d.global_amount),
-    "אחוז_ירידת_ערך": `${MathEngine.round(d.global_percent)}%`,
-    "ימי_מוסך": d.work_days || 0,
-    "שווי_שוק": MathEngine.formatCurrency(m.market_value),
-    "שווי_מחירון": MathEngine.formatCurrency(m.vehicle_value_gross)
+    "שווי_פיצוי": MathEngine.formatCurrency(m.total_compensation || financialData.totals?.total_compensation),
+    "אחוז_נזק": `${MathEngine.round(m.damage_percent || damageData.summary?.damage_percentage)}%`,
+    "ירידת_ערך": MathEngine.formatCurrency(d.global_amount || valuationData.depreciation?.global_amount),
+    "אחוז_ירידת_ערך": `${MathEngine.round(d.global_percent || valuationData.depreciation?.global_percentage)}%`,
+    "ימי_מוסך": d.work_days || valuationData.depreciation?.work_days_impact || 0,
+    "שווי_שוק": MathEngine.formatCurrency(m.market_value || valuationData.final_price),
+    "שווי_מחירון": MathEngine.formatCurrency(m.vehicle_value_gross || valuationData.base_price)
   };
 }
 

@@ -342,17 +342,69 @@ form button {
     const urlParams = new URLSearchParams(window.location.search);
     const isStandalone = urlParams.get('standalone') === '1';
 
-    if (isStandalone) {
-        // Standalone: just show results or allow export, do not save to helper
-        alert("חלקים נאספו (מצב עצמאי):\n" + allParts.map(p => p.part).join(", "));
-        // Optionally: display results below or allow export
+      // Enhanced part validation and processing
+      const validParts = [];
+      const invalidParts = [];
+      
+      allParts.forEach(part => {
+        if (!part.part || !part.desc) {
+          invalidParts.push({ part, error: 'שם החלק ותיאור הם שדות חובה' });
+        } else if (part.price && isNaN(parseFloat(part.price))) {
+          invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
+        } else {
+          validParts.push({
+            ...part,
+            addedAt: new Date().toISOString(),
+            fromWizard: !isStandalone
+          });
+        }
+      });
+      
+      if (invalidParts.length > 0) {
+        alert(`נמצאו ${invalidParts.length} חלקים לא תקינים:\n` + 
+              invalidParts.map(item => `${item.part.part || 'לא מוגדר'}: ${item.error}`).join('\n'));
+        return;
+      }
+
+      if (isStandalone) {
+        // Standalone: save to localStorage and show results
+        try {
+          const existingParts = JSON.parse(localStorage.getItem('saved_parts') || '[]');
+          const partsData = {
+            parts: validParts,
+            vehicle: getCarDetails(),
+            timestamp: new Date().toISOString(),
+            mode: 'standalone'
+          };
+          existingParts.push(partsData);
+          localStorage.setItem('saved_parts', JSON.stringify(existingParts));
+          
+          alert(`✅ נשמרו ${validParts.length} חלקים בהצלחה (מצב עצמאי)\n` + 
+                validParts.map(p => `• ${p.part} - ${p.desc}`).join('\n'));
+        } catch (e) {
+          console.error('Error saving parts:', e);
+          alert('שגיאה בשמירת החלקים');
+        }
       } else {
-        // Wizard: save to helper.damage_center_draft.parts and go to next bulk
+        // Wizard: save to helper and continue
         let helper = {};
         try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
         helper.damage_center_draft = helper.damage_center_draft || {};
-        helper.damage_center_draft.parts = allParts;
+        helper.damage_center_draft.parts = validParts;
+        
+        // Also save to parts_search for future suggestions
+        helper.parts_search = helper.parts_search || { results: [] };
+        helper.parts_search.results = [...(helper.parts_search.results || []), ...validParts];
+        
         sessionStorage.setItem("helper", JSON.stringify(helper));
+        
+        // Save to localStorage as well for persistence
+        try {
+          localStorage.setItem('helper_data', JSON.stringify(helper));
+        } catch (e) {
+          console.warn('Could not save to localStorage:', e);
+        }
+        
         window.location.href = "damage-center-repairs.html";
       }
     });
@@ -408,7 +460,26 @@ form button {
         return;
       }
 
-      // Fetch suggestions from server
+      // Get suggestions from multiple sources
+      const suggestions = [];
+      
+      // Search in PARTS_BANK (if available)
+      if (window.PARTS_BANK) {
+        Object.keys(window.PARTS_BANK).forEach(category => {
+          window.PARTS_BANK[category].forEach(part => {
+            if (part.toLowerCase().includes(query.toLowerCase())) {
+              suggestions.push({ 
+                name: part, 
+                desc: part, 
+                source: 'תחליפי',
+                category: category 
+              });
+            }
+          });
+        });
+      }
+      
+      // Search in stored helper results
       let storedHelper = {};
       try {
         storedHelper = JSON.parse(localStorage.getItem("helper_data") || '{}');
@@ -416,36 +487,64 @@ form button {
         storedHelper = {};
       }
       const allResults = storedHelper?.parts_search?.results || [];
-
-      const matches = allResults.filter(s => {
-        const label = (s.name || s.desc || '').toLowerCase();
-        return label.includes(query.toLowerCase());
+      
+      allResults.forEach(result => {
+        if ((result.name || '').toLowerCase().includes(query.toLowerCase()) ||
+            (result.desc || '').toLowerCase().includes(query.toLowerCase())) {
+          suggestions.push({
+            name: result.name || result.desc,
+            desc: result.desc || result.name,
+            price: result.price,
+            source: result.source
+          });
+        }
       });
 
-      if (matches.length === 0) {
+      if (suggestions.length === 0) {
         dropdown.innerHTML = '';
         dropdown.style.display = "none";
         return;
       }
 
-      dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
-        matches.map((s, i) => `<option value="${i}">${s.name || s.desc || s}</option>`).join('');
-      dropdown.style.display = "";
-      dropdown._suggestions = matches;
+      // Remove duplicates and limit to 10 results
+      const uniqueSuggestions = suggestions.filter((suggestion, index, self) => 
+        index === self.findIndex(s => s.name === suggestion.name)
+      ).slice(0, 10);
 
-      // On select, fill all fields
+      dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
+        uniqueSuggestions.map((s, i) => `
+          <option value="${i}">${s.name}${s.category ? ` (${s.category})` : ''}${s.price ? ` - ₪${s.price}` : ''}</option>
+        `).join('');
+      dropdown.style.display = "";
+      dropdown._suggestions = uniqueSuggestions;
+
+      // Enhanced selection handling
       dropdown.onchange = function () {
         const idx = this.value;
         if (!this._suggestions || !this._suggestions[idx]) return;
         const suggestion = this._suggestions[idx];
-        nameInput.value = suggestion.name || suggestion.desc || "";
-        descInput.value = suggestion.desc || suggestion.name || "";
-        priceInput.value = suggestion.price || "";
+        nameInput.value = suggestion.name || "";
+        descInput.value = suggestion.desc || "";
+        if (suggestion.price) priceInput.value = suggestion.price;
         if (suggestion.source) sourceSelect.value = suggestion.source;
         dropdown.style.display = "none";
+        
+        // Trigger change event for potential additional processing
+        nameInput.dispatchEvent(new Event('change'));
       };
     }
     // ...existing code for addPart, etc...
+  </script>
+  <script type="module">
+    // Try to load parts bank for better suggestions
+    try {
+      import('./parts.js').then(module => {
+        window.PARTS_BANK = module.PARTS_BANK;
+        console.log('Parts bank loaded for suggestions');
+      }).catch(e => console.warn('Could not load parts bank'));
+    } catch (e) {
+      console.warn('Module import not supported');
+    }
   </script>
   <script src="car-details-float.js"></script>
 </body>
