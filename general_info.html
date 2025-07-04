@@ -122,6 +122,7 @@
 
   <script type="module">
     import { sendToWebhook } from './webhook.js';
+    import { updateHelperWithEvents } from './helper-events.js';
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
       otherInsurance.style.display = this.value === "אחר" ? "block" : "none";
@@ -176,6 +177,19 @@
       console.log("📤 Sending General Info:", data);
 
       try {
+        // Update helper with event-driven system
+        updateHelperWithEvents('car_details', data, 'general_info');
+        updateHelperWithEvents('client', {
+          name: data.owner,
+          phone_number: data.ownerPhone,
+          address: data.ownerAddress,
+          insurance_company: data.insuranceCompany,
+          insurance_email: data.insuranceEmail,
+          insurance_agent: data.agentName,
+          insurance_agent_phone: data.agentPhone,
+          insurance_agent_email: data.agentEmail
+        }, 'general_info');
+        
         await sendToWebhook('FILL_FINAL_REPORT', data);
         showSuccessAndContinue();
       } catch (error) {
@@ -194,8 +208,10 @@
       });
     }
   </script>
+  <script type="module" src="helper-events.js"></script>
   <script src="car-details-float.js"></script>
   <script src="levi-floating.js"></script>
   <script src="parts-floating.js"></script>
+  <script src="internal-browser.js"></script>
 </body>
 </html>

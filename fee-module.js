@@ -1,6 +1,7 @@
 // fee-module.js
-import { helper } from './helper.js';
+import { helper, getFinancialData, syncVehicleData } from './helper.js';
 import { MathEngine } from './math.js';
+import { updateHelperWithEvents, helperEvents, HelperUtils } from './helper-events.js';
 
 function $(id) {
   return document.getElementById(id);
@@ -51,7 +52,7 @@ function calculateFees() {
 function saveFees() {
   calculateFees();
 
-  helper.fees = {
+  const feesData = {
     case_number: $('caseNumber').innerText,
     issue_date: $('issueDate').innerText,
     contact: {
@@ -74,6 +75,9 @@ function saveFees() {
     hour_rate: parseFloat($('hour_rate').value) || 0
   };
 
+  // Use event-driven update
+  updateHelperWithEvents('fees', feesData, 'fee-module');
+  
   showSuccessAndValidation();
 }
 

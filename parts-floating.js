@@ -412,7 +412,16 @@
   };
 
   window.openPartsBrowser = function (site) {
-    alert(`פתיחת ${site} בדפדפן מובנה - פונקציונליות תתווסף בגרסה הבאה`);
+    // Close parts search modal
+    togglePartsSearch();
+    
+    // Open site in internal browser
+    if (typeof openInternalBrowser === 'function') {
+      openInternalBrowser(site, 'parts_search');
+    } else {
+      console.error('Internal browser not loaded');
+      alert('דפדפן מובנה לא זמין - נא לטעון את המודול');
+    }
   };
 
   window.selectPartResult = function (index) {

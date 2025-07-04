@@ -1356,18 +1356,24 @@ class LeviProcessor {
 
 // Global functions
 window.openLeviPortal = function() {
-  window.open("https://portal.levi-itzhak.co.il", "_blank");
-  
-  if (window.leviProcessor?.credentials) {
-    const credentialsDisplay = document.getElementById('credentials-display');
-    const usernameDisplay = document.getElementById('username-display');
-    const passwordDisplay = document.getElementById('password-display');
-    
-    usernameDisplay.textContent = `משתמש: ${window.leviProcessor.credentials.username}`;
-    passwordDisplay.textContent = `סיסמה: ${window.leviProcessor.credentials.password}`;
-    credentialsDisplay.style.display = 'block';
+  // Use internal browser instead of external redirect
+  if (typeof openInternalBrowser === 'function') {
+    openInternalBrowser('portal.levi-itzhak.co.il', 'levi_report');
   } else {
-    alert('📋 אנא פתח את אתר לוי יצחק ב־browser חדש');
+    // Fallback to external browser if internal browser not available
+    window.open("https://portal.levi-itzhak.co.il", "_blank");
+    
+    if (window.leviProcessor?.credentials) {
+      const credentialsDisplay = document.getElementById('credentials-display');
+      const usernameDisplay = document.getElementById('username-display');
+      const passwordDisplay = document.getElementById('password-display');
+      
+      usernameDisplay.textContent = `משתמש: ${window.leviProcessor.credentials.username}`;
+      passwordDisplay.textContent = `סיסמה: ${window.leviProcessor.credentials.password}`;
+      credentialsDisplay.style.display = 'block';
+    } else {
+      alert('📋 אנא פתח את אתר לוי יצחק ב־browser חדש');
+    }
   }
 };
 
@@ -1394,6 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="car-details-float.js"></script>
 <script src="levi-floating.js"></script>
 <script src="parts-floating.js"></script>
+<script src="internal-browser.js"></script>
 
 </body>
 </html>
