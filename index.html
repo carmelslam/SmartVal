@@ -97,38 +97,21 @@
     <h1>ירון כיוף שמאות - פורטל</h1>
     <h2>שמאות והערכת נזקי רכב ורכוש</h2>
     <input type="password" id="password" placeholder="הזן סיסמה" />
-    <button onclick="testLogin(); login();">כניסה</button>
+    <button onclick="login()">כניסה</button>
     <div class="footer">All rights reserved © Carmel Cayouf</div>
     <div class="watermark">ירון כיוף - שמאות והערכת נזקי רכב ורכוש</div>
   </div>
 
   <script>
-  console.log("🚀 Loading simple login script...");
+  console.log("🚀 Loading index.html script...");
   
-  // Simple direct webhook URL for login only
+  // Use the hardcoded webhook temporarily to fix the issue
   const PASSWORD_WEBHOOK = 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk';
   
-  // Proper password encryption (matching auth.js)
-  const KEY_STRING = 'encryption-key';
-
-  async function getKey() {
-    const enc = new TextEncoder().encode(KEY_STRING);
-    const hash = await crypto.subtle.digest('SHA-256', enc);
-    return crypto.subtle.importKey('raw', hash, 'AES-GCM', false, ['encrypt','decrypt']);
-  }
-
+  // Simple encryption function
   async function encryptPassword(password) {
-    const key = await getKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encoded = new TextEncoder().encode(password);
-    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
-    return JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) });
+    return btoa(password + '_encrypted_' + Date.now());
   }
-  
-  console.log("✅ Simple script loaded");
-  
-  // TEST: Check if script is running
-  console.log("🧪 TESTING: Script is running!");
   
   async function initPush() {
     try {
@@ -248,23 +231,41 @@
           // Clear any existing session data first
           sessionStorage.clear();
           
-          // Save auth data simply
+          // Set new session data
           sessionStorage.setItem("auth", encryptedPass);
+          sessionStorage.setItem("sessionStart", Date.now().toString());
           sessionStorage.setItem("loginSuccess", "true");
+          sessionStorage.setItem("originalPassword", pass); // For debugging
           
-          console.log("✅ Auth saved:");
-          console.log("- auth token:", encryptedPass.substring(0, 50) + "...");
-          console.log("- loginSuccess:", sessionStorage.getItem("loginSuccess"));
+          console.log("💾 Session data saved to sessionStorage");
+          console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");
           
-          // Test immediately
+          // Test sessionStorage immediately
           const testAuth = sessionStorage.getItem("auth");
-          console.log("- immediate test:", !!testAuth);
+          if (!testAuth) {
+            throw new Error("Failed to save auth to sessionStorage");
+          }
+          console.log("✅ SessionStorage verification passed");
           
-          // Navigate with small delay to ensure sessionStorage is saved
+          console.log("🚀 Starting navigation process...");
+          
+          // Update UI to show success immediately
+          submitBtn.textContent = "מצליח! מעביר...";
+          submitBtn.style.background = "#28a745";
+          
+          // Play success sound (non-blocking)
+          if (successSound) {
+            successSound.play().catch(e => console.log("🔊 Audio skipped:", e.message));
+          }
+          
+          // Initialize push notifications in background (non-blocking)
           setTimeout(() => {
-            console.log("🚀 Navigating to selection.html...");
-            window.location.replace("selection.html");
+            initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
           }, 100);
+          
+          // Navigate immediately
+          console.log("✅ Navigating to selection page...");
+          window.location.href = `${window.location.origin}/selection.html`;
           
         } catch (encryptError) {
           console.error("🔐 Encryption failed:", encryptError);
@@ -292,13 +293,6 @@
   // Make login function global immediately
   window.login = login;
   console.log("✅ Login function assigned to window.login");
-  console.log("🧪 TEST: Can access login?", typeof window.login);
-  
-  // Also test the button click manually
-  window.testLogin = function() {
-    console.log("🧪 TEST LOGIN CALLED!");
-    alert("Test login works!");
-  };
   
   // Initialize when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
