@@ -118,43 +118,120 @@
 
   async function login() {
     const pass = document.getElementById("password").value.trim();
-    if (!pass) return alert("נא להזין סיסמה");
+    if (!pass) {
+      alert("נא להזין סיסמה");
+      return;
+    }
 
     const submitBtn = document.querySelector("button");
     const originalText = submitBtn.textContent;
     submitBtn.textContent = "מתחבר...";
     submitBtn.disabled = true;
 
+    console.log("🔐 Starting login process with password:", pass.substring(0, 3) + "***");
+
     try {
+      console.log("📡 Sending webhook request to Make.com...");
       const response = await fetch("https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ password: pass })
       });
       
-      const text = await response.text();
-      console.log("Auth response:", response.status, text);
+      console.log("📩 Response status:", response.status);
+      console.log("📩 Response headers:", Object.fromEntries(response.headers.entries()));
       
-      if (response.status === 200 || text.includes("success")) {
-        console.log("Authentication successful, encrypting password...");
-        const encryptedPass = await encryptPassword(pass);
-        sessionStorage.setItem("auth", encryptedPass);
-        sessionStorage.setItem("sessionStart", Date.now().toString());
+      const text = await response.text();
+      console.log("📩 Response text:", text);
+      
+      // Check for success in multiple ways
+      const isSuccess = response.status === 200 || 
+                       response.ok || 
+                       text.toLowerCase().includes("success") ||
+                       text.toLowerCase().includes("approved") ||
+                       text.toLowerCase().includes("valid");
+      
+      console.log("✅ Login success check:", isSuccess);
+
+      if (isSuccess) {
+        console.log("🔑 Authentication successful, encrypting password...");
         
-        console.log("Auth data saved, navigating to selection.html");
-        try { await ferrariSound.play(); } catch(e) { console.log("Audio failed:", e); }
-        await initPush();
-        
-        // Force navigation with slight delay
-        setTimeout(() => {
+        try {
+          const encryptedPass = await encryptPassword(pass);
+          console.log("🔒 Password encrypted successfully");
+          
+          // Clear any existing session data first
+          sessionStorage.clear();
+          
+          // Set new session data
+          sessionStorage.setItem("auth", encryptedPass);
+          sessionStorage.setItem("sessionStart", Date.now().toString());
+          sessionStorage.setItem("loginSuccess", "true");
+          sessionStorage.setItem("originalPassword", pass); // For debugging
+          
+          console.log("💾 Session data saved to sessionStorage");
+          console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");
+          
+          // Test sessionStorage immediately
+          const testAuth = sessionStorage.getItem("auth");
+          if (!testAuth) {
+            throw new Error("Failed to save auth to sessionStorage");
+          }
+          console.log("✅ SessionStorage verification passed");
+          
+          // Sound and push notifications (non-blocking)
+          try { 
+            await ferrariSound.play(); 
+          } catch(e) { 
+            console.log("🔊 Audio failed (expected):", e.message); 
+          }
+          
+          try {
+            await initPush();
+          } catch(e) {
+            console.log("📱 Push init failed (expected):", e.message);
+          }
+          
+          console.log("🚀 Attempting navigation to selection.html...");
+          
+          // Update UI to show success
+          submitBtn.textContent = "מצליח! מעביר...";
+          submitBtn.style.background = "#28a745";
+          
+          // Wait a moment to ensure sessionStorage is fully written
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Verify sessionStorage before navigation
+          const finalAuthCheck = sessionStorage.getItem("auth");
+          if (!finalAuthCheck) {
+            throw new Error("SessionStorage failed to persist auth token");
+          }
+          
+          console.log("✅ Final auth verification passed, navigating...");
+          
+          // Single reliable navigation
           window.location.href = "selection.html";
-        }, 100);
+          
+        } catch (encryptError) {
+          console.error("🔐 Encryption failed:", encryptError);
+          alert("שגיאה בהצפנת הסיסמה: " + encryptError.message);
+        }
+        
       } else {
-        alert("סיסמה לא מאומתת ❌\n" + text);
+        console.log("❌ Authentication failed");
+        alert("סיסמה לא מאומתת ❌\nResponse: " + text);
       }
     } catch (err) {
-      console.error("Login error:", err);
-      alert("שגיאת חיבור מול Make.com ❌\n" + err);
+      console.error("🚨 Login error:", err);
+      console.error("🚨 Error details:", {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      });
+      alert("שגיאת חיבור מול Make.com ❌\n" + err.message);
     } finally {
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;

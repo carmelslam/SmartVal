@@ -252,10 +252,37 @@
   <div class="footer">All rights reserved © Carmel Cayouf</div>
 </div>
 <script>
-  const userAuthToken = sessionStorage.getItem('auth');
-  if (!userAuthToken) {
-    alert("הגישה חסומה - אנא התחבר דרך דף הבית");
-    window.location.href = "index.html";
+  console.log("🔍 Selection page loaded, checking authentication...");
+  
+  function checkAuth() {
+    const userAuthToken = sessionStorage.getItem('auth');
+    const loginSuccess = sessionStorage.getItem('loginSuccess');
+    const sessionStart = sessionStorage.getItem('sessionStart');
+    
+    console.log("🔐 Auth check results:");
+    console.log("- Auth token exists:", !!userAuthToken);
+    console.log("- Login success flag:", loginSuccess);
+    console.log("- Session start:", sessionStart);
+    console.log("- Auth token preview:", userAuthToken ? userAuthToken.substring(0, 50) + "..." : "null");
+    
+    if (!userAuthToken) {
+      console.log("❌ No auth token found, redirecting to login");
+      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+      window.location.href = "index.html";
+      return false;
+    }
+    
+    console.log("✅ Authentication verified, user can access selection page");
+    return true;
+  }
+  
+  // Check auth immediately
+  if (!checkAuth()) {
+    // If auth fails, wait a bit and try again (in case of race condition)
+    setTimeout(() => {
+      console.log("🔄 Retrying auth check after delay...");
+      checkAuth();
+    }, 100);
   }
 
   function navigate(pageName) {
