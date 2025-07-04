@@ -29,6 +29,11 @@ class SecurityManager {
     
     this.auditLog = [];
     this.securityEvents = [];
+    
+    // Initialize direct references for easier access
+    this.csrfTokens = this.securityConfig.csrfTokens;
+    this.rateLimiting = this.securityConfig.rateLimiting;
+    
     this.initializeSecurity();
   }
 
