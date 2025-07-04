@@ -108,9 +108,21 @@
   // Simple direct webhook URL for login only
   const PASSWORD_WEBHOOK = 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk';
   
-  // Simple password encryption
-  function encryptPassword(password) {
-    return btoa(password + '_enc_' + Date.now());
+  // Proper password encryption (matching auth.js)
+  const KEY_STRING = 'encryption-key';
+
+  async function getKey() {
+    const enc = new TextEncoder().encode(KEY_STRING);
+    const hash = await crypto.subtle.digest('SHA-256', enc);
+    return crypto.subtle.importKey('raw', hash, 'AES-GCM', false, ['encrypt','decrypt']);
+  }
+
+  async function encryptPassword(password) {
+    const key = await getKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(password);
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+    return JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) });
   }
   
   console.log("✅ Simple script loaded");
@@ -233,48 +245,14 @@
           // Clear any existing session data first
           sessionStorage.clear();
           
-          // Set new session data with extra verification
+          // Save auth data simply
           sessionStorage.setItem("auth", encryptedPass);
-          sessionStorage.setItem("sessionStart", Date.now().toString());
           sessionStorage.setItem("loginSuccess", "true");
-          sessionStorage.setItem("originalPassword", pass); // For debugging
           
-          console.log("💾 Session data saved to sessionStorage");
-          console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");
+          console.log("✅ Auth saved, navigating...");
           
-          // Update UI to show success immediately
-          submitBtn.textContent = "מצליח! מעביר...";
-          submitBtn.style.background = "#28a745";
-          
-          // Play success sound (non-blocking)
-          if (successSound) {
-            successSound.play().catch(e => console.log("🔊 Audio skipped:", e.message));
-          }
-          
-          // Initialize push notifications in background (non-blocking)
-          setTimeout(() => {
-            initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
-          }, 100);
-          
-          // Wait longer and verify auth multiple times before navigation
-          setTimeout(() => {
-            const finalAuthCheck = sessionStorage.getItem("auth");
-            const finalLoginCheck = sessionStorage.getItem("loginSuccess");
-            
-            console.log("🔍 Final verification before navigation:");
-            console.log("- Auth token:", !!finalAuthCheck);
-            console.log("- Login success:", finalLoginCheck);
-            
-            if (!finalAuthCheck) {
-              console.error("❌ Auth token missing before navigation!");
-              alert("שגיאה בשמירת נתוני ההתחברות");
-              return;
-            }
-            
-            console.log("✅ Final verification passed - navigating...");
-            window.location.href = `${window.location.origin}/selection.html`;
-            
-          }, 300); // Wait 300ms for sessionStorage to be fully saved
+          // Navigate immediately
+          window.location.href = "selection.html";
           
         } catch (encryptError) {
           console.error("🔐 Encryption failed:", encryptError);
