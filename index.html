@@ -142,10 +142,10 @@
     }
   }
 
-  // Success sound using external URL
+  // Success sound using base64 to avoid CORS issues
   let successSound = null;
   try {
-    successSound = new Audio("https://cdn.pixabay.com/download/audio/2021/09/09/audio_ee1f52a9df.mp3?filename=ferrari-engine-sound-starting-7320.mp3");
+    successSound = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuZ3fPHdSYE");
   } catch(e) {
     console.log("🔊 Audio skipped due to browser restrictions");
   }
@@ -219,17 +219,14 @@
           // Success sound and push notifications (non-blocking)
           try { 
             if (successSound) {
-              await successSound.play(); 
+              successSound.play().catch(e => console.log("🔊 Audio playback skipped:", e.message)); 
             }
           } catch(e) { 
-            console.log("🔊 Audio playback skipped:", e.message); 
+            console.log("🔊 Audio setup skipped:", e.message); 
           }
           
-          try {
-            await initPush();
-          } catch(e) {
-            console.log("📱 Push notifications skipped:", e.message);
-          }
+          // Initialize push notifications in background (non-blocking)
+          initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
           
           console.log("🚀 Attempting navigation to selection.html...");
           
