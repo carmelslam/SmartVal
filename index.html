@@ -233,7 +233,7 @@
           // Clear any existing session data first
           sessionStorage.clear();
           
-          // Set new session data
+          // Set new session data with extra verification
           sessionStorage.setItem("auth", encryptedPass);
           sessionStorage.setItem("sessionStart", Date.now().toString());
           sessionStorage.setItem("loginSuccess", "true");
@@ -241,15 +241,6 @@
           
           console.log("💾 Session data saved to sessionStorage");
           console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");
-          
-          // Test sessionStorage immediately
-          const testAuth = sessionStorage.getItem("auth");
-          if (!testAuth) {
-            throw new Error("Failed to save auth to sessionStorage");
-          }
-          console.log("✅ SessionStorage verification passed");
-          
-          console.log("🚀 Starting navigation process...");
           
           // Update UI to show success immediately
           submitBtn.textContent = "מצליח! מעביר...";
@@ -265,9 +256,25 @@
             initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
           }, 100);
           
-          // Navigate immediately
-          console.log("✅ Navigating to selection page...");
-          window.location.href = `${window.location.origin}/selection.html`;
+          // Wait longer and verify auth multiple times before navigation
+          setTimeout(() => {
+            const finalAuthCheck = sessionStorage.getItem("auth");
+            const finalLoginCheck = sessionStorage.getItem("loginSuccess");
+            
+            console.log("🔍 Final verification before navigation:");
+            console.log("- Auth token:", !!finalAuthCheck);
+            console.log("- Login success:", finalLoginCheck);
+            
+            if (!finalAuthCheck) {
+              console.error("❌ Auth token missing before navigation!");
+              alert("שגיאה בשמירת נתוני ההתחברות");
+              return;
+            }
+            
+            console.log("✅ Final verification passed - navigating...");
+            window.location.href = `${window.location.origin}/selection.html`;
+            
+          }, 300); // Wait 300ms for sessionStorage to be fully saved
           
         } catch (encryptError) {
           console.error("🔐 Encryption failed:", encryptError);
