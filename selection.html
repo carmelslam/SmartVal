@@ -276,14 +276,27 @@
     return true;
   }
   
-  // Check auth immediately
-  if (!checkAuth()) {
-    // If auth fails, wait a bit and try again (in case of race condition)
-    setTimeout(() => {
-      console.log("🔄 Retrying auth check after delay...");
-      checkAuth();
-    }, 100);
+  // Check auth immediately with multiple retry attempts
+  let authRetries = 0;
+  const maxRetries = 3;
+  
+  function attemptAuth() {
+    if (checkAuth()) {
+      console.log("✅ Authentication successful");
+      return;
+    }
+    
+    authRetries++;
+    if (authRetries < maxRetries) {
+      console.log(`🔄 Auth retry ${authRetries}/${maxRetries} in 200ms...`);
+      setTimeout(attemptAuth, 200);
+    } else {
+      console.log("❌ Max auth retries reached, redirecting to login");
+      window.location.href = `${window.location.origin}/index.html`;
+    }
   }
+  
+  attemptAuth();
 
   function navigate(pageName) {
     window.location.href = pageName;
@@ -291,7 +304,7 @@
 
   function logout() {
     sessionStorage.clear();
-    window.location.href = "index.html";
+    window.location.href = `${window.location.origin}/index.html`;
   }
 
   document.addEventListener("DOMContentLoaded", function() {
@@ -301,7 +314,7 @@
       idleTimeout = setTimeout(() => {
         alert("הפגישה הסתיימה עקב חוסר פעילות.");
         sessionStorage.clear();
-        window.location.href = "index.html";
+        window.location.href = `${window.location.origin}/index.html`;
       }, 30 * 60 * 1000);
     }
     ["click", "keydown", "scroll", "mousemove"].forEach(eventType => {
