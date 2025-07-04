@@ -142,10 +142,10 @@
     }
   }
 
-  // Success sound using base64 to avoid CORS issues
+  // Ferrari engine success sound
   let successSound = null;
   try {
-    successSound = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuZ3fPHdSYE");
+    successSound = new Audio("https://cdn.pixabay.com/download/audio/2021/09/09/audio_ee1f52a9df.mp3?filename=ferrari-engine-sound-starting-7320.mp3");
   } catch(e) {
     console.log("🔊 Audio skipped due to browser restrictions");
   }
@@ -216,36 +216,24 @@
           }
           console.log("✅ SessionStorage verification passed");
           
-          // Success sound and push notifications (non-blocking)
-          try { 
-            if (successSound) {
-              successSound.play().catch(e => console.log("🔊 Audio playback skipped:", e.message)); 
-            }
-          } catch(e) { 
-            console.log("🔊 Audio setup skipped:", e.message); 
-          }
+          console.log("🚀 Starting navigation process...");
           
-          // Initialize push notifications in background (non-blocking)
-          initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
-          
-          console.log("🚀 Attempting navigation to selection.html...");
-          
-          // Update UI to show success
+          // Update UI to show success immediately
           submitBtn.textContent = "מצליח! מעביר...";
           submitBtn.style.background = "#28a745";
           
-          // Wait a moment to ensure sessionStorage is fully written
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          // Verify sessionStorage before navigation
-          const finalAuthCheck = sessionStorage.getItem("auth");
-          if (!finalAuthCheck) {
-            throw new Error("SessionStorage failed to persist auth token");
+          // Play success sound (non-blocking)
+          if (successSound) {
+            successSound.play().catch(e => console.log("🔊 Audio skipped:", e.message));
           }
           
-          console.log("✅ Final auth verification passed, navigating...");
+          // Initialize push notifications in background (non-blocking)
+          setTimeout(() => {
+            initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
+          }, 100);
           
-          // Navigate using absolute path to avoid relative path issues
+          // Navigate immediately
+          console.log("✅ Navigating to selection page...");
           window.location.href = `${window.location.origin}/selection.html`;
           
         } catch (encryptError) {
