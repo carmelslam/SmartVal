@@ -281,9 +281,23 @@
 <div id="agentResponse" class="floating-response" style="display:none;"></div>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
+    // Check authentication similar to selection.html
+    const userAuthToken = sessionStorage.getItem('auth');
+    const loginTime = sessionStorage.getItem('loginTime');
     const plate = sessionStorage.getItem('plate');
-    const token = sessionStorage.getItem('password') || sessionStorage.getItem('auth');
-    if (!token) window.location.href = 'index.html';
+    
+    console.log("🔍 Assistant page loaded, checking authentication...");
+    console.log("- Auth token exists:", !!userAuthToken);
+    console.log("- Login time exists:", !!loginTime);
+    
+    if (!userAuthToken || !loginTime) {
+      console.log("❌ No auth token or login time found, redirecting to login");
+      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    console.log("✅ Authentication verified, loading Nicole assistant");
     if (plate) document.getElementById('plateInput').value = plate;
     
     // Initialize modern UI functionality
