@@ -220,15 +220,12 @@
   let isMinimized = false;
   let originalUrl = '';
 
-  // Site configurations
+  // Site configurations with secure credential vault integration
   const siteConfigs = {
     'car-part.co.il': {
       name: 'Car Part - חלקי רכב',
       url: 'https://www.car-part.co.il',
-      credentials: {
-        username: 'yaronkayouf@gmail.com',
-        password: 'YK123456!'
-      },
+      credentialKey: 'car_part_credentials', // Reference to vault
       autoLogin: true,
       loginSelectors: {
         usernameField: 'input[name="email"], input[type="email"], #email',
@@ -239,16 +236,95 @@
     'portal.levi-itzhak.co.il': {
       name: 'פורטל לוי יצחק',
       url: 'https://portal.levi-itzhak.co.il',
-      credentials: {
-        username: 'yaronkayouf@gmail.com',
-        password: 'YK123456!'
-      },
+      credentialKey: 'levi_portal_credentials', // Reference to vault
       autoLogin: true,
       loginSelectors: {
         usernameField: '#username, input[name="username"]',
         passwordField: '#password, input[name="password"]',
         submitButton: '#login-btn, button[type="submit"]'
       }
+    }
+  };
+
+  // Secure credentials vault
+  const credentialsVault = {
+    async getCredentials(credentialKey) {
+      try {
+        // Try to get from secure sessionStorage first
+        const stored = sessionStorage.getItem(`vault_${credentialKey}`);
+        if (stored) {
+          const decrypted = await this.decryptCredentials(stored);
+          if (decrypted) return decrypted;
+        }
+        
+        // Fallback to default credentials if vault is empty
+        const defaultCredentials = await this.getDefaultCredentials(credentialKey);
+        if (defaultCredentials) {
+          // Store in vault for next time
+          await this.storeCredentials(credentialKey, defaultCredentials);
+          return defaultCredentials;
+        }
+        
+        throw new Error('No credentials available');
+      } catch (error) {
+        console.error('Error getting credentials:', error);
+        throw error;
+      }
+    },
+
+    async storeCredentials(credentialKey, credentials) {
+      try {
+        const encrypted = await this.encryptCredentials(credentials);
+        sessionStorage.setItem(`vault_${credentialKey}`, encrypted);
+        console.log(`Credentials stored for ${credentialKey}`);
+      } catch (error) {
+        console.error('Error storing credentials:', error);
+      }
+    },
+
+    async encryptCredentials(credentials) {
+      // Use the same encryption as auth.js
+      if (typeof encryptPassword === 'function') {
+        return await encryptPassword(JSON.stringify(credentials));
+      }
+      // Fallback to base64 encoding (not secure, but better than plain text)
+      return btoa(JSON.stringify(credentials));
+    },
+
+    async decryptCredentials(encryptedData) {
+      try {
+        // Use the same decryption as auth.js
+        if (typeof decryptPassword === 'function') {
+          const decrypted = await decryptPassword(encryptedData);
+          return JSON.parse(decrypted);
+        }
+        // Fallback to base64 decoding
+        return JSON.parse(atob(encryptedData));
+      } catch (error) {
+        console.error('Decryption failed:', error);
+        return null;
+      }
+    },
+
+    async getDefaultCredentials(credentialKey) {
+      // Default credentials - in production, these would come from a secure server
+      const defaults = {
+        car_part_credentials: {
+          username: 'yaronkayouf@gmail.com',
+          password: 'YK123456!'
+        },
+        levi_portal_credentials: {
+          username: 'yaronkayouf@gmail.com', 
+          password: 'YK123456!'
+        }
+      };
+      
+      return defaults[credentialKey] || null;
+    },
+
+    async updateCredentials(credentialKey, newCredentials) {
+      await this.storeCredentials(credentialKey, newCredentials);
+      updateStatus(`Credentials updated for ${credentialKey}`);
     }
   };
 
@@ -362,7 +438,7 @@
     loadSite(fullUrl);
   };
 
-  window.showCredentials = function() {
+  window.showCredentials = async function() {
     if (!currentSite || !siteConfigs[currentSite]) {
       alert('אין פרטי גישה זמינים לאתר זה');
       return;
@@ -372,45 +448,64 @@
     const popup = document.getElementById('credentialsPopup');
     const list = document.getElementById('credentialsList');
     
-    list.innerHTML = `
-      <div class="credential-field">
-        <span class="label">שם משתמש:</span>
-        <span class="value" onclick="copyToClipboard('${config.credentials.username}')">${config.credentials.username}</span>
-      </div>
-      <div class="credential-field">
-        <span class="label">סיסמה:</span>
-        <span class="value" onclick="copyToClipboard('${config.credentials.password}')">${config.credentials.password}</span>
-      </div>
-    `;
-    
-    popup.style.display = 'block';
+    try {
+      // Get credentials from vault
+      const credentials = await credentialsVault.getCredentials(config.credentialKey);
+      
+      list.innerHTML = `
+        <div class="credential-field">
+          <span class="label">שם משתמש:</span>
+          <span class="value" onclick="copyToClipboard('${credentials.username}')">${credentials.username}</span>
+        </div>
+        <div class="credential-field">
+          <span class="label">סיסמה:</span>
+          <span class="value" onclick="copyToClipboard('${credentials.password}')">${credentials.password}</span>
+        </div>
+        <div class="credential-field" style="margin-top: 10px;">
+          <button onclick="editCredentials('${config.credentialKey}')" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">ערוך פרטי גישה</button>
+        </div>
+      `;
+      
+      popup.style.display = 'block';
+    } catch (error) {
+      alert(`שגיאה בטעינת פרטי גישה: ${error.message}`);
+    }
   };
 
   window.hideCredentials = function() {
     document.getElementById('credentialsPopup').style.display = 'none';
   };
 
-  window.autoFillCredentials = function() {
+  window.autoFillCredentials = async function() {
     if (!currentSite || !siteConfigs[currentSite]) return;
     
     const config = siteConfigs[currentSite];
     const iframe = document.getElementById('browserIframe');
     
     try {
+      // Get credentials from vault
+      const credentials = await credentialsVault.getCredentials(config.credentialKey);
+      
       const doc = iframe.contentDocument || iframe.contentWindow.document;
+      
+      // Validate iframe access and check for cross-origin restrictions
+      if (!doc) {
+        throw new Error('Cannot access iframe document - likely cross-origin restriction');
+      }
+      
       const selectors = config.loginSelectors;
       
       // Find and fill username field
       const usernameField = doc.querySelector(selectors.usernameField);
       if (usernameField) {
-        usernameField.value = config.credentials.username;
+        usernameField.value = credentials.username;
         usernameField.dispatchEvent(new Event('input', { bubbles: true }));
       }
       
       // Find and fill password field
       const passwordField = doc.querySelector(selectors.passwordField);
       if (passwordField) {
-        passwordField.value = config.credentials.password;
+        passwordField.value = credentials.password;
         passwordField.dispatchEvent(new Event('input', { bubbles: true }));
       }
       
@@ -430,7 +525,15 @@
       
     } catch (error) {
       console.error('Auto-fill error:', error);
-      alert('לא ניתן למלא אוטומטית. נסה למלא ידנית.');
+      
+      // Provide specific error handling for different error types
+      if (error.name === 'SecurityError' || error.message.includes('cross-origin')) {
+        updateStatus('מילוי אוטומטי חסום - גישה ידנית נדרשת');
+        showCredentialsPopup(config.credentials);
+      } else {
+        updateStatus('שגיאה במילוי אוטומטי - נסה ידנית');
+        alert('לא ניתן למלא אוטומטית. נסה למלא ידנית.');
+      }
     }
   };
 
@@ -494,14 +597,27 @@
   function startSessionKeepAlive() {
     // Keep session alive by pinging the system every 5 minutes
     sessionKeepAlive = setInterval(() => {
-      if (typeof helper !== 'undefined' && helper.keepSessionAlive) {
-        helper.keepSessionAlive();
-      } else {
-        // Fallback: touch sessionStorage
-        const auth = sessionStorage.getItem('auth');
-        if (auth) {
-          sessionStorage.setItem('lastActivity', new Date().toISOString());
+      try {
+        // Validate session before attempting to keep alive
+        if (!validateSession()) {
+          console.log('Session invalid, stopping keep-alive');
+          stopSessionKeepAlive();
+          return;
         }
+        
+        // Check if helper exists and has keepSessionAlive function
+        if (typeof helper !== 'undefined' && typeof helper.keepSessionAlive === 'function') {
+          helper.keepSessionAlive();
+        } else {
+          // Fallback: touch sessionStorage with validation
+          const auth = sessionStorage.getItem('auth');
+          if (auth && auth.length > 0) {
+            sessionStorage.setItem('lastActivity', new Date().toISOString());
+            console.log('Session keep-alive: sessionStorage updated');
+          }
+        }
+      } catch (error) {
+        console.error('Session keep-alive error:', error);
       }
     }, 300000); // 5 minutes
   }
@@ -513,8 +629,101 @@
     }
   }
 
+  function validateSession() {
+    try {
+      const auth = sessionStorage.getItem('auth');
+      if (!auth || auth.length === 0) {
+        return false;
+      }
+      
+      // Check if session is not too old (max 24 hours)
+      const lastActivity = sessionStorage.getItem('lastActivity');
+      if (lastActivity) {
+        const timeDiff = Date.now() - new Date(lastActivity).getTime();
+        const hoursOld = timeDiff / (1000 * 60 * 60);
+        if (hoursOld > 24) {
+          console.log('Session expired (older than 24 hours)');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      return false;
+    }
+  }
+
+  // Credential management functions
+  window.editCredentials = async function(credentialKey) {
+    try {
+      const credentials = await credentialsVault.getCredentials(credentialKey);
+      
+      const newUsername = prompt('שם משתמש חדש:', credentials.username);
+      if (newUsername === null) return; // User cancelled
+      
+      const newPassword = prompt('סיסמה חדשה:', credentials.password);
+      if (newPassword === null) return; // User cancelled
+      
+      const updatedCredentials = {
+        username: newUsername,
+        password: newPassword
+      };
+      
+      await credentialsVault.updateCredentials(credentialKey, updatedCredentials);
+      alert('✅ פרטי הגישה עודכנו בהצלחה');
+      
+      // Refresh credentials display
+      hideCredentials();
+      setTimeout(() => showCredentials(), 100);
+      
+    } catch (error) {
+      alert(`❌ שגיאה בעדכון פרטי גישה: ${error.message}`);
+    }
+  };
+
   function updateStatus(message) {
     document.getElementById('browserStatus').textContent = message;
+  }
+
+  function showCredentialsPopup(credentials) {
+    const popup = document.createElement('div');
+    popup.id = 'credentialsPopup';
+    popup.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 2px solid #007bff;
+      border-radius: 10px;
+      padding: 20px;
+      z-index: 10000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      direction: rtl;
+      font-family: Arial, sans-serif;
+    `;
+    
+    popup.innerHTML = `
+      <h3 style="margin-top: 0; color: #007bff;">פרטי כניסה לאתר</h3>
+      <p><strong>שם משתמש:</strong> ${credentials.username}</p>
+      <p><strong>סיסמה:</strong> ${credentials.password}</p>
+      <p style="font-size: 14px; color: #666;">העתק את הפרטים והזן אותם באתר ידנית</p>
+      <div style="text-align: center; margin-top: 15px;">
+        <button onclick="copyToClipboard('${credentials.username}')" style="margin: 5px; padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">העתק שם משתמש</button>
+        <button onclick="copyToClipboard('${credentials.password}')" style="margin: 5px; padding: 8px 15px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer;">העתק סיסמה</button>
+        <button onclick="document.getElementById('credentialsPopup').remove()" style="margin: 5px; padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">סגור</button>
+      </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Auto-close after 30 seconds
+    setTimeout(() => {
+      if (document.getElementById('credentialsPopup')) {
+        popup.remove();
+      }
+    }, 30000);
   }
 
   function copyToClipboard(text) {

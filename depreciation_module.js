@@ -1,5 +1,6 @@
 // depreciation_module.js - Fixed implementation with proper functionality
 import { helper, updateHelper, updateCalculations, saveHelperToStorage, getVehicleData, getDamageData, getValuationData, syncLeviData } from './helper.js';
+import { MathEngine } from './math.js';
 
 function $(id) {
   return document.getElementById(id);
@@ -73,11 +74,14 @@ function init() {
     });
   }
 
-  // Depreciation table and global percent
+  // Depreciation table and global percent with auto-calculation
   renderDepTable(dep.centers || []);
   if ($('globalDep1')) {
     $('globalDep1').value = dep.global_percent || '';
-    $('globalDep1').addEventListener('input', saveAndRefresh);
+    $('globalDep1').addEventListener('input', () => {
+      triggerMathCalculation();
+      saveAndRefresh();
+    });
   }
 
   // Work days, agreement
@@ -147,7 +151,10 @@ function createDepRow(data = {}) {
     saveAndRefresh();
   });
   ['dep-part','dep-repair','dep-percent'].forEach(cls => {
-    div.querySelector('.' + cls).addEventListener('input', saveAndRefresh);
+    div.querySelector('.' + cls).addEventListener('input', () => {
+      if (cls === 'dep-percent') triggerMathCalculation();
+      saveAndRefresh();
+    });
   });
   return div;
 }
@@ -196,6 +203,7 @@ function createDiffRow(data = {}) {
   });
   ['diff-desc','diff-amount'].forEach(cls => {
     div.querySelector('.' + cls).addEventListener('input', () => {
+      if (cls === 'diff-amount') triggerMathCalculation();
       saveAndRefresh();
       updateDifferentialsSummary();
     });
@@ -382,5 +390,61 @@ window.generateAdditionalReport = () => {
   console.log('Generating additional report...');
   // This will integrate with final report builder
 };
+
+// Math engine integration for auto-calculation
+function triggerMathCalculation() {
+  try {
+    const mathEngine = new MathEngine();
+    
+    // Get current depreciation values
+    const depCenters = collectDepCenters();
+    const globalPercent = parseFloat($('globalDep1')?.value || 0);
+    const differentials = collectDifferentials();
+    
+    // Get base values from helper
+    const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+    const totalDamage = parseFloat(helper.expertise?.calculations?.total_damage) || 0;
+    
+    // Calculate depreciation compensation
+    let totalDepPercent = 0;
+    depCenters.forEach(center => {
+      totalDepPercent += center.percent;
+    });
+    totalDepPercent += globalPercent;
+    
+    const depCompensation = Math.round((marketValue * totalDepPercent) / 100);
+    
+    // Calculate differentials total
+    const differentialsTotal = differentials.reduce((sum, diff) => sum + diff.amount, 0);
+    
+    // Calculate final compensation
+    const totalCompensation = depCompensation + differentialsTotal;
+    
+    // Update calculations in helper
+    updateHelper('expertise', {
+      calculations: {
+        ...helper.expertise?.calculations,
+        depreciation_percent: totalDepPercent,
+        depreciation_compensation: depCompensation,
+        differentials_total: differentialsTotal,
+        total_compensation: totalCompensation
+      }
+    });
+    
+    // Refresh summary with new calculations
+    refreshSummary();
+    updateDifferentialsSummary();
+    
+    console.log('Math calculation triggered:', {
+      depPercent: totalDepPercent,
+      depCompensation,
+      differentialsTotal,
+      totalCompensation
+    });
+    
+  } catch (error) {
+    console.error('Math calculation error:', error);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', init);

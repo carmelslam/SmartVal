@@ -95,6 +95,9 @@
 
     <button id="submitBtn">פתח תיק</button>
     
+    <!-- Return button -->
+    <button onclick="window.location.href='selection.html'" style="background: #6c757d; color: white; width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">חזור לדף הבחירה</button>
+    
     <!-- Success message and continue button (hidden initially) -->
     <div id="successSection" style="display: none; margin-top: 20px;">
       <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin-bottom: 15px; color: #155724;">
@@ -109,6 +112,8 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
+    
+    // Initialize page
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
     const encryptedPassword = sessionStorage.getItem("auth");
@@ -117,7 +122,18 @@
       window.location.href = "index.html";
     }
 
-    const password = await decryptPassword(encryptedPassword);
+    // Handle async password decryption properly
+    let password = null;
+    (async () => {
+      try {
+        password = await decryptPassword(encryptedPassword);
+        console.log('✅ Password decrypted successfully');
+      } catch (error) {
+        console.error('❌ Password decryption failed:', error);
+        alert("שגיאה בפענוח הסיסמה");
+        window.location.href = "index.html";
+      }
+    })();
 
     document.getElementById("submitBtn").addEventListener("click", async function () {
       const plate = document.getElementById("plate").value.trim();
@@ -128,6 +144,16 @@
       if (!plate || !owner || !date || !location) {
         document.getElementById("err").innerText = "נא למלא את כל השדות";
         return;
+      }
+
+      // Ensure password is available
+      if (!password) {
+        try {
+          password = await decryptPassword(encryptedPassword);
+        } catch (error) {
+          document.getElementById("err").innerText = "שגיאה בפענוח הסיסמה";
+          return;
+        }
       }
 
       const payload = {
@@ -141,6 +167,11 @@
       try {
         document.getElementById("err").innerText = "";
         document.getElementById("feedback").style.display = "none";
+        
+        // Show loading state
+        document.getElementById("submitBtn").disabled = true;
+        document.getElementById("submitBtn").innerText = "שולח בקשה...";
+        
         await sendToWebhook('OPEN_CASE_UI', payload);
         const encryptedPassword = await encryptPassword(payload.password);
         const encryptedPayload = JSON.stringify({
@@ -157,6 +188,10 @@
       } catch (err) {
         document.getElementById("err").innerText = "שגיאה בשליחה: " + err.message;
         document.getElementById("feedback").style.display = "none";
+        
+        // Reset button state on error
+        document.getElementById("submitBtn").disabled = false;
+        document.getElementById("submitBtn").innerText = "פתח תיק";
       }
     });
 
@@ -171,5 +206,6 @@
       });
     }
   </script>
+  <script src="assistant-floating.js"></script>
 </body>
 </html>

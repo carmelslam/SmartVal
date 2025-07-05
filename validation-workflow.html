@@ -361,7 +361,14 @@
     };
     
     window.finalSubmit = async function() {
+      const submitBtn = document.querySelector('.btn-success');
+      const originalText = submitBtn.textContent;
+      
       try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'מעבד דו"ח סופי...';
+        
         // Prepare final report data
         const finalReportData = {
           validated_sections: approvedSections,
@@ -373,6 +380,7 @@
         // Send to webhook for final processing
         await sendToWebhook('SUBMIT_FINAL_REPORT', finalReportData);
         
+        submitBtn.textContent = '✅ הושלם בהצלחה';
         alert('✅ הדו"ח הסופי נוצר בהצלחה ונשלח לעיבוד');
         
         // Redirect to success page or selection
@@ -382,6 +390,8 @@
         
       } catch (error) {
         console.error('Final submission error:', error);
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         alert('❌ שגיאה ביצירת הדו"ח הסופי: ' + error.message);
       }
     };
@@ -394,7 +404,8 @@
   <script type="module" src="helper-events.js"></script>
   <script src="car-details-float.js"></script>
   <script src="levi-floating.js"></script>
-  <script src="parts-floating.js"></script>
   <script src="internal-browser.js"></script>
+  <script src="assistant-floating.js"></script>
+  <script src="onesignal-integration.js"></script>
 </body>
 </html>

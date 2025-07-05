@@ -46,30 +46,6 @@ updateHelper('expertise', {
       }
     }
   },
-
-  parts_search: {
-    summary: {
-      total_results: '',
-      recommended: ''
-    },
-    results: [
-      // array of parts returned by Make or browser
-      // format per item:
-      // {
-      //   supplier_name: '',
-      //   location: '',
-      //   source_type: '',
-      //   condition: '',
-      //   part_description: '',
-      //   availability: '',
-      //   price: '',
-      //   currency: '',
-      //   oem_code: '',
-      //   catalog_id: '',
-      //   notes: ''
-      // }
-    ]
-  }, // <-- Added missing comma here
   image_upload: {
     plate: '', // will be filled when car is initialized
     total_uploaded: 0 // accumulates with each upload until session reset
@@ -78,6 +54,6 @@ updateHelper('expertise', {
 
 export function damageCenters() {
   // This file is foundation logic only — no visual rendering here.
-  console.log('🧩 Foundation structures: helper.expertise.levi_report + parts_search + image_upload');
+  console.log('🧩 Foundation structures: helper.expertise.levi_report + image_upload');
 }
 

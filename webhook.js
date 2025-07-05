@@ -58,12 +58,43 @@ export async function sendToWebhook(id, payload) {
 
   const res = await fetch(url, options);
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
   try {
-    return await res.json();
+    const data = await res.json();
+    
+    // Enhanced validation for business logic errors
+    if (data && typeof data === 'object') {
+      // Check for explicit error indicators
+      if (data.error === true || data.status === 'error' || data.success === false) {
+        throw new Error(data.message || data.error_message || 'Server validation failed');
+      }
+      
+      // Check for Make.com automation failures
+      if (data.make_status === 'error' || data.automation_failed === true) {
+        throw new Error(data.make_error || 'Make.com automation execution failed');
+      }
+      
+      // Check for validation errors array
+      if (Array.isArray(data.errors) && data.errors.length > 0) {
+        throw new Error(`Validation errors: ${data.errors.join(', ')}`);
+      }
+      
+      // Check for admin/permission errors
+      if (data.access_denied === true || data.permission_error === true) {
+        throw new Error(data.permission_message || 'Access denied - insufficient permissions');
+      }
+    }
+    
+    return data;
   } catch (e) {
+    // If it's already an error we threw above, re-throw it
+    if (e.message && !e.message.includes('JSON')) {
+      throw e;
+    }
+    // Otherwise, it's a JSON parsing error
+    console.warn('Response is not valid JSON, returning undefined');
     return undefined;
   }
 }

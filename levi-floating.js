@@ -178,44 +178,74 @@
 
   function loadLeviData() {
     try {
-      // Try to get data from helper.js or sessionStorage
       let leviData = {};
       
-      // Check if helper.js is available
-      if (typeof helper !== 'undefined' && helper.levi) {
+      // Priority 1: Try to get data from helper's standardized expertise structure
+      if (typeof helper !== 'undefined' && helper.expertise && helper.expertise.levi_report) {
+        leviData = helper.expertise.levi_report;
+        console.log('Levi data loaded from helper.expertise.levi_report');
+      }
+      // Priority 2: Legacy helper.levi structure
+      else if (typeof helper !== 'undefined' && helper.levi) {
         leviData = helper.levi;
-      } else {
-        // Fallback to sessionStorage
+        console.log('Levi data loaded from legacy helper.levi');
+      }
+      // Priority 3: Fallback to sessionStorage with validation
+      else {
         const storedData = sessionStorage.getItem("leviData");
-        if (storedData) {
-          leviData = JSON.parse(storedData);
+        if (storedData && storedData !== "undefined" && storedData !== "null") {
+          try {
+            const parsedData = JSON.parse(storedData);
+            if (parsedData && typeof parsedData === 'object') {
+              leviData = parsedData;
+              console.log('Levi data loaded from sessionStorage');
+            }
+          } catch (parseError) {
+            console.error('Failed to parse stored Levi data:', parseError);
+          }
         }
       }
 
-      // Default empty structure
+      // Validate and set defaults
       const defaultData = {
-        levi_value: 0,
+        base_price: 0,
+        final_price: 0,
         model_code: "",
-        car_type: "",
-        market_value: 0,
-        insurance_value: 0,
+        full_model: "",
+        category: "",
         adjustments: {
-          mileage_adjustment: "",
-          ownership_adjustment: "",
-          features_adjustment: ""
+          registration: { percent: "", value: "", total: "" },
+          km: { percent: "", value: "", total: "" },
+          ownership: { type: "", percent: "", value: "", total: "" },
+          owner_count: { percent: "", value: "", total: "" },
+          features: { percent: "", value: "", total: "" }
         }
       };
 
-      // Merge with defaults
-      leviData = { ...defaultData, ...leviData };
+      // Deep merge with defaults to ensure all properties exist
+      leviData = deepMerge(defaultData, leviData);
 
-      // Update UI
+      // Update UI with validated data
       updateLeviDisplay(leviData);
 
     } catch (error) {
       console.error("Error loading Levi data:", error);
+      // Show user-friendly error and load defaults
       updateLeviDisplay({});
+      updateStatus('שגיאה בטעינת נתוני לוי יצחק');
     }
+  }
+
+  function deepMerge(target, source) {
+    const result = { ...target };
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = deepMerge(target[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    return result;
   }
 
   function updateLeviDisplay(data) {

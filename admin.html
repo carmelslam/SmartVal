@@ -203,17 +203,60 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
     <script type="module">
       import { MathEngine } from './math.js';
-      document.getElementById('save-admin-settings').addEventListener('click', () => {
+      import { sendToWebhook } from './webhook.js';
+      
+      document.getElementById('save-admin-settings').addEventListener('click', async () => {
         const vat = parseFloat(document.getElementById('vat-input').value);
-        if (!isNaN(vat) && vat >= 0 && vat <= 100) {
-          MathEngine.setVatRate(vat);
-          alert(`מע"מ עודכן ל-${vat}% במערכת`);
-        } else {
+        if (isNaN(vat) || vat < 0 || vat > 100) {
           alert('ערך מע"מ לא חוקי');
+          return;
         }
+        
+        const submitBtn = document.getElementById('save-admin-settings');
+        const originalText = submitBtn.textContent;
+        
+        try {
+          // Show loading state
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'שומר הגדרות...';
+          
+          // Save to server with validation
+          const adminSettings = {
+            vat_rate: vat,
+            timestamp: new Date().toISOString(),
+            admin_user: sessionStorage.getItem('auth') || 'admin'
+          };
+          
+          const response = await sendToWebhook('ADMIN_HUB', {
+            action: 'update_settings',
+            settings: adminSettings
+          });
+          
+          // If server validation passes, save locally
+          MathEngine.setVatRate(vat);
+          sessionStorage.setItem('globalVAT', vat.toString());
+          
+          submitBtn.textContent = '✅ נשמר בהצלחה';
+          alert(`✅ מע"מ עודכן ל-${vat}% במערכת ובשרת`);
+          
+        } catch (error) {
+          console.error('Admin settings save error:', error);
+          alert(`❌ שגיאה בשמירת הגדרות: ${error.message}`);
+          
+          // Reset button state
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        
+        // Reset button after 2 seconds
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }, 2000);
       });
     </script>
    <script type="module">
+  import { sendToWebhook } from './webhook.js';
   document.addEventListener('DOMContentLoaded', () => {
     const WEBHOOKS = window.WEBHOOKS;
 
@@ -239,29 +282,28 @@
         return;
       }
       
-      // Fallback to webhook verification
-      fetch(WEBHOOKS.DEV_HUB, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      })
-        .then(res => res.json())
+      // Use enhanced webhook verification with proper validation
+      sendToWebhook('DEV_HUB', { password })
         .then(data => {
-          if (data && data.role === 'dev') {
+          if (data && data.role === 'dev' && data.access_granted === true) {
             sessionStorage.setItem('dev-access', 'granted');
+            alert('✅ Developer access granted');
             window.location.href = 'dev-module.html';
           } else {
-            alert('Access denied: incorrect password');
+            alert('❌ Access denied: incorrect password or insufficient privileges');
           }
         })
         .catch(err => {
-          console.error('Dev login failed, trying direct access...', err);
-          // If webhook fails, allow direct access with correct password
-          if (password === 'dev_admin_2025') {
-            sessionStorage.setItem('dev-access', 'granted');
-            window.location.href = 'dev-module.html';
-          } else {
-            alert('Error connecting to verification server');
+          console.error('Dev login failed:', err);
+          alert(`🚫 Verification failed: ${err.message}`);
+          
+          // Emergency fallback only if it's a network error
+          if (err.message.includes('HTTP') || err.message.includes('network')) {
+            const fallbackAccess = confirm('Server connection failed. Use offline emergency access?');
+            if (fallbackAccess && password === 'dev_admin_2025') {
+              sessionStorage.setItem('dev-access', 'granted-offline');
+              window.location.href = 'dev-module.html';
+            }
           }
         });
     };
