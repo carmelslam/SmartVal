@@ -70,6 +70,12 @@
       font-size: 14px;
       margin-bottom: 10px;
     }
+    .success {
+      color: green;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -80,6 +86,7 @@
     <div class="title">ירון כיוף - פתיחת תיק חדש</div>
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
     <div id="err" class="error"></div>
+    <div id="feedback" class="success" style="display:none;"></div>
 
     <input id="plate" type="text" placeholder="מספר רכב" />
     <input id="owner" type="text" placeholder="שם בעל הרכב" />
@@ -102,62 +109,65 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
-    document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-    const encryptedPassword = sessionStorage.getItem("auth");
-    if (!encryptedPassword) {
-      alert("גישה חסומה. התחבר קודם דרך הדף הראשי.");
-      window.location.href = "index.html";
-    }
+    (async function init() {
+      document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-    const password = await decryptPassword(encryptedPassword);
-
-    document.getElementById("submitBtn").addEventListener("click", async function () {
-      const plate = document.getElementById("plate").value.trim();
-      const owner = document.getElementById("owner").value.trim();
-      const date = document.getElementById("date").value.trim();
-      const location = document.getElementById("location").value.trim();
-
-      if (!plate || !owner || !date || !location) {
-        document.getElementById("err").innerText = "נא למלא את כל השדות";
+      const encryptedPassword = sessionStorage.getItem("auth");
+      if (!encryptedPassword) {
+        alert("גישה חסומה. התחבר קודם דרך הדף הראשי.");
+        window.location.href = "index.html";
         return;
       }
 
-      const payload = {
-        plate,
-        owner,
-        date,
-        location,
-        password
-      };
+      const password = await decryptPassword(encryptedPassword);
 
-      try {
-        await sendToWebhook('OPEN_CASE_UI', payload);
-        const encryptedPassword = await encryptPassword(payload.password);
-        const encryptedPayload = JSON.stringify({
-          ...payload,
-          password: encryptedPassword
-        });
-        sessionStorage.setItem("carData", encryptedPayload);
-        
-        // Show success message and continue button
-        showSuccessAndContinue();
+      document.getElementById("submitBtn").addEventListener("click", async function () {
+        const plate = document.getElementById("plate").value.trim();
+        const owner = document.getElementById("owner").value.trim();
+        const date = document.getElementById("date").value.trim();
+        const location = document.getElementById("location").value.trim();
 
-      } catch (err) {
-        document.getElementById("err").innerText = "שגיאה בשליחה: " + err;
-      }
-    });
+        if (!plate || !owner || !date || !location) {
+          document.getElementById("err").innerText = "נא למלא את כל השדות";
+          return;
+        }
 
-    function showSuccessAndContinue() {
-      // Hide the form and show success section
-      document.getElementById("submitBtn").style.display = "none";
-      document.getElementById("successSection").style.display = "block";
-      
-      // Add continue button functionality
-      document.getElementById("continueBtn").addEventListener("click", function() {
-        window.location.href = "general_info.html";
+        const payload = { plate, owner, date, location, password };
+
+        try {
+          document.getElementById("err").innerText = "";
+          document.getElementById("feedback").style.display = "none";
+          await sendToWebhook('OPEN_CASE_UI', payload);
+          const encryptedPassword = await encryptPassword(payload.password);
+          const encryptedPayload = JSON.stringify({
+            ...payload,
+            password: encryptedPassword
+          });
+          sessionStorage.setItem("carData", encryptedPayload);
+
+          document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";
+          document.getElementById("feedback").style.display = "block";
+          // Show success message and continue button
+          showSuccessAndContinue();
+        } catch (err) {
+          document.getElementById("err").innerText = "שגיאה בשליחה: " + err.message;
+          document.getElementById("feedback").style.display = "none";
+        }
       });
-    }
+
+      function showSuccessAndContinue() {
+        // Hide the form and show success section
+        document.getElementById("submitBtn").style.display = "none";
+        document.getElementById("successSection").style.display = "block";
+
+        // Add continue button functionality
+        document.getElementById("continueBtn").addEventListener("click", function() {
+          window.location.href = "general_info.html";
+        });
+      }
+
+    })();
   </script>
 </body>
 </html>
