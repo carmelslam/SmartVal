@@ -44,6 +44,37 @@
       width: 120px;
       margin-bottom: 20px;
       opacity: 0.8;
+      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    
+    /* Logo success animation */
+    .logo.success-animation {
+      transform: scale(8) rotate(360deg);
+      opacity: 1;
+      z-index: 1000;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      margin-top: -60px;
+      margin-left: -60px;
+    }
+    
+    /* Overlay for smooth transition */
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    
+    .success-overlay.active {
+      opacity: 0.95;
     }
     h1 {
       font-size: 22px;
@@ -92,8 +123,11 @@
   </style>
 </head>
 <body>
+  <!-- Success transition overlay -->
+  <div class="success-overlay" id="successOverlay"></div>
+  
   <div class="container">
-    <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" class="logo" alt="Logo" />
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" class="logo" id="loginLogo" alt="Logo" />
     <h1>ירון כיוף שמאות - פורטל</h1>
     <h2>שמאות והערכת נזקי רכב ורכוש</h2>
     <form id="loginForm" onsubmit="login(event); return false;">
@@ -151,27 +185,94 @@
     }
   }
 
-  // Sports car engine success sound - trying multiple sources
-  let successSound = null;
-  const carSounds = [
-    "https://www.soundjay.com/misc/sounds/car-engine-2.mp3",
-    "https://www.freesoundslibrary.com/wp-content/uploads/2018/05/car-engine-sound.mp3", 
-    "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
-    "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcBzuZ3fPHdSYE"
-  ];
+  // Car ignition and driving away sounds
+  let carIgnitionSound = null;
+  let carDrivingAwaySound = null;
   
-  // Try each sound source until one works
-  for (let soundUrl of carSounds) {
-    try {
-      successSound = new Audio(soundUrl);
-      successSound.addEventListener('error', () => {
-        console.log("🔊 Sound source failed:", soundUrl);
-      });
-      console.log("🔊 Trying sound source:", soundUrl);
-      break;
-    } catch(e) {
-      console.log("🔊 Audio source failed:", soundUrl, e.message);
+  // Initialize car ignition sound for successful login
+  try {
+    carIgnitionSound = new Audio('./assets/car ignition.mp3');
+    carIgnitionSound.volume = 0.6; // Set volume to 60%
+    carIgnitionSound.addEventListener('canplaythrough', () => {
+      console.log('🚗 Car ignition sound loaded successfully');
+    });
+    carIgnitionSound.addEventListener('error', (e) => {
+      console.log('🔊 Car ignition sound failed to load:', e);
+    });
+  } catch(e) {
+    console.log('🔊 Failed to initialize car ignition sound:', e.message);
+  }
+  
+  // Initialize car driving away sound for logout
+  try {
+    carDrivingAwaySound = new Audio('./assets/car_driving_away.mp3');
+    carDrivingAwaySound.volume = 0.5; // Set volume to 50%
+    carDrivingAwaySound.addEventListener('canplaythrough', () => {
+      console.log('🚗 Car driving away sound loaded successfully');
+    });
+    carDrivingAwaySound.addEventListener('error', (e) => {
+      console.log('🔊 Car driving away sound failed to load:', e);
+    });
+  } catch(e) {
+    console.log('🔊 Failed to initialize car driving away sound:', e.message);
+  }
+  
+  // Global logout function with driving away sound
+  window.logoutWithSound = function() {
+    console.log('🚗 Logout initiated with driving away sound');
+    
+    // Play driving away sound
+    if (carDrivingAwaySound) {
+      carDrivingAwaySound.play().catch(e => 
+        console.log('🔊 Driving away sound skipped:', e.message)
+      );
     }
+    
+    // Clear session data
+    sessionStorage.clear();
+    localStorage.clear();
+    
+    // Show logout message briefly
+    const container = document.querySelector('.container');
+    if (container) {
+      container.innerHTML = `
+        <div style="text-align: center; color: #1e3a8a; padding: 20px;">
+          <h2>🚗 להתראות!</h2>
+          <p>מעביר חזרה לדף הכניסה...</p>
+        </div>
+      `;
+    }
+    
+    // Redirect after sound duration (approximately 2 seconds)
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 2500);
+  };
+
+  // Success animation function
+  function startSuccessAnimation() {
+    console.log('🎬 Starting success animation...');
+    
+    const logo = document.getElementById('loginLogo');
+    const overlay = document.getElementById('successOverlay');
+    
+    if (!logo || !overlay) {
+      console.log('🎬 Animation elements not found, skipping animation');
+      return;
+    }
+    
+    // Start overlay fade-in
+    overlay.classList.add('active');
+    
+    // Start logo animation after a brief delay
+    setTimeout(() => {
+      logo.classList.add('success-animation');
+    }, 200);
+    
+    // Log animation progress
+    setTimeout(() => {
+      console.log('🎬 Animation halfway complete...');
+    }, 750);
   }
 
   async function login(event) {
@@ -255,12 +356,12 @@
           console.log("🚀 Starting navigation process...");
           
           // Update UI to show success immediately
-          submitBtn.textContent = "מצליח! מעביר...";
+          submitBtn.textContent = "🚗 מצליח! מעביר...";
           submitBtn.style.background = "#28a745";
           
-          // Play success sound (non-blocking)
-          if (successSound) {
-            successSound.play().catch(e => console.log("🔊 Audio skipped:", e.message));
+          // Play car ignition sound (non-blocking)
+          if (carIgnitionSound) {
+            carIgnitionSound.play().catch(e => console.log("🔊 Car ignition audio skipped:", e.message));
           }
           
           // Initialize push notifications in background (non-blocking)
@@ -268,9 +369,14 @@
             initPush().catch(e => console.log("📱 Push notifications skipped:", e.message));
           }, 100);
           
-          // Navigate immediately
-          console.log("✅ Navigating to selection page...");
-          window.location.href = 'selection.html';
+          // Start logo animation and smooth transition
+          startSuccessAnimation();
+          
+          // Navigate after animation completes
+          setTimeout(() => {
+            console.log("✅ Navigating to selection page...");
+            window.location.href = 'selection.html';
+          }, 1500); // Wait for animation to complete
           
         } catch (encryptError) {
           console.error("🔐 Encryption failed:", encryptError);
