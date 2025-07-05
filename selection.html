@@ -20,9 +20,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data?.role === 'admin') {
+        .then(async res => {
+          const text = await res.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (_) {
+            data = { role: text.trim() };
+          }
+
+          if (data?.role === 'admin' || /admin|success/i.test(text)) {
             window.location.href = 'admin.html';
           } else {
             alert('Access denied: incorrect password');
@@ -258,17 +265,19 @@
     const userAuthToken = sessionStorage.getItem('auth');
     const loginSuccess = sessionStorage.getItem('loginSuccess');
     const sessionStart = sessionStorage.getItem('sessionStart');
+    const loginTime = sessionStorage.getItem('loginTime');
     
     console.log("🔐 Auth check results:");
     console.log("- Auth token exists:", !!userAuthToken);
     console.log("- Login success flag:", loginSuccess);
     console.log("- Session start:", sessionStart);
+    console.log("- Login time:", loginTime);
     console.log("- Auth token preview:", userAuthToken ? userAuthToken.substring(0, 50) + "..." : "null");
     
-    if (!userAuthToken) {
+    if (!userAuthToken || !loginTime) {
       console.log("❌ No auth token found, redirecting to login");
       alert("הגישה חסומה - אנא התחבר דרך דף הבית");
-      window.location.href = "index.html";
+      window.location.href = `${window.location.origin}/index.html`;
       return false;
     }
     
@@ -292,11 +301,11 @@
       setTimeout(attemptAuth, 200);
     } else {
       console.log("❌ Max auth retries reached, redirecting to login");
-      window.location.href = `${window.location.origin}/index.html`;
+      window.location.href = 'index.html';
     }
   }
   
-  attemptAuth();
+  document.addEventListener('DOMContentLoaded', attemptAuth);
 
   function navigate(pageName) {
     window.location.href = pageName;
@@ -304,7 +313,7 @@
 
   function logout() {
     sessionStorage.clear();
-    window.location.href = `${window.location.origin}/index.html`;
+    window.location.href = 'index.html';
   }
 
   document.addEventListener("DOMContentLoaded", function() {
@@ -314,7 +323,7 @@
       idleTimeout = setTimeout(() => {
         alert("הפגישה הסתיימה עקב חוסר פעילות.");
         sessionStorage.clear();
-        window.location.href = `${window.location.origin}/index.html`;
+        window.location.href = 'index.html';
       }, 30 * 60 * 1000);
     }
     ["click", "keydown", "scroll", "mousemove"].forEach(eventType => {
