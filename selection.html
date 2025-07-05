@@ -20,9 +20,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data?.role === 'admin') {
+        .then(async res => {
+          const text = await res.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (_) {
+            data = { role: text.trim() };
+          }
+
+          if (data?.role === 'admin' || /admin|success/i.test(text)) {
             window.location.href = 'admin.html';
           } else {
             alert('Access denied: incorrect password');
