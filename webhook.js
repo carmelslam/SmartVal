@@ -45,19 +45,26 @@ export const SEARCH_MODULE = WEBHOOKS.SEARCH_MODULE;
 export async function sendToWebhook(id, payload) {
   const url = WEBHOOKS[id];
   if (!url) {
-    console.error(`❌ Webhook [${id}] not registered.`);
-    return;
+    throw new Error(`Webhook [${id}] not registered`);
+  }
+
+  const options = {
+    method: 'POST',
+    body: payload instanceof FormData ? payload : JSON.stringify(payload)
+  };
+  if (!(payload instanceof FormData)) {
+    options.headers = { 'Content-Type': 'application/json' };
+  }
+
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
   }
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    console.log(`📤 Webhook [${id}] sent:`, res.status);
-  } catch (err) {
-    console.error(`❌ Failed sending [${id}]`, err);
+    return await res.json();
+  } catch (e) {
+    return undefined;
   }
 }
 
