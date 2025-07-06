@@ -6,9 +6,10 @@
     #carDetailsModal {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 95%;
-      max-width: 500px;
+      max-width: 650px;
       max-height: 90vh;
       background: white;
       border: 1px solid #28a745;
@@ -17,7 +18,7 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.3);
       direction: rtl;
       font-family: sans-serif;
-      border-radius: 16px;
+      border-radius: 20px;
       display: none;
       overflow-y: auto;
       cursor: move;
@@ -26,10 +27,12 @@
     @media (max-width: 768px) {
       #carDetailsModal {
         top: 10px;
-        right: 10px;
         width: 95%;
         max-width: 95%;
         padding: 15px;
+        margin: 10px;
+        left: 50%;
+        transform: translateX(-50%);
       }
     }
     
