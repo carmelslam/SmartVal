@@ -774,48 +774,25 @@
     }
   });
 
-  // Add global browser access button
-  if (!document.getElementById("globalBrowserBtn")) {
-    const browserBtn = document.createElement("button");
-    browserBtn.id = "globalBrowserBtn";
-    browserBtn.innerHTML = "🌐 דפדפן";
-    browserBtn.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 250px;
-      background: #2c3e50;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 9998;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    browserBtn.onclick = function() {
-      showBrowserMenu();
-    };
-    document.body.appendChild(browserBtn);
-  }
+  // Global browser button removed - functionality moved to selection page
 
   // Browser menu function
   window.showBrowserMenu = function() {
     const menu = document.createElement('div');
     menu.style.cssText = `
       position: fixed;
-      top: 60px;
-      left: 250px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       background: white;
       border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 10px;
+      padding: 15px;
       z-index: 99999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       font-family: sans-serif;
       direction: rtl;
-      min-width: 200px;
+      min-width: 250px;
     `;
     
     menu.innerHTML = `
@@ -836,7 +813,7 @@
     // Remove menu when clicking outside
     setTimeout(() => {
       document.addEventListener('click', function removeMenu(e) {
-        if (!menu.contains(e.target) && e.target !== document.getElementById('globalBrowserBtn')) {
+        if (!menu.contains(e.target)) {
           menu.remove();
           document.removeEventListener('click', removeMenu);
         }
