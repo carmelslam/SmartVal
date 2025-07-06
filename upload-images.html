@@ -425,49 +425,21 @@
       }
     }
     
-    .mobile-upload-options {
-      margin-bottom: 20px;
-    }
-    
-    .upload-option-row {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
-    .upload-option-btn {
-      flex: 1;
-      min-width: 120px;
-      padding: 15px 10px;
-      background: linear-gradient(135deg, #3b82f6, #1e40af);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s ease;
+    .main-upload-section {
       text-align: center;
+      margin-bottom: 15px;
     }
     
-    .upload-option-btn:hover {
-      background: linear-gradient(135deg, #1e40af, #1e3a8a);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+    .upload-main-btn {
+      width: 100%;
+      max-width: 300px;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: 600;
     }
     
-    @media (max-width: 768px) {
-      .upload-option-row {
-        flex-direction: column;
-        gap: 15px;
-      }
-      
-      .upload-option-btn {
-        min-width: auto;
-        padding: 18px 15px;
-        font-size: 16px;
-      }
+    .more-options-section {
+      text-align: center;
     }
   </style>
 <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" />
@@ -533,34 +505,12 @@
     <!-- File Upload Section -->
     <div class="form-section">
       <h3>העלאת תמונות</h3>
-      
-      <!-- Mobile/Tablet Upload Options -->
-      <div class="mobile-upload-options" style="display: none;">
-        <div class="upload-option-row">
-          <button type="button" class="upload-option-btn" onclick="selectFromGallery()">
-            📱 מגלריה
-          </button>
-          <button type="button" class="upload-option-btn" onclick="selectFromFiles()">
-            📁 מקבצים
-          </button>
-          <button type="button" class="upload-option-btn" onclick="takePhoto()">
-            📸 צלם תמונה
-          </button>
-        </div>
-      </div>
-      
-      <!-- Desktop Upload Area -->
-      <div class="file-upload-area" onclick="selectFiles()">
+      <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
         <div class="upload-icon">📷</div>
         <div class="upload-text">לחץ כאן או גרור תמונות לאזור זה</div>
-        <div class="upload-hint">תומך בקבצי JPG, PNG, HEIC | גודל מקסימלי: 10MB לקובץ</div>
+        <div class="upload-hint">תומך בקבצי JPG, PNG, HEIC | גודל מקסימלי: 10MB לקובץ | העלאת תמונות מרובות</div>
       </div>
-      
-      <!-- Hidden file inputs for different modes -->
-      <input id="file-input-gallery" type="file" accept="image/*" multiple style="display: none;">
-      <input id="file-input-files" type="file" accept="image/*" multiple style="display: none;">
-      <input id="file-input-camera" type="file" accept="image/*" capture="environment" style="display: none;">
-      <input id="file-input-desktop" type="file" accept="image/*" multiple style="display: none;">
+      <input id="file-input" type="file" accept="image/*" multiple capture="environment">
       
       <!-- Statistics -->
       <div class="stats-container" style="display: none;">
@@ -593,14 +543,18 @@
 
     <!-- Action Buttons -->
     <div class="form-section">
-      <button type="submit" class="btn btn-success" id="upload-btn" disabled>
-        📤 העלה תמונות
-      </button>
+      <div class="main-upload-section">
+        <button type="submit" class="btn btn-success upload-main-btn" id="upload-btn" disabled>
+          📤 העלה תמונות
+        </button>
+      </div>
       
       <!-- More Options Button -->
-      <button type="button" class="btn btn-secondary" id="more-options-btn" onclick="toggleMoreOptions()">
-        🔧 עוד אפשרויות
-      </button>
+      <div class="more-options-section">
+        <button type="button" class="btn btn-secondary" id="more-options-btn" onclick="toggleMoreOptions()">
+          🔧 עוד אפשרויות
+        </button>
+      </div>
     </div>
 
     <!-- More Options (Hidden by default) -->
@@ -647,18 +601,12 @@ class ImageUploadManager {
     this.loadCaseData();
     this.loadDamageCenters();
     this.setupDragAndDrop();
-    this.detectDeviceAndSetupUpload();
   }
 
   setupEventListeners() {
-    // Multiple file input change listeners
-    ['file-input-gallery', 'file-input-files', 'file-input-camera', 'file-input-desktop'].forEach(inputId => {
-      const input = document.getElementById(inputId);
-      if (input) {
-        input.addEventListener('change', (e) => {
-          this.handleFileSelection(e.target.files);
-        });
-      }
+    // File input change
+    document.getElementById('file-input').addEventListener('change', (e) => {
+      this.handleFileSelection(e.target.files);
     });
 
     // Form submission
@@ -802,13 +750,28 @@ class ImageUploadManager {
     const container = document.getElementById('preview-container');
     container.innerHTML = '';
 
+    if (this.files.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'grid';
+
     this.files.forEach((file, index) => {
       const previewItem = document.createElement('div');
       previewItem.className = 'preview-item';
 
       const img = document.createElement('img');
       img.className = 'preview-image';
-      img.src = URL.createObjectURL(file);
+      
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      
+      // Clean up object URL when image loads
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+      };
 
       const info = document.createElement('div');
       info.className = 'preview-info';
@@ -816,6 +779,7 @@ class ImageUploadManager {
       const filename = document.createElement('div');
       filename.className = 'preview-filename';
       filename.textContent = file.name;
+      filename.title = file.name; // Show full name on hover
 
       const size = document.createElement('div');
       size.className = 'preview-size';
@@ -824,7 +788,11 @@ class ImageUploadManager {
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove-btn';
       removeBtn.innerHTML = '✕';
-      removeBtn.onclick = () => this.removeFile(index);
+      removeBtn.title = 'מחק תמונה';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.removeFile(index);
+      };
 
       info.appendChild(filename);
       info.appendChild(size);
@@ -1033,40 +1001,10 @@ class ImageUploadManager {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  detectDeviceAndSetupUpload() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isTablet = /iPad|Android(?=.*Tablet)|PlayBook|Kindle|Silk|BlackBerry PlayBook/i.test(navigator.userAgent);
-    
-    if (isMobile || isTablet) {
-      // Show mobile upload options
-      document.querySelector('.mobile-upload-options').style.display = 'block';
-      document.querySelector('.file-upload-area').style.display = 'none';
-    } else {
-      // Show desktop upload area
-      document.querySelector('.mobile-upload-options').style.display = 'none';
-      document.querySelector('.file-upload-area').style.display = 'block';
-    }
-  }
 }
 
 // Global functions
 
-// Upload selection functions
-window.selectFromGallery = function() {
-  document.getElementById('file-input-gallery').click();
-};
-
-window.selectFromFiles = function() {
-  document.getElementById('file-input-files').click();
-};
-
-window.takePhoto = function() {
-  document.getElementById('file-input-camera').click();
-};
-
-window.selectFiles = function() {
-  document.getElementById('file-input-desktop').click();
-};
 
 window.toggleMoreOptions = function() {
   const moreOptionsSection = document.getElementById('more-options-section');
