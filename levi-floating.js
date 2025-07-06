@@ -8,7 +8,7 @@
       top: 50px;
       left: 50px;
       width: 90vw;
-      max-width: 900px;
+      max-width: 600px;
       max-height: 85vh;
       background: white;
       border: 1px solid #007bff;
