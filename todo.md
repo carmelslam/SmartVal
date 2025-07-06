@@ -141,3 +141,146 @@ Comprehensive System Fix Plan - UPDATED                      │ │
 │ │ maintains its intended functionality and UI without          │ │
 │ │ interference from other modules.                             │ │
 │ ╰──────────
+audit 3 todo : 
+Audit 3 : 
+Read all the issues that were found in audit 3 . Go through the issues I found. Learn them and evaluate throughout the whole system files, detect connections , relations and dependencies and evaluate functionality .
+Run your own deep check and conclude the issues broadness  inside the system .
+After understanding all the issues and running a comprehensive audit combined with my list , create a plan to fix the issues . The plan needs to be a task by task plan , DO NOT attempt to include everything in one go. The plan needs to fix issues first targeting foundation and root symptoms that run throughout the whole system and then targeting each module / issue separately .
+Here is the audit 3 list I found for now : 
+
+1. Open new case - redirects to password page and logs out  
+2. Slow down the logo spin  and make it stop half way 
+3. Levi report page : 
+    1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Keep general page styling as is fix just the styling issues listed below.
+    3. Re arrange the button : 
+        1. Action buttons in one line - side by side  not one under the other 
+        2. Navigation buttons to be side by side not one under the other 
+        3. The browser opens the site but returns an error : “The page cannot be displayed because an internal server error has occurred “
+        4. We don’t need the toggle דפדפן in the top of the page - beside the דו״ח לוי . The link in the green container is enough . Move this toggle with all its features and components to the selection page just before the logout button and make it in orange color style . 
+        5. Fix the title style so it matches the system : logo, site name , business name and page name 
+        6. The report toggle in the top : it’s good but needs change of fields : 
+            1. This is the received json from the OCR: 
+  "סוג רכב": "",
+  "יצרן": "",
+  "קוד דגם": "",
+  "קטגוריה": "",
+  "שנת יצור": "",
+  "שם דגם מלא": "",
+  "מחיר בסיס": "",
+  "מחיר סופי לרכב": ""
+התאמות מחיר : 
+עליה לכביש:
+    "עליה לכביש": "",
+    "עליה לכביש %": "",
+    "ערך ש״ח עליה לכביש": "",
+    "שווי מצטבר עליה לכביש": ""
+סוג בעלות : 
+    "בעלות": "",
+    "בעלות %": "",
+    "ערך ש״ח בעלות": "",
+    "שווי מצטבר בעלות": ""
+מספר ק״מ :
+    "מס ק״מ": "",
+    "מס ק״מ %": "",
+    "ערך ש״ח מס ק״מ": "", 
+    "שווי מצטבר מס ק״מ": ""
+מספר בעלים : 
+    "מספר בעלים": "",
+    "מספר בעלים %": "",
+    "ערך ש״ח מספר בעלים": "", 
+    "שווי מצטבר מספר בעלים": ""
+מאפיינים : 
+  "מאפיינים": “”,
+    "מאפיינים %": "",
+    "ערך ש״ח מאפיינים": "",
+    "שווי מצטבר  מאפיינים": ""
+
+Keep the floating window display as is 
+Change the section with the price adjustments layout so each line contains all the 4 square fields in a row each row has a title : 
+Example : 
+סוג בעלות :
+פרטי - 5% - 2500₪- 70,000₪
+Data is in side the same square fields as we have now .
+
+4. Multi pictures upload page : 
+    1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Fix the upload function, on mobile and iPad to support : upload from gallery, upload from files, take a picture. On desktop : upload function, on mobile to support : upload from gallery, upload from files
+    3. The function buttons: העלה תמונות , עוד אפשרויות, look ugly in their layout , keep the style and color but change layout as follow : the upload button to be in the same size as the navigation buttons . The more options button to stay as is but the other options buttons are in a row side by side . 
+    4. Explain the functionality of the dropdown : מוקד נזק: does display options according to helper data from the expertise or its manual . Take in consideration that uploading pictures can be done before opening a case or finalizing the expertise. So find the best way to balance the dropdown options: in my opinion: in any way there keep those 2  options in the dropdown :  free text input and the current option “all pictures” . 
+        if a helper damage center’s description     
+        and names available display them . if     
+         helper data is not available display: 
+“ לא הוזנו מוקדי נזק״ . 
+
+5. Invoice upload page : 
+    1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Fix the title style so it matches the system : logo, site name , business name and page name 
+
+6. Depreciation module : 
+    1. Change the buttons  font size it’s way to big and doesn’t match the general system style
+    2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to to override automatic data 
+    3. And override of automatic data ( not just here but across system) updates the helper and becomes the source of truth for the respective parameter overridden. 
+    4. Floating screens toggles in the top : 
+        1. Fix toggle buttons - for now they display as one pipe for both functions and without names .
+        2. The floating screens here should be : Levi report ( the one we improved when we worked on Levi module) , car details floating screen ( from helper ) , internal browser selection - exist but the button is displayed badly . Create a new floating screen that captures the main fields from the invoice which at this point is already OCRed and live in the helper : garage name , date, details of works, parts and repairs including costs . If an invoice doesn’t exist or not needed depending on the report type despite a corresponding message . 
+    5. Change in the title instead of car plate number , case id - pulled from helper . 
+    6. In the summary bulk ( in all types ) needs to “הוסף שדה ״  option to add free text , this needs to open name field and value field . In all types .
+    7. In depreciation bulk add another field that calculate the value of the percentage from the car market price . The percentage field that we have is important beside it needs to be added the field of depreciation value in ₪ .
+    8. All relative fields need to be auto calculated locally . All data needs like damage center name , price adjustments parameters ( percentage and value) and so on , need to be autofilled from helper .
+    9. In the הפרשים : when opened , add the vat value for each line and total cost : architecture for הפרשים is as follows : 
+        1. The תיאור הפרש field displays all the items detailed in the invoice works , parts and repairs and other services invoiced ,
+        2. The user selects the item 
+        3. The cost , vat and total cost are auto desolated from the invoice .
+        4. In the total section under the fields section : סה"כ הפרשים displays the sum of costs without vat , add another field for accumulated vat and add afield of accumulated total cost ( with vat) .
+        5. The current סה"כ סופי עם הפרשים: field is not part of the הפרשים it’s the adjusted summary value after reducing הפרשים . So it needs to be out of the container in its own section under סה״כ נכלל בחוות הדעת as the final value to be inserted in the report summary . The base value in this field is the סה״כ נכלל בחוות הדעת / or total in the summery section , if no הפרשים it’s unchanged , if הפרשים exist , it needs to auto calculate: original summary total (minus) total הפרשים
+
+7. Admin hub : 
+    1. The administration hub selection from the selection page , still doesn’t work , the admin page doesn’t acc the validated password and displays : Access denied: incorrect password
+8. Selection page -  בחר דוח להפקה . The report selection page opens correctly from selection page correctly but when selecting estimate report we get page doesn’t exist 404 : Page not found - Looks like you’ve followed a broken link or entered a URL that doesn’t exist on this site. If this is your site, and you weren’t expecting a 404 for this path, please visit Netlify’s “page not found” support guide for troubleshooting tips.
+9. Report selection page : currently selecting a final report or estimate to produce opens the depreciation page or the estimate builder respectively before producing - this is a weak link and risky points because of the following logic : what happens if the user has already completed the depreciation and fees or  estimate bulks but he didn’t produce the report ? If the selected options opens empty new pages that are conditional to producing the report then the user is forced to re enter everything again - bad UX . Solution : when selecting the report option from select report page , the opened pages : depreciation or estimate builder , behave differently based on previous work the user has done . If the user didn’t do nth then the forms are empty and he needs to fill as expected . If the user already had done work ( either finalized or partially completed forms) - the pages need to pull out the day from helper and refill the fields previously filled by the user ( since we said the logic is per event not session- that means anytime the system logs out / or saves the data is stored and updated in the helper and sent to server ) - then the user can edit or continue working to produce the report ( same logic with the fee fields) . 
+10. To achieve this integrity and data flow we need to add in the report selection page a plate number and password fields - if the session is active they are prefilled if it’s a dedicated session for report producing then 2 options 2
+    1. the user needs to input the plate number , this submit button acts like the טען תיק קיים in the selection page , that fetches the helper .
+    2. The button is inactive and message displayed : טען תיק קיים על מנת להמשיך להפקת דו״חות - 
+        - Decide on the best way to proceed with this that is efficient, uses resources wisely and lightly and at the same time user friendly .
+
+11. Nicole the knowledge manager : the Nicole module has several issues that need to be fixed : 
+    1. The text / audio field are still mandatory this need to be also optional , if the 2 fields are empty then Nicole cannot be activated. At least one fields either plate or free query field need to be filled - but both are optional . 
+    2. When sending a query we still have an error message that reads : שגיאה בשליחת השאלה: The string did not match the expected pattern.. the webhook is activated correctly but it doesn’t register any json . So it’s possible blow is not sending a json at all . 
+    3. The microphone options sometimes causes screen to freeze and to be not responsive and sometimes it displays an error : שגיאה בזיהוי קול: audio-capture
+    4. Styling changes : 
+        1. Change the microphone color to dark blue 
+        2. Change the send query button to system green 
+        3. Change the icon in the answer from 🤖to Nicol’s emoji 👩‍💼
+12. The system help assistant 🤖that we have across system in all pages : 
+    1. Purpose of this assistant is to help user with the system technical actions, workflows, debugging solutions , handling errors and so on , this is not Nicole this is an inner assistant to learn the system 
+    2. As for now the knowledge of this assistant is very limited and it directs the user to the system manual that doesn’t exist . 
+    3. You need to build a comprehensive guide for this assistant to be able to answer complex and technical questions about the system operation and help the user with the work flow 
+    4. Add a functionality for this assistant to display a graphic workflow , and also to suggest next step once the user finishes a step / action . 
+    5. This assistant is very useful and needs to be smart if it’s just for “show off” it’s not needed . 
+13. Push notifications: the one signal still doesn’t work , we don’t have a subscription prompt and notification are not displayed. The current setup of the notification is already working on another demo system Tevin has before , so it needs to work here too . In all pages we have this message in the top left :התראות כבויות that opened a message : לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן. But there is no option to enable notifications since there is no prompt received . 
+14. The wizard section : this section is by far the most needed work and modification in the system , it integrates with the parts module and as for now there are a lot of problems and duplications :
+    1. In the wizard : 
+        1. Missing input fields - fields for input are missing in all bulks , name , description, work . 
+        2. Repairs are missing from the wizard and needs to be added.
+        3. Parts open a new search page that is duplicating the parts search  module instead of opening the suggestion required parts module .  In this search page there are some enhancements comparing to the actual parts search module, like the auto suggest of parts in the parts name field pulled from  from the parts.js - you need to examine , think and plan a full parts search module that combines enhancements from the current wizard parts search and keep just the independent parts search module - FOR BEST RESULTS- relearn the parts logic from documentation and specs . In Skelton flow : the wizard sends the user to the search module , the search modules using one or more of its 3 search paths returns an answer , the answer is stored in the helper , the user directed to required parts , auto suggestions are delayed upon typing letters , the user selects and a new add part is prompted . / or fix displayed - doesn’t matter. 
+        4. Selected parts are stored in the expertise builder and the helper 
+        5. In the end of the wizard either add a new מוקד נזק  or continue to summary not to upload pictures . 
+        6. For now the summary is missing - no status dropdown , no additional details/ comments and no summary . Needs to be added , we already have the expertise summary html ready . 
+        7. Make sure that the search form that needs to be created is actually created . 
+    2. Those two modules require from you a deep understanding of the logic and flow , a deep check of the current structure and all the files in the repo , and rebuilding the logic from scratch combining all expertise related files in the repo as I already explained before. 
+    3. The wizard is the body pert of the expertise html builder and it files the placeholders . The builder’s other part is the car details pulled from the helper . 
+
+15. There are HTMLs that are included in the structure and you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
+    1. Evaluate and think how and where to combine them 
+    2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
+    3. I think best place for them is in the admin hub  
+
+16. General :
+*  Run a deep check across system files ensure that all  modules are configured correctly :
+* configurations, dependencies, workflows and data flow are according to the specs and documentations 
+*  Ensure all webhooks are active and connect correctly 
+* Ensure that there is a unification of styles across system, layouts, fonts , button shapes and classifications and colors. 
+* Change the system default font from Ariel to simply family font : sans-serif; no assistant no Ariel , or choose a modern look font , I hate Ariel .
+
+
