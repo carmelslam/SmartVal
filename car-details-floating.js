@@ -24,30 +24,15 @@
       cursor: move;
     }
     
-    @media only screen and (max-width: 768px) {
+    @media (max-width: 768px) {
       #carDetailsModal {
-        top: 5px !important;
-        left: 5px !important;
-        right: 5px !important;
-        bottom: auto !important;
-        width: auto !important;
-        max-width: none !important;
-        transform: none !important;
-        padding: 12px !important;
-        border-radius: 12px !important;
-        max-height: 90vh !important;
-        min-width: 0 !important;
-        box-sizing: border-box !important;
-      }
-      
-      .car-field {
-        padding: 6px 0 !important;
-        font-size: 13px !important;
-      }
-      
-      .car-modal-title {
-        font-size: 16px !important;
-        margin-bottom: 12px !important;
+        top: 10px;
+        width: 95%;
+        max-width: 95%;
+        padding: 15px;
+        margin: 10px;
+        left: 50%;
+        transform: translateX(-50%);
       }
     }
     
