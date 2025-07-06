@@ -41,10 +41,22 @@
     }
     .levi-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px 20px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px 12px;
       text-align: right;
+      font-size: 13px;
+    }
+    .levi-adjustment-group {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f1f3f4;
+      border-radius: 6px;
+    }
+    .levi-adjustment-group h5 {
+      margin: 0 0 10px 0;
+      color: #495057;
       font-size: 14px;
+      font-weight: bold;
     }
     .levi-field {
       background: white;
@@ -109,42 +121,150 @@
       <h4>נתוני שווי בסיסיים</h4>
       <div class="levi-grid">
         <div class="levi-field">
-          <div class="label">ערך הרכב</div>
-          <div class="value price" id="levi-final-price">₪0</div>
+          <div class="label">סוג רכב</div>
+          <div class="value" id="levi-vehicle-type">-</div>
+        </div>
+        <div class="levi-field">
+          <div class="label">יצרן</div>
+          <div class="value" id="levi-manufacturer">-</div>
         </div>
         <div class="levi-field">
           <div class="label">קוד דגם</div>
           <div class="value" id="levi-model-code">-</div>
         </div>
         <div class="levi-field">
-          <div class="label">ערך שוק</div>
+          <div class="label">קטגוריה</div>
+          <div class="value" id="levi-category">-</div>
+        </div>
+        <div class="levi-field">
+          <div class="label">שנת יצור</div>
+          <div class="value" id="levi-year">-</div>
+        </div>
+        <div class="levi-field">
+          <div class="label">שם דגם מלא</div>
+          <div class="value" id="levi-full-model">-</div>
+        </div>
+        <div class="levi-field">
+          <div class="label">מחיר בסיס</div>
           <div class="value price" id="levi-base-price">₪0</div>
         </div>
         <div class="levi-field">
-          <div class="label">סוג בעלות</div>
-          <div class="value" id="levi-ownership-type">-</div>
+          <div class="label">מחיר סופי לרכב</div>
+          <div class="value price" id="levi-final-price">₪0</div>
         </div>
       </div>
     </div>
 
     <div class="levi-section">
       <h4>התאמות מחיר</h4>
-      <div class="levi-grid">
-        <div class="levi-field">
-          <div class="label">התאמת קילומטראז'</div>
-          <div class="value" id="levi-km-adj">-</div>
+      
+      <div class="levi-adjustment-group">
+        <h5>עליה לכביש:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">עליה לכביש</div>
+            <div class="value" id="levi-registration">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">עליה לכביש %</div>
+            <div class="value" id="levi-registration-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח עליה לכביש</div>
+            <div class="value" id="levi-registration-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר עליה לכביש</div>
+            <div class="value" id="levi-registration-total">₪0</div>
+          </div>
         </div>
-        <div class="levi-field">
-          <div class="label">התאמת בעלות</div>
-          <div class="value" id="levi-ownership-adj">-</div>
+      </div>
+
+      <div class="levi-adjustment-group">
+        <h5>סוג בעלות:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">בעלות</div>
+            <div class="value" id="levi-ownership">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">בעלות %</div>
+            <div class="value" id="levi-ownership-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח בעלות</div>
+            <div class="value" id="levi-ownership-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר בעלות</div>
+            <div class="value" id="levi-ownership-total">₪0</div>
+          </div>
         </div>
-        <div class="levi-field">
-          <div class="label">התאמת ציוד</div>
-          <div class="value" id="levi-features-adj">-</div>
+      </div>
+
+      <div class="levi-adjustment-group">
+        <h5>מספר ק״מ:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">מס ק״מ</div>
+            <div class="value" id="levi-km">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">מס ק״מ %</div>
+            <div class="value" id="levi-km-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח מס ק״מ</div>
+            <div class="value" id="levi-km-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר מס ק״מ</div>
+            <div class="value" id="levi-km-total">₪0</div>
+          </div>
         </div>
-        <div class="levi-field">
-          <div class="label">ערך ביטוח</div>
-          <div class="value price" id="levi-insurance-value">₪0</div>
+      </div>
+
+      <div class="levi-adjustment-group">
+        <h5>מספר בעלים:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">מספר בעלים</div>
+            <div class="value" id="levi-owners">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">מספר בעלים %</div>
+            <div class="value" id="levi-owners-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח מספר בעלים</div>
+            <div class="value" id="levi-owners-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר מספר בעלים</div>
+            <div class="value" id="levi-owners-total">₪0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="levi-adjustment-group">
+        <h5>מאפיינים:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">מאפיינים</div>
+            <div class="value" id="levi-features">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">מאפיינים %</div>
+            <div class="value" id="levi-features-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח מאפיינים</div>
+            <div class="value" id="levi-features-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר מאפיינים</div>
+            <div class="value" id="levi-features-total">₪0</div>
+          </div>
         </div>
       </div>
     </div>
@@ -258,21 +378,53 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Basic values - Updated to match new JSON structure
-    document.getElementById("levi-final-price").textContent = formatPrice(data['מחיר סופי לרכב'] || data.final_price);
-    document.getElementById("levi-model-code").textContent = formatValue(data['קוד דגם'] || data.model_code);
-    document.getElementById("levi-base-price").textContent = formatPrice(data['מחיר בסיס'] || data.base_price);
-    document.getElementById("levi-ownership-type").textContent = formatValue(data['בעלות'] || data.ownership_type);
-    document.getElementById("levi-insurance-value").textContent = formatPrice(data.insurance_value || 0);
+    const formatPercent = (value) => {
+      return value && value.toString().trim() ? `${value}%` : "0%";
+    };
 
-    // Adjustments - Updated to match new structure
-    document.getElementById("levi-km-adj").textContent = formatValue(data['מס ק״מ %'] || data.km_adjustment);
-    document.getElementById("levi-ownership-adj").textContent = formatValue(data['בעלות %'] || data.ownership_adjustment);
-    document.getElementById("levi-features-adj").textContent = formatValue(data['מאפיינים %'] || data.features_adjustment);
+    // Basic vehicle information
+    document.getElementById("levi-vehicle-type").textContent = formatValue(data['סוג רכב'] || data.vehicle_type);
+    document.getElementById("levi-manufacturer").textContent = formatValue(data['יצרן'] || data.manufacturer);
+    document.getElementById("levi-model-code").textContent = formatValue(data['קוד דגם'] || data.model_code);
+    document.getElementById("levi-category").textContent = formatValue(data['קטגוריה'] || data.category);
+    document.getElementById("levi-year").textContent = formatValue(data['שנת יצור'] || data.year);
+    document.getElementById("levi-full-model").textContent = formatValue(data['שם דגם מלא'] || data.full_model);
+    document.getElementById("levi-base-price").textContent = formatPrice(data['מחיר בסיס'] || data.base_price);
+    document.getElementById("levi-final-price").textContent = formatPrice(data['מחיר סופי לרכב'] || data.final_price);
+
+    // Registration adjustments
+    document.getElementById("levi-registration").textContent = formatValue(data['עליה לכביש'] || data.registration);
+    document.getElementById("levi-registration-percent").textContent = formatPercent(data['עליה לכביש %'] || data.registration_percent);
+    document.getElementById("levi-registration-value").textContent = formatPrice(data['ערך ש״ח עליה לכביש'] || data.registration_value);
+    document.getElementById("levi-registration-total").textContent = formatPrice(data['שווי מצטבר עליה לכביש'] || data.registration_total);
+
+    // Ownership adjustments
+    document.getElementById("levi-ownership").textContent = formatValue(data['בעלות'] || data.ownership);
+    document.getElementById("levi-ownership-percent").textContent = formatPercent(data['בעלות %'] || data.ownership_percent);
+    document.getElementById("levi-ownership-value").textContent = formatPrice(data['ערך ש״ח בעלות'] || data.ownership_value);
+    document.getElementById("levi-ownership-total").textContent = formatPrice(data['שווי מצטבר בעלות'] || data.ownership_total);
+
+    // KM adjustments
+    document.getElementById("levi-km").textContent = formatValue(data['מס ק״מ'] || data.km);
+    document.getElementById("levi-km-percent").textContent = formatPercent(data['מס ק״מ %'] || data.km_percent);
+    document.getElementById("levi-km-value").textContent = formatPrice(data['ערך ש״ח מס ק״מ'] || data.km_value);
+    document.getElementById("levi-km-total").textContent = formatPrice(data['שווי מצטבר מס ק״מ'] || data.km_total);
+
+    // Owners adjustments
+    document.getElementById("levi-owners").textContent = formatValue(data['מספר בעלים'] || data.owners);
+    document.getElementById("levi-owners-percent").textContent = formatPercent(data['מספר בעלים %'] || data.owners_percent);
+    document.getElementById("levi-owners-value").textContent = formatPrice(data['ערך ש״ח מספר בעלים'] || data.owners_value);
+    document.getElementById("levi-owners-total").textContent = formatPrice(data['שווי מצטבר מספר בעלים'] || data.owners_total);
+
+    // Features adjustments
+    document.getElementById("levi-features").textContent = formatValue(data['מאפיינים'] || data.features);
+    document.getElementById("levi-features-percent").textContent = formatPercent(data['מאפיינים %'] || data.features_percent);
+    document.getElementById("levi-features-value").textContent = formatPrice(data['ערך ש״ח מאפיינים'] || data.features_value);
+    document.getElementById("levi-features-total").textContent = formatPrice(data['שווי מצטבר מאפיינים'] || data.features_total);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
-      if (el.textContent === "-" || el.textContent === "₪0") {
+      if (el.textContent === "-" || el.textContent === "₪0" || el.textContent === "0%") {
         el.classList.add('empty');
       } else {
         el.classList.remove('empty');
@@ -287,8 +439,8 @@
     floatBtn.innerHTML = "דו\"ח לוי";
     floatBtn.style.cssText = `
       position: fixed;
-      top: 80px;
-      left: 30px;
+      top: 120px;
+      left: 50px;
       background: #007bff;
       color: white;
       border: none;
