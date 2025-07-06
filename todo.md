@@ -368,7 +368,7 @@ Here is the audit 3 list I found for now :
 
 1. Open new case - redirects to password page and logs out - fixed  ✅
 2. Slow down the logo spin  and make it stop half way ✅
-3. Levi report page : 
+3. Levi report page : ✅
     1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
     2. Keep general page styling as is fix just the styling issues listed below.
     3. Re arrange the button : 
