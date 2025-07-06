@@ -5,11 +5,12 @@
   style.innerHTML = `
     #leviModal {
       position: fixed;
-      top: 50px;
-      left: 50px;
-      width: 90vw;
-      max-width: 600px;
-      max-height: 85vh;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      max-width: 700px;
+      max-height: 90vh;
       background: white;
       border: 1px solid #007bff;
       padding: 20px;
@@ -17,10 +18,22 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.3);
       direction: rtl;
       font-family: sans-serif;
-      border-radius: 12px;
+      border-radius: 20px;
       display: none;
       overflow-y: auto;
       cursor: move;
+    }
+    
+    @media (max-width: 768px) {
+      #leviModal {
+        top: 10px;
+        width: 95%;
+        max-width: 95%;
+        padding: 15px;
+        margin: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
     }
     .levi-modal-title {
       font-size: 20px;
@@ -49,6 +62,31 @@
       gap: 8px 12px;
       text-align: right;
       font-size: 13px;
+    }
+    
+    @media (max-width: 768px) {
+      .levi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px 8px;
+        font-size: 12px;
+      }
+      
+      .levi-field {
+        padding: 6px;
+        min-height: 40px;
+      }
+      
+      .levi-field .label {
+        font-size: 11px;
+      }
+      
+      .levi-field .value {
+        font-size: 13px;
+      }
+      
+      .levi-adjustment-group h5 {
+        font-size: 13px;
+      }
     }
     .levi-adjustment-group {
       margin-bottom: 15px;
