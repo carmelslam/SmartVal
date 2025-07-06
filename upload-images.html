@@ -441,6 +441,66 @@
     .more-options-section {
       text-align: center;
     }
+    
+    .upload-options {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .upload-option-btn {
+      flex: 1;
+      min-width: 120px;
+      max-width: 150px;
+      padding: 15px 10px;
+      background: linear-gradient(135deg, #3b82f6, #1e40af);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+    
+    .upload-option-btn:hover {
+      background: linear-gradient(135deg, #1e40af, #1e3a8a);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+    }
+    
+    .desktop-only {
+      display: block;
+    }
+    
+    .mobile-only {
+      display: none;
+    }
+    
+    @media (max-width: 768px) {
+      .desktop-only {
+        display: none;
+      }
+      
+      .mobile-only {
+        display: block;
+      }
+      
+      .upload-options {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .upload-option-btn {
+        min-width: auto;
+        max-width: none;
+        padding: 18px 15px;
+        font-size: 16px;
+      }
+    }
   </style>
 <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" />
 <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" />
@@ -505,12 +565,31 @@
     <!-- File Upload Section -->
     <div class="form-section">
       <h3>העלאת תמונות</h3>
-      <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
-        <div class="upload-icon">📷</div>
-        <div class="upload-text">לחץ כאן או גרור תמונות לאזור זה</div>
-        <div class="upload-hint">תומך בקבצי JPG, PNG, HEIC | גודל מקסימלי: 10MB לקובץ | העלאת תמונות מרובות</div>
+      
+      <!-- Upload Options -->
+      <div class="upload-options">
+        <button type="button" class="upload-option-btn" onclick="selectFromFiles()">
+          📁 קבצים
+        </button>
+        <button type="button" class="upload-option-btn" onclick="selectFromGallery()">
+          🖼️ גלריה
+        </button>
+        <button type="button" class="upload-option-btn mobile-only" onclick="takePhoto()">
+          📸 מצלמה
+        </button>
       </div>
-      <input id="file-input" type="file" accept="image/*" multiple capture="environment">
+      
+      <!-- Drag and Drop Area -->
+      <div class="file-upload-area desktop-only" id="drop-area">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">או גרור תמונות לכאן</div>
+        <div class="upload-hint">תומך בקבצי JPG, PNG, HEIC | גודל מקסימלי: 10MB לקובץ</div>
+      </div>
+      
+      <!-- Hidden file inputs -->
+      <input id="file-input-files" type="file" accept="image/*" multiple style="display: none;">
+      <input id="file-input-gallery" type="file" accept="image/*" multiple style="display: none;">
+      <input id="file-input-camera" type="file" accept="image/*" capture="environment" style="display: none;">
       
       <!-- Statistics -->
       <div class="stats-container" style="display: none;">
@@ -604,9 +683,16 @@ class ImageUploadManager {
   }
 
   setupEventListeners() {
-    // File input change
-    document.getElementById('file-input').addEventListener('change', (e) => {
-      this.handleFileSelection(e.target.files);
+    // File input change listeners for all inputs
+    ['file-input-files', 'file-input-gallery', 'file-input-camera'].forEach(inputId => {
+      const input = document.getElementById(inputId);
+      if (input) {
+        input.addEventListener('change', (e) => {
+          this.handleFileSelection(e.target.files);
+          // Clear the input so same file can be selected again
+          e.target.value = '';
+        });
+      }
     });
 
     // Form submission
@@ -667,7 +753,8 @@ class ImageUploadManager {
   }
 
   setupDragAndDrop() {
-    const uploadArea = document.querySelector('.file-upload-area');
+    const uploadArea = document.getElementById('drop-area');
+    if (!uploadArea) return; // Skip if not desktop
     
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       uploadArea.addEventListener(eventName, this.preventDefaults, false);
@@ -1005,6 +1092,18 @@ class ImageUploadManager {
 
 // Global functions
 
+// Upload selection functions
+window.selectFromFiles = function() {
+  document.getElementById('file-input-files').click();
+};
+
+window.selectFromGallery = function() {
+  document.getElementById('file-input-gallery').click();
+};
+
+window.takePhoto = function() {
+  document.getElementById('file-input-camera').click();
+};
 
 window.toggleMoreOptions = function() {
   const moreOptionsSection = document.getElementById('more-options-section');
