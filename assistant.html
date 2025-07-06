@@ -273,7 +273,7 @@
     
     <!-- Modern input container with integrated microphone -->
     <div class="input-container">
-      <textarea id="freeQuery" name="query" class="input-with-mic" placeholder="מה תרצה לדעת או לבקש? (שדה חובה) - אפשר לכתוב או להקיש על המיקרופון לדבר..." required></textarea>
+      <textarea id="freeQuery" name="query" class="input-with-mic" placeholder="מה תרצה לדעת או לבקש? אפשר לכתוב או להקיש על המיקרופון לדבר..."></textarea>
       <button type="button" id="micBtn" class="mic-button" title="לחץ כדי להקליט קול">
         🎤
       </button>
@@ -335,6 +335,8 @@
     let isRecording = false;
     
     micBtn.addEventListener('click', function() {
+      if (micBtn.disabled) return;
+      
       if (!isRecording) {
         startRecording();
       } else {
@@ -362,17 +364,60 @@
       recognition.addEventListener('error', (event) => {
         console.error('🎤 Speech recognition error:', event.error);
         stopRecording();
-        alert('שגיאה בזיהוי קול: ' + event.error);
+        
+        let errorMessage = 'שגיאה בזיהוי קול';
+        switch(event.error) {
+          case 'no-speech':
+            errorMessage = 'לא זוהה דיבור. אנא נסה שוב ודבר בקול ברור.';
+            break;
+          case 'audio-capture':
+            errorMessage = 'לא ניתן לגשת למיקרופון. אנא בדוק את ההרשאות.';
+            break;
+          case 'not-allowed':
+            errorMessage = 'גישה למיקרופון נדחתה. אנא אשר הרשאה בהגדרות הדפדפן.';
+            break;
+          case 'network':
+            errorMessage = 'שגיאת רשת. אנא בדוק את החיבור לאינטרנט.';
+            break;
+          case 'aborted':
+            errorMessage = 'זיהוי הקול הופסק.';
+            break;
+          default:
+            errorMessage = `שגיאה בזיהוי קול: ${event.error}`;
+        }
+        alert(errorMessage);
       });
 
       recognition.addEventListener('end', () => {
         stopRecording();
       });
+    } else {
+      // Speech recognition not supported
+      micBtn.style.opacity = '0.5';
+      micBtn.style.cursor = 'not-allowed';
+      micBtn.title = 'זיהוי קול לא נתמך בדפדפן זה';
+      micBtn.disabled = true;
     }
     
-    function startRecording() {
+    async function startRecording() {
       if (!recognition) {
         alert('זיהוי קול לא נתמך בדפדפן זה');
+        return;
+      }
+
+      // Check microphone permissions
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+      } catch (error) {
+        console.error('🎤 Microphone permission error:', error);
+        if (error.name === 'NotAllowedError') {
+          alert('נדרשת הרשאה למיקרופון כדי להשתמש בזיהוי קול. אנא אשר את ההרשאה ונסה שוב.');
+        } else if (error.name === 'NotFoundError') {
+          alert('לא נמצא מיקרופון. אנא חבר מיקרופון ונסה שוב.');
+        } else {
+          alert('שגיאה בגישה למיקרופון: ' + error.message);
+        }
         return;
       }
 
@@ -390,7 +435,16 @@
         console.log('🎤 Speech recognition started...');
       } catch (error) {
         console.error('🎤 Failed to start recognition:', error);
-        stopRecording();
+        if (error.message.includes('already started')) {
+          // Recognition already running, stop and restart
+          recognition.stop();
+          setTimeout(() => {
+            recognition.start();
+          }, 100);
+        } else {
+          stopRecording();
+          alert('שגיאה בהפעלת זיהוי קול: ' + error.message);
+        }
       }
     }
     
@@ -415,17 +469,19 @@
       console.log('🎤 Recording stopped...');
     }
     
-    // Enhanced send button functionality with API integration
-    sendBtn.addEventListener('click', async function(e) {
+    // Form submission handler
+    const form = document.getElementById('assistantForm');
+    form.addEventListener('submit', async function(e) {
       e.preventDefault();
       
       const query = textarea.value.trim();
       const plate = document.getElementById('plateInput').value.trim();
       
-      // Allow empty query for testing - remove validation temporarily
       if (!query) {
         alert('אנא כתוב שאלה או בקשה');
         textarea.focus();
+        textarea.style.animation = 'shake 0.5s';
+        setTimeout(() => { textarea.style.animation = ''; }, 500);
         return;
       }
       

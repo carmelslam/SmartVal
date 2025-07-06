@@ -145,6 +145,17 @@
     
     <h1>בחירת סוג דו"ח להפקה</h1>
     
+    <!-- Plate Input Section -->
+    <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:25px;">
+      <label style="display:block; font-size:16px; font-weight:600; color:#1e3a8a; margin-bottom:10px; text-align:right;">
+        מספר רכב:
+      </label>
+      <input type="text" id="plateInput" placeholder="הכנס מספר רכב" style="width:100%; padding:10px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; text-align:center; box-sizing:border-box;">
+      <div id="plateStatus" style="margin-top:10px; font-size:14px; color:#059669; display:none; text-align:right;">
+        ✓ נתוני הרכב נטענו בהצלחה
+      </div>
+    </div>
+    
     <div class="report-option" data-type="estimate" onclick="selectReport('estimate')">
       <div class="report-title">דו"ח אומדן</div>
       <div class="report-description">
@@ -190,7 +201,9 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
 
-  <script>
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
+    
     // Authentication check
     const auth = sessionStorage.getItem("auth");
     if (!auth) {
@@ -199,8 +212,107 @@
     }
 
     let selectedReportType = null;
+    let plateDataLoaded = false;
 
-    function selectReport(type) {
+    // Load existing plate data on page load
+    function loadPlateData() {
+      const existingPlate = sessionStorage.getItem('plate');
+      const helper = sessionStorage.getItem('helper');
+      
+      if (existingPlate) {
+        document.getElementById('plateInput').value = existingPlate;
+        if (helper) {
+          plateDataLoaded = true;
+          document.getElementById('plateStatus').style.display = 'block';
+          updateContinueButton();
+        }
+      }
+    }
+
+    // Handle plate input changes
+    async function handlePlateInput() {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      
+      if (!plateNumber) {
+        plateDataLoaded = false;
+        document.getElementById('plateStatus').style.display = 'none';
+        updateContinueButton();
+        return;
+      }
+      
+      try {
+        console.log('Loading data for plate:', plateNumber);
+        
+        // Try to fetch existing case data
+        const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
+        
+        if (response.success && response.data) {
+          // Store the data
+          sessionStorage.setItem('helper', JSON.stringify(response.data));
+          sessionStorage.setItem('plate', plateNumber);
+          sessionStorage.setItem('caseLoaded', 'true');
+          
+          plateDataLoaded = true;
+          document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
+          document.getElementById('plateStatus').style.color = '#059669';
+        } else {
+          // If no existing case, create basic structure
+          const basicData = {
+            meta: {
+              plate: plateNumber,
+              case_id: `CASE-${plateNumber}-${Date.now()}`,
+              created_at: new Date().toISOString()
+            },
+            vehicle: {
+              plate_number: plateNumber
+            }
+          };
+          
+          sessionStorage.setItem('helper', JSON.stringify(basicData));
+          sessionStorage.setItem('plate', plateNumber);
+          
+          plateDataLoaded = true;
+          document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר - תיק חדש';
+          document.getElementById('plateStatus').style.color = '#3b82f6';
+        }
+        
+        updateContinueButton();
+        
+      } catch (error) {
+        console.error('Error loading plate data:', error);
+        
+        // Even on error, save basic plate data
+        const basicData = {
+          meta: {
+            plate: plateNumber,
+            case_id: `CASE-${plateNumber}-${Date.now()}`,
+            created_at: new Date().toISOString()
+          },
+          vehicle: {
+            plate_number: plateNumber
+          }
+        };
+        
+        sessionStorage.setItem('helper', JSON.stringify(basicData));
+        sessionStorage.setItem('plate', plateNumber);
+        
+        plateDataLoaded = true;
+        document.getElementById('plateStatus').style.display = 'block';
+        document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר';
+        document.getElementById('plateStatus').style.color = '#f59e0b';
+        
+        updateContinueButton();
+      }
+    }
+
+    function updateContinueButton() {
+      const continueBtn = document.getElementById('continueBtn');
+      continueBtn.disabled = !selectedReportType || !plateDataLoaded;
+    }
+
+    window.selectReport = function(type) {
       // Remove previous selection
       document.querySelectorAll('.report-option').forEach(option => {
         option.classList.remove('selected');
@@ -210,14 +322,19 @@
       document.querySelector(`[data-type="${type}"]`).classList.add('selected');
       
       selectedReportType = type;
-      document.getElementById('continueBtn').disabled = false;
+      updateContinueButton();
       
       console.log('Selected report type:', type);
     }
 
-    function proceedToReport() {
+    window.proceedToReport = function() {
       if (!selectedReportType) {
         alert('אנא בחר סוג דו"ח');
+        return;
+      }
+      
+      if (!plateDataLoaded) {
+        alert('אנא הכנס מספר רכב');
         return;
       }
 
@@ -233,13 +350,41 @@
       }
     }
 
-    function logout() {
-      sessionStorage.clear();
-      window.location.href = "index.html";
+    window.logout = function() {
+      // Use the enhanced logout with sound if available
+      if (typeof window.logoutWithSound === 'function') {
+        window.logoutWithSound();
+      } else {
+        // Fallback to regular logout
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
     }
 
     // Auto-select based on URL parameter if provided
     document.addEventListener('DOMContentLoaded', function() {
+      // Load existing plate data
+      loadPlateData();
+      
+      // Set up plate input listener
+      const plateInput = document.getElementById('plateInput');
+      let plateTimeout;
+      
+      plateInput.addEventListener('input', function() {
+        clearTimeout(plateTimeout);
+        plateTimeout = setTimeout(() => {
+          handlePlateInput();
+        }, 500); // Debounce for 500ms
+      });
+      
+      // Handle enter key on plate input
+      plateInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          handlePlateInput();
+        }
+      });
+      
+      // Check URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const preselect = urlParams.get('type');
       if (preselect && (preselect === 'estimate' || preselect === 'final')) {
@@ -247,5 +392,6 @@
       }
     });
   </script>
+  <script src="logout-sound.js"></script>
 </body>
 </html>

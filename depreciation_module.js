@@ -23,7 +23,7 @@ function init() {
   const dep = helper.expertise?.depreciation || {};
 
   // Populate fixed data
-  if ($('pageTitle')) $('pageTitle').innerText = `רכב מס. ${meta.plate || '...'}`;
+  if ($('pageTitle')) $('pageTitle').innerText = `תיק מס. ${meta.case_id || meta.plate || '...'}`;
   if ($('carPlate')) $('carPlate').innerText = meta.plate || vehicle.plate_number || '';
   if ($('carManufacturer')) $('carManufacturer').innerText = vehicle.manufacturer || '';
   if ($('carModel')) $('carModel').innerText = vehicle.model || '';
@@ -167,10 +167,16 @@ export function addDepField() {
 }
 
 function collectDifferentials() {
-  return Array.from(document.querySelectorAll('#differentialsRows .diff-row')).map(row => ({
-    desc: row.querySelector('.diff-desc').value.trim(),
-    amount: parseFloat(row.querySelector('.diff-amount').value) || 0
-  }));
+  return Array.from(document.querySelectorAll('#differentialsRows .diff-row')).map(row => {
+    const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
+    const vat = amount * 0.17; // 17% VAT
+    return {
+      desc: row.querySelector('.diff-desc').value.trim(),
+      amount: amount,
+      vat: Math.round(vat),
+      total_with_vat: Math.round(amount + vat)
+    };
+  });
 }
 
 function renderDifferentials(list) {
@@ -188,40 +194,67 @@ function createDiffRow(data = {}) {
   const div = document.createElement('div');
   div.className = 'diff-row';
   div.style.display = 'grid';
-  div.style.gridTemplateColumns = '1fr 120px 80px';
+  div.style.gridTemplateColumns = '1fr 120px 120px 120px 80px';
   div.style.gap = '14px';
   div.style.marginBottom = '10px';
+  
+  const vat = data.vat || Math.round((data.amount || 0) * 0.17);
+  const totalWithVat = data.total_with_vat || Math.round((data.amount || 0) * 1.17);
+  
   div.innerHTML = `
     <div><input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}"></div>
     <div><input type="number" class="diff-amount" placeholder="סכום" value="${data.amount || ''}"></div>
+    <div><input type="number" class="diff-vat" placeholder="מע&quot;מ" value="${vat}" readonly style="background:#f4f6fa;"></div>
+    <div><input type="number" class="diff-total" placeholder="סה&quot;כ" value="${totalWithVat}" readonly style="background:#f4f6fa;"></div>
     <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
+  
   div.querySelector('.remove').addEventListener('click', () => {
     div.remove();
     saveAndRefresh();
     updateDifferentialsSummary();
   });
-  ['diff-desc','diff-amount'].forEach(cls => {
-    div.querySelector('.' + cls).addEventListener('input', () => {
-      if (cls === 'diff-amount') triggerMathCalculation();
-      saveAndRefresh();
-      updateDifferentialsSummary();
-    });
+  
+  // Update VAT and total when amount changes
+  div.querySelector('.diff-amount').addEventListener('input', function() {
+    const amount = parseFloat(this.value) || 0;
+    const vat = Math.round(amount * 0.17);
+    const total = Math.round(amount + vat);
+    div.querySelector('.diff-vat').value = vat;
+    div.querySelector('.diff-total').value = total;
+    triggerMathCalculation();
+    saveAndRefresh();
+    updateDifferentialsSummary();
   });
+  
+  div.querySelector('.diff-desc').addEventListener('input', () => {
+    saveAndRefresh();
+  });
+  
   return div;
 }
 
 function updateDifferentialsSummary() {
   const differentials = collectDifferentials();
-  const total = differentials.reduce((sum, diff) => sum + diff.amount, 0);
+  const totalAmount = differentials.reduce((sum, diff) => sum + diff.amount, 0);
+  const totalVAT = differentials.reduce((sum, diff) => sum + diff.vat, 0);
+  const totalWithVAT = differentials.reduce((sum, diff) => sum + diff.total_with_vat, 0);
   
   if ($('totalDifferentials')) {
-    $('totalDifferentials').innerText = `₪${total.toLocaleString()}`;
+    $('totalDifferentials').innerText = `₪${totalAmount.toLocaleString()}`;
   }
   
-  // Calculate final total with differentials
+  if ($('totalVAT')) {
+    $('totalVAT').innerText = `₪${totalVAT.toLocaleString()}`;
+  }
+  
+  if ($('totalDifferentialsWithVAT')) {
+    $('totalDifferentialsWithVAT').innerText = `₪${totalWithVAT.toLocaleString()}`;
+  }
+  
+  // Calculate final total with differentials (including VAT)
   const baseTotal = parseFloat(helper.expertise?.calculations?.total_compensation || 0);
-  const finalTotal = baseTotal + total;
+  const finalTotal = baseTotal + totalWithVAT;
   
   if ($('finalTotalWithDifferentials')) {
     $('finalTotalWithDifferentials').innerText = `₪${finalTotal.toLocaleString()}`;
@@ -414,8 +447,8 @@ function triggerMathCalculation() {
     
     const depCompensation = Math.round((marketValue * totalDepPercent) / 100);
     
-    // Calculate differentials total
-    const differentialsTotal = differentials.reduce((sum, diff) => sum + diff.amount, 0);
+    // Calculate differentials total (with VAT)
+    const differentialsTotal = differentials.reduce((sum, diff) => sum + diff.total_with_vat, 0);
     
     // Calculate final compensation
     const totalCompensation = depCompensation + differentialsTotal;

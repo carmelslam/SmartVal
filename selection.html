@@ -22,16 +22,34 @@
       })
         .then(async res => {
           const text = await res.text();
+          console.log('🔍 Admin webhook raw response:', text);
+          console.log('🔍 Response status:', res.status);
+          console.log('🔍 Response headers:', res.headers);
+          
           let data;
           try {
             data = JSON.parse(text);
+            console.log('🔍 Parsed JSON data:', data);
           } catch (_) {
+            console.log('🔍 Failed to parse as JSON, treating as text');
             data = { role: text.trim() };
           }
 
-          if (data?.role === 'admin' || /admin|success/i.test(text)) {
+          // Check multiple possible response formats
+          const isAdmin = data?.role === 'admin' || 
+                         data?.access === 'admin' ||
+                         data?.status === 'admin' ||
+                         data?.result === 'admin' ||
+                         data?.access_granted === true ||
+                         /admin|success|granted|approved/i.test(text);
+          
+          console.log('🔍 Admin check result:', isAdmin);
+          
+          if (isAdmin) {
+            console.log('✅ Admin access granted');
             window.location.href = 'admin.html';
           } else {
+            console.error('❌ Admin access denied. Response data:', data);
             alert('Access denied: incorrect password');
           }
         })

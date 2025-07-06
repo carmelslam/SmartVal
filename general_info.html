@@ -126,6 +126,8 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
+    import { decryptPassword } from './auth.js';
+    
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
       otherInsurance.style.display = this.value === "אחר" ? "block" : "none";
@@ -136,11 +138,24 @@
       otherInput.style.display = this.value === "אחר" ? "block" : "none";
     });
 
-    const sessionAuthKey = sessionStorage.getItem("auth");
-    if (!sessionAuthKey) {
+    const encryptedPassword = sessionStorage.getItem("auth");
+    if (!encryptedPassword) {
       alert("התחברות נדרשת");
       window.location.href = "index.html";
     }
+    
+    // Decrypt password for use in webhook
+    let password = null;
+    (async () => {
+      try {
+        password = await decryptPassword(encryptedPassword);
+        console.log('✅ Password decrypted successfully');
+      } catch (error) {
+        console.error('❌ Password decryption failed:', error);
+        alert("שגיאה בפענוח הסיסמה");
+        window.location.href = "index.html";
+      }
+    })();
 
     // Use carData fields as set by open-cases.html
     let carData = {};
@@ -158,6 +173,16 @@
 
     // When saving, keep field names consistent with helper/contact structure
     document.getElementById("submitBtn").addEventListener("click", async () => {
+      // Ensure password is decrypted before use
+      if (!password) {
+        try {
+          password = await decryptPassword(encryptedPassword);
+        } catch (error) {
+          alert("שגיאה בפענוח הסיסמה");
+          return;
+        }
+      }
+      
       const data = {
         plate: carData.plate || '',
         owner: carData.owner || '',
@@ -174,7 +199,7 @@
         ownerPhone: document.getElementById("ownerPhone").value.trim(),
         ownerAddress: document.getElementById("ownerAddress").value.trim(),
         damageType: (document.getElementById("damageType").value === "אחר" ? document.getElementById("otherDamageType").value.trim() : document.getElementById("damageType").value.trim()),
-        password: sessionAuthKey
+        password: password
       };
 
       console.log("📤 Sending General Info:", data);
@@ -219,8 +244,6 @@
     }
   </script>
   <script type="module" src="helper-events.js"></script>
-  <script src="car-details-float.js"></script>
-  <script src="levi-floating.js"></script>
   <script src="internal-browser.js"></script>
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
