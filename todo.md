@@ -424,12 +424,9 @@ Data is inside the same square fields as we have now .
 4. Multi pictures upload page : 
     1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
     2. Fix the upload function, on mobile and iPad to support : upload from gallery, upload from files, take a picture. On desktop : upload function, on mobile to support : upload from gallery, upload from files
-    3. The function buttons: העלה תמונות , עוד אפשרויות, look ugly in their layout , keep the style and color but change layout as follow : the upload button to be in the same size as the navigation buttons . The more options button to stay as is but the other options buttons are in a row side by side . 
-    4. Explain the functionality of the dropdown : מוקד נזק: does display options according to helper data from the expertise or its manual . Take in consideration that uploading pictures can be done before opening a case or finalizing the expertise. So find the best way to balance the dropdown options: in my opinion: in any way there keep those 2  options in the dropdown :  free text input and the current option "all pictures" . 
-        if a helper damage center's description     
-        and names available display them . if     
-         helper data is not available display: 
-" לא הוזנו מוקדי נזק״ . 
+    3. The function buttons: העלה תמונות , עוד אפשרויות, look ugly in their layout , keep the style and color but change layout as follow : the upload button to be in the same size as the navigation buttons . The more options button to stay as is but the other options buttons are in a row side by side . keep the navigation buttons unchanged 
+    4. Explain the functionality of the dropdown : מוקד נזק: does display options according to helper data from the expertise or its manual . Take in consideration that uploading pictures can be done before opening a case or finalizing the expertise. So find the best way to balance the dropdown options: in my opinion best solution is like thsi -  in any way there keep those 2  options in the dropdown :  free text input and the current option "all pictures" . 
+        if a helper damage center's description  and names available display them . if  helper data is not available display: " לא הוזנו מוקדי נזק״ . 
 
 5. Invoice upload page : 
     1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
