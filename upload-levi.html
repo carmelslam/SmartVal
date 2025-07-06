@@ -1544,13 +1544,18 @@ class LeviProcessor {
         source: 'manual'
       };
       
-      // Save to helper system
-      this.updateHelperWithResults(manualData);
+      // Don't call updateHelperWithResults - it corrupts manual data!
+      // Manual data is already properly saved by saveManualDataToHelper()
       
       // Send to webhook for manual data processing (different webhook than OCR)
       await sendToWebhook('SAVE_MANUAL_LEVI', manualData);
       
       this.showAlert('✅ נתונים ידניים נשמרו בהצלחה', 'success');
+      
+      // Refresh floating screen after save
+      if (typeof refreshLeviData === 'function') {
+        refreshLeviData();
+      }
       
     } catch (error) {
       console.error('Manual save error:', error);
