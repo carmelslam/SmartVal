@@ -642,8 +642,14 @@ export function addCustomSummaryField(summaryType) {
     saveAndRefresh();
   });
   
-  row.querySelector('.custom-field-name').addEventListener('input', saveAndRefresh);
-  row.querySelector('.custom-field-value').addEventListener('input', saveAndRefresh);
+  row.querySelector('.custom-field-name').addEventListener('input', () => {
+    calculateSubtotals();
+    saveAndRefresh();
+  });
+  row.querySelector('.custom-field-value').addEventListener('input', () => {
+    calculateSubtotals();
+    saveAndRefresh();
+  });
   
   grid.appendChild(row);
   console.log(`Added custom field to ${summaryType}`);
@@ -752,9 +758,25 @@ function updateSummaryVisibility() {
   // Control depreciation section visibility
   const depSec = $('depreciationSection');
   if (depSec) {
-    const hideDepreciation = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק');
+    const hideDepreciation = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק' || type === 'חוות דעת אובדן להלכה');
     depSec.style.display = hideDepreciation ? 'none' : 'block';
     console.log(`Depreciation section: ${hideDepreciation ? 'hidden' : 'shown'}`);
+  }
+  
+  // Control differentials section visibility for special report types
+  const diffSec = $('differentialsSection');
+  if (diffSec) {
+    const hideDifferentials = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק' || type === 'חוות דעת אובדן להלכה');
+    if (hideDifferentials) {
+      diffSec.style.display = 'none';
+      // Also uncheck the differentials checkbox
+      if ($('hasDifferentials')) {
+        $('hasDifferentials').checked = false;
+      }
+    } else {
+      diffSec.style.display = 'block';
+    }
+    console.log(`Differentials section: ${hideDifferentials ? 'hidden' : 'shown'}`);
   }
 }
 
@@ -807,6 +829,12 @@ function calculateGlobalDepreciationValue() {
 function refreshSummary() {
   const calc = helper.expertise?.calculations || {};
   const dep = helper.expertise?.depreciation || {};
+  const levi = helper.expertise?.levi_report || {};
+  
+  // Get base values
+  const marketValue = parseFloat(levi.final_price) || 0;
+  const totalClaim = parseFloat(calc.total_damage) || 0;
+  const depCompensation = parseFloat(dep.global_amount) || 0;
   
   // Update all summary fields across all report types
   const summaryFields = [
@@ -814,35 +842,177 @@ function refreshSummary() {
     'sumMarketValueTotal', 'sumMarketValueLegal'
   ];
   summaryFields.forEach(id => {
-    if ($(id)) $(id).value = calc.market_value || '';
+    if ($(id)) $(id).value = `₪${marketValue.toLocaleString()}`;
   });
   
   const claimFields = [
     'sumClaim', 'sumClaimGlobal'
   ];
   claimFields.forEach(id => {
-    if ($(id)) $(id).value = calc.total_damage || '';
+    if ($(id)) $(id).value = `₪${totalClaim.toLocaleString()}`;
   });
   
   const depFields = [
     'depCompensation', 'depCompensationGlobal'
   ];
   depFields.forEach(id => {
-    if ($(id)) $(id).value = dep.global_amount || '';
+    if ($(id)) $(id).value = `₪${depCompensation.toLocaleString()}`;
   });
   
-  const totalFields = [
-    'sumTotal', 'sumTotalGlobal', 'afterSaleDamage', 'afterSaleTotal', 'afterSaleLegal'
-  ];
-  totalFields.forEach(id => {
-    if ($(id)) $(id).value = calc.total_compensation || '';
-  });
+  // Calculate subtotals including תוספות והורדות for each report type
+  calculateSubtotals();
   
   // Specific fields for different report types
   if ($('saleValueDamage')) $('saleValueDamage').value = calc.sale_value_damaged || '';
   if ($('salvageValueTotal')) $('salvageValueTotal').value = calc.salvage_value || '';
   if ($('salvageValueLegal')) $('salvageValueLegal').value = calc.salvage_value || '';
   if ($('storageValueTotal')) $('storageValueTotal').value = calc.storage_value || '';
+  
+  // Populate תוספות והורדות from levi adjustments
+  populateAdditionsFromLevi();
+}
+
+// NEW: Calculate subtotals including תוספות והורדות for each report type
+function calculateSubtotals() {
+  const calc = helper.expertise?.calculations || {};
+  const dep = helper.expertise?.depreciation || {};
+  const levi = helper.expertise?.levi_report || {};
+  
+  // Get base values
+  const marketValue = parseFloat(levi.final_price) || 0;
+  const totalClaim = parseFloat(calc.total_damage) || 0;
+  const depCompensation = parseFloat(dep.global_amount) || 0;
+  
+  // Calculate additions/deductions for each report type
+  const reportTypes = [
+    { summaryType: 'summaryPrivate', totalField: 'sumTotal' },
+    { summaryType: 'summaryGlobal', totalField: 'sumTotalGlobal' },
+    { summaryType: 'summaryDamage', totalField: 'afterSaleDamage' },
+    { summaryType: 'summaryTotalLoss', totalField: 'afterSaleTotal' },
+    { summaryType: 'summaryLegalLoss', totalField: 'afterSaleLegal' }
+  ];
+  
+  reportTypes.forEach(({ summaryType, totalField }) => {
+    const additionsTotal = calculateAdditionsTotal(summaryType);
+    let subtotal = 0;
+    
+    // Different calculation logic for different report types
+    if (summaryType === 'summaryPrivate' || summaryType === 'summaryGlobal') {
+      // For private/global: market value + total claim + depreciation compensation + additions
+      subtotal = marketValue + totalClaim + depCompensation + additionsTotal;
+    } else if (summaryType === 'summaryDamage') {
+      // For damaged state: market value - sale value + additions
+      const saleValue = parseFloat($('saleValueDamage')?.value?.replace(/[^\d.-]/g, '')) || 0;
+      subtotal = marketValue - saleValue + additionsTotal;
+    } else if (summaryType === 'summaryTotalLoss') {
+      // For total loss: market value - salvage value + storage + additions
+      const salvageValue = parseFloat($('salvageValueTotal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+      const storageValue = parseFloat($('storageValueTotal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+      subtotal = marketValue - salvageValue + storageValue + additionsTotal;
+    } else if (summaryType === 'summaryLegalLoss') {
+      // For legal loss: market value - salvage value + additions
+      const salvageValue = parseFloat($('salvageValueLegal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+      subtotal = marketValue - salvageValue + additionsTotal;
+    }
+    
+    // Update the total field
+    if ($(totalField)) {
+      $(totalField).value = `₪${Math.max(0, subtotal).toLocaleString()}`;
+    }
+  });
+}
+
+// NEW: Calculate total of additions/deductions for a specific report type
+function calculateAdditionsTotal(summaryType) {
+  const customFields = collectCustomSummaryFields(summaryType);
+  let total = 0;
+  
+  customFields.forEach(field => {
+    const value = parseFloat(field.value?.replace(/[^\d.-]/g, '')) || 0;
+    total += value;
+  });
+  
+  return total;
+}
+
+// NEW: Populate תוספות והורדות from levi adjustments
+function populateAdditionsFromLevi() {
+  const levi = helper.expertise?.levi_report || {};
+  const adjustments = levi.adjustments || {};
+  
+  // Only populate if there are adjustments and no existing custom fields
+  if (Object.keys(adjustments).length === 0) return;
+  
+  // Populate each report type
+  const reportTypes = ['summaryPrivate', 'summaryGlobal', 'summaryDamage', 'summaryTotalLoss', 'summaryLegalLoss'];
+  
+  reportTypes.forEach(summaryType => {
+    const existingFields = collectCustomSummaryFields(summaryType);
+    
+    // Only populate if no existing fields
+    if (existingFields.length === 0) {
+      Object.keys(adjustments).forEach(adjustmentKey => {
+        const adjustment = adjustments[adjustmentKey];
+        if (adjustment && (adjustment.percent || adjustment.value)) {
+          addCustomSummaryFieldWithData(summaryType, adjustmentKey, adjustment.value || 0);
+        }
+      });
+    }
+  });
+}
+
+// NEW: Add custom summary field with predefined data
+function addCustomSummaryFieldWithData(summaryType, fieldName, fieldValue) {
+  const gridMapping = {
+    'summaryPrivate': 'sumAdditionsGrid',
+    'summaryGlobal': 'sumAdditionsGridGlobal', 
+    'summaryDamage': 'sumAdditionsGridDamage',
+    'summaryTotalLoss': 'sumAdditionsGridTotalLoss',
+    'summaryLegalLoss': 'sumAdditionsGridLegalLoss'
+  };
+  
+  const gridId = gridMapping[summaryType];
+  const grid = document.getElementById(gridId);
+  
+  if (!grid) return;
+  
+  const row = document.createElement('div');
+  row.className = 'custom-summary-row';
+  row.style.display = 'grid';
+  row.style.gridTemplateColumns = '1fr 1fr 80px';
+  row.style.gap = '10px';
+  row.style.marginBottom = '10px';
+  
+  row.innerHTML = `
+    <div>
+      <input type="text" class="custom-field-name" placeholder="שם השדה" value="${fieldName}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <div>
+      <input type="text" class="custom-field-value" placeholder="ערך" value="${fieldValue}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <div>
+      <button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0; font-size: 14px;">✕</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  row.querySelector('.remove').addEventListener('click', () => {
+    row.remove();
+    calculateSubtotals();
+    saveAndRefresh();
+  });
+  
+  row.querySelector('.custom-field-name').addEventListener('input', () => {
+    calculateSubtotals();
+    saveAndRefresh();
+  });
+  
+  row.querySelector('.custom-field-value').addEventListener('input', () => {
+    calculateSubtotals();
+    saveAndRefresh();
+  });
+  
+  grid.appendChild(row);
 }
 
 // FIXED: Floating screen toggle function
@@ -989,6 +1159,7 @@ function triggerMathCalculation() {
     
     // Refresh summary with new calculations
     refreshSummary();
+    calculateSubtotals();
     updateDifferentialsSummary();
     
     console.log('Math calculation triggered:', {
