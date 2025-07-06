@@ -519,39 +519,6 @@
     });
   }
 
-  // Add toggle button to access Levi report - positioned within container area
-  if (!document.getElementById("leviFloatBtn")) {
-    const floatBtn = document.createElement("button");
-    floatBtn.id = "leviFloatBtn";
-    floatBtn.innerHTML = "דו\"ח לוי";
-    // Position button inside container at left edge
-    const isMobile = window.innerWidth <= 768;
-    const leftPosition = isMobile ? '5%' : 'calc(50% - 260px + 20px)';
-    
-    floatBtn.style.cssText = `
-      position: fixed;
-      top: 120px;
-      left: ${leftPosition};
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 9998;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    floatBtn.onclick = toggleLeviReport;
-    document.body.appendChild(floatBtn);
-    
-    // Update position on window resize
-    window.addEventListener('resize', () => {
-      const isMobile = window.innerWidth <= 768;
-      const leftPosition = isMobile ? '5%' : 'calc(50% - 260px + 20px)';
-      floatBtn.style.left = leftPosition;
-    });
-  }
+  // Floating button removed - now controlled by top toggle squares
 
 })();
