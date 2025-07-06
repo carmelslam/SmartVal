@@ -941,9 +941,14 @@ function calculateSubtotals() {
 
 // NEW: Calculate total of additions/deductions for a specific report type
 function calculateAdditionsTotal(summaryType) {
-  const customFields = collectCustomSummaryFields(summaryType);
   let total = 0;
   
+  // 1. Add levi adjustments values
+  const leviTotal = calculateLeviAdjustmentsTotal(summaryType);
+  total += leviTotal;
+  
+  // 2. Add manual custom fields
+  const customFields = collectCustomSummaryFields(summaryType);
   customFields.forEach(field => {
     const value = parseFloat(field.value?.replace(/[^\d.-]/g, '')) || 0;
     total += value;
@@ -952,30 +957,122 @@ function calculateAdditionsTotal(summaryType) {
   return total;
 }
 
+// NEW: Calculate total from levi adjustments for a specific report type
+function calculateLeviAdjustmentsTotal(summaryType) {
+  const levi = helper.expertise?.levi_report || {};
+  let total = 0;
+  
+  // Sum all levi adjustment values
+  const adjustmentValues = [
+    parseFloat(levi['ערך ש״ח עליה לכביש'] || levi.registration_value || 0),
+    parseFloat(levi['ערך ש״ח בעלות'] || levi.ownership_value || 0),
+    parseFloat(levi['ערך ש״ח מס ק״מ'] || levi.km_value || 0),
+    parseFloat(levi['ערך ש״ח מספר בעלים'] || levi.owners_value || 0),
+    parseFloat(levi['ערך ש״ח מאפיינים'] || levi.features_value || 0)
+  ];
+  
+  adjustmentValues.forEach(value => {
+    total += value || 0;
+  });
+  
+  return total;
+}
+
 // NEW: Populate תוספות והורדות from levi adjustments
 function populateAdditionsFromLevi() {
   const levi = helper.expertise?.levi_report || {};
-  const adjustments = levi.adjustments || {};
   
-  // Only populate if there are adjustments and no existing custom fields
-  if (Object.keys(adjustments).length === 0) return;
+  // Populate each report type with levi adjustments
+  const reportTypes = [
+    { summaryType: 'summaryPrivate', suffix: 'private' },
+    { summaryType: 'summaryGlobal', suffix: 'global' },
+    { summaryType: 'summaryDamage', suffix: 'damage' },
+    { summaryType: 'summaryTotalLoss', suffix: 'totalLoss' },
+    { summaryType: 'summaryLegalLoss', suffix: 'legalLoss' }
+  ];
   
-  // Populate each report type
-  const reportTypes = ['summaryPrivate', 'summaryGlobal', 'summaryDamage', 'summaryTotalLoss', 'summaryLegalLoss'];
+  reportTypes.forEach(({ summaryType, suffix }) => {
+    populateLeviAdjustmentsForReportType(suffix, levi);
+  });
+}
+
+// NEW: Populate levi adjustments for a specific report type
+function populateLeviAdjustmentsForReportType(suffix, leviData) {
+  const container = document.getElementById(`leviAdjustmentsRows-${suffix}`);
+  if (!container) return;
   
-  reportTypes.forEach(summaryType => {
-    const existingFields = collectCustomSummaryFields(summaryType);
+  // Clear existing content
+  container.innerHTML = '';
+  
+  // Define adjustment mappings from levi data
+  const adjustmentMappings = [
+    {
+      name: 'עליה לכביש',
+      percent: leviData['עליה לכביש %'] || leviData.registration_percent || '',
+      value: leviData['ערך ש״ח עליה לכביש'] || leviData.registration_value || ''
+    },
+    {
+      name: 'בעלות',
+      percent: leviData['בעלות %'] || leviData.ownership_percent || '',
+      value: leviData['ערך ש״ח בעלות'] || leviData.ownership_value || ''
+    },
+    {
+      name: 'מס ק״מ',
+      percent: leviData['מס ק״מ %'] || leviData.km_percent || '',
+      value: leviData['ערך ש״ח מס ק״מ'] || leviData.km_value || ''
+    },
+    {
+      name: 'מספר בעלים',
+      percent: leviData['מספר בעלים %'] || leviData.owners_percent || '',
+      value: leviData['ערך ש״ח מספר בעלים'] || leviData.owners_value || ''
+    },
+    {
+      name: 'מאפיינים',
+      percent: leviData['מאפיינים %'] || leviData.features_percent || '',
+      value: leviData['ערך ש״ח מאפיינים'] || leviData.features_value || ''
+    }
+  ];
+  
+  // Add rows for adjustments that have values
+  adjustmentMappings.forEach(adjustment => {
+    const percentValue = parseFloat(adjustment.percent) || 0;
+    const monetaryValue = parseFloat(adjustment.value) || 0;
     
-    // Only populate if no existing fields
-    if (existingFields.length === 0) {
-      Object.keys(adjustments).forEach(adjustmentKey => {
-        const adjustment = adjustments[adjustmentKey];
-        if (adjustment && (adjustment.percent || adjustment.value)) {
-          addCustomSummaryFieldWithData(summaryType, adjustmentKey, adjustment.value || 0);
-        }
-      });
+    // Only show if there's a meaningful value
+    if (percentValue !== 0 || monetaryValue !== 0) {
+      const row = document.createElement('div');
+      row.className = 'levi-adjustment-row';
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '2fr 1fr 1fr';
+      row.style.gap = '8px';
+      row.style.padding = '8px';
+      row.style.background = 'white';
+      row.style.borderRadius = '4px';
+      row.style.marginBottom = '6px';
+      row.style.border = '1px solid #e9ecef';
+      
+      row.innerHTML = `
+        <div style="font-weight: 500; color: #333;">${adjustment.name}</div>
+        <div style="text-align: center; color: #007bff;">${percentValue > 0 ? percentValue + '%' : '-'}</div>
+        <div style="text-align: center; color: #28a745; font-weight: 500;">${monetaryValue > 0 ? '₪' + monetaryValue.toLocaleString() : '-'}</div>
+      `;
+      
+      container.appendChild(row);
     }
   });
+  
+  // If no adjustments found, show a message
+  if (container.children.length === 0) {
+    const emptyRow = document.createElement('div');
+    emptyRow.style.padding = '12px';
+    emptyRow.style.textAlign = 'center';
+    emptyRow.style.color = '#6c757d';
+    emptyRow.style.fontStyle = 'italic';
+    emptyRow.style.background = 'white';
+    emptyRow.style.borderRadius = '4px';
+    emptyRow.textContent = 'לא נמצאו התאמות בדו"ח לוי יצחק';
+    container.appendChild(emptyRow);
+  }
 }
 
 // NEW: Add custom summary field with predefined data
