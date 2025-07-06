@@ -26,14 +26,18 @@
     
     @media (max-width: 768px) {
       #invoiceDetailsModal {
-        top: 10px;
-        left: 2.5%;
-        transform: none;
-        width: 95%;
-        max-width: 95%;
-        padding: 15px;
-        margin: 0;
-        box-sizing: border-box;
+        position: fixed !important;
+        top: 5px !important;
+        left: 5px !important;
+        right: 5px !important;
+        transform: none !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
       }
     }
     
