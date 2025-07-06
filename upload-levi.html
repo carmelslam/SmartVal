@@ -1697,6 +1697,135 @@ window.calculateFinalPrice = function() {
 
   // Final price is the last cumulative total
   document.getElementById('manual-final-price').value = Math.round(runningTotal);
+  
+  // Save manual data to helper system (same as OCR behavior)
+  saveManualDataToHelper();
+};
+
+// Save manual data to helper system (behave like OCR)
+window.saveManualDataToHelper = function() {
+  try {
+    // Get all manual form values
+    const basePrice = parseFloat(document.getElementById('manual-base-price').value) || 0;
+    const finalPrice = parseFloat(document.getElementById('manual-final-price').value) || 0;
+    
+    // Vehicle details
+    const manufacturer = document.getElementById('manual-manufacturer').value || '';
+    const modelCode = document.getElementById('manual-model-code').value || '';
+    const category = document.getElementById('manual-category').value || '';
+    const year = document.getElementById('manual-year').value || '';
+    const fullModel = document.getElementById('manual-full-model').value || '';
+    
+    // Adjustment values
+    const registrationPercent = parseFloat(document.getElementById('manual-registration-percent').value) || 0;
+    const registrationValue = parseFloat(document.getElementById('manual-registration-value').value) || 0;
+    const registrationTotal = parseFloat(document.getElementById('manual-registration-total').value) || 0;
+    
+    const ownershipPercent = parseFloat(document.getElementById('manual-ownership-percent').value) || 0;
+    const ownershipValue = parseFloat(document.getElementById('manual-ownership-value').value) || 0;
+    const ownershipTotal = parseFloat(document.getElementById('manual-ownership-total').value) || 0;
+    
+    const kmPercent = parseFloat(document.getElementById('manual-km-percent').value) || 0;
+    const kmValue = parseFloat(document.getElementById('manual-km-value').value) || 0;
+    const kmTotal = parseFloat(document.getElementById('manual-km-total').value) || 0;
+    
+    const ownersPercent = parseFloat(document.getElementById('manual-owners-percent').value) || 0;
+    const ownersValue = parseFloat(document.getElementById('manual-owners-value').value) || 0;
+    const ownersTotal = parseFloat(document.getElementById('manual-owners-total').value) || 0;
+    
+    const featuresPercent = parseFloat(document.getElementById('manual-features-percent').value) || 0;
+    const featuresValue = parseFloat(document.getElementById('manual-features-value').value) || 0;
+    const featuresTotal = parseFloat(document.getElementById('manual-features-total').value) || 0;
+    
+    // Create Levi data object in Hebrew format (matching OCR structure)
+    const leviData = {
+      'סוג רכב': 'פרטי', // Default vehicle type
+      'יצרן': manufacturer,
+      'קוד דגם': modelCode,
+      'קטגוריה': category,
+      'שנת יצור': year,
+      'שם דגם מלא': fullModel,
+      'מחיר בסיס': basePrice,
+      'מחיר סופי לרכב': finalPrice,
+      
+      // Registration adjustments
+      'עליה לכביש': registrationPercent > 0 ? `${registrationPercent}%` : '',
+      'עליה לכביש %': registrationPercent,
+      'ערך ש״ח עליה לכביש': registrationValue,
+      'שווי מצטבר עליה לכביש': registrationTotal,
+      
+      // Ownership adjustments
+      'בעלות': ownershipPercent > 0 ? `${ownershipPercent}%` : '',
+      'בעלות %': ownershipPercent,
+      'ערך ש״ח בעלות': ownershipValue,
+      'שווי מצטבר בעלות': ownershipTotal,
+      
+      // KM adjustments
+      'מס ק״מ': kmPercent > 0 ? `${kmPercent}%` : '',
+      'מס ק״מ %': kmPercent,
+      'ערך ש״ח מס ק״מ': kmValue,
+      'שווי מצטבר מס ק״מ': kmTotal,
+      
+      // Owners adjustments
+      'מספר בעלים': ownersPercent > 0 ? `${ownersPercent}%` : '',
+      'מספר בעלים %': ownersPercent,
+      'ערך ש״ח מספר בעלים': ownersValue,
+      'שווי מצטבר מספר בעלים': ownersTotal,
+      
+      // Features adjustments
+      'מאפיינים': featuresPercent > 0 ? `${featuresPercent}%` : '',
+      'מאפיינים %': featuresPercent,
+      'ערך ש״ח מאפיינים': featuresValue,
+      'שווי מצטבר מאפיינים': featuresTotal
+    };
+    
+    // Get current helper data and preserve existing OCR data
+    let helper = {};
+    try {
+      helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    } catch (e) {
+      console.warn('Could not parse existing helper data:', e);
+    }
+    
+    // Preserve existing OCR data and merge with manual input
+    if (!helper.expertise) {
+      helper.expertise = {};
+    }
+    
+    // If OCR data exists, merge manual data with it (manual data takes priority)
+    if (helper.expertise.levi_report) {
+      console.log('Merging manual data with existing OCR data');
+      helper.expertise.levi_report = { ...helper.expertise.levi_report, ...leviData };
+    } else {
+      console.log('No existing OCR data, using manual data only');
+      helper.expertise.levi_report = leviData;
+    }
+    
+    // Also update car details if provided
+    if (manufacturer || modelCode || category || year || fullModel) {
+      if (!helper.car_details) {
+        helper.car_details = {};
+      }
+      if (manufacturer) helper.car_details.manufacturer = manufacturer;
+      if (modelCode) helper.car_details.model_code = modelCode;
+      if (category) helper.car_details.category = category;
+      if (year) helper.car_details.year = year;
+      if (fullModel) helper.car_details.full_model = fullModel;
+    }
+    
+    // Save back to session storage
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    // Update the helper system (if updateHelper function exists)
+    if (typeof updateHelper === 'function') {
+      updateHelper(helper);
+    }
+    
+    console.log('Manual data saved to helper system:', leviData);
+    
+  } catch (error) {
+    console.error('Error saving manual data to helper:', error);
+  }
 };
 
 // Initialize when DOM is loaded
