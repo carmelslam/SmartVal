@@ -640,8 +640,8 @@ export function toggleFloatingScreen(screenType) {
       }
     },
     invoiceDetails: () => {
-      if (window.showInvoiceDetails) {
-        window.showInvoiceDetails();
+      if (window.toggleInvoiceDetails) {
+        window.toggleInvoiceDetails();
       } else {
         console.log('Invoice details floating screen not available');
       }
