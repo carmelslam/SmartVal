@@ -2,13 +2,13 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>דו"ח לוי יצחק - OCR</title>
+  <title>ירון כיוף שמאות - דו"ח לוי יצחק</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link href="https://fonts.googleapis.com/css2?family=Assistant&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       margin: 0;
       padding: 20px;
@@ -334,8 +334,7 @@
     }
     
     .footer-btns {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      display: flex;
       gap: 15px;
       margin-top: 30px;
       padding-top: 20px;
@@ -343,6 +342,7 @@
       max-width: 400px;
       margin-left: auto;
       margin-right: auto;
+      justify-content: center;
     }
     
     .footer {
@@ -353,8 +353,8 @@
     }
     
     .action-buttons {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
       gap: 15px;
       justify-content: center;
       margin-top: 20px;
@@ -505,8 +505,8 @@
     <div class="logo">
       <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
     </div>
-    <h1 class="title">דו"ח לוי יצחק - OCR</h1>
-    <div class="subtitle">ירון כיוף שמאות והערכת נזקי רכב ורכוש</div>
+    <h1 class="title">ירון כיוף שמאות</h1>
+    <div class="subtitle">דו"ח לוי יצחק - שמאות והערכת נזקי רכב ורכוש</div>
   </div>
 
   <div id="alerts-container"></div>
@@ -658,22 +658,12 @@
         </div>
       </div>
       
-      <!-- Adjustments Table -->
+      <!-- Price Adjustments - New Layout -->
       <div style="margin-top: 30px;">
         <h4>התאמות מחיר</h4>
-        <table class="adjustment-table" id="adjustments-table">
-          <thead>
-            <tr>
-              <th>סוג התאמה</th>
-              <th>אחוז (%)</th>
-              <th>ערך (₪)</th>
-              <th>סה"כ (₪)</th>
-            </tr>
-          </thead>
-          <tbody id="adjustments-body">
-            <!-- Adjustments will be populated here -->
-          </tbody>
-        </table>
+        <div id="adjustments-container">
+          <!-- Adjustments will be populated here -->
+        </div>
       </div>
       
       <!-- Manual Override Section -->
@@ -1075,24 +1065,32 @@ class LeviProcessor {
     const ocrContainer = document.getElementById('ocr-results');
     ocrContainer.classList.add('show');
 
-    // Vehicle Details
+    // Vehicle Details - Updated to match new OCR JSON structure
     const vehicleDetails = document.getElementById('vehicle-details');
     vehicleDetails.innerHTML = `
       <div class="data-item">
-        <span class="data-label">דגם מלא:</span>
-        <span class="data-value">${result.vehicle_details?.full_model || 'לא זמין'}</span>
+        <span class="data-label">סוג רכב:</span>
+        <span class="data-value">${result['סוג רכב'] || result.vehicle_details?.vehicle_type || 'לא זמין'}</span>
       </div>
       <div class="data-item">
-        <span class="data-label">שנת ייצור:</span>
-        <span class="data-value">${result.vehicle_details?.year || 'לא זמין'}</span>
+        <span class="data-label">יצרן:</span>
+        <span class="data-value">${result['יצרן'] || result.vehicle_details?.manufacturer || 'לא זמין'}</span>
       </div>
       <div class="data-item">
-        <span class="data-label">קילומטראז':</span>
-        <span class="data-value">${result.vehicle_details?.km ? result.vehicle_details.km.toLocaleString() : 'לא זמין'} ק"מ</span>
+        <span class="data-label">קוד דגם:</span>
+        <span class="data-value">${result['קוד דגם'] || result.vehicle_details?.model_code || 'לא זמין'}</span>
       </div>
       <div class="data-item">
-        <span class="data-label">תיבת הילוכים:</span>
-        <span class="data-value">${result.vehicle_details?.transmission || (result.vehicle_details?.is_automatic ? 'אוטומטי' : 'ידני')}</span>
+        <span class="data-label">קטגוריה:</span>
+        <span class="data-value">${result['קטגוריה'] || result.vehicle_details?.category || 'לא זמין'}</span>
+      </div>
+      <div class="data-item">
+        <span class="data-label">שנת יצור:</span>
+        <span class="data-value">${result['שנת יצור'] || result.vehicle_details?.year || 'לא זמין'}</span>
+      </div>
+      <div class="data-item">
+        <span class="data-label">שם דגם מלא:</span>
+        <span class="data-value">${result['שם דגם מלא'] || result.vehicle_details?.full_model || 'לא זמין'}</span>
       </div>
     `;
 
@@ -1113,20 +1111,22 @@ class LeviProcessor {
       </div>
     `;
 
-    // Pricing Details
+    // Pricing Details - Updated to match new OCR structure
     const pricingDetails = document.getElementById('pricing-details');
+    const basePrice = result['מחיר בסיס'] || result.pricing?.base_price || 0;
+    const finalPrice = result['מחיר סופי לרכב'] || result.pricing?.final_price || 0;
     pricingDetails.innerHTML = `
       <div class="data-item">
         <span class="data-label">מחיר בסיס:</span>
-        <span class="data-value">₪${(result.pricing?.base_price || 0).toLocaleString()}</span>
+        <span class="data-value">₪${parseFloat(basePrice).toLocaleString()}</span>
       </div>
       <div class="data-item">
-        <span class="data-label">מחיר סופי:</span>
-        <span class="data-value"><strong>₪${(result.pricing?.final_price || 0).toLocaleString()}</strong></span>
+        <span class="data-label">מחיר סופי לרכב:</span>
+        <span class="data-value"><strong>₪${parseFloat(finalPrice).toLocaleString()}</strong></span>
       </div>
       <div class="data-item">
         <span class="data-label">הפרש:</span>
-        <span class="data-value">₪${((result.pricing?.final_price || 0) - (result.pricing?.base_price || 0)).toLocaleString()}</span>
+        <span class="data-value">₪${(parseFloat(finalPrice) - parseFloat(basePrice)).toLocaleString()}</span>
       </div>
     `;
 
@@ -1139,35 +1139,57 @@ class LeviProcessor {
   }
 
   displayAdjustments(adjustments) {
-    const adjustmentsBody = document.getElementById('adjustments-body');
-    adjustmentsBody.innerHTML = '';
+    const adjustmentsContainer = document.getElementById('adjustments-container');
+    adjustmentsContainer.innerHTML = '';
 
-    const adjustmentTypes = {
-      registration: 'התאמת רישום',
-      km: 'התאמת קילומטראז\'',
-      ownership: 'סוג בעלות',
-      owner_count: 'מספר בעלים',
-      features: 'אביזרים',
-      total: 'סה"כ התאמות'
-    };
-
-    Object.entries(adjustments).forEach(([key, adjustment]) => {
-      if (adjustment && (adjustment.percent || adjustment.value || adjustment.total)) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${adjustmentTypes[key] || key}</td>
-          <td>${adjustment.percent || '0'}%</td>
-          <td>₪${(adjustment.value || 0).toLocaleString()}</td>
-          <td><strong>₪${(adjustment.total || 0).toLocaleString()}</strong></td>
-        `;
-        adjustmentsBody.appendChild(row);
+    // Define adjustment structure based on your OCR JSON example
+    const adjustmentSections = [
+      {
+        title: 'עליה לכביש',
+        fields: ['עליה לכביש', 'עליה לכביש %', 'ערך ש״ח עליה לכביש', 'שווי מצטבר עליה לכביש']
+      },
+      {
+        title: 'סוג בעלות',
+        fields: ['בעלות', 'בעלות %', 'ערך ש״ח בעלות', 'שווי מצטבר בעלות']
+      },
+      {
+        title: 'מספר ק״מ',
+        fields: ['מס ק״מ', 'מס ק״מ %', 'ערך ש״ח מס ק״מ', 'שווי מצטבר מס ק״מ']
+      },
+      {
+        title: 'מספר בעלים',
+        fields: ['מספר בעלים', 'מספר בעלים %', 'ערך ש״ח מספר בעלים', 'שווי מצטבר מספר בעלים']
+      },
+      {
+        title: 'מאפיינים',
+        fields: ['מאפיינים', 'מאפיינים %', 'ערך ש״ח מאפיינים', 'שווי מצטבר מאפיינים']
       }
+    ];
+
+    adjustmentSections.forEach(section => {
+      const adjustmentRow = document.createElement('div');
+      adjustmentRow.className = 'adjustment-row';
+      
+      const label = document.createElement('label');
+      label.textContent = section.title + ':';
+      adjustmentRow.appendChild(label);
+      
+      section.fields.forEach(fieldKey => {
+        const value = adjustments[fieldKey] || 
+                     (adjustments[section.title] && adjustments[section.title][fieldKey]) || 
+                     '';
+        
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'adjustment-value';
+        valueSpan.textContent = value || '-';
+        adjustmentRow.appendChild(valueSpan);
+      });
+      
+      adjustmentsContainer.appendChild(adjustmentRow);
     });
 
-    if (adjustmentsBody.children.length === 0) {
-      const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="4" style="text-align: center; color: #7f8c8d;">אין נתוני התאמות זמינים</td>';
-      adjustmentsBody.appendChild(row);
+    if (adjustmentsContainer.children.length === 0) {
+      adjustmentsContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">אין נתוני התאמות זמינים</p>';
     }
   }
 

@@ -100,7 +100,7 @@ All 16 issues from Audit 3 have been successfully addressed and fixed.
 - Error troubleshooting included
 - Contact information added
 
-### 13. ✅ OneSignal Push Notifications (Issue #13)
+### 13.  ✅ OneSignal Push Notifications (Issue #13)
 **Fixed:**
 - Updated manifest.json with proper configuration
 - Added GCM sender ID
@@ -366,8 +366,8 @@ Run your own deep check and conclude the issues broadness  inside the system .
 After understanding all the issues and running a comprehensive audit combined with my list , create a plan to fix the issues . The plan needs to be a task by task plan , DO NOT attempt to include everything in one go. The plan needs to fix issues first targeting foundation and root symptoms that run throughout the whole system and then targeting each module / issue separately .
 Here is the audit 3 list I found for now : 
 
-1. Open new case - redirects to password page and logs out  
-2. Slow down the logo spin  and make it stop half way 
+1. Open new case - redirects to password page and logs out - fixed  ✅
+2. Slow down the logo spin  and make it stop half way ✅
 3. Levi report page : 
     1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
     2. Keep general page styling as is fix just the styling issues listed below.
@@ -376,8 +376,8 @@ Here is the audit 3 list I found for now :
         2. Navigation buttons to be side by side not one under the other 
         3. The browser opens the site but returns an error : "The page cannot be displayed because an internal server error has occurred "
         4. We don't need the toggle דפדפן in the top of the page - beside the דו״ח לוי . The link in the green container is enough . Move this toggle with all its features and components to the selection page just before the logout button and make it in orange color style . 
-        5. Fix the title style so it matches the system : logo, site name , business name and page name 
-        6. The report toggle in the top : it's good but needs change of fields : 
+        5. Fix the title an dbusiness name and site name style so it matches the system : logo, site name , business name and page name 
+        6. The report toggle in the top דו"ח לוי: it's good but needs its outside teh page and also needs change of fields : 
             1. This is the received json from the OCR: 
   "סוג רכב": "",
   "יצרן": "",
@@ -419,7 +419,7 @@ Change the section with the price adjustments layout so each line contains all t
 Example : 
 סוג בעלות :
 פרטי - 5% - 2500₪- 70,000₪
-Data is in side the same square fields as we have now .
+Data is inside the same square fields as we have now .
 
 4. Multi pictures upload page : 
     1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
@@ -494,7 +494,9 @@ Data is in side the same square fields as we have now .
     2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
     3. I think best place for them is in the admin hub  
 
-16. General :
+16. in selection page move the expertise summary to be a part of the wizard as the last module in the wizard .
+
+17. General :
 *  Run a deep check across system files ensure that all  modules are configured correctly :
 * configurations, dependencies, workflows and data flow are according to the specs and documentations 
 *  Ensure all webhooks are active and connect correctly 
