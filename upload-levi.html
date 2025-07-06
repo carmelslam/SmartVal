@@ -881,6 +881,9 @@
       <button type="button" id="toggle-manual" class="btn btn-warning">
         ✏️ הזנה ידנית
       </button>
+      <button type="button" id="test-helper" class="btn btn-info" style="display: none;">
+        🧪 בדוק Helper
+      </button>
       <button type="button" id="continue-to-damage" class="btn btn-success" style="display: none;">
         ➡️ המשך למוקדי נזק
       </button>
@@ -954,6 +957,11 @@ class LeviProcessor {
     // Save manual data
     document.getElementById('save-manual').addEventListener('click', () => {
       this.saveManualData();
+    });
+
+    // Test helper integration
+    document.getElementById('test-helper').addEventListener('click', () => {
+      this.testHelperIntegration();
     });
 
     // Update prices
@@ -1087,6 +1095,8 @@ class LeviProcessor {
       // Show manual save button, hide OCR save button
       saveManualButton.style.display = 'inline-block';
       saveResultsButton.style.display = 'none';
+      // Show test button for debugging
+      document.getElementById('test-helper').style.display = 'inline-block';
       // Add event listeners for real-time saving
       setTimeout(() => addManualFieldListeners(), 100);
     } else {
@@ -1096,6 +1106,8 @@ class LeviProcessor {
       // Hide manual save button, keep OCR save button hidden (shows after processing)
       saveManualButton.style.display = 'none';
       saveResultsButton.style.display = 'none';
+      // Hide test button
+      document.getElementById('test-helper').style.display = 'none';
     }
   }
 
@@ -1555,6 +1567,70 @@ class LeviProcessor {
       console.error('Manual save error:', error);
       this.showAlert('❌ שגיאה בשמירת הנתונים הידניים', 'error');
     }
+  }
+
+  testHelperIntegration() {
+    console.log('=== HELPER INTEGRATION TEST ===');
+    
+    // Test 1: Save test data to helper
+    const testData = {
+      'סוג רכב': 'פרטי',
+      'יצרן': 'TEST_TOYOTA',
+      'מחיר בסיס': 150000,
+      'מחיר סופי לרכב': 165000,
+      'עליה לכביש %': 5,
+      'ערך ש״ח עליה לכביש': 7500
+    };
+    
+    let helper = {};
+    try {
+      helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    } catch (e) {
+      helper = {};
+    }
+    
+    if (!helper.expertise) helper.expertise = {};
+    helper.expertise.levi_report = testData;
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    console.log('1. Test data saved to helper:', testData);
+    
+    // Test 2: Verify data can be read back
+    const readBack = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    console.log('2. Data read back from helper:', readBack.expertise?.levi_report);
+    
+    // Test 3: Try to refresh floating screen
+    if (typeof refreshLeviData === 'function') {
+      console.log('3. Calling refreshLeviData()...');
+      refreshLeviData();
+    } else {
+      console.log('3. refreshLeviData function not found!');
+    }
+    
+    // Test 4: Check if floating screen is working
+    setTimeout(() => {
+      const modal = document.getElementById("leviModal");
+      if (modal) {
+        console.log('4. Floating modal exists');
+        const manufacturerElement = document.getElementById("levi-manufacturer");
+        if (manufacturerElement) {
+          console.log('5. Manufacturer field value:', manufacturerElement.textContent);
+          if (manufacturerElement.textContent.includes('TEST_TOYOTA')) {
+            alert('✅ Floating screen is working! Data shows: ' + manufacturerElement.textContent);
+          } else {
+            alert('❌ Floating screen not showing test data. Shows: ' + manufacturerElement.textContent);
+          }
+        } else {
+          console.log('5. Manufacturer element not found');
+          alert('❌ Floating screen elements not found');
+        }
+      } else {
+        console.log('4. Floating modal not found');
+        alert('❌ Floating modal not found');
+      }
+    }, 1000);
+    
+    console.log('=== END TEST ===');
   }
 
   updateHelperWithResults(result) {

@@ -9,7 +9,7 @@
       left: 50%;
       transform: translateX(-50%);
       width: 95%;
-      max-width: 700px;
+      max-width: 650px;
       max-height: 90vh;
       background: white;
       border: 1px solid #007bff;
