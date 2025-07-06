@@ -421,7 +421,7 @@ Example :
 פרטי - 5% - 2500₪- 70,000₪
 Data is inside the same square fields as we have now .
 
-4. Multi pictures upload page : 
+4. Multi pictures upload page : ✅
     1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
     2. Fix the upload function, on mobile and iPad to support : upload from gallery, upload from files, take a picture. On desktop : upload function, on mobile to support : upload from gallery, upload from files
     3. The function buttons: העלה תמונות ,
