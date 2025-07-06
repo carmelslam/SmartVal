@@ -354,7 +354,43 @@
         </div>
       </div>
     </div>
-    <!-- 6. SUMMARY BLOCKS -->
+    
+    <!-- 6. הפרשים SECTION (MOVED BEFORE SUMMARY) -->
+    <div class="form-section" id="differentialsSection">
+      <h3>הפרשים</h3>
+      <label style="margin-bottom:5px;">האם קיימים הפרשים?
+        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;">
+      </label>
+      <div id="differentialsTable" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 120px 120px 120px 80px; gap:14px; margin-top:15px; margin-bottom:10px;">
+          <div><label>תיאור הפרש:</label></div>
+          <div><label>סכום (ש"ח):</label></div>
+          <div><label>מע"מ:</label></div>
+          <div><label>סה"כ כולל מע"מ:</label></div>
+          <div><label>פעולות:</label></div>
+        </div>
+        <div id="differentialsRows"></div>
+        <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
+      </div>
+      <div id="differentialsSummary" style="display:none; margin-top:15px;">
+        <div class="form-grid">
+          <div>
+            <label>סה"כ הפרשים (ללא מע"מ):</label>
+            <div class="readonly-box" id="totalDifferentials">₪0</div>
+          </div>
+          <div>
+            <label>סה"כ מע"מ:</label>
+            <div class="readonly-box" id="totalVAT">₪0</div>
+          </div>
+          <div>
+            <label>סה"כ הפרשים כולל מע"מ:</label>
+            <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 7. SUMMARY BLOCKS -->
     <div class="form-section summary-block" id="summaryPrivate">
       <h3>סיכום - חוות דעת פרטית</h3>
       <div class="form-grid">
@@ -371,8 +407,12 @@
           <input type="text" id="depCompensation" />
         </div>
         <div>
-          <label>סה״כ נכלל בחוות הדעת:</label>
+          <label>סה״כ נכלל בחוות הדעת (לפני הפרשים):</label>
           <input type="text" id="sumTotal" readonly />
+        </div>
+        <div id="sumTotalAfterDifferentials-private" style="display:none;">
+          <label>סה״כ סופי (לאחר הפרשים):</label>
+          <input type="text" id="sumTotalFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
         </div>
       </div>
       <div style="margin:16px 0 0 0;">
@@ -398,8 +438,12 @@
           <input type="text" id="depCompensationGlobal" />
         </div>
         <div>
-          <label>סה״כ נכלל בחוות הדעת:</label>
+          <label>סה״כ נכלל בחוות הדעת (לפני הפרשים):</label>
           <input type="text" id="sumTotalGlobal" readonly />
+        </div>
+        <div id="sumTotalAfterDifferentials-global" style="display:none;">
+          <label>סה״כ סופי (לאחר הפרשים):</label>
+          <input type="text" id="sumTotalFinalGlobal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
         </div>
       </div>
       <div style="margin:16px 0 0 0;">
@@ -421,8 +465,12 @@
           <input type="text" id="saleValueDamage" />
         </div>
         <div>
-          <label>סה״כ לאחר מכירה:</label>
+          <label>סה״כ לאחר מכירה (לפני הפרשים):</label>
           <input type="text" id="afterSaleDamage" readonly />
+        </div>
+        <div id="sumTotalAfterDifferentials-damage" style="display:none;">
+          <label>סה״כ סופי (לאחר הפרשים):</label>
+          <input type="text" id="afterSaleDamageFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
         </div>
       </div>
       <div style="margin:16px 0 0 0;">
@@ -448,8 +496,12 @@
           <input type="text" id="storageValueTotal" />
         </div>
         <div>
-          <label>סה״כ לאחר מכירת שרידים:</label>
+          <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
           <input type="text" id="afterSaleTotal" readonly />
+        </div>
+        <div id="sumTotalAfterDifferentials-totalLoss" style="display:none;">
+          <label>סה״כ סופי (לאחר הפרשים):</label>
+          <input type="text" id="afterSaleTotalFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
         </div>
       </div>
       <div style="margin:16px 0 0 0;">
@@ -471,8 +523,12 @@
           <input type="text" id="salvageValueLegal" />
         </div>
         <div>
-          <label>סה״כ לאחר מכירת שרידים:</label>
+          <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
           <input type="text" id="afterSaleLegal" readonly />
+        </div>
+        <div id="sumTotalAfterDifferentials-legalLoss" style="display:none;">
+          <label>סה״כ סופי (לאחר הפרשים):</label>
+          <input type="text" id="afterSaleLegalFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
         </div>
       </div>
       <div style="margin:16px 0 0 0;">
@@ -493,39 +549,6 @@
       <label style="margin-bottom:2px;">
         <input type="checkbox" id="isAgreement" style="width:auto; margin-left:6px;"> בהסדר/לא בהסדר
       </label>
-    </div>
-  </div>
-</div>
-   <div class="form-section">
-  <h3>הפרשים</h3>
-  <label style="margin-bottom:5px;">האם קיימים הפרשים?
-    <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;">
-  </label>
-  <div id="differentialsTable" style="display:none;">
-    <div style="display:grid; grid-template-columns:1fr 120px 120px 120px 80px; gap:14px; margin-top:15px; margin-bottom:10px;">
-      <div><label>תיאור הפרש:</label></div>
-      <div><label>סכום (ש"ח):</label></div>
-      <div><label>מע"מ:</label></div>
-      <div><label>סה"כ כולל מע"מ:</label></div>
-      <div><label>פעולות:</label></div>
-    </div>
-    <div id="differentialsRows"></div>
-    <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
-  </div>
-  <div id="differentialsSummary" style="display:none; margin-top:15px;">
-    <div class="form-grid">
-      <div>
-        <label>סה"כ הפרשים (ללא מע"מ):</label>
-        <div class="readonly-box" id="totalDifferentials">₪0</div>
-      </div>
-      <div>
-        <label>סה"כ מע"מ:</label>
-        <div class="readonly-box" id="totalVAT">₪0</div>
-      </div>
-      <div>
-        <label>סה"כ הפרשים כולל מע"מ:</label>
-        <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
-      </div>
     </div>
   </div>
 </div>
@@ -553,22 +576,6 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
 
-  <!-- FINAL TOTAL WITH DIFFERENTIALS - OUTSIDE CONTAINER -->
-  <div class="container" style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white;">
-    <div style="text-align: center;">
-      <h3 style="color: white; margin-bottom: 15px; font-size: 22px;">סיכום סופי</h3>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 600px; margin: 0 auto;">
-        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; backdrop-filter: blur(10px);">
-          <div style="font-size: 16px; margin-bottom: 8px;">סה"כ נכלל בחוות הדעת:</div>
-          <div style="font-size: 24px; font-weight: bold;" id="finalBaseTotal">₪0</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3);">
-          <div style="font-size: 16px; margin-bottom: 8px;">סה"כ סופי עם הפרשים:</div>
-          <div style="font-size: 28px; font-weight: bold; color: #fbbf24;" id="finalTotalWithDifferentials">₪0</div>
-        </div>
-      </div>
-    </div>
-  </div>
   
   <script>
     // Authentication check

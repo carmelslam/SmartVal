@@ -369,18 +369,42 @@ function updateDifferentialsSummary() {
     $('totalDifferentialsWithVAT').innerText = `₪${totalWithVAT.toLocaleString()}`;
   }
   
-  // Calculate final total with differentials (including VAT)
-  const baseTotal = parseFloat(helper.expertise?.calculations?.total_compensation || 0);
-  const finalTotal = baseTotal + totalWithVAT;
+  // Update final subtotals in all summary sections
+  updateFinalSubtotals();
+}
+
+// NEW: Update final subtotals after differentials
+function updateFinalSubtotals() {
+  const differentials = collectDifferentials();
+  const totalWithVAT = differentials.reduce((sum, diff) => sum + diff.total_with_vat, 0);
   
-  if ($('finalTotalWithDifferentials')) {
-    $('finalTotalWithDifferentials').innerText = `₪${finalTotal.toLocaleString()}`;
-  }
+  // Define mapping of base subtotal fields to final subtotal fields
+  const subtotalMappings = [
+    { baseId: 'sumTotal', finalId: 'sumTotalFinal' },
+    { baseId: 'sumTotalGlobal', finalId: 'sumTotalFinalGlobal' },
+    { baseId: 'afterSaleDamage', finalId: 'afterSaleDamageFinal' },
+    { baseId: 'afterSaleTotal', finalId: 'afterSaleTotalFinal' },
+    { baseId: 'afterSaleLegal', finalId: 'afterSaleLegalFinal' }
+  ];
   
-  // Update the final total section outside container
-  if ($('finalBaseTotal')) {
-    $('finalBaseTotal').innerText = `₪${baseTotal.toLocaleString()}`;
-  }
+  subtotalMappings.forEach(mapping => {
+    const baseField = $(mapping.baseId);
+    const finalField = $(mapping.finalId);
+    
+    if (baseField && finalField) {
+      const baseValue = parseFloat(baseField.value.replace(/[^\d.-]/g, '')) || 0;
+      const finalValue = baseValue - totalWithVAT; // Subtract differentials from base subtotal
+      
+      finalField.value = `₪${Math.max(0, finalValue).toLocaleString()}`;
+      
+      // Add visual indication if final is different from base
+      if (finalValue !== baseValue) {
+        finalField.style.color = finalValue < baseValue ? '#dc3545' : '#28a745';
+      }
+    }
+  });
+  
+  console.log(`Final subtotals updated. Differentials total: ₪${totalWithVAT.toLocaleString()}`);
 }
 
 export function addDifferentialRow() {
@@ -489,9 +513,30 @@ function toggleDifferentials() {
   if (table) table.style.display = show ? 'block' : 'none';
   if (summary) summary.style.display = show ? 'block' : 'none';
   
+  // Show/hide final subtotal fields in all summary sections
+  const finalSubtotalFields = [
+    'sumTotalAfterDifferentials-private',
+    'sumTotalAfterDifferentials-global', 
+    'sumTotalAfterDifferentials-damage',
+    'sumTotalAfterDifferentials-totalLoss',
+    'sumTotalAfterDifferentials-legalLoss'
+  ];
+  
+  finalSubtotalFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.style.display = show ? 'block' : 'none';
+    }
+  });
+  
   // Add initial row if showing for first time
   if (show && $('differentialsRows') && $('differentialsRows').children.length === 0) {
     addDifferentialRow();
+  }
+  
+  // Update calculations if showing
+  if (show) {
+    updateFinalSubtotals();
   }
 }
 
