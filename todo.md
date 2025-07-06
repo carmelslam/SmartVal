@@ -434,7 +434,7 @@ Data is inside the same square fields as we have now .
     2. Fix the title style so it matches the system : logo, site name , business name and page name 
 
 6. Depreciation module : 
-    1. Change the buttons  font size it's way to big and doesn't match the general system style
+    1. Change the buttons  font size it's bold and doesn't match the general buttons font system style
     2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to to override automatic data 
     3. And override of automatic data ( not just here but across system) updates the helper and becomes the source of truth for the respective parameter overridden. 
     4. Floating screens toggles in the top : 

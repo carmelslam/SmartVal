@@ -217,6 +217,60 @@
       background: rgba(192, 57, 43, 1);
     }
     
+    /* Quick look modal styles */
+    .quick-look-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      backdrop-filter: blur(5px);
+    }
+    
+    .quick-look-content {
+      max-width: 90%;
+      max-height: 90%;
+      position: relative;
+    }
+    
+    .quick-look-image {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 10px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .quick-look-close {
+      position: absolute;
+      top: -15px;
+      right: -15px;
+      background: rgba(231, 76, 60, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+    
+    .quick-look-close:hover {
+      background: rgba(192, 57, 43, 1);
+    }
+    
+    .preview-image {
+      cursor: zoom-in;
+    }
+    
     .damage-center-selector {
       margin-bottom: 20px;
     }
@@ -686,6 +740,14 @@
   
   <div class="footer">All rights reserved © Carmel Cayouf</div>
 </div>
+
+<!-- Quick Look Modal -->
+<div id="quick-look-modal" class="quick-look-modal" onclick="closeQuickLook(event)">
+  <div class="quick-look-content">
+    <img id="quick-look-image" class="quick-look-image" src="" alt="Quick Look">
+    <button class="quick-look-close" onclick="closeQuickLook()">&times;</button>
+  </div>
+</div>
 <script type="module">
 import { sendToWebhook, getWebhook } from './webhook.js';
 import { updateHelper } from './helper.js';
@@ -916,9 +978,16 @@ class ImageUploadManager {
       const objectUrl = URL.createObjectURL(file);
       img.src = objectUrl;
       
+      // Add click event for quick look
+      img.onclick = (e) => {
+        e.stopPropagation();
+        this.showQuickLook(objectUrl, file.name);
+      };
+      
       // Clean up object URL when image loads
       img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
+        // Don't revoke immediately - keep for quick look
+        img.dataset.objectUrl = objectUrl;
       };
 
       const info = document.createElement('div');
@@ -1161,6 +1230,18 @@ class ImageUploadManager {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  showQuickLook(imageSrc, fileName) {
+    const modal = document.getElementById('quick-look-modal');
+    const modalImage = document.getElementById('quick-look-image');
+    
+    modalImage.src = imageSrc;
+    modalImage.alt = fileName;
+    modal.style.display = 'flex';
+    
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+  }
+
 }
 
 // Global functions
@@ -1198,6 +1279,19 @@ window.logout = function() {
   window.location.href = 'index.html';
 };
 
+window.closeQuickLook = function(event) {
+  // If event is provided and target is not the modal background, don't close
+  if (event && event.target.id !== 'quick-look-modal') {
+    return;
+  }
+  
+  const modal = document.getElementById('quick-look-modal');
+  modal.style.display = 'none';
+  
+  // Restore body scroll
+  document.body.style.overflow = '';
+};
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Auth check
@@ -1210,6 +1304,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize upload manager
   window.imageUploadManager = new ImageUploadManager();
+  
+  // Add keyboard support for quick look modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('quick-look-modal');
+      if (modal.style.display === 'flex') {
+        closeQuickLook();
+      }
+    }
+  });
 });
 
 </script>
