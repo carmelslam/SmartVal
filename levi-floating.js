@@ -5,18 +5,22 @@
   style.innerHTML = `
     #leviModal {
       position: fixed;
-      top: 70px;
-      left: 20px;
-      max-width: 520px;
+      top: 50px;
+      left: 50px;
+      width: 90vw;
+      max-width: 900px;
+      max-height: 85vh;
       background: white;
       border: 1px solid #007bff;
-      padding: 25px;
+      padding: 20px;
       z-index: 9999;
       box-shadow: 0 0 20px rgba(0,0,0,0.3);
       direction: rtl;
       font-family: sans-serif;
       border-radius: 12px;
       display: none;
+      overflow-y: auto;
+      cursor: move;
     }
     .levi-modal-title {
       font-size: 20px;
@@ -60,9 +64,13 @@
     }
     .levi-field {
       background: white;
-      padding: 10px;
+      padding: 8px;
       border-radius: 6px;
       border: 1px solid #e9ecef;
+      min-height: 45px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     .levi-field .label {
       font-weight: bold;
@@ -283,10 +291,43 @@
     if (modal.style.display === "none" || !modal.style.display) {
       loadLeviData();
       modal.style.display = "block";
+      makeDraggable(modal);
     } else {
       modal.style.display = "none";
     }
   };
+
+  // Make modal draggable
+  function makeDraggable(modal) {
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+
+    modal.addEventListener('mousedown', function(e) {
+      if (e.target === modal || e.target.classList.contains('levi-modal-title')) {
+        isDragging = true;
+        dragOffset.x = e.clientX - modal.offsetLeft;
+        dragOffset.y = e.clientY - modal.offsetTop;
+        modal.style.cursor = 'grabbing';
+      }
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (isDragging) {
+        const newLeft = Math.max(0, Math.min(window.innerWidth - modal.offsetWidth, e.clientX - dragOffset.x));
+        const newTop = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, e.clientY - dragOffset.y));
+        
+        modal.style.left = newLeft + 'px';
+        modal.style.top = newTop + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        modal.style.cursor = 'move';
+      }
+    });
+  }
 
   window.refreshLeviData = function () {
     loadLeviData();
@@ -439,8 +480,8 @@
     floatBtn.innerHTML = "דו\"ח לוי";
     floatBtn.style.cssText = `
       position: fixed;
-      top: 120px;
-      left: 50px;
+      top: 80px;
+      left: 80px;
       background: #007bff;
       color: white;
       border: none;
