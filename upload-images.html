@@ -334,13 +334,13 @@
     }
     
     .stat-number {
-      font-size: 24px;
-      font-weight: bold;
+      font-size: 18px;
+      font-weight: 600;
       display: block;
     }
     
     .stat-label {
-      font-size: 14px;
+      font-size: 12px;
       opacity: 0.9;
     }
     
@@ -568,14 +568,11 @@
       
       <!-- Upload Options -->
       <div class="upload-options">
-        <button type="button" class="upload-option-btn" onclick="selectFromFiles()">
-          📁 קבצים
+        <button type="button" class="upload-option-btn desktop-only" onclick="selectFromFiles()">
+          📁 העלה מהמכשיר
         </button>
-        <button type="button" class="upload-option-btn" onclick="selectFromGallery()">
-          🖼️ גלריה
-        </button>
-        <button type="button" class="upload-option-btn mobile-only" onclick="takePhoto()">
-          📸 מצלמה
+        <button type="button" class="upload-option-btn mobile-only" onclick="selectFromDevice()">
+          📱 העלה מהמכשיר
         </button>
       </div>
       
@@ -587,9 +584,7 @@
       </div>
       
       <!-- Hidden file inputs -->
-      <input id="file-input-files" type="file" accept="image/*" multiple style="display: none;">
-      <input id="file-input-gallery" type="file" accept="image/*" multiple style="display: none;">
-      <input id="file-input-camera" type="file" accept="image/*" capture="environment" style="display: none;">
+      <input id="file-input-device" type="file" accept="image/*" multiple style="display: none;">
       
       <!-- Statistics -->
       <div class="stats-container" style="display: none;">
@@ -683,17 +678,15 @@ class ImageUploadManager {
   }
 
   setupEventListeners() {
-    // File input change listeners for all inputs
-    ['file-input-files', 'file-input-gallery', 'file-input-camera'].forEach(inputId => {
-      const input = document.getElementById(inputId);
-      if (input) {
-        input.addEventListener('change', (e) => {
-          this.handleFileSelection(e.target.files);
-          // Clear the input so same file can be selected again
-          e.target.value = '';
-        });
-      }
-    });
+    // File input change listener
+    const fileInput = document.getElementById('file-input-device');
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        this.handleFileSelection(e.target.files);
+        // Clear the input so same file can be selected again
+        e.target.value = '';
+      });
+    }
 
     // Form submission
     document.getElementById('upload-form').addEventListener('submit', (e) => {
@@ -1094,15 +1087,11 @@ class ImageUploadManager {
 
 // Upload selection functions
 window.selectFromFiles = function() {
-  document.getElementById('file-input-files').click();
+  document.getElementById('file-input-device').click();
 };
 
-window.selectFromGallery = function() {
-  document.getElementById('file-input-gallery').click();
-};
-
-window.takePhoto = function() {
-  document.getElementById('file-input-camera').click();
+window.selectFromDevice = function() {
+  document.getElementById('file-input-device').click();
 };
 
 window.toggleMoreOptions = function() {
