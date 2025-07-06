@@ -647,8 +647,8 @@ export function toggleFloatingScreen(screenType) {
       }
     },
     internalBrowser: () => {
-      if (window.openInternalBrowser) {
-        window.openInternalBrowser();
+      if (window.showBrowserMenu) {
+        window.showBrowserMenu();
       } else {
         console.log('Internal browser not available');
       }
