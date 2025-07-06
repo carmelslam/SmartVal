@@ -516,10 +516,14 @@
     const floatBtn = document.createElement("button");
     floatBtn.id = "leviFloatBtn";
     floatBtn.innerHTML = "דו\"ח לוי";
+    // Position button inside container at left edge
+    const isMobile = window.innerWidth <= 768;
+    const leftPosition = isMobile ? '5%' : 'calc(50% - 260px + 20px)';
+    
     floatBtn.style.cssText = `
       position: fixed;
-      top: 80px;
-      left: 80px;
+      top: 120px;
+      left: ${leftPosition};
       background: #007bff;
       color: white;
       border: none;
@@ -533,6 +537,13 @@
     `;
     floatBtn.onclick = toggleLeviReport;
     document.body.appendChild(floatBtn);
+    
+    // Update position on window resize
+    window.addEventListener('resize', () => {
+      const isMobile = window.innerWidth <= 768;
+      const leftPosition = isMobile ? '5%' : 'calc(50% - 260px + 20px)';
+      floatBtn.style.left = leftPosition;
+    });
   }
 
 })();

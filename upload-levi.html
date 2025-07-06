@@ -17,8 +17,8 @@
     }
     
     .container {
-      max-width: 700px
-      width: 100%;
+      max-width: 520px;
+      width: 90%;
       background: #fff;
       padding: 30px;
       border-radius: 20px;
@@ -872,6 +872,9 @@
       <button type="button" id="save-results" class="btn btn-primary" style="display: none;">
         💾 שמור תוצאות
       </button>
+      <button type="button" id="save-manual" class="btn btn-success" style="display: none;">
+        💾 שמור נתונים ידניים
+      </button>
       <button type="button" id="clear-form" class="btn btn-secondary">
         🗑️ נקה טופס
       </button>
@@ -948,6 +951,11 @@ class LeviProcessor {
       this.saveResults();
     });
 
+    // Save manual data
+    document.getElementById('save-manual').addEventListener('click', () => {
+      this.saveManualData();
+    });
+
     // Update prices
     document.getElementById('update-prices').addEventListener('click', () => {
       this.updatePrices();
@@ -958,26 +966,70 @@ class LeviProcessor {
   }
 
   loadCaseData() {
-    // Load case data from session storage
+    try {
+      // Priority 1: Load from helper if available (most up-to-date)
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Load car details from helper
+      if (helper.car_details) {
+        if (helper.car_details.plate) {
+          document.getElementById('plate').value = helper.car_details.plate;
+        }
+      }
+      
+      // Load general info from helper
+      if (helper.general_info) {
+        if (helper.general_info.owner_name) {
+          document.getElementById('owner').value = helper.general_info.owner_name;
+        }
+        if (helper.general_info.office_code) {
+          document.getElementById('office_code').value = helper.general_info.office_code;
+        }
+      }
+      
+      // Load password from helper (multiple possible locations)
+      let password = null;
+      if (helper.credentials?.ycPass) {
+        password = helper.credentials.ycPass;
+      } else if (helper.general_info?.ycPass) {
+        password = helper.general_info.ycPass;
+      } else if (helper.general_info?.password) {
+        password = helper.general_info.password;
+      }
+      
+      if (password) {
+        document.getElementById('pass').value = password;
+      }
+      
+      console.log('Case data loaded from helper:', {
+        plate: helper.car_details?.plate,
+        owner: helper.general_info?.owner_name,
+        office_code: helper.general_info?.office_code,
+        password_found: !!password
+      });
+      
+    } catch (e) {
+      console.warn('Could not load helper data, falling back to session storage:', e);
+    }
+    
+    // Fallback: Load from session storage if helper data is not available
     const plate = sessionStorage.getItem('plate');
     const owner = sessionStorage.getItem('owner');
     const pass = sessionStorage.getItem('ycPass');
     const officeCode = sessionStorage.getItem('office_code');
 
-    if (plate) document.getElementById('plate').value = plate;
-    if (owner) document.getElementById('owner').value = owner;
-    if (pass) document.getElementById('pass').value = pass;
-    if (officeCode) document.getElementById('office_code').value = officeCode;
-
-    // Load from helper if available
-    try {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (helper.car_details) {
-        document.getElementById('plate').value = helper.car_details.plate || '';
-        document.getElementById('owner').value = helper.general_info?.owner_name || '';
-      }
-    } catch (e) {
-      console.warn('Could not load helper data:', e);
+    // Only use session storage if field is still empty
+    if (!document.getElementById('plate').value && plate) {
+      document.getElementById('plate').value = plate;
+    }
+    if (!document.getElementById('owner').value && owner) {
+      document.getElementById('owner').value = owner;
+    }
+    if (!document.getElementById('pass').value && pass) {
+      document.getElementById('pass').value = pass;
+    }
+    if (!document.getElementById('office_code').value && officeCode) {
+      document.getElementById('office_code').value = officeCode;
     }
   }
 
@@ -1025,15 +1077,23 @@ class LeviProcessor {
   handleReportSourceChange(source) {
     const uploadSection = document.getElementById('upload-section');
     const manualSection = document.getElementById('manual-section');
+    const saveResultsButton = document.getElementById('save-results');
+    const saveManualButton = document.getElementById('save-manual');
     
     if (source === 'manual') {
       uploadSection.style.display = 'none';
       manualSection.style.display = 'block';
       this.isManualMode = true;
+      // Show manual save button, hide OCR save button
+      saveManualButton.style.display = 'inline-block';
+      saveResultsButton.style.display = 'none';
     } else {
       uploadSection.style.display = 'block';
       manualSection.style.display = 'none';
       this.isManualMode = false;
+      // Hide manual save button, keep OCR save button hidden (shows after processing)
+      saveManualButton.style.display = 'none';
+      saveResultsButton.style.display = 'none';
     }
   }
 
@@ -1463,6 +1523,35 @@ class LeviProcessor {
     } catch (error) {
       console.error('Save error:', error);
       this.showAlert('❌ שגיאה בשמירת התוצאות', 'error');
+    }
+  }
+
+  async saveManualData() {
+    try {
+      // Get manual data from helper system
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.expertise || !helper.expertise.levi_report) {
+        this.showAlert('אין נתונים ידניים לשמירה', 'warning');
+        return;
+      }
+      
+      const manualData = {
+        ...helper.expertise.levi_report,
+        updated_at: new Date().toISOString(),
+        source: 'manual'
+      };
+      
+      // Save to helper system
+      this.updateHelperWithResults(manualData);
+      
+      // Send to webhook for manual data processing (different webhook than OCR)
+      await sendToWebhook('SAVE_MANUAL_LEVI', manualData);
+      
+      this.showAlert('✅ נתונים ידניים נשמרו בהצלחה', 'success');
+      
+    } catch (error) {
+      console.error('Manual save error:', error);
+      this.showAlert('❌ שגיאה בשמירת הנתונים הידניים', 'error');
     }
   }
 
