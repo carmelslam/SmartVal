@@ -326,8 +326,14 @@
     setInterval(updateIndicator, 5000);
   }
 
-  // Add status indicator after a short delay to ensure page is loaded
-  setTimeout(addNotificationStatusIndicator, 2000);
+  // Add status indicator after DOM is ready and with a delay
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(addNotificationStatusIndicator, 3000);
+    });
+  } else {
+    setTimeout(addNotificationStatusIndicator, 3000);
+  }
 
   // Expose utility functions globally
   window.oneSignalUtils = {
