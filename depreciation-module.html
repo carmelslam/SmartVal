@@ -122,7 +122,7 @@
       margin-top: 16px;
       margin-bottom: 0;
       cursor: pointer;
-      font-weight: 900;
+      font-weight: 600;
       transition: background .2s;
     }
     .btn.add {
@@ -140,6 +140,26 @@
       color: #aaa;
       text-align: center;
     }
+    .floating-toggle-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 120px;
+      text-align: center;
+    }
+    .floating-toggle-btn:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    .floating-toggle-btn:active {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -149,6 +169,24 @@
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
     <h1>מודול ירידת ערך ודו"ח סופי</h1>
     <h2 id="pageTitle">רכב מס. ...</h2>
+
+    <!-- FLOATING SCREENS TOGGLE CONTAINER -->
+    <div class="form-section" style="background: #f0f4f8; border: 1px solid #d1d5db; margin-bottom: 25px;">
+      <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <button type="button" class="floating-toggle-btn" onclick="toggleFloatingScreen('leviReport')">
+          דו"ח לוי יצחק
+        </button>
+        <button type="button" class="floating-toggle-btn" onclick="toggleFloatingScreen('carDetails')">
+          פרטי רכב
+        </button>
+        <button type="button" class="floating-toggle-btn" onclick="toggleFloatingScreen('invoiceDetails')">
+          פרטי חשבוניות
+        </button>
+        <button type="button" class="floating-toggle-btn" onclick="toggleFloatingScreen('internalBrowser')">
+          דפדפן פנימי
+        </button>
+      </div>
+    </div>
 
    <!-- REPORT TYPE & COMPANY ON ONE ROW -->
 <div class="form-section">
@@ -238,17 +276,21 @@
     <!-- 5. DEPRECIATION BULK SECTION -->
     <div class="form-section" id="depreciationSection">
       <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr 120px 80px; gap:14px; margin-bottom:10px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
         <div><label>% ירידת ערך:</label></div>
+        <div><label>ערך ב-₪:</label></div>
         <div><label>פעולות:</label></div>
       </div>
       <div id="depreciationBulkTable"></div>
       <button class="btn add" type="button" onclick="addDepField()">הוסף שדה</button>
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
-        <input type="number" id="globalDep1" placeholder="% ירידת ערך" />
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <input type="number" id="globalDep1" placeholder="% ירידת ערך" />
+          <input type="number" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
+        </div>
       </div>
     </div>
     <!-- 6. SUMMARY BLOCKS -->
@@ -275,7 +317,7 @@
       <div style="margin:16px 0 0 0;">
         <label>תוספות והורדות:</label>
         <div class="form-grid" id="sumAdditionsGrid"></div>
-        <button class="btn add" type="button" onclick="addSummaryRow()">הוסף שדה</button>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryPrivate')">הוסף שדה</button>
       </div>
     </div>
 
@@ -299,6 +341,11 @@
           <input type="text" id="sumTotalGlobal" readonly />
         </div>
       </div>
+      <div style="margin:16px 0 0 0;">
+        <label>תוספות והורדות:</label>
+        <div class="form-grid" id="sumAdditionsGridGlobal"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryGlobal')">הוסף שדה</button>
+      </div>
     </div>
 
     <div class="form-section summary-block" id="summaryDamage" style="display:none;">
@@ -316,6 +363,11 @@
           <label>סה״כ לאחר מכירה:</label>
           <input type="text" id="afterSaleDamage" readonly />
         </div>
+      </div>
+      <div style="margin:16px 0 0 0;">
+        <label>תוספות והורדות:</label>
+        <div class="form-grid" id="sumAdditionsGridDamage"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryDamage')">הוסף שדה</button>
       </div>
     </div>
 
@@ -339,6 +391,11 @@
           <input type="text" id="afterSaleTotal" readonly />
         </div>
       </div>
+      <div style="margin:16px 0 0 0;">
+        <label>תוספות והורדות:</label>
+        <div class="form-grid" id="sumAdditionsGridTotalLoss"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryTotalLoss')">הוסף שדה</button>
+      </div>
     </div>
 
     <div class="form-section summary-block" id="summaryLegalLoss" style="display:none;">
@@ -356,6 +413,11 @@
           <label>סה״כ לאחר מכירת שרידים:</label>
           <input type="text" id="afterSaleLegal" readonly />
         </div>
+      </div>
+      <div style="margin:16px 0 0 0;">
+        <label>תוספות והורדות:</label>
+        <div class="form-grid" id="sumAdditionsGridLegalLoss"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryLegalLoss')">הוסף שדה</button>
       </div>
     </div>
 
@@ -470,6 +532,8 @@
   <script src="internal-browser.js"></script>
   <script src="logout-sound.js"></script>
   <script src="assistant-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="car-details-floating.js"></script>
   <script src="onesignal-integration.js"></script>
 </body>
 </html>

@@ -79,9 +79,13 @@ function init() {
   if ($('globalDep1')) {
     $('globalDep1').value = dep.global_percent || '';
     $('globalDep1').addEventListener('input', () => {
+      calculateGlobalDepreciationValue();
       triggerMathCalculation();
       saveAndRefresh();
     });
+  }
+  if ($('globalDepValue')) {
+    $('globalDepValue').value = dep.global_amount || '';
   }
 
   // Work days, agreement
@@ -119,7 +123,8 @@ function collectDepCenters() {
   return Array.from(document.querySelectorAll('#depreciationBulkTable .dep-row')).map(row => ({
     part: row.querySelector('.dep-part').value.trim(),
     repair: row.querySelector('.dep-repair').value.trim(),
-    percent: parseFloat(row.querySelector('.dep-percent').value) || 0
+    percent: parseFloat(row.querySelector('.dep-percent').value) || 0,
+    value: parseFloat(row.querySelector('.dep-value').value) || 0
   }));
 }
 
@@ -130,6 +135,10 @@ function renderDepTable(list) {
   list.forEach(item => {
     const row = createDepRow(item);
     table.appendChild(row);
+    // Calculate value if percent is set but value is missing
+    if (item.percent && !item.value) {
+      calculateDepreciationValue(row);
+    }
   });
 }
 
@@ -137,13 +146,14 @@ function createDepRow(data = {}) {
   const div = document.createElement('div');
   div.className = 'dep-row';
   div.style.display = 'grid';
-  div.style.gridTemplateColumns = '1fr 1fr 120px 80px';
+  div.style.gridTemplateColumns = '1fr 1fr 120px 120px 80px';
   div.style.gap = '14px';
   div.style.marginBottom = '10px';
   div.innerHTML = `
     <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.part || ''}"></div>
     <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${data.repair || ''}"></div>
     <div><input type="number" class="dep-percent" placeholder="%" value="${data.percent || ''}"></div>
+    <div><input type="number" class="dep-value" placeholder="₪" value="${data.value || ''}" readonly style="background:#f4f6fa;"></div>
     <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
   div.querySelector('.remove').addEventListener('click', () => {
@@ -152,11 +162,22 @@ function createDepRow(data = {}) {
   });
   ['dep-part','dep-repair','dep-percent'].forEach(cls => {
     div.querySelector('.' + cls).addEventListener('input', () => {
-      if (cls === 'dep-percent') triggerMathCalculation();
+      if (cls === 'dep-percent') {
+        calculateDepreciationValue(div);
+        triggerMathCalculation();
+      }
       saveAndRefresh();
     });
   });
   return div;
+}
+
+// Calculate depreciation value for individual row
+function calculateDepreciationValue(row) {
+  const percent = parseFloat(row.querySelector('.dep-percent').value) || 0;
+  const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+  const value = Math.round((marketValue * percent) / 100);
+  row.querySelector('.dep-value').value = value;
 }
 
 export function addDepField() {
@@ -273,6 +294,76 @@ export function addSummaryRow() {
   addDifferentialRow();
 }
 
+// FIXED: Custom summary field functionality
+export function addCustomSummaryField(summaryType) {
+  const gridMapping = {
+    'summaryPrivate': 'sumAdditionsGrid',
+    'summaryGlobal': 'sumAdditionsGridGlobal', 
+    'summaryDamage': 'sumAdditionsGridDamage',
+    'summaryTotalLoss': 'sumAdditionsGridTotalLoss',
+    'summaryLegalLoss': 'sumAdditionsGridLegalLoss'
+  };
+  
+  const gridId = gridMapping[summaryType];
+  const grid = document.getElementById(gridId);
+  
+  if (!grid) {
+    console.warn('Grid not found for summary type:', summaryType);
+    return;
+  }
+  
+  const row = document.createElement('div');
+  row.className = 'custom-summary-row';
+  row.style.display = 'grid';
+  row.style.gridTemplateColumns = '1fr 1fr 80px';
+  row.style.gap = '10px';
+  row.style.marginBottom = '10px';
+  
+  row.innerHTML = `
+    <div>
+      <input type="text" class="custom-field-name" placeholder="שם השדה" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <div>
+      <input type="text" class="custom-field-value" placeholder="ערך" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <div>
+      <button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0; font-size: 14px;">✕</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  row.querySelector('.remove').addEventListener('click', () => {
+    row.remove();
+    saveAndRefresh();
+  });
+  
+  row.querySelector('.custom-field-name').addEventListener('input', saveAndRefresh);
+  row.querySelector('.custom-field-value').addEventListener('input', saveAndRefresh);
+  
+  grid.appendChild(row);
+  console.log(`Added custom field to ${summaryType}`);
+}
+
+function collectCustomSummaryFields(summaryType) {
+  const gridMapping = {
+    'summaryPrivate': 'sumAdditionsGrid',
+    'summaryGlobal': 'sumAdditionsGridGlobal', 
+    'summaryDamage': 'sumAdditionsGridDamage',
+    'summaryTotalLoss': 'sumAdditionsGridTotalLoss',
+    'summaryLegalLoss': 'sumAdditionsGridLegalLoss'
+  };
+  
+  const gridId = gridMapping[summaryType];
+  const grid = document.getElementById(gridId);
+  
+  if (!grid) return [];
+  
+  return Array.from(grid.querySelectorAll('.custom-summary-row')).map(row => ({
+    name: row.querySelector('.custom-field-name').value.trim(),
+    value: row.querySelector('.custom-field-value').value.trim()
+  })).filter(field => field.name || field.value);
+}
+
 // FIXED: Collapsible section toggle
 export function toggleSection(id) {
   const el = document.getElementById(id);
@@ -349,7 +440,14 @@ function saveAndRefresh() {
     is_agreement: $('isAgreement')?.checked || false,
     has_differentials: $('hasDifferentials')?.checked || false,
     differentials: collectDifferentials(),
-    global_amount: calculateGlobalAmount()
+    global_amount: calculateGlobalAmount(),
+    custom_summary_fields: {
+      private: collectCustomSummaryFields('summaryPrivate'),
+      global: collectCustomSummaryFields('summaryGlobal'),
+      damage: collectCustomSummaryFields('summaryDamage'),
+      totalLoss: collectCustomSummaryFields('summaryTotalLoss'),
+      legalLoss: collectCustomSummaryFields('summaryLegalLoss')
+    }
   };
   
   updateHelper('expertise', { depreciation: depreciationData });
@@ -368,6 +466,16 @@ function calculateGlobalAmount() {
   const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
   const percent = parseFloat($('globalDep1')?.value || 0);
   return Math.round((marketValue * percent) / 100);
+}
+
+// Calculate and update global depreciation value field
+function calculateGlobalDepreciationValue() {
+  const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+  const percent = parseFloat($('globalDep1')?.value || 0);
+  const value = Math.round((marketValue * percent) / 100);
+  if ($('globalDepValue')) {
+    $('globalDepValue').value = value;
+  }
 }
 
 function refreshSummary() {
@@ -411,12 +519,56 @@ function refreshSummary() {
   if ($('storageValueTotal')) $('storageValueTotal').value = calc.storage_value || '';
 }
 
+// FIXED: Floating screen toggle function
+export function toggleFloatingScreen(screenType) {
+  console.log('Toggling floating screen:', screenType);
+  
+  const screens = {
+    leviReport: () => {
+      if (window.toggleLeviReport) {
+        window.toggleLeviReport();
+      } else {
+        console.log('Levi report floating screen not available');
+      }
+    },
+    carDetails: () => {
+      if (window.toggleCarDetails) {
+        window.toggleCarDetails();
+      } else {
+        console.log('Car details floating screen not available');
+      }
+    },
+    invoiceDetails: () => {
+      if (window.showInvoiceDetails) {
+        window.showInvoiceDetails();
+      } else {
+        console.log('Invoice details floating screen not available');
+      }
+    },
+    internalBrowser: () => {
+      if (window.openInternalBrowser) {
+        window.openInternalBrowser();
+      } else {
+        console.log('Internal browser not available');
+      }
+    }
+  };
+  
+  if (screens[screenType]) {
+    screens[screenType]();
+  } else {
+    console.warn('Unknown screen type:', screenType);
+  }
+}
+
 // Global function exports
 window.addDepField = addDepField;
 window.addDifferentialRow = addDifferentialRow;
 window.addSummaryRow = addSummaryRow;
+window.addCustomSummaryField = addCustomSummaryField;
 window.toggleSection = toggleSection;
 window.updateSummaryVisibility = updateSummaryVisibility;
+window.toggleFloatingScreen = toggleFloatingScreen;
 
 // Generate report function placeholder
 window.generateAdditionalReport = () => {

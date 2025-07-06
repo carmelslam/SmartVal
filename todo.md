@@ -435,11 +435,11 @@ Data is inside the same square fields as we have now .
 
 6. Depreciation module : 
     1. Change the buttons  font size it's bold and doesn't match the general buttons font system style
-    2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to to override automatic data 
+    2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to override automatic data 
     3. And override of automatic data ( not just here but across system) updates the helper and becomes the source of truth for the respective parameter overridden. 
     4. Floating screens toggles in the top : 
         1. Fix toggle buttons - for now they display as one pipe for both functions and without names .
-        2. The floating screens here should be : Levi report ( the one we improved when we worked on Levi module) , car details floating screen ( from helper ) , internal browser selection - exist but the button is displayed badly . Create a new floating screen that captures the main fields from the invoice which at this point is already OCRed and live in the helper : garage name , date, details of works, parts and repairs including costs . If an invoice doesn't exist or not needed depending on the report type despite a corresponding message . 
+        2. The floating screens here should be : Levi report ( the one we improved when we worked on Levi module) , car details floating screen ( from helper ) , internal browser selection - exist but the button is displayed badly . Create a new floating screen that captures the main fields from the invoice which at this point is already OCRed and live in the helper : garage name , date, details of works, parts and repairs including costs . If an invoice doesn't exist or not needed depending on the report type - display a corresponding message . 
     5. Change in the title instead of car plate number , case id - pulled from helper . 
     6. In the summary bulk ( in all types ) needs to "הוסף שדה ״  option to add free text , this needs to open name field and value field . In all types .
     7. In depreciation bulk add another field that calculate the value of the percentage from the car market price . The percentage field that we have is important beside it needs to be added the field of depreciation value in ₪ .
