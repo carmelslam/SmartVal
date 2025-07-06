@@ -495,6 +495,23 @@
       margin: 0 5px;
       font-family: monospace;
     }
+
+    .adjustment-section {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .adjustment-section h5 {
+      margin: 0 0 15px 0;
+      color: #495057;
+      font-size: 16px;
+      font-weight: bold;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -588,40 +605,176 @@
 
     <!-- Manual Entry Section -->
     <div class="section" id="manual-section" style="display: none;">
-      <h3>הזנה ידנית - פרטי הרכב</h3>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="manual-model">דגם מלא:</label>
-          <input id="manual-model" type="text" placeholder="דגם הרכב המלא" />
-        </div>
-        <div class="form-group">
-          <label for="manual-year">שנת ייצור:</label>
-          <input id="manual-year" type="number" min="1980" max="2030" placeholder="שנת ייצור" />
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        ⚠️ <strong>הזנה ידנית - אפשרות גיבוי בלבד</strong><br>
+        אפשרות זו משמשת רק במקרים חריגים כאשר OCR לא עובד. האם אתה בטוח שברצונך להמשיך?
+        <div style="margin-top: 10px;">
+          <button type="button" onclick="confirmManualEntry()" style="background: #f39c12; color: white; border: none; padding: 8px 15px; border-radius: 4px; margin-right: 10px;">כן, המשך</button>
+          <button type="button" onclick="cancelManualEntry()" style="background: #95a5a6; color: white; border: none; padding: 8px 15px; border-radius: 4px;">ביטול</button>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="manual-km">קילומטראז':</label>
-          <input id="manual-km" type="number" min="0" placeholder="קילומטראז' הרכב" />
+
+      <div id="manual-form-content" style="display: none;">
+        <h3>הזנה ידנית - דו"ח לוי יצחק</h3>
+        
+        <!-- Basic Vehicle Info -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="manual-vehicle-type">סוג רכב:</label>
+            <input id="manual-vehicle-type" type="text" placeholder="סוג רכב" />
+          </div>
+          <div class="form-group">
+            <label for="manual-manufacturer">יצרן:</label>
+            <input id="manual-manufacturer" type="text" placeholder="יצרן הרכב" />
+          </div>
         </div>
-        <div class="form-group">
-          <label for="manual-transmission">סוג תיבת הילוכים:</label>
-          <select id="manual-transmission">
-            <option value="">בחר סוג תיבה</option>
-            <option value="manual">ידני</option>
-            <option value="automatic">אוטומטי</option>
-            <option value="cvt">CVT</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="manual-model-code">קוד דגם:</label>
+            <input id="manual-model-code" type="text" placeholder="קוד דגם" />
+          </div>
+          <div class="form-group">
+            <label for="manual-category">קטגוריה:</label>
+            <input id="manual-category" type="text" placeholder="קטגוריית הרכב" />
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="manual-base-price">מחיר בסיס:</label>
-          <input id="manual-base-price" type="number" min="0" step="100" placeholder="מחיר בסיס בשקלים" />
+        <div class="form-row">
+          <div class="form-group">
+            <label for="manual-year">שנת יצור:</label>
+            <input id="manual-year" type="number" min="1980" max="2030" placeholder="שנת יצור" />
+          </div>
+          <div class="form-group">
+            <label for="manual-full-model">שם דגם מלא:</label>
+            <input id="manual-full-model" type="text" placeholder="שם דגם מלא" />
+          </div>
         </div>
-        <div class="form-group">
-          <label for="manual-final-price">מחיר סופי:</label>
-          <input id="manual-final-price" type="number" min="0" step="100" placeholder="מחיר סופי בשקלים" />
+        <div class="form-row">
+          <div class="form-group">
+            <label for="manual-base-price">מחיר בסיס:</label>
+            <input id="manual-base-price" type="number" min="0" step="100" placeholder="מחיר בסיס בשקלים" onchange="calculateFinalPrice()" />
+          </div>
+          <div class="form-group">
+            <label for="manual-final-price">מחיר סופי לרכב: <span style="color: #888;">(מחושב אוטומטית)</span></label>
+            <input id="manual-final-price" type="number" min="0" step="100" placeholder="מחושב אוטומטית" readonly style="background: #f8f9fa;" />
+          </div>
+        </div>
+
+        <!-- Price Adjustments -->
+        <h4 style="margin-top: 30px; color: #2c3e50;">התאמות מחיר</h4>
+        
+        <!-- Registration Adjustment -->
+        <div class="adjustment-section">
+          <h5>עליה לכביש:</h5>
+          <div class="form-row">
+            <div class="form-group">
+              <label>עליה לכביש:</label>
+              <input id="manual-registration" type="text" placeholder="סוג עליה לכביש" />
+            </div>
+            <div class="form-group">
+              <label>עליה לכביש %:</label>
+              <input id="manual-registration-percent" type="number" step="0.1" placeholder="0" onchange="calculateFinalPrice()" />
+            </div>
+            <div class="form-group">
+              <label>ערך ש״ח עליה לכביש:</label>
+              <input id="manual-registration-value" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+            <div class="form-group">
+              <label>שווי מצטבר עליה לכביש:</label>
+              <input id="manual-registration-total" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Ownership Adjustment -->
+        <div class="adjustment-section">
+          <h5>סוג בעלות:</h5>
+          <div class="form-row">
+            <div class="form-group">
+              <label>בעלות:</label>
+              <input id="manual-ownership" type="text" placeholder="סוג בעלות" />
+            </div>
+            <div class="form-group">
+              <label>בעלות %:</label>
+              <input id="manual-ownership-percent" type="number" step="0.1" placeholder="0" onchange="calculateFinalPrice()" />
+            </div>
+            <div class="form-group">
+              <label>ערך ש״ח בעלות:</label>
+              <input id="manual-ownership-value" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+            <div class="form-group">
+              <label>שווי מצטבר בעלות:</label>
+              <input id="manual-ownership-total" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- KM Adjustment -->
+        <div class="adjustment-section">
+          <h5>מספר ק״מ:</h5>
+          <div class="form-row">
+            <div class="form-group">
+              <label>מס ק״מ:</label>
+              <input id="manual-km" type="text" placeholder="מספר ק״מ" />
+            </div>
+            <div class="form-group">
+              <label>מס ק״מ %:</label>
+              <input id="manual-km-percent" type="number" step="0.1" placeholder="0" onchange="calculateFinalPrice()" />
+            </div>
+            <div class="form-group">
+              <label>ערך ש״ח מס ק״מ:</label>
+              <input id="manual-km-value" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+            <div class="form-group">
+              <label>שווי מצטבר מס ק״מ:</label>
+              <input id="manual-km-total" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Owners Adjustment -->
+        <div class="adjustment-section">
+          <h5>מספר בעלים:</h5>
+          <div class="form-row">
+            <div class="form-group">
+              <label>מספר בעלים:</label>
+              <input id="manual-owners" type="text" placeholder="מספר בעלים" />
+            </div>
+            <div class="form-group">
+              <label>מספר בעלים %:</label>
+              <input id="manual-owners-percent" type="number" step="0.1" placeholder="0" onchange="calculateFinalPrice()" />
+            </div>
+            <div class="form-group">
+              <label>ערך ש״ח מספר בעלים:</label>
+              <input id="manual-owners-value" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+            <div class="form-group">
+              <label>שווי מצטבר מספר בעלים:</label>
+              <input id="manual-owners-total" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Features Adjustment -->
+        <div class="adjustment-section">
+          <h5>מאפיינים:</h5>
+          <div class="form-row">
+            <div class="form-group">
+              <label>מאפיינים:</label>
+              <input id="manual-features" type="text" placeholder="מאפיינים" />
+            </div>
+            <div class="form-group">
+              <label>מאפיינים %:</label>
+              <input id="manual-features-percent" type="number" step="0.1" placeholder="0" onchange="calculateFinalPrice()" />
+            </div>
+            <div class="form-group">
+              <label>ערך ש״ח מאפיינים:</label>
+              <input id="manual-features-value" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+            <div class="form-group">
+              <label>שווי מצטבר מאפיינים:</label>
+              <input id="manual-features-total" type="number" step="100" placeholder="0" readonly style="background: #f8f9fa;" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -990,39 +1143,55 @@ class LeviProcessor {
   }
 
   processManualEntry() {
-    // Process manual entry data
+    // Process manual entry data according to exact JSON structure
     const manualData = {
+      // Basic vehicle information
+      'סוג רכב': document.getElementById('manual-vehicle-type').value,
+      'יצרן': document.getElementById('manual-manufacturer').value,
+      'קוד דגם': document.getElementById('manual-model-code').value,
+      'קטגוריה': document.getElementById('manual-category').value,
+      'שנת יצור': document.getElementById('manual-year').value,
+      'שם דגם מלא': document.getElementById('manual-full-model').value,
+      'מחיר בסיס': document.getElementById('manual-base-price').value,
+      'מחיר סופי לרכב': document.getElementById('manual-final-price').value,
+
+      // Price adjustments - Registration
+      'עליה לכביש': document.getElementById('manual-registration').value,
+      'עליה לכביש %': document.getElementById('manual-registration-percent').value,
+      'ערך ש״ח עליה לכביש': document.getElementById('manual-registration-value').value,
+      'שווי מצטבר עליה לכביש': document.getElementById('manual-registration-total').value,
+
+      // Price adjustments - Ownership
+      'בעלות': document.getElementById('manual-ownership').value,
+      'בעלות %': document.getElementById('manual-ownership-percent').value,
+      'ערך ש״ח בעלות': document.getElementById('manual-ownership-value').value,
+      'שווי מצטבר בעלות': document.getElementById('manual-ownership-total').value,
+
+      // Price adjustments - KM
+      'מס ק״מ': document.getElementById('manual-km').value,
+      'מס ק״מ %': document.getElementById('manual-km-percent').value,
+      'ערך ש״ח מס ק״מ': document.getElementById('manual-km-value').value,
+      'שווי מצטבר מס ק״מ': document.getElementById('manual-km-total').value,
+
+      // Price adjustments - Owners
+      'מספר בעלים': document.getElementById('manual-owners').value,
+      'מספר בעלים %': document.getElementById('manual-owners-percent').value,
+      'ערך ש״ח מספר בעלים': document.getElementById('manual-owners-value').value,
+      'שווי מצטבר מספר בעלים': document.getElementById('manual-owners-total').value,
+
+      // Price adjustments - Features
+      'מאפיינים': document.getElementById('manual-features').value,
+      'מאפיינים %': document.getElementById('manual-features-percent').value,
+      'ערך ש״ח מאפיינים': document.getElementById('manual-features-value').value,
+      'שווי מצטבר מאפיינים': document.getElementById('manual-features-total').value,
+
+      // Meta information
       plate: document.getElementById('plate').value,
       owner: document.getElementById('owner').value,
       office_code: document.getElementById('office_code').value,
       valuation_date: document.getElementById('valuation-date').value,
-      vehicle_details: {
-        full_model: document.getElementById('manual-model').value,
-        year: parseInt(document.getElementById('manual-year').value) || '',
-        km: parseInt(document.getElementById('manual-km').value) || '',
-        transmission: document.getElementById('manual-transmission').value,
-        is_automatic: document.getElementById('manual-transmission').value === 'automatic'
-      },
-      pricing: {
-        base_price: parseFloat(document.getElementById('manual-base-price').value) || 0,
-        final_price: parseFloat(document.getElementById('manual-final-price').value) || 0
-      },
       source: 'manual_entry',
       processed_at: new Date().toISOString()
-    };
-
-    // Calculate adjustments based on base and final price
-    const basePrice = manualData.pricing.base_price;
-    const finalPrice = manualData.pricing.final_price;
-    const adjustment = finalPrice - basePrice;
-    const adjustmentPercent = basePrice > 0 ? ((adjustment / basePrice) * 100).toFixed(2) : 0;
-
-    manualData.adjustments = {
-      total: {
-        percent: adjustmentPercent,
-        value: adjustment,
-        total: finalPrice
-      }
     };
 
     return manualData;
@@ -1442,6 +1611,74 @@ window.openLeviPortal = function() {
 window.logout = function() {
   sessionStorage.clear();
   window.location.href = 'index.html';
+};
+
+// Manual entry confirmation functions
+window.confirmManualEntry = function() {
+  if (confirm('⚠️ אזהרה: הזנה ידנית משמשת רק לצרכים חריגים.\n\nהאם אתה בטוח שברצונך להמשיך עם הזנה ידנית במקום OCR?')) {
+    document.getElementById('manual-form-content').style.display = 'block';
+  }
+};
+
+window.cancelManualEntry = function() {
+  const reportSource = document.getElementById('report-source');
+  reportSource.value = 'screenshot';
+  const uploadSection = document.getElementById('upload-section');
+  const manualSection = document.getElementById('manual-section');
+  uploadSection.style.display = 'block';
+  manualSection.style.display = 'none';
+};
+
+// Math engine calculation function
+window.calculateFinalPrice = function() {
+  const basePrice = parseFloat(document.getElementById('manual-base-price').value) || 0;
+  
+  if (basePrice <= 0) {
+    document.getElementById('manual-final-price').value = '';
+    return;
+  }
+
+  // Get all percentage adjustments
+  const registrationPercent = parseFloat(document.getElementById('manual-registration-percent').value) || 0;
+  const ownershipPercent = parseFloat(document.getElementById('manual-ownership-percent').value) || 0;
+  const kmPercent = parseFloat(document.getElementById('manual-km-percent').value) || 0;
+  const ownersPercent = parseFloat(document.getElementById('manual-owners-percent').value) || 0;
+  const featuresPercent = parseFloat(document.getElementById('manual-features-percent').value) || 0;
+
+  // Calculate individual adjustment values
+  const registrationValue = Math.round(basePrice * (registrationPercent / 100));
+  const ownershipValue = Math.round(basePrice * (ownershipPercent / 100));
+  const kmValue = Math.round(basePrice * (kmPercent / 100));
+  const ownersValue = Math.round(basePrice * (ownersPercent / 100));
+  const featuresValue = Math.round(basePrice * (featuresPercent / 100));
+
+  // Update individual value fields
+  document.getElementById('manual-registration-value').value = registrationValue;
+  document.getElementById('manual-ownership-value').value = ownershipValue;
+  document.getElementById('manual-km-value').value = kmValue;
+  document.getElementById('manual-owners-value').value = ownersValue;
+  document.getElementById('manual-features-value').value = featuresValue;
+
+  // Calculate cumulative totals
+  let runningTotal = basePrice;
+  
+  runningTotal += registrationValue;
+  document.getElementById('manual-registration-total').value = Math.round(runningTotal);
+  
+  runningTotal += ownershipValue;
+  document.getElementById('manual-ownership-total').value = Math.round(runningTotal);
+  
+  runningTotal += kmValue;
+  document.getElementById('manual-km-total').value = Math.round(runningTotal);
+  
+  runningTotal += ownersValue;
+  document.getElementById('manual-owners-total').value = Math.round(runningTotal);
+  
+  runningTotal += featuresValue;
+  document.getElementById('manual-features-total').value = Math.round(runningTotal);
+
+  // Final price is the last cumulative total
+  document.getElementById('manual-final-price').value = Math.round(runningTotal);
 };
 
 // Initialize when DOM is loaded
