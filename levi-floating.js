@@ -151,10 +151,6 @@
       background: #28a745;
       color: white;
     }
-    .levi-btn.edit {
-      background: #ffc107;
-      color: #212529;
-    }
   `;
   document.head.appendChild(style);
 
@@ -318,7 +314,6 @@
     <div class="levi-buttons">
       <button class="levi-btn close" onclick="toggleLeviReport()">סגור</button>
       <button class="levi-btn refresh" onclick="refreshLeviData()">רענן נתונים</button>
-      <button class="levi-btn edit" onclick="editLeviData()">ערוך</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -369,10 +364,6 @@
 
   window.refreshLeviData = function () {
     loadLeviData();
-  };
-
-  window.editLeviData = function () {
-    alert("פונקציונליות עריכה תתווסף בגרסה הבאה");
   };
 
   function loadLeviData() {
