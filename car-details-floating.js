@@ -120,70 +120,90 @@
     <div class="car-modal-title">פרטי רכב</div>
     
     <div class="car-section">
-      <h4>פרטי הרכב הבסיסיים</h4>
+      <h4>פרטי רכב (Vehicle)</h4>
       <div class="car-field">
         <div class="label">מספר רכב:</div>
-        <div class="value" id="car-plate">-</div>
+        <div class="value" id="vehicle-plate">-</div>
       </div>
       <div class="car-field">
         <div class="label">יצרן:</div>
-        <div class="value" id="car-manufacturer">-</div>
+        <div class="value" id="vehicle-manufacturer">-</div>
       </div>
       <div class="car-field">
         <div class="label">דגם:</div>
-        <div class="value" id="car-model">-</div>
+        <div class="value" id="vehicle-model">-</div>
       </div>
       <div class="car-field">
         <div class="label">שנת יצור:</div>
-        <div class="value" id="car-year">-</div>
+        <div class="value" id="vehicle-year">-</div>
       </div>
       <div class="car-field">
-        <div class="label">צבע:</div>
-        <div class="value" id="car-color">-</div>
+        <div class="label">קילומטראז׳:</div>
+        <div class="value" id="vehicle-km">-</div>
       </div>
       <div class="car-field">
-        <div class="label">מספר שילדה:</div>
-        <div class="value" id="car-chassis">-</div>
+        <div class="label">שילדה:</div>
+        <div class="value" id="vehicle-chassis">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">קוד דגם:</div>
+        <div class="value" id="vehicle-model-code">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">סוג דלק:</div>
+        <div class="value" id="vehicle-fuel-type">-</div>
       </div>
     </div>
 
     <div class="car-section">
-      <h4>פרטי בעלים</h4>
+      <h4>פרטי רכב נוספים (Car Details)</h4>
       <div class="car-field">
-        <div class="label">שם בעל הרכב:</div>
-        <div class="value" id="car-owner-name">-</div>
+        <div class="label">בעלים:</div>
+        <div class="value" id="car-owner">-</div>
       </div>
       <div class="car-field">
-        <div class="label">ת.ז בעל הרכב:</div>
-        <div class="value" id="car-owner-id">-</div>
+        <div class="label">סוג בעלות:</div>
+        <div class="value" id="car-ownership-type">-</div>
       </div>
       <div class="car-field">
-        <div class="label">כתובת:</div>
+        <div class="label">ערך שוק:</div>
+        <div class="value" id="car-market-value">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">תאריך נזק:</div>
+        <div class="value" id="car-damage-date">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">כתובת בעלים:</div>
         <div class="value" id="car-owner-address">-</div>
       </div>
       <div class="car-field">
-        <div class="label">טלפון:</div>
+        <div class="label">טלפון בעלים:</div>
         <div class="value" id="car-owner-phone">-</div>
       </div>
     </div>
 
     <div class="car-section">
-      <h4>פרטי ביטוח</h4>
+      <h4>פרטי מוסך וביטוח</h4>
+      <div class="car-field">
+        <div class="label">שם מוסך:</div>
+        <div class="value" id="garage-name">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">טלפון מוסך:</div>
+        <div class="value" id="garage-phone">-</div>
+      </div>
       <div class="car-field">
         <div class="label">חברת ביטוח:</div>
-        <div class="value" id="car-insurance-company">-</div>
+        <div class="value" id="insurance-company">-</div>
       </div>
       <div class="car-field">
-        <div class="label">מספר פוליסה:</div>
-        <div class="value" id="car-policy-number">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">סוכן ביטוח:</div>
-        <div class="value" id="car-insurance-agent">-</div>
+        <div class="label">סוכן:</div>
+        <div class="value" id="agent-name">-</div>
       </div>
       <div class="car-field">
         <div class="label">טלפון סוכן:</div>
-        <div class="value" id="car-agent-phone">-</div>
+        <div class="value" id="agent-phone">-</div>
       </div>
     </div>
 
@@ -283,25 +303,30 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Vehicle information - using proper helper structure
-    document.getElementById("car-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
-    document.getElementById("car-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
-    document.getElementById("car-model").textContent = formatValue(vehicle.model || carDetails.model);
-    document.getElementById("car-year").textContent = formatValue(vehicle.year || carDetails.year);
-    document.getElementById("car-color").textContent = formatValue(vehicle.color || carDetails.color);
-    document.getElementById("car-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
+    // helper.vehicle fields
+    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number);
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer);
+    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model);
+    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year);
+    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km);
+    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis);
+    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code);
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type);
 
-    // Owner information - prioritize client data, fallback to car_details
-    document.getElementById("car-owner-name").textContent = formatValue(client.name || carDetails.owner);
-    document.getElementById("car-owner-id").textContent = formatValue(client.id_number || carDetails.owner_id);
-    document.getElementById("car-owner-address").textContent = formatValue(client.address || carDetails.ownerAddress);
-    document.getElementById("car-owner-phone").textContent = formatValue(client.phone_number || carDetails.ownerPhone);
+    // helper.car_details fields  
+    document.getElementById("car-owner").textContent = formatValue(carDetails.owner);
+    document.getElementById("car-ownership-type").textContent = formatValue(carDetails.ownership_type);
+    document.getElementById("car-market-value").textContent = formatValue(carDetails.market_value);
+    document.getElementById("car-damage-date").textContent = formatValue(carDetails.damageDate);
+    document.getElementById("car-owner-address").textContent = formatValue(carDetails.ownerAddress);
+    document.getElementById("car-owner-phone").textContent = formatValue(carDetails.ownerPhone);
 
-    // Insurance information - using proper helper structure
-    document.getElementById("car-insurance-company").textContent = formatValue(client.insurance_company || carDetails.insuranceCompany);
-    document.getElementById("car-policy-number").textContent = formatValue(client.policy_number || carDetails.policy_number);
-    document.getElementById("car-insurance-agent").textContent = formatValue(client.insurance_agent || carDetails.agentName);
-    document.getElementById("car-agent-phone").textContent = formatValue(client.insurance_agent_phone || carDetails.agentPhone);
+    // Garage and insurance from helper.car_details
+    document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
+    document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
+    document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
+    document.getElementById("agent-name").textContent = formatValue(carDetails.agentName);
+    document.getElementById("agent-phone").textContent = formatValue(carDetails.agentPhone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
