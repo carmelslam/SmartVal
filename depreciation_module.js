@@ -277,15 +277,28 @@ export function addDepField() {
 function collectDifferentials() {
   return Array.from(document.querySelectorAll('#differentialsRows .diff-row')).map(row => {
     const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
-    // Get VAT rate from system configuration (default 18%)
-    const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-                    MathEngine.getVatRate() / 100 : 0.18;
-    const vat = amount * vatRate;
+    const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
+    const total = parseFloat(row.querySelector('.diff-total').value) || 0;
+    
+    // Get description from either dropdown selection or manual input
+    const selectElement = row.querySelector('.diff-desc-select');
+    const textInput = row.querySelector('.diff-desc');
+    let description = '';
+    
+    if (selectElement && selectElement.value && selectElement.value !== 'custom') {
+      // Use dropdown selection text
+      description = selectElement.options[selectElement.selectedIndex].text;
+    } else {
+      // Use manual input
+      description = textInput.value.trim();
+    }
+    
     return {
-      desc: row.querySelector('.diff-desc').value.trim(),
+      desc: description,
       amount: amount,
-      vat: Math.round(vat),
-      total_with_vat: Math.round(amount + vat)
+      vat: vat,
+      total_with_vat: total,
+      invoiceItemId: row.dataset.invoiceItemId || null
     };
   });
 }
@@ -315,40 +328,207 @@ function createDiffRow(data = {}) {
   const vat = data.vat || Math.round((data.amount || 0) * vatRate);
   const totalWithVat = data.total_with_vat || Math.round((data.amount || 0) * (1 + vatRate));
   
+  // Create invoice items dropdown
+  const invoiceItems = getInvoiceItemsForDropdown();
+  const optionsHtml = invoiceItems.map(item => 
+    `<option value="${item.id}" ${data.invoiceItemId === item.id ? 'selected' : ''}>${item.description}</option>`
+  ).join('');
+  
   div.innerHTML = `
-    <div><input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}"></div>
-    <div><input type="number" class="diff-amount" placeholder="סכום" value="${data.amount || ''}"></div>
+    <div>
+      <select class="diff-desc-select" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        <option value="">בחר פריט מהחשבונית...</option>
+        ${optionsHtml}
+        <option value="custom">הזנה ידנית</option>
+      </select>
+      <input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}" style="width:100%; margin-top:5px; display:${data.desc && !data.invoiceItemId ? 'block' : 'none'};">
+    </div>
+    <div><input type="number" class="diff-amount" placeholder="סכום" value="${data.amount || ''}" readonly style="background:#f4f6fa;"></div>
     <div><input type="number" class="diff-vat" placeholder="מע&quot;מ" value="${vat}" readonly style="background:#f4f6fa;"></div>
     <div><input type="number" class="diff-total" placeholder="סה&quot;כ" value="${totalWithVat}" readonly style="background:#f4f6fa;"></div>
     <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
   
+  // Setup event listeners
+  setupDifferentialRowEvents(div);
+  
+  return div;
+}
+
+// NEW: Get invoice items for dropdown
+function getInvoiceItemsForDropdown() {
+  const items = [];
+  
+  try {
+    let helper = {};
+    
+    // Try to get data from sessionStorage helper
+    try {
+      const storedHelper = sessionStorage.getItem('helper');
+      if (storedHelper) {
+        helper = JSON.parse(storedHelper);
+      }
+    } catch (parseError) {
+      console.warn('Could not parse helper from sessionStorage:', parseError);
+    }
+    
+    // Fallback to global helper variable
+    if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
+      helper = window.helper;
+    }
+    
+    // Get invoice data
+    const invoice = helper.invoice || {};
+    const documentsInvoices = helper.documents?.invoices || [];
+    
+    // Add main invoice items
+    if (invoice.parts && Array.isArray(invoice.parts)) {
+      invoice.parts.forEach((part, index) => {
+        if (part.name && part.price) {
+          items.push({
+            id: `part_${index}`,
+            description: `חלק: ${part.name} - ${part.description || ''}`,
+            amount: parseFloat(part.price) || 0,
+            type: 'part'
+          });
+        }
+      });
+    }
+    
+    if (invoice.works && Array.isArray(invoice.works)) {
+      invoice.works.forEach((work, index) => {
+        if (work.type && work.cost) {
+          items.push({
+            id: `work_${index}`,
+            description: `עבודה: ${work.type} - ${work.description || ''}`,
+            amount: parseFloat(work.cost) || 0,
+            type: 'work'
+          });
+        }
+      });
+    }
+    
+    if (invoice.repairs && Array.isArray(invoice.repairs)) {
+      invoice.repairs.forEach((repair, index) => {
+        if (repair.name && repair.cost) {
+          items.push({
+            id: `repair_${index}`,
+            description: `תיקון: ${repair.name} - ${repair.description || ''}`,
+            amount: parseFloat(repair.cost) || 0,
+            type: 'repair'
+          });
+        }
+      });
+    }
+    
+    // Add document invoices items
+    documentsInvoices.forEach((docInvoice, docIndex) => {
+      if (typeof docInvoice === 'object') {
+        Object.keys(docInvoice).forEach(key => {
+          const value = docInvoice[key];
+          if (typeof value === 'number' && value > 0) {
+            items.push({
+              id: `doc_${docIndex}_${key}`,
+              description: `חשבונית ${docIndex + 1}: ${key}`,
+              amount: value,
+              type: 'document'
+            });
+          }
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error loading invoice items:', error);
+  }
+  
+  return items;
+}
+
+// NEW: Setup differential row events
+function setupDifferentialRowEvents(div) {
+  const selectElement = div.querySelector('.diff-desc-select');
+  const textInput = div.querySelector('.diff-desc');
+  const amountInput = div.querySelector('.diff-amount');
+  const vatInput = div.querySelector('.diff-vat');
+  const totalInput = div.querySelector('.diff-total');
+  
+  // Handle dropdown selection
+  selectElement.addEventListener('change', function() {
+    const selectedValue = this.value;
+    
+    if (selectedValue === 'custom') {
+      // Show manual input
+      textInput.style.display = 'block';
+      amountInput.style.background = '#fff';
+      amountInput.removeAttribute('readonly');
+      amountInput.value = '';
+      vatInput.value = '';
+      totalInput.value = '';
+      textInput.focus();
+    } else if (selectedValue === '') {
+      // No selection
+      textInput.style.display = 'none';
+      amountInput.style.background = '#f4f6fa';
+      amountInput.setAttribute('readonly', 'true');
+      amountInput.value = '';
+      vatInput.value = '';
+      totalInput.value = '';
+    } else {
+      // Invoice item selected
+      const invoiceItems = getInvoiceItemsForDropdown();
+      const selectedItem = invoiceItems.find(item => item.id === selectedValue);
+      
+      if (selectedItem) {
+        textInput.style.display = 'none';
+        textInput.value = selectedItem.description;
+        
+        // Auto-populate amount, VAT, and total
+        const amount = selectedItem.amount;
+        const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+                        MathEngine.getVatRate() / 100 : 0.18;
+        const vat = Math.round(amount * vatRate);
+        const total = Math.round(amount + vat);
+        
+        amountInput.value = amount;
+        vatInput.value = vat;
+        totalInput.value = total;
+        
+        // Save the selection
+        div.dataset.invoiceItemId = selectedValue;
+        saveAndRefresh();
+        updateDifferentialsSummary();
+      }
+    }
+  });
+  
+  // Handle manual amount input (only when custom is selected)
+  amountInput.addEventListener('input', function() {
+    if (selectElement.value === 'custom') {
+      const amount = parseFloat(this.value) || 0;
+      const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+                      MathEngine.getVatRate() / 100 : 0.18;
+      const vat = Math.round(amount * vatRate);
+      const total = Math.round(amount + vat);
+      vatInput.value = vat;
+      totalInput.value = total;
+      triggerMathCalculation();
+      saveAndRefresh();
+      updateDifferentialsSummary();
+    }
+  });
+  
+  // Handle manual description input
+  textInput.addEventListener('input', () => {
+    saveAndRefresh();
+  });
+  
+  // Handle row removal
   div.querySelector('.remove').addEventListener('click', () => {
     div.remove();
     saveAndRefresh();
     updateDifferentialsSummary();
   });
-  
-  // Update VAT and total when amount changes
-  div.querySelector('.diff-amount').addEventListener('input', function() {
-    const amount = parseFloat(this.value) || 0;
-    // Get VAT rate from system configuration (default 18%)
-    const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-                    MathEngine.getVatRate() / 100 : 0.18;
-    const vat = Math.round(amount * vatRate);
-    const total = Math.round(amount + vat);
-    div.querySelector('.diff-vat').value = vat;
-    div.querySelector('.diff-total').value = total;
-    triggerMathCalculation();
-    saveAndRefresh();
-    updateDifferentialsSummary();
-  });
-  
-  div.querySelector('.diff-desc').addEventListener('input', () => {
-    saveAndRefresh();
-  });
-  
-  return div;
 }
 
 function updateDifferentialsSummary() {
