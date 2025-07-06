@@ -4,7 +4,7 @@
   const style = document.createElement("style");
   style.innerHTML = `
     #leviModal {
-      position: absolute;
+      position: fixed;
       top: 50px;
       left: 50px;
       width: 90vw;
