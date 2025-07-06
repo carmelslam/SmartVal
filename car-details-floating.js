@@ -27,12 +27,13 @@
     @media (max-width: 768px) {
       #carDetailsModal {
         top: 10px;
+        left: 2.5%;
+        transform: none;
         width: 95%;
         max-width: 95%;
         padding: 15px;
-        margin: 10px;
-        left: 50%;
-        transform: translateX(-50%);
+        margin: 0;
+        box-sizing: border-box;
       }
     }
     
