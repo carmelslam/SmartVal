@@ -781,29 +781,29 @@
     const menu = document.createElement('div');
     menu.style.cssText = `
       position: fixed;
-      top: 50%;
+      bottom: 120px;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       background: white;
       border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 15px;
+      padding: 20px;
       z-index: 99999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       font-family: sans-serif;
       direction: rtl;
-      min-width: 250px;
+      min-width: 280px;
     `;
     
     menu.innerHTML = `
-      <div style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">בחר אתר לפתיחה:</div>
-      <button onclick="openInternalBrowser('car-part.co.il'); this.parentElement.remove();" style="width: 100%; padding: 8px; margin-bottom: 5px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">
+      <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50; font-size: 16px;">בחר אתר לפתיחה:</div>
+      <button onclick="openInternalBrowser('car-part.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
         🔧 Car Part - חלקי רכב
       </button>
-      <button onclick="openInternalBrowser('portal.levi-itzhak.co.il'); this.parentElement.remove();" style="width: 100%; padding: 8px; margin-bottom: 5px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">
+      <button onclick="openInternalBrowser('portal.levi-itzhak.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
         📊 פורטל לוי יצחק
       </button>
-      <button onclick="this.parentElement.remove();" style="width: 100%; padding: 6px; border: 1px solid #ccc; background: white; color: #666; border-radius: 4px; cursor: pointer;">
+      <button onclick="this.parentElement.remove();" style="width: 100%; padding: 10px; border: 1px solid #ccc; background: white; color: #666; border-radius: 6px; cursor: pointer; font-size: 14px;">
         ביטול
       </button>
     `;
