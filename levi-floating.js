@@ -441,10 +441,6 @@
       // Deep merge with defaults to ensure all properties exist
       leviData = deepMerge(defaultData, leviData);
 
-      // Debug: Log what data we're about to display
-      console.log('Final leviData to display in floating screen:', leviData);
-      console.log('Data has keys:', Object.keys(leviData));
-      
       // Update UI with validated data
       updateLeviDisplay(leviData);
 

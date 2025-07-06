@@ -881,9 +881,6 @@
       <button type="button" id="toggle-manual" class="btn btn-warning">
         ✏️ הזנה ידנית
       </button>
-      <button type="button" id="test-helper" class="btn btn-info" style="display: none;">
-        🧪 בדוק Helper
-      </button>
       <button type="button" id="continue-to-damage" class="btn btn-success" style="display: none;">
         ➡️ המשך למוקדי נזק
       </button>
@@ -959,10 +956,6 @@ class LeviProcessor {
       this.saveManualData();
     });
 
-    // Test helper integration
-    document.getElementById('test-helper').addEventListener('click', () => {
-      this.testHelperIntegration();
-    });
 
     // Update prices
     document.getElementById('update-prices').addEventListener('click', () => {
@@ -1095,8 +1088,6 @@ class LeviProcessor {
       // Show manual save button, hide OCR save button
       saveManualButton.style.display = 'inline-block';
       saveResultsButton.style.display = 'none';
-      // Show test button for debugging
-      document.getElementById('test-helper').style.display = 'inline-block';
       // Add event listeners for real-time saving
       setTimeout(() => addManualFieldListeners(), 100);
     } else {
@@ -1106,8 +1097,6 @@ class LeviProcessor {
       // Hide manual save button, keep OCR save button hidden (shows after processing)
       saveManualButton.style.display = 'none';
       saveResultsButton.style.display = 'none';
-      // Hide test button
-      document.getElementById('test-helper').style.display = 'none';
     }
   }
 
@@ -1569,110 +1558,6 @@ class LeviProcessor {
     }
   }
 
-  testHelperIntegration() {
-    console.log('=== COMPREHENSIVE FLOATING SCREEN DIAGNOSTIC ===');
-    
-    // Step 1: Check if floating screen script is loaded
-    console.log('1. Checking if floating screen is loaded...');
-    const modal = document.getElementById("leviModal");
-    const button = document.getElementById("leviFloatBtn");
-    
-    if (!modal) {
-      alert('❌ CRITICAL: Floating screen modal not found. Script may not be loaded.');
-      return;
-    }
-    
-    if (!button) {
-      alert('❌ CRITICAL: Floating screen button not found.');
-      return;
-    }
-    
-    console.log('✅ Modal and button exist');
-    
-    // Step 2: Test basic functionality
-    console.log('2. Testing functions...');
-    if (typeof refreshLeviData !== 'function') {
-      alert('❌ CRITICAL: refreshLeviData function not found');
-      return;
-    }
-    
-    if (typeof toggleLeviReport !== 'function') {
-      alert('❌ CRITICAL: toggleLeviReport function not found');
-      return;
-    }
-    
-    console.log('✅ Functions exist');
-    
-    // Step 3: Clear any existing data and set test data
-    console.log('3. Setting up test data...');
-    const testData = {
-      'יצרן': 'DIAGNOSTIC_TEST',
-      'מחיר בסיס': 100000,
-      'מחיר סופי לרכב': 110000
-    };
-    
-    // Clear sessionStorage
-    sessionStorage.removeItem('helper');
-    sessionStorage.removeItem('leviData');
-    
-    // Set fresh test data
-    const helper = {
-      expertise: {
-        levi_report: testData
-      }
-    };
-    sessionStorage.setItem('helper', JSON.stringify(helper));
-    console.log('✅ Test data set:', testData);
-    
-    // Step 4: Test data reading
-    console.log('4. Testing data reading...');
-    const readTest = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    console.log('Data read back:', readTest.expertise?.levi_report);
-    
-    // Step 5: Force refresh floating screen
-    console.log('5. Refreshing floating screen...');
-    refreshLeviData();
-    
-    // Step 6: Open modal and check display
-    console.log('6. Opening modal...');
-    toggleLeviReport();
-    
-    // Step 7: Check if data appears correctly
-    setTimeout(() => {
-      console.log('7. Checking display...');
-      const manufacturerEl = document.getElementById("levi-manufacturer");
-      const basePriceEl = document.getElementById("levi-base-price");
-      
-      if (!manufacturerEl || !basePriceEl) {
-        alert('❌ CRITICAL: Display elements not found');
-        return;
-      }
-      
-      const manufacturerText = manufacturerEl.textContent;
-      const priceText = basePriceEl.textContent;
-      
-      console.log('Manufacturer shows:', manufacturerText);
-      console.log('Base price shows:', priceText);
-      
-      let result = '';
-      if (manufacturerText.includes('DIAGNOSTIC_TEST')) {
-        result += '✅ Manufacturer: WORKING\n';
-      } else {
-        result += `❌ Manufacturer: FAILED (shows: ${manufacturerText})\n`;
-      }
-      
-      if (priceText.includes('100,000') || priceText.includes('100000')) {
-        result += '✅ Price: WORKING\n';
-      } else {
-        result += `❌ Price: FAILED (shows: ${priceText})\n`;
-      }
-      
-      alert(`FLOATING SCREEN TEST RESULTS:\n\n${result}`);
-      
-    }, 2000);
-    
-    console.log('=== DIAGNOSTIC COMPLETE ===');
-  }
 
   updateHelperWithResults(result) {
     try {
@@ -1908,6 +1793,11 @@ window.calculateFinalPrice = function() {
   
   // Save manual data to helper system (same as OCR behavior)
   saveManualDataToHelper();
+  
+  // Immediately update floating screen when calculations change
+  if (typeof refreshLeviData === 'function') {
+    refreshLeviData();
+  }
 };
 
 // Save manual data to helper system (behave like OCR)
@@ -2035,14 +1925,7 @@ window.saveManualDataToHelper = function() {
       console.log('Floating Levi report updated with manual data');
     }
     
-    console.log('Manual data saved to helper system:', leviData);
-    console.log('Full helper object after save:', JSON.stringify(helper, null, 2));
-    
-    // Debug: Check if floating screen can access this data
-    setTimeout(() => {
-      const testHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('Verification - helper from sessionStorage:', testHelper.expertise?.levi_report);
-    }, 100);
+    console.log('Manual data saved to helper system and floating screen refreshed');
     
   } catch (error) {
     console.error('Error saving manual data to helper:', error);
@@ -2061,17 +1944,31 @@ window.addManualFieldListeners = function() {
   manualFields.forEach(fieldId => {
     const field = document.getElementById(fieldId);
     if (field) {
-      field.addEventListener('input', () => {
+      // Remove any existing listeners first
+      field.removeEventListener('input', field._manualSaveHandler);
+      field.removeEventListener('change', field._manualSaveHandler);
+      
+      // Create the handler function
+      field._manualSaveHandler = () => {
         // Debounce the save to avoid too many calls
         clearTimeout(window.manualSaveTimeout);
         window.manualSaveTimeout = setTimeout(() => {
+          console.log(`Manual field ${fieldId} changed, saving data...`);
           saveManualDataToHelper();
-        }, 500);
-      });
+          // Refresh floating screen immediately
+          if (typeof refreshLeviData === 'function') {
+            refreshLeviData();
+          }
+        }, 300); // Reduced debounce time for more responsive updates
+      };
+      
+      // Add listeners for both input and change events
+      field.addEventListener('input', field._manualSaveHandler);
+      field.addEventListener('change', field._manualSaveHandler);
     }
   });
   
-  console.log('Manual field listeners added for real-time saving');
+  console.log('Manual field listeners added for real-time saving and floating screen refresh');
 };
 
 // Initialize when DOM is loaded
