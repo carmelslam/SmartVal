@@ -280,6 +280,28 @@
     });
   }
 
-  // Floating button removed - toggle moved inside container as requested
+  // Add toggle button to access Levi report - positioned within container area
+  if (!document.getElementById("leviFloatBtn")) {
+    const floatBtn = document.createElement("button");
+    floatBtn.id = "leviFloatBtn";
+    floatBtn.innerHTML = "דו\"ח לוי";
+    floatBtn.style.cssText = `
+      position: fixed;
+      top: 80px;
+      left: 30px;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 9998;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    `;
+    floatBtn.onclick = toggleLeviReport;
+    document.body.appendChild(floatBtn);
+  }
 
 })();
