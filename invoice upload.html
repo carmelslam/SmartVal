@@ -606,7 +606,17 @@ class InvoiceProcessor {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (helper.car_details) {
         document.getElementById('plate').value = helper.car_details.plate || '';
-        document.getElementById('owner').value = helper.general_info?.owner_name || '';
+      }
+      if (helper.general_info) {
+        document.getElementById('owner').value = helper.general_info.owner_name || '';
+        // Load garage name from helper if available
+        if (helper.general_info.garage_name) {
+          document.getElementById('garage_name').value = helper.general_info.garage_name;
+        }
+      }
+      // Load password from helper if available and not already loaded from session
+      if (helper.authentication && helper.authentication.password && !pass) {
+        document.getElementById('pass').value = helper.authentication.password;
       }
     } catch (e) {
       console.warn('Could not load helper data:', e);
