@@ -778,6 +778,23 @@ function updateSummaryVisibility() {
     }
     console.log(`Differentials section: ${hideDifferentials ? 'hidden' : 'shown'}`);
   }
+  
+  // Hide final subtotal fields for special report types (no differences)
+  const specialReportTypes = (type === 'חוות דעת טוטלוסט' || type === 'חוות דעת מכירה מצבו הניזוק' || type === 'חוות דעת אובדן להלכה');
+  const finalSubtotalFields = [
+    'sumTotalAfterDifferentials-damage',
+    'sumTotalAfterDifferentials-totalLoss', 
+    'sumTotalAfterDifferentials-legalLoss'
+  ];
+  
+  finalSubtotalFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      if (specialReportTypes) {
+        field.style.display = 'none';
+      }
+    }
+  });
 }
 
 function saveAndRefresh() {
