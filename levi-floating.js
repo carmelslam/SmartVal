@@ -24,39 +24,50 @@
       cursor: move;
     }
     
-    @media (max-width: 768px) {
+    @media only screen and (max-width: 768px) {
       #leviModal {
-        top: 10px;
-        left: 10px;
-        width: calc(100vw - 20px);
-        max-width: calc(100vw - 20px);
-        transform: none;
-        padding: 15px;
-        border-radius: 12px;
-        max-height: calc(100vh - 20px);
+        top: 5px !important;
+        left: 5px !important;
+        right: 5px !important;
+        bottom: auto !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+        max-height: 90vh !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
       }
       
       .levi-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px 8px;
-        font-size: 12px;
+        grid-template-columns: repeat(1, 1fr) !important;
+        gap: 8px !important;
+        font-size: 12px !important;
       }
       
       .levi-field {
-        padding: 6px;
-        min-height: 40px;
+        padding: 8px !important;
+        min-height: 35px !important;
       }
       
       .levi-field .label {
-        font-size: 11px;
+        font-size: 12px !important;
+        margin-bottom: 2px !important;
       }
       
       .levi-field .value {
-        font-size: 13px;
+        font-size: 14px !important;
       }
       
       .levi-adjustment-group h5 {
-        font-size: 13px;
+        font-size: 14px !important;
+        margin-bottom: 8px !important;
+      }
+      
+      .levi-modal-title {
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
       }
     }
     .levi-modal-title {

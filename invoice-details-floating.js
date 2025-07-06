@@ -24,25 +24,29 @@
       cursor: move;
     }
     
-    @media (max-width: 768px) {
+    @media only screen and (max-width: 768px) {
       #invoiceDetailsModal {
-        top: 10px;
-        left: 10px;
-        width: calc(100vw - 20px);
-        max-width: calc(100vw - 20px);
-        transform: none;
-        padding: 15px;
-        border-radius: 12px;
-        max-height: calc(100vh - 20px);
+        top: 5px !important;
+        left: 5px !important;
+        right: 5px !important;
+        bottom: auto !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+        max-height: 90vh !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
       }
       
       .invoice-items-table {
-        font-size: 11px;
+        font-size: 11px !important;
       }
       
       .invoice-modal-title {
-        font-size: 18px;
-        margin-bottom: 15px;
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
       }
     }
     
