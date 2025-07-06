@@ -403,14 +403,29 @@
       }
       
       .action-buttons {
-        flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      
+      .action-buttons .btn {
+        margin-bottom: 0;
+        font-size: 14px;
+        padding: 12px 16px;
+        min-height: 44px;
       }
       
       .footer-btns {
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 40px;
+        gap: 10px;
+        margin-top: 25px;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      
+      .footer-btns .btn {
+        flex: 1;
+        font-size: 14px;
+        padding: 12px 16px;
+        min-height: 44px;
       }
       
       .data-grid {
@@ -1611,6 +1626,71 @@ window.openLeviPortal = function() {
       alert('📋 אנא פתח את אתר לוי יצחק ב־browser חדש');
     }
   }
+
+  // Auto-fill manual form from helper data
+  populateManualFormFromHelper() {
+    try {
+      // Get helper data from session storage
+      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Auto-fill vehicle details if available
+      if (helperData.car_details) {
+        const carDetails = helperData.car_details;
+        
+        // Fill manufacturer if available
+        if (carDetails.manufacturer) {
+          document.getElementById('manual-manufacturer').value = carDetails.manufacturer;
+        }
+        
+        // Fill model code if available
+        if (carDetails.model_code) {
+          document.getElementById('manual-model-code').value = carDetails.model_code;
+        }
+        
+        // Fill category if available
+        if (carDetails.category) {
+          document.getElementById('manual-category').value = carDetails.category;
+        }
+        
+        // Fill year if available
+        if (carDetails.year) {
+          document.getElementById('manual-year').value = carDetails.year;
+        }
+        
+        // Fill full model name if available
+        if (carDetails.full_model || carDetails.model_name) {
+          document.getElementById('manual-full-model').value = carDetails.full_model || carDetails.model_name;
+        }
+      }
+      
+      // Auto-fill Levi report data if available
+      if (helperData.expertise && helperData.expertise.levi_report) {
+        const leviData = helperData.expertise.levi_report;
+        
+        // Fill base price if available
+        if (leviData.base_price || leviData['מחיר בסיס']) {
+          document.getElementById('manual-base-price').value = leviData.base_price || leviData['מחיר בסיס'];
+          // Trigger calculation after setting base price
+          calculateFinalPrice();
+        }
+      }
+      
+      // Try legacy helper.levi structure as fallback
+      else if (helperData.levi) {
+        const leviData = helperData.levi;
+        
+        if (leviData.base_price || leviData['מחיר בסיס']) {
+          document.getElementById('manual-base-price').value = leviData.base_price || leviData['מחיר בסיס'];
+          calculateFinalPrice();
+        }
+      }
+      
+      console.log('Manual form populated from helper data');
+      
+    } catch (error) {
+      console.error('Error populating manual form from helper:', error);
+    }
+  }
 };
 
 window.logout = function() {
@@ -1633,71 +1713,6 @@ window.cancelManualEntry = function() {
   uploadSection.style.display = 'block';
   manualSection.style.display = 'none';
 };
-
-// Auto-fill manual form from helper data
-populateManualFormFromHelper() {
-  try {
-    // Get helper data from session storage
-    const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    
-    // Auto-fill vehicle details if available
-    if (helperData.car_details) {
-      const carDetails = helperData.car_details;
-      
-      // Fill manufacturer if available
-      if (carDetails.manufacturer) {
-        document.getElementById('manual-manufacturer').value = carDetails.manufacturer;
-      }
-      
-      // Fill model code if available
-      if (carDetails.model_code) {
-        document.getElementById('manual-model-code').value = carDetails.model_code;
-      }
-      
-      // Fill category if available
-      if (carDetails.category) {
-        document.getElementById('manual-category').value = carDetails.category;
-      }
-      
-      // Fill year if available
-      if (carDetails.year) {
-        document.getElementById('manual-year').value = carDetails.year;
-      }
-      
-      // Fill full model name if available
-      if (carDetails.full_model || carDetails.model_name) {
-        document.getElementById('manual-full-model').value = carDetails.full_model || carDetails.model_name;
-      }
-    }
-    
-    // Auto-fill Levi report data if available
-    if (helperData.expertise && helperData.expertise.levi_report) {
-      const leviData = helperData.expertise.levi_report;
-      
-      // Fill base price if available
-      if (leviData.base_price || leviData['מחיר בסיס']) {
-        document.getElementById('manual-base-price').value = leviData.base_price || leviData['מחיר בסיס'];
-        // Trigger calculation after setting base price
-        calculateFinalPrice();
-      }
-    }
-    
-    // Try legacy helper.levi structure as fallback
-    else if (helperData.levi) {
-      const leviData = helperData.levi;
-      
-      if (leviData.base_price || leviData['מחיר בסיס']) {
-        document.getElementById('manual-base-price').value = leviData.base_price || leviData['מחיר בסיס'];
-        calculateFinalPrice();
-      }
-    }
-    
-    console.log('Manual form populated from helper data');
-    
-  } catch (error) {
-    console.error('Error populating manual form from helper:', error);
-  }
-}
 
 // Math engine calculation function
 window.calculateFinalPrice = function() {
