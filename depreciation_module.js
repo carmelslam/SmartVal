@@ -150,16 +150,26 @@ function createDepRow(data = {}) {
   div.style.gap = '14px';
   div.style.marginBottom = '10px';
   div.innerHTML = `
-    <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.part || ''}"></div>
+    <div style="position: relative;">
+      <input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.part || ''}" autocomplete="off">
+      <div class="damage-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+    </div>
     <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${data.repair || ''}"></div>
     <div><input type="number" class="dep-percent" placeholder="%" value="${data.percent || ''}"></div>
     <div><input type="number" class="dep-value" placeholder="₪" value="${data.value || ''}" readonly style="background:#f4f6fa;"></div>
     <div><button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0;">✕</button></div>
   `;
+  
   div.querySelector('.remove').addEventListener('click', () => {
     div.remove();
     saveAndRefresh();
   });
+  
+  // Setup auto-complete for damage part field
+  const partInput = div.querySelector('.dep-part');
+  const suggestionsDiv = div.querySelector('.damage-suggestions');
+  setupDamagePartAutoComplete(partInput, suggestionsDiv);
+  
   ['dep-part','dep-repair','dep-percent'].forEach(cls => {
     div.querySelector('.' + cls).addEventListener('input', () => {
       if (cls === 'dep-percent') {
@@ -170,6 +180,83 @@ function createDepRow(data = {}) {
     });
   });
   return div;
+}
+
+// FIXED: Damage part auto-complete functionality
+function setupDamagePartAutoComplete(input, suggestionsDiv) {
+  // Common damage center names from system data
+  const commonDamageParts = [
+    'פגוש קדמי', 'פגוש אחורי', 'דלת קדמית ימין', 'דלת קדמית שמאל',
+    'דלת אחורית ימין', 'דלת אחורית שמאל', 'מכסה מנוע', 'מכסה תא מטען',
+    'חלון קדמי', 'חלון אחורי', 'מראה צד ימין', 'מראה צד שמאל',
+    'פנס קדמי ימין', 'פנס קדמי שמאל', 'פנס אחורי ימין', 'פנס אחורי שמאל',
+    'רוח קדמית', 'רוח אחורית', 'גג', 'מדף תחתון', 'רמקול אחורי',
+    'קוסלת ימין', 'קוסלת שמאל', 'עמוד A', 'עמוד B', 'עמוד C',
+    'משקף דלת', 'ידית דלת', 'זגוגית צד', 'זגוגית משולשת'
+  ];
+
+  // Get existing damage centers from helper data
+  const existingDamageParts = [];
+  try {
+    const damageBlocks = helper.expertise?.damage_blocks || [];
+    const depreciationCenters = helper.expertise?.depreciation?.centers || [];
+    
+    damageBlocks.forEach(block => {
+      if (block.center && !existingDamageParts.includes(block.center)) {
+        existingDamageParts.push(block.center);
+      }
+    });
+    
+    depreciationCenters.forEach(center => {
+      if (center.part && !existingDamageParts.includes(center.part)) {
+        existingDamageParts.push(center.part);
+      }
+    });
+  } catch (error) {
+    console.log('Could not load existing damage parts:', error);
+  }
+
+  // Combine all suggestions
+  const allSuggestions = [...new Set([...existingDamageParts, ...commonDamageParts])];
+
+  input.addEventListener('input', () => {
+    const value = input.value.trim();
+    if (value.length < 1) {
+      suggestionsDiv.style.display = 'none';
+      return;
+    }
+
+    const filtered = allSuggestions.filter(suggestion => 
+      suggestion.includes(value) || value.includes(suggestion.substring(0, 2))
+    );
+
+    if (filtered.length === 0) {
+      suggestionsDiv.style.display = 'none';
+      return;
+    }
+
+    suggestionsDiv.innerHTML = filtered.slice(0, 8).map(suggestion => 
+      `<div class="suggestion-item" style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;">${suggestion}</div>`
+    ).join('');
+
+    suggestionsDiv.style.display = 'block';
+
+    // Add click handlers for suggestions
+    suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+      item.addEventListener('click', () => {
+        input.value = item.textContent;
+        suggestionsDiv.style.display = 'none';
+        saveAndRefresh();
+      });
+    });
+  });
+
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      suggestionsDiv.style.display = 'none';
+    }
+  });
 }
 
 // Calculate depreciation value for individual row
@@ -190,7 +277,10 @@ export function addDepField() {
 function collectDifferentials() {
   return Array.from(document.querySelectorAll('#differentialsRows .diff-row')).map(row => {
     const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
-    const vat = amount * 0.17; // 17% VAT
+    // Get VAT rate from system configuration (default 18%)
+    const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+                    MathEngine.getVatRate() / 100 : 0.18;
+    const vat = amount * vatRate;
     return {
       desc: row.querySelector('.diff-desc').value.trim(),
       amount: amount,
@@ -219,8 +309,11 @@ function createDiffRow(data = {}) {
   div.style.gap = '14px';
   div.style.marginBottom = '10px';
   
-  const vat = data.vat || Math.round((data.amount || 0) * 0.17);
-  const totalWithVat = data.total_with_vat || Math.round((data.amount || 0) * 1.17);
+  // Get VAT rate from system configuration (default 18%)
+  const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+                  MathEngine.getVatRate() / 100 : 0.18;
+  const vat = data.vat || Math.round((data.amount || 0) * vatRate);
+  const totalWithVat = data.total_with_vat || Math.round((data.amount || 0) * (1 + vatRate));
   
   div.innerHTML = `
     <div><input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}"></div>
@@ -239,7 +332,10 @@ function createDiffRow(data = {}) {
   // Update VAT and total when amount changes
   div.querySelector('.diff-amount').addEventListener('input', function() {
     const amount = parseFloat(this.value) || 0;
-    const vat = Math.round(amount * 0.17);
+    // Get VAT rate from system configuration (default 18%)
+    const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+                    MathEngine.getVatRate() / 100 : 0.18;
+    const vat = Math.round(amount * vatRate);
     const total = Math.round(amount + vat);
     div.querySelector('.diff-vat').value = vat;
     div.querySelector('.diff-total').value = total;
@@ -279,6 +375,11 @@ function updateDifferentialsSummary() {
   
   if ($('finalTotalWithDifferentials')) {
     $('finalTotalWithDifferentials').innerText = `₪${finalTotal.toLocaleString()}`;
+  }
+  
+  // Update the final total section outside container
+  if ($('finalBaseTotal')) {
+    $('finalBaseTotal').innerText = `₪${baseTotal.toLocaleString()}`;
   }
 }
 

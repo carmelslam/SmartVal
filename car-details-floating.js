@@ -263,44 +263,45 @@
         helper = window.helper;
       }
 
-      // Get vehicle data
+      // Get vehicle data using system structure
       const vehicle = helper.vehicle || {};
+      const carDetails = helper.car_details || {};
       const client = helper.client || {};
       const meta = helper.meta || {};
       
-      // Update UI with car data
-      updateCarDisplay(vehicle, client, meta);
+      // Update UI with car data using proper helper structure
+      updateCarDisplay(vehicle, carDetails, client, meta);
 
     } catch (error) {
       console.error("Error loading car data:", error);
-      updateCarDisplay({}, {}, {});
+      updateCarDisplay({}, {}, {}, {});
     }
   }
 
-  function updateCarDisplay(vehicle, client, meta) {
+  function updateCarDisplay(vehicle, carDetails, client, meta) {
     const formatValue = (value) => {
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Vehicle information
-    document.getElementById("car-plate").textContent = formatValue(meta.plate || vehicle.plate_number);
-    document.getElementById("car-manufacturer").textContent = formatValue(vehicle.manufacturer);
-    document.getElementById("car-model").textContent = formatValue(vehicle.model);
-    document.getElementById("car-year").textContent = formatValue(vehicle.year);
-    document.getElementById("car-color").textContent = formatValue(vehicle.color);
-    document.getElementById("car-chassis").textContent = formatValue(vehicle.chassis_number);
+    // Vehicle information - using proper helper structure
+    document.getElementById("car-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
+    document.getElementById("car-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
+    document.getElementById("car-model").textContent = formatValue(vehicle.model || carDetails.model);
+    document.getElementById("car-year").textContent = formatValue(vehicle.year || carDetails.year);
+    document.getElementById("car-color").textContent = formatValue(vehicle.color || carDetails.color);
+    document.getElementById("car-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
 
-    // Owner information
-    document.getElementById("car-owner-name").textContent = formatValue(client.name);
-    document.getElementById("car-owner-id").textContent = formatValue(client.id_number);
-    document.getElementById("car-owner-address").textContent = formatValue(client.address);
-    document.getElementById("car-owner-phone").textContent = formatValue(client.phone_number);
+    // Owner information - prioritize client data, fallback to car_details
+    document.getElementById("car-owner-name").textContent = formatValue(client.name || carDetails.owner);
+    document.getElementById("car-owner-id").textContent = formatValue(client.id_number || carDetails.owner_id);
+    document.getElementById("car-owner-address").textContent = formatValue(client.address || carDetails.ownerAddress);
+    document.getElementById("car-owner-phone").textContent = formatValue(client.phone_number || carDetails.ownerPhone);
 
-    // Insurance information
-    document.getElementById("car-insurance-company").textContent = formatValue(client.insurance_company);
-    document.getElementById("car-policy-number").textContent = formatValue(client.policy_number);
-    document.getElementById("car-insurance-agent").textContent = formatValue(client.insurance_agent);
-    document.getElementById("car-agent-phone").textContent = formatValue(client.insurance_agent_phone);
+    // Insurance information - using proper helper structure
+    document.getElementById("car-insurance-company").textContent = formatValue(client.insurance_company || carDetails.insuranceCompany);
+    document.getElementById("car-policy-number").textContent = formatValue(client.policy_number || carDetails.policy_number);
+    document.getElementById("car-insurance-agent").textContent = formatValue(client.insurance_agent || carDetails.agentName);
+    document.getElementById("car-agent-phone").textContent = formatValue(client.insurance_agent_phone || carDetails.agentPhone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
