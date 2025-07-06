@@ -573,7 +573,12 @@
           <label for="damage-center">מוקד נזק:</label>
           <select id="damage-center" name="damage-center">
             <option value="">כל התמונות (ללא קישור למוקד ספציפי)</option>
+            <option value="custom">הזנה חופשית - מוקד חדש</option>
           </select>
+        </div>
+        <div class="form-group" id="custom-damage-center" style="display: none;">
+          <label for="custom-damage-name">שם מוקד נזק חדש:</label>
+          <input id="custom-damage-name" name="custom-damage-name" placeholder="הזן שם מוקד נזק" type="text"/>
         </div>
         <div class="form-group">
           <label for="image-category">סוג התמונה:</label>
@@ -755,19 +760,56 @@ class ImageUploadManager {
       const damageCenters = helper.damage_centers || [];
       const selector = document.getElementById('damage-center');
       
-      // Clear existing options except the first one
-      while (selector.children.length > 1) {
+      // Clear existing options except the first two (all pictures + custom input)
+      while (selector.children.length > 2) {
         selector.removeChild(selector.lastChild);
       }
       
-      damageCenters.forEach((center, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `מוקד ${index + 1}: ${center.location || 'ללא שם'}`;
-        selector.appendChild(option);
+      // Check if we have damage centers data
+      if (damageCenters.length > 0) {
+        // Add damage centers from helper data
+        damageCenters.forEach((center, index) => {
+          const option = document.createElement('option');
+          option.value = `existing_${index}`;
+          const centerName = center.location || center.description || center.name || `מוקד ${index + 1}`;
+          option.textContent = `מוקד ${index + 1}: ${centerName}`;
+          selector.appendChild(option);
+        });
+      } else {
+        // Add "no damage centers" option if no data available
+        const noDataOption = document.createElement('option');
+        noDataOption.value = 'no_data';
+        noDataOption.textContent = 'לא הוזנו מוקדי נזק';
+        noDataOption.disabled = true;
+        noDataOption.style.fontStyle = 'italic';
+        noDataOption.style.color = '#64748b';
+        selector.appendChild(noDataOption);
+      }
+      
+      // Add event listener for custom input toggle
+      selector.addEventListener('change', (e) => {
+        const customDiv = document.getElementById('custom-damage-center');
+        if (e.target.value === 'custom') {
+          customDiv.style.display = 'block';
+          document.getElementById('custom-damage-name').focus();
+        } else {
+          customDiv.style.display = 'none';
+          document.getElementById('custom-damage-name').value = '';
+        }
       });
+      
     } catch (e) {
       console.warn('Could not load damage centers:', e);
+      
+      // Fallback: add "no data" option
+      const selector = document.getElementById('damage-center');
+      const noDataOption = document.createElement('option');
+      noDataOption.value = 'no_data';
+      noDataOption.textContent = 'לא הוזנו מוקדי נזק';
+      noDataOption.disabled = true;
+      noDataOption.style.fontStyle = 'italic';
+      noDataOption.style.color = '#64748b';
+      selector.appendChild(noDataOption);
     }
   }
 
@@ -934,7 +976,19 @@ class ImageUploadManager {
       formData.append('plate', document.getElementById('plate').value);
       formData.append('owner', document.getElementById('owner').value);
       formData.append('password', document.getElementById('password').value);
-      formData.append('damage_center', document.getElementById('damage-center').value);
+      
+      // Handle damage center selection
+      const damageCenterValue = document.getElementById('damage-center').value;
+      if (damageCenterValue === 'custom') {
+        const customName = document.getElementById('custom-damage-name').value.trim();
+        formData.append('damage_center', `custom:${customName}`);
+        formData.append('damage_center_type', 'custom');
+        formData.append('custom_damage_name', customName);
+      } else {
+        formData.append('damage_center', damageCenterValue);
+        formData.append('damage_center_type', damageCenterValue.startsWith('existing_') ? 'existing' : 'all');
+      }
+      
       formData.append('image_category', document.getElementById('image-category').value);
       
       // Add default processing options
