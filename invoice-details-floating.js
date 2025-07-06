@@ -24,20 +24,38 @@
       cursor: move;
     }
     
-    @media (max-width: 768px) {
+    @media screen and (max-width: 768px) {
       #invoiceDetailsModal {
         position: fixed !important;
-        top: 5px !important;
-        left: 5px !important;
-        right: 5px !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         transform: none !important;
-        width: auto !important;
-        max-width: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
         padding: 10px !important;
         margin: 0 !important;
         box-sizing: border-box !important;
-        max-height: 85vh !important;
         overflow-y: auto !important;
+        z-index: 99999 !important;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      #invoiceDetailsModal {
+        padding: 8px !important;
+      }
+      
+      .invoice-items-table {
+        font-size: 11px !important;
+      }
+      
+      .invoice-modal-title {
+        font-size: 18px !important;
+        margin-bottom: 15px !important;
       }
     }
     
