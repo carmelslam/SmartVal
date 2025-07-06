@@ -110,19 +110,19 @@
       <div class="levi-grid">
         <div class="levi-field">
           <div class="label">ערך הרכב</div>
-          <div class="value price" id="levi-value">₪0</div>
+          <div class="value price" id="levi-final-price">₪0</div>
         </div>
         <div class="levi-field">
           <div class="label">קוד דגם</div>
           <div class="value" id="levi-model-code">-</div>
         </div>
         <div class="levi-field">
-          <div class="label">סוג בעלות</div>
-          <div class="value" id="levi-car-type">-</div>
+          <div class="label">ערך שוק</div>
+          <div class="value price" id="levi-base-price">₪0</div>
         </div>
         <div class="levi-field">
-          <div class="label">ערך שוק</div>
-          <div class="value price" id="levi-market-value">₪0</div>
+          <div class="label">סוג בעלות</div>
+          <div class="value" id="levi-ownership-type">-</div>
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@
       <div class="levi-grid">
         <div class="levi-field">
           <div class="label">התאמת קילומטראז'</div>
-          <div class="value" id="levi-mileage-adj">-</div>
+          <div class="value" id="levi-km-adj">-</div>
         </div>
         <div class="levi-field">
           <div class="label">התאמת בעלות</div>
@@ -258,18 +258,17 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Basic values
-    document.getElementById("levi-value").textContent = formatPrice(data.levi_value);
-    document.getElementById("levi-model-code").textContent = formatValue(data.model_code);
-    document.getElementById("levi-car-type").textContent = formatValue(data.car_type);
-    document.getElementById("levi-market-value").textContent = formatPrice(data.market_value);
-    document.getElementById("levi-insurance-value").textContent = formatPrice(data.insurance_value);
+    // Basic values - Updated to match new JSON structure
+    document.getElementById("levi-final-price").textContent = formatPrice(data['מחיר סופי לרכב'] || data.final_price);
+    document.getElementById("levi-model-code").textContent = formatValue(data['קוד דגם'] || data.model_code);
+    document.getElementById("levi-base-price").textContent = formatPrice(data['מחיר בסיס'] || data.base_price);
+    document.getElementById("levi-ownership-type").textContent = formatValue(data['בעלות'] || data.ownership_type);
+    document.getElementById("levi-insurance-value").textContent = formatPrice(data.insurance_value || 0);
 
-    // Adjustments
-    const adjustments = data.adjustments || {};
-    document.getElementById("levi-mileage-adj").textContent = formatValue(adjustments.mileage_adjustment);
-    document.getElementById("levi-ownership-adj").textContent = formatValue(adjustments.ownership_adjustment);
-    document.getElementById("levi-features-adj").textContent = formatValue(adjustments.features_adjustment);
+    // Adjustments - Updated to match new structure
+    document.getElementById("levi-km-adj").textContent = formatValue(data['מס ק״מ %'] || data.km_adjustment);
+    document.getElementById("levi-ownership-adj").textContent = formatValue(data['בעלות %'] || data.ownership_adjustment);
+    document.getElementById("levi-features-adj").textContent = formatValue(data['מאפיינים %'] || data.features_adjustment);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
@@ -281,28 +280,6 @@
     });
   }
 
-  // Add floating button to access Levi report from any page
-  if (!document.getElementById("leviFloatBtn")) {
-    const floatBtn = document.createElement("button");
-    floatBtn.id = "leviFloatBtn";
-    floatBtn.innerHTML = "דו\"ח לוי";
-    floatBtn.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 140px;
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 9998;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    floatBtn.onclick = toggleLeviReport;
-    document.body.appendChild(floatBtn);
-  }
+  // Floating button removed - toggle moved inside container as requested
 
 })();
