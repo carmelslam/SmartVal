@@ -1087,6 +1087,8 @@ class LeviProcessor {
       // Show manual save button, hide OCR save button
       saveManualButton.style.display = 'inline-block';
       saveResultsButton.style.display = 'none';
+      // Add event listeners for real-time saving
+      setTimeout(() => addManualFieldListeners(), 100);
     } else {
       uploadSection.style.display = 'block';
       manualSection.style.display = 'none';
@@ -1917,10 +1919,42 @@ window.saveManualDataToHelper = function() {
     }
     
     console.log('Manual data saved to helper system:', leviData);
+    console.log('Full helper object after save:', JSON.stringify(helper, null, 2));
+    
+    // Debug: Check if floating screen can access this data
+    setTimeout(() => {
+      const testHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('Verification - helper from sessionStorage:', testHelper.expertise?.levi_report);
+    }, 100);
     
   } catch (error) {
     console.error('Error saving manual data to helper:', error);
   }
+};
+
+// Add event listeners to all manual input fields to save data on change
+window.addManualFieldListeners = function() {
+  const manualFields = [
+    'manual-vehicle-type', 'manual-manufacturer', 'manual-model-code', 
+    'manual-category', 'manual-year', 'manual-full-model', 'manual-base-price',
+    'manual-registration-percent', 'manual-ownership-percent', 'manual-km-percent',
+    'manual-owners-percent', 'manual-features-percent'
+  ];
+  
+  manualFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.addEventListener('input', () => {
+        // Debounce the save to avoid too many calls
+        clearTimeout(window.manualSaveTimeout);
+        window.manualSaveTimeout = setTimeout(() => {
+          saveManualDataToHelper();
+        }, 500);
+      });
+    }
+  });
+  
+  console.log('Manual field listeners added for real-time saving');
 };
 
 // Initialize when DOM is loaded
