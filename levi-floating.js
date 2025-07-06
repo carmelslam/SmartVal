@@ -379,25 +379,42 @@
     try {
       let leviData = {};
       
-      // Priority 1: Try to get data from helper's standardized expertise structure
-      if (typeof helper !== 'undefined' && helper.expertise && helper.expertise.levi_report) {
+      // Priority 1: Try to get data from sessionStorage helper
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.expertise && helper.expertise.levi_report) {
+          leviData = helper.expertise.levi_report;
+          console.log('Levi data loaded from sessionStorage helper.expertise.levi_report');
+        }
+        // Priority 2: Legacy helper.levi structure
+        else if (helper.levi) {
+          leviData = helper.levi;
+          console.log('Levi data loaded from sessionStorage helper.levi');
+        }
+      } catch (parseError) {
+        console.warn('Could not parse helper from sessionStorage:', parseError);
+      }
+      
+      // Priority 3: Try to get data from global helper variable
+      if (Object.keys(leviData).length === 0 && typeof helper !== 'undefined' && helper.expertise && helper.expertise.levi_report) {
         leviData = helper.expertise.levi_report;
-        console.log('Levi data loaded from helper.expertise.levi_report');
+        console.log('Levi data loaded from global helper.expertise.levi_report');
       }
-      // Priority 2: Legacy helper.levi structure
-      else if (typeof helper !== 'undefined' && helper.levi) {
+      // Priority 4: Legacy global helper.levi structure
+      else if (Object.keys(leviData).length === 0 && typeof helper !== 'undefined' && helper.levi) {
         leviData = helper.levi;
-        console.log('Levi data loaded from legacy helper.levi');
+        console.log('Levi data loaded from global helper.levi');
       }
-      // Priority 3: Fallback to sessionStorage with validation
-      else {
+      
+      // Priority 5: Fallback to sessionStorage leviData
+      if (Object.keys(leviData).length === 0) {
         const storedData = sessionStorage.getItem("leviData");
         if (storedData && storedData !== "undefined" && storedData !== "null") {
           try {
             const parsedData = JSON.parse(storedData);
             if (parsedData && typeof parsedData === 'object') {
               leviData = parsedData;
-              console.log('Levi data loaded from sessionStorage');
+              console.log('Levi data loaded from sessionStorage leviData');
             }
           } catch (parseError) {
             console.error('Failed to parse stored Levi data:', parseError);
