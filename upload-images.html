@@ -599,12 +599,16 @@ class ImageUploadManager {
     // Load case data from session storage
     const plate = sessionStorage.getItem('plate');
     const owner = sessionStorage.getItem('owner');
+    const password = sessionStorage.getItem('ycPass');
     
     if (plate) {
       document.getElementById('plate').value = plate;
     }
     if (owner) {
       document.getElementById('owner').value = owner;
+    }
+    if (password) {
+      document.getElementById('password').value = password;
     }
 
     // Load from helper if available
@@ -767,6 +771,12 @@ class ImageUploadManager {
   async uploadImages() {
     if (this.uploadInProgress || this.files.length === 0) return;
 
+    // Validate password before upload
+    if (!this.validatePassword()) {
+      this.showAlert('❌ סיסמא שגויה או חסרה', 'error');
+      return;
+    }
+
     this.uploadInProgress = true;
     this.showUploadProgress(true);
     
@@ -776,6 +786,7 @@ class ImageUploadManager {
       // Add case information
       formData.append('plate', document.getElementById('plate').value);
       formData.append('owner', document.getElementById('owner').value);
+      formData.append('password', document.getElementById('password').value);
       formData.append('damage_center', document.getElementById('damage-center').value);
       formData.append('image_category', document.getElementById('image-category').value);
       
@@ -818,6 +829,23 @@ class ImageUploadManager {
     }
   }
 
+  validatePassword() {
+    const enteredPassword = document.getElementById('password').value;
+    const sessionPassword = sessionStorage.getItem('ycPass');
+    
+    if (!enteredPassword) {
+      return false;
+    }
+    
+    // If session password exists, validate against it
+    if (sessionPassword) {
+      return enteredPassword === sessionPassword;
+    }
+    
+    // If no session password, any non-empty password is accepted
+    return true;
+  }
+
   updateHelperWithImages(uploadResult) {
     try {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -853,10 +881,17 @@ class ImageUploadManager {
       return;
     }
 
+    // Validate password before processing
+    if (!this.validatePassword()) {
+      this.showAlert('❌ סיסמא שגויה או חסרה', 'error');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('plate', plate);
       formData.append('owner', owner);
+      formData.append('password', document.getElementById('password').value);
       formData.append('process_type', type);
       formData.append('advanced_mode', 'true'); // Flag to indicate this pulls from case folder
       
@@ -958,6 +993,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const auth = sessionStorage.getItem("auth");
   if (!auth) {
     alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+    window.location.href = "index.html";
+    return;
+  }
+
+  // Check if password exists in session storage, if not redirect to gate
+  const sessionPassword = sessionStorage.getItem('ycPass');
+  if (!sessionPassword) {
+    alert("נדרשת הזדהות מחדש - מעבר לדף הבית");
     window.location.href = "index.html";
     return;
   }
