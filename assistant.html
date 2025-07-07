@@ -746,14 +746,43 @@
         console.log('🌐 Sending request to:', webhookUrl);
         const startTime = performance.now();
         
-        // Implement retry logic for network failures
+        // Try using the webhook.js sendToWebhook function which handles CORS better
         let response;
+        try {
+          console.log('📡 Using sendToWebhook method for better CORS handling');
+          const { sendToWebhook } = await import('./webhook.js');
+          const webhookResponse = await sendToWebhook('SEARCH_MODULE', payload);
+          
+          if (webhookResponse) {
+            // If sendToWebhook succeeds, process the response directly
+            const responseText = webhookResponse?.text || webhookResponse?.answer || webhookResponse?.response || webhookResponse?.message || webhookResponse;
+            
+            if (responseText) {
+              displayResponse(responseText);
+              
+              // Only auto-speak if user used microphone input (STT)
+              if (wasVoiceInput) {
+                console.log('🎤 Voice input detected, auto-playing TTS response');
+                await speakResponse(responseText);
+              } else {
+                console.log('📝 Text input used, TTS available via manual button');
+              }
+              
+              saveToHelper(query, responseText);
+              return; // Exit successfully
+            }
+          }
+        } catch (webhookError) {
+          console.log('sendToWebhook failed, trying direct fetch:', webhookError);
+        }
+        
+        // Fallback to direct fetch if sendToWebhook fails
         let lastError;
         const maxRetries = 2;
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            console.log(`📡 Attempt ${attempt}/${maxRetries}`);
+            console.log(`📡 Direct fetch attempt ${attempt}/${maxRetries}`);
             response = await fetch(webhookUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -823,17 +852,18 @@
         
         // Check if this is a CORS error (Load failed)
         if (error.message.includes('Load failed') || error.name === 'TypeError') {
-          console.log('🌐 CORS error detected - Nicole received the question but response was blocked');
-          displayResponse(`✅ השאלה נשלחה לניקול בהצלחה!
-
-🔄 בעיית CORS חוסמת את התשובה, אבל ניקול קיבלה את השאלה ועונה עליה.
-
-💡 לקבלת התשובה המלאה:
-• בדוק את לוח הבקרה של Make.com 
-• או שאל שוב את השאלה
-• ניקול פועלת תקין למרות הודעת השגיאה`);
+          console.log('🌐 CORS error detected');
           
-          // Don't throw error for CORS - it's expected
+          // Show the explanation since we already tried alternative methods above
+          displayResponse(`❌ בעיית תקשורת עם ניקול
+
+🔧 ניקול פועלת אבל יש בעיה בקבלת התשובות.
+
+💡 פתרונות זמניים:
+• נסה לרענן את הדף ולשאול שוב
+• בדוק חיבור לאינטרנט
+• פנה לתמיכה טכנית אם הבעיה נמשכת`);
+          
           return;
         }
         
