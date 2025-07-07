@@ -752,9 +752,17 @@
           body: JSON.stringify(payload)
         });
 
-        // Read the actual response text
-        const responseData = await response.json();
-        displayResponse(responseData.text, responseData.audio);
+        // Read as text first, then try to parse as JSON
+        const rawResponse = await response.text();
+        
+        try {
+          // Try to parse as JSON (new format with audio)
+          const responseData = JSON.parse(rawResponse);
+          displayResponse(responseData.text, responseData.audio);
+        } catch (jsonError) {
+          // If JSON parsing fails, treat as plain text (old format)
+          displayResponse(rawResponse);
+        }
 
       } catch (err) {
         displayResponse('שגיאה בשליחת הבקשה. נסה שוב.');
