@@ -389,6 +389,7 @@
     let isRecording = false;
     let recordingTimeout;
     let inactivityTimeout;
+    let wasVoiceInput = false; // Track if last input was from voice
     const MAX_RECORDING_TIME = 60000; // 60 seconds max recording
     const INACTIVITY_TIMEOUT = 15000; // 15 seconds of silence
     
@@ -415,6 +416,9 @@
       recognition.addEventListener('result', (event) => {
         const transcript = event.results[0][0].transcript;
         textarea.value = transcript;
+        
+        // Mark that this input came from voice
+        wasVoiceInput = true;
         
         // Reset inactivity timeout when speech is detected
         if (inactivityTimeout) {
@@ -654,6 +658,9 @@
       const query = textarea.value.trim();
       const plate = document.getElementById('plateInput').value.trim();
       
+      // Check if this was voice input (will be reset after processing)
+      const currentWasVoiceInput = wasVoiceInput;
+      
       // Enhanced validation: require at least one field (plate OR query)
       if (!query && !plate) {
         alert('אנא מלא לפחות שדה אחד:\n• מספר רכב, או\n• שאלה/בקשה');
@@ -691,7 +698,10 @@
       sendBtn.disabled = true;
       
       try {
-        await submitQuery(plate, finalQuery);
+        await submitQuery(plate, finalQuery, currentWasVoiceInput);
+        
+        // Reset voice input flag after successful submission
+        wasVoiceInput = false;
       } catch (error) {
         console.error('Submit error:', error);
         alert('שגיאה בשליחת השאלה: ' + error.message);
@@ -703,7 +713,7 @@
     });
 
     // Submit query to webhook and handle response
-    async function submitQuery(plate, query) {
+    async function submitQuery(plate, query, wasVoiceInput = false) {
       // Generate unique trace ID for this request
       const traceId = 'nicole_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
       
@@ -829,7 +839,15 @@
           
           // Display and process the response
           displayResponse(responseText);
-          await speakResponse(responseText);
+          
+          // Only auto-speak if user used microphone input (STT)
+          if (wasVoiceInput) {
+            console.log('🎤 Voice input detected, auto-playing TTS response');
+            await speakResponse(responseText);
+          } else {
+            console.log('📝 Text input used, TTS available via manual button');
+          }
+          
           saveToHelper(query, responseText);
           
           // Save debug info to sessionStorage for later analysis
@@ -922,17 +940,6 @@
             🔧 בדוק TTS
           </button>
           
-          <button onclick="testFallbackTTS('${text.replace(/'/g, "\\'")}', this)" style="
-            background: #8b5cf6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
-          ">
-            🗣️ TTS גיבוי
-          </button>
           
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
         </div>
@@ -1046,49 +1053,6 @@
       }
     };
     
-    // Test fallback TTS function
-    window.testFallbackTTS = async function(text, buttonElement) {
-      const statusDiv = document.getElementById('ttsStatus');
-      const originalButtonText = buttonElement.innerHTML;
-      
-      try {
-        buttonElement.innerHTML = '⏳ בודק...';
-        buttonElement.disabled = true;
-        
-        if (statusDiv) statusDiv.textContent = 'בודק TTS גיבוי...';
-        
-        console.group('🗣️ Testing Fallback TTS');
-        
-        // Check if browser supports Speech Synthesis
-        if (!('speechSynthesis' in window)) {
-          throw new Error('דפדפן לא תומך ב-Speech Synthesis');
-        }
-        
-        // Get available voices
-        const voices = speechSynthesis.getVoices();
-        console.log('🎤 Available voices:', voices.length);
-        console.log('🎤 Hebrew voices:', voices.filter(v => v.lang.includes('he') || v.lang.includes('iw')));
-        
-        // Test fallback TTS
-        await fallbackTTS(text || 'בדיקת TTS גיבוי');
-        
-        if (statusDiv) statusDiv.textContent = '✅ TTS גיבוי פועל';
-        console.log('✅ Fallback TTS test passed');
-        
-      } catch (error) {
-        console.error('❌ Fallback TTS test failed:', error);
-        if (statusDiv) statusDiv.textContent = `❌ ${error.message}`;
-      } finally {
-        buttonElement.innerHTML = originalButtonText;
-        buttonElement.disabled = false;
-        console.groupEnd();
-        
-        // Clear status after 3 seconds
-        setTimeout(() => {
-          if (statusDiv) statusDiv.textContent = '';
-        }, 3000);
-      }
-    };
 
     // Enhanced Text-to-Speech functionality using Google Cloud TTS
     async function speakResponse(text) {
@@ -1097,9 +1061,20 @@
         return;
       }
       
+      // Clean text for TTS - remove markdown, special characters, etc.
+      let cleanText = text
+        .replace(/\*\*/g, '') // Remove ** markdown
+        .replace(/\*/g, '') // Remove * markdown
+        .replace(/_{2,}/g, '') // Remove __ markdown
+        .replace(/`{1,3}/g, '') // Remove code blocks
+        .replace(/#{1,6}\s*/g, '') // Remove headings
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace links with text
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim();
+      
       // Limit text length for TTS (Google TTS has limits)
       const maxLength = 5000;
-      const textForTTS = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+      const textForTTS = cleanText.length > maxLength ? cleanText.substring(0, maxLength) + '...' : cleanText;
       
       const apiKey = 'AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o';
       const voice = 'he-IL-Wavenet-A'; // Female Hebrew voice
@@ -1223,79 +1198,25 @@
           console.warn('🔊 No audio content received from TTS API');
         }
       } catch (error) {
-        console.error('🔊 TTS Error:', error);
+        console.error('🔊 Google TTS Error:', error);
         
-        // Try fallback TTS using browser Speech Synthesis API
-        console.log('🔄 Attempting fallback TTS using browser Speech Synthesis...');
-        try {
-          await fallbackTTS(textForTTS);
-          console.log('✅ Fallback TTS completed successfully');
-        } catch (fallbackError) {
-          console.error('❌ Fallback TTS also failed:', fallbackError);
-          
-          // Provide detailed error feedback
-          if (error.message.includes('network') || error.message.includes('fetch')) {
-            console.log('🔊 Primary TTS failed due to network issue');
-          } else if (error.message.includes('quota') || error.message.includes('limit')) {
-            console.log('🔊 Primary TTS failed due to API quota limits');
-          } else if (error.message.includes('403') || error.message.includes('401')) {
-            console.log('🔊 Primary TTS failed due to API authentication/authorization');
-          }
+        // Don't use automatic fallback - let user choose manually
+        console.log('💡 TTS failed. User can use manual TTS buttons if needed.');
+        
+        // Provide detailed error feedback for debugging
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          console.log('🔊 TTS failed due to network issue');
+        } else if (error.message.includes('quota') || error.message.includes('limit')) {
+          console.log('🔊 TTS failed due to API quota limits');
+        } else if (error.message.includes('403') || error.message.includes('401')) {
+          console.log('🔊 TTS failed due to API authentication/authorization');
         }
+        
+        // Throw error so manual TTS can handle it appropriately
+        throw error;
       }
     }
     
-    // Fallback TTS using browser's Speech Synthesis API
-    async function fallbackTTS(text) {
-      return new Promise((resolve, reject) => {
-        if (!('speechSynthesis' in window)) {
-          reject(new Error('Browser Speech Synthesis not supported'));
-          return;
-        }
-        
-        console.log('🗣️ Using browser Speech Synthesis as fallback');
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Try to find Hebrew voice
-        const voices = speechSynthesis.getVoices();
-        const hebrewVoice = voices.find(voice => 
-          voice.lang.includes('he') || 
-          voice.lang.includes('iw') ||
-          voice.name.toLowerCase().includes('hebrew')
-        );
-        
-        if (hebrewVoice) {
-          utterance.voice = hebrewVoice;
-          console.log('🗣️ Using Hebrew voice:', hebrewVoice.name);
-        } else {
-          console.log('🗣️ No Hebrew voice found, using default');
-        }
-        
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        
-        utterance.onstart = () => {
-          console.log('🗣️ Fallback TTS started');
-          updateNicoleSpeakingStatus(true);
-        };
-        
-        utterance.onend = () => {
-          console.log('🗣️ Fallback TTS completed');
-          updateNicoleSpeakingStatus(false);
-          resolve();
-        };
-        
-        utterance.onerror = (event) => {
-          console.error('🗣️ Fallback TTS error:', event.error);
-          updateNicoleSpeakingStatus(false);
-          reject(new Error(`Fallback TTS error: ${event.error}`));
-        };
-        
-        speechSynthesis.speak(utterance);
-      });
-    }
     
     // Helper function to show Nicole speaking status
     function updateNicoleSpeakingStatus(isSpeaking) {

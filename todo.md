@@ -1,6 +1,6 @@
 # Nicole Module & System Assistant - Comprehensive Enhancement Report
 
-## Status: ✅ ALL 11 TASKS COMPLETED + CRITICAL FIXES
+## Status: ✅ ALL 13 TASKS COMPLETED + CRITICAL FIXES
 
 ### Latest Update Summary  
 **Date:** 2025-07-07 (Updated)  
@@ -25,10 +25,22 @@
   - Professional Hebrew female voice configuration
 - **Impact**: Complete conversational experience with both text and speech responses
 
-### 📊 **Updated Task Summary (11 Total Tasks):**
+#### **Fix 3: Conditional TTS - Smart Voice Response** ✅ **COMPLETED**
+- **User Requirements**: "i dont want her to speak on default just if i select speech or if i use the speech query"
+- **Implementation**: 
+  - Voice input tracking (`wasVoiceInput` variable)
+  - Auto-TTS only triggers when user used voice input (STT)
+  - Manual TTS buttons for text-based queries
+  - Comprehensive text cleaning (removes **, *, markdown, special characters)
+  - Maintained high-quality Google TTS (no robotic voices)
+  - No automatic fallback to browser speech synthesis
+- **Impact**: Perfect user experience - Nicole speaks naturally when you speak to her, stays quiet for text input
+
+### 📊 **Updated Task Summary (13 Total Tasks):**
 - **Tasks 1A-5B**: Original 10 Nicole enhancement tasks ✅ **COMPLETED**
 - **Task 6A**: Fixed Nicole response processing for JSON/text flexibility ✅ **COMPLETED**  
 - **Task 6B**: Enhanced TTS system with visual feedback and error handling ✅ **COMPLETED**
+- **Task 7**: Implemented conditional TTS with voice input detection and text cleaning ✅ **COMPLETED**
 
 ---
 
