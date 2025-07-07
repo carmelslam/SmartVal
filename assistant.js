@@ -63,29 +63,72 @@ form.addEventListener('submit', async (e) => {
 function displayResponse(text) {
   responseBox.style.display = 'block';
   responseBox.textContent = text;
+
+  const errDiv = document.getElementById('ttsError');
+  if (errDiv) errDiv.remove();
 }
 
-function speakResponse(text) {
+function showTTSError(message) {
+  let errDiv = document.getElementById('ttsError');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = 'ttsError';
+    errDiv.style.color = 'red';
+    errDiv.style.fontSize = '12px';
+    errDiv.style.marginTop = '8px';
+    responseBox.appendChild(errDiv);
+  }
+  errDiv.textContent = message;
+}
+
+async function speakResponse(text) {
   const apiKey = 'AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o';
   const voice = 'he-IL-Wavenet-A';
 
-  fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      input: { text },
-      voice: { languageCode: 'he-IL', name: voice },
-      audioConfig: { audioEncoding: 'MP3' }
-    })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.audioContent) {
-        const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
-        audio.play();
-      }
-    })
-    .catch(console.error);
+  try {
+    const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { text },
+        voice: { languageCode: 'he-IL', name: voice },
+        audioConfig: { audioEncoding: 'MP3' }
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`TTS request failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.audioContent) {
+      throw new Error('No audio content returned');
+    }
+
+    const binary = atob(data.audioContent);
+    const len = binary.length;
+    const buffer = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      buffer[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([buffer], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+
+    try {
+      await audio.play();
+    } catch (err) {
+      showTTSError('TTS failed to load. Please check audio settings.');
+      throw err;
+    } finally {
+      audio.addEventListener('ended', () => URL.revokeObjectURL(url));
+      audio.addEventListener('error', () => URL.revokeObjectURL(url));
+    }
+  } catch (error) {
+    console.error('TTS playback error:', error);
+    showTTSError('TTS failed to load. Please check audio settings.');
+  }
 }
 
 function saveToHelper(question, answer) {
