@@ -789,50 +789,35 @@
 
         // Handle both JSON and text responses flexibly
         const contentType = response.headers.get('content-type');
-        console.log('📄 Response content-type:', contentType);
+        const rawResponse = await response.text();
+        console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
         
         let responseText;
-        let data = null;
+        let data;
         
-        try {
-          // Get the raw response text
-          const rawResponse = await response.text();
-          console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
-          
-          if (contentType && contentType.includes('application/json')) {
-            // Parse as JSON and extract text fields
-            data = JSON.parse(rawResponse);
-            responseText = data?.text || data?.answer || data?.response || data?.message;
-          } else {
-            // Use direct text response from Make.com
-            responseText = rawResponse.trim();
-            console.log('📄 Using direct text response');
-          }
-          
-          // Validate that we have a meaningful response
-          if (!responseText) {
-            throw new Error('No response text found');
-          }
-          
-          console.log('✅ Valid response extracted:', responseText.substring(0, 100) + '...');
-          
-          // Display and process the response
-          displayResponse(responseText);
-          
-          // Only auto-speak if user used microphone input (STT)
-          if (wasVoiceInput) {
-            console.log('🎤 Voice input detected, auto-playing TTS response');
-            await speakResponse(responseText);
-          } else {
-            console.log('📝 Text input used, TTS available via manual button');
-          }
-          
-          saveToHelper(query, responseText);
-          
-        } catch (parseError) {
-          console.error('❌ Response processing error:', parseError);
-          throw new Error(`Failed to process response: ${parseError.message}`);
+        // Smart content detection and processing
+        if (contentType && contentType.includes('application/json')) {
+          // Parse as JSON and extract text fields
+          data = JSON.parse(rawResponse);
+          responseText = data?.text || data?.answer || data?.response || data?.message;
+        } else {
+          // Use direct text response from Make.com
+          responseText = rawResponse.trim();
+          console.log('📄 Using direct text response');
         }
+        
+        // Display and process the response
+        displayResponse(responseText);
+        
+        // Only auto-speak if user used microphone input (STT)
+        if (wasVoiceInput) {
+          console.log('🎤 Voice input detected, auto-playing TTS response');
+          await speakResponse(responseText);
+        } else {
+          console.log('📝 Text input used, TTS available via manual button');
+        }
+        
+        saveToHelper(query, responseText);
       } catch (error) {
         console.error('🚨 Webhook error details:', {
           error_message: error.message,
