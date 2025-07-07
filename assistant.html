@@ -784,29 +784,8 @@
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-          responseTime: responseTime + 'ms',
-          url: response.url,
-          redirected: response.redirected,
-          type: response.type
+          responseTime: responseTime + 'ms'
         });
-        
-        // Check for basic response validity
-        if (!response.ok) {
-          console.error('❌ HTTP Error Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            url: response.url
-          });
-          
-          let errorDetails = 'Unknown error';
-          try {
-            errorDetails = await response.text();
-          } catch (e) {
-            console.error('Could not read error response body:', e);
-          }
-          
-          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorDetails}`);
-        }
 
         // Handle both JSON and text responses flexibly
         const contentType = response.headers.get('content-type');
@@ -816,99 +795,26 @@
         let data = null;
         
         try {
-          // Enhanced debugging for response processing
-          console.group('🔍 DETAILED RESPONSE PROCESSING DEBUG');
-          console.log('📋 Response object:', response);
-          console.log('📋 Response properties:', {
-            ok: response.ok,
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            body: !!response.body,
-            bodyUsed: response.bodyUsed,
-            redirected: response.redirected,
-            type: response.type,
-            url: response.url
-          });
+          // Get the raw response text
+          const rawResponse = await response.text();
+          console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
           
-          // Check if response body is readable
-          if (!response.body) {
-            console.error('❌ Response body is null');
-            throw new Error('Response body is null or undefined');
+          if (contentType && contentType.includes('application/json')) {
+            // Parse as JSON and extract text fields
+            data = JSON.parse(rawResponse);
+            responseText = data?.text || data?.answer || data?.response || data?.message;
+          } else {
+            // Use direct text response from Make.com
+            responseText = rawResponse.trim();
+            console.log('📄 Using direct text response');
           }
           
-          if (response.bodyUsed) {
-            console.error('❌ Response body already used');
-            throw new Error('Response body has already been consumed');
-          }
-          
-          console.log('📥 Reading response body...');
-          let rawResponse;
-          
-          try {
-            console.log('📥 Calling response.text()...');
-            rawResponse = await response.text();
-            console.log('✅ response.text() completed');
-            console.log('📄 Raw response type:', typeof rawResponse);
-            console.log('📄 Raw response length:', rawResponse?.length || 0);
-            console.log('📄 Raw response preview:', rawResponse ? rawResponse.substring(0, 500) + '...' : 'NULL_RESPONSE');
-            console.log('📄 Raw response full (first 1000 chars):', rawResponse ? rawResponse.substring(0, 1000) : 'NULL_RESPONSE');
-          } catch (textError) {
-            console.error('❌ Failed to read response text:', textError);
-            console.error('❌ Text error details:', {
-              name: textError.name,
-              message: textError.message,
-              stack: textError.stack
-            });
-            throw new Error(`Failed to read response: ${textError.message}`);
-          }
-          
-          // Check if we actually got a response
-          if (rawResponse === null || rawResponse === undefined) {
-            throw new Error('Response text is null or undefined');
-          }
-          
-          // Since Make.com returns plain text, always treat as text first
-          responseText = rawResponse.trim();
-          console.log('📄 Using response as plain text (Make.com format)');
-          
-          // Optional: Try to detect if it might be JSON wrapped in text
-          if (rawResponse.startsWith('{') && rawResponse.endsWith('}')) {
-            try {
-              data = JSON.parse(rawResponse);
-              console.log('📥 Detected JSON format, parsed successfully');
-              
-              // Extract text from JSON if available
-              const jsonText = data?.text || data?.answer || data?.response || data?.message;
-              if (jsonText) {
-                responseText = jsonText;
-                console.log('📄 Using text field from JSON');
-              }
-            } catch (jsonError) {
-              console.log('📄 JSON detection failed, keeping as plain text');
-              // Keep using the plain text version
-            }
-          }
-          
-          // Final validation
+          // Validate that we have a meaningful response
           if (!responseText) {
-            throw new Error('Empty response after all processing attempts');
-          }
-          
-          // Basic validation for meaningful response
-          if (responseText.length < 3) {
-            throw new Error(`Response too short: "${responseText}"`);
+            throw new Error('No response text found');
           }
           
           console.log('✅ Valid response extracted:', responseText.substring(0, 100) + '...');
-          console.log('📊 Response Analysis:', {
-            response_length: responseText.length,
-            content_type: contentType,
-            is_json: !!data,
-            has_hebrew: /[\u0590-\u05FF]/.test(responseText),
-            has_english: /[a-zA-Z]/.test(responseText),
-            contains_car_terms: /רכב|נזק|ביטוח|שמאי/.test(responseText)
-          });
           
           // Display and process the response
           displayResponse(responseText);
@@ -923,34 +829,8 @@
           
           saveToHelper(query, responseText);
           
-          // Save debug info to sessionStorage for later analysis
-          const debugHistory = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
-          debugHistory.push({
-            trace_id: traceId,
-            timestamp: new Date().toISOString(),
-            query: query,
-            plate: plate,
-            response_preview: responseText.substring(0, 200),
-            response_time: responseTime,
-            content_type: contentType,
-            was_json: !!data,
-            success: true
-          });
-          // Keep only last 10 debug entries
-          if (debugHistory.length > 10) debugHistory.shift();
-          sessionStorage.setItem('nicole_debug_history', JSON.stringify(debugHistory));
-          
-          console.log('✅ Response processing completed successfully');
-          console.groupEnd(); // Close the detailed debug group
-          
         } catch (parseError) {
           console.error('❌ Response processing error:', parseError);
-          console.error('❌ Parse error details:', {
-            name: parseError.name,
-            message: parseError.message,
-            stack: parseError.stack
-          });
-          console.groupEnd(); // Close the detailed debug group
           throw new Error(`Failed to process response: ${parseError.message}`);
         }
       } catch (error) {
