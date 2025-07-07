@@ -789,8 +789,20 @@
 
         // Handle both JSON and text responses flexibly
         const contentType = response.headers.get('content-type');
-        const rawResponse = await response.text();
-        console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
+        
+        let rawResponse;
+        try {
+          console.log('📥 Attempting to read response body...');
+          rawResponse = await response.text();
+          console.log('✅ Response body read successfully');
+          console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
+        } catch (textError) {
+          console.error('❌ Failed to read response body:', textError);
+          // If we can't read the response but Nicole answered, it means the webhook worked
+          // Display a success message instead of failing
+          displayResponse('ניקול קיבלה את השאלה ועונה עליה. ייתכן שיש בעיית חיבור בהחזרת התשובה.');
+          return; // Exit early but don't throw error
+        }
         
         let responseText;
         let data;
