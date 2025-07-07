@@ -737,6 +737,15 @@
         auth_exists: !!sessionStorage.getItem('auth'),
         auth_type: sessionStorage.getItem('password') ? 'password' : 'auth'
       });
+      console.log('🌐 Environment Info:', {
+        user_agent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        encoding: document.characterSet || document.charset,
+        page_encoding: document.inputEncoding,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      });
 
       try {
         // Import webhook from webhook.js module
@@ -754,29 +763,154 @@
 
         // Read as text first, then try to parse as JSON
         const rawResponse = await response.text();
+        const endTime = performance.now();
+        const requestDuration = Math.round(endTime - startTime);
+        
+        // Store debug information for analysis
+        const debugEntry = {
+          trace_id: traceId,
+          timestamp: new Date().toISOString(),
+          request_duration_ms: requestDuration,
+          response_status: response.status,
+          response_headers: Object.fromEntries(response.headers.entries()),
+          response_size: rawResponse.length,
+          query: query,
+          plate: plate || 'NONE'
+        };
+        
+        // Enhanced logging for debugging JSON issues
+        console.log('📥 Raw Response Details:', {
+          length: rawResponse.length,
+          first_100_chars: rawResponse.substring(0, 100),
+          char_codes: rawResponse.substring(0, 20).split('').map(c => c.charCodeAt(0)),
+          is_empty: rawResponse.trim() === '',
+          starts_with_brace: rawResponse.trim().startsWith('{'),
+          ends_with_brace: rawResponse.trim().endsWith('}')
+        });
         
         try {
+          // Clean the response text to handle potential encoding issues
+          let cleanResponse = rawResponse.trim();
+          
+          // Remove potential BOM (Byte Order Mark) if present
+          if (cleanResponse.charCodeAt(0) === 0xFEFF) {
+            cleanResponse = cleanResponse.substring(1);
+            console.log('🧹 Removed BOM from response');
+          }
+          
           // Try to parse as JSON (new format with audio)
-          const responseData = JSON.parse(rawResponse);
+          const responseData = JSON.parse(cleanResponse);
           
-          // Show debug info on page
-          const debugInfo = `
-            <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-size: 12px; border-radius: 5px;">
-              <strong>🔍 DEBUG INFO:</strong><br>
-              <strong>Raw Response:</strong> ${rawResponse.substring(0, 200)}...<br>
-              <strong>Text Field Type:</strong> ${typeof responseData.text}<br>
-              <strong>Text Field Value:</strong> ${responseData.text?.substring(0, 100)}...<br>
-              <strong>Audio Field:</strong> ${responseData.audio ? 'Present' : 'Missing'}
-            </div>
-          `;
+          console.log('✅ JSON Parse Success:', {
+            response_type: typeof responseData,
+            has_text: !!responseData.text,
+            has_audio: !!responseData.audio,
+            has_message: !!responseData.message,
+            has_response: !!responseData.response,
+            all_keys: Object.keys(responseData)
+          });
           
-          displayResponse(debugInfo + responseData.text, responseData.audio);
+          // Determine the text content from various possible fields
+          let textContent = responseData.text || 
+                           responseData.message || 
+                           responseData.response || 
+                           responseData.content ||
+                           JSON.stringify(responseData, null, 2);
+          
+          if (!textContent || textContent.trim() === '') {
+            console.warn('⚠️ No readable text content found in response');
+            textContent = 'תגובה התקבלה אך ללא תוכן טקסט';
+          }
+          
+          // Show debug info only in development
+          const isDebugMode = window.location.hostname === 'localhost' || window.location.search.includes('debug=true');
+          let debugInfo = '';
+          
+          if (isDebugMode) {
+            debugInfo = `
+              <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-size: 12px; border-radius: 5px;">
+                <strong>🔍 DEBUG INFO:</strong><br>
+                <strong>Response Keys:</strong> ${Object.keys(responseData).join(', ')}<br>
+                <strong>Text Source:</strong> ${responseData.text ? 'text' : responseData.message ? 'message' : responseData.response ? 'response' : 'fallback'}<br>
+                <strong>Audio Field:</strong> ${responseData.audio ? 'Present' : 'Missing'}
+              </div>
+            `;
+          }
+          
+          displayResponse(debugInfo + textContent, responseData.audio);
+          
+          // Store success in debug entry
+          debugEntry.parsing_success = true;
+          debugEntry.response_structure = Object.keys(responseData);
+          debugEntry.text_source = responseData.text ? 'text' : responseData.message ? 'message' : responseData.response ? 'response' : 'fallback';
+          debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(textContent);
+          debugEntry.final_text_length = textContent.length;
+          
         } catch (jsonError) {
-          // If JSON parsing fails, treat as plain text (old format)
-          displayResponse('JSON Parse Failed. Raw response: ' + rawResponse);
+          console.error('❌ JSON Parse Error Details:', {
+            error_name: jsonError.name,
+            error_message: jsonError.message,
+            raw_response_preview: rawResponse.substring(0, 300),
+            response_length: rawResponse.length,
+            first_char_code: rawResponse.charCodeAt(0),
+            last_char_code: rawResponse.charCodeAt(rawResponse.length - 1)
+          });
+          
+          // Try to extract meaningful content even if JSON parsing fails
+          let fallbackContent = rawResponse;
+          
+          // If the response looks like it might be wrapped or have extra characters, try to clean it
+          if (rawResponse.includes('{') && rawResponse.includes('}')) {
+            const firstBrace = rawResponse.indexOf('{');
+            const lastBrace = rawResponse.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+              const possibleJson = rawResponse.substring(firstBrace, lastBrace + 1);
+              try {
+                const extractedData = JSON.parse(possibleJson);
+                const extractedText = extractedData.text || extractedData.message || extractedData.response;
+                if (extractedText) {
+                  console.log('✅ Successfully extracted content from malformed JSON');
+                  displayResponse(extractedText, extractedData.audio);
+                  return;
+                }
+              } catch (secondError) {
+                console.log('🔄 Secondary extraction also failed, using fallback');
+              }
+            }
+          }
+          
+          // Show user-friendly error with the actual content if possible
+          if (fallbackContent.length > 0) {
+            displayResponse(`שגיאה בפענוח התגובה, אך התוכן התקבל:\n\n${fallbackContent}`);
+          } else {
+            displayResponse('שגיאה בקבלת תגובה מהשרת. אנא נסה שוב.');
+          }
+          
+          // Store failure in debug entry
+          debugEntry.parsing_success = false;
+          debugEntry.error_type = 'json_parse_failed';
+          debugEntry.error_message = jsonError.message;
+          debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(fallbackContent);
+          debugEntry.fallback_used = fallbackContent.length > 0;
         }
+        
+        // Store debug entry in session for analysis
+        const debugHistory = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+        debugHistory.push(debugEntry);
+        // Keep only last 50 entries
+        if (debugHistory.length > 50) debugHistory.shift();
+        sessionStorage.setItem('nicole_debug_history', JSON.stringify(debugHistory));
+        
+        console.log(`✅ Request completed [${traceId}]:`, {
+          duration: requestDuration + 'ms',
+          success: debugEntry.parsing_success,
+          has_hebrew: debugEntry.has_hebrew
+        });
+        console.groupEnd();
 
       } catch (err) {
+        console.error('❌ Request failed:', err);
+        console.groupEnd();
         displayResponse('שגיאה בשליחת הבקשה. נסה שוב.');
       }
     }
@@ -785,17 +919,55 @@
     function displayResponse(text, audio = null) {
       const responseBox = document.getElementById('agentResponse');
       responseBox.style.display = 'block';
+      
+      // Clean and format the text content for display
+      let displayText = text;
+      let textForTTS = text;
+      
+      // Handle different content types
+      if (typeof text === 'object') {
+        console.log('📝 Received object response, converting to readable format');
+        displayText = JSON.stringify(text, null, 2);
+        textForTTS = Object.values(text).join(' ');
+      } else if (typeof text === 'string') {
+        // Clean the text for better display
+        displayText = text.trim();
+        textForTTS = text.replace(/[\n\r]+/g, ' ').trim();
+        
+        // If text looks like JSON that wasn't parsed, try to format it
+        if (displayText.startsWith('{') && displayText.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(displayText);
+            const readable = parsed.text || parsed.message || parsed.response || JSON.stringify(parsed, null, 2);
+            displayText = readable;
+            textForTTS = readable.replace(/[\n\r]+/g, ' ').trim();
+            console.log('🔄 Reformatted JSON string for better display');
+          } catch (e) {
+            console.log('📝 Text looks like JSON but failed to parse, displaying as-is');
+          }
+        }
+        
+        // Convert markdown-like formatting to HTML for better display
+        displayText = displayText
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br>');
+      }
+      
+      // Escape text for TTS button to prevent XSS
+      const escapedTextForTTS = textForTTS.replace(/'/g, "\\'").replace(/"/g, '\\"');
+      
       responseBox.innerHTML = `
         <div style="margin-bottom: 10px; font-weight: bold; color: #667eea;">
           👩‍💼 תשובת ניקול:
         </div>
-        <div style="line-height: 1.5; margin-bottom: 10px;">
-          ${text}
+        <div style="line-height: 1.5; margin-bottom: 10px; white-space: pre-wrap;">
+          ${displayText}
         </div>
         
         <!-- TTS Controls -->
         <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-          <button onclick="manualSpeakResponse('${text.replace(/'/g, "\\'")}', this)" style="
+          <button onclick="manualSpeakResponse('${escapedTextForTTS}', this)" style="
             background: #22c55e;
             color: white;
             border: none;
@@ -822,7 +994,6 @@
             🔧 בדוק TTS
           </button>
           
-          
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
         </div>
         
@@ -840,16 +1011,41 @@
         ">✕</button>
       `;
 
-  if (audio) {
-    const ttsAudio = new Audio(audio);
-    try {
-      ttsAudio.play();
-    } catch (e) {
-      console.warn("🔇 Autoplay blocked. User must click play.");
-      window.pendingTTSAudio = ttsAudio;
+      // Handle audio playback
+      if (audio) {
+        let audioElement;
+        
+        // Handle different audio formats
+        if (typeof audio === 'string') {
+          if (audio.startsWith('data:audio') || audio.startsWith('http')) {
+            audioElement = new Audio(audio);
+          } else {
+            // Assume it's base64 audio content
+            audioElement = new Audio('data:audio/mp3;base64,' + audio);
+          }
+        } else if (audio instanceof Blob) {
+          const audioUrl = URL.createObjectURL(audio);
+          audioElement = new Audio(audioUrl);
+        }
+        
+        if (audioElement) {
+          try {
+            audioElement.play();
+            console.log('🔊 Auto-playing audio response');
+          } catch (e) {
+            console.warn("🔇 Autoplay blocked. User must click play.");
+            window.pendingTTSAudio = audioElement;
+          }
+        }
+      }
+      
+      // Log response handling success
+      console.log('✅ Response displayed successfully:', {
+        text_length: displayText.length,
+        has_audio: !!audio,
+        text_type: typeof text
+      });
     }
-  }
-}
     
     // Manual TTS trigger for testing
     window.manualSpeakResponse = async function(text, buttonElement) {
@@ -1235,6 +1431,103 @@
           console.error('❌ Microphone test failed:', error);
           return { success: false, error: error.message };
         }
+      },
+      // New debugging tools for JSON and encoding issues
+      analyzeText: (text) => {
+        console.group('🔍 Text Analysis');
+        console.log('📝 Text Info:', {
+          length: text.length,
+          type: typeof text,
+          first_10_chars: text.substring(0, 10),
+          last_10_chars: text.substring(text.length - 10),
+          char_codes: text.substring(0, 20).split('').map(c => ({ char: c, code: c.charCodeAt(0) })),
+          has_bom: text.charCodeAt(0) === 0xFEFF,
+          has_hebrew: /[\u0590-\u05FF]/.test(text),
+          has_arabic: /[\u0600-\u06FF]/.test(text),
+          line_breaks: text.match(/\r?\n/g)?.length || 0,
+          is_json_like: text.trim().startsWith('{') && text.trim().endsWith('}')
+        });
+        
+        if (text.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(text);
+            console.log('✅ Valid JSON:', parsed);
+          } catch (e) {
+            console.error('❌ JSON Parse Error:', e.message);
+            console.log('🔧 JSON Syntax Check:', {
+              balanced_braces: (text.match(/\{/g)?.length || 0) === (text.match(/\}/g)?.length || 0),
+              balanced_brackets: (text.match(/\[/g)?.length || 0) === (text.match(/\]/g)?.length || 0),
+              has_quotes: /["']/.test(text),
+              has_commas: /,/.test(text)
+            });
+          }
+        }
+        console.groupEnd();
+        return text;
+      },
+      testEncoding: () => {
+        const testStrings = [
+          'שלום עולם', // Hebrew
+          'مرحبا بالعالم', // Arabic
+          'Hello World', // English
+          '{"text": "בדיקה"}' // JSON with Hebrew
+        ];
+        
+        console.group('🌐 Character Encoding Test');
+        testStrings.forEach((str, index) => {
+          console.log(`Test ${index + 1}:`, {
+            original: str,
+            encoded: encodeURIComponent(str),
+            base64: btoa(unescape(encodeURIComponent(str))),
+            char_codes: str.split('').map(c => c.charCodeAt(0)),
+            json_stringify: JSON.stringify(str),
+            roundtrip_test: decodeURIComponent(encodeURIComponent(str)) === str
+          });
+        });
+        console.groupEnd();
+      },
+      simulateResponse: (responseText) => {
+        console.group('🧪 Simulate Response Processing');
+        console.log('Input:', responseText);
+        
+        try {
+          // Simulate the same processing as the real code
+          let cleanResponse = responseText.trim();
+          
+          if (cleanResponse.charCodeAt(0) === 0xFEFF) {
+            cleanResponse = cleanResponse.substring(1);
+            console.log('🧹 Removed BOM');
+          }
+          
+          const responseData = JSON.parse(cleanResponse);
+          const textContent = responseData.text || responseData.message || responseData.response || responseData.content;
+          
+          console.log('✅ Simulation Success:', {
+            parsed_data: responseData,
+            extracted_text: textContent,
+            would_display: textContent || 'fallback content'
+          });
+          
+        } catch (error) {
+          console.error('❌ Simulation Failed:', error.message);
+          console.log('🔄 Would attempt extraction fallback...');
+          
+          if (responseText.includes('{') && responseText.includes('}')) {
+            const firstBrace = responseText.indexOf('{');
+            const lastBrace = responseText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+              const extracted = responseText.substring(firstBrace, lastBrace + 1);
+              console.log('🔧 Extracted JSON:', extracted);
+              try {
+                const extractedData = JSON.parse(extracted);
+                console.log('✅ Extraction Success:', extractedData);
+              } catch (e2) {
+                console.error('❌ Extraction also failed:', e2.message);
+              }
+            }
+          }
+        }
+        console.groupEnd();
       }
     };
     
@@ -1247,6 +1540,9 @@
     console.log('  - nicoleDebug.getErrorPatterns() - Analyze error frequency');
     console.log('  - nicoleDebug.testMicrophone() - Test mic permissions');
     console.log('  - nicoleDebug.clearMicErrors() - Clear mic error history');
+    console.log('  - nicoleDebug.analyzeText(text) - Analyze text and encoding');
+    console.log('  - nicoleDebug.testEncoding() - Test character encoding support');
+    console.log('  - nicoleDebug.simulateResponse(text) - Simulate response processing');
   }
 </script>
 
