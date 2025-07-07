@@ -746,131 +746,28 @@
         console.log('🌐 Sending request to:', webhookUrl);
         const startTime = performance.now();
         
-        // Try using the webhook.js sendToWebhook function which handles CORS better
-        let response;
-        try {
-          console.log('📡 Using sendToWebhook method for better CORS handling');
-          const { sendToWebhook } = await import('./webhook.js');
-          const webhookResponse = await sendToWebhook('SEARCH_MODULE', payload);
-          
-          if (webhookResponse) {
-            // If sendToWebhook succeeds, process the response directly
-            const responseText = webhookResponse?.text || webhookResponse?.answer || webhookResponse?.response || webhookResponse?.message || webhookResponse;
-            
-            if (responseText) {
-              displayResponse(responseText);
-              
-              // Only auto-speak if user used microphone input (STT)
-              if (wasVoiceInput) {
-                console.log('🎤 Voice input detected, auto-playing TTS response');
-                await speakResponse(responseText);
-              } else {
-                console.log('📝 Text input used, TTS available via manual button');
-              }
-              
-              saveToHelper(query, responseText);
-              return; // Exit successfully
-            }
-          }
-        } catch (webhookError) {
-          console.log('sendToWebhook failed, trying direct fetch:', webhookError);
-        }
-        
-        // Fallback to direct fetch if sendToWebhook fails
-        let lastError;
-        const maxRetries = 2;
-        
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            console.log(`📡 Direct fetch attempt ${attempt}/${maxRetries}`);
-            response = await fetch(webhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-              timeout: 30000 // 30 second timeout
-            });
-            break; // Success, exit retry loop
-          } catch (error) {
-            lastError = error;
-            console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
-            
-            if (attempt < maxRetries) {
-              const retryDelay = attempt * 1000; // 1s, 2s delays
-              console.log(`🔄 Retrying in ${retryDelay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-            }
-          }
-        }
-        
-        if (!response) {
-          throw new Error(`All ${maxRetries} attempts failed. Last error: ${lastError.message}`);
-        }
-
-        const endTime = performance.now();
-        const responseTime = Math.round(endTime - startTime);
-        
-        console.log('📡 Response received:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          responseTime: responseTime + 'ms'
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
-        // Read response as text first, then try to parse as JSON if possible
-        const rawResponse = await response.text();
-        let responseText;
-        
-        try {
-          // Try to parse as JSON (like the working assistant.js)
-          const data = JSON.parse(rawResponse);
-          responseText = data?.text || data?.answer || data?.response || data?.message;
-        } catch (e) {
-          // If JSON parsing fails, use the raw text
-          responseText = rawResponse;
-        }
-        
-        if (responseText) {
-          displayResponse(responseText);
+        const data = await res.json();
+        if (data?.text) {
+          displayResponse(data.text);
           
           // Only auto-speak if user used microphone input (STT)
           if (wasVoiceInput) {
             console.log('🎤 Voice input detected, auto-playing TTS response');
-            await speakResponse(responseText);
+            await speakResponse(data.text);
           } else {
             console.log('📝 Text input used, TTS available via manual button');
           }
           
-          saveToHelper(query, responseText);
+          saveToHelper(query, data.text);
         }
-      } catch (error) {
-        console.error('🚨 Webhook error details:', {
-          error_message: error.message,
-          error_type: error.constructor.name,
-          stack: error.stack,
-          trace_id: traceId
-        });
-        
-        // Check if this is a CORS error (Load failed)
-        if (error.message.includes('Load failed') || error.name === 'TypeError') {
-          console.log('🌐 CORS error detected');
-          
-          // Show the explanation since we already tried alternative methods above
-          displayResponse(`❌ בעיית תקשורת עם ניקול
-
-🔧 ניקול פועלת אבל יש בעיה בקבלת התשובות.
-
-💡 פתרונות זמניים:
-• נסה לרענן את הדף ולשאול שוב
-• בדוק חיבור לאינטרנט
-• פנה לתמיכה טכנית אם הבעיה נמשכת`);
-          
-          return;
-        }
-        
-        displayResponse('שגיאה בשליחת הבקשה. אנא נסה שוב מאוחר יותר.');
-        throw error;
-      } finally {
-        console.groupEnd();
+      } catch (err) {
+        displayResponse('שגיאה בשליחת הבקשה. נסה שוב.');
       }
     }
 
