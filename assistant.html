@@ -123,7 +123,7 @@
       height: 34px;
       border-radius: 50%;
       border: none;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       color: white;
       cursor: pointer;
       display: flex;
@@ -131,12 +131,12 @@
       justify-content: center;
       font-size: 15px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
     }
     
     .mic-button:hover {
       transform: translateY(-50%) scale(1.1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
     }
     
     .mic-button:active {
@@ -180,14 +180,14 @@
     }
     
     .btn-send {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
       color: white;
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
     }
     
     .btn-send:hover {
       transform: translateY(-3px);
-      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
     }
     
     .btn-send:active {
@@ -267,7 +267,7 @@
   </div>
   <div class="title">ירון כיוף שמאות - פורטל</div>
   <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
-  <h2>ניקול – עוזרת דיגיטלית</h2>
+  <h2>👩‍💼 ניקול – עוזרת דיגיטלית</h2>
   <form id="assistantForm">
     <input type="text" id="plateInput" name="plate" placeholder="מספר רכב (אופציונלי)">
     
@@ -297,28 +297,82 @@
 <div id="agentResponse" class="floating-response" style="display:none;"></div>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-    // Check authentication similar to selection.html
+    // Enhanced authentication audit
     const userAuthToken = sessionStorage.getItem('auth');
     const loginTime = sessionStorage.getItem('loginTime');
+    const password = sessionStorage.getItem('password');
     const plate = sessionStorage.getItem('plate');
     
-    console.log("🔍 Assistant page loaded, checking authentication...");
-    console.log("- Auth token exists:", !!userAuthToken);
-    console.log("- Login time exists:", !!loginTime);
+    console.group("🔐 Nicole Authentication Audit");
+    console.log("📊 Authentication State:", {
+      auth_token: userAuthToken ? userAuthToken.substring(0, 20) + '...' : 'MISSING',
+      auth_length: userAuthToken?.length || 0,
+      login_time: loginTime,
+      password_exists: !!password,
+      password_type: password ? typeof password : 'undefined',
+      plate_preloaded: plate || 'NONE',
+      session_keys: Object.keys(sessionStorage).sort(),
+      timestamp: new Date().toISOString()
+    });
     
-    if (!userAuthToken || !loginTime) {
-      console.log("❌ No auth token or login time found, redirecting to login");
+    // Check authentication validity
+    const isValidAuth = userAuthToken && loginTime;
+    console.log("🎫 Auth Validation:", {
+      has_auth_token: !!userAuthToken,
+      has_login_time: !!loginTime,
+      is_valid: isValidAuth,
+      login_age_minutes: loginTime ? Math.round((Date.now() - new Date(loginTime).getTime()) / 60000) : 'N/A'
+    });
+    
+    // Check for auth conflicts or issues
+    const authIssues = [];
+    if (!userAuthToken) authIssues.push('Missing auth token');
+    if (!loginTime) authIssues.push('Missing login time');
+    if (!password && !userAuthToken) authIssues.push('No password fallback');
+    
+    if (authIssues.length > 0) {
+      console.warn("⚠️ Authentication Issues:", authIssues);
+    }
+    
+    if (!isValidAuth) {
+      console.error("❌ Authentication failed, redirecting to login");
+      console.log("🔄 Redirect reason:", authIssues.join(', '));
       alert("הגישה חסומה - אנא התחבר דרך דף הבית");
       window.location.href = 'index.html';
       return;
     }
     
-    console.log("✅ Authentication verified, loading Nicole assistant");
-    if (plate) document.getElementById('plateInput').value = plate;
+    console.log("✅ Authentication verified successfully");
+    console.groupEnd();
+    
+    // Pre-populate plate if available
+    if (plate) {
+      document.getElementById('plateInput').value = plate;
+      console.log("🚗 Pre-populated plate number:", plate);
+    }
+    
+    // Store auth audit in session for debugging
+    sessionStorage.setItem('nicole_auth_audit', JSON.stringify({
+      timestamp: new Date().toISOString(),
+      auth_valid: true,
+      auth_method: password ? 'password' : 'auth_token',
+      login_age_minutes: Math.round((Date.now() - new Date(loginTime).getTime()) / 60000)
+    }));
     
     // Initialize modern UI functionality
     initializeModernUI();
   });
+
+  // Helper function to detect browser info
+  function getBrowserInfo() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Chrome')) return 'Chrome';
+    if (ua.includes('Firefox')) return 'Firefox';
+    if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+    if (ua.includes('Edge')) return 'Edge';
+    if (ua.includes('Opera')) return 'Opera';
+    return 'Unknown';
+  }
 
   function clearForm() {
     document.getElementById('plateInput').value = '';
@@ -333,6 +387,10 @@
     
     // Enhanced microphone button functionality
     let isRecording = false;
+    let recordingTimeout;
+    let inactivityTimeout;
+    const MAX_RECORDING_TIME = 60000; // 60 seconds max recording
+    const INACTIVITY_TIMEOUT = 15000; // 15 seconds of silence
     
     micBtn.addEventListener('click', function() {
       if (micBtn.disabled) return;
@@ -357,39 +415,131 @@
       recognition.addEventListener('result', (event) => {
         const transcript = event.results[0][0].transcript;
         textarea.value = transcript;
+        
+        // Reset inactivity timeout when speech is detected
+        if (inactivityTimeout) {
+          clearTimeout(inactivityTimeout);
+          inactivityTimeout = null;
+        }
+        
         stopRecording();
         console.log('🎤 Speech recognized:', transcript);
       });
 
       recognition.addEventListener('error', (event) => {
+        const errorDetails = {
+          error_type: event.error,
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          browser: getBrowserInfo(),
+          mic_permissions: 'unknown'
+        };
+        
+        console.group('🚨 Microphone Error Analysis');
         console.error('🎤 Speech recognition error:', event.error);
+        console.log('📊 Error Details:', errorDetails);
+        
         stopRecording();
         
         let errorMessage = 'שגיאה בזיהוי קול';
+        let troubleshooting = '';
+        let severity = 'medium';
+        
         switch(event.error) {
           case 'no-speech':
             errorMessage = 'לא זוהה דיבור. אנא נסה שוב ודבר בקול ברור.';
+            troubleshooting = 'בדוק שהמיקרופון עובד ושאין רעש סביבה';
+            severity = 'low';
             break;
           case 'audio-capture':
-            errorMessage = 'לא ניתן לגשת למיקרופון. אנא בדוק את ההרשאות.';
+            errorMessage = 'לא ניתן לגשת למיקרופון. אנא בדוק את ההרשאות והחיבור.';
+            troubleshooting = '1. בדוק שהמיקרופון מחובר\n2. אשר הרשאות למיקרופון\n3. סגור יישומים אחרים שעשויים להשתמש במיקרופון';
+            severity = 'high';
             break;
           case 'not-allowed':
             errorMessage = 'גישה למיקרופון נדחתה. אנא אשר הרשאה בהגדרות הדפדפן.';
+            troubleshooting = 'לחץ על סמל המיקרופון בשורת הכתובת ואשר הרשאה';
+            severity = 'high';
             break;
           case 'network':
             errorMessage = 'שגיאת רשת. אנא בדוק את החיבור לאינטרנט.';
+            troubleshooting = 'בדוק חיבור האינטרנט ונסה שוב';
+            severity = 'medium';
             break;
           case 'aborted':
             errorMessage = 'זיהוי הקול הופסק.';
+            troubleshooting = 'זוהי שגיאה זמנית, ניתן לנסות שוב';
+            severity = 'low';
+            break;
+          case 'service-not-allowed':
+            errorMessage = 'שירות זיהוי קול לא זמין.';
+            troubleshooting = 'השירות עשוי להיות חסום או לא זמין באזור שלך';
+            severity = 'high';
             break;
           default:
             errorMessage = `שגיאה בזיהוי קול: ${event.error}`;
+            troubleshooting = 'שגיאה לא מזוהה, נסה לרענן את הדף';
+            severity = 'medium';
         }
-        alert(errorMessage);
+        
+        // Log detailed error for debugging
+        console.log('🛠️ Error Analysis:', {
+          error_code: event.error,
+          message: errorMessage,
+          troubleshooting: troubleshooting,
+          severity: severity,
+          browser_support: !!window.webkitSpeechRecognition || !!window.SpeechRecognition,
+          permissions_api: !!navigator.permissions
+        });
+        
+        // Save error to session for pattern analysis
+        const micErrors = JSON.parse(sessionStorage.getItem('nicole_mic_errors') || '[]');
+        micErrors.push({
+          ...errorDetails,
+          message: errorMessage,
+          severity: severity,
+          troubleshooting: troubleshooting
+        });
+        // Keep only last 20 errors
+        if (micErrors.length > 20) micErrors.shift();
+        sessionStorage.setItem('nicole_mic_errors', JSON.stringify(micErrors));
+        
+        console.groupEnd();
+        
+        // Show user-friendly error with troubleshooting
+        const fullMessage = `${errorMessage}\n\nפתרון מוצע:\n${troubleshooting}`;
+        alert(fullMessage);
+        
+        // If it's a critical error, disable mic button temporarily
+        if (severity === 'high') {
+          micBtn.style.opacity = '0.5';
+          micBtn.disabled = true;
+          setTimeout(() => {
+            micBtn.style.opacity = '1';
+            micBtn.disabled = false;
+          }, 10000); // Re-enable after 10 seconds
+        }
       });
 
       recognition.addEventListener('end', () => {
         stopRecording();
+      });
+      
+      // Cleanup function for page unload
+      window.addEventListener('beforeunload', () => {
+        if (isRecording) {
+          stopRecording();
+        }
+        if (recordingTimeout) clearTimeout(recordingTimeout);
+        if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      });
+      
+      // Cleanup function for visibility changes (tab switches)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isRecording) {
+          console.log('🎤 Tab hidden while recording, stopping...');
+          stopRecording();
+        }
       });
     } else {
       // Speech recognition not supported
@@ -430,9 +580,26 @@
       textarea.style.borderColor = '#ff6b6b';
       textarea.placeholder = '🎤 מקליט... דבר עכשיו או לחץ שוב כדי להפסיק';
       
+      // Set maximum recording timeout
+      recordingTimeout = setTimeout(() => {
+        console.log('🎤 Maximum recording time reached, stopping...');
+        stopRecording();
+        alert('הקלטה הופסקה לאחר דקה. אנא נסה שוב.');
+      }, MAX_RECORDING_TIME);
+      
+      // Set inactivity timeout
+      inactivityTimeout = setTimeout(() => {
+        console.log('🎤 No speech detected for 15 seconds, stopping...');
+        stopRecording();
+        // Don't show alert for inactivity timeout - it's normal
+      }, INACTIVITY_TIMEOUT);
+      
       try {
         recognition.start();
-        console.log('🎤 Speech recognition started...');
+        console.log('🎤 Speech recognition started with timeouts:', {
+          max_time: MAX_RECORDING_TIME,
+          inactivity_timeout: INACTIVITY_TIMEOUT
+        });
       } catch (error) {
         console.error('🎤 Failed to start recognition:', error);
         if (error.message.includes('already started')) {
@@ -454,6 +621,16 @@
       micBtn.innerHTML = '🎤';
       micBtn.title = 'לחץ כדי להקליט קול';
       
+      // Clear all timeouts
+      if (recordingTimeout) {
+        clearTimeout(recordingTimeout);
+        recordingTimeout = null;
+      }
+      if (inactivityTimeout) {
+        clearTimeout(inactivityTimeout);
+        inactivityTimeout = null;
+      }
+      
       // Reset textarea styling
       textarea.style.borderColor = '#e2e8f0';
       textarea.placeholder = 'מה תרצה לדעת או לבקש? אפשר לכתוב או להקיש על המיקרופון לדבר...';
@@ -466,7 +643,7 @@
         }
       }
       
-      console.log('🎤 Recording stopped...');
+      console.log('🎤 Recording stopped with timeout cleanup...');
     }
     
     // Form submission handler
@@ -477,20 +654,44 @@
       const query = textarea.value.trim();
       const plate = document.getElementById('plateInput').value.trim();
       
-      if (!query) {
-        alert('אנא כתוב שאלה או בקשה');
-        textarea.focus();
-        textarea.style.animation = 'shake 0.5s';
-        setTimeout(() => { textarea.style.animation = ''; }, 500);
+      // Enhanced validation: require at least one field (plate OR query)
+      if (!query && !plate) {
+        alert('אנא מלא לפחות שדה אחד:\n• מספר רכב, או\n• שאלה/בקשה');
+        
+        // Focus on the first empty field
+        if (!plate) {
+          document.getElementById('plateInput').focus();
+          document.getElementById('plateInput').style.animation = 'shake 0.5s';
+          setTimeout(() => { document.getElementById('plateInput').style.animation = ''; }, 500);
+        } else {
+          textarea.focus();
+          textarea.style.animation = 'shake 0.5s';
+          setTimeout(() => { textarea.style.animation = ''; }, 500);
+        }
+        
+        console.log('❌ Validation failed: Both fields empty', { plate, query });
         return;
       }
+      
+      // If only plate is provided, create a default query
+      let finalQuery = query;
+      if (!query && plate) {
+        finalQuery = `מה המידע הזמין עבור רכב מספר ${plate}?`;
+        console.log('🔄 Auto-generated query for plate-only request:', finalQuery);
+      }
+      
+      console.log('✅ Validation passed:', { 
+        plate: plate || 'NONE', 
+        query: finalQuery,
+        validation_type: query && plate ? 'BOTH' : query ? 'QUERY_ONLY' : 'PLATE_ONLY'
+      });
       
       // Add loading state
       sendBtn.innerHTML = '<span>⏳</span> שולח...';
       sendBtn.disabled = true;
       
       try {
-        await submitQuery(plate, query);
+        await submitQuery(plate, finalQuery);
       } catch (error) {
         console.error('Submit error:', error);
         alert('שגיאה בשליחת השאלה: ' + error.message);
@@ -503,38 +704,152 @@
 
     // Submit query to webhook and handle response
     async function submitQuery(plate, query) {
+      // Generate unique trace ID for this request
+      const traceId = 'nicole_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+      
       const payload = { 
         plate: plate, 
         free_query: query, 
         source: 'assistant-ui',
-        password: sessionStorage.getItem('password') || sessionStorage.getItem('auth')
+        password: sessionStorage.getItem('password') || sessionStorage.getItem('auth'),
+        trace_id: traceId,
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        page_url: window.location.href
       };
+
+      // Enhanced logging for debugging
+      console.group(`🔍 Nicole Query Debug [${traceId}]`);
+      console.log('📤 Outgoing Payload:', JSON.stringify(payload, null, 2));
+      console.log('🔗 Webhook URL:', WEBHOOKS?.SEARCH_MODULE || 'URL_NOT_LOADED');
+      console.log('🔑 Auth Data:', {
+        password_exists: !!sessionStorage.getItem('password'),
+        auth_exists: !!sessionStorage.getItem('auth'),
+        auth_type: sessionStorage.getItem('password') ? 'password' : 'auth'
+      });
 
       try {
         // Import webhook from webhook.js module
         const { WEBHOOKS } = await import('./webhook.js');
         const webhookUrl = WEBHOOKS.SEARCH_MODULE;
         
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+        console.log('🌐 Sending request to:', webhookUrl);
+        const startTime = performance.now();
+        
+        // Implement retry logic for network failures
+        let response;
+        let lastError;
+        const maxRetries = 2;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`📡 Attempt ${attempt}/${maxRetries}`);
+            response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              timeout: 30000 // 30 second timeout
+            });
+            break; // Success, exit retry loop
+          } catch (error) {
+            lastError = error;
+            console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
+            
+            if (attempt < maxRetries) {
+              const retryDelay = attempt * 1000; // 1s, 2s delays
+              console.log(`🔄 Retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+          }
+        }
+        
+        if (!response) {
+          throw new Error(`All ${maxRetries} attempts failed. Last error: ${lastError.message}`);
+        }
+
+        const endTime = performance.now();
+        const responseTime = Math.round(endTime - startTime);
+        
+        console.log('📡 Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          responseTime: responseTime + 'ms'
         });
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn('⚠️ Non-JSON response received:', contentType);
+          const textResponse = await response.text();
+          console.log('📄 Raw response text:', textResponse);
+          throw new Error(`Expected JSON response, got ${contentType}: ${textResponse.substring(0, 200)}`);
+        }
 
         const data = await response.json();
         
+        console.log('📥 Parsed Response Data:', JSON.stringify(data, null, 2));
+        
+        // Enhanced response validation
         if (data?.text || data?.answer || data?.response) {
           const responseText = data.text || data.answer || data.response;
+          console.log('✅ Valid response extracted:', responseText.substring(0, 100) + '...');
+          console.log('📊 Response Analysis:', {
+            response_length: responseText.length,
+            has_hebrew: /[\u0590-\u05FF]/.test(responseText),
+            has_english: /[a-zA-Z]/.test(responseText),
+            contains_car_terms: /רכב|נזק|ביטוח|שמאי/.test(responseText)
+          });
+          
           displayResponse(responseText);
           await speakResponse(responseText);
           saveToHelper(query, responseText);
+          
+          // Save debug info to sessionStorage for later analysis
+          const debugHistory = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+          debugHistory.push({
+            trace_id: traceId,
+            timestamp: new Date().toISOString(),
+            query: query,
+            plate: plate,
+            response_preview: responseText.substring(0, 200),
+            response_time: responseTime,
+            success: true
+          });
+          // Keep only last 10 debug entries
+          if (debugHistory.length > 10) debugHistory.shift();
+          sessionStorage.setItem('nicole_debug_history', JSON.stringify(debugHistory));
+          
         } else {
-          throw new Error('No response text received from server');
+          console.error('❌ Invalid response structure:', data);
+          console.log('🔍 Available response fields:', Object.keys(data || {}));
+          throw new Error(`No response text received from server. Available fields: ${Object.keys(data || {}).join(', ')}`);
         }
       } catch (error) {
-        console.error('Webhook error:', error);
+        console.error('🚨 Webhook error details:', {
+          error_message: error.message,
+          error_type: error.constructor.name,
+          stack: error.stack,
+          trace_id: traceId
+        });
+        
+        // Save error to debug history
+        const debugHistory = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+        debugHistory.push({
+          trace_id: traceId,
+          timestamp: new Date().toISOString(),
+          query: query,
+          plate: plate,
+          error: error.message,
+          success: false
+        });
+        if (debugHistory.length > 10) debugHistory.shift();
+        sessionStorage.setItem('nicole_debug_history', JSON.stringify(debugHistory));
+        
         displayResponse('שגיאה בשליחת הבקשה. אנא נסה שוב מאוחר יותר.');
         throw error;
+      } finally {
+        console.groupEnd();
       }
     }
 
@@ -632,6 +947,73 @@
     textarea.addEventListener('blur', function() {
       this.parentElement.style.transform = 'scale(1)';
     });
+    
+    // Add global debug function for easy console access
+    window.nicoleDebug = {
+      getHistory: () => {
+        const history = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+        console.table(history);
+        return history;
+      },
+      clearHistory: () => {
+        sessionStorage.removeItem('nicole_debug_history');
+        console.log('🧹 Nicole debug history cleared');
+      },
+      getLastRequest: () => {
+        const history = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+        return history[history.length - 1] || null;
+      },
+      exportHistory: () => {
+        const history = JSON.parse(sessionStorage.getItem('nicole_debug_history') || '[]');
+        const blob = new Blob([JSON.stringify(history, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nicole_debug_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        console.log('💾 Debug history exported');
+      },
+      getMicErrors: () => {
+        const errors = JSON.parse(sessionStorage.getItem('nicole_mic_errors') || '[]');
+        console.table(errors);
+        return errors;
+      },
+      clearMicErrors: () => {
+        sessionStorage.removeItem('nicole_mic_errors');
+        console.log('🧹 Microphone error history cleared');
+      },
+      getErrorPatterns: () => {
+        const errors = JSON.parse(sessionStorage.getItem('nicole_mic_errors') || '[]');
+        const patterns = {};
+        errors.forEach(error => {
+          patterns[error.error_type] = (patterns[error.error_type] || 0) + 1;
+        });
+        console.log('📊 Error Patterns:', patterns);
+        return patterns;
+      },
+      testMicrophone: async () => {
+        console.log('🎤 Testing microphone permissions...');
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log('✅ Microphone access granted');
+          stream.getTracks().forEach(track => track.stop());
+          return { success: true, message: 'Microphone working' };
+        } catch (error) {
+          console.error('❌ Microphone test failed:', error);
+          return { success: false, error: error.message };
+        }
+      }
+    };
+    
+    console.log('🔧 Nicole Debug Tools Available:');
+    console.log('  - nicoleDebug.getHistory() - View all request/response history');
+    console.log('  - nicoleDebug.getLastRequest() - Get the most recent request');
+    console.log('  - nicoleDebug.clearHistory() - Clear debug history');
+    console.log('  - nicoleDebug.exportHistory() - Export history as JSON file');
+    console.log('  - nicoleDebug.getMicErrors() - View microphone error history');
+    console.log('  - nicoleDebug.getErrorPatterns() - Analyze error frequency');
+    console.log('  - nicoleDebug.testMicrophone() - Test mic permissions');
+    console.log('  - nicoleDebug.clearMicErrors() - Clear mic error history');
   }
 </script>
 

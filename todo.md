@@ -433,7 +433,7 @@ Data is inside the same square fields as we have now .
     1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
     2. Fix the title style so it matches the system : logo, site name , business name and page name 
 
-6. Depreciation module : 
+6. Depreciation module : ✅ 
     1. Change the buttons  font size it's bold and doesn't match the general buttons font system style
     2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to override automatic data 
     3. And override of automatic data ( not just here but across system) updates the helper and becomes the source of truth for the respective parameter overridden. 
@@ -468,6 +468,7 @@ Data is inside the same square fields as we have now .
         1. Change the microphone color to dark blue 
         2. Change the send query button to system green 
         3. Change the icon in the answer from 🤖to Nicol's emoji 👩‍💼
+        4. Response TTS check, when nicole answers to also speak and not just send textual message 
 12. The system help assistant 🤖that we have across system in all pages : 
     1. Purpose of this assistant is to help user with the system technical actions, workflows, debugging solutions , handling errors and so on , this is not Nicole this is an inner assistant to learn the system 
     2. As for now the knowledge of this assistant is very limited and it directs the user to the system manual that doesn't exist . 
@@ -487,7 +488,7 @@ Data is inside the same square fields as we have now .
     2. Those two modules require from you a deep understanding of the logic and flow , a deep check of the current structure and all the files in the repo , and rebuilding the logic from scratch combining all expertise related files in the repo as I already explained before. 
     3. The wizard is the body pert of the expertise html builder and it files the placeholders . The builder's other part is the car details pulled from the helper . 
 
-15. There are HTMLs that are included in the structure and you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
+15. Orphan pages : There are HTMLs that are included in the structure but are not asssigned to any flow.  you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
     1. Evaluate and think how and where to combine them 
     2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
     3. I think best place for them is in the admin hub  

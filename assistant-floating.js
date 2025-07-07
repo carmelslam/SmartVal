@@ -129,9 +129,10 @@
       </div>
 
       <div id="assistantTabs" style="display: flex; margin-bottom: 20px; border-bottom: 1px solid #e1e8ed;">
-        <button class="assistant-tab active" data-tab="help" style="flex: 1; padding: 10px; border: none; background: none; cursor: pointer; border-bottom: 2px solid #667eea; color: #667eea; font-weight: bold;">עזרה כללית</button>
-        <button class="assistant-tab" data-tab="contextual" style="flex: 1; padding: 10px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: #666;">עזרה בדף זה</button>
-        <button class="assistant-tab" data-tab="shortcuts" style="flex: 1; padding: 10px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: #666;">קיצורי דרך</button>
+        <button class="assistant-tab active" data-tab="help" style="flex: 1; padding: 8px; border: none; background: none; cursor: pointer; border-bottom: 2px solid #667eea; color: #667eea; font-weight: bold; font-size: 13px;">עזרה כללית</button>
+        <button class="assistant-tab" data-tab="contextual" style="flex: 1; padding: 8px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-size: 13px;">עזרה בדף זה</button>
+        <button class="assistant-tab" data-tab="workflow" style="flex: 1; padding: 8px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-size: 13px;">תהליכי עבודה</button>
+        <button class="assistant-tab" data-tab="shortcuts" style="flex: 1; padding: 8px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-size: 13px;">קיצורי דרך</button>
       </div>
 
       <div id="assistantContent">
@@ -158,6 +159,109 @@
         <div id="contextualTab" class="assistant-tab-content" style="display: none;">
           <div id="contextualHelp">
             <!-- Contextual help content will be populated dynamically -->
+          </div>
+        </div>
+
+        <div id="workflowTab" class="assistant-tab-content" style="display: none;">
+          <h3 style="color: #667eea; margin-bottom: 15px;">תהליכי עבודה מרכזיים</h3>
+          <div id="workflowDiagrams">
+            
+            <div class="workflow-item" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-right: 4px solid #667eea;">
+              <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                📋 תהליך פתיחת תיק חדש
+              </h4>
+              <div class="workflow-steps" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #667eea; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">1</span>
+                  <span>דף הבחירה → "התחלת דו"ח חדש"</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #667eea; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">2</span>
+                  <span>מילוי פרטי רכב ובעלים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #667eea; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">3</span>
+                  <span>פרטי ביטוח ותאריכים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #e8f5e8; border-radius: 8px;">
+                  <span style="background: #22c55e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">✓</span>
+                  <span>שמירה ופתיחת התיק</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="workflow-item" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-right: 4px solid #f59e0b;">
+              <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                📄 תהליך דו"ח לוי יצחק
+              </h4>
+              <div class="workflow-steps" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #f59e0b; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">1</span>
+                  <span>העלאת קובץ PDF/תמונה</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #f59e0b; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">2</span>
+                  <span>עיבוד OCR אוטומטי (30 שניות)</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #f59e0b; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">3</span>
+                  <span>אימות וגם תיקון נתונים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #e8f5e8; border-radius: 8px;">
+                  <span style="background: #22c55e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">✓</span>
+                  <span>שמירה והשלמה</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="workflow-item" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-right: 4px solid #dc2626;">
+              <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                🔧 ניהול מוקדי נזק
+              </h4>
+              <div class="workflow-steps" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #dc2626; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">1</span>
+                  <span>הגדרת מוקדי נזק</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #dc2626; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">2</span>
+                  <span>הוספת חלקים ומחירים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #dc2626; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">3</span>
+                  <span>עבודות תיקון ושעות</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #e8f5e8; border-radius: 8px;">
+                  <span style="background: #22c55e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">✓</span>
+                  <span>חישוב אוטומטי סה"כ</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="workflow-item" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-right: 4px solid #7c3aed;">
+              <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                ✅ אימות דו"ח סופי
+              </h4>
+              <div class="workflow-steps" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #7c3aed; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">1</span>
+                  <span>בדיקת שלמות כל המודולים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #7c3aed; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">2</span>
+                  <span>אימות נתונים וחישובים</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
+                  <span style="background: #7c3aed; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">3</span>
+                  <span>תהליך אישור סופי</span>
+                </div>
+                <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #e8f5e8; border-radius: 8px;">
+                  <span style="background: #22c55e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">✓</span>
+                  <span>יצירת דו"ח PDF</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -608,6 +712,117 @@
 לא נפתר? פנה לתמיכה:
 - טלפון: 1-800-YARON
 - מייל: support@yaron-appraisal.com`
+      },
+      
+      // Integration and automation
+      integration: {
+        keywords: ['אוטומציה', 'make.com', 'אינטגרציה', 'וובהוק', 'API'],
+        response: `על האוטומציה במערכת:
+המערכת עובדת עם אוטומציות Make.com לעיבוד מידע:
+
+🔧 תכונות אוטומטיות:
+- עיבוד OCR אוטומטי לדוחות לוי יצחק
+- יצירת דוחות אוטומטית
+- שליחת התראות ועדכונים
+- גיבוי אוטומטי של נתונים
+
+⚡ ביצועים:
+- זמן תגובה: בדרך כלל פחות מ-30 שניות
+- זמינות: 24/7
+- גיבוי: כל שעה
+
+🛠️ אם יש בעיות:
+1. המתן עד דקה לעיבוד
+2. בדוק חיבור אינטרנט
+3. רענן את הדף
+4. פנה לתמיכה טכנית`
+      },
+      
+      // Data management and backup
+      backup: {
+        keywords: ['גיבוי', 'שחזור', 'נתונים', 'איפוס', 'מחיקה'],
+        response: `ניהול נתונים וגיבויים:
+
+💾 גיבויים אוטומטיים:
+- גיבוי שעתי של כל הנתונים
+- שמירה ל-30 יום אחורה
+- גיבוי לענן מאובטח
+
+🔄 שחזור נתונים:
+1. כנס לניהול מערכת (Admin)
+2. לחץ על "גיבויים ושחזור"
+3. בחר תאריך לשחזור
+4. אשר את הפעולה
+
+⚠️ זהירות:
+- שחזור מחליף את כל הנתונים הנוכחיים
+- יש לוודא שהתאריך נכון
+- פעולה בלתי הפיכה לאחר אישור
+
+📁 ייצוא נתונים:
+- ניתן לייצא תיקים בפורמט PDF
+- ייצוא נתונים גולמיים ב-JSON
+- שמירה מקומית או ענן`
+      },
+      
+      // Advanced features
+      advanced: {
+        keywords: ['מתקדם', 'אפשרויות', 'הגדרות', 'קונפיגורציה', 'התאמה אישית'],
+        response: `תכונות מתקדמות במערכת:
+
+🎯 התאמה אישית:
+- תבניות דוחות מותאמות אישית
+- שדות מותאמים לכל לקוח
+- זיווי עלויות אוטומטי
+- תעריפים מותאמים
+
+📊 דוחות מתקדמים:
+- ניתוח נתונים סטטיסטי
+- דוחות תקופתיים
+- השוואת מחירים
+- מגמות נזקים
+
+🔗 אינטגרציות:
+- חיבור לחברות ביטוח
+- סנכרון עם מוסכים
+- עדכוני מחירים אוטומטיים
+- יצוא לחשבשבת
+
+⚙️ כיצד לגשת:
+1. ניהול מערכת > הגדרות מתקדמות
+2. בחר את התכונה הרצויה
+3. עקוב אחר ההוראות
+4. שמור את השינויים`
+      },
+      
+      // Quality control
+      quality: {
+        keywords: ['איכות', 'בקרה', 'אימות', 'ביקורת', 'תקינות'],
+        response: `בקרת איכות וחוק:
+
+✅ בדיקות תקינות:
+- אימות אוטומטי של נתונים
+- בדיקת עקביות מחירים
+- וולידציה של פרטי רכב
+- בקרת תקינות מסמכים
+
+📋 תהליך האימות:
+1. המערכת בודקת אוטומטית כל שדה
+2. מסמנת שגיאות או חוסרים
+3. מציעה תיקונים אוטומטיים
+4. מאפשרת אישור סופי רק אחרי תיקון
+
+🎖️ תקני איכות:
+- עמידה בתקני הביטוח הישראליים
+- התאמה לדרישות רש"ת
+- סיווג נזקים לפי בסיס החוק
+- מחירון עדכני ומאושר
+
+🛡️ אבטחת מידע:
+- הצפנת נתונים ברמה בנקאית
+- גישה מוגבלת לפי הרשאות
+- מעקב אחר כל הפעולות
+- גיבויים מוצפנים`
       }
     };
     

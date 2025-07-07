@@ -1,3 +1,7 @@
+// ⚠️ DEPRECATED: This file is legacy and not used by the system
+// The active Nicole implementation is in assistant.html
+// This file can be safely removed as it has no references in the codebase
+// 
 // Assistant logic with mic input, webhook call, TTS playback, and local helper session support
 
 import { SEARCH_MODULE } from './webhook.js';
