@@ -754,24 +754,19 @@
 
         // Read as text first, then try to parse as JSON
         const rawResponse = await response.text();
+        console.log('🔍 RAW RESPONSE:', rawResponse);
         
         try {
           // Try to parse as JSON (new format with audio)
           const responseData = JSON.parse(rawResponse);
+          console.log('🔍 PARSED JSON:', responseData);
+          console.log('🔍 TEXT FIELD:', responseData.text);
+          console.log('🔍 AUDIO FIELD:', responseData.audio);
           
-          // Check if text field is also JSON that needs parsing
-          let finalText = responseData.text;
-          if (typeof finalText === 'string' && finalText.startsWith('{')) {
-            try {
-              const innerData = JSON.parse(finalText);
-              finalText = innerData.text || finalText;
-            } catch (e) {
-              // If inner parsing fails, use the original text
-            }
-          }
-          
-          displayResponse(finalText, responseData.audio);
+          // Just use the text field directly - no more nested parsing
+          displayResponse(responseData.text, responseData.audio);
         } catch (jsonError) {
+          console.log('🔍 JSON PARSE FAILED, using as plain text');
           // If JSON parsing fails, treat as plain text (old format)
           displayResponse(rawResponse);
         }
