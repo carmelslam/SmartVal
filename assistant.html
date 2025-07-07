@@ -715,6 +715,50 @@
       }
     });
 
+    // Function to sanitize JSON strings by properly escaping control characters
+    function sanitizeJsonString(jsonString) {
+      try {
+        console.log('🧼 Sanitizing JSON string for control characters...');
+        
+        // Simple but effective approach: fix the most common control character issues
+        let sanitized = jsonString
+          // Fix unescaped newlines in string values (but not in keys)
+          .replace(/("text"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
+          .replace(/("message"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3') 
+          .replace(/("response"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
+          .replace(/("content"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
+          .replace(/("answer"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
+          
+          // Fix unescaped carriage returns
+          .replace(/("text"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
+          .replace(/("message"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
+          .replace(/("response"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
+          
+          // Fix unescaped tabs
+          .replace(/("text"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
+          .replace(/("message"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
+          .replace(/("response"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
+          
+          // Fix other common control characters in string values
+          .replace(/("(?:text|message|response|content|answer)"\s*:\s*"[^"]*?)([\x00-\x08\x0B\x0C\x0E-\x1F\x7F])([^"]*?")/g, function(match, before, controlChar, after) {
+            const escaped = '\\u' + ('0000' + controlChar.charCodeAt(0).toString(16)).slice(-4);
+            return before + escaped + after;
+          });
+        
+        if (sanitized !== jsonString) {
+          console.log('✅ JSON sanitization completed - found and fixed control characters');
+        } else {
+          console.log('ℹ️ No control characters found to fix');
+        }
+        
+        return sanitized;
+        
+      } catch (error) {
+        console.error('❌ JSON sanitization failed:', error);
+        return jsonString; // Return original if sanitization fails
+      }
+    }
+
     // Submit query to webhook and handle response
     async function submitQuery(plate, query, wasVoiceInput = false, isReply = false) {
       // Generate unique trace ID for this request
@@ -818,6 +862,9 @@
             console.log('🧹 Removed BOM from response');
           }
           
+          // Fix control characters in JSON strings that cause parsing errors
+          cleanResponse = sanitizeJsonString(cleanResponse);
+          
           // Check if JSON is complete and fix common issues
           if (!cleanResponse.endsWith('}') && cleanResponse.includes('{')) {
             console.log('⚠️ JSON appears incomplete, attempting to fix...');
@@ -916,7 +963,8 @@
             const firstBrace = rawResponse.indexOf('{');
             const lastBrace = rawResponse.lastIndexOf('}');
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-              const possibleJson = rawResponse.substring(firstBrace, lastBrace + 1);
+              let possibleJson = rawResponse.substring(firstBrace, lastBrace + 1);
+              possibleJson = sanitizeJsonString(possibleJson); // Sanitize before parsing
               try {
                 const extractedData = JSON.parse(possibleJson);
                 const extractedText = extractedData.text || extractedData.message || extractedData.response || extractedData.answer;
@@ -940,6 +988,9 @@
             if (!extractedSuccessfully) {
               try {
                 let fixedJson = rawResponse.substring(firstBrace, lastBrace + 1);
+                
+                // Sanitize control characters first
+                fixedJson = sanitizeJsonString(fixedJson);
                 
                 // Fix common issues
                 fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
@@ -1716,6 +1767,46 @@
         sessionStorage.removeItem('nicole_conversation');
         console.log('🧹 Conversation context cleared');
         initializeConversationContext();
+      },
+      // Test JSON sanitization with problematic strings
+      testJsonSanitization: (testJson) => {
+        console.group('🧪 JSON Sanitization Test');
+        console.log('Original JSON:', testJson);
+        
+        try {
+          JSON.parse(testJson);
+          console.log('✅ Original JSON is valid');
+        } catch (e) {
+          console.log('❌ Original JSON error:', e.message);
+          
+          const sanitized = sanitizeJsonString(testJson);
+          console.log('Sanitized JSON:', sanitized);
+          
+          try {
+            const parsed = JSON.parse(sanitized);
+            console.log('✅ Sanitized JSON is valid:', parsed);
+          } catch (e2) {
+            console.log('❌ Sanitized JSON still invalid:', e2.message);
+          }
+        }
+        console.groupEnd();
+      },
+      // Generate test cases for Hebrew text with control characters
+      generateTestCases: () => {
+        const testCases = [
+          '{"text": "שלום\nעולם"}',  // Newline
+          '{"text": "בדיקה\tמערכת"}', // Tab  
+          '{"text": "טקסט\rעברי"}',   // Carriage return
+          '{"text": "הודעה עם\nמספר\nשורות"}', // Multiple newlines
+          '{"message": "תגובה\nעם\tתווי\rבקרה"}'  // Mixed control chars
+        ];
+        
+        console.group('🧪 Generated Test Cases');
+        testCases.forEach((testCase, index) => {
+          console.log(`Test ${index + 1}:`, testCase);
+          nicoleDebug.testJsonSanitization(testCase);
+        });
+        console.groupEnd();
       }
     };
     
@@ -1733,6 +1824,8 @@
     console.log('  - nicoleDebug.simulateResponse(text) - Simulate response processing');
     console.log('  - nicoleDebug.getConversation() - View conversation context');
     console.log('  - nicoleDebug.clearConversation() - Clear conversation context');
+    console.log('  - nicoleDebug.testJsonSanitization(json) - Test JSON sanitization');
+    console.log('  - nicoleDebug.generateTestCases() - Generate Hebrew control character tests');
     
     // Initialize conversation context
     initializeConversationContext();
