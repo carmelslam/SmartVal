@@ -787,7 +787,18 @@
           responseTime: responseTime + 'ms'
         });
 
-        const responseText = await response.text();
+        // Read response as text first, then try to parse as JSON if possible
+        const rawResponse = await response.text();
+        let responseText;
+        
+        try {
+          // Try to parse as JSON (like the working assistant.js)
+          const data = JSON.parse(rawResponse);
+          responseText = data?.text || data?.answer || data?.response || data?.message;
+        } catch (e) {
+          // If JSON parsing fails, use the raw text
+          responseText = rawResponse;
+        }
         
         if (responseText) {
           displayResponse(responseText);
