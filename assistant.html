@@ -907,34 +907,125 @@
       `;
     }
 
-    // Text-to-Speech functionality using Google Cloud TTS
+    // Enhanced Text-to-Speech functionality using Google Cloud TTS
     async function speakResponse(text) {
-      if (!text) return;
+      if (!text) {
+        console.log('🔊 No text provided for TTS');
+        return;
+      }
+      
+      // Limit text length for TTS (Google TTS has limits)
+      const maxLength = 5000;
+      const textForTTS = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
       
       const apiKey = 'AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o';
-      const voice = 'he-IL-Wavenet-A';
+      const voice = 'he-IL-Wavenet-A'; // Female Hebrew voice
+      
+      console.log('🔊 Starting TTS for text length:', textForTTS.length);
 
       try {
         const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            input: { text },
-            voice: { languageCode: 'he-IL', name: voice },
-            audioConfig: { audioEncoding: 'MP3' }
+            input: { text: textForTTS },
+            voice: { 
+              languageCode: 'he-IL', 
+              name: voice,
+              ssmlGender: 'FEMALE'
+            },
+            audioConfig: { 
+              audioEncoding: 'MP3',
+              speakingRate: 1.0,
+              pitch: 0.0,
+              volumeGainDb: 0.0
+            }
           })
         });
+
+        if (!response.ok) {
+          throw new Error(`TTS API error: ${response.status} ${response.statusText}`);
+        }
 
         const data = await response.json();
         
         if (data.audioContent) {
           const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
-          audio.play();
-          console.log('🔊 Playing TTS response');
+          
+          // Add audio event listeners for better feedback
+          audio.addEventListener('loadstart', () => {
+            console.log('🔊 TTS audio loading...');
+          });
+          
+          audio.addEventListener('canplay', () => {
+            console.log('🔊 TTS audio ready to play');
+          });
+          
+          audio.addEventListener('play', () => {
+            console.log('🔊 Nicole is speaking...');
+            // Add visual indicator that Nicole is speaking
+            updateNicoleSpeakingStatus(true);
+          });
+          
+          audio.addEventListener('ended', () => {
+            console.log('🔊 Nicole finished speaking');
+            updateNicoleSpeakingStatus(false);
+          });
+          
+          audio.addEventListener('error', (e) => {
+            console.error('🔊 Audio playback error:', e);
+            updateNicoleSpeakingStatus(false);
+          });
+          
+          // Play the audio
+          await audio.play();
+          
+        } else {
+          console.warn('🔊 No audio content received from TTS API');
         }
       } catch (error) {
         console.error('🔊 TTS Error:', error);
         // TTS failure shouldn't block the response display
+        
+        // Try to provide fallback user feedback
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          console.log('🔊 TTS failed due to network issue');
+        } else if (error.message.includes('quota') || error.message.includes('limit')) {
+          console.log('🔊 TTS failed due to API quota limits');
+        }
+      }
+    }
+    
+    // Helper function to show Nicole speaking status
+    function updateNicoleSpeakingStatus(isSpeaking) {
+      const responseBox = document.getElementById('agentResponse');
+      if (responseBox && responseBox.style.display !== 'none') {
+        const statusDiv = responseBox.querySelector('.nicole-speaking-status');
+        
+        if (isSpeaking) {
+          if (!statusDiv) {
+            const speakingIndicator = document.createElement('div');
+            speakingIndicator.className = 'nicole-speaking-status';
+            speakingIndicator.innerHTML = '🔊 ניקול מדברת...';
+            speakingIndicator.style.cssText = `
+              position: absolute;
+              bottom: 8px;
+              right: 8px;
+              background: rgba(102, 126, 234, 0.1);
+              color: #667eea;
+              padding: 4px 8px;
+              border-radius: 12px;
+              font-size: 12px;
+              font-weight: 500;
+              animation: pulse 1.5s infinite;
+            `;
+            responseBox.appendChild(speakingIndicator);
+          }
+        } else {
+          if (statusDiv) {
+            statusDiv.remove();
+          }
+        }
       }
     }
 
