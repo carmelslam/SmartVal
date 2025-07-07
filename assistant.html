@@ -784,8 +784,29 @@
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-          responseTime: responseTime + 'ms'
+          responseTime: responseTime + 'ms',
+          url: response.url,
+          redirected: response.redirected,
+          type: response.type
         });
+        
+        // Check for basic response validity
+        if (!response.ok) {
+          console.error('❌ HTTP Error Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url
+          });
+          
+          let errorDetails = 'Unknown error';
+          try {
+            errorDetails = await response.text();
+          } catch (e) {
+            console.error('Could not read error response body:', e);
+          }
+          
+          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorDetails}`);
+        }
 
         // Handle both JSON and text responses flexibly
         const contentType = response.headers.get('content-type');
@@ -795,31 +816,58 @@
         let data = null;
         
         try {
-          // First try to parse as JSON
-          const rawResponse = await response.text();
-          console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
+          // Check if response body is readable
+          if (!response.body) {
+            throw new Error('Response body is null or undefined');
+          }
+          
+          console.log('📥 Reading response body...');
+          let rawResponse;
+          
+          try {
+            rawResponse = await response.text();
+            console.log('📄 Raw response length:', rawResponse?.length || 0);
+            console.log('📄 Raw response preview:', rawResponse ? rawResponse.substring(0, 200) + '...' : 'NULL_RESPONSE');
+          } catch (textError) {
+            console.error('❌ Failed to read response text:', textError);
+            throw new Error(`Failed to read response: ${textError.message}`);
+          }
+          
+          // Check if we actually got a response
+          if (rawResponse === null || rawResponse === undefined) {
+            throw new Error('Response text is null or undefined');
+          }
           
           if (contentType && contentType.includes('application/json')) {
-            // It's JSON, parse it
-            data = JSON.parse(rawResponse);
-            console.log('📥 Parsed JSON data:', JSON.stringify(data, null, 2));
-            
-            // Extract text from JSON structure
-            responseText = data?.text || data?.answer || data?.response || data?.message;
-            
-            if (!responseText) {
-              console.error('❌ No text field found in JSON response');
-              console.log('🔍 Available JSON fields:', Object.keys(data || {}));
-              throw new Error(`No response text in JSON. Available fields: ${Object.keys(data || {}).join(', ')}`);
+            // It's JSON, try to parse it
+            try {
+              data = JSON.parse(rawResponse);
+              console.log('📥 Parsed JSON data:', JSON.stringify(data, null, 2));
+              
+              // Extract text from JSON structure
+              responseText = data?.text || data?.answer || data?.response || data?.message;
+              
+              if (!responseText) {
+                console.error('❌ No text field found in JSON response');
+                console.log('🔍 Available JSON fields:', Object.keys(data || {}));
+                
+                // If it's JSON but no text field, treat the whole response as text
+                responseText = rawResponse.trim();
+                console.log('📄 Using full JSON response as text fallback');
+              }
+            } catch (jsonError) {
+              console.warn('⚠️ JSON parsing failed, treating as text:', jsonError.message);
+              responseText = rawResponse.trim();
             }
           } else {
             // It's plain text - use directly as Nicole's response
             responseText = rawResponse.trim();
             console.log('📄 Using direct text response');
-            
-            if (!responseText) {
-              throw new Error('Empty response received from server');
-            }
+          }
+          
+          // Final validation
+          if (!responseText) {
+            throw new Error('Empty response after all processing attempts');
           }
           
           // Validate that we have a meaningful response
