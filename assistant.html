@@ -922,6 +922,18 @@
             🔧 בדוק TTS
           </button>
           
+          <button onclick="testFallbackTTS('${text.replace(/'/g, "\\'")}', this)" style="
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+          ">
+            🗣️ TTS גיבוי
+          </button>
+          
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
         </div>
         
@@ -990,11 +1002,17 @@
         console.log('🔍 Testing Google TTS API availability...');
         const testResponse = await fetch('https://texttospeech.googleapis.com/v1/voices?key=AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o');
         
+        console.log('📡 API Response Status:', testResponse.status);
+        console.log('📡 API Response Headers:', Object.fromEntries(testResponse.headers.entries()));
+        
         if (!testResponse.ok) {
-          throw new Error(`API Error: ${testResponse.status} ${testResponse.statusText}`);
+          const errorText = await testResponse.text();
+          console.error('❌ API Error Details:', errorText);
+          throw new Error(`API Error: ${testResponse.status} ${testResponse.statusText} - ${errorText}`);
         }
         
-        console.log('✅ Google TTS API is accessible');
+        const voicesData = await testResponse.json();
+        console.log('✅ Google TTS API is accessible, voices available:', voicesData.voices?.length || 0);
         
         // Test 2: Check browser audio support
         console.log('🔍 Testing browser audio support...');
@@ -1027,6 +1045,50 @@
         }, 5000);
       }
     };
+    
+    // Test fallback TTS function
+    window.testFallbackTTS = async function(text, buttonElement) {
+      const statusDiv = document.getElementById('ttsStatus');
+      const originalButtonText = buttonElement.innerHTML;
+      
+      try {
+        buttonElement.innerHTML = '⏳ בודק...';
+        buttonElement.disabled = true;
+        
+        if (statusDiv) statusDiv.textContent = 'בודק TTS גיבוי...';
+        
+        console.group('🗣️ Testing Fallback TTS');
+        
+        // Check if browser supports Speech Synthesis
+        if (!('speechSynthesis' in window)) {
+          throw new Error('דפדפן לא תומך ב-Speech Synthesis');
+        }
+        
+        // Get available voices
+        const voices = speechSynthesis.getVoices();
+        console.log('🎤 Available voices:', voices.length);
+        console.log('🎤 Hebrew voices:', voices.filter(v => v.lang.includes('he') || v.lang.includes('iw')));
+        
+        // Test fallback TTS
+        await fallbackTTS(text || 'בדיקת TTS גיבוי');
+        
+        if (statusDiv) statusDiv.textContent = '✅ TTS גיבוי פועל';
+        console.log('✅ Fallback TTS test passed');
+        
+      } catch (error) {
+        console.error('❌ Fallback TTS test failed:', error);
+        if (statusDiv) statusDiv.textContent = `❌ ${error.message}`;
+      } finally {
+        buttonElement.innerHTML = originalButtonText;
+        buttonElement.disabled = false;
+        console.groupEnd();
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          if (statusDiv) statusDiv.textContent = '';
+        }, 3000);
+      }
+    };
 
     // Enhanced Text-to-Speech functionality using Google Cloud TTS
     async function speakResponse(text) {
@@ -1045,6 +1107,7 @@
       console.log('🔊 Starting TTS for text length:', textForTTS.length);
 
       try {
+        console.log('🔗 Calling Google TTS API...');
         const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1064,8 +1127,24 @@
           })
         });
 
+        console.log('📡 TTS API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
         if (!response.ok) {
-          throw new Error(`TTS API error: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error('❌ TTS API Error Details:', errorText);
+          
+          // Try to parse error for more specific info
+          try {
+            const errorData = JSON.parse(errorText);
+            console.error('❌ Parsed API Error:', errorData);
+            throw new Error(`TTS API error: ${response.status} - ${errorData.error?.message || errorText}`);
+          } catch {
+            throw new Error(`TTS API error: ${response.status} ${response.statusText} - ${errorText}`);
+          }
         }
 
         const data = await response.json();
@@ -1145,15 +1224,77 @@
         }
       } catch (error) {
         console.error('🔊 TTS Error:', error);
-        // TTS failure shouldn't block the response display
         
-        // Try to provide fallback user feedback
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          console.log('🔊 TTS failed due to network issue');
-        } else if (error.message.includes('quota') || error.message.includes('limit')) {
-          console.log('🔊 TTS failed due to API quota limits');
+        // Try fallback TTS using browser Speech Synthesis API
+        console.log('🔄 Attempting fallback TTS using browser Speech Synthesis...');
+        try {
+          await fallbackTTS(textForTTS);
+          console.log('✅ Fallback TTS completed successfully');
+        } catch (fallbackError) {
+          console.error('❌ Fallback TTS also failed:', fallbackError);
+          
+          // Provide detailed error feedback
+          if (error.message.includes('network') || error.message.includes('fetch')) {
+            console.log('🔊 Primary TTS failed due to network issue');
+          } else if (error.message.includes('quota') || error.message.includes('limit')) {
+            console.log('🔊 Primary TTS failed due to API quota limits');
+          } else if (error.message.includes('403') || error.message.includes('401')) {
+            console.log('🔊 Primary TTS failed due to API authentication/authorization');
+          }
         }
       }
+    }
+    
+    // Fallback TTS using browser's Speech Synthesis API
+    async function fallbackTTS(text) {
+      return new Promise((resolve, reject) => {
+        if (!('speechSynthesis' in window)) {
+          reject(new Error('Browser Speech Synthesis not supported'));
+          return;
+        }
+        
+        console.log('🗣️ Using browser Speech Synthesis as fallback');
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Try to find Hebrew voice
+        const voices = speechSynthesis.getVoices();
+        const hebrewVoice = voices.find(voice => 
+          voice.lang.includes('he') || 
+          voice.lang.includes('iw') ||
+          voice.name.toLowerCase().includes('hebrew')
+        );
+        
+        if (hebrewVoice) {
+          utterance.voice = hebrewVoice;
+          console.log('🗣️ Using Hebrew voice:', hebrewVoice.name);
+        } else {
+          console.log('🗣️ No Hebrew voice found, using default');
+        }
+        
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        utterance.onstart = () => {
+          console.log('🗣️ Fallback TTS started');
+          updateNicoleSpeakingStatus(true);
+        };
+        
+        utterance.onend = () => {
+          console.log('🗣️ Fallback TTS completed');
+          updateNicoleSpeakingStatus(false);
+          resolve();
+        };
+        
+        utterance.onerror = (event) => {
+          console.error('🗣️ Fallback TTS error:', event.error);
+          updateNicoleSpeakingStatus(false);
+          reject(new Error(`Fallback TTS error: ${event.error}`));
+        };
+        
+        speechSynthesis.speak(utterance);
+      });
     }
     
     // Helper function to show Nicole speaking status
