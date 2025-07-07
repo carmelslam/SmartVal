@@ -793,12 +793,20 @@
         // Enhanced logging for debugging JSON issues
         console.log('📥 Raw Response Details:', {
           length: rawResponse.length,
-          first_100_chars: rawResponse.substring(0, 100),
-          char_codes: rawResponse.substring(0, 20).split('').map(c => c.charCodeAt(0)),
+          first_200_chars: rawResponse.substring(0, 200),
+          last_100_chars: rawResponse.substring(Math.max(0, rawResponse.length - 100)),
+          char_codes: rawResponse.substring(0, 30).split('').map(c => c.charCodeAt(0)),
           is_empty: rawResponse.trim() === '',
           starts_with_brace: rawResponse.trim().startsWith('{'),
-          ends_with_brace: rawResponse.trim().endsWith('}')
+          ends_with_brace: rawResponse.trim().endsWith('}'),
+          brace_count: (rawResponse.match(/\{/g) || []).length,
+          closing_brace_count: (rawResponse.match(/\}/g) || []).length,
+          has_text_field: rawResponse.includes('"text"'),
+          has_audioContent_field: rawResponse.includes('"audioContent"')
         });
+        
+        // Log the exact raw response for manual inspection
+        console.log('🔍 FULL RAW RESPONSE:', rawResponse);
         
         try {
           // Clean the response text to handle potential encoding issues
@@ -808,6 +816,25 @@
           if (cleanResponse.charCodeAt(0) === 0xFEFF) {
             cleanResponse = cleanResponse.substring(1);
             console.log('🧹 Removed BOM from response');
+          }
+          
+          // Check if JSON is complete and fix common issues
+          if (!cleanResponse.endsWith('}') && cleanResponse.includes('{')) {
+            console.log('⚠️ JSON appears incomplete, attempting to fix...');
+            
+            // Count braces to see if we need to close
+            const openBraces = (cleanResponse.match(/\{/g) || []).length;
+            const closeBraces = (cleanResponse.match(/\}/g) || []).length;
+            
+            if (openBraces > closeBraces) {
+              // Add missing closing braces
+              const missingBraces = openBraces - closeBraces;
+              cleanResponse += '}'.repeat(missingBraces);
+              console.log(`🔧 Added ${missingBraces} missing closing brace(s)`);
+            }
+            
+            // Fix trailing commas that might cause issues
+            cleanResponse = cleanResponse.replace(/,(\s*[}\]])/g, '$1');
           }
           
           // Try to parse as JSON (new format with audio)
@@ -827,7 +854,15 @@
                            responseData.message || 
                            responseData.response || 
                            responseData.content ||
+                           responseData.answer ||
+                           responseData.reply ||
                            JSON.stringify(responseData, null, 2);
+          
+          // Handle audio content if present
+          let audioContent = responseData.audio || 
+                            responseData.audioContent || 
+                            responseData.audio_content ||
+                            null;
           
           if (!textContent || textContent.trim() === '') {
             console.warn('⚠️ No readable text content found in response');
@@ -849,14 +884,16 @@
             `;
           }
           
-          displayResponse(debugInfo + textContent, responseData.audio);
+          displayResponse(debugInfo + textContent, audioContent);
           
           // Store success in debug entry
           debugEntry.parsing_success = true;
           debugEntry.response_structure = Object.keys(responseData);
-          debugEntry.text_source = responseData.text ? 'text' : responseData.message ? 'message' : responseData.response ? 'response' : 'fallback';
+          debugEntry.text_source = responseData.text ? 'text' : responseData.message ? 'message' : responseData.response ? 'response' : responseData.answer ? 'answer' : 'fallback';
           debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(textContent);
           debugEntry.final_text_length = textContent.length;
+          debugEntry.has_audio = !!audioContent;
+          debugEntry.audio_source = responseData.audioContent ? 'audioContent' : responseData.audio ? 'audio' : null;
           
         } catch (jsonError) {
           console.error('❌ JSON Parse Error Details:', {
@@ -870,40 +907,94 @@
           
           // Try to extract meaningful content even if JSON parsing fails
           let fallbackContent = rawResponse;
+          let extractedSuccessfully = false;
           
-          // If the response looks like it might be wrapped or have extra characters, try to clean it
+          // Multiple extraction strategies
           if (rawResponse.includes('{') && rawResponse.includes('}')) {
+            
+            // Strategy 1: Extract the largest valid JSON block
             const firstBrace = rawResponse.indexOf('{');
             const lastBrace = rawResponse.lastIndexOf('}');
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
               const possibleJson = rawResponse.substring(firstBrace, lastBrace + 1);
               try {
                 const extractedData = JSON.parse(possibleJson);
-                const extractedText = extractedData.text || extractedData.message || extractedData.response;
+                const extractedText = extractedData.text || extractedData.message || extractedData.response || extractedData.answer;
+                const extractedAudio = extractedData.audio || extractedData.audioContent;
                 if (extractedText) {
-                  console.log('✅ Successfully extracted content from malformed JSON');
-                  displayResponse(extractedText, extractedData.audio);
-                  return;
+                  console.log('✅ Successfully extracted content using Strategy 1');
+                  displayResponse(extractedText, extractedAudio);
+                  
+                  // Update debug entry for successful extraction
+                  debugEntry.parsing_success = true;
+                  debugEntry.extraction_method = 'strategy_1_basic';
+                  debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(extractedText);
+                  extractedSuccessfully = true;
                 }
               } catch (secondError) {
-                console.log('🔄 Secondary extraction also failed, using fallback');
+                console.log('🔄 Strategy 1 failed, trying Strategy 2...');
+              }
+            }
+            
+            // Strategy 2: Try to fix common JSON issues and re-parse
+            if (!extractedSuccessfully) {
+              try {
+                let fixedJson = rawResponse.substring(firstBrace, lastBrace + 1);
+                
+                // Fix common issues
+                fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+                fixedJson = fixedJson.replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Add quotes to keys
+                fixedJson = fixedJson.replace(/:\s*([^",{\[\]}\s][^",}\]]*[^",}\]\s])\s*([,}])/g, ': "$1"$2'); // Quote unquoted values
+                
+                const extractedData = JSON.parse(fixedJson);
+                const extractedText = extractedData.text || extractedData.message || extractedData.response || extractedData.answer;
+                const extractedAudio = extractedData.audio || extractedData.audioContent;
+                if (extractedText) {
+                  console.log('✅ Successfully extracted content using Strategy 2');
+                  displayResponse(extractedText, extractedAudio);
+                  
+                  debugEntry.parsing_success = true;
+                  debugEntry.extraction_method = 'strategy_2_fixed';
+                  debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(extractedText);
+                  extractedSuccessfully = true;
+                }
+              } catch (thirdError) {
+                console.log('🔄 Strategy 2 also failed, trying Strategy 3...');
+              }
+            }
+            
+            // Strategy 3: Use regex to extract text field value
+            if (!extractedSuccessfully) {
+              const textMatch = rawResponse.match(/"text"\s*:\s*"([^"]*(?:\\.[^"]*)*)"/);
+              if (textMatch) {
+                const extractedText = textMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+                console.log('✅ Successfully extracted text using Strategy 3 (regex)');
+                displayResponse(extractedText, null);
+                
+                debugEntry.parsing_success = true;
+                debugEntry.extraction_method = 'strategy_3_regex';
+                debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(extractedText);
+                extractedSuccessfully = true;
               }
             }
           }
           
-          // Show user-friendly error with the actual content if possible
-          if (fallbackContent.length > 0) {
-            displayResponse(`שגיאה בפענוח התגובה, אך התוכן התקבל:\n\n${fallbackContent}`);
-          } else {
-            displayResponse('שגיאה בקבלת תגובה מהשרת. אנא נסה שוב.');
+          // Final fallback if no extraction strategy worked
+          if (!extractedSuccessfully) {
+            if (fallbackContent.length > 0) {
+              displayResponse(`שגיאה בפענוח התגובה, אך התוכן התקבל:\n\n${fallbackContent}`);
+            } else {
+              displayResponse('שגיאה בקבלת תגובה מהשרת. אנא נסה שוב.');
+            }
+            
+            // Store failure in debug entry
+            debugEntry.parsing_success = false;
+            debugEntry.error_type = 'json_parse_failed';
+            debugEntry.error_message = jsonError.message;
+            debugEntry.extraction_method = 'none';
+            debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(fallbackContent);
+            debugEntry.fallback_used = fallbackContent.length > 0;
           }
-          
-          // Store failure in debug entry
-          debugEntry.parsing_success = false;
-          debugEntry.error_type = 'json_parse_failed';
-          debugEntry.error_message = jsonError.message;
-          debugEntry.has_hebrew = /[\u0590-\u05FF]/.test(fallbackContent);
-          debugEntry.fallback_used = fallbackContent.length > 0;
         }
         
         // Store debug entry in session for analysis
