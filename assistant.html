@@ -777,30 +777,57 @@
           responseTime: responseTime + 'ms'
         });
 
-        // Check if response is JSON
+        // Handle both JSON and text responses flexibly
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          console.warn('⚠️ Non-JSON response received:', contentType);
-          const textResponse = await response.text();
-          console.log('📄 Raw response text:', textResponse);
-          throw new Error(`Expected JSON response, got ${contentType}: ${textResponse.substring(0, 200)}`);
-        }
-
-        const data = await response.json();
+        console.log('📄 Response content-type:', contentType);
         
-        console.log('📥 Parsed Response Data:', JSON.stringify(data, null, 2));
+        let responseText;
+        let data = null;
         
-        // Enhanced response validation
-        if (data?.text || data?.answer || data?.response) {
-          const responseText = data.text || data.answer || data.response;
+        try {
+          // First try to parse as JSON
+          const rawResponse = await response.text();
+          console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
+          
+          if (contentType && contentType.includes('application/json')) {
+            // It's JSON, parse it
+            data = JSON.parse(rawResponse);
+            console.log('📥 Parsed JSON data:', JSON.stringify(data, null, 2));
+            
+            // Extract text from JSON structure
+            responseText = data?.text || data?.answer || data?.response || data?.message;
+            
+            if (!responseText) {
+              console.error('❌ No text field found in JSON response');
+              console.log('🔍 Available JSON fields:', Object.keys(data || {}));
+              throw new Error(`No response text in JSON. Available fields: ${Object.keys(data || {}).join(', ')}`);
+            }
+          } else {
+            // It's plain text - use directly as Nicole's response
+            responseText = rawResponse.trim();
+            console.log('📄 Using direct text response');
+            
+            if (!responseText) {
+              throw new Error('Empty response received from server');
+            }
+          }
+          
+          // Validate that we have a meaningful response
+          if (responseText.length < 10) {
+            throw new Error(`Response too short: "${responseText}"`);
+          }
+          
           console.log('✅ Valid response extracted:', responseText.substring(0, 100) + '...');
           console.log('📊 Response Analysis:', {
             response_length: responseText.length,
+            content_type: contentType,
+            is_json: !!data,
             has_hebrew: /[\u0590-\u05FF]/.test(responseText),
             has_english: /[a-zA-Z]/.test(responseText),
             contains_car_terms: /רכב|נזק|ביטוח|שמאי/.test(responseText)
           });
           
+          // Display and process the response
           displayResponse(responseText);
           await speakResponse(responseText);
           saveToHelper(query, responseText);
@@ -814,16 +841,17 @@
             plate: plate,
             response_preview: responseText.substring(0, 200),
             response_time: responseTime,
+            content_type: contentType,
+            was_json: !!data,
             success: true
           });
           // Keep only last 10 debug entries
           if (debugHistory.length > 10) debugHistory.shift();
           sessionStorage.setItem('nicole_debug_history', JSON.stringify(debugHistory));
           
-        } else {
-          console.error('❌ Invalid response structure:', data);
-          console.log('🔍 Available response fields:', Object.keys(data || {}));
-          throw new Error(`No response text received from server. Available fields: ${Object.keys(data || {}).join(', ')}`);
+        } catch (parseError) {
+          console.error('❌ Response processing error:', parseError);
+          throw new Error(`Failed to process response: ${parseError.message}`);
         }
       } catch (error) {
         console.error('🚨 Webhook error details:', {
