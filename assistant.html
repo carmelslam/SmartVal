@@ -881,17 +881,50 @@
       }
     }
 
-    // Display response in floating box
+    // Display response in floating box with manual TTS controls
     function displayResponse(text) {
       const responseBox = document.getElementById('agentResponse');
       responseBox.style.display = 'block';
       responseBox.innerHTML = `
         <div style="margin-bottom: 10px; font-weight: bold; color: #667eea;">
-          🤖 תשובת ניקול:
+          👩‍💼 תשובת ניקול:
         </div>
-        <div style="line-height: 1.5;">
+        <div style="line-height: 1.5; margin-bottom: 10px;">
           ${text}
         </div>
+        
+        <!-- TTS Controls -->
+        <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+          <button onclick="manualSpeakResponse('${text.replace(/'/g, "\\'")}', this)" style="
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          ">
+            🔊 השמע תשובה
+          </button>
+          
+          <button onclick="testTTSDebug()" style="
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+          ">
+            🔧 בדוק TTS
+          </button>
+          
+          <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
+        </div>
+        
         <button onclick="this.parentElement.style.display='none'" style="
           position: absolute; 
           top: 8px; 
@@ -906,6 +939,94 @@
         ">✕</button>
       `;
     }
+    
+    // Manual TTS trigger for testing
+    window.manualSpeakResponse = async function(text, buttonElement) {
+      const statusDiv = document.getElementById('ttsStatus');
+      const originalButtonText = buttonElement.innerHTML;
+      
+      try {
+        buttonElement.innerHTML = '⏳ מכין קול...';
+        buttonElement.disabled = true;
+        
+        if (statusDiv) statusDiv.textContent = 'בודק הרשאות דפדפן...';
+        
+        // Check if we have pending TTS audio from autoplay block
+        if (window.pendingTTSAudio) {
+          console.log('🔊 Playing pending TTS audio...');
+          await window.pendingTTSAudio.play();
+          window.pendingTTSAudio = null; // Clear after use
+          if (statusDiv) statusDiv.textContent = '✅ הושמע מהזיכרון';
+        } else {
+          // Generate new TTS
+          await speakResponse(text);
+          if (statusDiv) statusDiv.textContent = '✅ הושמע בהצלחה';
+        }
+        
+      } catch (error) {
+        console.error('Manual TTS Error:', error);
+        if (statusDiv) statusDiv.textContent = `❌ שגיאה: ${error.message}`;
+      } finally {
+        buttonElement.innerHTML = originalButtonText;
+        buttonElement.disabled = false;
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          if (statusDiv) statusDiv.textContent = '';
+        }, 3000);
+      }
+    };
+    
+    // TTS debugging function
+    window.testTTSDebug = async function() {
+      const statusDiv = document.getElementById('ttsStatus');
+      
+      console.group('🔧 TTS Debug Test');
+      
+      try {
+        statusDiv.textContent = 'בודק TTS...';
+        
+        // Test 1: Check API availability
+        console.log('🔍 Testing Google TTS API availability...');
+        const testResponse = await fetch('https://texttospeech.googleapis.com/v1/voices?key=AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o');
+        
+        if (!testResponse.ok) {
+          throw new Error(`API Error: ${testResponse.status} ${testResponse.statusText}`);
+        }
+        
+        console.log('✅ Google TTS API is accessible');
+        
+        // Test 2: Check browser audio support
+        console.log('🔍 Testing browser audio support...');
+        const testAudio = new Audio();
+        const canPlayMp3 = testAudio.canPlayType('audio/mpeg');
+        console.log('Audio MP3 support:', canPlayMp3);
+        
+        // Test 3: Try simple TTS
+        console.log('🔍 Testing simple TTS...');
+        await speakResponse('בדיקה');
+        
+        statusDiv.textContent = '✅ TTS עובד תקין';
+        console.log('✅ All TTS tests passed');
+        
+      } catch (error) {
+        console.error('❌ TTS Debug failed:', error);
+        statusDiv.textContent = `❌ ${error.message}`;
+        
+        // Additional debug info
+        console.log('🔍 Debug Info:');
+        console.log('- User Agent:', navigator.userAgent);
+        console.log('- Browser supports Audio:', !!window.Audio);
+        console.log('- HTTPS:', window.location.protocol === 'https:');
+      } finally {
+        console.groupEnd();
+        
+        // Clear status after 5 seconds
+        setTimeout(() => {
+          if (statusDiv) statusDiv.textContent = '';
+        }, 5000);
+      }
+    };
 
     // Enhanced Text-to-Speech functionality using Google Cloud TTS
     async function speakResponse(text) {
@@ -977,8 +1098,47 @@
             updateNicoleSpeakingStatus(false);
           });
           
-          // Play the audio
-          await audio.play();
+          // Handle browser autoplay restrictions
+          try {
+            // Try to play immediately
+            await audio.play();
+            console.log('✅ TTS played successfully (auto)');
+            
+          } catch (autoplayError) {
+            console.warn('🔇 Browser blocked autoplay:', autoplayError.name);
+            
+            if (autoplayError.name === 'NotAllowedError') {
+              // Browser blocked autoplay - show user notification
+              console.log('💡 TTS requires user interaction due to browser autoplay policy');
+              
+              // Show visual notification that speech is ready but needs user click
+              const responseBox = document.getElementById('agentResponse');
+              if (responseBox) {
+                const autoplayNotice = document.createElement('div');
+                autoplayNotice.innerHTML = `
+                  <div style="
+                    background: rgba(249, 168, 37, 0.1);
+                    border: 1px solid #f9a825;
+                    color: #f57c00;
+                    padding: 8px 12px;
+                    border-radius: 8px;
+                    margin-top: 8px;
+                    font-size: 12px;
+                    text-align: center;
+                  ">
+                    🔊 התשובה מוכנה להשמעה - לחץ על כפתור "השמע תשובה"
+                  </div>
+                `;
+                responseBox.appendChild(autoplayNotice);
+                
+                // Store audio for manual playback
+                window.pendingTTSAudio = audio;
+              }
+            } else {
+              // Other playback error
+              throw autoplayError;
+            }
+          }
           
         } else {
           console.warn('🔊 No audio content received from TTS API');
