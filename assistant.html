@@ -715,6 +715,81 @@
       }
     });
 
+    // Function to detect and complete truncated JSON responses
+    function completeIncompleteJson(jsonString) {
+      try {
+        console.log('🔍 Checking for truncated JSON...');
+        
+        const trimmed = jsonString.trim();
+        
+        // Quick check: if it starts with { but doesn't end with }, it might be truncated
+        if (trimmed.startsWith('{') && !trimmed.endsWith('}')) {
+          console.log('⚠️ JSON appears to be truncated');
+          
+          // Look for the last complete field before truncation
+          let completed = trimmed;
+          
+          // If the JSON ends abruptly in the middle of a string, close the string
+          const lastQuoteIndex = completed.lastIndexOf('"');
+          const lastOpenQuoteIndex = completed.lastIndexOf('"', lastQuoteIndex - 1);
+          
+          // Count quotes to see if we're in the middle of a string
+          const quoteCount = (completed.match(/"/g) || []).length;
+          if (quoteCount % 2 !== 0) {
+            // Odd number of quotes means we're in the middle of a string
+            console.log('🔧 Completing truncated string...');
+            completed += '"';
+          }
+          
+          // Add closing brace
+          if (!completed.endsWith('}')) {
+            completed += '}';
+            console.log('🔧 Added closing brace to complete JSON');
+          }
+          
+          // Verify the completion makes sense
+          try {
+            JSON.parse(completed);
+            console.log('✅ Successfully completed truncated JSON');
+            return completed;
+          } catch (testError) {
+            console.log('⚠️ Completion attempt failed, trying more aggressive completion...');
+            
+            // More aggressive approach: find the last valid comma and close from there
+            const lastCommaIndex = trimmed.lastIndexOf(',');
+            const lastColonIndex = trimmed.lastIndexOf(':');
+            
+            if (lastColonIndex > lastCommaIndex) {
+              // We're in the middle of a value, try to close it properly
+              let aggressiveComplete = trimmed;
+              
+              // If it looks like we're in a string value, close the string
+              const afterColon = trimmed.substring(lastColonIndex + 1).trim();
+              if (afterColon.startsWith('"') && !afterColon.endsWith('"')) {
+                aggressiveComplete += '"';
+              }
+              
+              aggressiveComplete += '}';
+              
+              try {
+                JSON.parse(aggressiveComplete);
+                console.log('✅ Aggressive completion succeeded');
+                return aggressiveComplete;
+              } catch (aggressiveError) {
+                console.log('❌ Aggressive completion also failed');
+              }
+            }
+          }
+        }
+        
+        return jsonString;
+        
+      } catch (error) {
+        console.error('❌ JSON completion failed:', error);
+        return jsonString;
+      }
+    }
+
     // Function to sanitize JSON strings by properly escaping control characters
     function sanitizeJsonString(jsonString) {
       try {
@@ -903,6 +978,9 @@
           // Fix control characters in JSON strings that cause parsing errors
           cleanResponse = sanitizeJsonString(cleanResponse);
           
+          // Check for truncated JSON and attempt to complete it
+          cleanResponse = completeIncompleteJson(cleanResponse);
+          
           // Check if JSON is complete and fix common issues
           if (!cleanResponse.endsWith('}') && cleanResponse.includes('{')) {
             console.log('⚠️ JSON appears incomplete, attempting to fix...');
@@ -1002,6 +1080,7 @@
             const lastBrace = rawResponse.lastIndexOf('}');
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
               let possibleJson = rawResponse.substring(firstBrace, lastBrace + 1);
+              possibleJson = completeIncompleteJson(possibleJson); // Complete truncated JSON
               possibleJson = sanitizeJsonString(possibleJson); // Sanitize before parsing
               try {
                 const extractedData = JSON.parse(possibleJson);
@@ -1027,7 +1106,9 @@
               try {
                 let fixedJson = rawResponse.substring(firstBrace, lastBrace + 1);
                 
-                // Sanitize control characters first
+                // Complete truncated JSON first
+                fixedJson = completeIncompleteJson(fixedJson);
+                // Sanitize control characters
                 fixedJson = sanitizeJsonString(fixedJson);
                 
                 // Fix common issues
@@ -1862,6 +1943,31 @@
         console.log('This is the pattern that was causing the error at position 121');
         nicoleDebug.testJsonSanitization(failingJson);
         console.groupEnd();
+      },
+      // Test truncated JSON completion
+      testTruncatedJson: () => {
+        const truncatedJsons = [
+          '{"text": "שלום מע', // Cut off mid-string
+          '{"text": "הודעה מלאה", "audio"', // Cut off mid-key
+          '{\n  "text": "שלום! אני מבינה שזו בדיקת מערכת, ואני כאן כדי להגיב ולוודא שהכל עובד כראוי. אני שמחה לעזור בכל דרך שתצטרך.\n\nאני מאשרת שאני פעילה ומוכנה לסייע בכל שאלה או בקשה. אם יש משהו ספציפי שאתה רוצה שאבדוק או אבחן במסגרת הבדיקה הזו, אנא ציין, ואני אעשה את המיטב.\n\nאיך אני יכולה לעזור לך הלאה עם הבד' // Real truncated case
+        ];
+        
+        console.group('📝 Testing Truncated JSON Completion');
+        truncatedJsons.forEach((truncated, index) => {
+          console.log(`\nTruncated Test ${index + 1}:`);
+          console.log('Original (truncated):', truncated);
+          
+          const completed = completeIncompleteJson(truncated);
+          console.log('Completed:', completed);
+          
+          try {
+            const parsed = JSON.parse(completed);
+            console.log('✅ Successfully parsed completed JSON:', parsed);
+          } catch (e) {
+            console.log('❌ Completion failed:', e.message);
+          }
+        });
+        console.groupEnd();
       }
     };
     
@@ -1882,6 +1988,7 @@
     console.log('  - nicoleDebug.testJsonSanitization(json) - Test JSON sanitization');
     console.log('  - nicoleDebug.generateTestCases() - Generate Hebrew control character tests');
     console.log('  - nicoleDebug.testActualError() - Test the actual failing JSON pattern');
+    console.log('  - nicoleDebug.testTruncatedJson() - Test truncated JSON completion');
     
     // Initialize conversation context
     initializeConversationContext();
