@@ -758,7 +758,19 @@
         try {
           // Try to parse as JSON (new format with audio)
           const responseData = JSON.parse(rawResponse);
-          displayResponse(responseData.text, responseData.audio);
+          
+          // Check if text field is also JSON that needs parsing
+          let finalText = responseData.text;
+          if (typeof finalText === 'string' && finalText.startsWith('{')) {
+            try {
+              const innerData = JSON.parse(finalText);
+              finalText = innerData.text || finalText;
+            } catch (e) {
+              // If inner parsing fails, use the original text
+            }
+          }
+          
+          displayResponse(finalText, responseData.audio);
         } catch (jsonError) {
           // If JSON parsing fails, treat as plain text (old format)
           displayResponse(rawResponse);
