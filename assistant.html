@@ -753,15 +753,16 @@
         });
 
         // Read the actual response text
-        const responseText = await response.text();
-        displayResponse(responseText);
+        const responseData = await response.json();
+        displayResponse(responseData.text, responseData.audio);
+
       } catch (err) {
         displayResponse('שגיאה בשליחת הבקשה. נסה שוב.');
       }
     }
 
     // Display response in floating box with manual TTS controls
-    function displayResponse(text) {
+    function displayResponse(text, audio = null) {
       const responseBox = document.getElementById('agentResponse');
       responseBox.style.display = 'block';
       responseBox.innerHTML = `
@@ -818,6 +819,18 @@
           font-size: 12px;
         ">✕</button>
       `;
+
+  if (audio) {
+    const ttsAudio = new Audio(audio);
+    try {
+      ttsAudio.play();
+    } catch (e) {
+      console.warn("🔇 Autoplay blocked. User must click play.");
+      window.pendingTTSAudio = ttsAudio;
+    }
+  }
+}
+
     }
     
     // Manual TTS trigger for testing
