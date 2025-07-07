@@ -720,33 +720,71 @@
       try {
         console.log('🧼 Sanitizing JSON string for control characters...');
         
-        // Simple but effective approach: fix the most common control character issues
-        let sanitized = jsonString
-          // Fix unescaped newlines in string values (but not in keys)
-          .replace(/("text"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
-          .replace(/("message"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3') 
-          .replace(/("response"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
-          .replace(/("content"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
-          .replace(/("answer"\s*:\s*"[^"]*?)(\n)([^"]*?")/g, '$1\\n$3')
-          
-          // Fix unescaped carriage returns
-          .replace(/("text"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
-          .replace(/("message"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
-          .replace(/("response"\s*:\s*"[^"]*?)(\r)([^"]*?")/g, '$1\\r$3')
-          
-          // Fix unescaped tabs
-          .replace(/("text"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
-          .replace(/("message"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
-          .replace(/("response"\s*:\s*"[^"]*?)(\t)([^"]*?")/g, '$1\\t$3')
-          
-          // Fix other common control characters in string values
-          .replace(/("(?:text|message|response|content|answer)"\s*:\s*"[^"]*?)([\x00-\x08\x0B\x0C\x0E-\x1F\x7F])([^"]*?")/g, function(match, before, controlChar, after) {
-            const escaped = '\\u' + ('0000' + controlChar.charCodeAt(0).toString(16)).slice(-4);
-            return before + escaped + after;
-          });
+        let sanitized = '';
+        let inString = false;
+        let escapeNext = false;
+        let stringChar = null; // Track if we're in " or ' quotes
+        let fixes = 0;
         
-        if (sanitized !== jsonString) {
-          console.log('✅ JSON sanitization completed - found and fixed control characters');
+        for (let i = 0; i < jsonString.length; i++) {
+          const char = jsonString[i];
+          const charCode = char.charCodeAt(0);
+          
+          if (escapeNext) {
+            // Previous character was escape, so this character is literal
+            sanitized += char;
+            escapeNext = false;
+            continue;
+          }
+          
+          if (char === '\\') {
+            sanitized += char;
+            escapeNext = true;
+            continue;
+          }
+          
+          if (!inString) {
+            // We're outside a string
+            if (char === '"' || char === "'") {
+              inString = true;
+              stringChar = char;
+            }
+            sanitized += char;
+          } else {
+            // We're inside a string
+            if (char === stringChar) {
+              // End of string
+              inString = false;
+              stringChar = null;
+              sanitized += char;
+            } else if (charCode >= 0x00 && charCode <= 0x1F && char !== '\t' && char !== '\n' && char !== '\r') {
+              // Control character that needs unicode escaping
+              sanitized += '\\u' + ('0000' + charCode.toString(16)).slice(-4);
+              fixes++;
+            } else if (char === '\n') {
+              sanitized += '\\n';
+              fixes++;
+            } else if (char === '\r') {
+              sanitized += '\\r';
+              fixes++;
+            } else if (char === '\t') {
+              sanitized += '\\t';
+              fixes++;
+            } else if (char === '\b') {
+              sanitized += '\\b';
+              fixes++;
+            } else if (char === '\f') {
+              sanitized += '\\f';
+              fixes++;
+            } else {
+              // Regular character
+              sanitized += char;
+            }
+          }
+        }
+        
+        if (fixes > 0) {
+          console.log(`✅ JSON sanitization completed - fixed ${fixes} control characters`);
         } else {
           console.log('ℹ️ No control characters found to fix');
         }
@@ -1798,7 +1836,9 @@
           '{"text": "בדיקה\tמערכת"}', // Tab  
           '{"text": "טקסט\rעברי"}',   // Carriage return
           '{"text": "הודעה עם\nמספר\nשורות"}', // Multiple newlines
-          '{"message": "תגובה\nעם\tתווי\rבקרה"}'  // Mixed control chars
+          '{"message": "תגובה\nעם\tתווי\rבקרה"}',  // Mixed control chars
+          // Test case based on actual failing JSON
+          '{\n  "text": "שלום! אני מבינה שזו בדיקת מערכת, ואני כאן כדי להגיב ולוודא שהכל עובד כראוי. אני שמחה לעזור בכל דרך שתצטרך.\n\nאני מאשרת שאני פעילה ומוכנה לסייע בכל שאלה או בקשה. אם יש משהו ספציפי שאתה רוצה שאבדוק או אבחן במסגרת הבדיקה הזו, אנא ציין, ואני אעשה את המיטב."\n}'
         ];
         
         console.group('🧪 Generated Test Cases');
@@ -1806,6 +1846,21 @@
           console.log(`Test ${index + 1}:`, testCase);
           nicoleDebug.testJsonSanitization(testCase);
         });
+        console.groupEnd();
+      },
+      // Test the exact failing pattern from the error
+      testActualError: () => {
+        const failingJson = `{
+  "text": "שלום! אני מבינה שזו בדיקת מערכת, ואני כאן כדי להגיב ולוודא שהכל עובד כראוי. אני שמחה לעזור בכל דרך שתצטרך.
+
+אני מאשרת שאני פעילה ומוכנה לסייע בכל שאלה או בקשה. אם יש משהו ספציפי שאתה רוצה שאבדוק או אבחן במסגרת הבדיקה הזו, אנא ציין, ואני אעשה את המיטב.
+
+איך אני יכולה לעזור לך הלאה עם הבד"
+}`;
+        
+        console.group('🚨 Testing Actual Failing JSON');
+        console.log('This is the pattern that was causing the error at position 121');
+        nicoleDebug.testJsonSanitization(failingJson);
         console.groupEnd();
       }
     };
@@ -1826,6 +1881,7 @@
     console.log('  - nicoleDebug.clearConversation() - Clear conversation context');
     console.log('  - nicoleDebug.testJsonSanitization(json) - Test JSON sanitization');
     console.log('  - nicoleDebug.generateTestCases() - Generate Hebrew control character tests');
+    console.log('  - nicoleDebug.testActualError() - Test the actual failing JSON pattern');
     
     // Initialize conversation context
     initializeConversationContext();
