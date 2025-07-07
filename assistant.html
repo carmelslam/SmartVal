@@ -746,26 +746,43 @@
         console.log('🌐 Sending request to:', webhookUrl);
         const startTime = performance.now();
         
-        const res = await fetch(webhookUrl, {
+        const response = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
-        if (data?.text) {
-          displayResponse(data.text);
-          
-          // Only auto-speak if user used microphone input (STT)
-          if (wasVoiceInput) {
-            console.log('🎤 Voice input detected, auto-playing TTS response');
-            await speakResponse(data.text);
-          } else {
-            console.log('📝 Text input used, TTS available via manual button');
-          }
-          
-          saveToHelper(query, data.text);
+        // Handle both JSON and text responses flexibly (Task 6A working code)
+        const contentType = response.headers.get('content-type');
+        const rawResponse = await response.text();
+        console.log('📄 Raw response:', rawResponse.substring(0, 200) + '...');
+        
+        let responseText;
+        let data;
+        
+        // Smart content detection and processing
+        if (contentType && contentType.includes('application/json')) {
+          // Parse as JSON and extract text fields
+          data = JSON.parse(rawResponse);
+          responseText = data?.text || data?.answer || data?.response || data?.message;
+        } else {
+          // Use direct text response from Make.com
+          responseText = rawResponse.trim();
+          console.log('📄 Using direct text response');
         }
+        
+        // Display and process the response
+        displayResponse(responseText);
+        
+        // Only auto-speak if user used microphone input (STT)
+        if (wasVoiceInput) {
+          console.log('🎤 Voice input detected, auto-playing TTS response');
+          await speakResponse(responseText);
+        } else {
+          console.log('📝 Text input used, TTS available via manual button');
+        }
+        
+        saveToHelper(query, responseText);
       } catch (err) {
         displayResponse('שגיאה בשליחת הבקשה. נסה שוב.');
       }
