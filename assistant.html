@@ -698,6 +698,9 @@
       sendBtn.disabled = true;
       
       try {
+        // Store user query in conversation context
+        storeConversationContext(finalQuery, 'user');
+        
         await submitQuery(plate, finalQuery, currentWasVoiceInput);
         
         // Reset voice input flag after successful submission
@@ -713,9 +716,13 @@
     });
 
     // Submit query to webhook and handle response
-    async function submitQuery(plate, query, wasVoiceInput = false) {
+    async function submitQuery(plate, query, wasVoiceInput = false, isReply = false) {
       // Generate unique trace ID for this request
       const traceId = 'nicole_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+      
+      // Get conversation context for continuous dialogue
+      const conversationContext = getConversationContext();
+      const hasContext = conversationContext.length > 0;
       
       const payload = { 
         plate: plate, 
@@ -725,7 +732,12 @@
         trace_id: traceId,
         timestamp: new Date().toISOString(),
         user_agent: navigator.userAgent,
-        page_url: window.location.href
+        page_url: window.location.href,
+        // Conversation context
+        is_reply: isReply,
+        conversation_context: hasContext ? conversationContext : null,
+        conversation_id: hasContext ? JSON.parse(sessionStorage.getItem('nicole_conversation') || '{}').conversation_id : null,
+        voice_input: wasVoiceInput
       };
 
       // Enhanced logging for debugging
@@ -965,8 +977,24 @@
           ${displayText}
         </div>
         
-        <!-- TTS Controls -->
-        <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+        <!-- Response Controls -->
+        <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap;">
+          <button onclick="showReplyBox()" style="
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          ">
+            💬 השב על התשובה
+          </button>
+          
           <button onclick="manualSpeakResponse('${escapedTextForTTS}', this)" style="
             background: #22c55e;
             color: white;
@@ -995,6 +1023,49 @@
           </button>
           
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
+        </div>
+        
+        <!-- Reply Box (initially hidden) -->
+        <div id="replyBox" style="display: none; margin-top: 12px; padding: 12px; background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.2);">
+          <div style="margin-bottom: 8px; font-weight: 600; color: #667eea; font-size: 13px;">
+            💬 המשך השיחה:
+          </div>
+          <textarea id="replyInput" placeholder="כתוב את השאלה או התגובה שלך..." style="
+            width: 100%;
+            min-height: 60px;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+          "></textarea>
+          <div style="display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end;">
+            <button onclick="cancelReply()" style="
+              background: #f3f4f6;
+              color: #6b7280;
+              border: none;
+              border-radius: 4px;
+              padding: 4px 8px;
+              cursor: pointer;
+              font-size: 11px;
+            ">
+              ביטול
+            </button>
+            <button onclick="sendReply()" style="
+              background: #667eea;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              padding: 4px 12px;
+              cursor: pointer;
+              font-size: 11px;
+              font-weight: 600;
+            ">
+              שלח תגובה
+            </button>
+          </div>
         </div>
         
         <button onclick="this.parentElement.style.display='none'" style="
@@ -1045,6 +1116,9 @@
         has_audio: !!audio,
         text_type: typeof text
       });
+      
+      // Store this response in conversation context
+      storeConversationContext(displayText, 'assistant');
     }
     
     // Manual TTS trigger for testing
@@ -1528,6 +1602,29 @@
           }
         }
         console.groupEnd();
+      },
+      // Conversation context debugging
+      getConversation: () => {
+        const context = JSON.parse(sessionStorage.getItem('nicole_conversation') || '{}');
+        console.group('💬 Conversation Context');
+        console.log('Conversation ID:', context.conversation_id);
+        console.log('Started:', context.started_at);
+        console.log('Messages:', context.messages?.length || 0);
+        console.log('Current Plate:', context.current_plate);
+        if (context.messages && context.messages.length > 0) {
+          console.table(context.messages.map(msg => ({
+            role: msg.role,
+            content: msg.content.substring(0, 50) + (msg.content.length > 50 ? '...' : ''),
+            timestamp: msg.timestamp
+          })));
+        }
+        console.groupEnd();
+        return context;
+      },
+      clearConversation: () => {
+        sessionStorage.removeItem('nicole_conversation');
+        console.log('🧹 Conversation context cleared');
+        initializeConversationContext();
       }
     };
     
@@ -1543,7 +1640,150 @@
     console.log('  - nicoleDebug.analyzeText(text) - Analyze text and encoding');
     console.log('  - nicoleDebug.testEncoding() - Test character encoding support');
     console.log('  - nicoleDebug.simulateResponse(text) - Simulate response processing');
+    console.log('  - nicoleDebug.getConversation() - View conversation context');
+    console.log('  - nicoleDebug.clearConversation() - Clear conversation context');
+    
+    // Initialize conversation context
+    initializeConversationContext();
   }
+  
+  // Conversation Context Management
+  function initializeConversationContext() {
+    if (!sessionStorage.getItem('nicole_conversation')) {
+      const initialContext = {
+        conversation_id: 'conv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+        started_at: new Date().toISOString(),
+        messages: [],
+        current_plate: sessionStorage.getItem('plate') || null
+      };
+      sessionStorage.setItem('nicole_conversation', JSON.stringify(initialContext));
+      console.log('🔄 New conversation context initialized:', initialContext.conversation_id);
+    }
+  }
+  
+  function storeConversationContext(message, role = 'user') {
+    try {
+      const context = JSON.parse(sessionStorage.getItem('nicole_conversation') || '{}');
+      if (!context.messages) context.messages = [];
+      
+      const messageEntry = {
+        role: role, // 'user' or 'assistant'
+        content: message,
+        timestamp: new Date().toISOString(),
+        message_id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)
+      };
+      
+      context.messages.push(messageEntry);
+      context.last_activity = new Date().toISOString();
+      
+      // Keep only last 20 messages for context (10 exchanges)
+      if (context.messages.length > 20) {
+        context.messages = context.messages.slice(-20);
+      }
+      
+      sessionStorage.setItem('nicole_conversation', JSON.stringify(context));
+      console.log(`💬 Stored ${role} message in conversation context`);
+      
+    } catch (error) {
+      console.error('❌ Failed to store conversation context:', error);
+    }
+  }
+  
+  function getConversationContext() {
+    try {
+      const context = JSON.parse(sessionStorage.getItem('nicole_conversation') || '{}');
+      return context.messages || [];
+    } catch (error) {
+      console.error('❌ Failed to get conversation context:', error);
+      return [];
+    }
+  }
+  
+  // Reply Functions
+  window.showReplyBox = function() {
+    const replyBox = document.getElementById('replyBox');
+    const replyInput = document.getElementById('replyInput');
+    
+    if (replyBox && replyInput) {
+      replyBox.style.display = 'block';
+      replyInput.focus();
+      
+      // Scroll the reply box into view
+      setTimeout(() => {
+        replyBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  };
+  
+  window.cancelReply = function() {
+    const replyBox = document.getElementById('replyBox');
+    const replyInput = document.getElementById('replyInput');
+    
+    if (replyBox && replyInput) {
+      replyBox.style.display = 'none';
+      replyInput.value = '';
+    }
+  };
+  
+  window.sendReply = async function() {
+    const replyInput = document.getElementById('replyInput');
+    const replyText = replyInput?.value?.trim();
+    
+    if (!replyText) {
+      alert('אנא כתוב תגובה או שאלה');
+      return;
+    }
+    
+    // Hide reply box and clear input
+    cancelReply();
+    
+    // Get current plate from main form or session
+    const currentPlate = document.getElementById('plateInput')?.value?.trim() || 
+                        sessionStorage.getItem('plate') || '';
+    
+    // Store user message in context
+    storeConversationContext(replyText, 'user');
+    
+    // Show loading state
+    const responseBox = document.getElementById('agentResponse');
+    if (responseBox) {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'replyLoading';
+      loadingDiv.innerHTML = `
+        <div style="
+          background: rgba(102, 126, 234, 0.1);
+          border: 1px solid rgba(102, 126, 234, 0.3);
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 12px;
+          text-align: center;
+          color: #667eea;
+          font-size: 13px;
+        ">
+          <div style="display: inline-flex; align-items: center; gap: 8px;">
+            <div style="width: 16px; height: 16px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            שולח תגובה...
+          </div>
+        </div>
+      `;
+      responseBox.appendChild(loadingDiv);
+    }
+    
+    try {
+      // Send reply with conversation context
+      await submitQuery(currentPlate, replyText, false, true);
+      
+    } catch (error) {
+      console.error('Reply error:', error);
+      alert('שגיאה בשליחת התגובה: ' + error.message);
+    } finally {
+      // Remove loading indicator
+      const loadingDiv = document.getElementById('replyLoading');
+      if (loadingDiv) {
+        loadingDiv.remove();
+      }
+    }
+  };
 </script>
 
 <style>
@@ -1564,6 +1804,23 @@
     opacity: 0.7;
     cursor: not-allowed;
     transform: none !important;
+  }
+  
+  /* Spinner animation for loading states */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Reply box styling enhancements */
+  #replyBox {
+    transition: all 0.3s ease;
+  }
+  
+  #replyInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 </style>
 </body>
