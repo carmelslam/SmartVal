@@ -8,6 +8,9 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
+  // Disable OneSignal due to persistent v16 SDK issues
+  const DISABLE_ONESIGNAL = true;
+  
   // OneSignal manager class
   class OneSignalManager {
     constructor() {
@@ -19,6 +22,14 @@
 
     async init() {
       try {
+        // Skip if OneSignal is disabled
+        if (DISABLE_ONESIGNAL) {
+          console.log('📱 OneSignal: Disabled due to SDK issues - using basic notifications');
+          this.initialized = true;
+          this.setupBasicNotifications();
+          return;
+        }
+        
         // Skip if on login page (already initialized there)
         if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
           console.log('📱 OneSignal: Skipping init on login page');
@@ -189,6 +200,36 @@
       }
     }
 
+    setupBasicNotifications() {
+      try {
+        console.log('📱 OneSignal: Setting up basic notification system');
+        
+        // Check current permission status
+        const permission = Notification.permission;
+        this.subscribed = (permission === 'granted');
+        
+        console.log('📱 OneSignal: Basic notification status:', {
+          permission: permission,
+          subscribed: this.subscribed
+        });
+        
+        // Store subscription status
+        sessionStorage.setItem('oneSignalSubscribed', this.subscribed.toString());
+        
+        // Generate a simple ID for tracking
+        if (!sessionStorage.getItem('basicNotificationId')) {
+          const basicId = 'basic_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          sessionStorage.setItem('basicNotificationId', basicId);
+        }
+        
+        this.initialized = true;
+        console.log('📱 OneSignal: Basic notification system ready');
+        
+      } catch (error) {
+        console.error('📱 OneSignal: Error setting up basic notifications:', error);
+      }
+    }
+
     setupSubscriptionListeners() {
       try {
         if (!window.OneSignal) return;
@@ -296,6 +337,25 @@
 
     async requestPermission() {
       try {
+        if (DISABLE_ONESIGNAL) {
+          console.log('📱 OneSignal: Using basic permission request');
+          
+          const result = await Notification.requestPermission();
+          const permission = (result === 'granted');
+          
+          this.subscribed = permission;
+          
+          if (permission) {
+            console.log('📱 OneSignal: Basic permission granted');
+            sessionStorage.setItem('oneSignalSubscribed', 'true');
+          } else {
+            console.log('📱 OneSignal: Basic permission denied');
+            sessionStorage.setItem('oneSignalSubscribed', 'false');
+          }
+          
+          return permission;
+        }
+        
         console.log('📱 OneSignal: Requesting notification permission...');
         
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
