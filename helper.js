@@ -284,49 +284,8 @@ function validateHelperDataStructure(data) {
   return errors;
 }
 
-function standardizeHelperData(data) {
-  // Create a standardized copy
-  const standardized = JSON.parse(JSON.stringify(data));
-  
-  // Ensure required sections exist
-  if (!standardized.meta) standardized.meta = {};
-  if (!standardized.car_details) standardized.car_details = {};
-  if (!standardized.progress) standardized.progress = {};
-  
-  // Standardize timestamps
-  if (!standardized.meta.created_at) {
-    standardized.meta.created_at = new Date().toISOString();
-  }
-  standardized.meta.updated_at = new Date().toISOString();
-  
-  // Ensure progress tracking exists
-  const progressSections = ['expertise', 'depreciation', 'estimate', 'fees'];
-  progressSections.forEach(section => {
-    if (!standardized.progress[section]) {
-      standardized.progress[section] = {
-        completed: false,
-        timestamp: null,
-        data_size: 0
-      };
-    }
-  });
-  
-  // Sync plate numbers
-  if (standardized.meta.plate && !standardized.car_details.plate) {
-    standardized.car_details.plate = standardized.meta.plate;
-  } else if (standardized.car_details.plate && !standardized.meta.plate) {
-    standardized.meta.plate = standardized.car_details.plate;
-  }
-  
-  // Generate case_id if missing
-  if (!standardized.meta.case_id && standardized.meta.plate) {
-    standardized.meta.case_id = `CASE-${standardized.meta.plate}-${Date.now()}`;
-  }
-  
-  return standardized;
-}
 
-function createDataIntegrityReport(data) {
+export function createDataIntegrityReport(data) {
   const report = {
     timestamp: new Date().toISOString(),
     isValid: true,
