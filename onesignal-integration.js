@@ -121,11 +121,12 @@
         if (!window.OneSignal) return;
 
         // Use auth token as external user ID for targeting
-        await OneSignal.setExternalUserId(authToken);
+        await OneSignal.User.addAlias('external_id', authToken);
         this.userToken = authToken;
 
-        // Get player ID for logging/debugging
-        this.playerId = await OneSignal.getPlayerId();
+        // Get player ID for logging/debugging (v16 uses pushSubscription.id)
+        const subscription = await OneSignal.User.PushSubscription.id;
+        this.playerId = subscription;
         
         console.log('📱 OneSignal: User context set', {
           externalUserId: authToken.substring(0, 10) + '...',
@@ -144,11 +145,11 @@
       try {
         if (!window.OneSignal) return;
 
-        const isSubscribed = await OneSignal.getNotificationPermission();
-        this.subscribed = (isSubscribed === 'granted');
+        const permission = await OneSignal.Notifications.permission;
+        this.subscribed = (permission === 'granted');
 
         console.log('📱 OneSignal: Subscription status:', {
-          permission: isSubscribed,
+          permission: permission,
           subscribed: this.subscribed
         });
 
@@ -171,7 +172,7 @@
 
         console.log('📱 OneSignal: Requesting notification permission...');
         
-        const permission = await OneSignal.requestPermission();
+        const permission = await OneSignal.Notifications.requestPermission();
         this.subscribed = permission;
 
         if (permission) {
