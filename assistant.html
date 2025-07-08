@@ -1272,6 +1272,21 @@
             🔊 השמע תשובה
           </button>
           
+          <button onclick="stopCurrentSpeaking()" style="
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          ">
+            ⏹️ עצור הקראה
+          </button>
+          
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
         </div>
         
@@ -1982,6 +1997,29 @@
     }
   }
   
+  // Stop Speaking Function
+  window.stopCurrentSpeaking = function() {
+    // Stop current TTS audio if playing
+    if (window.currentTTSAudio) {
+      window.currentTTSAudio.pause();
+      window.currentTTSAudio.currentTime = 0;
+      window.currentTTSAudio = null;
+      console.log('🔊 Stopped current TTS audio');
+    }
+    
+    // Clear any pending TTS audio
+    if (window.pendingTTSAudio) {
+      window.pendingTTSAudio = null;
+      console.log('🔊 Cleared pending TTS audio');
+    }
+    
+    // Update speaking status
+    updateNicoleSpeakingStatus(false);
+    window.isTTSPlaying = false;
+    
+    console.log('⏹️ Speaking stopped by user');
+  };
+
   // Reply Recording Function
   window.startReplyRecording = function() {
     const replyInput = document.getElementById('replyInput');
