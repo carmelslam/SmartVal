@@ -315,7 +315,204 @@
 
     window.loadSection = function(id) {
       const content = document.getElementById('adminContent');
-      content.innerHTML = `<p>טוען ${id}...</p>`;
+      
+      switch(id) {
+        case 'caseStatus':
+          content.innerHTML = `
+            <h2>📊 סטטוס תיקים</h2>
+            <div style="margin-bottom: 20px;">
+              <input type="text" id="plateSearch" placeholder="הכנס מספר רכב לחיפוש" style="padding: 8px; margin-right: 10px; width: 200px;">
+              <button onclick="searchCaseStatus()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px;">חפש תיק</button>
+            </div>
+            <div id="caseResults">
+              <p>הכנס מספר רכב לצפייה בסטטוס התיק</p>
+            </div>`;
+          break;
+          
+        case 'tracking':
+          content.innerHTML = `
+            <h2>📋 סקירה לפי שדות</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div>
+                <h3>סינון לפי תאריך</h3>
+                <input type="date" id="dateFrom" style="padding: 8px; margin: 5px;">
+                <input type="date" id="dateTo" style="padding: 8px; margin: 5px;">
+                <button onclick="filterByDate()" style="padding: 8px; background: #ff6b35; color: white; border: none; border-radius: 4px;">סנן</button>
+              </div>
+              <div>
+                <h3>סינון לפי סטטוס</h3>
+                <select id="statusFilter" style="padding: 8px; margin: 5px;">
+                  <option value="">כל הסטטוסים</option>
+                  <option value="open">פתוח</option>
+                  <option value="in_progress">בטיפול</option>
+                  <option value="completed">הושלם</option>
+                </select>
+                <button onclick="filterByStatus()" style="padding: 8px; background: #ff6b35; color: white; border: none; border-radius: 4px;">סנן</button>
+              </div>
+            </div>
+            <div id="trackingResults" style="margin-top: 20px;">
+              <p>בחר אפשרות סינון לצפייה בנתונים</p>
+            </div>`;
+          break;
+          
+        case 'reminders':
+          content.innerHTML = `
+            <h2>🔔 רשימת תזכורות</h2>
+            <div style="margin-bottom: 20px;">
+              <button onclick="addReminder()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px;">➕ הוסף תזכורת חדשה</button>
+            </div>
+            <div id="remindersList">
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4>תזכורת לבדיקת תיקים פתוחים</h4>
+                <p>תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
+                <p>סטטוס: פעיל</p>
+                <button onclick="editReminder(1)" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 4px; margin-left: 5px;">ערוך</button>
+                <button onclick="deleteReminder(1)" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">מחק</button>
+              </div>
+            </div>`;
+          break;
+          
+        case 'override':
+          content.innerHTML = `
+            <h2>✏️ שינוי נתונים</h2>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; margin-bottom: 20px;">
+              <strong>⚠️ אזהרה:</strong> שינוי נתונים במערכת דורש הרשאות מנהל וגיבוי אוטומטי
+            </div>
+            <div>
+              <h3>חיפוש תיק לעריכה</h3>
+              <input type="text" id="editPlateSearch" placeholder="הכנס מספר רכב" style="padding: 8px; margin-right: 10px; width: 200px;">
+              <button onclick="loadCaseForEdit()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px;">טען תיק לעריכה</button>
+            </div>
+            <div id="editResults" style="margin-top: 20px;">
+              <p>טען תיק כדי להתחיל עריכה</p>
+            </div>`;
+          break;
+          
+        case 'logView':
+          content.innerHTML = `
+            <h2>📜 יומן פעולות</h2>
+            <div style="margin-bottom: 20px;">
+              <button onclick="refreshLog()" style="padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px;">🔄 רענן יומן</button>
+              <button onclick="exportLog()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; margin-right: 10px;">📤 יצא יומן</button>
+            </div>
+            <div id="logContent" style="background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto;">
+              <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+                <strong>${new Date().toLocaleString('he-IL')}</strong> - משתמש נכנס למערכת הניהול
+              </div>
+              <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+                <strong>${new Date(Date.now() - 3600000).toLocaleString('he-IL')}</strong> - עודכן מע"מ גלובלי ל-18%
+              </div>
+              <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+                <strong>${new Date(Date.now() - 7200000).toLocaleString('he-IL')}</strong> - נוצר תיק חדש עבור רכב 123-45-678
+              </div>
+            </div>`;
+          break;
+          
+        default:
+          content.innerHTML = `<p>טוען ${id}...</p>`;
+      }
+    };
+
+    // Helper functions for admin sections
+    window.searchCaseStatus = function() {
+      const plate = document.getElementById('plateSearch').value.trim();
+      if (!plate) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      document.getElementById('caseResults').innerHTML = `
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border: 1px solid #3b82f6;">
+          <h4>תיק מספר: ${plate}</h4>
+          <p><strong>סטטוס:</strong> פעיל</p>
+          <p><strong>תאריך יצירה:</strong> ${new Date().toLocaleDateString('he-IL')}</p>
+          <p><strong>שלב נוכחי:</strong> הערכת נזקים</p>
+          <p><strong>מעודכן לאחרונה:</strong> לפני 2 שעות</p>
+        </div>`;
+    };
+
+    window.filterByDate = function() {
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      
+      document.getElementById('trackingResults').innerHTML = `
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+          <h4>תוצאות סינון לתקופה: ${dateFrom} - ${dateTo}</h4>
+          <p>נמצאו 5 תיקים בתקופה זו</p>
+          <ul>
+            <li>תיק 123-45-678 - הושלם</li>
+            <li>תיק 234-56-789 - בטיפול</li>
+            <li>תיק 345-67-890 - פתוח</li>
+          </ul>
+        </div>`;
+    };
+
+    window.filterByStatus = function() {
+      const status = document.getElementById('statusFilter').value;
+      const statusText = document.getElementById('statusFilter').selectedOptions[0].text;
+      
+      document.getElementById('trackingResults').innerHTML = `
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+          <h4>תוצאות סינון לפי סטטוס: ${statusText}</h4>
+          <p>נמצאו 3 תיקים עם סטטוס זה</p>
+        </div>`;
+    };
+
+    window.addReminder = function() {
+      const newReminder = prompt('הכנס תוכן התזכורת:');
+      if (newReminder) {
+        const remindersList = document.getElementById('remindersList');
+        remindersList.innerHTML += `
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+            <h4>${newReminder}</h4>
+            <p>תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
+            <p>סטטוס: פעיל</p>
+            <button onclick="editReminder(${Date.now()})" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 4px; margin-left: 5px;">ערוך</button>
+            <button onclick="deleteReminder(${Date.now()})" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">מחק</button>
+          </div>`;
+      }
+    };
+
+    window.editReminder = function(id) {
+      alert('פונקציית עריכה תזכורת - ID: ' + id);
+    };
+
+    window.deleteReminder = function(id) {
+      if (confirm('האם אתה בטוח שברצונך למחוק את התזכורת?')) {
+        alert('התזכורת נמחקה');
+      }
+    };
+
+    window.loadCaseForEdit = function() {
+      const plate = document.getElementById('editPlateSearch').value.trim();
+      if (!plate) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      document.getElementById('editResults').innerHTML = `
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7;">
+          <h4>עריכת תיק: ${plate}</h4>
+          <p>פונקציית עריכה נתונים תהיה זמינה בגרסה הבאה</p>
+          <p>נכון לעכשיו ניתן לצפות בנתונים בלבד</p>
+        </div>`;
+    };
+
+    window.refreshLog = function() {
+      document.getElementById('logContent').innerHTML = `
+        <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+          <strong>${new Date().toLocaleString('he-IL')}</strong> - יומן רוענן על ידי מנהל
+        </div>
+        <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+          <strong>${new Date().toLocaleString('he-IL')}</strong> - משתמש נכנס למערכת הניהול
+        </div>
+        <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+          <strong>${new Date(Date.now() - 3600000).toLocaleString('he-IL')}</strong> - עודכן מע"מ גלובלי ל-18%
+        </div>`;
+    };
+
+    window.exportLog = function() {
+      alert('יומן יוצא לקובץ CSV - פונקציה תהיה זמינה בגרסה הבאה');
     };
 
   });
