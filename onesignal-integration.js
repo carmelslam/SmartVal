@@ -75,14 +75,29 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Minimal configuration to avoid ID errors
+              // Comprehensive v16 configuration
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
-                autoRegister: false,
-                autoResubscribe: false,
-                serviceWorkerParam: { scope: '/' },
-                serviceWorkerPath: 'OneSignalSDKWorker.js'
+                serviceWorkerPath: '/OneSignalSDKWorker.js',
+                serviceWorkerScope: '/',
+                allowLocalhostAsSecureOrigin: true
               };
+              
+              // Safari requires specific configuration
+              if (isSafari) {
+                initConfig.safari_web_id = 'web.onesignal.auto.' + ONESIGNAL_APP_ID;
+                initConfig.promptOptions = {
+                  slidedown: {
+                    enabled: true,
+                    autoPrompt: false,
+                    timeDelay: 20,
+                    pageViews: 1,
+                    actionMessage: "We'd like to show you notifications for updates.",
+                    acceptButtonText: "Allow",
+                    cancelButtonText: "No Thanks"
+                  }
+                };
+              }
               
               console.log('📱 OneSignal: Init config:', initConfig);
               console.log('📱 OneSignal: Current hostname:', window.location.hostname);
@@ -90,17 +105,20 @@
               await OneSignal.init(initConfig);
 
               this.initialized = true;
-              console.log('📱 OneSignal: Initialized successfully with minimal config');
+              console.log('📱 OneSignal: Initialized successfully with v16 config');
 
               // Set user context (simplified)
               this.userToken = auth;
               
-              // Don't try to get OneSignal ID immediately to avoid errors
-              console.log('📱 OneSignal: Skipping automatic ID retrieval to prevent errors');
-
-              // Simple permission check without subscription operations
-              setTimeout(() => {
-                this.checkBasicPermission();
+              // Wait for OneSignal to be fully ready
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Set up event listeners for subscription changes
+              this.setupSubscriptionListeners();
+              
+              // Check current subscription status
+              setTimeout(async () => {
+                await this.checkSubscriptionStatus();
               }, 1000);
 
               resolve();
@@ -171,23 +189,24 @@
       }
     }
 
-    checkBasicPermission() {
+    setupSubscriptionListeners() {
       try {
-        const permission = Notification.permission;
-        this.subscribed = (permission === 'granted');
+        if (!window.OneSignal) return;
         
-        console.log('📱 OneSignal: Basic permission check:', {
-          permission: permission,
-          subscribed: this.subscribed
+        // Listen for subscription changes
+        OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+          console.log('📱 OneSignal: Subscription changed:', event);
+          if (event.current.id) {
+            console.log('📱 OneSignal: New subscription ID:', event.current.id);
+            sessionStorage.setItem('onesignalId', event.current.id);
+            sessionStorage.setItem('oneSignalSubscribed', 'true');
+            this.subscribed = true;
+          }
         });
-
-        // Store subscription status
-        sessionStorage.setItem('oneSignalSubscribed', this.subscribed.toString());
         
-        return this.subscribed;
+        console.log('📱 OneSignal: Subscription listeners set up');
       } catch (error) {
-        console.error('📱 OneSignal: Error in basic permission check:', error);
-        return false;
+        console.error('📱 OneSignal: Error setting up listeners:', error);
       }
     }
 
@@ -277,17 +296,57 @@
 
     async requestPermission() {
       try {
-        console.log('📱 OneSignal: Requesting notification permission (simplified)...');
+        console.log('📱 OneSignal: Requesting notification permission...');
         
-        // Use browser native permission request to avoid OneSignal validation errors
-        const result = await Notification.requestPermission();
-        const permission = (result === 'granted');
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        let permission = false;
+        
+        if (isSafari) {
+          // Safari requires OneSignal slidedown
+          console.log('📱 OneSignal: Using Safari slidedown prompt');
+          try {
+            if (window.OneSignal && window.OneSignal.Slidedown) {
+              await OneSignal.Slidedown.promptPush();
+              // Wait for user interaction
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              permission = (Notification.permission === 'granted');
+            } else {
+              // Fallback to native
+              const result = await Notification.requestPermission();
+              permission = (result === 'granted');
+            }
+          } catch (e) {
+            console.log('📱 OneSignal: Safari fallback to native:', e.message);
+            const result = await Notification.requestPermission();
+            permission = (result === 'granted');
+          }
+        } else {
+          // Chrome and other browsers - use OneSignal proper method
+          try {
+            if (window.OneSignal && window.OneSignal.Notifications) {
+              const granted = await OneSignal.Notifications.requestPermission();
+              permission = granted;
+            } else {
+              const result = await Notification.requestPermission();
+              permission = (result === 'granted');
+            }
+          } catch (e) {
+            console.log('📱 OneSignal: Chrome fallback to native:', e.message);
+            const result = await Notification.requestPermission();
+            permission = (result === 'granted');
+          }
+        }
         
         this.subscribed = permission;
 
         if (permission) {
-          console.log('📱 OneSignal: Permission granted');
+          console.log('📱 OneSignal: Permission granted, waiting for subscription...');
           sessionStorage.setItem('oneSignalSubscribed', 'true');
+          
+          // Wait for subscription to be processed
+          setTimeout(async () => {
+            await this.checkSubscriptionStatus();
+          }, 2000);
         } else {
           console.log('📱 OneSignal: Permission denied');
           sessionStorage.setItem('oneSignalSubscribed', 'false');
@@ -303,10 +362,29 @@
 
     async sendTestNotification() {
       try {
-        if (!this.subscribed) {
-          console.log('📱 OneSignal: User not subscribed, cannot send test notification');
-          return false;
+        console.log('📱 OneSignal: Attempting to send test notification...');
+        
+        // Get current subscription info
+        let onesignalId = sessionStorage.getItem('onesignalId');
+        
+        // Try to get fresh ID if not available
+        if (!onesignalId && window.OneSignal && window.OneSignal.User) {
+          try {
+            onesignalId = await OneSignal.User.getOnesignalId();
+            if (onesignalId) {
+              sessionStorage.setItem('onesignalId', onesignalId);
+            }
+          } catch (e) {
+            console.log('📱 OneSignal: Could not get fresh ID:', e.message);
+          }
         }
+        
+        console.log('📱 OneSignal: Test notification data:', {
+          subscribed: this.subscribed,
+          onesignalId: onesignalId,
+          userToken: this.userToken,
+          browser: navigator.userAgent.includes('Safari') ? 'Safari' : 'Chrome'
+        });
 
         // Send test notification via webhook
         const response = await fetch('https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd', {
@@ -317,10 +395,12 @@
           body: JSON.stringify({
             type: 'test_notification',
             user_id: this.userToken,
-            player_id: this.playerId,
+            player_id: onesignalId || this.playerId,
+            onesignal_id: onesignalId,
             message: 'בדיקת התראות - המערכת פועלת כראוי!',
-            title: 'מערכת השמאות',
-            url: window.location.href
+            title: 'מערכת השמאות - בדיקה',
+            url: window.location.href,
+            browser: navigator.userAgent.includes('Safari') ? 'Safari' : 'Chrome'
           })
         });
 
@@ -328,7 +408,7 @@
           console.log('📱 OneSignal: Test notification sent successfully');
           return true;
         } else {
-          console.error('📱 OneSignal: Failed to send test notification');
+          console.error('📱 OneSignal: Failed to send test notification, status:', response.status);
           return false;
         }
 
