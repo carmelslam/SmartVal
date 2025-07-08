@@ -414,10 +414,21 @@ async function verifyDevAccess() {
       response?.success === true ||
       response?.approved === true ||
       
-      // String response patterns (if response is just a string)
-      typeof response === 'string' && /^(dev|success|granted|approved|valid|authenticated|true)$/i.test(response?.trim());
+      // String response patterns (if response is just a string) - FIXED
+      (typeof response === 'string' && /^(dev|success|granted|approved|valid|authenticated|true)$/i.test(response.trim())) ||
+      
+      // Handle webhook response that returns "approved" as seen in console
+      response === 'approved' ||
+      response === 'dev' ||
+      response === 'granted';
     
     console.log('🔍 Dev access validation result:', isDevAccess);
+    console.log('🔍 Response details:', {
+      response,
+      type: typeof response,
+      stringValue: typeof response === 'string' ? response.trim() : 'not a string',
+      regexTest: typeof response === 'string' ? /^(dev|success|granted|approved|valid|authenticated|true)$/i.test(response.trim()) : 'not tested'
+    });
     
     if (isDevAccess) {
       console.log('✅ Dev access granted via webhook');
