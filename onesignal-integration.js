@@ -32,6 +32,8 @@
           return;
         }
 
+        // Log current domain for debugging
+        console.log('📱 OneSignal: Current domain:', window.location.origin);
         console.log('📱 OneSignal: Initializing on post-login page...');
 
         // Check if already initialized
@@ -51,10 +53,19 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              await OneSignal.init({
+              // Dynamic configuration based on current domain
+              const initConfig = {
                 appId: ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: true
-              });
+              };
+              
+              // Add subdomain configuration if not on production domain
+              if (!window.location.hostname.includes('yaron-cayouf-portal.netlify.app')) {
+                initConfig.subdomainName = 'yaron-cayouf-portal';
+              }
+              
+              console.log('📱 OneSignal: Init config:', initConfig);
+              await OneSignal.init(initConfig);
 
               this.initialized = true;
               console.log('📱 OneSignal: Initialized successfully on post-login page');
