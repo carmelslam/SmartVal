@@ -28,8 +28,8 @@
       position: fixed;
       bottom: ${assistantConfig.position.bottom};
       right: ${assistantConfig.position.right};
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border: none;
       border-radius: 50%;
