@@ -34,6 +34,9 @@
 
         // Log current domain for debugging
         console.log('📱 OneSignal: Current domain:', window.location.origin);
+        console.log('📱 OneSignal: Hostname:', window.location.hostname);
+        console.log('📱 OneSignal: Protocol:', window.location.protocol);
+        console.log('📱 OneSignal: Expected domain: yaron-cayouf-portal.netlify.app');
         console.log('📱 OneSignal: Initializing on post-login page...');
 
         // Check if already initialized
@@ -47,8 +50,8 @@
           console.log('📱 OneSignal: Using existing initialization from login page');
           this.initialized = true;
           
-          // Set user external ID for targeting
-          await this.setUserContext(auth);
+          // Set user context (simplified)
+          this.userToken = auth;
 
           // Check subscription status
           await this.checkSubscriptionStatus();
@@ -80,8 +83,8 @@
               this.initialized = true;
               console.log('📱 OneSignal: Initialized successfully on post-login page');
 
-              // Set user external ID for targeting
-              await this.setUserContext(auth);
+              // Set user context (simplified)
+              this.userToken = auth;
 
               // Check subscription status
               await this.checkSubscriptionStatus();
@@ -207,7 +210,6 @@
 
         if (permission) {
           console.log('📱 OneSignal: Permission granted');
-          await this.setUserContext(this.userToken || sessionStorage.getItem('auth'));
           // Force update subscription status
           sessionStorage.setItem('oneSignalSubscribed', 'true');
         } else {
