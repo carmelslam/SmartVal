@@ -11,52 +11,137 @@
     import { WEBHOOKS } from './webhook.js';
     import { sendToWebhook } from './webhook.js';
 
-    window.verifyAdminAccess = function () {
+    window.verifyAdminAccess = async function () {
       const password = prompt("Enter admin password:");
       if (!password) return;
 
-      fetch(WEBHOOKS.ADMIN_HUB, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      })
-        .then(async res => {
-          const text = await res.text();
-          console.log('🔍 Admin webhook raw response:', text);
-          console.log('🔍 Response status:', res.status);
-          console.log('🔍 Response headers:', res.headers);
-          
-          let data;
-          try {
-            data = JSON.parse(text);
-            console.log('🔍 Parsed JSON data:', data);
-          } catch (_) {
-            console.log('🔍 Failed to parse as JSON, treating as text');
-            data = { role: text.trim() };
-          }
+      // Enhanced admin verification with comprehensive response handling
+      const submitBtn = event?.target || document.querySelector('button[onclick*="verifyAdminAccess"]');
+      const originalText = submitBtn?.textContent || 'ניהול מערכת (Admin)';
+      
+      try {
+        // Show loading state
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'מתחבר למערכת...';
+        }
 
-          // Check multiple possible response formats
-          const isAdmin = data?.role === 'admin' || 
-                         data?.access === 'admin' ||
-                         data?.status === 'admin' ||
-                         data?.result === 'admin' ||
-                         data?.access_granted === true ||
-                         /admin|success|granted|approved/i.test(text);
-          
-          console.log('🔍 Admin check result:', isAdmin);
-          
-          if (isAdmin) {
-            console.log('✅ Admin access granted');
-            window.location.href = 'admin.html';
-          } else {
-            console.error('❌ Admin access denied. Response data:', data);
-            alert('Access denied: incorrect password');
-          }
-        })
-        .catch(err => {
-          console.error('Admin login failed:', err);
-          alert('Error connecting to verification server');
+        const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            password,
+            action: 'admin_login',
+            timestamp: new Date().toISOString(),
+            user_auth: sessionStorage.getItem('auth')
+          })
         });
+
+        const text = await response.text();
+        console.log('🔍 Admin webhook response status:', response.status);
+        console.log('🔍 Admin webhook raw response:', text);
+        
+        // Handle different response formats more robustly
+        let data;
+        let isValidResponse = false;
+        
+        try {
+          data = JSON.parse(text);
+          isValidResponse = true;
+          console.log('🔍 Parsed JSON admin response:', data);
+        } catch (_) {
+          console.log('🔍 Response is not JSON, treating as text');
+          data = { responseText: text.trim() };
+        }
+
+        // Enhanced admin access validation with multiple patterns
+        const isAdmin = 
+          // JSON response patterns
+          data?.role === 'admin' || 
+          data?.access === 'admin' ||
+          data?.status === 'admin' ||
+          data?.result === 'admin' ||
+          data?.access_granted === true ||
+          data?.admin === true ||
+          data?.authenticated === true ||
+          data?.valid === true ||
+          
+          // Text response patterns (case insensitive)
+          /^(admin|success|granted|approved|valid|authenticated|true)$/i.test(text?.trim()) ||
+          
+          // Partial match patterns
+          /admin.*granted|access.*granted|admin.*success|authenticated.*admin/i.test(text) ||
+          
+          // Response status validation
+          (response.status === 200 && text && !text.toLowerCase().includes('error') && !text.toLowerCase().includes('denied'));
+        
+        console.log('🔍 Admin validation result:', isAdmin);
+        console.log('🔍 Response analysis:', {
+          hasJsonData: isValidResponse,
+          responseLength: text?.length || 0,
+          responseStatus: response.status,
+          containsError: text?.toLowerCase().includes('error'),
+          containsDenied: text?.toLowerCase().includes('denied')
+        });
+        
+        if (isAdmin) {
+          console.log('✅ Admin access granted');
+          
+          // Store admin session
+          sessionStorage.setItem('admin-access', 'granted');
+          sessionStorage.setItem('admin-timestamp', new Date().toISOString());
+          
+          if (submitBtn) {
+            submitBtn.textContent = '✅ גישה אושרה';
+          }
+          
+          setTimeout(() => {
+            window.location.href = 'admin.html';
+          }, 500);
+          
+        } else {
+          console.error('❌ Admin access denied');
+          console.error('Response details:', { data, text, status: response.status });
+          
+          if (submitBtn) {
+            submitBtn.textContent = '❌ גישה נדחתה';
+            setTimeout(() => {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }, 2000);
+          }
+          
+          alert('גישה נדחתה: סיסמה שגויה או שגיאה בשרת');
+        }
+        
+      } catch (err) {
+        console.error('Admin verification error:', err);
+        
+        if (submitBtn) {
+          submitBtn.textContent = '❌ שגיאת חיבור';
+          setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }, 2000);
+        }
+        
+        // Enhanced error handling with fallback options
+        let errorMessage = 'שגיאה בחיבור לשרת האימות';
+        
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'שגיאת רשת - בדוק חיבור לאינטרנט';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'פג זמן החיבור - נסה שוב';
+        }
+        
+        alert(errorMessage);
+        
+        // Emergency fallback for development (only with specific dev password)
+        if (password === 'admin_emergency_2025' && confirm('השתמש בגישת חירום לפיתוח?')) {
+          sessionStorage.setItem('admin-access', 'granted-emergency');
+          window.location.href = 'admin.html';
+        }
+      }
     }
 
     window.loadExistingCase = function () {

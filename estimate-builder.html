@@ -619,16 +619,88 @@
       }
     };
 
-    // Authentication check
+    // Enhanced authentication and data validation check
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('🔄 Estimate Builder: Initializing...');
+      
+      // Authentication check
       const auth = sessionStorage.getItem("auth");
       if (!auth) {
+        console.error('❌ No authentication found');
         showAlert("הגישה חסומה - אנא התחבר דרך דף הבית", 'error');
         setTimeout(() => {
           window.location.href = "index.html";
         }, 2000);
         return;
       }
+
+      // Comprehensive data validation
+      const plateNumber = sessionStorage.getItem('plate');
+      const helperData = sessionStorage.getItem('helper');
+      const selectedReportType = sessionStorage.getItem('selectedReportType');
+      
+      console.log('📊 Estimate Builder validation:', {
+        hasAuth: !!auth,
+        hasPlate: !!plateNumber,
+        hasHelper: !!helperData,
+        hasReportType: !!selectedReportType,
+        reportType: selectedReportType
+      });
+      
+      // Validate required data
+      if (!plateNumber) {
+        console.error('❌ No plate number found');
+        showAlert('שגיאה: לא נמצא מספר רכב. אנא חזור לעמוד הבחירת דו"ח', 'error');
+        setTimeout(() => {
+          window.location.href = 'report-selection.html';
+        }, 3000);
+        return;
+      }
+      
+      if (!helperData) {
+        console.error('❌ No helper data found');
+        showAlert('שגיאה: לא נמצאו נתוני התיק. אנא חזור לעמוד הבחירת דו"ח', 'error');
+        setTimeout(() => {
+          window.location.href = 'report-selection.html';
+        }, 3000);
+        return;
+      }
+      
+      // Validate that this is the correct report type
+      if (selectedReportType !== 'estimate') {
+        console.warn('⚠️ Wrong report type selected:', selectedReportType);
+        showAlert('שגיאה: נבחר סוג דו"ח שגוי. מעביר לדף הנכון...', 'warning');
+        
+        if (selectedReportType === 'final') {
+          setTimeout(() => {
+            window.location.href = 'depreciation-module.html';
+          }, 2000);
+        } else {
+          setTimeout(() => {
+            window.location.href = 'report-selection.html';
+          }, 2000);
+        }
+        return;
+      }
+      
+      // Validate helper data structure
+      let helper;
+      try {
+        helper = JSON.parse(helperData);
+        if (!helper || typeof helper !== 'object') {
+          throw new Error('Invalid helper data structure');
+        }
+      } catch (error) {
+        console.error('❌ Invalid helper data:', error);
+        showAlert('שגיאה: נתוני התיק פגומים. אנא טען את התיק מחדש', 'error');
+        setTimeout(() => {
+          window.location.href = 'selection.html';
+        }, 3000);
+        return;
+      }
+      
+      console.log('✅ Estimate Builder: All validations passed');
+      showAlert('בונה אומדן - נתונים נטענו בהצלחה', 'success');
 
       // Check for post-session mode
       const urlParams = new URLSearchParams(window.location.search);

@@ -239,6 +239,149 @@ function sanitizeHelperData(data) {
   return sanitized;
 }
 
+// Enhanced data validation and consistency checks
+function validateHelperDataStructure(data) {
+  const errors = [];
+  
+  // Validate required sections
+  const requiredSections = ['meta', 'car_details'];
+  requiredSections.forEach(section => {
+    if (!data[section]) {
+      errors.push(`Missing required section: ${section}`);
+    }
+  });
+  
+  // Validate meta section
+  if (data.meta) {
+    if (!data.meta.plate || data.meta.plate.trim() === '') {
+      errors.push('Plate number is required in meta section');
+    }
+    
+    if (data.meta.case_id && !/^CASE-/.test(data.meta.case_id)) {
+      errors.push('Invalid case_id format');
+    }
+  }
+  
+  // Validate car_details section
+  if (data.car_details) {
+    const carPlate = data.car_details.plate;
+    const metaPlate = data.meta?.plate;
+    
+    if (carPlate && metaPlate && carPlate !== metaPlate) {
+      errors.push('Plate number mismatch between meta and car_details');
+    }
+  }
+  
+  // Validate damage_sections if present
+  if (data.damage_sections) {
+    data.damage_sections.forEach((section, index) => {
+      if (!section.zone) {
+        errors.push(`Damage section ${index + 1} missing zone information`);
+      }
+    });
+  }
+  
+  return errors;
+}
+
+function standardizeHelperData(data) {
+  // Create a standardized copy
+  const standardized = JSON.parse(JSON.stringify(data));
+  
+  // Ensure required sections exist
+  if (!standardized.meta) standardized.meta = {};
+  if (!standardized.car_details) standardized.car_details = {};
+  if (!standardized.progress) standardized.progress = {};
+  
+  // Standardize timestamps
+  if (!standardized.meta.created_at) {
+    standardized.meta.created_at = new Date().toISOString();
+  }
+  standardized.meta.updated_at = new Date().toISOString();
+  
+  // Ensure progress tracking exists
+  const progressSections = ['expertise', 'depreciation', 'estimate', 'fees'];
+  progressSections.forEach(section => {
+    if (!standardized.progress[section]) {
+      standardized.progress[section] = {
+        completed: false,
+        timestamp: null,
+        data_size: 0
+      };
+    }
+  });
+  
+  // Sync plate numbers
+  if (standardized.meta.plate && !standardized.car_details.plate) {
+    standardized.car_details.plate = standardized.meta.plate;
+  } else if (standardized.car_details.plate && !standardized.meta.plate) {
+    standardized.meta.plate = standardized.car_details.plate;
+  }
+  
+  // Generate case_id if missing
+  if (!standardized.meta.case_id && standardized.meta.plate) {
+    standardized.meta.case_id = `CASE-${standardized.meta.plate}-${Date.now()}`;
+  }
+  
+  return standardized;
+}
+
+function createDataIntegrityReport(data) {
+  const report = {
+    timestamp: new Date().toISOString(),
+    isValid: true,
+    warnings: [],
+    errors: [],
+    completeness: {},
+    recommendations: []
+  };
+  
+  // Check data completeness
+  const sections = {
+    'Car Details': data.car_details,
+    'Damage Sections': data.damage_sections,
+    'Depreciation Data': data.depreciation,
+    'Estimate Data': data.estimate_data,
+    'Fee Data': data.fee_data
+  };
+  
+  Object.entries(sections).forEach(([name, section]) => {
+    if (!section) {
+      report.completeness[name] = 0;
+      report.warnings.push(`${name} section is missing`);
+    } else if (Array.isArray(section)) {
+      report.completeness[name] = section.length > 0 ? 100 : 0;
+      if (section.length === 0) {
+        report.warnings.push(`${name} section is empty`);
+      }
+    } else if (typeof section === 'object') {
+      const keys = Object.keys(section);
+      const filledKeys = keys.filter(key => section[key] && section[key] !== '');
+      report.completeness[name] = keys.length > 0 ? (filledKeys.length / keys.length) * 100 : 0;
+      
+      if (report.completeness[name] < 50) {
+        report.warnings.push(`${name} section is less than 50% complete`);
+      }
+    }
+  });
+  
+  // Add recommendations
+  if (report.completeness['Car Details'] < 100) {
+    report.recommendations.push('Complete vehicle information for accurate reporting');
+  }
+  
+  if (report.completeness['Damage Sections'] === 0) {
+    report.recommendations.push('Add damage assessment data for proper evaluation');
+  }
+  
+  if (report.warnings.length > 3) {
+    report.isValid = false;
+    report.errors.push('Too many data integrity issues detected');
+  }
+  
+  return report;
+}
+
 export function updateHelper(section, data) {
   try {
     // Security validation
@@ -286,14 +429,29 @@ export function updateHelper(section, data) {
 export function saveHelperToStorage() {
   try {
     // Create backup before saving
-    const currentData = localStorage.getItem('helper_data');
+    const currentData = sessionStorage.getItem('helper');
     if (currentData) {
       localStorage.setItem('helper_data_backup', currentData);
     }
     
+    // Standardize and validate data before storage
+    const standardizedHelper = standardizeHelperData(helper);
+    const validationErrors = validateHelperDataStructure(standardizedHelper);
+    
+    if (validationErrors.length > 0) {
+      console.warn('Helper data validation warnings:', validationErrors);
+      errorHandler.createError('validation', 'medium', 'Helper data has validation issues', {
+        errors: validationErrors
+      });
+    }
+    
     // Sanitize data before storage
-    const sanitizedHelper = sanitizeHelperData(helper);
-    localStorage.setItem('helper_data', JSON.stringify(sanitizedHelper));
+    const sanitizedHelper = sanitizeHelperData(standardizedHelper);
+    
+    // Save to both sessionStorage (primary) and localStorage (backup)
+    const dataString = JSON.stringify(sanitizedHelper);
+    sessionStorage.setItem('helper', dataString);
+    localStorage.setItem('helper_data', dataString);
     
     // Security audit
     securityManager.logSecurityEvent('data_saved', {
@@ -327,18 +485,166 @@ export function saveHelperToStorage() {
 
 export function loadHelperFromStorage() {
   try {
-    const data = localStorage.getItem('helper_data');
-    if (data) {
-      const parsedData = JSON.parse(data);
-      const sanitizedData = sanitizeHelperData(parsedData);
-      Object.assign(helper, sanitizedData);
-      
-      // Security audit
-      securityManager.logSecurityEvent('data_loaded', {
-        dataSize: data.length,
-        timestamp: new Date()
+    // Try sessionStorage first (primary), then localStorage (backup)
+    let data = sessionStorage.getItem('helper');
+    let dataSource = 'sessionStorage';
+    
+    if (!data) {
+      data = localStorage.getItem('helper_data');
+      dataSource = 'localStorage';
+    }
+    
+    if (!data) {
+      console.log('No helper data found in storage');
+      return false;
+    }
+    
+    const parsedData = JSON.parse(data);
+    
+    // Validate data structure
+    const validationErrors = validateHelperDataStructure(parsedData);
+    if (validationErrors.length > 0) {
+      console.warn('Loaded helper data has validation issues:', validationErrors);
+      errorHandler.createError('validation', 'medium', 'Loaded helper data has validation issues', {
+        errors: validationErrors,
+        source: dataSource
       });
     }
+    
+    // Standardize the loaded data
+    const standardizedData = standardizeHelperData(parsedData);
+    
+    // Sanitize data
+    const sanitizedData = sanitizeHelperData(standardizedData);
+    
+    // Update helper object
+    Object.assign(helper, sanitizedData);
+    
+    // If data was loaded from localStorage, save it to sessionStorage for consistency
+    if (dataSource === 'localStorage') {
+      const dataString = JSON.stringify(sanitizedData);
+      sessionStorage.setItem('helper', dataString);
+      console.log('Helper data migrated from localStorage to sessionStorage');
+    }
+    
+    // Create data integrity report
+    const integrityReport = createDataIntegrityReport(sanitizedData);
+    console.log('Helper data integrity report:', integrityReport);
+    
+    // Security audit
+    securityManager.logSecurityEvent('data_loaded', {
+      dataSize: data.length,
+      source: dataSource,
+      validationErrors: validationErrors.length,
+      integrityScore: Object.values(integrityReport.completeness).reduce((a, b) => a + b, 0) / Object.keys(integrityReport.completeness).length || 0,
+      timestamp: new Date()
+    });
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Failed to load helper data:', error);
+    errorHandler.createError('data', 'high', 'Failed to load helper data from storage', {
+      originalError: error.message
+    });
+    return false;
+  }
+}
+
+// Enhanced helper data management functions
+export function validateAndFixHelperData() {
+  try {
+    const validationErrors = validateHelperDataStructure(helper);
+    if (validationErrors.length > 0) {
+      console.warn('Helper data validation issues found:', validationErrors);
+      
+      // Attempt to fix common issues
+      const standardizedHelper = standardizeHelperData(helper);
+      Object.assign(helper, standardizedHelper);
+      
+      // Re-validate after fixes
+      const newValidationErrors = validateHelperDataStructure(helper);
+      if (newValidationErrors.length < validationErrors.length) {
+        console.log('Fixed some helper data issues automatically');
+        saveHelperToStorage();
+      }
+      
+      return {
+        initialErrors: validationErrors,
+        fixedErrors: validationErrors.length - newValidationErrors.length,
+        remainingErrors: newValidationErrors
+      };
+    }
+    
+    return { initialErrors: [], fixedErrors: 0, remainingErrors: [] };
+    
+  } catch (error) {
+    console.error('Error validating helper data:', error);
+    return { error: error.message };
+  }
+}
+
+export function getHelperDataIntegrityReport() {
+  try {
+    return createDataIntegrityReport(helper);
+  } catch (error) {
+    console.error('Error creating integrity report:', error);
+    return {
+      timestamp: new Date().toISOString(),
+      isValid: false,
+      errors: [error.message],
+      warnings: [],
+      completeness: {},
+      recommendations: ['Fix data integrity issues before proceeding']
+    };
+  }
+}
+
+export function syncHelperDataBetweenStorages() {
+  try {
+    const sessionData = sessionStorage.getItem('helper');
+    const localData = localStorage.getItem('helper_data');
+    
+    let mostRecentData = null;
+    let mostRecentSource = '';
+    
+    if (sessionData && localData) {
+      const sessionObj = JSON.parse(sessionData);
+      const localObj = JSON.parse(localData);
+      
+      const sessionTimestamp = new Date(sessionObj.meta?.updated_at || 0);
+      const localTimestamp = new Date(localObj.meta?.updated_at || 0);
+      
+      if (sessionTimestamp > localTimestamp) {
+        mostRecentData = sessionData;
+        mostRecentSource = 'sessionStorage';
+      } else {
+        mostRecentData = localData;
+        mostRecentSource = 'localStorage';
+      }
+    } else if (sessionData) {
+      mostRecentData = sessionData;
+      mostRecentSource = 'sessionStorage';
+    } else if (localData) {
+      mostRecentData = localData;
+      mostRecentSource = 'localStorage';
+    }
+    
+    if (mostRecentData) {
+      // Sync both storages with the most recent data
+      sessionStorage.setItem('helper', mostRecentData);
+      localStorage.setItem('helper_data', mostRecentData);
+      
+      console.log(`Helper data synced from ${mostRecentSource}`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error syncing helper data:', error);
+    return false;
+  }
+}
     
     // Ensure car_details object exists with all fields
     helper.car_details = { ...CAR_DETAILS_TEMPLATE, ...(helper.car_details || {}) };

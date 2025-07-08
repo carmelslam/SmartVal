@@ -260,7 +260,7 @@
    <script type="module">
   import { sendToWebhook } from './webhook.js';
   document.addEventListener('DOMContentLoaded', () => {
-    // Check if user has authentication
+    // Check if user has basic authentication
     const auth = sessionStorage.getItem('auth');
     if (!auth) {
       console.log('❌ No auth token found in admin.html, redirecting to login');
@@ -269,8 +269,34 @@
       return;
     }
     
-    // TODO: Add admin-specific verification here once webhook format is known
-    console.log('✅ User is authenticated, loading admin panel');
+    // Check for admin-specific access
+    const adminAccess = sessionStorage.getItem('admin-access');
+    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+    
+    if (!adminAccess || !adminAccess.includes('granted')) {
+      console.log('❌ No admin access token found, redirecting to selection');
+      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
+      window.location.href = 'selection.html';
+      return;
+    }
+    
+    // Check if admin session is still valid (24 hours)
+    if (adminTimestamp) {
+      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (sessionAge > maxAge) {
+        console.log('❌ Admin session expired, redirecting to selection');
+        sessionStorage.removeItem('admin-access');
+        sessionStorage.removeItem('admin-timestamp');
+        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
+        window.location.href = 'selection.html';
+        return;
+      }
+    }
+    
+    console.log('✅ Admin access verified, loading admin panel');
+    console.log('Admin access type:', adminAccess);
     
     const WEBHOOKS = window.WEBHOOKS;
 

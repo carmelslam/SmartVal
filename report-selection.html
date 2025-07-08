@@ -145,14 +145,56 @@
     
     <h1>בחירת סוג דו"ח להפקה</h1>
     
-    <!-- Plate Input Section -->
+    <!-- Enhanced Plate Input Section with Password and Data Flow -->
     <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:25px;">
-      <label style="display:block; font-size:16px; font-weight:600; color:#1e3a8a; margin-bottom:10px; text-align:right;">
-        מספר רכב:
-      </label>
-      <input type="text" id="plateInput" placeholder="הכנס מספר רכב" style="width:100%; padding:10px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; text-align:center; box-sizing:border-box;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+        <div>
+          <label style="display:block; font-size:16px; font-weight:600; color:#1e3a8a; margin-bottom:10px; text-align:right;">
+            מספר רכב:
+          </label>
+          <input type="text" id="plateInput" placeholder="הכנס מספר רכב" style="width:100%; padding:10px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; text-align:center; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:16px; font-weight:600; color:#1e3a8a; margin-bottom:10px; text-align:right;">
+            סיסמה (אופציונלי):
+          </label>
+          <input type="password" id="passwordInput" placeholder="סיסמה לאימות נתונים" style="width:100%; padding:10px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; text-align:center; box-sizing:border-box;">
+        </div>
+      </div>
+      
+      <div style="text-align:center; margin-bottom:15px;">
+        <button id="loadCaseBtn" onclick="loadExistingCaseWithPassword()" style="padding:10px 20px; background:#1e3a8a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
+          טען תיק קיים
+        </button>
+        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;">
+          צור תיק חדש
+        </button>
+      </div>
+      
       <div id="plateStatus" style="margin-top:10px; font-size:14px; color:#059669; display:none; text-align:right;">
         ✓ נתוני הרכב נטענו בהצלחה
+      </div>
+      
+      <div id="dataIntegrityStatus" style="margin-top:8px; font-size:13px; display:none; text-align:right; padding:8px; border-radius:6px; background:#fef3c7;">
+        <!-- Will show data completeness and previous work status -->
+      </div>
+      
+      <div id="caseProgressIndicator" style="margin-top:10px; display:none;">
+        <div style="font-size:14px; font-weight:600; color:#374151; margin-bottom:8px; text-align:right;">התקדמות התיק:</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; font-size:12px;">
+          <div id="progress-expertise" style="padding:4px 8px; border-radius:4px; text-align:center; background:#f3f4f6; color:#6b7280;">
+            אקספרטיזה: <span>לא הושלם</span>
+          </div>
+          <div id="progress-depreciation" style="padding:4px 8px; border-radius:4px; text-align:center; background:#f3f4f6; color:#6b7280;">
+            ירידת ערך: <span>לא הושלם</span>
+          </div>
+          <div id="progress-estimate" style="padding:4px 8px; border-radius:4px; text-align:center; background:#f3f4f6; color:#6b7280;">
+            אומדן: <span>לא הושלם</span>
+          </div>
+          <div id="progress-fees" style="padding:4px 8px; border-radius:4px; text-align:center; background:#f3f4f6; color:#6b7280;">
+            שכ"ט: <span>לא הושלם</span>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -328,25 +370,75 @@
     }
 
     window.proceedToReport = function() {
+      console.log('🚀 Proceeding to report:', { selectedReportType, plateDataLoaded });
+      
       if (!selectedReportType) {
         alert('אנא בחר סוג דו"ח');
         return;
       }
       
       if (!plateDataLoaded) {
-        alert('אנא הכנס מספר רכב');
+        alert('אנא הכנס מספר רכב ותעמד עד שהנתונים ייטענו');
+        return;
+      }
+
+      // Validate session data before navigation
+      const plateNumber = sessionStorage.getItem('plate');
+      const helperData = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('שגיאה: מספר רכב לא נשמר במערכת');
+        return;
+      }
+      
+      if (!helperData) {
+        alert('שגיאה: נתוני התיק לא נמצאו במערכת');
         return;
       }
 
       // Store selection for the target module
       sessionStorage.setItem('selectedReportType', selectedReportType);
+      sessionStorage.setItem('reportSelectionTimestamp', new Date().toISOString());
       
-      if (selectedReportType === 'estimate') {
-        // Go to estimate builder
-        window.location.href = 'estimate-builder.html';
-      } else if (selectedReportType === 'final') {
-        // Go to depreciation module (start of final report workflow)
-        window.location.href = 'depreciation-module.html';
+      console.log('📝 Navigating to report type:', selectedReportType);
+      
+      try {
+        if (selectedReportType === 'estimate') {
+          // Validate estimate builder availability
+          console.log('🔄 Navigating to estimate builder');
+          
+          // Add a pre-navigation check
+          const targetUrl = 'estimate-builder.html';
+          
+          // Store navigation intent
+          sessionStorage.setItem('navigationTarget', targetUrl);
+          
+          // Navigate with error handling
+          window.location.href = targetUrl;
+          
+        } else if (selectedReportType === 'final') {
+          // Validate depreciation module availability
+          console.log('🔄 Navigating to depreciation module');
+          
+          const targetUrl = 'depreciation-module.html';
+          sessionStorage.setItem('navigationTarget', targetUrl);
+          
+          // Navigate with error handling
+          window.location.href = targetUrl;
+          
+        } else {
+          console.error('❌ Unknown report type:', selectedReportType);
+          alert('שגיאה: סוג דו"ח לא מזוהה');
+        }
+        
+      } catch (error) {
+        console.error('❌ Navigation error:', error);
+        alert('שגיאה בניתוב לדף הדו"ח. אנא נסה שוב.');
+        
+        // Fallback navigation
+        if (confirm('האם תרצה לחזור לעמוד הבחירה?')) {
+          window.location.href = 'selection.html';
+        }
       }
     }
 
@@ -359,6 +451,187 @@
         sessionStorage.clear();
         window.location.href = "index.html";
       }
+    }
+
+    // Enhanced case loading with password support
+    window.loadExistingCaseWithPassword = async function () {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+
+      const loadBtn = document.getElementById('loadCaseBtn');
+      const originalText = loadBtn.textContent;
+      
+      try {
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'טוען נתונים...';
+        
+        const payload = { plate: plateNumber };
+        if (password) {
+          payload.password = password;
+        }
+
+        const response = await sendToWebhook('ADMIN_FETCH_CASE', payload);
+        
+        if (response.success && response.data) {
+          const caseData = response.data;
+          
+          // Store the data
+          sessionStorage.setItem('helper', JSON.stringify(caseData));
+          sessionStorage.setItem('plate', plateNumber);
+          sessionStorage.setItem('caseLoaded', 'true');
+          
+          plateDataLoaded = true;
+          
+          // Update UI
+          document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '✓ תיק קיים נטען בהצלחה';
+          document.getElementById('plateStatus').style.color = '#059669';
+          
+          // Analyze and display case progress
+          displayCaseProgress(caseData);
+          showDataIntegrityStatus(caseData, 'existing');
+          
+          updateContinueButton();
+          
+        } else {
+          // Case not found - offer to create new
+          document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '⚠️ תיק לא נמצא במערכת';
+          document.getElementById('plateStatus').style.color = '#f59e0b';
+          
+          if (confirm('תיק לא נמצא במערכת. האם ברצונך ליצור תיק חדש?')) {
+            createNewCase();
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error loading case:', error);
+        
+        document.getElementById('plateStatus').style.display = 'block';
+        document.getElementById('plateStatus').textContent = '❌ שגיאה בטעינת התיק';
+        document.getElementById('plateStatus').style.color = '#dc2626';
+        
+        // Create basic case as fallback
+        createNewCase();
+        
+      } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = originalText;
+      }
+    }
+
+    // Create new case function
+    window.createNewCase = function () {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      const basicData = {
+        meta: {
+          plate: plateNumber,
+          case_id: `CASE-${plateNumber}-${Date.now()}`,
+          created_at: new Date().toISOString(),
+          status: 'new'
+        },
+        car_details: {
+          plate: plateNumber
+        },
+        progress: {
+          expertise: { completed: false, timestamp: null },
+          depreciation: { completed: false, timestamp: null },
+          estimate: { completed: false, timestamp: null },
+          fees: { completed: false, timestamp: null }
+        }
+      };
+      
+      sessionStorage.setItem('helper', JSON.stringify(basicData));
+      sessionStorage.setItem('plate', plateNumber);
+      sessionStorage.setItem('caseLoaded', 'true');
+      
+      plateDataLoaded = true;
+      
+      document.getElementById('plateStatus').style.display = 'block';
+      document.getElementById('plateStatus').textContent = '✓ תיק חדש נוצר';
+      document.getElementById('plateStatus').style.color = '#3b82f6';
+      
+      displayCaseProgress(basicData);
+      showDataIntegrityStatus(basicData, 'new');
+      
+      updateContinueButton();
+    }
+
+    // Display case progress indicators
+    function displayCaseProgress(caseData) {
+      const progressDiv = document.getElementById('caseProgressIndicator');
+      progressDiv.style.display = 'block';
+      
+      // Check completion status for each module
+      const progress = caseData.progress || {};
+      
+      // Update progress indicators
+      updateProgressIndicator('expertise', progress.expertise?.completed, caseData.damage_sections?.length > 0);
+      updateProgressIndicator('depreciation', progress.depreciation?.completed, caseData.depreciation_data?.completed);
+      updateProgressIndicator('estimate', progress.estimate?.completed, caseData.estimate_data?.completed);
+      updateProgressIndicator('fees', progress.fees?.completed, caseData.fee_data?.completed);
+    }
+
+    function updateProgressIndicator(type, isCompleted, hasData) {
+      const element = document.getElementById(`progress-${type}`);
+      const span = element.querySelector('span');
+      
+      if (isCompleted || hasData) {
+        element.style.background = '#dcfce7';
+        element.style.color = '#166534';
+        span.textContent = 'הושלם';
+      } else {
+        element.style.background = '#f3f4f6';
+        element.style.color = '#6b7280';
+        span.textContent = 'לא הושלם';
+      }
+    }
+
+    // Show data integrity status
+    function showDataIntegrityStatus(caseData, type) {
+      const statusDiv = document.getElementById('dataIntegrityStatus');
+      statusDiv.style.display = 'block';
+      
+      let statusText = '';
+      let completionCount = 0;
+      const totalModules = 4;
+      
+      // Count completed modules
+      if (caseData.damage_sections?.length > 0) completionCount++;
+      if (caseData.depreciation_data?.completed) completionCount++;
+      if (caseData.estimate_data?.completed) completionCount++;
+      if (caseData.fee_data?.completed) completionCount++;
+      
+      if (type === 'new') {
+        statusText = '📋 תיק חדש נוצר - ניתן להתחיל בעבודה על הדו"חות';
+        statusDiv.style.background = '#dbeafe';
+        statusDiv.style.color = '#1e40af';
+      } else if (completionCount === 0) {
+        statusText = '📝 תיק קיים ללא נתונים - ניתן להתחיל בעבודה';
+        statusDiv.style.background = '#fef3c7';
+        statusDiv.style.color = '#92400e';
+      } else if (completionCount === totalModules) {
+        statusText = '✅ התיק הושלם במלואו - ניתן להפיק דו"חות';
+        statusDiv.style.background = '#dcfce7';
+        statusDiv.style.color = '#166534';
+      } else {
+        statusText = `🔄 התיק הושלם חלקית (${completionCount}/${totalModules}) - ניתן להמשיך או להפיק דו"חות חלקיים`;
+        statusDiv.style.background = '#fef3c7';
+        statusDiv.style.color = '#92400e';
+      }
+      
+      statusDiv.textContent = statusText;
     }
 
     // Auto-select based on URL parameter if provided
