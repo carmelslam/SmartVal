@@ -67,16 +67,11 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Dynamic configuration based on current domain
+              // Simplified configuration to avoid CORS issues
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: true
               };
-              
-              // Add subdomain configuration if not on production domain
-              if (!window.location.hostname.includes('yaron-cayouf-portal.netlify.app')) {
-                initConfig.subdomainName = 'yaron-cayouf-portal';
-              }
               
               console.log('📱 OneSignal: Init config:', initConfig);
               await OneSignal.init(initConfig);
@@ -134,16 +129,19 @@
       try {
         if (!window.OneSignal) return;
 
-        // Use auth token as external user ID for targeting
-        await OneSignal.User.addAlias('external_id', authToken);
         this.userToken = authToken;
 
         // Get player ID for logging/debugging (v16 uses pushSubscription.id)
-        const subscription = await OneSignal.User.PushSubscription.id;
-        this.playerId = subscription;
+        try {
+          const subscription = await OneSignal.User.PushSubscription.id;
+          this.playerId = subscription;
+        } catch (e) {
+          console.log('📱 OneSignal: Could not get subscription ID, continuing without it');
+          this.playerId = null;
+        }
         
         console.log('📱 OneSignal: User context set', {
-          externalUserId: authToken.substring(0, 10) + '...',
+          userToken: authToken.substring(0, 10) + '...',
           playerId: this.playerId
         });
 
@@ -159,7 +157,15 @@
       try {
         if (!window.OneSignal) return;
 
-        const permission = await OneSignal.Notifications.permission;
+        // Use browser's native permission API as fallback
+        let permission;
+        try {
+          permission = await OneSignal.Notifications.permission;
+        } catch (e) {
+          // Fallback to browser native permission
+          permission = Notification.permission;
+        }
+        
         this.subscribed = (permission === 'granted');
 
         console.log('📱 OneSignal: Subscription status:', {
@@ -179,14 +185,23 @@
 
     async requestPermission() {
       try {
-        if (!window.OneSignal) {
-          console.log('📱 OneSignal: SDK not available for permission request');
-          return false;
-        }
-
         console.log('📱 OneSignal: Requesting notification permission...');
         
-        const permission = await OneSignal.Notifications.requestPermission();
+        let permission;
+        try {
+          if (window.OneSignal && window.OneSignal.Notifications) {
+            permission = await OneSignal.Notifications.requestPermission();
+          } else {
+            // Fallback to browser native permission
+            const result = await Notification.requestPermission();
+            permission = (result === 'granted');
+          }
+        } catch (e) {
+          console.log('📱 OneSignal: Using fallback permission request');
+          const result = await Notification.requestPermission();
+          permission = (result === 'granted');
+        }
+        
         this.subscribed = permission;
 
         if (permission) {
