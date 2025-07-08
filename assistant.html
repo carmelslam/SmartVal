@@ -1271,17 +1271,6 @@
             🔊 השמע תשובה
           </button>
           
-          <button onclick="testTTSDebug()" style="
-            background: #f59e0b;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
-          ">
-            🔧 בדוק TTS
-          </button>
           
           <div id="ttsStatus" style="font-size: 11px; color: #666;"></div>
         </div>
@@ -1419,62 +1408,6 @@
       }
     };
     
-    // TTS debugging function
-    window.testTTSDebug = async function() {
-      const statusDiv = document.getElementById('ttsStatus');
-      
-      console.group('🔧 TTS Debug Test');
-      
-      try {
-        statusDiv.textContent = 'בודק TTS...';
-        
-        // Test 1: Check API availability
-        console.log('🔍 Testing Google TTS API availability...');
-        const testResponse = await fetch('https://texttospeech.googleapis.com/v1/voices?key=AIzaSyCYMIbBVJsGfOv1pbELD41-Lxe7OwsHd1o');
-        
-        console.log('📡 API Response Status:', testResponse.status);
-        console.log('📡 API Response Headers:', Object.fromEntries(testResponse.headers.entries()));
-        
-        if (!testResponse.ok) {
-          const errorText = await testResponse.text();
-          console.error('❌ API Error Details:', errorText);
-          throw new Error(`API Error: ${testResponse.status} ${testResponse.statusText} - ${errorText}`);
-        }
-        
-        const voicesData = await testResponse.json();
-        console.log('✅ Google TTS API is accessible, voices available:', voicesData.voices?.length || 0);
-        
-        // Test 2: Check browser audio support
-        console.log('🔍 Testing browser audio support...');
-        const testAudio = new Audio();
-        const canPlayMp3 = testAudio.canPlayType('audio/mpeg');
-        console.log('Audio MP3 support:', canPlayMp3);
-        
-        // Test 3: Try simple TTS
-        console.log('🔍 Testing simple TTS...');
-        await speakResponse('בדיקה');
-        
-        statusDiv.textContent = '✅ TTS עובד תקין';
-        console.log('✅ All TTS tests passed');
-        
-      } catch (error) {
-        console.error('❌ TTS Debug failed:', error);
-        statusDiv.textContent = `❌ ${error.message}`;
-        
-        // Additional debug info
-        console.log('🔍 Debug Info:');
-        console.log('- User Agent:', navigator.userAgent);
-        console.log('- Browser supports Audio:', !!window.Audio);
-        console.log('- HTTPS:', window.location.protocol === 'https:');
-      } finally {
-        console.groupEnd();
-        
-        // Clear status after 5 seconds
-        setTimeout(() => {
-          if (statusDiv) statusDiv.textContent = '';
-        }, 5000);
-      }
-    };
     
 
     // Enhanced Text-to-Speech functionality using Google Cloud TTS
