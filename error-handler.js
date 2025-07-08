@@ -223,10 +223,17 @@ class ErrorHandler {
   }
 
   showUserNotification(errorInfo) {
+    // Disabled user notifications - they are annoying
+    console.log(`User notification suppressed: ${this.getUserFriendlyMessage(errorInfo)}`);
+    return;
+    
+    // Original code commented out:
+    /*
     const message = this.getUserFriendlyMessage(errorInfo);
     const actions = this.getErrorActions(errorInfo);
     
     this.showNotification(message, this.getNotificationType(errorInfo.severity), actions);
+    */
   }
 
   getUserFriendlyMessage(errorInfo) {
@@ -285,6 +292,12 @@ class ErrorHandler {
   }
 
   showNotification(message, type = 'error', actions = []) {
+    // Disabled notification popups - they are annoying
+    console.log(`[${type.toUpperCase()}]: ${message}`);
+    return;
+    
+    // Original code commented out:
+    /*
     const notification = this.createNotificationElement(message, type, actions);
     document.body.appendChild(notification);
     
@@ -299,6 +312,7 @@ class ErrorHandler {
     // Add to queue for management
     this.notificationQueue.push(notification);
     this.manageNotificationQueue();
+    */
   }
 
   createNotificationElement(message, type, actions) {
