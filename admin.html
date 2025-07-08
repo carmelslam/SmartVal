@@ -344,22 +344,57 @@ async function verifyDevAccess() {
     
     // Import webhooks dynamically with fallback
     let sendToWebhook;
+    let WEBHOOKS;
     try {
       const webhookModule = await import('./webhook.js');
       sendToWebhook = webhookModule.sendToWebhook;
+      WEBHOOKS = webhookModule.WEBHOOKS;
+      console.log('✅ Successfully imported webhook module');
     } catch (importError) {
       console.error('Failed to import webhook module:', importError);
-      throw new Error('Unable to load webhook module');
+      // Fallback webhook URL
+      WEBHOOKS = {
+        DEV_HUB: 'https://hook.eu2.make.com/cg8j5gu0wyum6yrbl4rz2myd0pew3znt'
+      };
+      console.log('⚠️ Using fallback webhook URL');
     }
     
-    // Use enhanced webhook verification with proper validation
-    console.log('🔍 Attempting DEV_HUB webhook verification...');
-    const response = await sendToWebhook('DEV_HUB', { 
-      password,
-      action: 'dev_login',
-      timestamp: new Date().toISOString(),
-      user_auth: sessionStorage.getItem('auth')
-    });
+    // Use direct fetch if sendToWebhook is not available
+    let response;
+    if (sendToWebhook) {
+      console.log('🔍 Attempting DEV_HUB webhook verification via sendToWebhook...');
+      response = await sendToWebhook('DEV_HUB', { 
+        password,
+        action: 'dev_login',
+        timestamp: new Date().toISOString(),
+        user_auth: sessionStorage.getItem('auth')
+      });
+    } else {
+      console.log('🔍 Attempting DEV_HUB webhook verification via direct fetch...');
+      const fetchResponse = await fetch(WEBHOOKS.DEV_HUB, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          password,
+          action: 'dev_login',
+          timestamp: new Date().toISOString(),
+          user_auth: sessionStorage.getItem('auth')
+        })
+      });
+      
+      console.log('🔍 DEV_HUB fetch response status:', fetchResponse.status);
+      
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+      }
+      
+      try {
+        response = await fetchResponse.json();
+      } catch (jsonError) {
+        console.log('Response is not JSON, getting text...');
+        response = await fetchResponse.text();
+      }
+    }
     
     console.log('🔍 DEV_HUB webhook response:', response);
     
