@@ -604,39 +604,6 @@ export function syncHelperDataBetweenStorages() {
     return false;
   }
 }
-    
-    // Ensure car_details object exists with all fields
-    helper.car_details = { ...CAR_DETAILS_TEMPLATE, ...(helper.car_details || {}) };
-    
-    return true;
-  } catch (error) {
-    errorHandler.createError('system', 'high', 'Failed to load data from storage', {
-      error: error.message,
-      stack: error.stack
-    });
-    
-    // Try to restore from backup
-    try {
-      const backup = localStorage.getItem('helper_data_backup');
-      if (backup) {
-        const parsedBackup = JSON.parse(backup);
-        const sanitizedBackup = sanitizeHelperData(parsedBackup);
-        Object.assign(helper, sanitizedBackup);
-        helper.car_details = { ...CAR_DETAILS_TEMPLATE, ...(helper.car_details || {}) };
-        errorHandler.createError('system', 'medium', 'Restored from backup after load failure');
-        return true;
-      }
-    } catch (restoreError) {
-      errorHandler.createError('system', 'critical', 'Failed to restore from backup during load', {
-        error: restoreError.message
-      });
-    }
-    
-    // Initialize with template if all else fails
-    helper.car_details = { ...CAR_DETAILS_TEMPLATE };
-    return false;
-  }
-}
 
 export function initHelper(meta = {}) {
   // Reset helper to initial state and set meta fields
