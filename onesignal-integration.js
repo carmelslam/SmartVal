@@ -67,13 +67,14 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Simplified configuration to avoid CORS issues
+              // Direct configuration for production domain
               const initConfig = {
-                appId: ONESIGNAL_APP_ID,
-                allowLocalhostAsSecureOrigin: true
+                appId: ONESIGNAL_APP_ID
               };
               
               console.log('📱 OneSignal: Init config:', initConfig);
+              console.log('📱 OneSignal: Current hostname:', window.location.hostname);
+              
               await OneSignal.init(initConfig);
 
               this.initialized = true;
