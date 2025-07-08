@@ -22,8 +22,7 @@ class SecurityManager {
       securityHeaders: {
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
-        'X-XSS-Protection': '1; mode=block',
-        'Referrer-Policy': 'strict-origin-when-cross-origin'
+        'X-XSS-Protection': '1; mode=block'
       }
     };
     
@@ -85,20 +84,30 @@ class SecurityManager {
   interceptAjaxRequests() {
     const originalFetch = window.fetch;
     window.fetch = async (url, options = {}) => {
-      // Add CSRF token to headers
-      const csrfToken = sessionStorage.getItem('csrfToken');
-      if (csrfToken) {
+      // Check if this is an external request that shouldn't have CSRF token
+      const urlStr = url.toString();
+      const isExternalRequest = urlStr.includes('onesignal.com') || 
+                               urlStr.includes('cdn.onesignal.com') ||
+                               urlStr.includes('google') ||
+                               urlStr.includes('make.com') ||
+                               !urlStr.startsWith(window.location.origin);
+      
+      // Only add CSRF token for same-origin requests
+      if (!isExternalRequest) {
+        const csrfToken = sessionStorage.getItem('csrfToken');
+        if (csrfToken) {
+          options.headers = {
+            ...options.headers,
+            'X-CSRF-Token': csrfToken
+          };
+        }
+        
+        // Add security headers
         options.headers = {
           ...options.headers,
-          'X-CSRF-Token': csrfToken
+          ...this.securityConfig.securityHeaders
         };
       }
-      
-      // Add security headers
-      options.headers = {
-        ...options.headers,
-        ...this.securityConfig.securityHeaders
-      };
       
       // Log request for audit
       this.logSecurityEvent('api_request', {
