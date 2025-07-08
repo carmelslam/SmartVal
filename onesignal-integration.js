@@ -319,31 +319,33 @@
       user-select: none;
       transition: all 0.3s ease;
       font-family: Arial, sans-serif;
+      display: none;
     `;
 
     function updateIndicator() {
       const status = window.oneSignalManager.getStatus();
       const subscribed = sessionStorage.getItem('oneSignalSubscribed') === 'true';
+      const permission = Notification.permission;
       
-      if (subscribed) {
-        indicator.style.background = '#d4edda';
-        indicator.style.borderColor = '#c3e6cb';
-        indicator.style.color = '#155724';
-        indicator.innerHTML = '🔔 התראות פעילות';
-        indicator.title = 'התראות פעילות - לחץ לבדיקה';
-      } else {
-        indicator.style.background = '#f8d7da';
-        indicator.style.borderColor = '#f5c6cb';
-        indicator.style.color = '#721c24';
-        indicator.innerHTML = '🔕 התראות כבויות';
-        indicator.title = 'התראות כבויות - לחץ להפעלה';
+      // Only show indicator if notifications are denied or not determined
+      if (permission === 'granted' || subscribed) {
+        indicator.style.display = 'none';
+        return;
       }
+      
+      // Show indicator only when notifications are explicitly denied or never asked
+      indicator.style.display = 'block';
+      indicator.style.background = '#f8d7da';
+      indicator.style.borderColor = '#f5c6cb';
+      indicator.style.color = '#721c24';
+      indicator.innerHTML = '🔕 התראות כבויות';
+      indicator.title = 'התראות כבויות - לחץ להפעלה';
     }
 
     indicator.addEventListener('click', async () => {
-      const subscribed = sessionStorage.getItem('oneSignalSubscribed') === 'true';
+      const permission = Notification.permission;
       
-      if (!subscribed) {
+      if (permission !== 'granted') {
         const granted = await window.oneSignalManager.requestPermission();
         if (granted) {
           // Force update the session storage and indicator
@@ -352,14 +354,6 @@
           alert('✅ התראות הופעלו בהצלחה!');
         } else {
           alert('❌ לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן.');
-        }
-      } else {
-        // Send test notification
-        const sent = await window.oneSignalManager.sendTestNotification();
-        if (sent) {
-          alert('📱 התראת בדיקה נשלחה!');
-        } else {
-          alert('❌ שגיאה בשליחת התראת בדיקה');
         }
       }
     });

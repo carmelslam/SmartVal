@@ -880,7 +880,7 @@ Data is inside the same square fields as we have now .
     2. The button is inactive and message displayed : טען תיק קיים על מנת להמשיך להפקת דו״חות - 
         - Decide on the best way to proceed with this that is efficient, uses resources wisely and lightly and at the same time user friendly .
 
-11. Nicole the knowledge manager : the Nicole module has several issues that need to be fixed : 
+11. Nicole the knowledge manager ✅: the Nicole module has several issues that need to be fixed : 
     1. The text / audio field are still mandatory this need to be also optional , if the 2 fields are empty then Nicole cannot be activated. At least one fields either plate or free query field need to be filled - but both are optional . 
     2. When sending a query we still have an error message that reads : שגיאה בשליחת השאלה: The string did not match the expected pattern.. the webhook is activated correctly but it doesn't register any json . So it's possible blow is not sending a json at all . 
     3. The microphone options sometimes causes screen to freeze and to be not responsive and sometimes it displays an error : שגיאה בזיהוי קול: audio-capture
@@ -889,7 +889,7 @@ Data is inside the same square fields as we have now .
         2. Change the send query button to system green 
         3. Change the icon in the answer from 🤖to Nicol's emoji 👩‍💼
         4. Response TTS check, when nicole answers to also speak and not just send textual message 
-12. The system help assistant 🤖that we have across system in all pages : 
+12. The system help assistant 🤖that we have across system in all pages : NOT FIXED 
     1. Purpose of this assistant is to help user with the system technical actions, workflows, debugging solutions , handling errors and so on , this is not Nicole this is an inner assistant to learn the system 
     2. As for now the knowledge of this assistant is very limited and it directs the user to the system manual that doesn't exist . 
     3. You need to build a comprehensive guide for this assistant to be able to answer complex and technical questions about the system operation and help the user with the work flow 
