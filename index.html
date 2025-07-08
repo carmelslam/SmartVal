@@ -21,9 +21,26 @@
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "3b924b99-c302-4919-a97e-baf909394696",
-    });
+    try {
+      // Dynamic configuration based on current domain
+      const initConfig = {
+        appId: "3b924b99-c302-4919-a97e-baf909394696",
+        allowLocalhostAsSecureOrigin: true
+      };
+      
+      // Add subdomain configuration if not on production domain
+      if (!window.location.hostname.includes('yaron-cayouf-portal.netlify.app')) {
+        initConfig.subdomainName = 'yaron-cayouf-portal';
+      }
+      
+      console.log('📱 OneSignal Login: Current domain:', window.location.origin);
+      console.log('📱 OneSignal Login: Init config:', initConfig);
+      
+      await OneSignal.init(initConfig);
+      console.log('📱 OneSignal Login: Initialized successfully');
+    } catch (error) {
+      console.error('📱 OneSignal Login: Initialization error:', error);
+    }
   });
 </script>
   <style>

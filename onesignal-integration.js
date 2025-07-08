@@ -42,6 +42,20 @@
           return;
         }
 
+        // Check if OneSignal is already initialized from login page
+        if (window.OneSignal && window.OneSignal.init) {
+          console.log('📱 OneSignal: Using existing initialization from login page');
+          this.initialized = true;
+          
+          // Set user external ID for targeting
+          await this.setUserContext(auth);
+
+          // Check subscription status
+          await this.checkSubscriptionStatus();
+          
+          return;
+        }
+
         // Load OneSignal SDK if not already loaded
         if (!window.OneSignal) {
           await this.loadOneSignalSDK();
