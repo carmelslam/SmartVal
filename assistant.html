@@ -1257,7 +1257,7 @@
             💬 השב על התשובה
           </button>
           
-          <button onclick="speakResponse(textForTTS)" style="
+          <button onclick="replayReceivedAudio()" style="
             background: #22c55e;
             color: white;
             border: none;
@@ -1388,6 +1388,9 @@
         }
         
         if (audioElement) {
+          // Store the audio element globally for replay
+          window.currentReceivedAudio = audioElement;
+          
           try {
             audioElement.play();
             console.log('🔊 Auto-playing audio response');
@@ -1997,6 +2000,34 @@
     }
   }
   
+  // Replay Received Audio Function
+  window.replayReceivedAudio = function() {
+    // Check if we have the received audio from Make.com
+    if (window.currentReceivedAudio) {
+      try {
+        // Reset audio to beginning and play
+        window.currentReceivedAudio.currentTime = 0;
+        window.currentReceivedAudio.play();
+        console.log('🔊 Replaying received MP3 from Make.com');
+      } catch (error) {
+        console.error('🔊 Error replaying received audio:', error);
+        alert('שגיאה בהשמעה חוזרת של ההודעה');
+      }
+    } else if (window.pendingTTSAudio) {
+      // If we have pending audio from autoplay block, use that
+      try {
+        window.pendingTTSAudio.play();
+        console.log('🔊 Playing pending audio from autoplay block');
+      } catch (error) {
+        console.error('🔊 Error playing pending audio:', error);
+        alert('שגיאה בהשמעת ההודעה');
+      }
+    } else {
+      console.log('🔊 No received audio available to replay');
+      alert('אין הודעה קולית זמינה להשמעה חוזרת');
+    }
+  };
+
   // Stop Speaking Function
   window.stopCurrentSpeaking = function() {
     // Stop current TTS audio if playing
@@ -2007,10 +2038,18 @@
       console.log('🔊 Stopped current TTS audio');
     }
     
+    // Stop received audio from Make.com if playing
+    if (window.currentReceivedAudio) {
+      window.currentReceivedAudio.pause();
+      window.currentReceivedAudio.currentTime = 0;
+      console.log('🔊 Stopped received MP3 audio');
+    }
+    
     // Clear any pending TTS audio
     if (window.pendingTTSAudio) {
-      window.pendingTTSAudio = null;
-      console.log('🔊 Cleared pending TTS audio');
+      window.pendingTTSAudio.pause();
+      window.pendingTTSAudio.currentTime = 0;
+      console.log('🔊 Stopped pending TTS audio');
     }
     
     // Update speaking status
