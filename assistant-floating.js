@@ -8,7 +8,7 @@
 
   // Assistant configuration
   const assistantConfig = {
-    position: { bottom: '20px', right: '100px' },
+    position: { bottom: '100px', right: '20px' },
     zIndex: 9997,
     hotkey: 'F1',
     autoHide: true,
