@@ -1231,9 +1231,6 @@
           .replace(/\n/g, '<br>');
       }
       
-      // Escape text for TTS button to prevent XSS
-      const escapedTextForTTS = textForTTS.replace(/'/g, "\\'").replace(/"/g, '\\"');
-      
       responseBox.innerHTML = `
         <div style="margin-bottom: 10px; font-weight: bold; color: #667eea;">
           👩‍💼 תשובת ניקול:
@@ -1260,7 +1257,7 @@
             💬 השב על התשובה
           </button>
           
-          <button id="ttsPlayBtn" onclick="playTTSResponse('${escapedTextForTTS}', this)" style="
+          <button id="ttsPlayBtn" onclick="playTTSResponseFromElement(this)" style="
             background: #22c55e;
             color: white;
             border: none;
@@ -1350,6 +1347,28 @@
         ">✕</button>
       `;
 
+      // Store TTS text in the play button data attribute
+      const ttsPlayBtn = responseBox.querySelector('#ttsPlayBtn');
+      if (ttsPlayBtn) {
+        ttsPlayBtn.setAttribute('data-tts-text', textForTTS);
+      }
+
+      // Automatic TTS - speak by default unless disabled
+      try {
+        await speakResponse(textForTTS);
+        console.log('🔊 Auto-TTS started successfully');
+        
+        // Show stop button when auto-playing
+        const stopBtn = responseBox.querySelector('#ttsStopBtn');
+        if (ttsPlayBtn && stopBtn) {
+          ttsPlayBtn.style.display = 'none';
+          stopBtn.style.display = 'flex';
+        }
+      } catch (autoTTSError) {
+        console.log('🔇 Auto-TTS failed, user can manually trigger:', autoTTSError.message);
+        // Keep play button visible for manual trigger
+      }
+
       // Handle audio playback
       if (audio) {
         let audioElement;
@@ -1390,6 +1409,15 @@
     }
     
     // TTS Control Functions
+    window.playTTSResponseFromElement = async function(buttonElement) {
+      const text = buttonElement.getAttribute('data-tts-text');
+      if (!text) {
+        console.error('No TTS text found in button data attribute');
+        return;
+      }
+      return await playTTSResponse(text, buttonElement);
+    };
+
     window.playTTSResponse = async function(text, buttonElement) {
       // Stop any currently playing audio first
       if (window.currentTTSAudio) {
@@ -1664,18 +1692,23 @@
             console.log('🔊 Nicole is speaking...');
             // Add visual indicator that Nicole is speaking
             updateNicoleSpeakingStatus(true);
+            window.isTTSPlaying = true;
           });
           
           audio.addEventListener('ended', () => {
             console.log('🔊 Nicole finished speaking');
             updateNicoleSpeakingStatus(false);
             window.currentTTSAudio = null;
+            window.isTTSPlaying = false;
+            resetTTSButtons();
           });
           
           audio.addEventListener('error', (e) => {
             console.error('🔊 Audio playback error:', e);
             updateNicoleSpeakingStatus(false);
             window.currentTTSAudio = null;
+            window.isTTSPlaying = false;
+            resetTTSButtons();
           });
           
           // Handle browser autoplay restrictions
@@ -1690,6 +1723,11 @@
             if (autoplayError.name === 'NotAllowedError') {
               // Browser blocked autoplay - show user notification
               console.log('💡 TTS requires user interaction due to browser autoplay policy');
+              
+              // Store audio for manual playback and reset UI
+              window.pendingTTSAudio = audio;
+              window.currentTTSAudio = null;
+              resetTTSButtons();
               
               // Show visual notification that speech is ready but needs user click
               const responseBox = document.getElementById('agentResponse');
