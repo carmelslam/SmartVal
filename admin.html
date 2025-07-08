@@ -353,9 +353,39 @@ async function verifyDevAccess() {
     }
     
     // Use enhanced webhook verification with proper validation
-    const response = await sendToWebhook('DEV_HUB', { password });
+    console.log('🔍 Attempting DEV_HUB webhook verification...');
+    const response = await sendToWebhook('DEV_HUB', { 
+      password,
+      action: 'dev_login',
+      timestamp: new Date().toISOString(),
+      user_auth: sessionStorage.getItem('auth')
+    });
     
-    if (response && response.role === 'dev' && response.access_granted === true) {
+    console.log('🔍 DEV_HUB webhook response:', response);
+    
+    // Enhanced dev access validation with multiple patterns
+    const isDevAccess = 
+      // JSON response patterns
+      response?.role === 'dev' || 
+      response?.access === 'dev' ||
+      response?.status === 'dev' ||
+      response?.result === 'dev' ||
+      response?.access_granted === true ||
+      response?.dev === true ||
+      response?.authenticated === true ||
+      response?.valid === true ||
+      
+      // Check for success indicators
+      response?.success === true ||
+      response?.approved === true ||
+      
+      // String response patterns (if response is just a string)
+      typeof response === 'string' && /^(dev|success|granted|approved|valid|authenticated|true)$/i.test(response?.trim());
+    
+    console.log('🔍 Dev access validation result:', isDevAccess);
+    
+    if (isDevAccess) {
+      console.log('✅ Dev access granted via webhook');
       sessionStorage.setItem('dev-access', 'granted');
       if (submitBtn) {
         submitBtn.textContent = '✅ גישה אושרה';
@@ -365,6 +395,7 @@ async function verifyDevAccess() {
       }, 500);
     } else {
       console.error('❌ Dev access denied');
+      console.error('Response details:', response);
       if (submitBtn) {
         submitBtn.textContent = '❌ גישה נדחתה';
         setTimeout(() => {
