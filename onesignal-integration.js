@@ -192,11 +192,13 @@
         if (permission) {
           console.log('📱 OneSignal: Permission granted');
           await this.setUserContext(this.userToken || sessionStorage.getItem('auth'));
+          // Force update subscription status
+          sessionStorage.setItem('oneSignalSubscribed', 'true');
         } else {
           console.log('📱 OneSignal: Permission denied');
+          sessionStorage.setItem('oneSignalSubscribed', 'false');
         }
 
-        sessionStorage.setItem('oneSignalSubscribed', permission.toString());
         return permission;
 
       } catch (error) {
@@ -291,7 +293,7 @@
     indicator.style.cssText = `
       position: fixed;
       top: 10px;
-      left: 10px;
+      right: 10px;
       background: #f8f9fa;
       border: 1px solid #dee2e6;
       border-radius: 6px;
@@ -329,6 +331,8 @@
       if (!subscribed) {
         const granted = await window.oneSignalManager.requestPermission();
         if (granted) {
+          // Force update the session storage and indicator
+          sessionStorage.setItem('oneSignalSubscribed', 'true');
           updateIndicator();
           alert('✅ התראות הופעלו בהצלחה!');
         } else {
