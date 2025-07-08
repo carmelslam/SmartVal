@@ -918,6 +918,13 @@ Data is inside the same square fields as we have now .
     2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
     3. I think best place for them is in the admin hub  
 
+16. add another return to selection button under the continue botton .
+
+17. make sure the onsignal is enabeld on all pages 
+
+18. make sure the floating system assistant is visisble on all pages 
+
+
 16. in selection page move the expertise summary to be under the wizard 
 17. General :
 *  Run a deep check across system files ensure that all  modules are configured correctly :
