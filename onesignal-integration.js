@@ -75,20 +75,14 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Safari-specific configuration
+              // Minimal configuration to avoid ID errors
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
-                safari_web_id: 'web.onesignal.auto.' + ONESIGNAL_APP_ID
+                autoRegister: false,
+                autoResubscribe: false,
+                serviceWorkerParam: { scope: '/' },
+                serviceWorkerPath: 'OneSignalSDKWorker.js'
               };
-              
-              // Add specific configs for Safari
-              if (isSafari) {
-                initConfig.notifyButton = {
-                  enable: true,
-                  size: 'small',
-                  position: 'bottom-left'
-                };
-              }
               
               console.log('📱 OneSignal: Init config:', initConfig);
               console.log('📱 OneSignal: Current hostname:', window.location.hostname);
@@ -96,37 +90,18 @@
               await OneSignal.init(initConfig);
 
               this.initialized = true;
-              console.log('📱 OneSignal: Initialized successfully on post-login page');
-
-              // Wait for OneSignal to be fully ready
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              console.log('📱 OneSignal: Initialized successfully with minimal config');
 
               // Set user context (simplified)
               this.userToken = auth;
               
-              // Try to get OneSignal ID
-              try {
-                if (window.OneSignal.User) {
-                  const onesignalId = await window.OneSignal.User.getOnesignalId();
-                  if (onesignalId) {
-                    console.log('📱 OneSignal: Got OneSignal ID:', onesignalId);
-                    sessionStorage.setItem('onesignalId', onesignalId);
-                  }
-                }
-              } catch (e) {
-                console.log('📱 OneSignal: Could not get OneSignal ID:', e.message);
-              }
+              // Don't try to get OneSignal ID immediately to avoid errors
+              console.log('📱 OneSignal: Skipping automatic ID retrieval to prevent errors');
 
-              // Check subscription status after a delay for Safari
-              if (isSafari) {
-                setTimeout(async () => {
-                  await this.checkSubscriptionStatus();
-                }, 2000);
-              } else {
-                setTimeout(async () => {
-                  await this.checkSubscriptionStatus();
-                }, 1000);
-              }
+              // Simple permission check without subscription operations
+              setTimeout(() => {
+                this.checkBasicPermission();
+              }, 1000);
 
               resolve();
             } catch (error) {
@@ -193,6 +168,26 @@
 
       } catch (error) {
         console.error('📱 OneSignal: Error setting user context:', error);
+      }
+    }
+
+    checkBasicPermission() {
+      try {
+        const permission = Notification.permission;
+        this.subscribed = (permission === 'granted');
+        
+        console.log('📱 OneSignal: Basic permission check:', {
+          permission: permission,
+          subscribed: this.subscribed
+        });
+
+        // Store subscription status
+        sessionStorage.setItem('oneSignalSubscribed', this.subscribed.toString());
+        
+        return this.subscribed;
+      } catch (error) {
+        console.error('📱 OneSignal: Error in basic permission check:', error);
+        return false;
       }
     }
 
@@ -282,80 +277,17 @@
 
     async requestPermission() {
       try {
-        console.log('📱 OneSignal: Requesting notification permission...');
+        console.log('📱 OneSignal: Requesting notification permission (simplified)...');
         
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        let permission = false;
-        
-        try {
-          if (isSafari) {
-            // Safari requires a different approach
-            console.log('📱 OneSignal: Using Safari-specific permission request');
-            if (window.OneSignal && window.OneSignal.Slidedown) {
-              await OneSignal.Slidedown.promptPush();
-              // Wait for permission to be granted
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              permission = (Notification.permission === 'granted');
-            } else {
-              // Fallback for Safari
-              const result = await Notification.requestPermission();
-              permission = (result === 'granted');
-            }
-          } else {
-            // Chrome and other browsers
-            if (window.OneSignal && window.OneSignal.Notifications) {
-              permission = await OneSignal.Notifications.requestPermission();
-            } else {
-              const result = await Notification.requestPermission();
-              permission = (result === 'granted');
-            }
-          }
-        } catch (e) {
-          console.log('📱 OneSignal: Using browser native permission request:', e.message);
-          const result = await Notification.requestPermission();
-          permission = (result === 'granted');
-        }
+        // Use browser native permission request to avoid OneSignal validation errors
+        const result = await Notification.requestPermission();
+        const permission = (result === 'granted');
         
         this.subscribed = permission;
 
         if (permission) {
           console.log('📱 OneSignal: Permission granted');
           sessionStorage.setItem('oneSignalSubscribed', 'true');
-          
-          // Wait for OneSignal to process the permission
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Try to get the OneSignal ID after permission is granted
-          try {
-            if (window.OneSignal.User) {
-              const onesignalId = await window.OneSignal.User.getOnesignalId();
-              if (onesignalId) {
-                console.log('📱 OneSignal: Got ID after permission:', onesignalId);
-                sessionStorage.setItem('onesignalId', onesignalId);
-                this.playerId = onesignalId;
-              } else {
-                console.log('📱 OneSignal: No ID available yet, will retry...');
-                // Retry after another delay
-                setTimeout(async () => {
-                  try {
-                    const retryId = await window.OneSignal.User.getOnesignalId();
-                    if (retryId) {
-                      console.log('📱 OneSignal: Got ID on retry:', retryId);
-                      sessionStorage.setItem('onesignalId', retryId);
-                      this.playerId = retryId;
-                    }
-                  } catch (e) {
-                    console.log('📱 OneSignal: Retry failed:', e.message);
-                  }
-                }, 3000);
-              }
-            }
-          } catch (e) {
-            console.log('📱 OneSignal: Could not get ID after permission:', e.message);
-          }
-          
-          // Update subscription status
-          await this.checkSubscriptionStatus();
         } else {
           console.log('📱 OneSignal: Permission denied');
           sessionStorage.setItem('oneSignalSubscribed', 'false');
