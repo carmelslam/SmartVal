@@ -536,8 +536,20 @@ async function verifyAdminAccess(event) {
       submitBtn.textContent = 'מתחבר למערכת...';
     }
 
-    // Import webhooks dynamically
-    const { WEBHOOKS } = await import('./webhook.js');
+    // Import webhooks dynamically with fallback
+    let WEBHOOKS;
+    try {
+      const webhookModule = await import('./webhook.js');
+      WEBHOOKS = webhookModule.WEBHOOKS;
+    } catch (importError) {
+      console.error('Failed to import webhooks:', importError);
+      // Fallback webhook URL
+      WEBHOOKS = {
+        ADMIN_HUB: 'https://hook.eu2.make.com/xwr4rxw9sp1v16ihuw4ldgyxa312hg2p'
+      };
+    }
+    
+    console.log('Using ADMIN_HUB:', WEBHOOKS.ADMIN_HUB);
 
     const response = await fetch(WEBHOOKS.ADMIN_HUB, {
       method: 'POST',
@@ -628,7 +640,20 @@ async function verifyAdminAccess(event) {
       }, 2000);
     }
     
-    alert('שגיאה בחיבור לשרת האימות');
+    // More specific error messages
+    let errorMessage = 'שגיאה בחיבור לשרת האימות';
+    
+    if (err.message.includes('Failed to fetch')) {
+      errorMessage = 'שגיאת רשת - בדוק חיבור לאינטרנט';
+    } else if (err.message.includes('NetworkError')) {
+      errorMessage = 'שגיאת רשת - יתכן שהשרת לא זמין';
+    } else if (err.message.includes('CORS')) {
+      errorMessage = 'שגיאת אבטחה - בעיית CORS';
+    } else if (err.name === 'TypeError') {
+      errorMessage = 'שגיאה טכנית - בעיה בטעינת המודולים';
+    }
+    
+    alert(errorMessage + '\n\nפרטי השגיאה: ' + err.message);
     
     // Emergency fallback for development (only with specific dev password)
     if (password === 'admin_emergency_2025' && confirm('השתמש בגישת חירום לפיתוח?')) {
