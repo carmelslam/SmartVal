@@ -271,11 +271,10 @@ Reminder Synchronization → Status Feedback
 - Fixed form grid layout breaking on mobile devices (סקירה לפי שדות module)
 - Added mobile CSS media queries ONLY for form fields (preserved main layout)
 - Fixed form grids to stack vertically on mobile devices within forms
-- Fixed date input visibility on mobile with proper font sizing and styling
-- Added clear "מתאריך" and "עד תאריך" labels for better mobile UX
 - Enhanced date input webkit styling for better visibility on mobile browsers
 - **REVERTED**: Main admin panel layout changes to preserve original design
-- **KEPT**: Only form-specific mobile responsiveness fixes
+- **REVERTED**: Desktop form structure back to original state
+- **KEPT**: Only mobile-specific CSS fixes to prevent field overflow on mobile devices
 
 **Next Steps:** 
 - Provide Google Calendar and Outlook API credentials for calendar sync activation
