@@ -2696,16 +2696,50 @@
       };
       
       extractedDataDiv.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
-          <div><strong style="color: #fbbf24;">כותרת:</strong> ${data.title}</div>
-          <div><strong style="color: #fbbf24;">תאריך:</strong> ${new Date(data.date).toLocaleDateString('he-IL')}</div>
-          <div><strong style="color: #fbbf24;">שעה:</strong> ${data.time}</div>
-          <div><strong style="color: #fbbf24;">קטגוריה:</strong> ${categoryNames[data.category]}</div>
-          <div><strong style="color: #fbbf24;">עדיפות:</strong> ${priorityNames[data.priority]}</div>
-          <div><strong style="color: #fbbf24;">רכב:</strong> ${data.plate || 'לא זוהה'}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">כותרת:</label>
+            <input type="text" id="editVoiceTitle" value="${data.title}" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+          </div>
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">תאריך:</label>
+            <input type="date" id="editVoiceDate" value="${data.date}" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+          </div>
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">שעה:</label>
+            <input type="time" id="editVoiceTime" value="${data.time}" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+          </div>
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">קטגוריה:</label>
+            <select id="editVoiceCategory" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+              <option value="general" ${data.category === 'general' ? 'selected' : ''}>כללי</option>
+              <option value="case_deadline" ${data.category === 'case_deadline' ? 'selected' : ''}>מועד סגירת תיק</option>
+              <option value="payment_reminder" ${data.category === 'payment_reminder' ? 'selected' : ''}>תזכורת תשלום</option>
+              <option value="follow_up" ${data.category === 'follow_up' ? 'selected' : ''}>מעקב</option>
+              <option value="inspection" ${data.category === 'inspection' ? 'selected' : ''}>בדיקה</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">עדיפות:</label>
+            <select id="editVoicePriority" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+              <option value="low" ${data.priority === 'low' ? 'selected' : ''}>נמוכה</option>
+              <option value="medium" ${data.priority === 'medium' ? 'selected' : ''}>בינונית</option>
+              <option value="high" ${data.priority === 'high' ? 'selected' : ''}>גבוהה</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">רכב:</label>
+            <input type="text" id="editVoicePlate" value="${data.plate || ''}" placeholder="מספר רכב" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0;">
+          </div>
         </div>
-        <div style="margin-top: 10px;"><strong style="color: #fbbf24;">תיאור מלא:</strong></div>
-        <div style="background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; font-style: italic;">${data.description}</div>
+        <div style="margin-bottom: 15px;">
+          <label style="color: #fbbf24; font-weight: bold; display: block; margin-bottom: 5px;">תיאור מלא:</label>
+          <textarea id="editVoiceDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #444; color: #e0e0e0; resize: vertical;">${data.description}</textarea>
+        </div>
+        <div style="background: #1a1a1a; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #555;">
+          <strong style="color: #4ade80;">🎤 טקסט מקורי מהקול:</strong>
+          <div style="margin-top: 5px; color: #ccc; font-style: italic; font-size: 13px;">"${data.description}"</div>
+        </div>
       `;
       
       resultsDiv.style.display = 'block';
@@ -2713,14 +2747,33 @@
 
     // Confirm and create the voice reminder
     window.confirmVoiceReminder = async function() {
-      const data = window.extractedVoiceReminderData;
-      if (!data) {
+      const originalData = window.extractedVoiceReminderData;
+      if (!originalData) {
         alert('אין נתונים ליצירת תזכורת');
+        return;
+      }
+      
+      // Get edited values from the form
+      const editedData = {
+        title: document.getElementById('editVoiceTitle')?.value?.trim() || originalData.title,
+        description: document.getElementById('editVoiceDescription')?.value?.trim() || originalData.description,
+        plate: document.getElementById('editVoicePlate')?.value?.trim() || originalData.plate || null,
+        date: document.getElementById('editVoiceDate')?.value || originalData.date,
+        time: document.getElementById('editVoiceTime')?.value || originalData.time,
+        category: document.getElementById('editVoiceCategory')?.value || originalData.category,
+        priority: document.getElementById('editVoicePriority')?.value || originalData.priority
+      };
+      
+      // Validate required fields
+      if (!editedData.title || !editedData.date) {
+        alert('אנא מלא כותרת ותאריך לתזכורת');
         return;
       }
       
       try {
         console.log('🔄 Starting voice reminder creation process...');
+        console.log('Original data:', originalData);
+        console.log('Edited data:', editedData);
         console.log('Webhook ready:', window.webhookReady);
         console.log('sendToWebhook available:', typeof window.sendToWebhook);
         
@@ -2737,18 +2790,18 @@
           throw new Error('מערכת הקישור לשרת לא זמינה - נסה לרענן את הדף');
         }
         
-        console.log('🔄 Creating voice reminder with data:', data);
+        console.log('🔄 Creating voice reminder with edited data:', editedData);
         
         // Use the same data structure as regular reminder creation
         const reminderData = {
           id: Date.now(),
-          title: data.title,
-          description: data.description,
-          plate: data.plate || null,
-          date: data.date,
-          time: data.time,
-          category: data.category,
-          priority: data.priority,
+          title: editedData.title,
+          description: editedData.description,
+          plate: editedData.plate,
+          date: editedData.date,
+          time: editedData.time,
+          category: editedData.category,
+          priority: editedData.priority,
           status: 'active',
           created: new Date().toISOString(),
           created_via: 'voice_stt',
