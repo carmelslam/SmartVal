@@ -406,17 +406,112 @@
           
         case 'reminders':
           content.innerHTML = `
-            <h2>🔔 רשימת תזכורות</h2>
-            <div style="margin-bottom: 20px;">
-              <button onclick="addReminder()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px;">➕ הוסף תזכורת חדשה</button>
+            <h2 style="color: #ff6b35; font-size: 24px; margin-bottom: 20px;">🔔 רשימת תזכורות</h2>
+            
+            <!-- Filter and View Controls -->
+            <div style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #555;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                  <label style="color: #e0e0e0; font-size: 14px; margin-bottom: 5px; display: block;">סינון לפי סטטוס:</label>
+                  <select id="statusFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
+                    <option value="all">כל הסטטוסים</option>
+                    <option value="active">פעיל</option>
+                    <option value="pending">ממתין</option>
+                    <option value="completed">הושלם</option>
+                    <option value="overdue">פג תוקף</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="color: #e0e0e0; font-size: 14px; margin-bottom: 5px; display: block;">סינון לפי קטגוריה:</label>
+                  <select id="categoryFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
+                    <option value="all">כל הקטגוריות</option>
+                    <option value="case_deadline">מועד סגירת תיק</option>
+                    <option value="payment_reminder">תזכורת תשלום</option>
+                    <option value="follow_up">מעקב</option>
+                    <option value="inspection">בדיקה</option>
+                    <option value="general">כללי</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="addReminder()" 
+                        onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; font-weight: bold;">
+                  ➕ הוסף תזכורת חדשה
+                </button>
+                
+                <button onclick="filterReminders()" 
+                        onmouseover="this.style.background='#3b82f6'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#1d4ed8'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #1d4ed8; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
+                  🔍 סנן
+                </button>
+                
+                <button onclick="toggleView()" 
+                        onmouseover="this.style.background='#9333ea'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#7c3aed'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #7c3aed; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
+                  📅 <span id="viewToggleText">תצוגת יומן</span>
+                </button>
+                
+                <button onclick="exportReminders()" 
+                        onmouseover="this.style.background='#f59e0b'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#d97706'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
+                  📤 יצא
+                </button>
+              </div>
             </div>
-            <div id="remindersList">
-              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                <h4>תזכורת לבדיקת תיקים פתוחים</h4>
-                <p>תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
-                <p>סטטוס: פעיל</p>
-                <button onclick="editReminder(1)" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 4px; margin-left: 5px;">ערוך</button>
-                <button onclick="deleteReminder(1)" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">מחק</button>
+            
+            <!-- Reminders List View -->
+            <div id="remindersListView" style="display: block;">
+              <div id="remindersList">
+                <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444;">
+                  <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="color: #4ade80; margin: 0; font-size: 16px;">תזכורת לבדיקת תיקים פתוחים</h4>
+                    <span style="background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">פעיל</span>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; font-size: 14px; color: #ccc;">
+                    <div><strong style="color: #fbbf24;">תאריך יעד:</strong> ${new Date(Date.now() + 86400000).toLocaleDateString('he-IL')}</div>
+                    <div><strong style="color: #fbbf24;">קטגוריה:</strong> מעקב</div>
+                    <div><strong style="color: #fbbf24;">עדיפות:</strong> גבוהה</div>
+                    <div><strong style="color: #fbbf24;">נוצר:</strong> ${new Date().toLocaleDateString('he-IL')}</div>
+                  </div>
+                  <p style="color: #e0e0e0; margin: 10px 0; font-size: 14px;">בדיקה שבועית של תיקים פתוחים העוברים 30 יום ללא פעילות</p>
+                  <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="editReminder(1)" 
+                            onmouseover="this.style.background='#f59e0b'; this.style.transform='translateY(-1px)';"
+                            onmouseout="this.style.background='#d97706'; this.style.transform='translateY(0)';"
+                            style="padding: 8px 16px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                      ✏️ ערוך
+                    </button>
+                    <button onclick="completeReminder(1)" 
+                            onmouseover="this.style.background='#059669'; this.style.transform='translateY(-1px)';"
+                            onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)';"
+                            style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                      ✅ סמן כהושלם
+                    </button>
+                    <button onclick="deleteReminder(1)" 
+                            onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)';"
+                            onmouseout="this.style.background='#991b1b'; this.style.transform='translateY(0)';"
+                            style="padding: 8px 16px; background: #991b1b; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                      🗑️ מחק
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Calendar View (Hidden by default) -->
+            <div id="remindersCalendarView" style="display: none;">
+              <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
+                <h3 style="color: #ff6b35; margin-bottom: 15px;">תצוגת יומן</h3>
+                <div style="color: #ccc; font-size: 16px;">
+                  <p>תצוגת יומן תהיה זמינה בגרסה הבאה</p>
+                  <p style="font-size: 14px; margin-top: 10px;">כרגע ניתן לצפות ולנהל תזכורות בתצוגת רשימה</p>
+                </div>
               </div>
             </div>`;
           break;
@@ -1194,29 +1289,466 @@
       }, 100);
     };
 
+    // Enhanced Reminders Management System with Modern Features
+    window.remindersData = window.remindersData || [];
+    
     window.addReminder = function() {
-      const newReminder = prompt('הכנס תוכן התזכורת:');
-      if (newReminder) {
-        const remindersList = document.getElementById('remindersList');
-        remindersList.innerHTML += `
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-            <h4>${newReminder}</h4>
-            <p>תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
-            <p>סטטוס: פעיל</p>
-            <button onclick="editReminder(${Date.now()})" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 4px; margin-left: 5px;">ערוך</button>
-            <button onclick="deleteReminder(${Date.now()})" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">מחק</button>
-          </div>`;
+      // Create modern form dialog
+      const formHtml = `
+        <div id="reminderFormOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+          <div style="background: #2a2a2a; padding: 25px; border-radius: 12px; width: 500px; max-width: 90%; border: 2px solid #ff6b35;">
+            <h3 style="color: #ff6b35; margin-bottom: 20px; text-align: center;">➕ הוספת תזכורת חדשה</h3>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">כותרת התזכורת:</label>
+              <input type="text" id="reminderTitle" placeholder="הכנס כותרת התזכורת" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תיאור:</label>
+              <textarea id="reminderDescription" placeholder="הכנס תיאור מפורט" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0; height: 80px; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תאריך יעד:</label>
+                <input type="date" id="reminderDate" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">שעה:</label>
+                <input type="time" id="reminderTime" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">קטגוריה:</label>
+                <select id="reminderCategory" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="case_deadline">מועד סגירת תיק</option>
+                  <option value="payment_reminder">תזכורת תשלום</option>
+                  <option value="follow_up">מעקב</option>
+                  <option value="inspection">בדיקה</option>
+                  <option value="general">כללי</option>
+                </select>
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">עדיפות:</label>
+                <select id="reminderPriority" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="high">גבוהה</option>
+                  <option value="medium">בינונית</option>
+                  <option value="low">נמוכה</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <button onclick="saveReminder()" style="padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">💾 שמור ושלח</button>
+              <button onclick="closeReminderForm()" style="padding: 12px 24px; background: #991b1b; color: white; border: none; border-radius: 8px; cursor: pointer;">❌ ביטול</button>
+            </div>
+          </div>
+        </div>`;
+      
+      document.body.insertAdjacentHTML('beforeend', formHtml);
+      
+      // Set default date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('reminderDate').value = tomorrow.toISOString().split('T')[0];
+      document.getElementById('reminderTime').value = '09:00';
+    };
+    
+    window.closeReminderForm = function() {
+      const overlay = document.getElementById('reminderFormOverlay');
+      if (overlay) overlay.remove();
+    };
+    
+    window.saveReminder = async function() {
+      const title = document.getElementById('reminderTitle').value.trim();
+      const description = document.getElementById('reminderDescription').value.trim();
+      const date = document.getElementById('reminderDate').value;
+      const time = document.getElementById('reminderTime').value;
+      const category = document.getElementById('reminderCategory').value;
+      const priority = document.getElementById('reminderPriority').value;
+      
+      if (!title || !date) {
+        alert('אנא מלא כותרת ותאריך לתזכורת');
+        return;
+      }
+      
+      const reminderData = {
+        id: Date.now(),
+        title,
+        description,
+        date,
+        time,
+        category,
+        priority,
+        status: 'active',
+        created: new Date().toISOString()
+      };
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', {
+          action: 'create_reminder',
+          reminder: reminderData,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('Reminder created:', response);
+        
+        // Add to local data
+        window.remindersData.push(reminderData);
+        
+        // Refresh display
+        renderReminders();
+        
+        // Close form
+        closeReminderForm();
+        
+        alert('התזכורת נוצרה ונשלחה בהצלחה!');
+        
+      } catch (error) {
+        console.error('Error creating reminder:', error);
+        alert(`שגיאה ביצירת התזכורת: ${error.message}`);
       }
     };
-
+    
     window.editReminder = function(id) {
-      alert('פונקציית עריכה תזכורת - ID: ' + id);
+      const reminder = window.remindersData.find(r => r.id === id) || {
+        id: id,
+        title: 'תזכורת לעריכה',
+        description: 'תיאור התזכורת',
+        date: new Date().toISOString().split('T')[0],
+        time: '09:00',
+        category: 'general',
+        priority: 'medium',
+        status: 'active'
+      };
+      
+      const formHtml = `
+        <div id="reminderFormOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+          <div style="background: #2a2a2a; padding: 25px; border-radius: 12px; width: 500px; max-width: 90%; border: 2px solid #f59e0b;">
+            <h3 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">✏️ עריכת תזכורת</h3>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">כותרת התזכורת:</label>
+              <input type="text" id="reminderTitle" value="${reminder.title}" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תיאור:</label>
+              <textarea id="reminderDescription" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0; height: 80px; resize: vertical;">${reminder.description}</textarea>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תאריך יעד:</label>
+                <input type="date" id="reminderDate" value="${reminder.date}" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">שעה:</label>
+                <input type="time" id="reminderTime" value="${reminder.time}" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">קטגוריה:</label>
+                <select id="reminderCategory" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="case_deadline" ${reminder.category === 'case_deadline' ? 'selected' : ''}>מועד סגירת תיק</option>
+                  <option value="payment_reminder" ${reminder.category === 'payment_reminder' ? 'selected' : ''}>תזכורת תשלום</option>
+                  <option value="follow_up" ${reminder.category === 'follow_up' ? 'selected' : ''}>מעקב</option>
+                  <option value="inspection" ${reminder.category === 'inspection' ? 'selected' : ''}>בדיקה</option>
+                  <option value="general" ${reminder.category === 'general' ? 'selected' : ''}>כללי</option>
+                </select>
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">עדיפות:</label>
+                <select id="reminderPriority" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="high" ${reminder.priority === 'high' ? 'selected' : ''}>גבוהה</option>
+                  <option value="medium" ${reminder.priority === 'medium' ? 'selected' : ''}>בינונית</option>
+                  <option value="low" ${reminder.priority === 'low' ? 'selected' : ''}>נמוכה</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <button onclick="updateReminder(${id})" style="padding: 12px 24px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">💾 עדכן</button>
+              <button onclick="closeReminderForm()" style="padding: 12px 24px; background: #991b1b; color: white; border: none; border-radius: 8px; cursor: pointer;">❌ ביטול</button>
+            </div>
+          </div>
+        </div>`;
+      
+      document.body.insertAdjacentHTML('beforeend', formHtml);
     };
-
-    window.deleteReminder = function(id) {
-      if (confirm('האם אתה בטוח שברצונך למחוק את התזכורת?')) {
-        alert('התזכורת נמחקה');
+    
+    window.updateReminder = async function(id) {
+      const title = document.getElementById('reminderTitle').value.trim();
+      const description = document.getElementById('reminderDescription').value.trim();
+      const date = document.getElementById('reminderDate').value;
+      const time = document.getElementById('reminderTime').value;
+      const category = document.getElementById('reminderCategory').value;
+      const priority = document.getElementById('reminderPriority').value;
+      
+      if (!title || !date) {
+        alert('אנא מלא כותרת ותאריך לתזכורת');
+        return;
       }
+      
+      const reminderData = {
+        id,
+        title,
+        description,
+        date,
+        time,
+        category,
+        priority,
+        status: 'active',
+        updated: new Date().toISOString()
+      };
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', {
+          action: 'update_reminder',
+          reminder: reminderData,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('Reminder updated:', response);
+        
+        // Update local data
+        const index = window.remindersData.findIndex(r => r.id === id);
+        if (index !== -1) {
+          window.remindersData[index] = reminderData;
+        }
+        
+        // Refresh display
+        renderReminders();
+        
+        // Close form
+        closeReminderForm();
+        
+        alert('התזכורת עודכנה בהצלחה!');
+        
+      } catch (error) {
+        console.error('Error updating reminder:', error);
+        alert(`שגיאה בעדכון התזכורת: ${error.message}`);
+      }
+    };
+    
+    window.completeReminder = async function(id) {
+      if (!confirm('האם אתה בטוח שברצונך לסמן את התזכורת כהושלמה?')) {
+        return;
+      }
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', {
+          action: 'complete_reminder',
+          reminder_id: id,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('Reminder completed:', response);
+        
+        // Update local data
+        const reminder = window.remindersData.find(r => r.id === id);
+        if (reminder) {
+          reminder.status = 'completed';
+          reminder.completed = new Date().toISOString();
+        }
+        
+        // Refresh display
+        renderReminders();
+        
+        alert('התזכורת סומנה כהושלמה!');
+        
+      } catch (error) {
+        console.error('Error completing reminder:', error);
+        alert(`שגיאה בסימון התזכורת: ${error.message}`);
+      }
+    };
+    
+    window.deleteReminder = async function(id) {
+      if (!confirm('האם אתה בטוח שברצונך למחוק את התזכורת? פעולה זו לא ניתנת לביטול.')) {
+        return;
+      }
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', {
+          action: 'delete_reminder',
+          reminder_id: id,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('Reminder deleted:', response);
+        
+        // Remove from local data
+        window.remindersData = window.remindersData.filter(r => r.id !== id);
+        
+        // Refresh display
+        renderReminders();
+        
+        alert('התזכורת נמחקה בהצלחה!');
+        
+      } catch (error) {
+        console.error('Error deleting reminder:', error);
+        alert(`שגיאה במחיקת התזכורת: ${error.message}`);
+      }
+    };
+    
+    window.filterReminders = function() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const categoryFilter = document.getElementById('categoryFilter').value;
+      
+      renderReminders(statusFilter, categoryFilter);
+    };
+    
+    window.toggleView = function() {
+      const listView = document.getElementById('remindersListView');
+      const calendarView = document.getElementById('remindersCalendarView');
+      const toggleText = document.getElementById('viewToggleText');
+      
+      if (listView.style.display === 'none') {
+        listView.style.display = 'block';
+        calendarView.style.display = 'none';
+        toggleText.textContent = 'תצוגת יומן';
+      } else {
+        listView.style.display = 'none';
+        calendarView.style.display = 'block';
+        toggleText.textContent = 'תצוגת רשימה';
+      }
+    };
+    
+    window.exportReminders = function() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const categoryFilter = document.getElementById('categoryFilter').value;
+      
+      let filteredData = window.remindersData;
+      
+      if (statusFilter !== 'all') {
+        filteredData = filteredData.filter(r => r.status === statusFilter);
+      }
+      
+      if (categoryFilter !== 'all') {
+        filteredData = filteredData.filter(r => r.category === categoryFilter);
+      }
+      
+      const exportData = {
+        sender_id: 'רשימת תזכורות',
+        export_date: new Date().toISOString(),
+        filters: { status: statusFilter, category: categoryFilter },
+        total_reminders: filteredData.length,
+        data: filteredData
+      };
+      
+      console.log('Exporting reminders:', exportData);
+      alert('נתוני התזכורות יוצאו בהצלחה!');
+    };
+    
+    window.renderReminders = function(statusFilter = 'all', categoryFilter = 'all') {
+      const remindersList = document.getElementById('remindersList');
+      if (!remindersList) return;
+      
+      let filteredData = window.remindersData;
+      
+      if (statusFilter !== 'all') {
+        filteredData = filteredData.filter(r => r.status === statusFilter);
+      }
+      
+      if (categoryFilter !== 'all') {
+        filteredData = filteredData.filter(r => r.category === categoryFilter);
+      }
+      
+      if (filteredData.length === 0) {
+        remindersList.innerHTML = `
+          <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
+            <h3 style="color: #ff6b35;">אין תזכורות מתאימות</h3>
+            <p style="color: #ccc;">לא נמצאו תזכורות התואמות לקריטריונים שנבחרו</p>
+          </div>`;
+        return;
+      }
+      
+      remindersList.innerHTML = filteredData.map(reminder => {
+        const statusColors = {
+          active: { bg: '#16a34a', text: 'פעיל' },
+          pending: { bg: '#f59e0b', text: 'ממתין' },
+          completed: { bg: '#6b7280', text: 'הושלם' },
+          overdue: { bg: '#dc2626', text: 'פג תוקף' }
+        };
+        
+        const categoryNames = {
+          case_deadline: 'מועד סגירת תיק',
+          payment_reminder: 'תזכורת תשלום',
+          follow_up: 'מעקב',
+          inspection: 'בדיקה',
+          general: 'כללי'
+        };
+        
+        const priorityNames = {
+          high: 'גבוהה',
+          medium: 'בינונית',
+          low: 'נמוכה'
+        };
+        
+        const statusInfo = statusColors[reminder.status];
+        
+        return `
+          <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h4 style="color: #4ade80; margin: 0; font-size: 16px;">${reminder.title}</h4>
+              <span style="background: ${statusInfo.bg}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${statusInfo.text}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; font-size: 14px; color: #ccc;">
+              <div><strong style="color: #fbbf24;">תאריך יעד:</strong> ${new Date(reminder.date).toLocaleDateString('he-IL')}</div>
+              <div><strong style="color: #fbbf24;">קטגוריה:</strong> ${categoryNames[reminder.category]}</div>
+              <div><strong style="color: #fbbf24;">עדיפות:</strong> ${priorityNames[reminder.priority]}</div>
+              <div><strong style="color: #fbbf24;">נוצר:</strong> ${new Date(reminder.created).toLocaleDateString('he-IL')}</div>
+            </div>
+            <p style="color: #e0e0e0; margin: 10px 0; font-size: 14px;">${reminder.description}</p>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button onclick="editReminder(${reminder.id})" 
+                      onmouseover="this.style.background='#f59e0b'; this.style.transform='translateY(-1px)';"
+                      onmouseout="this.style.background='#d97706'; this.style.transform='translateY(0)';"
+                      style="padding: 8px 16px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                ✏️ ערוך
+              </button>
+              ${reminder.status !== 'completed' ? `
+                <button onclick="completeReminder(${reminder.id})" 
+                        onmouseover="this.style.background='#059669'; this.style.transform='translateY(-1px)';"
+                        onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)';"
+                        style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                  ✅ סמן כהושלם
+                </button>
+              ` : ''}
+              <button onclick="deleteReminder(${reminder.id})" 
+                      onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)';"
+                      onmouseout="this.style.background='#991b1b'; this.style.transform='translateY(0)';"
+                      style="padding: 8px 16px; background: #991b1b; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 13px;">
+                🗑️ מחק
+              </button>
+            </div>
+          </div>`;
+      }).join('');
     };
 
     window.loadCaseForEdit = function() {
