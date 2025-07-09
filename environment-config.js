@@ -47,7 +47,7 @@ class EnvironmentConfig {
         LOG_LEVEL: 'debug'
       },
       staging: {
-        API_BASE_URL: 'https://api-staging.yaronkayouf.com/api',
+        API_BASE_URL: 'https://yaron-cayouf-portal.netlify.app/api',
         CLOUDINARY_CLOUD_NAME: 'yaronkayouf-staging',
         CLOUDINARY_UPLOAD_PRESET: 'yaron_staging',
         WEBHOOK_BASE_URL: 'https://hook.eu2.make.com/staging',
@@ -61,7 +61,7 @@ class EnvironmentConfig {
         LOG_LEVEL: 'info'
       },
       production: {
-        API_BASE_URL: 'https://api.yaronkayouf.com/api',
+        API_BASE_URL: 'https://yaron-cayouf-portal.netlify.app/api',
         CLOUDINARY_CLOUD_NAME: 'yaronkayouf',
         CLOUDINARY_UPLOAD_PRESET: 'yaron_production',
         WEBHOOK_BASE_URL: 'https://hook.eu2.make.com',
