@@ -267,13 +267,15 @@ Reminder Synchronization → Status Feedback
 - Fixed field IDs to use `editVoiceDueDate` and `editVoiceDueTime` for proper date handling
 - Enhanced Hebrew date recognition patterns to include "תאריך יעד", "עד", "עד תאריך" triggers
 
-✅ **Mobile Responsiveness Fix for Admin Panel**
-- Fixed container layout breaking on mobile devices (סקירה לפי שדות module)
-- Added comprehensive mobile CSS media queries for screens under 768px
-- Changed grid layout from 2-column to single column on mobile
-- Added proper viewport handling and form element sizing
-- Enhanced mobile navigation and header styling
-- Fixed form grids to stack vertically on mobile devices
+✅ **Mobile Form Fields Fix for Admin Panel**
+- Fixed form grid layout breaking on mobile devices (סקירה לפי שדות module)
+- Added mobile CSS media queries ONLY for form fields (preserved main layout)
+- Fixed form grids to stack vertically on mobile devices within forms
+- Fixed date input visibility on mobile with proper font sizing and styling
+- Added clear "מתאריך" and "עד תאריך" labels for better mobile UX
+- Enhanced date input webkit styling for better visibility on mobile browsers
+- **REVERTED**: Main admin panel layout changes to preserve original design
+- **KEPT**: Only form-specific mobile responsiveness fixes
 
 **Next Steps:** 
 - Provide Google Calendar and Outlook API credentials for calendar sync activation
