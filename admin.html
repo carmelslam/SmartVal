@@ -273,54 +273,8 @@
   // Merge with existing DOMContentLoaded event - do not create duplicate
   // The admin functionality will be added to the existing DOMContentLoaded below
   
-  const initializeAdmin = () => {
-    // Check if user has basic authentication
-    const auth = sessionStorage.getItem('auth');
-    if (!auth) {
-      console.log('❌ No auth token found in admin.html, redirecting to login');
-      alert('הגישה חסומה - אנא התחבר דרך דף הבית');
-      window.location.href = 'index.html';
-      return;
-    }
-    
-    // Check for admin-specific access
-    const adminAccess = sessionStorage.getItem('admin-access');
-    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
-    
-    if (!adminAccess || !adminAccess.includes('granted')) {
-      console.log('❌ No admin access token found, redirecting to selection');
-      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
-      window.location.href = 'selection.html';
-      return;
-    }
-    
-    // Check if admin session is still valid (24 hours)
-    if (adminTimestamp) {
-      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      if (sessionAge > maxAge) {
-        console.log('❌ Admin session expired, redirecting to selection');
-        sessionStorage.removeItem('admin-access');
-        sessionStorage.removeItem('admin-timestamp');
-        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
-        window.location.href = 'selection.html';
-        return;
-      }
-    }
-    
-    console.log('✅ Admin access verified, loading admin panel');
-    console.log('Admin access type:', adminAccess);
-    
-    const WEBHOOKS = window.WEBHOOKS;
-
-    // Load VAT from session
-    const existingVat = sessionStorage.getItem('globalVAT');
-    if (existingVat) {
-      document.getElementById('vat-input').value = existingVat;
-    }
-
-    window.loadSection = function(id) {
+  // Define loadSection globally so it's available immediately
+  window.loadSection = function(id) {
       const content = document.getElementById('adminContent');
       
       switch(id) {
@@ -1017,10 +971,53 @@
       alert('יומן יוצא לקובץ CSV - פונקציה תהיה זמינה בגרסה הבאה');
     };
 
-  };
   
   // Add to existing DOMContentLoaded event from first script
-  document.addEventListener('DOMContentLoaded', initializeAdmin);
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if user has basic authentication
+    const auth = sessionStorage.getItem('auth');
+    if (!auth) {
+      console.log('❌ No auth token found in admin.html, redirecting to login');
+      alert('הגישה חסומה - אנא התחבר דרך דף הבית');
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    // Check for admin-specific access
+    const adminAccess = sessionStorage.getItem('admin-access');
+    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+    
+    if (!adminAccess || !adminAccess.includes('granted')) {
+      console.log('❌ No admin access token found, redirecting to selection');
+      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
+      window.location.href = 'selection.html';
+      return;
+    }
+    
+    // Check if admin session is still valid (24 hours)
+    if (adminTimestamp) {
+      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (sessionAge > maxAge) {
+        console.log('❌ Admin session expired, redirecting to selection');
+        sessionStorage.removeItem('admin-access');
+        sessionStorage.removeItem('admin-timestamp');
+        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
+        window.location.href = 'selection.html';
+        return;
+      }
+    }
+    
+    console.log('✅ Admin access verified, loading admin panel');
+    console.log('Admin access type:', adminAccess);
+    
+    // Load VAT from session
+    const existingVat = sessionStorage.getItem('globalVAT');
+    if (existingVat) {
+      document.getElementById('vat-input').value = existingVat;
+    }
+  });
 </script>
 
 <script>
