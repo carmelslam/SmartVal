@@ -298,11 +298,6 @@
                   <input type="date" id="dateTo" style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 12px; height: 40px;">
                 </div>
 
-                <!-- Plate Number -->
-                <div>
-                  <label style="color: #ff6b35; font-size: 13px; margin-bottom: 5px; display: block;">מספר רכב</label>
-                  <input type="text" id="plateFilter" placeholder="הכנס מספר רכב" style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 12px; height: 40px;">
-                </div>
 
                 <!-- Manufacturer -->
                 <div>
@@ -463,8 +458,7 @@
       const resultsDiv = document.getElementById('trackingResults');
       
       // Check if at least one filter is set - ANY field is acceptable
-      const hasAnyFilter = document.getElementById('plateFilter')?.value?.trim() ||
-                          document.getElementById('dateFrom')?.value ||
+      const hasAnyFilter = document.getElementById('dateFrom')?.value ||
                           document.getElementById('dateTo')?.value ||
                           document.getElementById('statusFilter')?.value ||
                           document.getElementById('manufacturerFilter')?.value?.trim() ||
@@ -475,7 +469,7 @@
                           document.getElementById('paymentFilter')?.value;
                           
       if (!hasAnyFilter) {
-        alert('אנא בחר לפחות פילטר אחד כדי לבצע חיפוש (מספר רכב, תאריך, יצרן, דירקטיבה וכו...)');
+        alert('אנא בחר לפחות פילטר אחד כדי לבצע חיפוש (תאריך, יצרן, דירקטיבה וכו...)');
         resultsDiv.innerHTML = `
           <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; color: #ccc; text-align: center;">
             <p>לא נבחרו פילטרים</p>
@@ -499,7 +493,6 @@
         // Ultra simple structure that Make.com can easily parse
         const searchParams = {
           type: 'field_search',
-          plate: document.getElementById('plateFilter')?.value?.trim() || 'all',
           date_from: document.getElementById('dateFrom')?.value || 'all',
           date_to: document.getElementById('dateTo')?.value || 'all',
           directive: document.getElementById('statusFilter')?.value || 'all',
@@ -526,7 +519,6 @@
         // Create description of active filters (only non-empty ones)
         const activeFilters = [];
         if (searchParams.date_from && searchParams.date_to) activeFilters.push(`תאריכים: ${searchParams.date_from} - ${searchParams.date_to}`);
-        if (searchParams.plate) activeFilters.push(`מס. רכב: ${searchParams.plate}`);
         if (searchParams.directive) activeFilters.push(`דירקטיבה: ${searchParams.directive}`);
         if (searchParams.manufacturer) activeFilters.push(`יצרן: ${searchParams.manufacturer}`);
         if (searchParams.owner) activeFilters.push(`בעלים: ${searchParams.owner}`);
