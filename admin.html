@@ -2595,7 +2595,18 @@
         { pattern: /מחרתיים/gi, offset: 2 },
         { pattern: /השבוע הבא/gi, offset: 7 },
         { pattern: /בעוד שבוע/gi, offset: 7 },
-        { pattern: /בעוד (\d+) ימים/gi, offset: 'dynamic' }
+        { pattern: /בעוד (\d+) ימים/gi, offset: 'dynamic' },
+        { pattern: /תאריך יעד[:\s]*היום/gi, offset: 0 },
+        { pattern: /תאריך יעד[:\s]*מחר/gi, offset: 1 },
+        { pattern: /תאריך יעד[:\s]*מחרתיים/gi, offset: 2 },
+        { pattern: /עד היום/gi, offset: 0 },
+        { pattern: /עד מחר/gi, offset: 1 },
+        { pattern: /עד תאריך[:\s]*היום/gi, offset: 0 },
+        { pattern: /עד תאריך[:\s]*מחר/gi, offset: 1 },
+        { pattern: /עד תאריך[:\s]*מחרתיים/gi, offset: 2 },
+        { pattern: /תאריך יעד[:\s]*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/gi, offset: 'date' },
+        { pattern: /עד[:\s]*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/gi, offset: 'date' },
+        { pattern: /עד תאריך[:\s]*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/gi, offset: 'date' }
       ];
       
       for (const { pattern, offset } of datePatterns) {
@@ -2605,6 +2616,12 @@
           if (offset === 'dynamic') {
             const days = parseInt(match[1]);
             targetDate.setDate(today.getDate() + days);
+          } else if (offset === 'date') {
+            // Handle DD/MM/YYYY format
+            const day = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1; // Month is 0-indexed
+            const year = parseInt(match[3]);
+            targetDate.setFullYear(year, month, day);
           } else {
             targetDate.setDate(today.getDate() + offset);
           }
