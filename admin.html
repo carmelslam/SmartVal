@@ -457,6 +457,101 @@
           content.innerHTML = `<p>טוען ${id}...</p>`;
       }
     };
+
+    // Define performSearch function globally to be accessible by onclick
+    window.performSearch = async function() {
+      const resultsDiv = document.getElementById('trackingResults');
+      resultsDiv.innerHTML = `
+        <div style="background: #333; padding: 12px; border-radius: 8px; border: 1px solid #555; color: #e0e0e0; text-align: center;">
+          <h4 style="color: #ff6b35; margin-bottom: 8px;">🔍 מחפש לפי הפרמטרים שנבחרו</h4>
+          <p>אנא המתן...</p>
+        </div>`;
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available - page still loading');
+        }
+        
+        // Collect all filter parameters - using statusFilter as directive now
+        const searchParams = {
+          action: 'field_review',
+          date_from: document.getElementById('dateFrom')?.value || '',
+          date_to: document.getElementById('dateTo')?.value || '',
+          plate: document.getElementById('plateFilter')?.value?.trim() || '',
+          directive: document.getElementById('statusFilter')?.value || '', // Changed from status to directive
+          manufacturer: document.getElementById('manufacturerFilter')?.value?.trim() || '',
+          owner: document.getElementById('ownerFilter')?.value?.trim() || '',
+          garage: document.getElementById('garageFilter')?.value?.trim() || '',
+          claim_status: document.getElementById('claimFilter')?.value || '',
+          invoice_received: document.getElementById('invoiceFilter')?.value || '',
+          payment_received: document.getElementById('paymentFilter')?.value || ''
+        };
+        
+        // Send all parameters including empty ones - let the webhook handle filtering
+        console.log('Sending search parameters:', searchParams);
+        const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', searchParams);
+        
+        // Create description of active filters (only non-empty ones)
+        const activeFilters = [];
+        if (searchParams.date_from && searchParams.date_to) activeFilters.push(`תאריכים: ${searchParams.date_from} - ${searchParams.date_to}`);
+        if (searchParams.plate) activeFilters.push(`מס. רכב: ${searchParams.plate}`);
+        if (searchParams.directive) activeFilters.push(`דירקטיבה: ${searchParams.directive}`);
+        if (searchParams.manufacturer) activeFilters.push(`יצרן: ${searchParams.manufacturer}`);
+        if (searchParams.owner) activeFilters.push(`בעלים: ${searchParams.owner}`);
+        if (searchParams.garage) activeFilters.push(`מוסך: ${searchParams.garage}`);
+        if (searchParams.claim_status) activeFilters.push(`תיק בתביעה: ${searchParams.claim_status}`);
+        if (searchParams.invoice_received) activeFilters.push(`חשבונית: ${searchParams.invoice_received === 'yes' ? 'כן' : 'לא'}`);
+        if (searchParams.payment_received) activeFilters.push(`תשלום: ${searchParams.payment_received === 'yes' ? 'כן' : 'לא'}`);
+        
+        const filterDescription = activeFilters.length > 0 ? activeFilters.join(', ') : 'חיפוש כללי';
+        window.displayFieldResults('חיפוש מורכב', filterDescription, response);
+        
+      } catch (error) {
+        console.error('Search error:', error);
+        window.displayFieldError('חיפוש מורכב', error.message);
+      }
+    };
+
+    // Define clearAllFilters function globally
+    window.clearAllFilters = function() {
+      // Clear date filters
+      const dateFromField = document.getElementById('dateFrom');
+      const dateToField = document.getElementById('dateTo');
+      if (dateFromField) dateFromField.value = '';
+      if (dateToField) dateToField.value = '';
+      
+      // Clear text filters
+      const plateField = document.getElementById('plateFilter');
+      const manufacturerField = document.getElementById('manufacturerFilter');
+      const ownerField = document.getElementById('ownerFilter');
+      const garageField = document.getElementById('garageFilter');
+      if (plateField) plateField.value = '';
+      if (manufacturerField) manufacturerField.value = '';
+      if (ownerField) ownerField.value = '';
+      if (garageField) garageField.value = '';
+      
+      // Clear dropdown filters - statusFilter is now directive
+      const statusField = document.getElementById('statusFilter'); // This is actually directive now
+      const claimField = document.getElementById('claimFilter');
+      const invoiceField = document.getElementById('invoiceFilter');
+      const paymentField = document.getElementById('paymentFilter');
+      if (statusField) statusField.value = '';
+      if (claimField) claimField.value = '';
+      if (invoiceField) invoiceField.value = '';
+      if (paymentField) paymentField.value = '';
+      
+      document.getElementById('trackingResults').innerHTML = `
+        <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; color: #ccc; text-align: center;">
+          <p>✅ כל הסינונים נוקו</p>
+          <p style="font-size: 12px; color: #999;">בחר אפשרויות סינון חדשות כדי לחפש</p>
+        </div>`;
+    };
+
+    // Define exportResults function globally
+    window.exportResults = function() {
+      alert('פונקציית ייצוא תהיה זמינה בגרסה הבאה - יצוא לקובץ Excel/CSV');
+    };
     </script>
     
    <script type="module">
@@ -846,97 +941,7 @@
       }
     };
 
-    window.clearAllFilters = function() {
-      // Clear date filters
-      const dateFromField = document.getElementById('dateFrom');
-      const dateToField = document.getElementById('dateTo');
-      if (dateFromField) dateFromField.value = '';
-      if (dateToField) dateToField.value = '';
-      
-      // Clear text filters
-      const plateField = document.getElementById('plateFilter');
-      const manufacturerField = document.getElementById('manufacturerFilter');
-      const ownerField = document.getElementById('ownerFilter');
-      const garageField = document.getElementById('garageFilter');
-      if (plateField) plateField.value = '';
-      if (manufacturerField) manufacturerField.value = '';
-      if (ownerField) ownerField.value = '';
-      if (garageField) garageField.value = '';
-      
-      // Clear dropdown filters - statusFilter is now directive
-      const statusField = document.getElementById('statusFilter'); // This is actually directive now
-      const claimField = document.getElementById('claimFilter');
-      const invoiceField = document.getElementById('invoiceFilter');
-      const paymentField = document.getElementById('paymentFilter');
-      if (statusField) statusField.value = '';
-      if (claimField) claimField.value = '';
-      if (invoiceField) invoiceField.value = '';
-      if (paymentField) paymentField.value = '';
-      
-      document.getElementById('trackingResults').innerHTML = `
-        <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; color: #ccc; text-align: center;">
-          <p>✅ כל הסינונים נוקו</p>
-          <p style="font-size: 12px; color: #999;">בחר אפשרויות סינון חדשות כדי לחפש</p>
-        </div>`;
-    };
-
-    window.exportResults = function() {
-      alert('פונקציית ייצוא תהיה זמינה בגרסה הבאה - יצוא לקובץ Excel/CSV');
-    };
-
-    window.performSearch = async function() {
-      const resultsDiv = document.getElementById('trackingResults');
-      resultsDiv.innerHTML = `
-        <div style="background: #333; padding: 12px; border-radius: 8px; border: 1px solid #555; color: #e0e0e0; text-align: center;">
-          <h4 style="color: #ff6b35; margin-bottom: 8px;">🔍 מחפש לפי הפרמטרים שנבחרו</h4>
-          <p>אנא המתן...</p>
-        </div>`;
-      
-      try {
-        // Wait for webhook to be ready
-        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available - page still loading');
-        }
-        
-        // Collect all filter parameters - using statusFilter as directive now
-        const searchParams = {
-          action: 'field_review',
-          date_from: document.getElementById('dateFrom')?.value || '',
-          date_to: document.getElementById('dateTo')?.value || '',
-          plate: document.getElementById('plateFilter')?.value?.trim() || '',
-          directive: document.getElementById('statusFilter')?.value || '', // Changed from status to directive
-          manufacturer: document.getElementById('manufacturerFilter')?.value?.trim() || '',
-          owner: document.getElementById('ownerFilter')?.value?.trim() || '',
-          garage: document.getElementById('garageFilter')?.value?.trim() || '',
-          claim_status: document.getElementById('claimFilter')?.value || '',
-          invoice_received: document.getElementById('invoiceFilter')?.value || '',
-          payment_received: document.getElementById('paymentFilter')?.value || ''
-        };
-        
-        // Send all parameters including empty ones - let the webhook handle filtering
-        console.log('Sending search parameters:', searchParams);
-        const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', searchParams);
-        
-        // Create description of active filters (only non-empty ones)
-        const activeFilters = [];
-        if (searchParams.date_from && searchParams.date_to) activeFilters.push(`תאריכים: ${searchParams.date_from} - ${searchParams.date_to}`);
-        if (searchParams.plate) activeFilters.push(`מס. רכב: ${searchParams.plate}`);
-        if (searchParams.directive) activeFilters.push(`דירקטיבה: ${searchParams.directive}`);
-        if (searchParams.manufacturer) activeFilters.push(`יצרן: ${searchParams.manufacturer}`);
-        if (searchParams.owner) activeFilters.push(`בעלים: ${searchParams.owner}`);
-        if (searchParams.garage) activeFilters.push(`מוסך: ${searchParams.garage}`);
-        if (searchParams.claim_status) activeFilters.push(`תיק בתביעה: ${searchParams.claim_status}`);
-        if (searchParams.invoice_received) activeFilters.push(`חשבונית: ${searchParams.invoice_received === 'yes' ? 'כן' : 'לא'}`);
-        if (searchParams.payment_received) activeFilters.push(`תשלום: ${searchParams.payment_received === 'yes' ? 'כן' : 'לא'}`);
-        
-        const filterDescription = activeFilters.length > 0 ? activeFilters.join(', ') : 'חיפוש כללי';
-        displayFieldResults('חיפוש מורכב', filterDescription, response);
-        
-      } catch (error) {
-        console.error('Search error:', error);
-        displayFieldError('חיפוש מורכב', error.message);
-      }
-    };
+    // Functions removed - they are now defined globally above
 
     window.performFieldFilter = async function(filterType, filterValue, displayName) {
       const resultsDiv = document.getElementById('trackingResults');
