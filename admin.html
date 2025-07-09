@@ -2829,11 +2829,21 @@ window.closeCalendarSyncModal = function() {
 
 // Voice Reminder Functionality - STT Integration for Reminder Creation
 window.startVoiceReminder = function() {
+  console.log('🎤 Voice reminder button clicked');
+  console.log('Browser support check:', {
+    webkitSpeechRecognition: 'webkitSpeechRecognition' in window,
+    SpeechRecognition: 'SpeechRecognition' in window,
+    userAgent: navigator.userAgent
+  });
+  
   // Check if speech recognition is available
   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    console.error('❌ Speech recognition not supported in this browser');
     alert('זיהוי קול לא נתמך בדפדפן זה\nאנא השתמש בכרום או אדג\'');
     return;
   }
+  
+  console.log('✅ Speech recognition supported, showing modal...');
   
   // Show voice recording modal
   const modalHtml = `
@@ -3152,9 +3162,21 @@ window.confirmVoiceReminder = async function() {
   }
   
   try {
-    // Wait for webhook to be ready
+    console.log('🔄 Starting voice reminder creation process...');
+    console.log('Webhook ready:', window.webhookReady);
+    console.log('sendToWebhook available:', typeof window.sendToWebhook);
+    
+    // Wait for webhook to be ready with better timing handling
+    if (!window.webhookReady) {
+      console.log('⏳ Webhook not ready, waiting for initialization...');
+      // Wait a bit for webhook to initialize
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
     if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
-      throw new Error('Webhook function not available');
+      console.error('❌ Webhook system not available');
+      console.log('Available functions:', Object.keys(window).filter(k => k.includes('webhook')));
+      throw new Error('מערכת הקישור לשרת לא זמינה - נסה לרענן את הדף');
     }
     
     console.log('🔄 Creating voice reminder with data:', data);
@@ -3174,9 +3196,11 @@ window.confirmVoiceReminder = async function() {
       voice_transcript: window.voiceReminderTranscript || ''
     };
     
+    console.log('📤 Sending voice reminder payload:', reminderPayload);
+    
     const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', reminderPayload);
     
-    console.log('✅ Voice reminder created:', response);
+    console.log('✅ Voice reminder created successfully:', response);
     
     // Close modal and show success
     closeVoiceReminderModal();
@@ -3184,12 +3208,20 @@ window.confirmVoiceReminder = async function() {
     
     // Refresh reminders list if data is loaded
     if (window.remindersData && Array.isArray(window.remindersData)) {
-      // Refresh current view
+      console.log('🔄 Refreshing reminders display...');
       renderReminders();
+    } else {
+      console.log('ℹ️ No reminders data loaded, skipping refresh');
     }
     
   } catch (error) {
-    console.error('Failed to create voice reminder:', error);
+    console.error('❌ Failed to create voice reminder:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      webhookReady: window.webhookReady,
+      sendToWebhookType: typeof window.sendToWebhook
+    });
     alert(`❌ שגיאה ביצירת תזכורת: ${error.message}`);
   }
 };
