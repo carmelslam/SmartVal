@@ -280,6 +280,12 @@
             <div style="margin-bottom: 20px;">
               <input type="text" id="plateSearch" placeholder="הכנס מספר רכב לחיפוש" style="padding: 8px; margin-right: 10px; width: 200px;">
               <button onclick="searchCaseStatus()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px;">חפש תיק</button>
+              <button onclick="exportCaseStatus()" 
+                      onmouseover="this.style.background='#047857'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.3)';"
+                      onmouseout="this.style.background='#059669'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)';"
+                      style="padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                📤 ייצא
+              </button>
             </div>
             <div id="caseResults">
               <p>הכנס מספר רכב לצפייה בסטטוס התיק</p>
@@ -631,6 +637,99 @@
         alert(`שגיאה בייצוא: ${error.message}`);
       }
     };
+
+    // Define exportCaseStatus function globally
+    window.exportCaseStatus = async function() {
+      // Check if there are any results to export
+      if (!window.lastCaseStatusResults || !window.lastCaseStatusPlate) {
+        alert('אין נתונים לייצוא - אנא בצע חיפוש תחילה');
+        return;
+      }
+      
+      // Show export options dialog
+      const exportChoice = prompt(`בחר את סוג הנתונים לייצוא:
+1 - תמ"צ כללי
+2 - אקספירטיזה  
+3 - חוו"ד
+4 - כל הנתונים
+      
+הכנס מספר בחירה (1-4):`);
+      
+      if (!exportChoice || !['1', '2', '3', '4'].includes(exportChoice)) {
+        alert('בחירה לא תקינה');
+        return;
+      }
+      
+      // Show loading
+      const originalButton = event.target;
+      const originalText = originalButton.innerHTML;
+      originalButton.innerHTML = '⏳ מייצא...';
+      originalButton.disabled = true;
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        // Prepare export data based on choice
+        let exportData = {
+          sender_id: 'סטטוס תיקים',
+          plate: window.lastCaseStatusPlate,
+          query_date: new Date().toISOString(),
+          export_date: new Date().toISOString(),
+          export_type: exportChoice
+        };
+        
+        const caseData = window.lastCaseStatusResults;
+        
+        switch(exportChoice) {
+          case '1':
+            exportData.data = caseData['תמ"צ כללי'] || {};
+            exportData.data_type = 'תמ"צ כללי';
+            break;
+          case '2':
+            exportData.data = caseData['אקספירטיזה'] || {};
+            exportData.data_type = 'אקספירטיזה';
+            break;
+          case '3':
+            exportData.data = caseData['חוו"ד'] || {};
+            exportData.data_type = 'חוו"ד';
+            break;
+          case '4':
+            exportData.data = caseData;
+            exportData.data_type = 'כל הנתונים';
+            break;
+        }
+        
+        console.log('🔄 Exporting case status:', exportData);
+        
+        const response = await window.sendToWebhook('ADMIN_EXPORT_SEARCH_RESULTS', exportData);
+        
+        console.log('📤 Export response:', response);
+        
+        // Show success
+        originalButton.innerHTML = '✅ יוצא בהצלחה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert('נתוני התיק יוצאו בהצלחה!');
+        
+      } catch (error) {
+        console.error('Export error:', error);
+        
+        // Show error
+        originalButton.innerHTML = '❌ שגיאה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert(`שגיאה בייצוא: ${error.message}`);
+      }
+    };
     </script>
     
    <script type="module">
@@ -726,6 +825,9 @@
         
         if (response && Array.isArray(response) && response.length > 0) {
           const caseData = response[0];
+          // Store results for export
+          window.lastCaseStatusResults = caseData;
+          window.lastCaseStatusPlate = plate;
           displayCaseStatus(plate, caseData);
         } else {
           resultsDiv.innerHTML = `
