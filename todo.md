@@ -1141,6 +1141,8 @@ Data is inside the same square fields as we have now .
 
 18. make sure the floating system assistant is visisble on all pages 
 
+19. a total selection page makeover 
+
 
 16. in selection page move the expertise summary to be under the wizard 
 17. General :
