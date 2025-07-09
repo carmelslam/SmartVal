@@ -521,6 +521,10 @@
         const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', searchParams);
         console.log('📥 Webhook response:', response);
         
+        // Store results and filters for export
+        window.lastSearchResults = response && Array.isArray(response) ? response : (response ? [response] : []);
+        window.lastSearchFilters = searchParams;
+        
         // Create description of active filters (only non-empty ones)
         const activeFilters = [];
         if (searchParams.date_from && searchParams.date_to) activeFilters.push(`תאריכים: ${searchParams.date_from} - ${searchParams.date_to}`);
@@ -578,8 +582,63 @@
     };
 
     // Define exportResults function globally
-    window.exportResults = function() {
-      alert('פונקציית ייצוא תהיה זמינה בגרסה הבאה - יצוא לקובץ Excel/CSV');
+    window.exportResults = async function() {
+      // Check if there are any results to export
+      const resultsDiv = document.getElementById('trackingResults');
+      if (!window.lastSearchResults || !Array.isArray(window.lastSearchResults) || window.lastSearchResults.length === 0) {
+        alert('אין תוצאות לייצוא - אנא בצע חיפוש תחילה');
+        return;
+      }
+      
+      // Show loading
+      const originalButton = event.target;
+      const originalText = originalButton.innerHTML;
+      originalButton.innerHTML = '⏳ מייצא...';
+      originalButton.disabled = true;
+      
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        // Prepare export data
+        const exportData = {
+          sender_id: 'סקירה לפי שדות',
+          query_date: new Date().toISOString(),
+          export_date: new Date().toISOString(),
+          total_results: window.lastSearchResults.length,
+          search_filters: window.lastSearchFilters || {},
+          results: window.lastSearchResults
+        };
+        
+        console.log('🔄 Exporting search results:', exportData);
+        
+        const response = await window.sendToWebhook('ADMIN_EXPORT_SEARCH_RESULTS', exportData);
+        
+        console.log('📤 Export response:', response);
+        
+        // Show success
+        originalButton.innerHTML = '✅ יוצא בהצלחה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert('תוצאות החיפוש יוצאו בהצלחה!');
+        
+      } catch (error) {
+        console.error('Export error:', error);
+        
+        // Show error
+        originalButton.innerHTML = '❌ שגיאה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert(`שגיאה בייצוא: ${error.message}`);
+      }
     };
     </script>
     
