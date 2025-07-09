@@ -270,11 +270,12 @@ Reminder Synchronization → Status Feedback
 ✅ **Mobile Form Fields Fix for Admin Panel**
 - Fixed form grid layout breaking on mobile devices (סקירה לפי שדות module)
 - Added mobile CSS media queries ONLY for form fields (preserved main layout)
-- Fixed form grids to stack vertically on mobile devices within forms
+- **FIXED**: Desktop maintains original 2-column layout using specific ID targeting
+- **FIXED**: Mobile form stacks to 1 column only on mobile devices
 - Enhanced date input webkit styling for better visibility on mobile browsers
 - **REVERTED**: Main admin panel layout changes to preserve original design
 - **REVERTED**: Desktop form structure back to original state
-- **KEPT**: Only mobile-specific CSS fixes to prevent field overflow on mobile devices
+- **CORRECTED**: Removed generic class usage, now targets specific form ID
 
 **Next Steps:** 
 - Provide Google Calendar and Outlook API credentials for calendar sync activation
