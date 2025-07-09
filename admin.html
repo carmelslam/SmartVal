@@ -264,17 +264,10 @@
         });
       });
     </script>
-   <script type="module">
-  import { sendToWebhook } from './webhook.js';
-  
-  // Make sendToWebhook globally available
-  window.sendToWebhook = sendToWebhook;
-  
-  // Merge with existing DOMContentLoaded event - do not create duplicate
-  // The admin functionality will be added to the existing DOMContentLoaded below
-  
-  // Define loadSection globally so it's available immediately
-  window.loadSection = function(id) {
+    
+    <script>
+    // Define loadSection globally so it's available immediately
+    window.loadSection = function(id) {
       const content = document.getElementById('adminContent');
       
       switch(id) {
@@ -462,6 +455,68 @@
           content.innerHTML = `<p>טוען ${id}...</p>`;
       }
     };
+    </script>
+    
+   <script type="module">
+  import { sendToWebhook } from './webhook.js';
+  
+  // Make sendToWebhook globally available immediately
+  window.sendToWebhook = sendToWebhook;
+  
+  // Make sure it's available before any functions try to use it
+  window.webhookReady = true;
+  
+  // Merge with existing DOMContentLoaded event - do not create duplicate
+  // The admin functionality will be added to the existing DOMContentLoaded below
+  
+  // Define admin helper functions here when needed
+  
+  // Add to existing DOMContentLoaded event from first script
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if user has basic authentication
+    const auth = sessionStorage.getItem('auth');
+    if (!auth) {
+      console.log('❌ No auth token found in admin.html, redirecting to login');
+      alert('הגישה חסומה - אנא התחבר דרך דף הבית');
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    // Check for admin-specific access
+    const adminAccess = sessionStorage.getItem('admin-access');
+    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+    
+    if (!adminAccess || !adminAccess.includes('granted')) {
+      console.log('❌ No admin access token found, redirecting to selection');
+      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
+      window.location.href = 'selection.html';
+      return;
+    }
+    
+    // Check if admin session is still valid (24 hours)
+    if (adminTimestamp) {
+      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (sessionAge > maxAge) {
+        console.log('❌ Admin session expired, redirecting to selection');
+        sessionStorage.removeItem('admin-access');
+        sessionStorage.removeItem('admin-timestamp');
+        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
+        window.location.href = 'selection.html';
+        return;
+      }
+    }
+    
+    console.log('✅ Admin access verified, loading admin panel');
+    console.log('Admin access type:', adminAccess);
+    
+    // Load VAT from session
+    const existingVat = sessionStorage.getItem('globalVAT');
+    if (existingVat) {
+      document.getElementById('vat-input').value = existingVat;
+    }
+  });
 
     // Helper functions for admin sections
     window.searchCaseStatus = async function() {
@@ -479,9 +534,11 @@
         </div>`;
       
       try {
-        // Check if sendToWebhook is available
-        if (typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        // Wait for webhook to be ready with a small delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (!window.sendToWebhook || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available - please refresh the page');
         }
         
         const response = await window.sendToWebhook('ADMIN_FETCH_TRACKING_TABLE', {
@@ -657,9 +714,9 @@
         </div>`;
       
       try {
-        // Check if sendToWebhook is available
-        if (typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available - page still loading');
         }
         
         const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', {
@@ -768,9 +825,9 @@
         </div>`;
       
       try {
-        // Check if sendToWebhook is available
-        if (typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available - page still loading');
         }
         
         const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', {
@@ -820,9 +877,9 @@
         </div>`;
       
       try {
-        // Check if sendToWebhook is available
-        if (typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available - page still loading');
         }
         
         const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', {
