@@ -414,20 +414,172 @@
     };
 
     // Helper functions for admin sections
-    window.searchCaseStatus = function() {
+    window.searchCaseStatus = async function() {
       const plate = document.getElementById('plateSearch').value.trim();
       if (!plate) {
         alert('אנא הכנס מספר רכב');
         return;
       }
       
-      document.getElementById('caseResults').innerHTML = `
+      const resultsDiv = document.getElementById('caseResults');
+      resultsDiv.innerHTML = `
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7;">
+          <h4>🔍 מחפש נתונים עבור רכב: ${plate}</h4>
+          <p>אנא המתן...</p>
+        </div>`;
+      
+      try {
+        const response = await sendToWebhook('ADMIN_FETCH_TRACKING_TABLE', {
+          plate: plate,
+          action: 'get_case_status'
+        });
+        
+        console.log('Case status response:', response);
+        
+        if (response && Array.isArray(response) && response.length > 0) {
+          const caseData = response[0];
+          displayCaseStatus(plate, caseData);
+        } else {
+          resultsDiv.innerHTML = `
+            <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
+              <h4>❌ לא נמצאו נתונים</h4>
+              <p>לא נמצאו נתונים עבור רכב מספר: ${plate}</p>
+              <p>אנא בדוק את מספר הרכב ונסה שוב</p>
+            </div>`;
+        }
+      } catch (error) {
+        console.error('Error fetching case status:', error);
+        resultsDiv.innerHTML = `
+          <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
+            <h4>❌ שגיאה בטעינת נתונים</h4>
+            <p>שגיאה: ${error.message}</p>
+            <p>אנא נסה שוב מאוחר יותר</p>
+          </div>`;
+      }
+    };
+
+    window.displayCaseStatus = function(plate, caseData) {
+      const resultsDiv = document.getElementById('caseResults');
+      
+      // Extract the three categories from the response
+      const generalInfo = caseData['תמ"צ כללי'] || {};
+      const expertise = caseData['אקספירטיזה'] || {};
+      const opinion = caseData['חוו"ד'] || {};
+      
+      resultsDiv.innerHTML = `
         <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border: 1px solid #3b82f6;">
-          <h4>תיק מספר: ${plate}</h4>
-          <p><strong>סטטוס:</strong> פעיל</p>
-          <p><strong>תאריך יצירה:</strong> ${new Date().toLocaleDateString('he-IL')}</p>
-          <p><strong>שלב נוכחי:</strong> הערכת נזקים</p>
-          <p><strong>מעודכן לאחרונה:</strong> לפני 2 שעות</p>
+          <h4>📊 סטטוס תיק עבור רכב: ${plate}</h4>
+          <p><strong>מספר תיק:</strong> ${generalInfo['מספר תיק'] || 'לא זמין'}</p>
+          <p><strong>מצב עדכון:</strong> ${new Date().toLocaleDateString('he-IL')}</p>
+          
+          <!-- תמ"צ כללי Section -->
+          <div style="margin-top: 20px;">
+            <button onclick="toggleSection('general')" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+              📋 תמ"צ כללי
+            </button>
+            <div id="general-section" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #dee2e6;">
+              ${formatGeneralInfo(generalInfo)}
+            </div>
+          </div>
+          
+          <!-- אקספירטיזה Section -->
+          <div style="margin-top: 15px;">
+            <button onclick="toggleSection('expertise')" style="width: 100%; padding: 12px; background: #ffc107; color: black; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+              🔧 אקספירטיזה
+            </button>
+            <div id="expertise-section" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #ffeaa7;">
+              ${formatExpertiseInfo(expertise)}
+            </div>
+          </div>
+          
+          <!-- חוו"ד Section -->
+          <div style="margin-top: 15px;">
+            <button onclick="toggleSection('opinion')" style="width: 100%; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+              📝 חוו"ד
+            </button>
+            <div id="opinion-section" style="display: none; background: #f8d7da; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #f5c6cb;">
+              ${formatOpinionInfo(opinion)}
+            </div>
+          </div>
+        </div>`;
+    };
+
+    window.toggleSection = function(sectionId) {
+      const section = document.getElementById(sectionId + '-section');
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+      } else {
+        section.style.display = 'none';
+      }
+    };
+
+    window.formatGeneralInfo = function(info) {
+      return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <p><strong>מספר תיק:</strong> ${info['מספר תיק'] || 'לא זמין'}</p>
+            <p><strong>תאריך בדיקה:</strong> ${info['תאריך הבדיקה'] || 'לא זמין'}</p>
+            <p><strong>תאריך חוו"ד:</strong> ${info['תאריך חוו"ד'] || 'לא זמין'}</p>
+            <p><strong>מס. רכב:</strong> ${info['מס.רכב'] || 'לא זמין'}</p>
+            <p><strong>שם היצרן:</strong> ${info['שם היצרן'] || 'לא זמין'}</p>
+            <p><strong>שנת ייצור:</strong> ${info['שנת ייצור'] || 'לא זמין'}</p>
+          </div>
+          <div>
+            <p><strong>ערך הרכב:</strong> ${info['ערך הרכב'] || 'לא זמין'}</p>
+            <p><strong>בעל הרכב:</strong> ${info['שם בעל הרכב'] || 'לא זמין'}</p>
+            <p><strong>טלפון:</strong> ${info['טלפון'] || 'לא זמין'}</p>
+            <p><strong>מוסך:</strong> ${info['מוסך'] || 'לא זמין'}</p>
+            <p><strong>טלפון מוסך:</strong> ${info['טלפון מוסך'] || 'לא זמין'}</p>
+            <p><strong>סטטוס כללי:</strong> ${info['סטטוס כללי'] || 'לא זמין'}</p>
+          </div>
+        </div>
+        <div style="margin-top: 15px;">
+          <p><strong>דירקטיבה:</strong> ${info['דירקטיבה'] || 'לא זמין'}</p>
+          <p><strong>הערות כלליות:</strong> ${info['הערות כלליות'] || 'אין הערות'}</p>
+        </div>`;
+    };
+
+    window.formatExpertiseInfo = function(info) {
+      return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <p><strong>מספר תיק:</strong> ${info['מספר תיק'] || 'לא זמין'}</p>
+            <p><strong>מספר רכב:</strong> ${info['מספר רכב'] || 'לא זמין'}</p>
+            <p><strong>מס. מוקדי נזק:</strong> ${info['מס מוקדי נזק'] || 'לא זמין'}</p>
+            <p><strong>מוקד נזק:</strong> ${info['מוקד נזק'] || 'לא זמין'}</p>
+          </div>
+          <div>
+            <p><strong>תיאור:</strong> ${info['תיאור'] || 'לא זמין'}</p>
+            <p><strong>תיקונים מתוכננים:</strong> ${info['תיקונים מתוכננים'] || 'לא זמין'}</p>
+            <p><strong>חלקים מתוכננים:</strong> ${info['חלקים מתוכננים'] || 'לא זמין'}</p>
+            <p><strong>עבודות מתוכננות:</strong> ${info['עבודות מתוכננות'] || 'לא זמין'}</p>
+          </div>
+        </div>
+        <div style="margin-top: 15px;">
+          <p><strong>הנחייה:</strong> ${info['הנחייה'] || 'אין הנחיות'}</p>
+          <p><strong>הערות:</strong> ${info['הערות'] || 'אין הערות'}</p>
+        </div>`;
+    };
+
+    window.formatOpinionInfo = function(info) {
+      return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <p><strong>מספר רכב:</strong> ${info['מספר רכב'] || 'לא זמין'}</p>
+            <p><strong>מס. מוקדי נזק:</strong> ${info['מס מוקדי נזק'] || 'לא זמין'}</p>
+            <p><strong>מוקד נזק:</strong> ${info['מוקד נזק'] || 'לא זמין'}</p>
+            <p><strong>תיקונים בפועל:</strong> ${info['תיקונים בפועל'] || 'לא זמין'}</p>
+          </div>
+          <div>
+            <p><strong>סה"כ חלקים בפועל:</strong> ${info['סה"כ חלקים בפועל'] || 'לא זמין'}</p>
+            <p><strong>סה"כ עבודות בפועל:</strong> ${info['סה"כ עבודות בפועל'] || 'לא זמין'}</p>
+            <p><strong>סכום לתביעה:</strong> ${info['סכום לתביעה'] || 'לא זמין'}</p>
+            <p><strong>ירידת ערך:</strong> ${info['ירידת ערך'] || 'לא זמין'}</p>
+          </div>
+        </div>
+        <div style="margin-top: 15px;">
+          <p><strong>פיצוי סופי:</strong> ${info['פיצוי סופי'] || 'לא זמין'}</p>
+          <p><strong>הערות:</strong> ${info['הערות'] || 'אין הערות'}</p>
         </div>`;
     };
 
