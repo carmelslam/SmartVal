@@ -408,12 +408,44 @@
           content.innerHTML = `
             <h2 style="color: #ff6b35; font-size: 24px; margin-bottom: 20px;">🔔 רשימת תזכורות</h2>
             
-            <!-- Filter and View Controls -->
+            <!-- Data Status and Primary Actions -->
             <div style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #555;">
+              <div id="dataStatusDisplay" style="margin-bottom: 15px; padding: 10px; border-radius: 6px; background: #2a2a2a; border: 1px solid #444;">
+                <div style="color: #ff6b35; font-weight: bold; margin-bottom: 5px;">מצב נתונים:</div>
+                <div id="dataStatusText" style="color: #ccc; font-size: 14px;">לא נטענו תזכורות - בחר פרמטרי סינון וטען תזכורות מהשרת</div>
+              </div>
+              
+              <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <button onclick="addReminder()" 
+                        onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; font-weight: bold;">
+                  ➕ הוסף תזכורת
+                </button>
+                
+                <button onclick="showLoadRemindersModal()" 
+                        onmouseover="this.style.background='#e55a2b'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#ff6b35'; this.style.transform='translateY(0)';"
+                        style="padding: 10px 20px; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; font-weight: bold;">
+                  📥 טען תזכורות עם סינון
+                </button>
+                
+                <button id="refreshDataBtn" onclick="refreshReminders()" disabled
+                        onmouseover="if(!this.disabled) { this.style.background='#6366f1'; this.style.transform='translateY(-2px)'; }"
+                        onmouseout="if(!this.disabled) { this.style.background='#4f46e5'; this.style.transform='translateY(0)'; }"
+                        style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5;">
+                  🔄 רענן
+                </button>
+              </div>
+            </div>
+            
+            <!-- Local Filtering Controls (Initially Disabled) -->
+            <div id="localFilterControls" style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #555; opacity: 0.5;">
+              <div style="margin-bottom: 10px; color: #ff6b35; font-weight: bold;">סינון מקומי (זמין לאחר טעינת נתונים):</div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
                   <label style="color: #e0e0e0; font-size: 14px; margin-bottom: 5px; display: block;">סינון לפי סטטוס:</label>
-                  <select id="statusFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
+                  <select id="localStatusFilter" disabled style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
                     <option value="all">כל הסטטוסים</option>
                     <option value="active">פעיל</option>
                     <option value="pending">ממתין</option>
@@ -423,7 +455,7 @@
                 </div>
                 <div>
                   <label style="color: #e0e0e0; font-size: 14px; margin-bottom: 5px; display: block;">סינון לפי קטגוריה:</label>
-                  <select id="categoryFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
+                  <select id="localCategoryFilter" disabled style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0; width: 100%;">
                     <option value="all">כל הקטגוריות</option>
                     <option value="case_deadline">מועד סגירת תיק</option>
                     <option value="payment_reminder">תזכורת תשלום</option>
@@ -435,31 +467,24 @@
               </div>
               
               <div style="display: flex; gap: 10px; align-items: center;">
-                <button onclick="addReminder()" 
-                        onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)';"
-                        style="padding: 10px 20px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; font-weight: bold;">
-                  ➕ הוסף תזכורת חדשה
+                <button id="localFilterBtn" onclick="applyLocalFilters()" disabled
+                        onmouseover="if(!this.disabled) { this.style.background='#3b82f6'; this.style.transform='translateY(-2px)'; }"
+                        onmouseout="if(!this.disabled) { this.style.background='#1d4ed8'; this.style.transform='translateY(0)'; }"
+                        style="padding: 10px 20px; background: #1d4ed8; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5;">
+                  🔍 סנן מקומי
                 </button>
                 
-                <button onclick="filterReminders()" 
-                        onmouseover="this.style.background='#3b82f6'; this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='#1d4ed8'; this.style.transform='translateY(0)';"
-                        style="padding: 10px 20px; background: #1d4ed8; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
-                  🔍 סנן
-                </button>
-                
-                <button onclick="toggleView()" 
-                        onmouseover="this.style.background='#9333ea'; this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='#7c3aed'; this.style.transform='translateY(0)';"
-                        style="padding: 10px 20px; background: #7c3aed; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
+                <button id="toggleViewBtn" onclick="toggleView()" disabled
+                        onmouseover="if(!this.disabled) { this.style.background='#9333ea'; this.style.transform='translateY(-2px)'; }"
+                        onmouseout="if(!this.disabled) { this.style.background='#7c3aed'; this.style.transform='translateY(0)'; }"
+                        style="padding: 10px 20px; background: #7c3aed; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5;">
                   📅 <span id="viewToggleText">תצוגת יומן</span>
                 </button>
                 
-                <button onclick="exportReminders()" 
-                        onmouseover="this.style.background='#f59e0b'; this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='#d97706'; this.style.transform='translateY(0)';"
-                        style="padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">
+                <button id="exportBtn" onclick="exportReminders()" disabled
+                        onmouseover="if(!this.disabled) { this.style.background='#f59e0b'; this.style.transform='translateY(-2px)'; }"
+                        onmouseout="if(!this.disabled) { this.style.background='#d97706'; this.style.transform='translateY(0)'; }"
+                        style="padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5;">
                   📤 יצא
                 </button>
               </div>
@@ -541,10 +566,17 @@
               </div>
             </div>`;
             
-          // Fetch reminders when section loads
+          // Initialize reminder section - no automatic fetching
           setTimeout(() => {
-            if (typeof window.fetchReminders === 'function') {
-              window.fetchReminders();
+            // Initialize with empty state
+            const remindersList = document.getElementById('remindersList');
+            if (remindersList) {
+              remindersList.innerHTML = `
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
+                  <h3 style="color: #ff6b35;">👆 התחל על ידי טעינת תזכורות</h3>
+                  <p style="color: #ccc;">לחץ על "טען תזכורות עם סינון" כדי לטעון תזכורות רלוונטיות מהשרת</p>
+                  <p style="color: #999; font-size: 14px;">זה יאפשר לך לבחור פרמטרי סינון ולטעון רק את המידע שאתה צריך</p>
+                </div>`;
             }
           }, 200);
           break;
@@ -1324,27 +1356,143 @@
 
     // Enhanced Reminders Management System with Modern Features
     window.remindersData = window.remindersData || [];
+    window.currentServerFilters = {};
+    window.dataLoadedTimestamp = null;
     
-    // Fetch reminders from Make.com 
-    window.fetchReminders = async function(statusFilter = 'all', categoryFilter = 'all') {
+    // Show server-side filter modal
+    window.showLoadRemindersModal = function() {
+      const modalHtml = `
+        <div id="loadRemindersModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+          <div style="background: #2a2a2a; padding: 25px; border-radius: 12px; width: 600px; max-width: 90%; border: 2px solid #ff6b35; max-height: 80vh; overflow-y: auto;">
+            <h3 style="color: #ff6b35; margin-bottom: 20px; text-align: center;">📥 טעינת תזכורות עם סינון מתקדם</h3>
+            
+            <div style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 6px; border: 1px solid #555;">
+              <div style="color: #e0e0e0; font-size: 14px; margin-bottom: 5px;">ℹ️ בחר פרמטרי סינון לטעינת תזכורות רלוונטיות בלבד מהשרת</div>
+              <div style="color: #999; font-size: 12px;">זה יקטין את זמן הטעינה ויציג רק את המידע הרלוונטי</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">סטטוס:</label>
+                <select id="serverStatusFilter" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="all">כל הסטטוסים</option>
+                  <option value="active">פעיל</option>
+                  <option value="pending">ממתין</option>
+                  <option value="completed">הושלם</option>
+                  <option value="overdue">פג תוקף</option>
+                </select>
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">קטגוריה:</label>
+                <select id="serverCategoryFilter" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                  <option value="all">כל הקטגוריות</option>
+                  <option value="case_deadline">מועד סגירת תיק</option>
+                  <option value="payment_reminder">תזכורת תשלום</option>
+                  <option value="follow_up">מעקב</option>
+                  <option value="inspection">בדיקה</option>
+                  <option value="general">כללי</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">מספר רכב (אופציונלי):</label>
+              <input type="text" id="serverPlateFilter" placeholder="הכנס מספר רכב לסינון תזכורות ספציפיות" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              <div style="color: #999; font-size: 12px; margin-top: 5px;">השאר ריק כדי לטעון תזכורות של כל הרכבים</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">מתאריך:</label>
+                <input type="date" id="serverDateFrom" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+              <div>
+                <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">עד תאריך:</label>
+                <input type="date" id="serverDateTo" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">מגבלת תוצאות:</label>
+              <select id="serverLimitFilter" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
+                <option value="50">50 תזכורות אחרונות</option>
+                <option value="100">100 תזכורות אחרונות</option>
+                <option value="200">200 תזכורות אחרונות</option>
+                <option value="500">500 תזכורות אחרונות</option>
+                <option value="all">כל התזכורות (לא מומלץ)</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <button onclick="loadRemindersWithFilters()" 
+                      onmouseover="this.style.background='#e55a2b'; this.style.transform='translateY(-2px)';"
+                      onmouseout="this.style.background='#ff6b35'; this.style.transform='translateY(0)';"
+                      style="padding: 12px 24px; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease;">
+                📥 טען תזכורות
+              </button>
+              <button onclick="closeLoadRemindersModal()" 
+                      onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-2px)';"
+                      onmouseout="this.style.background='#991b1b'; this.style.transform='translateY(0)';"
+                      style="padding: 12px 24px; background: #991b1b; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                ❌ ביטול
+              </button>
+            </div>
+          </div>
+        </div>`;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Set default date range (last 30 days)
+      const today = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      
+      document.getElementById('serverDateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+      document.getElementById('serverDateTo').value = today.toISOString().split('T')[0];
+    };
+    
+    window.closeLoadRemindersModal = function() {
+      const modal = document.getElementById('loadRemindersModal');
+      if (modal) modal.remove();
+    };
+    
+    // Load reminders with server-side filtering
+    window.loadRemindersWithFilters = async function() {
       try {
+        // Get filter values from modal
+        const serverFilters = {
+          status: document.getElementById('serverStatusFilter').value,
+          category: document.getElementById('serverCategoryFilter').value,
+          plate_number: document.getElementById('serverPlateFilter').value.trim(),
+          date_from: document.getElementById('serverDateFrom').value,
+          date_to: document.getElementById('serverDateTo').value,
+          limit: document.getElementById('serverLimitFilter').value
+        };
+        
+        // Close modal
+        closeLoadRemindersModal();
+        
+        // Update data status to loading
+        updateDataStatus('loading', 'טוען תזכורות מ-Make.com עם הפרמטרים שנבחרו...');
+        
         // Wait for webhook to be ready
         if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
           throw new Error('Webhook function not available');
         }
         
-        console.log('🔄 Fetching reminders with filters:', { statusFilter, categoryFilter });
+        console.log('🔄 Loading reminders with server filters:', serverFilters);
         
         const response = await window.sendToWebhook('ADMIN_FETCH_REMINDERS', {
           action: 'fetch_reminders',
-          filters: {
-            status: statusFilter,
-            category: categoryFilter
+          server_filters: serverFilters,
+          pagination: {
+            limit: serverFilters.limit === 'all' ? null : parseInt(serverFilters.limit),
+            offset: 0
           },
           timestamp: new Date().toISOString()
         });
         
-        console.log('📥 Fetched reminders:', response);
+        console.log('📥 Fetched reminders with server filters:', response);
         
         // Update local data with fetched reminders
         if (response && Array.isArray(response)) {
@@ -1356,16 +1504,159 @@
           window.remindersData = [];
         }
         
+        // Store current filters and timestamp
+        window.currentServerFilters = serverFilters;
+        window.dataLoadedTimestamp = new Date();
+        
+        // Enable local filtering controls
+        enableLocalControls();
+        
+        // Update data status
+        const filterDesc = createFilterDescription(serverFilters);
+        updateDataStatus('loaded', `נטענו ${window.remindersData.length} תזכורות (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
+        
         // Refresh display
-        renderReminders(statusFilter, categoryFilter);
+        renderReminders();
         
         return window.remindersData;
+        
       } catch (error) {
-        console.error('Error fetching reminders:', error);
-        // Keep existing data if fetch fails
-        renderReminders(statusFilter, categoryFilter);
+        console.error('Error loading reminders:', error);
+        updateDataStatus('error', `שגיאה בטעינת תזכורות: ${error.message}`);
         throw error;
       }
+    };
+    
+    // Create filter description for display
+    window.createFilterDescription = function(filters) {
+      const parts = [];
+      if (filters.status !== 'all') parts.push(`סטטוס: ${filters.status}`);
+      if (filters.category !== 'all') parts.push(`קטגוריה: ${filters.category}`);
+      if (filters.plate_number) parts.push(`רכב: ${filters.plate_number}`);
+      if (filters.date_from || filters.date_to) {
+        const dateRange = `${filters.date_from || ''} - ${filters.date_to || ''}`;
+        parts.push(`תאריכים: ${dateRange}`);
+      }
+      if (filters.limit !== 'all') parts.push(`מוגבל ל-${filters.limit}`);
+      
+      return parts.length > 0 ? parts.join(', ') : 'ללא סינון';
+    };
+    
+    // Update data status display
+    window.updateDataStatus = function(status, message) {
+      const statusText = document.getElementById('dataStatusText');
+      if (statusText) {
+        statusText.textContent = message;
+        
+        // Update styling based on status
+        const statusDisplay = document.getElementById('dataStatusDisplay');
+        if (statusDisplay) {
+          switch (status) {
+            case 'loading':
+              statusDisplay.style.borderColor = '#f59e0b';
+              statusDisplay.style.backgroundColor = '#451a03';
+              break;
+            case 'loaded':
+              statusDisplay.style.borderColor = '#16a34a';
+              statusDisplay.style.backgroundColor = '#0f3424';
+              break;
+            case 'error':
+              statusDisplay.style.borderColor = '#dc2626';
+              statusDisplay.style.backgroundColor = '#450a0a';
+              break;
+            default:
+              statusDisplay.style.borderColor = '#444';
+              statusDisplay.style.backgroundColor = '#2a2a2a';
+          }
+        }
+      }
+    };
+    
+    // Enable local filtering controls
+    window.enableLocalControls = function() {
+      const localControls = document.getElementById('localFilterControls');
+      const buttons = ['refreshDataBtn', 'localFilterBtn', 'toggleViewBtn', 'exportBtn'];
+      const selects = ['localStatusFilter', 'localCategoryFilter'];
+      
+      if (localControls) {
+        localControls.style.opacity = '1';
+      }
+      
+      buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      });
+      
+      selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+          select.disabled = false;
+        }
+      });
+    };
+    
+    // Refresh reminders with same server filters
+    window.refreshReminders = async function() {
+      if (!window.currentServerFilters || Object.keys(window.currentServerFilters).length === 0) {
+        alert('אין פרמטרי סינון שמורים - אנא טען תזכורות תחילה');
+        return;
+      }
+      
+      try {
+        updateDataStatus('loading', 'מרענן תזכורות מ-Make.com...');
+        
+        const response = await window.sendToWebhook('ADMIN_FETCH_REMINDERS', {
+          action: 'fetch_reminders',
+          server_filters: window.currentServerFilters,
+          pagination: {
+            limit: window.currentServerFilters.limit === 'all' ? null : parseInt(window.currentServerFilters.limit),
+            offset: 0
+          },
+          timestamp: new Date().toISOString()
+        });
+        
+        // Update data
+        if (response && Array.isArray(response)) {
+          window.remindersData = response;
+        } else if (response && response.reminders && Array.isArray(response.reminders)) {
+          window.remindersData = response.reminders;
+        } else {
+          window.remindersData = [];
+        }
+        
+        window.dataLoadedTimestamp = new Date();
+        
+        // Update status
+        const filterDesc = createFilterDescription(window.currentServerFilters);
+        updateDataStatus('loaded', `רוענן - ${window.remindersData.length} תזכורות (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
+        
+        // Refresh display
+        renderReminders();
+        
+      } catch (error) {
+        console.error('Error refreshing reminders:', error);
+        updateDataStatus('error', `שגיאה ברענון: ${error.message}`);
+      }
+    };
+    
+    // Apply local filters (client-side)
+    window.applyLocalFilters = function() {
+      const localStatus = document.getElementById('localStatusFilter').value;
+      const localCategory = document.getElementById('localCategoryFilter').value;
+      
+      console.log('🔍 Applying local filters:', { localStatus, localCategory });
+      
+      // This will filter the already-loaded data
+      renderReminders(localStatus, localCategory);
+    };
+    
+    // Legacy fetch reminders function (for backward compatibility)
+    window.fetchReminders = async function(statusFilter = 'all', categoryFilter = 'all') {
+      console.warn('fetchReminders() is deprecated. Use loadRemindersWithFilters() instead.');
+      return window.remindersData;
     };
     
     window.addReminder = function() {
@@ -1707,31 +1998,10 @@
       }
     };
     
-    window.filterReminders = async function() {
-      const statusFilter = document.getElementById('statusFilter').value;
-      const categoryFilter = document.getElementById('categoryFilter').value;
-      
-      try {
-        // Show loading state
-        const remindersList = document.getElementById('remindersList');
-        if (remindersList) {
-          remindersList.innerHTML = `
-            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
-              <h3 style="color: #ff6b35;">🔄 מסנן תזכורות...</h3>
-              <p style="color: #ccc;">אנא המתן</p>
-            </div>`;
-        }
-        
-        // Fetch filtered reminders from Make.com
-        await fetchReminders(statusFilter, categoryFilter);
-        
-      } catch (error) {
-        console.error('Error filtering reminders:', error);
-        alert(`שגיאה בסינון תזכורות: ${error.message}`);
-        
-        // Fallback to local filtering
-        renderReminders(statusFilter, categoryFilter);
-      }
+    // Legacy function - redirects to local filtering
+    window.filterReminders = function() {
+      console.warn('filterReminders() is deprecated. Use applyLocalFilters() instead.');
+      applyLocalFilters();
     };
     
     window.toggleView = function() {
@@ -1756,8 +2026,11 @@
     };
     
     window.exportReminders = async function() {
-      const statusFilter = document.getElementById('statusFilter').value;
-      const categoryFilter = document.getElementById('categoryFilter').value;
+      // Check if data is loaded
+      if (!window.remindersData || window.remindersData.length === 0) {
+        alert('אין נתונים לייצוא - אנא טען תזכורות תחילה');
+        return;
+      }
       
       try {
         // Show loading
@@ -1766,29 +2039,49 @@
         originalButton.innerHTML = '⏳ מייצא...';
         originalButton.disabled = true;
         
-        // Fetch fresh data before export
-        await fetchReminders(statusFilter, categoryFilter);
+        // Get current local filters
+        const localStatus = document.getElementById('localStatusFilter').value;
+        const localCategory = document.getElementById('localCategoryFilter').value;
+        
+        // Apply local filters to data for export
+        let exportData = [...window.remindersData];
+        
+        if (localStatus !== 'all') {
+          exportData = exportData.filter(r => r.status === localStatus);
+        }
+        if (localCategory !== 'all') {
+          exportData = exportData.filter(r => r.category === localCategory);
+        }
         
         // Wait for webhook to be ready
         if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
           throw new Error('Webhook function not available');
         }
         
+        // Create comprehensive filter description
+        const serverFilterDesc = createFilterDescription(window.currentServerFilters);
+        const localFilterDesc = [];
+        if (localStatus !== 'all') localFilterDesc.push(`סטטוס מקומי: ${localStatus}`);
+        if (localCategory !== 'all') localFilterDesc.push(`קטגוריה מקומית: ${localCategory}`);
+        
+        const fullFilterDesc = [serverFilterDesc, ...localFilterDesc].join(' + ');
+        
         // Prepare export data in standardized format
-        const exportData = {
+        const exportPayload = {
           sender_id: 'רשימת תזכורות',
           export_date: new Date().toISOString(),
           export_type: 'filtered_reminders',
-          data_type: `תזכורות מסוננות - סטטוס: ${statusFilter === 'all' ? 'הכל' : statusFilter}, קטגוריה: ${categoryFilter === 'all' ? 'הכל' : categoryFilter}`,
-          filters: { status: statusFilter, category: categoryFilter },
-          total_reminders: window.remindersData.length,
-          data: window.remindersData
+          data_type: `תזכורות מסוננות - ${fullFilterDesc}`,
+          server_filters: window.currentServerFilters,
+          local_filters: { status: localStatus, category: localCategory },
+          total_reminders: exportData.length,
+          data: exportData
         };
         
-        console.log('🔄 Exporting reminders:', exportData);
+        console.log('🔄 Exporting reminders:', exportPayload);
         
         // Send to export webhook
-        const response = await window.sendToWebhook('ADMIN_EXPORT_SEARCH_RESULTS', exportData);
+        const response = await window.sendToWebhook('ADMIN_EXPORT_SEARCH_RESULTS', exportPayload);
         
         console.log('📤 Export response:', response);
         
@@ -1799,7 +2092,7 @@
           originalButton.disabled = false;
         }, 2000);
         
-        alert('נתוני התזכורות יוצאו בהצלחה!');
+        alert(`נתוני התזכורות יוצאו בהצלחה! (${exportData.length} תזכורות)`);
         
       } catch (error) {
         console.error('Export error:', error);
