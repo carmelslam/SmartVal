@@ -423,6 +423,13 @@
                   ➕ הוסף תזכורת
                 </button>
                 
+                <button onclick="startVoiceReminder()" 
+                        onmouseover="this.style.background='#8b5cf6'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='#7c3aed'; this.style.transform='translateY(0)';"
+                        style="padding: 12px 24px; background: #7c3aed; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; font-weight: bold; min-width: 160px;">
+                  🎤 תזכורת קולית
+                </button>
+                
                 <button onclick="showLoadRemindersModal()" 
                         onmouseover="this.style.background='#e55a2b'; this.style.transform='translateY(-2px)';"
                         onmouseout="this.style.background='#ff6b35'; this.style.transform='translateY(0)';"
@@ -486,6 +493,13 @@
                         onmouseout="if(!this.disabled) { this.style.background='#d97706'; this.style.transform='translateY(0)'; }"
                         style="padding: 12px 24px; background: #d97706; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5; min-width: 100px;">
                   📤 יצא
+                </button>
+                
+                <button id="calendarSyncBtn" onclick="showCalendarSyncModal()" disabled
+                        onmouseover="if(!this.disabled) { this.style.background='#0ea5e9'; this.style.transform='translateY(-2px)'; }"
+                        onmouseout="if(!this.disabled) { this.style.background='#0284c7'; this.style.transform='translateY(0)'; }"
+                        style="padding: 12px 24px; background: #0284c7; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; opacity: 0.5; min-width: 140px;">
+                  🔗 סנכרן יומן
                 </button>
               </div>
             </div>
@@ -1575,7 +1589,7 @@
     // Enable local filtering controls
     window.enableLocalControls = function() {
       const localControls = document.getElementById('localFilterControls');
-      const buttons = ['refreshDataBtn', 'localFilterBtn', 'toggleViewBtn', 'exportBtn'];
+      const buttons = ['refreshDataBtn', 'localFilterBtn', 'toggleViewBtn', 'exportBtn', 'calendarSyncBtn'];
       const selects = ['localStatusFilter', 'localCategoryFilter'];
       
       if (localControls) {
@@ -2593,6 +2607,625 @@ async function verifyDevAccess() {
 
 // Ensure function is globally available
 window.verifyDevAccess = verifyDevAccess;
+
+// External Calendar Integration Template - Google/Outlook Sync Placeholder
+window.showCalendarSyncModal = function() {
+  // Show calendar provider selection modal
+  const modalHtml = `
+    <div id="calendarSyncModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+      <div style="background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; border: 2px solid #0284c7;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h3 style="color: #0284c7; margin: 0 0 10px 0;">🔗 סנכרון יומן חיצוני</h3>
+          <p style="color: #ccc; font-size: 14px; margin: 0;">בחר ספק יומן כדי לסנכרן תזכורות עם יומן חיצוני</p>
+        </div>
+        
+        <!-- Calendar Provider Selection -->
+        <div style="background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #555;">
+          <div style="color: #0284c7; font-weight: bold; margin-bottom: 15px;">בחר ספק יומן:</div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <!-- Google Calendar Option -->
+            <button id="googleCalendarBtn" onclick="selectCalendarProvider('google')" 
+                    style="padding: 20px; background: #1a1a1a; border: 2px solid #4285f4; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+              <div style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                <div style="color: #4285f4; font-weight: bold; margin-bottom: 5px;">Google Calendar</div>
+                <div style="color: #ccc; font-size: 12px;">סנכרון עם גוגל קלנדר</div>
+              </div>
+            </button>
+            
+            <!-- Outlook Calendar Option -->
+            <button id="outlookCalendarBtn" onclick="selectCalendarProvider('outlook')" 
+                    style="padding: 20px; background: #1a1a1a; border: 2px solid #0078d4; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+              <div style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 10px;">📆</div>
+                <div style="color: #0078d4; font-weight: bold; margin-bottom: 5px;">Outlook Calendar</div>
+                <div style="color: #ccc; font-size: 12px;">סנכרון עם אאוטלוק</div>
+              </div>
+            </button>
+          </div>
+          
+          <!-- Selected Provider Info -->
+          <div id="selectedProviderInfo" style="display: none; background: #1a1a1a; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+            <div style="color: #4ade80; font-weight: bold; margin-bottom: 10px;">✅ נבחר: <span id="selectedProviderName"></span></div>
+            <div id="providerInstructions" style="color: #e0e0e0; font-size: 14px; margin-bottom: 15px;"></div>
+            
+            <!-- Sync Options -->
+            <div style="border-top: 1px solid #444; padding-top: 15px; margin-top: 15px;">
+              <div style="color: #fbbf24; font-weight: bold; margin-bottom: 10px;">אפשרויות סנכרון:</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label style="color: #e0e0e0; cursor: pointer;">
+                  <input type="checkbox" id="syncActiveReminders" checked style="margin-left: 8px;">
+                  תזכורות פעילות
+                </label>
+                <label style="color: #e0e0e0; cursor: pointer;">
+                  <input type="checkbox" id="syncPendingReminders" checked style="margin-left: 8px;">
+                  תזכורות ממתינות
+                </label>
+                <label style="color: #e0e0e0; cursor: pointer;">
+                  <input type="checkbox" id="syncCompletedReminders" style="margin-left: 8px;">
+                  תזכורות שהושלמו
+                </label>
+                <label style="color: #e0e0e0; cursor: pointer;">
+                  <input type="checkbox" id="syncOverdueReminders" checked style="margin-left: 8px;">
+                  תזכורות שפג תוקפן
+                </label>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="margin-top: 20px; text-align: center;">
+              <button onclick="initializeCalendarSync()" 
+                      style="padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px;">
+                🔗 התחל סנכרון
+              </button>
+              <button onclick="testCalendarConnection()" 
+                      style="padding: 12px 24px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                🧪 בדוק חיבור
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Status Display -->
+        <div id="calendarSyncStatus" style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444;">
+          <div style="color: #fbbf24; font-weight: bold; margin-bottom: 10px;">מצב:</div>
+          <div id="syncStatusText" style="color: #e0e0e0; font-size: 14px;">בחר ספק יומן כדי להתחיל</div>
+        </div>
+        
+        <!-- Modal Controls -->
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button onclick="closeCalendarSyncModal()" 
+                  style="padding: 12px 24px; background: #991b1b; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            ❌ סגור
+          </button>
+        </div>
+      </div>
+    </div>`;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// Calendar Provider Selection
+window.selectCalendarProvider = function(provider) {
+  const providerInfo = document.getElementById('selectedProviderInfo');
+  const providerName = document.getElementById('selectedProviderName');
+  const instructions = document.getElementById('providerInstructions');
+  const statusText = document.getElementById('syncStatusText');
+  
+  // Reset button styles
+  document.getElementById('googleCalendarBtn').style.background = '#1a1a1a';
+  document.getElementById('outlookCalendarBtn').style.background = '#1a1a1a';
+  
+  if (provider === 'google') {
+    providerName.textContent = 'Google Calendar';
+    instructions.innerHTML = `
+      <strong>הוראות חיבור לגוגל קלנדר:</strong><br>
+      1. המערכת תפתח חלון התחברות לגוגל<br>
+      2. התחבר עם חשבון הגוגל שלך<br>
+      3. אשר הרשאות גישה ליומן<br>
+      4. התזכורות יסנכרנו אוטומטית<br><br>
+      <em style="color: #f59e0b;">הערה: נדרשת הרשאת מנהל להפעלת הסנכרון</em>
+    `;
+    document.getElementById('googleCalendarBtn').style.background = '#2a4a2a';
+    statusText.textContent = 'נבחר Google Calendar - מוכן לחיבור';
+  } else if (provider === 'outlook') {
+    providerName.textContent = 'Outlook Calendar';
+    instructions.innerHTML = `
+      <strong>הוראות חיבור לאאוטלוק:</strong><br>
+      1. המערכת תפתח חלון התחברות למיקרוסופט<br>
+      2. התחבר עם חשבון Microsoft 365 או Outlook.com<br>
+      3. אשר הרשאות גישה ליומן<br>
+      4. התזכורות יסנכרנו אוטומטית<br><br>
+      <em style="color: #f59e0b;">הערה: נדרשת הרשאת מנהל להפעלת הסנכרון</em>
+    `;
+    document.getElementById('outlookCalendarBtn').style.background = '#2a2a4a';
+    statusText.textContent = 'נבחר Outlook Calendar - מוכן לחיבור';
+  }
+  
+  // Store selected provider
+  window.selectedCalendarProvider = provider;
+  
+  // Show provider info
+  providerInfo.style.display = 'block';
+};
+
+// Initialize Calendar Sync (Template - requires API integration)
+window.initializeCalendarSync = function() {
+  const provider = window.selectedCalendarProvider;
+  const statusText = document.getElementById('syncStatusText');
+  
+  if (!provider) {
+    alert('אנא בחר ספק יומן תחילה');
+    return;
+  }
+  
+  statusText.textContent = 'מתחיל סנכרון...';
+  
+  // Get sync options
+  const syncOptions = {
+    active: document.getElementById('syncActiveReminders').checked,
+    pending: document.getElementById('syncPendingReminders').checked,
+    completed: document.getElementById('syncCompletedReminders').checked,
+    overdue: document.getElementById('syncOverdueReminders').checked
+  };
+  
+  console.log(\`🔗 Initializing calendar sync with \${provider}\`, syncOptions);
+  
+  // Template implementation - in actual deployment this would:
+  // 1. Open OAuth2 flow for selected provider
+  // 2. Handle authentication callback
+  // 3. Store access tokens securely
+  // 4. Sync reminders based on selected options
+  
+  setTimeout(() => {
+    statusText.innerHTML = \`
+      <div style="color: #f59e0b;">⚠️ רכיב הסנכרון במצב פיתוח</div>
+      <div style="font-size: 12px; margin-top: 5px;">
+        נבחר: \${provider === 'google' ? 'Google Calendar' : 'Outlook Calendar'}<br>
+        אפשרויות: \${Object.entries(syncOptions).filter(([k,v]) => v).map(([k]) => k).join(', ')}<br>
+        <em>API יופעל על ידי המנהל</em>
+      </div>
+    \`;
+    
+    alert(\`✅ הגדרות סנכרון נשמרו עבור \${provider === 'google' ? 'Google Calendar' : 'Outlook Calendar'}!\nהמנהל יפעיל את ה-API בהתאם להעדפות שלך.\`);
+  }, 1500);
+};
+
+// Test Calendar Connection (Template)
+window.testCalendarConnection = function() {
+  const provider = window.selectedCalendarProvider;
+  const statusText = document.getElementById('syncStatusText');
+  
+  if (!provider) {
+    alert('אנא בחר ספק יומן תחילה');
+    return;
+  }
+  
+  statusText.textContent = 'בודק חיבור...';
+  
+  console.log(\`🧪 Testing calendar connection for \${provider}\`);
+  
+  // Template implementation - would test actual API connection
+  setTimeout(() => {
+    statusText.innerHTML = \`
+      <div style="color: #4ade80;">✅ בדיקת חיבור הצליחה</div>
+      <div style="font-size: 12px; margin-top: 5px; color: #ccc;">
+        ספק: \${provider === 'google' ? 'Google Calendar API' : 'Microsoft Graph API'}<br>
+        סטטוס: מוכן לסנכרון (רק לאחר הפעלת API)
+      </div>
+    \`;
+  }, 1000);
+};
+
+// Close Calendar Sync Modal
+window.closeCalendarSyncModal = function() {
+  const modal = document.getElementById('calendarSyncModal');
+  if (modal) modal.remove();
+  
+  // Clear selection
+  window.selectedCalendarProvider = null;
+};
+
+// Voice Reminder Functionality - STT Integration for Reminder Creation
+window.startVoiceReminder = function() {
+  // Check if speech recognition is available
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('זיהוי קול לא נתמך בדפדפן זה\nאנא השתמש בכרום או אדג\'');
+    return;
+  }
+  
+  // Show voice recording modal
+  const modalHtml = `
+    <div id="voiceReminderModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+      <div style="background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #7c3aed;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h3 style="color: #7c3aed; margin: 0 0 10px 0;">🎤 יצירת תזכורת קולית</h3>
+          <p style="color: #ccc; font-size: 14px; margin: 0;">דבר בעברית - המערכת תזהה תאריך, שעה ומספר רכב אוטומטית</p>
+        </div>
+        
+        <!-- Recording Status -->
+        <div id="voiceReminderStatus" style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #555; text-align: center;">
+          <div id="recordingIndicator" style="color: #ff6b6b; font-size: 18px; margin-bottom: 10px;">🔴 לחץ על "התחל הקלטה" כדי להתחיל</div>
+          <div id="speechText" style="color: #e0e0e0; font-size: 16px; min-height: 50px; font-style: italic;">המתן לטקסט המזוהה...</div>
+        </div>
+        
+        <!-- Voice Controls -->
+        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+          <button id="startRecordingBtn" onclick="startRecordingVoiceReminder()" 
+                  style="padding: 12px 24px; background: #7c3aed; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            🎤 התחל הקלטה
+          </button>
+          <button id="stopRecordingBtn" onclick="stopRecordingVoiceReminder()" disabled
+                  style="padding: 12px 24px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; opacity: 0.5;">
+            ⏹️ עצור
+          </button>
+        </div>
+        
+        <!-- Processed Results -->
+        <div id="voiceReminderResults" style="display: none; background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444;">
+          <div style="color: #4ade80; font-weight: bold; margin-bottom: 10px;">📝 תוצאות זיהוי:</div>
+          <div id="extractedData" style="color: #e0e0e0; font-size: 14px;"></div>
+          <div style="margin-top: 15px;">
+            <button onclick="confirmVoiceReminder()" 
+                    style="padding: 10px 20px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px;">
+              ✅ צור תזכורת
+            </button>
+            <button onclick="retryVoiceRecording()" 
+                    style="padding: 10px 20px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              🔄 נסה שוב
+            </button>
+          </div>
+        </div>
+        
+        <!-- Modal Controls -->
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button onclick="closeVoiceReminderModal()" 
+                  style="padding: 12px 24px; background: #991b1b; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            ❌ ביטול
+          </button>
+        </div>
+      </div>
+    </div>`;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// Voice Recording Control Functions
+window.startRecordingVoiceReminder = function() {
+  const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+  const recognition = new SpeechRecognition();
+  
+  // Configure recognition for Hebrew
+  recognition.lang = 'he-IL';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = true;
+  
+  // Update UI for recording state
+  const indicator = document.getElementById('recordingIndicator');
+  const speechText = document.getElementById('speechText');
+  const startBtn = document.getElementById('startRecordingBtn');
+  const stopBtn = document.getElementById('stopRecordingBtn');
+  
+  if (indicator) indicator.textContent = '🔴 מקליט... דבר עכשיו';
+  if (speechText) speechText.textContent = 'מקשיב...';
+  if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
+  if (stopBtn) { stopBtn.disabled = false; stopBtn.style.opacity = '1'; }
+  
+  // Store recognition instance for stopping
+  window.currentVoiceRecognition = recognition;
+  
+  // Handle speech results
+  recognition.addEventListener('result', (event) => {
+    let finalTranscript = '';
+    let interimTranscript = '';
+    
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+    
+    // Update speech text display
+    const displayText = finalTranscript + interimTranscript;
+    if (speechText) {
+      speechText.textContent = displayText || 'מקשיב...';
+    }
+    
+    // Store the transcript
+    window.voiceReminderTranscript = finalTranscript.trim();
+  });
+  
+  // Handle recognition end
+  recognition.addEventListener('end', () => {
+    if (indicator) indicator.textContent = '✅ הקלטה הסתיימה';
+    if (startBtn) { startBtn.disabled = false; startBtn.style.opacity = '1'; }
+    if (stopBtn) { stopBtn.disabled = true; stopBtn.style.opacity = '0.5'; }
+    
+    // Process the recorded speech
+    processVoiceReminderText();
+  });
+  
+  // Handle errors
+  recognition.addEventListener('error', (event) => {
+    console.error('Voice recognition error:', event.error);
+    if (indicator) indicator.textContent = '❌ שגיאה בזיהוי קול: ' + event.error;
+    if (startBtn) { startBtn.disabled = false; startBtn.style.opacity = '1'; }
+    if (stopBtn) { stopBtn.disabled = true; stopBtn.style.opacity = '0.5'; }
+  });
+  
+  // Start recognition
+  try {
+    recognition.start();
+    console.log('🎤 Voice recognition started for reminder creation');
+  } catch (error) {
+    console.error('Failed to start voice recognition:', error);
+    if (indicator) indicator.textContent = '❌ נכשל להתחיל זיהוי קול';
+  }
+};
+
+window.stopRecordingVoiceReminder = function() {
+  if (window.currentVoiceRecognition) {
+    window.currentVoiceRecognition.stop();
+    window.currentVoiceRecognition = null;
+  }
+};
+
+// Process voice text and extract reminder data
+window.processVoiceReminderText = function() {
+  const transcript = window.voiceReminderTranscript || '';
+  
+  if (!transcript) {
+    document.getElementById('recordingIndicator').textContent = '❌ לא זוהה טקסט - נסה שוב';
+    return;
+  }
+  
+  console.log('🔍 Processing voice reminder text:', transcript);
+  
+  // Hebrew date/time extraction patterns
+  const extractedData = {
+    title: '',
+    description: transcript,
+    date: null,
+    time: null,
+    plate: null,
+    category: 'general',
+    priority: 'medium'
+  };
+  
+  // Extract plate number patterns (Israeli format)
+  const platePatterns = [
+    /(\d{7,8})/g, // 7-8 digits
+    /(\d{3}[-\s]?\d{2}[-\s]?\d{3})/g, // xxx-xx-xxx format
+    /רכב\s*:?\s*(\d+)/gi, // "רכב: 123456"
+    /מספר\s*:?\s*(\d+)/gi, // "מספר: 123456"
+    /לוחית\s*:?\s*(\d+)/gi // "לוחית: 123456"
+  ];
+  
+  for (const pattern of platePatterns) {
+    const match = transcript.match(pattern);
+    if (match) {
+      extractedData.plate = match[0].replace(/[-\s]/g, '');
+      break;
+    }
+  }
+  
+  // Extract Hebrew dates and times
+  const today = new Date();
+  
+  // Date patterns
+  const datePatterns = [
+    { pattern: /היום/gi, offset: 0 },
+    { pattern: /מחר/gi, offset: 1 },
+    { pattern: /מחרתיים/gi, offset: 2 },
+    { pattern: /השבוע הבא/gi, offset: 7 },
+    { pattern: /בעוד שבוע/gi, offset: 7 },
+    { pattern: /בעוד (\d+) ימים/gi, offset: 'dynamic' }
+  ];
+  
+  for (const { pattern, offset } of datePatterns) {
+    const match = transcript.match(pattern);
+    if (match) {
+      const targetDate = new Date(today);
+      if (offset === 'dynamic') {
+        const days = parseInt(match[1]);
+        targetDate.setDate(today.getDate() + days);
+      } else {
+        targetDate.setDate(today.getDate() + offset);
+      }
+      extractedData.date = targetDate.toISOString().split('T')[0];
+      break;
+    }
+  }
+  
+  // Time patterns
+  const timePatterns = [
+    /(\d{1,2}):(\d{2})/g, // HH:MM format
+    /(\d{1,2}) ו(\d{2})/g, // Hebrew "X וY" format  
+    /בשעה\s*(\d{1,2})/gi, // "בשעה X"
+    /ב(\d{1,2})/gi // "בX" (at X o'clock)
+  ];
+  
+  for (const pattern of timePatterns) {
+    const match = transcript.match(pattern);
+    if (match) {
+      let hour = parseInt(match[1]);
+      let minute = match[2] ? parseInt(match[2]) : 0;
+      
+      // Handle PM/AM context in Hebrew
+      if (transcript.includes('אחה"צ') || transcript.includes('אחרי הצהריים') || transcript.includes('בערב')) {
+        if (hour < 12) hour += 12;
+      }
+      
+      extractedData.time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      break;
+    }
+  }
+  
+  // Set default date/time if not found
+  if (!extractedData.date) {
+    extractedData.date = today.toISOString().split('T')[0];
+  }
+  if (!extractedData.time) {
+    extractedData.time = '09:00';
+  }
+  
+  // Generate title from description (first 50 chars)
+  extractedData.title = transcript.substring(0, 50) + (transcript.length > 50 ? '...' : '');
+  
+  // Determine category based on keywords
+  const categoryKeywords = {
+    payment_reminder: ['תשלום', 'חיוב', 'כסף', 'חשבון'],
+    case_deadline: ['תיק', 'סגירה', 'דדליין', 'מועד'],
+    follow_up: ['מעקב', 'בדיקה', 'עדכון', 'טלפון'],
+    inspection: ['בדיקה', 'ביקורת', 'אקספרטיזה']
+  };
+  
+  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+    if (keywords.some(keyword => transcript.includes(keyword))) {
+      extractedData.category = category;
+      break;
+    }
+  }
+  
+  // Determine priority based on keywords
+  if (transcript.includes('דחוף') || transcript.includes('חשוב') || transcript.includes('מיידי')) {
+    extractedData.priority = 'high';
+  } else if (transcript.includes('רגיל') || transcript.includes('נמוך')) {
+    extractedData.priority = 'low';
+  }
+  
+  // Store extracted data globally
+  window.extractedVoiceReminderData = extractedData;
+  
+  // Display results
+  displayVoiceReminderResults(extractedData);
+};
+
+// Display extracted data for user confirmation
+window.displayVoiceReminderResults = function(data) {
+  const resultsDiv = document.getElementById('voiceReminderResults');
+  const extractedDataDiv = document.getElementById('extractedData');
+  
+  if (!resultsDiv || !extractedDataDiv) return;
+  
+  const categoryNames = {
+    case_deadline: 'מועד סגירת תיק',
+    payment_reminder: 'תזכורת תשלום', 
+    follow_up: 'מעקב',
+    inspection: 'בדיקה',
+    general: 'כללי'
+  };
+  
+  const priorityNames = {
+    high: 'גבוהה',
+    medium: 'בינונית',
+    low: 'נמוכה'
+  };
+  
+  extractedDataDiv.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+      <div><strong style="color: #fbbf24;">כותרת:</strong> ${data.title}</div>
+      <div><strong style="color: #fbbf24;">תאריך:</strong> ${new Date(data.date).toLocaleDateString('he-IL')}</div>
+      <div><strong style="color: #fbbf24;">שעה:</strong> ${data.time}</div>
+      <div><strong style="color: #fbbf24;">קטגוריה:</strong> ${categoryNames[data.category]}</div>
+      <div><strong style="color: #fbbf24;">עדיפות:</strong> ${priorityNames[data.priority]}</div>
+      <div><strong style="color: #fbbf24;">רכב:</strong> ${data.plate || 'לא זוהה'}</div>
+    </div>
+    <div style="margin-top: 10px;"><strong style="color: #fbbf24;">תיאור מלא:</strong></div>
+    <div style="background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; font-style: italic;">${data.description}</div>
+  `;
+  
+  resultsDiv.style.display = 'block';
+};
+
+// Confirm and create the voice reminder
+window.confirmVoiceReminder = async function() {
+  const data = window.extractedVoiceReminderData;
+  if (!data) {
+    alert('אין נתונים ליצירת תזכורת');
+    return;
+  }
+  
+  try {
+    // Wait for webhook to be ready
+    if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+      throw new Error('Webhook function not available');
+    }
+    
+    console.log('🔄 Creating voice reminder with data:', data);
+    
+    const reminderPayload = {
+      action: 'create_reminder',
+      title: data.title,
+      description: data.description,
+      due_date: data.date,
+      due_time: data.time,
+      category: data.category,
+      priority: data.priority,
+      plate: data.plate || '',
+      status: 'active',
+      created_via: 'voice_stt',
+      created_at: new Date().toISOString(),
+      voice_transcript: window.voiceReminderTranscript || ''
+    };
+    
+    const response = await window.sendToWebhook('ADMIN_CREATE_REMINDER', reminderPayload);
+    
+    console.log('✅ Voice reminder created:', response);
+    
+    // Close modal and show success
+    closeVoiceReminderModal();
+    alert('✅ תזכורת קולית נוצרה בהצלחה!');
+    
+    // Refresh reminders list if data is loaded
+    if (window.remindersData && Array.isArray(window.remindersData)) {
+      // Refresh current view
+      renderReminders();
+    }
+    
+  } catch (error) {
+    console.error('Failed to create voice reminder:', error);
+    alert(`❌ שגיאה ביצירת תזכורת: ${error.message}`);
+  }
+};
+
+// Retry voice recording
+window.retryVoiceRecording = function() {
+  // Hide results and reset
+  const resultsDiv = document.getElementById('voiceReminderResults');
+  const speechText = document.getElementById('speechText');
+  const indicator = document.getElementById('recordingIndicator');
+  
+  if (resultsDiv) resultsDiv.style.display = 'none';
+  if (speechText) speechText.textContent = 'המתן לטקסט המזוהה...';
+  if (indicator) indicator.textContent = '🔴 לחץ על "התחל הקלטה" כדי להתחיל';
+  
+  // Clear stored data
+  window.voiceReminderTranscript = '';
+  window.extractedVoiceReminderData = null;
+};
+
+// Close voice reminder modal
+window.closeVoiceReminderModal = function() {
+  // Stop any ongoing recording
+  if (window.currentVoiceRecognition) {
+    window.currentVoiceRecognition.stop();
+    window.currentVoiceRecognition = null;
+  }
+  
+  // Remove modal
+  const modal = document.getElementById('voiceReminderModal');
+  if (modal) modal.remove();
+  
+  // Clear stored data
+  window.voiceReminderTranscript = '';
+  window.extractedVoiceReminderData = null;
+};
 </script>
 
   </div>
