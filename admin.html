@@ -461,6 +461,31 @@
     // Define performSearch function globally to be accessible by onclick
     window.performSearch = async function() {
       const resultsDiv = document.getElementById('trackingResults');
+      
+      // Check if any filters are set - if not, confirm search all
+      const hasAnyFilter = document.getElementById('plateFilter')?.value?.trim() ||
+                          document.getElementById('dateFrom')?.value ||
+                          document.getElementById('dateTo')?.value ||
+                          document.getElementById('statusFilter')?.value ||
+                          document.getElementById('manufacturerFilter')?.value?.trim() ||
+                          document.getElementById('ownerFilter')?.value?.trim() ||
+                          document.getElementById('garageFilter')?.value?.trim() ||
+                          document.getElementById('claimFilter')?.value ||
+                          document.getElementById('invoiceFilter')?.value ||
+                          document.getElementById('paymentFilter')?.value;
+                          
+      if (!hasAnyFilter) {
+        const confirmAll = confirm('לא נבחרו פילטרים - האם לחפש את כל התיקים במערכת?');
+        if (!confirmAll) {
+          resultsDiv.innerHTML = `
+            <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; color: #ccc; text-align: center;">
+              <p>החיפוש בוטל</p>
+              <p style="font-size: 12px; color: #999;">בחר פילטרים ונסה שוב</p>
+            </div>`;
+          return;
+        }
+      }
+      
       resultsDiv.innerHTML = `
         <div style="background: #333; padding: 12px; border-radius: 8px; border: 1px solid #555; color: #e0e0e0; text-align: center;">
           <h4 style="color: #ff6b35; margin-bottom: 8px;">🔍 מחפש לפי הפרמטרים שנבחרו</h4>
