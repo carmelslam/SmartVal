@@ -1083,7 +1083,7 @@ From admin panel screenshot analysis, the following menu buttons are non-functio
 - **Export:** CSV/Excel export functionality for filtered results
 - **Performance:** Pagination for large result sets
 
-#### 1.3 Reminders Management (רשימת תזכורות)
+#### 1.3 Reminders Management (רשימת תזכורות) ***DETAILED TASK PLAN BELOW.***
 **Functionality:** System-wide reminder and notification management
 - **Features:** Add/edit/delete reminders with due dates and categories
 - **Webhook:** `ADMIN_CREATE_REMINDER`
@@ -1481,3 +1481,161 @@ From admin panel screenshot analysis, the following menu buttons are non-functio
 
 ## Next Steps
 Both search modules in the admin panel are now fully functional with comprehensive export capabilities and standardized data structures ready for Make.com automation processing.
+
+
+---
+
+# Reminders Management Module - Complete Implementation Plan
+
+## Status: 🔄 PENDING IMPLEMENTATION
+
+### Task 1: Add Missing Webhook for Fetching Reminders
+- **Need:** `ADMIN_FETCH_REMINDERS` webhook in webhook.js ->  ADMIN_FETCH_REMINDERS: 'https://hook.eu2.make.com/td9fb37c83dcn9h6zxyoy0vekmglj14a'
+
+- **Function:** `fetchReminders()` to retrieve reminders from Make.com
+- **Purpose:** Load existing reminders before display/export
+
+### Task 2: Fix Filter Functionality
+- **Fix:** Connect filter button to actual data fetching
+- **Implementation:** Filter parameters sent to fetch webhook
+- **Result:** Working status and category filtering
+
+### Task 3: Implement Proper Export Flow
+- **Step 1:** Fetch reminders from Make.com with filters
+- **Step 2:** Display filtered results in UI
+- **Step 3:** Export displayed data using existing export webhook
+- **JSON:** Compatible with previous export reports structure
+
+### Task 4: Add Plate Number Field
+- **Location:** Add to reminder creation/edit forms
+- **Field:** Optional vehicle plate number input
+- **Purpose:** Link reminders to specific vehicles
+
+### Task 5: Build Functional Calendar View
+- **Replace:** Current placeholder with real calendar
+- **Features:** Monthly view, reminder indicators, clickable dates
+- **Position:** Between control buttons and results window
+- **Width:** Full width of container
+
+### Task 6: Update Data Flow Architecture
+- **Current:** Local data only → Webhook on action
+- **New:** Fetch from Make.com → Display → Filter → Export
+- **Benefit:** True integration with Make.com data source
+
+## Implementation Order:
+1. ✅ Add fetch webhook and function
+2. ✅ Fix filter functionality with data fetching
+3. ✅ Add plate number field to forms
+4. ✅ Build calendar view component
+5. ✅ Update export to use proper data flow
+6. 🔄 Test complete workflow
+
+## ✅ COMPLETED IMPLEMENTATION SUMMARY
+
+### Task 1: ✅ Added ADMIN_FETCH_REMINDERS Webhook
+- **File:** webhook.js
+- **Added:** `ADMIN_FETCH_REMINDERS: 'https://hook.eu2.make.com/td9fb37c83dcn9h6zxyoy0vekmglj14a'`
+- **Purpose:** Enable fetching reminders from Make.com backend
+
+### Task 2: ✅ Implemented fetchReminders() Function
+- **File:** admin.html
+- **Added:** `window.fetchReminders(statusFilter, categoryFilter)` function
+- **Features:**
+  - Fetches reminders from Make.com with filter parameters
+  - Updates local data with server response
+  - Handles both array and object response formats
+  - Includes comprehensive error handling
+  - Refreshes display after data fetch
+
+### Task 3: ✅ Fixed Filter Functionality
+- **File:** admin.html
+- **Updated:** `window.filterReminders()` function
+- **Changes:**
+  - Now async function that calls fetchReminders()
+  - Shows loading state during fetch
+  - Connects to real data fetching with server-side filtering
+  - Fallback to local filtering on error
+
+### Task 4: ✅ Added Plate Number Field
+- **File:** admin.html
+- **Added to forms:**
+  - Add reminder form: Optional plate number input field
+  - Edit reminder form: Pre-populated plate number field
+- **Updated functions:**
+  - `saveReminder()`: Now captures and saves plate number
+  - `updateReminder()`: Now updates plate number
+  - `renderReminders()`: Displays plate number when available
+  - `editReminder()`: Default reminder object includes plate field
+
+### Task 5: ✅ Built Functional Calendar View
+- **File:** admin.html
+- **Replaced:** Placeholder calendar with full functionality
+- **Features:**
+  - Monthly calendar grid with Hebrew month names
+  - Navigation buttons (previous/next month)
+  - Reminder indicators on dates with reminders
+  - Click on dates to view reminders for that day
+  - Color-coded reminder priority display
+  - Responsive design with proper styling
+- **Functions added:**
+  - `renderCalendar()`: Renders calendar with reminder indicators
+  - `previousMonth()`: Navigate to previous month
+  - `nextMonth()`: Navigate to next month
+  - `showDateReminders()`: Display reminders for selected date
+- **Integration:** Calendar updates when data changes
+
+### Task 6: ✅ Updated Export Flow
+- **File:** admin.html
+- **Updated:** `window.exportReminders()` function
+- **Changes:**
+  - Now fetches fresh data before export
+  - Uses proper data fetching workflow
+  - Sends to standardized export webhook
+  - Maintains JSON structure compatibility with previous exports
+  - Includes loading states and error handling
+  - Export data format matches system standards
+
+### Task 7: 🔄 Testing Complete Workflow
+- **Status:** Ready for testing
+- **Test scenarios:**
+  1. Create new reminder with plate number
+  2. Filter reminders by status and category
+  3. Switch between list and calendar views
+  4. Edit existing reminders
+  5. Export filtered reminder data
+  6. Verify Make.com integration
+
+## Technical Implementation Details:
+
+### Data Flow Architecture:
+- **Old:** Local mock data only
+- **New:** Make.com integration with fallback to local data
+- **Workflow:** Fetch → Filter → Display → Export
+
+### Key Functions:
+- `fetchReminders(statusFilter, categoryFilter)` - Fetch from Make.com
+- `filterReminders()` - Server-side filtering
+- `exportReminders()` - Proper export workflow
+- `renderCalendar()` - Calendar visualization
+- `saveReminder()` - Create with plate number
+- `updateReminder()` - Update with plate number
+
+### Calendar Features:
+- Hebrew month names and Sunday-first week
+- Visual reminder indicators with counts
+- Date click handlers for reminder details
+- Auto-refresh on data updates
+- Responsive grid layout
+
+### Export Integration:
+- JSON structure matches previous reports
+- Uses existing `ADMIN_EXPORT_SEARCH_RESULTS` webhook
+- Includes metadata: sender_id, export_date, data_type
+- Comprehensive error handling
+
+## Next Steps:
+1. Test complete workflow end-to-end
+2. Verify Make.com webhook responses
+3. Test edge cases and error scenarios
+4. Validate export data format
+5. Test calendar functionality with real data

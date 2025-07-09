@@ -506,14 +506,47 @@
             
             <!-- Calendar View (Hidden by default) -->
             <div id="remindersCalendarView" style="display: none;">
-              <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
-                <h3 style="color: #ff6b35; margin-bottom: 15px;">תצוגת יומן</h3>
-                <div style="color: #ccc; font-size: 16px;">
-                  <p>תצוגת יומן תהיה זמינה בגרסה הבאה</p>
-                  <p style="font-size: 14px; margin-top: 10px;">כרגע ניתן לצפות ולנהל תזכורות בתצוגת רשימה</p>
+              <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444;">
+                <h3 style="color: #ff6b35; margin-bottom: 15px; text-align: center;">📅 תצוגת יומן תזכורות</h3>
+                
+                <!-- Calendar Navigation -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                  <button onclick="previousMonth()" style="padding: 8px 16px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; cursor: pointer;">◀ הקודם</button>
+                  <h4 id="calendarMonth" style="color: #ff6b35; margin: 0;"></h4>
+                  <button onclick="nextMonth()" style="padding: 8px 16px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; cursor: pointer;">הבא ▶</button>
+                </div>
+                
+                <!-- Calendar Grid -->
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 20px;">
+                  <!-- Days of week headers -->
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">א</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ב</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ג</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ד</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ה</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ו</div>
+                  <div style="background: #333; color: #ff6b35; padding: 8px; text-align: center; font-weight: bold; border-radius: 4px;">ש</div>
+                </div>
+                
+                <!-- Calendar Days Container -->
+                <div id="calendarDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 20px;">
+                  <!-- Days will be populated by JavaScript -->
+                </div>
+                
+                <!-- Selected Date Reminders -->
+                <div id="selectedDateReminders" style="display: none; background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555;">
+                  <h4 style="color: #ff6b35; margin: 0 0 10px 0;">תזכורות ליום <span id="selectedDateText"></span></h4>
+                  <div id="selectedDateRemindersList"></div>
                 </div>
               </div>
             </div>`;
+            
+          // Fetch reminders when section loads
+          setTimeout(() => {
+            if (typeof window.fetchReminders === 'function') {
+              window.fetchReminders();
+            }
+          }, 200);
           break;
           
         case 'override':
@@ -1292,6 +1325,49 @@
     // Enhanced Reminders Management System with Modern Features
     window.remindersData = window.remindersData || [];
     
+    // Fetch reminders from Make.com 
+    window.fetchReminders = async function(statusFilter = 'all', categoryFilter = 'all') {
+      try {
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        console.log('🔄 Fetching reminders with filters:', { statusFilter, categoryFilter });
+        
+        const response = await window.sendToWebhook('ADMIN_FETCH_REMINDERS', {
+          action: 'fetch_reminders',
+          filters: {
+            status: statusFilter,
+            category: categoryFilter
+          },
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('📥 Fetched reminders:', response);
+        
+        // Update local data with fetched reminders
+        if (response && Array.isArray(response)) {
+          window.remindersData = response;
+        } else if (response && response.reminders && Array.isArray(response.reminders)) {
+          window.remindersData = response.reminders;
+        } else {
+          console.warn('No reminders found in response');
+          window.remindersData = [];
+        }
+        
+        // Refresh display
+        renderReminders(statusFilter, categoryFilter);
+        
+        return window.remindersData;
+      } catch (error) {
+        console.error('Error fetching reminders:', error);
+        // Keep existing data if fetch fails
+        renderReminders(statusFilter, categoryFilter);
+        throw error;
+      }
+    };
+    
     window.addReminder = function() {
       // Create modern form dialog
       const formHtml = `
@@ -1307,6 +1383,11 @@
             <div style="margin-bottom: 15px;">
               <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תיאור:</label>
               <textarea id="reminderDescription" placeholder="הכנס תיאור מפורט" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0; height: 80px; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">מספר רכב (אופציונלי):</label>
+              <input type="text" id="reminderPlate" placeholder="הכנס מספר רכב (אם רלוונטי)" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -1365,6 +1446,7 @@
     window.saveReminder = async function() {
       const title = document.getElementById('reminderTitle').value.trim();
       const description = document.getElementById('reminderDescription').value.trim();
+      const plate = document.getElementById('reminderPlate').value.trim();
       const date = document.getElementById('reminderDate').value;
       const time = document.getElementById('reminderTime').value;
       const category = document.getElementById('reminderCategory').value;
@@ -1379,6 +1461,7 @@
         id: Date.now(),
         title,
         description,
+        plate: plate || null,
         date,
         time,
         category,
@@ -1423,6 +1506,7 @@
         id: id,
         title: 'תזכורת לעריכה',
         description: 'תיאור התזכורת',
+        plate: null,
         date: new Date().toISOString().split('T')[0],
         time: '09:00',
         category: 'general',
@@ -1443,6 +1527,11 @@
             <div style="margin-bottom: 15px;">
               <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">תיאור:</label>
               <textarea id="reminderDescription" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0; height: 80px; resize: vertical;">${reminder.description}</textarea>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">מספר רכב (אופציונלי):</label>
+              <input type="text" id="reminderPlate" value="${reminder.plate || ''}" placeholder="הכנס מספר רכב (אם רלוונטי)" style="width: 100%; padding: 10px; border: 1px solid #555; border-radius: 6px; background: #444; color: #e0e0e0;">
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -1490,6 +1579,7 @@
     window.updateReminder = async function(id) {
       const title = document.getElementById('reminderTitle').value.trim();
       const description = document.getElementById('reminderDescription').value.trim();
+      const plate = document.getElementById('reminderPlate').value.trim();
       const date = document.getElementById('reminderDate').value;
       const time = document.getElementById('reminderTime').value;
       const category = document.getElementById('reminderCategory').value;
@@ -1504,6 +1594,7 @@
         id,
         title,
         description,
+        plate: plate || null,
         date,
         time,
         category,
@@ -1616,11 +1707,31 @@
       }
     };
     
-    window.filterReminders = function() {
+    window.filterReminders = async function() {
       const statusFilter = document.getElementById('statusFilter').value;
       const categoryFilter = document.getElementById('categoryFilter').value;
       
-      renderReminders(statusFilter, categoryFilter);
+      try {
+        // Show loading state
+        const remindersList = document.getElementById('remindersList');
+        if (remindersList) {
+          remindersList.innerHTML = `
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
+              <h3 style="color: #ff6b35;">🔄 מסנן תזכורות...</h3>
+              <p style="color: #ccc;">אנא המתן</p>
+            </div>`;
+        }
+        
+        // Fetch filtered reminders from Make.com
+        await fetchReminders(statusFilter, categoryFilter);
+        
+      } catch (error) {
+        console.error('Error filtering reminders:', error);
+        alert(`שגיאה בסינון תזכורות: ${error.message}`);
+        
+        // Fallback to local filtering
+        renderReminders(statusFilter, categoryFilter);
+      }
     };
     
     window.toggleView = function() {
@@ -1636,33 +1747,74 @@
         listView.style.display = 'none';
         calendarView.style.display = 'block';
         toggleText.textContent = 'תצוגת רשימה';
+        
+        // Render calendar when switching to calendar view
+        setTimeout(() => {
+          renderCalendar();
+        }, 100);
       }
     };
     
-    window.exportReminders = function() {
+    window.exportReminders = async function() {
       const statusFilter = document.getElementById('statusFilter').value;
       const categoryFilter = document.getElementById('categoryFilter').value;
       
-      let filteredData = window.remindersData;
-      
-      if (statusFilter !== 'all') {
-        filteredData = filteredData.filter(r => r.status === statusFilter);
+      try {
+        // Show loading
+        const originalButton = event.target;
+        const originalText = originalButton.innerHTML;
+        originalButton.innerHTML = '⏳ מייצא...';
+        originalButton.disabled = true;
+        
+        // Fetch fresh data before export
+        await fetchReminders(statusFilter, categoryFilter);
+        
+        // Wait for webhook to be ready
+        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
+          throw new Error('Webhook function not available');
+        }
+        
+        // Prepare export data in standardized format
+        const exportData = {
+          sender_id: 'רשימת תזכורות',
+          export_date: new Date().toISOString(),
+          export_type: 'filtered_reminders',
+          data_type: `תזכורות מסוננות - סטטוס: ${statusFilter === 'all' ? 'הכל' : statusFilter}, קטגוריה: ${categoryFilter === 'all' ? 'הכל' : categoryFilter}`,
+          filters: { status: statusFilter, category: categoryFilter },
+          total_reminders: window.remindersData.length,
+          data: window.remindersData
+        };
+        
+        console.log('🔄 Exporting reminders:', exportData);
+        
+        // Send to export webhook
+        const response = await window.sendToWebhook('ADMIN_EXPORT_SEARCH_RESULTS', exportData);
+        
+        console.log('📤 Export response:', response);
+        
+        // Show success
+        originalButton.innerHTML = '✅ יוצא בהצלחה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert('נתוני התזכורות יוצאו בהצלחה!');
+        
+      } catch (error) {
+        console.error('Export error:', error);
+        
+        // Show error
+        const originalButton = event.target;
+        const originalText = originalButton.innerHTML;
+        originalButton.innerHTML = '❌ שגיאה';
+        setTimeout(() => {
+          originalButton.innerHTML = originalText;
+          originalButton.disabled = false;
+        }, 2000);
+        
+        alert(`שגיאה בייצוא: ${error.message}`);
       }
-      
-      if (categoryFilter !== 'all') {
-        filteredData = filteredData.filter(r => r.category === categoryFilter);
-      }
-      
-      const exportData = {
-        sender_id: 'רשימת תזכורות',
-        export_date: new Date().toISOString(),
-        filters: { status: statusFilter, category: categoryFilter },
-        total_reminders: filteredData.length,
-        data: filteredData
-      };
-      
-      console.log('Exporting reminders:', exportData);
-      alert('נתוני התזכורות יוצאו בהצלחה!');
     };
     
     window.renderReminders = function(statusFilter = 'all', categoryFilter = 'all') {
@@ -1723,6 +1875,7 @@
               <div><strong style="color: #fbbf24;">קטגוריה:</strong> ${categoryNames[reminder.category]}</div>
               <div><strong style="color: #fbbf24;">עדיפות:</strong> ${priorityNames[reminder.priority]}</div>
               <div><strong style="color: #fbbf24;">נוצר:</strong> ${new Date(reminder.created).toLocaleDateString('he-IL')}</div>
+              ${reminder.plate ? `<div><strong style="color: #fbbf24;">מספר רכב:</strong> ${reminder.plate}</div>` : ''}
             </div>
             <p style="color: #e0e0e0; margin: 10px 0; font-size: 14px;">${reminder.description}</p>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -1749,6 +1902,148 @@
             </div>
           </div>`;
       }).join('');
+      
+      // Update calendar if it's currently visible
+      const calendarView = document.getElementById('remindersCalendarView');
+      if (calendarView && calendarView.style.display !== 'none') {
+        setTimeout(() => {
+          renderCalendar();
+        }, 100);
+      }
+    };
+
+    // Calendar functionality
+    window.currentCalendarDate = new Date();
+    
+    window.renderCalendar = function() {
+      const calendarDays = document.getElementById('calendarDays');
+      const calendarMonth = document.getElementById('calendarMonth');
+      
+      if (!calendarDays || !calendarMonth) return;
+      
+      const year = window.currentCalendarDate.getFullYear();
+      const month = window.currentCalendarDate.getMonth();
+      
+      // Hebrew month names
+      const monthNames = [
+        'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+      ];
+      
+      calendarMonth.textContent = `${monthNames[month]} ${year}`;
+      
+      // Get first day of month and days in month
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      
+      // Get the day of week for the first day (0 = Sunday, 6 = Saturday)
+      // Hebrew calendar starts with Sunday, so we need to adjust
+      const startingDayOfWeek = firstDay.getDay();
+      
+      // Clear calendar
+      calendarDays.innerHTML = '';
+      
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.style.cssText = 'background: #1a1a1a; padding: 12px; border-radius: 4px; min-height: 40px;';
+        calendarDays.appendChild(emptyDay);
+      }
+      
+      // Add days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayElement = document.createElement('div');
+        const currentDate = new Date(year, month, day);
+        const dateString = currentDate.toISOString().split('T')[0];
+        
+        // Check if this date has reminders
+        const dayReminders = window.remindersData.filter(r => r.date === dateString);
+        const hasReminders = dayReminders.length > 0;
+        
+        // Style based on whether it has reminders
+        const dayStyle = hasReminders 
+          ? 'background: #ff6b35; color: white; padding: 12px; border-radius: 4px; min-height: 40px; cursor: pointer; text-align: center; font-weight: bold; position: relative;'
+          : 'background: #444; color: #e0e0e0; padding: 12px; border-radius: 4px; min-height: 40px; cursor: pointer; text-align: center; hover:background: #555;';
+        
+        dayElement.style.cssText = dayStyle;
+        dayElement.innerHTML = `
+          <div>${day}</div>
+          ${hasReminders ? `<div style="position: absolute; top: 2px; right: 2px; background: #16a34a; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center;">${dayReminders.length}</div>` : ''}
+        `;
+        
+        // Add click handler
+        dayElement.onclick = () => showDateReminders(dateString, day);
+        
+        // Add hover effect
+        dayElement.onmouseover = () => {
+          if (!hasReminders) {
+            dayElement.style.background = '#555';
+          }
+        };
+        dayElement.onmouseout = () => {
+          if (!hasReminders) {
+            dayElement.style.background = '#444';
+          }
+        };
+        
+        calendarDays.appendChild(dayElement);
+      }
+    };
+    
+    window.previousMonth = function() {
+      window.currentCalendarDate.setMonth(window.currentCalendarDate.getMonth() - 1);
+      renderCalendar();
+    };
+    
+    window.nextMonth = function() {
+      window.currentCalendarDate.setMonth(window.currentCalendarDate.getMonth() + 1);
+      renderCalendar();
+    };
+    
+    window.showDateReminders = function(dateString, day) {
+      const dateReminders = window.remindersData.filter(r => r.date === dateString);
+      const selectedDateReminders = document.getElementById('selectedDateReminders');
+      const selectedDateText = document.getElementById('selectedDateText');
+      const selectedDateRemindersList = document.getElementById('selectedDateRemindersList');
+      
+      if (!selectedDateReminders || !selectedDateText || !selectedDateRemindersList) return;
+      
+      selectedDateText.textContent = `${day}/${window.currentCalendarDate.getMonth() + 1}/${window.currentCalendarDate.getFullYear()}`;
+      
+      if (dateReminders.length === 0) {
+        selectedDateRemindersList.innerHTML = '<p style="color: #ccc; text-align: center; margin: 10px 0;">אין תזכורות ליום זה</p>';
+      } else {
+        selectedDateRemindersList.innerHTML = dateReminders.map(reminder => {
+          const categoryNames = {
+            case_deadline: 'מועד סגירת תיק',
+            payment_reminder: 'תזכורת תשלום',
+            follow_up: 'מעקב',
+            inspection: 'בדיקה',
+            general: 'כללי'
+          };
+          
+          const priorityColors = {
+            high: '#dc2626',
+            medium: '#f59e0b',
+            low: '#16a34a'
+          };
+          
+          return `
+            <div style="background: #2a2a2a; padding: 10px; border-radius: 6px; margin: 5px 0; border: 1px solid #555;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <strong style="color: #4ade80;">${reminder.title}</strong>
+                <span style="background: ${priorityColors[reminder.priority]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${reminder.priority}</span>
+              </div>
+              <div style="font-size: 12px; color: #ccc; margin-bottom: 5px;">${reminder.time || '09:00'} | ${categoryNames[reminder.category]}</div>
+              <div style="color: #e0e0e0; font-size: 13px;">${reminder.description}</div>
+              ${reminder.plate ? `<div style="color: #fbbf24; font-size: 12px; margin-top: 5px;">רכב: ${reminder.plate}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+      
+      selectedDateReminders.style.display = 'block';
     };
 
     window.loadCaseForEdit = function() {
