@@ -603,44 +603,56 @@
       alert('✅ היומן רוענן בהצלחה!');
     };
     
-    window.exportLog = function(format) {
-      addLogEntry('user_action', 'info', 'admin', `יצוא יומן בפורמט ${format}`);
+    window.exportLogCSV = function() {
+      addLogEntry('user_action', 'info', 'admin', 'יצוא יומן לקובץ CSV');
       
       try {
-        let exportData, fileName, mimeType;
+        // Create CSV headers in Hebrew
+        const headers = ['תאריך ושעה', 'סוג פעולה', 'רמת חשיבות', 'מודול', 'תיאור', 'מספר רכב', 'פרטים נוספים'];
         
-        if (format === 'json') {
-          exportData = JSON.stringify(filteredLogData, null, 2);
-          fileName = `action_log_${new Date().toISOString().split('T')[0]}.json`;
-          mimeType = 'application/json';
-        } else if (format === 'csv') {
-          const headers = ['זמן', 'סוג', 'רמה', 'מודול', 'הודעה', 'רכב', 'פרטים'];
-          const rows = filteredLogData.map(entry => [
-            formatTimestamp(entry.timestamp),
-            entry.type,
-            entry.level,
-            entry.module,
-            entry.message,
-            entry.plate || '',
-            JSON.stringify(entry.details)
-          ]);
-          exportData = [headers, ...rows].map(row => row.join(',')).join('\n');
-          fileName = `action_log_${new Date().toISOString().split('T')[0]}.csv`;
-          mimeType = 'text/csv';
-        }
+        // Convert log data to CSV format
+        const csvRows = [];
+        csvRows.push(headers.join(','));
         
-        const blob = new Blob([exportData], { type: mimeType });
+        filteredLogData.forEach(entry => {
+          const row = [
+            `"${formatTimestamp(entry.timestamp)}"`,
+            `"${entry.type}"`,
+            `"${entry.level}"`,
+            `"${entry.module}"`,
+            `"${entry.message.replace(/"/g, '""')}"`, // Escape quotes in message
+            `"${entry.plate || ''}"`,
+            `"${Object.entries(entry.details).map(([key, value]) => `${key}: ${value}`).join('; ').replace(/"/g, '""')}"`
+          ];
+          csvRows.push(row.join(','));
+        });
+        
+        // Create CSV content with UTF-8 BOM for Hebrew support
+        const csvContent = '\uFEFF' + csvRows.join('\n');
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        const link = document.createElement('a');
+        
+        const today = new Date().toISOString().split('T')[0];
+        const fileName = `action_log_${today}.csv`;
+        
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
         URL.revokeObjectURL(url);
         
-        alert(`✅ יומן יוצא בהצלחה כקובץ ${format.toUpperCase()}!`);
+        alert(`✅ יומן יוצא בהצלחה כקובץ CSV!\nשם הקובץ: ${fileName}\nכמות רשומות: ${filteredLogData.length}`);
+        
       } catch (error) {
-        console.error('Export failed:', error);
-        alert(`❌ שגיאה בייצוא: ${error.message}`);
+        console.error('CSV Export failed:', error);
+        alert(`❌ שגיאה בייצוא קובץ CSV: ${error.message}`);
       }
     };
     
@@ -1097,8 +1109,7 @@
             <!-- Action Buttons - Centered -->
             <div style="margin-bottom: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
               <button onclick="window.refreshLog()" style="padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🔄 רענן יומן</button>
-              <button onclick="window.exportLog('json')" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📤 יצא JSON</button>
-              <button onclick="window.exportLog('csv')" style="padding: 6px 12px; background: #ffc107; color: #333; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📊 יצא CSV</button>
+              <button onclick="window.exportLogCSV()" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📊 יצא CSV</button>
               <button onclick="window.clearLogs()" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🗑️ נקה יומן</button>
             </div>
             
