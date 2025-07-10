@@ -4446,9 +4446,6 @@
 <script>
 // Global dev access function - non-module script for immediate availability
 async function verifyDevAccess() {
-  const password = prompt("Enter developer password:");
-  if (!password) return;
-  
   // Get button reference
   const submitBtn = document.getElementById('devButton');
   const originalText = submitBtn?.textContent || 'Developer Panel';
@@ -4459,7 +4456,6 @@ async function verifyDevAccess() {
       submitBtn.disabled = true;
       submitBtn.textContent = 'מתחבר למערכת...';
     }
-    
     
     // Import webhooks dynamically with fallback
     let sendToWebhook;
@@ -4483,10 +4479,10 @@ async function verifyDevAccess() {
     if (sendToWebhook) {
       console.log('🔍 Attempting DEV_HUB webhook verification via sendToWebhook...');
       response = await sendToWebhook('DEV_HUB', { 
-        password,
-        action: 'dev_login',
+        action: 'dev_access_request',
         timestamp: new Date().toISOString(),
-        user_auth: sessionStorage.getItem('auth')
+        user_auth: sessionStorage.getItem('auth'),
+        request_type: 'dev_panel_access'
       });
     } else {
       console.log('🔍 Attempting DEV_HUB webhook verification via direct fetch...');
@@ -4494,10 +4490,10 @@ async function verifyDevAccess() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          password,
-          action: 'dev_login',
+          action: 'dev_access_request',
           timestamp: new Date().toISOString(),
-          user_auth: sessionStorage.getItem('auth')
+          user_auth: sessionStorage.getItem('auth'),
+          request_type: 'dev_panel_access'
         })
       });
       
