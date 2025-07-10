@@ -594,7 +594,7 @@ class SecurityManager {
   }
 
   sendSecurityEventToServer(event) {
-    // Only send critical security events to server
+    // Only log critical security events locally (no server endpoints available on static site)
     const criticalEvents = [
       'suspicious_activity_detected',
       'rate_limit_exceeded',
@@ -604,16 +604,12 @@ class SecurityManager {
     ];
     
     if (criticalEvents.includes(event.type)) {
-      fetch('/api/security/log', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': sessionStorage.getItem('csrfToken')
-        },
-        body: JSON.stringify(event)
-      }).catch(error => {
-        console.error('Failed to send security event to server:', error);
-      });
+      // Log critical security events to console for monitoring
+      console.warn('🔒 Critical Security Event:', event.type, event);
+      
+      // Note: In a production environment with a backend, this would send to a security monitoring service
+      // Example: SecurityService.reportEvent(event);
+      // For static sites, consider integrating with external security monitoring services
     }
   }
 

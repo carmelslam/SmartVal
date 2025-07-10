@@ -394,22 +394,15 @@ class EnvironmentConfig {
   }
 
   sendErrorReport(errorInfo) {
-    // Only send in staging/production
-    if (this.environment === 'development') {
-      console.error('💥 Error Report:', errorInfo);
-      return;
-    }
+    // Log error locally for all environments
+    console.error('💥 Error Report:', errorInfo);
     
-    // Send to error reporting service
-    fetch(this.config.API_BASE_URL + '/errors', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(errorInfo)
-    }).catch(err => {
-      console.error('Failed to send error report:', err);
-    });
+    // Note: Since this is a static site on Netlify, we don't have server-side API endpoints
+    // Error reporting is handled locally through console logging
+    // In a production environment with a backend, this would send to a proper error reporting service
+    
+    // Optional: Could integrate with external error reporting services like Sentry, LogRocket, etc.
+    // Example: Sentry.captureException(errorInfo);
   }
 
   setupAnalytics() {
