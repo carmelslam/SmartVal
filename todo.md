@@ -1210,6 +1210,7 @@ Data is inside the same square fields as we have now .
     3. You need to build a comprehensive guide for this assistant to be able to answer complex and technical questions about the system operation and help the user with the work flow 
     4. Add a functionality for this assistant to display a graphic workflow , and also to suggest next step once the user finishes a step / action . 
     5. This assistant is very useful and needs to be smart if it's just for "show off" it's not needed .
+    6. add an extensive assistance to the admin hub and its modules .
 
 13. Push notifications: ***status : chrome and iphone can subscribe , mac safari doesnt register subscribtion , iphone recieves push, mac doesnt recive push messages despite chrome has been subscribed*** the one signal still doesn't work , we don't have a subscription prompt and notification are not displayed. The current setup of the notification is already working on another demo system Tevin has before , so it needs to work here too . In all pages we have this message in the top left :התראות כבויות that opened a message : לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן. But there is no option to enable notifications since there is no prompt received . 
 
