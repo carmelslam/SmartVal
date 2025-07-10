@@ -400,13 +400,36 @@
           submitBtn.disabled = true;
           submitBtn.textContent = 'שומר הגדרות...';
           
-          // Save VAT locally only (no webhook needed)
+          // Save VAT to all storage locations
           MathEngine.setVatRate(vat);
           sessionStorage.setItem('globalVAT', vat.toString());
           localStorage.setItem('globalVAT', vat.toString());
           
+          // Update helper data if available
+          if (typeof window.updateHelper === 'function') {
+            window.updateHelper('fees', { vat_percent: vat });
+          }
+          
+          // Trigger recalculations if updateCalculations is available
+          if (typeof window.updateCalculations === 'function') {
+            window.updateCalculations();
+          }
+          
+          // Update any visible VAT fields in the UI
+          const vatFields = document.querySelectorAll('input[id*="vat"], input[id*="VAT"], input[class*="vat"]');
+          vatFields.forEach(field => {
+            if (field.id !== 'vat-input' && field.type === 'number') {
+              field.value = vat;
+            }
+          });
+          
+          // Dispatch custom event for other modules to listen to
+          window.dispatchEvent(new CustomEvent('vatUpdated', { 
+            detail: { newVatRate: vat }
+          }));
+          
           submitBtn.textContent = '✅ נשמר בהצלחה';
-          alert(`✅ מע"מ עודכן ל-${vat}% במערכת`);
+          alert(`✅ מע"מ עודכן ל-${vat}% במערכת\nכל החישובים והשדות יעודכנו אוטומטית`);
           
         } catch (error) {
           console.error('VAT save error:', error);

@@ -27,6 +27,14 @@ function init() {
   ['travel_fee', 'media_fee', 'office_fee'].forEach(id => {
     $(id).addEventListener('input', calculateFees);
   });
+  
+  // Listen for VAT updates from admin panel
+  window.addEventListener('vatUpdated', (event) => {
+    const newVatRate = event.detail.newVatRate;
+    $('vat_rate').value = newVatRate;
+    calculateFees(); // Recalculate fees with new VAT
+    console.log(`Fee module updated with new VAT rate: ${newVatRate}%`);
+  });
 
   $('saveBtn').addEventListener('click', saveFees);
 }

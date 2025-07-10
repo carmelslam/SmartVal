@@ -649,6 +649,11 @@ export function updateCalculations() {
   const marketValue = parseFloat(helper.expertise.levi_report?.final_price) || parseFloat(helper.levisummary?.final_price) || 0;
   const shavehPercent = parseFloat(helper.vehicle?.shaveh_percent) || 0;
   const vatRate = parseFloat(helper.fees?.vat_percent) || MathEngine.getVatRate();
+  
+  // Update helper with current VAT rate to ensure consistency
+  if (helper.fees && !helper.fees.vat_percent) {
+    helper.fees.vat_percent = vatRate;
+  }
 
   const fees = {
     photos: parseFloat(helper.fees?.photos) || 0,
@@ -775,3 +780,6 @@ export function syncVehicleData(vehicleData) {
 
 
 window.addEventListener('DOMContentLoaded', loadHelperFromStorage);
+
+// Make updateCalculations globally available for VAT updates
+window.updateCalculations = updateCalculations;

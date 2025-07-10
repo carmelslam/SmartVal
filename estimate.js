@@ -71,6 +71,16 @@ const EstimateEngine = {
       if (e.target.matches('.add-part-row')) this.addPartRow(e.target.dataset.centerId);
       if (e.target.matches('.add-repair-row')) this.addRepairRow(e.target.dataset.centerId);
     });
+    
+    // Listen for VAT updates from admin panel
+    window.addEventListener('vatUpdated', (event) => {
+      const newVatRate = event.detail.newVatRate;
+      const vatField = document.getElementById('vat-percent');
+      if (vatField) {
+        vatField.value = newVatRate;
+        console.log(`Estimate module updated with new VAT rate: ${newVatRate}%`);
+      }
+    });
 
     // Auto-save on input changes
     document.addEventListener('input', (e) => {
