@@ -818,10 +818,10 @@
             
             <!-- Action Buttons - Centered -->
             <div style="margin-bottom: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-              <button onclick="refreshLog()" style="padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🔄 רענן יומן</button>
-              <button onclick="exportLog('json')" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📤 יצא JSON</button>
-              <button onclick="exportLog('csv')" style="padding: 6px 12px; background: #ffc107; color: #333; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📊 יצא CSV</button>
-              <button onclick="clearLogs()" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🗑️ נקה יומן</button>
+              <button onclick="window.refreshLog()" style="padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🔄 רענן יומן</button>
+              <button onclick="window.exportLog('json')" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📤 יצא JSON</button>
+              <button onclick="window.exportLog('csv')" style="padding: 6px 12px; background: #ffc107; color: #333; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">📊 יצא CSV</button>
+              <button onclick="window.clearLogs()" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🗑️ נקה יומן</button>
             </div>
             
             <!-- Log Filters -->
@@ -855,8 +855,8 @@
                 <input type="date" id="logDateTo" style="padding: 6px; font-size: 12px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px;">
               </div>
               <div style="text-align: center;">
-                <button onclick="applyLogFilters()" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 5px;">החל סינון</button>
-                <button onclick="clearLogFilters()" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 5px;">נקה סינון</button>
+                <button onclick="window.applyLogFilters()" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 5px;">החל סינון</button>
+                <button onclick="window.clearLogFilters()" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 5px;">נקה סינון</button>
               </div>
             </div>
             
@@ -5074,13 +5074,13 @@ function displayLogs(logs) {
             <span style="font-weight: 600; color: ${levelColor}; font-size: 11px;">${log.level.toUpperCase()}</span>
             <span style="color: #999; font-size: 11px;">${log.module}</span>
           </div>
-          <span style="color: #888; font-size: 10px;">${formattedDate}</span>
+          <span style="color: #888; font-size: 9px;">${formattedDate}</span>
         </div>
         <div style="margin-bottom: 3px;">
-          <strong style="color: #ff6b35; font-size: 12px;">${log.action}</strong>
-          ${log.case_id ? `<span style="color: #ccc; font-size: 10px; margin-right: 8px;">תיק: ${log.case_id}</span>` : ''}
+          <strong style="color: #ff6b35; font-size: 9px;">${log.action}</strong>
+          ${log.case_id ? `<span style="color: #ccc; font-size: 8px; margin-right: 8px;">תיק: ${log.case_id}</span>` : ''}
         </div>
-        <div style="color: #e0e0e0; font-size: 11px; line-height: 1.3;">${log.message}</div>
+        <div style="color: #e0e0e0; font-size: 8px; line-height: 1.2;">${log.message}</div>
         ${log.metadata && Object.keys(log.metadata).length > 0 ? `
           <details style="margin-top: 4px;">
             <summary style="color: #999; font-size: 10px; cursor: pointer;">פרטים נוספים</summary>
@@ -5138,7 +5138,7 @@ function updateLogStatistics(logs) {
   const levelStats = Object.entries(stats.byLevel).map(([level, count]) => `${level}: ${count}`).join(' | ');
   
   logStats.innerHTML = `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 11px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; font-size: 9px;">
       <div><strong style="color: #ff6b35;">סה"כ רשומות:</strong> <span style="color: #ccc;">${stats.total}</span></div>
       <div><strong style="color: #ff6b35;">לפי סוג:</strong> <span style="color: #ccc;">${typeStats}</span></div>
       <div><strong style="color: #ff6b35;">לפי רמה:</strong> <span style="color: #ccc;">${levelStats}</span></div>
@@ -5187,40 +5187,54 @@ function applyFilters(logs) {
 
 // Apply log filters
 window.applyLogFilters = function() {
-  currentLogFilters = {
-    logType: document.getElementById('logTypeFilter').value,
-    level: document.getElementById('logLevelFilter').value,
-    module: document.getElementById('logModuleFilter').value,
-    searchText: document.getElementById('logSearchText').value.trim(),
-    startDate: document.getElementById('logDateFrom').value,
-    endDate: document.getElementById('logDateTo').value
-  };
-  
-  const filteredLogs = applyFilters(allLogs);
-  displayLogs(filteredLogs);
+  try {
+    currentLogFilters = {
+      logType: document.getElementById('logTypeFilter').value,
+      level: document.getElementById('logLevelFilter').value,
+      module: document.getElementById('logModuleFilter').value,
+      searchText: document.getElementById('logSearchText').value.trim(),
+      startDate: document.getElementById('logDateFrom').value,
+      endDate: document.getElementById('logDateTo').value
+    };
+    
+    console.log('Applying filters:', currentLogFilters);
+    const filteredLogs = applyFilters(allLogs);
+    displayLogs(filteredLogs);
+    alert(`סונן יומן: נמצאו ${filteredLogs.length} רשומות`);
+  } catch (error) {
+    console.error('Error applying filters:', error);
+    alert('שגיאה בסינון יומן');
+  }
 };
 
 // Clear log filters
 window.clearLogFilters = function() {
-  document.getElementById('logTypeFilter').value = '';
-  document.getElementById('logLevelFilter').value = '';
-  document.getElementById('logModuleFilter').value = '';
-  document.getElementById('logSearchText').value = '';
-  document.getElementById('logDateFrom').value = '';
-  document.getElementById('logDateTo').value = '';
-  
-  currentLogFilters = {};
-  displayLogs(allLogs);
+  try {
+    document.getElementById('logTypeFilter').value = '';
+    document.getElementById('logLevelFilter').value = '';
+    document.getElementById('logModuleFilter').value = '';
+    document.getElementById('logSearchText').value = '';
+    document.getElementById('logDateFrom').value = '';
+    document.getElementById('logDateTo').value = '';
+    
+    currentLogFilters = {};
+    displayLogs(allLogs);
+    alert('סינון נוקה - מציג את כל הרשומות');
+  } catch (error) {
+    console.error('Error clearing filters:', error);
+    alert('שגיאה בניקוי סינון');
+  }
 };
 
 // Export logs
 window.exportLog = function(format = 'json') {
-  const filteredLogs = applyFilters(allLogs);
-  
-  if (filteredLogs.length === 0) {
-    alert('אין רשומות יומן לייצוא');
-    return;
-  }
+  try {
+    const filteredLogs = applyFilters(allLogs);
+    
+    if (filteredLogs.length === 0) {
+      alert('אין רשומות יומן לייצוא');
+      return;
+    }
   
   let exportData;
   let filename;
@@ -5253,17 +5267,28 @@ window.exportLog = function(format = 'json') {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  
+  alert(`יוצא ${filteredLogs.length} רשומות יומן כ-${format.toUpperCase()}`);
+  } catch (error) {
+    console.error('Error exporting logs:', error);
+    alert('שגיאה בייצוא יומן');
+  }
 };
 
 // Clear logs
 window.clearLogs = function() {
-  if (confirm('האם אתה בטוח שברצונך לנקות את כל היומן? פעולה זו לא ניתנת לביטול.')) {
-    localStorage.removeItem('system-logs');
-    localStorage.removeItem('admin-action-logs');
-    allLogs = [];
-    displayLogs([]);
-    updateLogStatistics([]);
-    alert('היומן נוקה בהצלחה');
+  try {
+    if (confirm('האם אתה בטוח שברצונך לנקות את כל היומן? פעולה זו לא ניתנת לביטול.')) {
+      localStorage.removeItem('system-logs');
+      localStorage.removeItem('admin-action-logs');
+      allLogs = [];
+      displayLogs([]);
+      updateLogStatistics([]);
+      alert('היומן נוקה בהצלחה');
+    }
+  } catch (error) {
+    console.error('Error clearing logs:', error);
+    alert('שגיאה בניקוי יומן');
   }
 };
 
@@ -5284,16 +5309,68 @@ function logsToCSV(logs) {
   return [headers, ...rows].map(row => row.join(',')).join('\n');
 }
 
-// Auto-refresh logs when log view is loaded
-const originalLoadSection = loadSection;
-loadSection = function(id) {
-  originalLoadSection(id);
-  if (id === 'logView') {
-    setTimeout(() => {
-      refreshLog();
-    }, 100);
-  }
+// Create test logs if none exist
+window.createTestLogs = function() {
+  const testLogs = [
+    {
+      log_id: 'test-1',
+      timestamp: new Date().toISOString(),
+      log_type: 'user_action',
+      level: 'info',
+      module: 'admin',
+      action: 'login',
+      message: 'משתמש נכנס למערכת הניהול',
+      case_id: '',
+      user_id: 'admin'
+    },
+    {
+      log_id: 'test-2',
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      log_type: 'system_event',
+      level: 'info',
+      module: 'webhook',
+      action: 'send_request',
+      message: 'נשלח בקשה ל-ADMIN_HUB',
+      case_id: '123-45-678',
+      user_id: 'system'
+    },
+    {
+      log_id: 'test-3',
+      timestamp: new Date(Date.now() - 7200000).toISOString(),
+      log_type: 'error',
+      level: 'warn',
+      module: 'auth',
+      action: 'decrypt_failed',
+      message: 'נכשל פענוח סיסמה - נסיון חוזר',
+      case_id: '',
+      user_id: 'user'
+    }
+  ];
+  
+  localStorage.setItem('system-logs', JSON.stringify(testLogs));
+  console.log('Test logs created');
 };
+
+// Auto-refresh logs when log view is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  const originalLoadSection = window.loadSection;
+  window.loadSection = function(id) {
+    originalLoadSection(id);
+    if (id === 'logView') {
+      setTimeout(() => {
+        // Create test logs if none exist
+        const existingLogs = localStorage.getItem('system-logs');
+        if (!existingLogs || JSON.parse(existingLogs).length === 0) {
+          window.createTestLogs();
+        }
+        
+        if (typeof window.refreshLog === 'function') {
+          window.refreshLog();
+        }
+      }, 200);
+    }
+  };
+});
 </script>
 
   </div>
