@@ -1164,6 +1164,7 @@ Data is inside the same square fields as we have now .
 20. is Nicole expecting a voice input by default ? current issue :inconsistant error ,  if a query was sent using the plate number or the text input or both but not usin STT voice query, the webhook sometimes returns false, and creates an error .
 change the page title from  ניקול – עוזרת דיגיטלית to   ניקול – מנהלת הידע
 
+21. automatic logout should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
 
 16. in selection page move the expertise summary to be under the wizard 
 **. General :**
