@@ -1214,7 +1214,7 @@ From admin panel screenshot analysis, the following menu buttons are non-functio
 - **Loading UX:** Single request with unified loading state
 - **Error Handling:** Comprehensive error messages in Hebrew
 
-#### 1.2 Field Review (סקירה לפי שדות) ✅
+#### 1.2 Field Review (סקירה לפי שדות) ✅ ***needs some css adjustment for mobile - form container is too narrow, date fields are wider than teh other fields - needs fixing ***.
 **Functionality:** Multiple case search and filtering system
 - **Purpose:** Administrative overview of multiple cases with filtering
 - **Filters:** Date range, status, case type, garage, completion stage
@@ -1238,6 +1238,8 @@ From admin panel screenshot analysis, the following menu buttons are non-functio
 - **Webhook:** Various webhooks depending on data type being modified
 - **Audit Trail:** Complete logging of all administrative changes
 - **Permissions:** Multi-level approval for critical data changes
+-**vat change:** the vat change option and functionalty needs to be moved inside this section , not to be in the admin home page. 
+- **module layout** : arrange layout based on functinality , vat adjustments/ definition, needs ti be seperated from file data and so on. 
 
 #### 1.5 Action Log (יומן פעולות)
 **Functionality:** System activity monitoring and audit trail
