@@ -485,7 +485,7 @@
             <strong>סוג אימות:</strong> נתוני ההפעלה הנוכחית בלבד
           </div>
           <div class="info-item">
-            <strong>מקור נתונים:</strong> התיק הפעיל כרגע ב-helper.js
+            <strong>מקור נתונים:</strong> התיק הפעיל כרגע במערכת
           </div>
           <div class="info-item">
             <strong>מטרה:</strong> בקרת איכות לפני הפקת דוחות
@@ -598,20 +598,90 @@
         </div>
       </div>
 
-      <!-- Business Rules Card -->
+      <!-- Invoice Status Card -->
       <div class="card">
-        <h3>📊 חוקי עסק <span class="status-indicator" id="business-status"></span></h3>
+        <h3>🧾 סטטוס חשבוניות <span class="status-indicator" id="invoice-status"></span></h3>
         <div class="metric">
-          <span class="metric-label">יחס עלות חלקים/עבודה:</span>
-          <span class="metric-value" id="cost-ratio">-</span>
+          <span class="metric-label">דרוש חשבונית:</span>
+          <span class="metric-value" id="invoice-required">בודק...</span>
         </div>
         <div class="metric">
-          <span class="metric-label">סה"כ הערכה:</span>
-          <span class="metric-value" id="total-estimate">₪0</span>
+          <span class="metric-label">חשבונית התקבלה:</span>
+          <span class="metric-value" id="invoice-received">לא</span>
         </div>
         <div class="metric">
-          <span class="metric-label">סטטוס בדיקה:</span>
-          <span class="metric-value" id="business-validation">בדיקה...</span>
+          <span class="metric-label">סה"כ מחשבונית:</span>
+          <span class="metric-value" id="invoice-total">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="invoice-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Levi Adjustments Card -->
+      <div class="card">
+        <h3>📈 התאמות לוי יצחק <span class="status-indicator" id="levi-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">דוח לוי קיים:</span>
+          <span class="metric-value" id="levi-exists">לא</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">שווי שוק:</span>
+          <span class="metric-value" id="market-value">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">התאמות מחיר:</span>
+          <span class="metric-value" id="price-adjustments">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="levi-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Depreciation Card -->
+      <div class="card">
+        <h3>📉 ירידת ערך <span class="status-indicator" id="depreciation-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">ירידת ערך הוגדרה:</span>
+          <span class="metric-value" id="depreciation-defined">לא</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סכום ירידת ערך:</span>
+          <span class="metric-value" id="depreciation-amount">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">אחוז ירידת ערך:</span>
+          <span class="metric-value" id="depreciation-percentage">0%</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="depreciation-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Professional Standards Card -->
+      <div class="card">
+        <h3>⚖️ תקנים מקצועיים <span class="status-indicator" id="professional-status"></span></h3>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('timeline')">
+          <span class="metric-label">ימים מיצירת אקספרטיזה:</span>
+          <span class="metric-value" id="case-age">0</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('completeness')">
+          <span class="metric-label">אחוז השלמת תיעוד:</span>
+          <span class="metric-value" id="documentation-completeness">0%</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('readiness')">
+          <span class="metric-label">מוכנות לדוח סופי:</span>
+          <span class="metric-value" id="report-readiness">לא מוכן</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס מקצועי:</span>
+          <span class="metric-value" id="professional-validation">בדיקה...</span>
         </div>
       </div>
     </div>
@@ -769,7 +839,10 @@
         updateWarnings(summary);
         updateVehicleData(summary);
         updateDamageData(summary);
-        updateBusinessRules(summary);
+        updateInvoiceStatus(summary);
+        updateLeviData(summary);
+        updateDepreciationData(summary);
+        updateProfessionalStandards(summary);
         
         // Update last check time
         document.getElementById('last-check').textContent = new Date().toLocaleTimeString('he-IL');
@@ -791,7 +864,10 @@
           updateWarnings(fallbackSummary);
           updateVehicleData(fallbackSummary);
           updateDamageData(fallbackSummary);
-          updateBusinessRules(fallbackSummary);
+          updateInvoiceStatus(fallbackSummary);
+          updateLeviData(fallbackSummary);
+          updateDepreciationData(fallbackSummary);
+          updateProfessionalStandards(fallbackSummary);
         } catch (fallbackError) {
           console.error('❌ Fallback also failed:', fallbackError);
         }
@@ -824,16 +900,50 @@
         damageErrors.push('לא הוגדרו מוקדי נזק');
       }
       
-      // Check business rules
-      const businessErrors = [];
-      const businessWarnings = [];
+      // Check invoice requirements (conditional based on report type)
+      const invoiceErrors = [];
+      const invoiceWarnings = [];
+      const reportType = helperData.meta?.report_type || '';
+      const finalReportTypes = ['final', 'Final_Private', 'Final_Global', 'Final_Total', 'Final_Sale'];
+      const invoiceRequired = finalReportTypes.some(type => reportType.includes(type));
       
-      if (centers.length > 10) {
-        businessWarnings.push('מספר מוקדי נזק גבוה מהרגיל');
+      if (invoiceRequired && !helperData.invoice_uploaded && !helperData.invoice_summary) {
+        invoiceErrors.push('דוח סופי דורש חשבונית');
+      }
+
+      // Check Levi report
+      const leviErrors = [];
+      const leviWarnings = [];
+      
+      if (!helperData.levi_report && !helperData.car_details?.market_value) {
+        leviWarnings.push('חסר דוח לוי יצחק או שווי שוק');
+      }
+
+      // Check depreciation
+      const depreciationErrors = [];
+      const depreciationWarnings = [];
+      
+      if (!helperData.expertise?.depreciation && !helperData.depreciation) {
+        depreciationWarnings.push('לא הוגדרה ירידת ערך');
+      }
+
+      // Check professional standards
+      const professionalErrors = [];
+      const professionalWarnings = [];
+      
+      // Calculate case age
+      const expertiseDate = helperData.meta?.submission_date || helperData.meta?.inspection_date;
+      if (expertiseDate) {
+        const daysSinceExpertise = Math.floor((new Date() - new Date(expertiseDate)) / (1000 * 60 * 60 * 24));
+        if (daysSinceExpertise > 30) {
+          professionalWarnings.push('התיק פתוח יותר מ-30 ימים');
+        }
       }
       
-      const totalErrors = vehicleErrors.length + damageErrors.length + businessErrors.length;
-      const totalWarnings = vehicleWarnings.length + damageWarnings.length + businessWarnings.length;
+      const totalErrors = vehicleErrors.length + damageErrors.length + invoiceErrors.length + 
+                         leviErrors.length + depreciationErrors.length + professionalErrors.length;
+      const totalWarnings = vehicleWarnings.length + damageWarnings.length + invoiceWarnings.length + 
+                           leviWarnings.length + depreciationWarnings.length + professionalWarnings.length;
       
       return {
         isValid: totalErrors === 0,
@@ -851,10 +961,26 @@
             errors: damageErrors,
             warnings: damageWarnings
           },
-          business: {
-            isValid: businessErrors.length === 0,
-            errors: businessErrors,
-            warnings: businessWarnings
+          invoice: {
+            isValid: invoiceErrors.length === 0,
+            errors: invoiceErrors,
+            warnings: invoiceWarnings,
+            required: invoiceRequired
+          },
+          levi: {
+            isValid: leviErrors.length === 0,
+            errors: leviErrors,
+            warnings: leviWarnings
+          },
+          depreciation: {
+            isValid: depreciationErrors.length === 0,
+            errors: depreciationErrors,
+            warnings: depreciationWarnings
+          },
+          professional: {
+            isValid: professionalErrors.length === 0,
+            errors: professionalErrors,
+            warnings: professionalWarnings
           }
         }
       };
@@ -870,7 +996,10 @@
         details: {
           vehicle: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
           damage: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
-          business: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] }
+          invoice: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          levi: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          depreciation: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          professional: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] }
         }
       };
     }
@@ -921,8 +1050,17 @@
         if (summary.details.damage && !summary.details.damage.isValid) {
           errorItems.push(...summary.details.damage.errors.map(e => `נתוני נזק: ${e}`));
         }
-        if (summary.details.business && !summary.details.business.isValid) {
-          errorItems.push(...summary.details.business.errors.map(e => `חוקי עסק: ${e}`));
+        if (summary.details.invoice && !summary.details.invoice.isValid) {
+          errorItems.push(...summary.details.invoice.errors.map(e => `חשבוניות: ${e}`));
+        }
+        if (summary.details.levi && !summary.details.levi.isValid) {
+          errorItems.push(...summary.details.levi.errors.map(e => `לוי יצחק: ${e}`));
+        }
+        if (summary.details.depreciation && !summary.details.depreciation.isValid) {
+          errorItems.push(...summary.details.depreciation.errors.map(e => `ירידת ערך: ${e}`));
+        }
+        if (summary.details.professional && !summary.details.professional.isValid) {
+          errorItems.push(...summary.details.professional.errors.map(e => `תקנים מקצועיים: ${e}`));
         }
         
         errorsList.innerHTML = errorItems.length > 0 
@@ -954,8 +1092,17 @@
         if (summary.details.damage && summary.details.damage.warnings.length > 0) {
           warningItems.push(...summary.details.damage.warnings.map(w => `נתוני נזק: ${w}`));
         }
-        if (summary.details.business && summary.details.business.warnings.length > 0) {
-          warningItems.push(...summary.details.business.warnings.map(w => `חוקי עסק: ${w}`));
+        if (summary.details.invoice && summary.details.invoice.warnings.length > 0) {
+          warningItems.push(...summary.details.invoice.warnings.map(w => `חשבוניות: ${w}`));
+        }
+        if (summary.details.levi && summary.details.levi.warnings.length > 0) {
+          warningItems.push(...summary.details.levi.warnings.map(w => `לוי יצחק: ${w}`));
+        }
+        if (summary.details.depreciation && summary.details.depreciation.warnings.length > 0) {
+          warningItems.push(...summary.details.depreciation.warnings.map(w => `ירידת ערך: ${w}`));
+        }
+        if (summary.details.professional && summary.details.professional.warnings.length > 0) {
+          warningItems.push(...summary.details.professional.warnings.map(w => `תקנים מקצועיים: ${w}`));
         }
         
         warningsList.innerHTML = warningItems.length > 0 
@@ -1034,6 +1181,192 @@
         damageStatus.className = 'status-indicator status-pending';
         damageValidation.textContent = 'לא נבדק';
         damageValidation.className = 'metric-value';
+      }
+    }
+
+    function updateInvoiceStatus(summary) {
+      const invoiceStatus = document.getElementById('invoice-status');
+      const invoiceRequired = document.getElementById('invoice-required');
+      const invoiceReceived = document.getElementById('invoice-received');
+      const invoiceTotal = document.getElementById('invoice-total');
+      const invoiceValidation = document.getElementById('invoice-validation');
+      
+      const helperData = helper || {};
+      const reportType = helperData.meta?.report_type || '';
+      const finalReportTypes = ['final', 'Final_Private', 'Final_Global', 'Final_Total', 'Final_Sale'];
+      const isInvoiceRequired = finalReportTypes.some(type => reportType.includes(type));
+      
+      // Update invoice requirement
+      invoiceRequired.textContent = isInvoiceRequired ? 'כן' : 'לא';
+      invoiceRequired.className = isInvoiceRequired ? 'metric-value warning' : 'metric-value success';
+      
+      // Check if invoice was received
+      const invoiceExists = helperData.invoice_uploaded || helperData.invoice_summary || helperData.invoice_data;
+      invoiceReceived.textContent = invoiceExists ? 'כן' : 'לא';
+      invoiceReceived.className = invoiceExists ? 'metric-value success' : 'metric-value error';
+      
+      // Calculate invoice total
+      const invoiceAmount = helperData.invoice_summary?.total || 
+                           helperData.invoice_data?.total || 
+                           helperData.invoice_total || 0;
+      invoiceTotal.textContent = `₪${parseFloat(invoiceAmount).toLocaleString('he-IL')}`;
+      
+      // Update validation status
+      const hasValidationData = summary.details && summary.details.invoice;
+      if (hasValidationData) {
+        if (summary.details.invoice.isValid) {
+          invoiceStatus.className = 'status-indicator status-valid';
+          invoiceValidation.textContent = 'תקין';
+          invoiceValidation.className = 'metric-value success';
+        } else {
+          invoiceStatus.className = 'status-indicator status-invalid';
+          invoiceValidation.textContent = 'דורש תיקון';
+          invoiceValidation.className = 'metric-value error';
+        }
+      } else {
+        invoiceStatus.className = 'status-indicator status-pending';
+        invoiceValidation.textContent = 'לא נבדק';
+        invoiceValidation.className = 'metric-value';
+      }
+    }
+
+    function updateLeviData(summary) {
+      const leviStatus = document.getElementById('levi-status');
+      const leviExists = document.getElementById('levi-exists');
+      const marketValue = document.getElementById('market-value');
+      const priceAdjustments = document.getElementById('price-adjustments');
+      const leviValidation = document.getElementById('levi-validation');
+      
+      const helperData = helper || {};
+      const leviData = helperData.levi_report || helperData.levi_data || {};
+      const carDetails = helperData.car_details || {};
+      
+      // Check if Levi report exists
+      const hasLeviReport = leviData && Object.keys(leviData).length > 0;
+      leviExists.textContent = hasLeviReport ? 'כן' : 'לא';
+      leviExists.className = hasLeviReport ? 'metric-value success' : 'metric-value warning';
+      
+      // Update market value
+      const marketVal = leviData.market_value || carDetails.market_value || leviData.שווי_שוק || 0;
+      marketValue.textContent = `₪${parseFloat(marketVal).toLocaleString('he-IL')}`;
+      
+      // Calculate price adjustments
+      const adjustments = leviData.adjustments || leviData.price_adjustments || leviData.התאמות_מחיר || [];
+      const adjustmentsCount = Array.isArray(adjustments) ? adjustments.length : 0;
+      priceAdjustments.textContent = adjustmentsCount;
+      
+      // Update validation status
+      const hasValidationData = summary.details && summary.details.levi;
+      if (hasValidationData) {
+        if (summary.details.levi.isValid) {
+          leviStatus.className = 'status-indicator status-valid';
+          leviValidation.textContent = 'תקין';
+          leviValidation.className = 'metric-value success';
+        } else {
+          leviStatus.className = 'status-indicator status-invalid';
+          leviValidation.textContent = 'דורש בדיקה';
+          leviValidation.className = 'metric-value error';
+        }
+      } else {
+        leviStatus.className = 'status-indicator status-pending';
+        leviValidation.textContent = 'לא נבדק';
+        leviValidation.className = 'metric-value';
+      }
+    }
+
+    function updateDepreciationData(summary) {
+      const depreciationStatus = document.getElementById('depreciation-status');
+      const depreciationDefined = document.getElementById('depreciation-defined');
+      const depreciationAmount = document.getElementById('depreciation-amount');
+      const depreciationPercentage = document.getElementById('depreciation-percentage');
+      const depreciationValidation = document.getElementById('depreciation-validation');
+      
+      const helperData = helper || {};
+      const depreciationData = helperData.depreciation || helperData.expertise?.depreciation || {};
+      
+      // Check if depreciation is defined
+      const hasDepreciation = depreciationData && Object.keys(depreciationData).length > 0;
+      depreciationDefined.textContent = hasDepreciation ? 'כן' : 'לא';
+      depreciationDefined.className = hasDepreciation ? 'metric-value success' : 'metric-value warning';
+      
+      // Update depreciation amount
+      const depAmount = depreciationData.amount || depreciationData.depreciation_amount || 0;
+      depreciationAmount.textContent = `₪${parseFloat(depAmount).toLocaleString('he-IL')}`;
+      
+      // Update depreciation percentage
+      const depPercent = depreciationData.percentage || depreciationData.depreciation_percentage || 0;
+      depreciationPercentage.textContent = `${depPercent}%`;
+      
+      // Update validation status
+      const hasValidationData = summary.details && summary.details.depreciation;
+      if (hasValidationData) {
+        if (summary.details.depreciation.isValid) {
+          depreciationStatus.className = 'status-indicator status-valid';
+          depreciationValidation.textContent = 'תקין';
+          depreciationValidation.className = 'metric-value success';
+        } else {
+          depreciationStatus.className = 'status-indicator status-invalid';
+          depreciationValidation.textContent = 'דורש הגדרה';
+          depreciationValidation.className = 'metric-value error';
+        }
+      } else {
+        depreciationStatus.className = 'status-indicator status-pending';
+        depreciationValidation.textContent = 'לא נבדק';
+        depreciationValidation.className = 'metric-value';
+      }
+    }
+
+    function updateProfessionalStandards(summary) {
+      const professionalStatus = document.getElementById('professional-status');
+      const caseAge = document.getElementById('case-age');
+      const documentationCompleteness = document.getElementById('documentation-completeness');
+      const reportReadiness = document.getElementById('report-readiness');
+      const professionalValidation = document.getElementById('professional-validation');
+      
+      const helperData = helper || {};
+      const meta = helperData.meta || {};
+      
+      // Calculate case age
+      const expertiseDate = meta.submission_date || meta.inspection_date || meta.date_created;
+      let daysSinceExpertise = 0;
+      if (expertiseDate) {
+        daysSinceExpertise = Math.floor((new Date() - new Date(expertiseDate)) / (1000 * 60 * 60 * 24));
+      }
+      caseAge.textContent = daysSinceExpertise;
+      
+      // Calculate documentation completeness
+      const requiredFields = ['vehicle', 'damage', 'car_details'];
+      const completedFields = requiredFields.filter(field => 
+        helperData[field] && Object.keys(helperData[field]).length > 0
+      );
+      const completeness = Math.round((completedFields.length / requiredFields.length) * 100);
+      documentationCompleteness.textContent = `${completeness}%`;
+      
+      // Check report readiness
+      const hasVehicleData = helperData.vehicle && Object.keys(helperData.vehicle).length > 0;
+      const hasDamageData = helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0;
+      const hasCarDetails = helperData.car_details && Object.keys(helperData.car_details).length > 0;
+      
+      const isReady = hasVehicleData && hasDamageData && hasCarDetails;
+      reportReadiness.textContent = isReady ? 'מוכן' : 'לא מוכן';
+      reportReadiness.className = isReady ? 'metric-value success' : 'metric-value warning';
+      
+      // Update validation status
+      const hasValidationData = summary.details && summary.details.professional;
+      if (hasValidationData) {
+        if (summary.details.professional.isValid) {
+          professionalStatus.className = 'status-indicator status-valid';
+          professionalValidation.textContent = 'תקין';
+          professionalValidation.className = 'metric-value success';
+        } else {
+          professionalStatus.className = 'status-indicator status-invalid';
+          professionalValidation.textContent = 'דורש שיפור';
+          professionalValidation.className = 'metric-value error';
+        }
+      } else {
+        professionalStatus.className = 'status-indicator status-pending';
+        professionalValidation.textContent = 'לא נבדק';
+        professionalValidation.className = 'metric-value';
       }
     }
 
@@ -1203,8 +1536,20 @@
         recommendations.push('יש לבדוק ולתקן את נתוני הנזק');
       }
 
-      if (summary.details.business && !summary.details.business.isValid) {
-        recommendations.push('יש לבדוק את חוקי העסק והיחסים בין העלויות');
+      if (summary.details.invoice && !summary.details.invoice.isValid) {
+        recommendations.push('יש לבדוק את נושא החשבוניות הנדרשות');
+      }
+
+      if (summary.details.levi && !summary.details.levi.isValid) {
+        recommendations.push('יש לבדוק את נתוני דוח לוי יצחק ושווי השוק');
+      }
+
+      if (summary.details.depreciation && !summary.details.depreciation.isValid) {
+        recommendations.push('יש להגדיר ולבדוק את נתוני ירידת הערך');
+      }
+
+      if (summary.details.professional && !summary.details.professional.isValid) {
+        recommendations.push('יש לשפר את התקנים המקצועיים והשלמת התיעוד');
       }
 
       return recommendations;
@@ -1569,6 +1914,152 @@
       }
     }
 
+    function drillDownProfessional(type) {
+      console.log(`🔍 Drilling down into professional standards: ${type}`);
+      
+      try {
+        const helperData = helper || {};
+        const meta = helperData.meta || {};
+        
+        let content = '';
+        let title = '';
+        
+        switch (type) {
+          case 'timeline':
+            title = 'פירוט זמן התיק';
+            const expertiseDate = meta.submission_date || meta.inspection_date || meta.date_created;
+            const currentDate = new Date();
+            
+            if (expertiseDate) {
+              const creationDate = new Date(expertiseDate);
+              const daysSinceCreation = Math.floor((currentDate - creationDate) / (1000 * 60 * 60 * 24));
+              
+              content = `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                  <h4 style="color: #667eea; margin-bottom: 15px;">זמני התיק</h4>
+                  <p><strong>תאריך יצירת אקספרטיזה:</strong> ${creationDate.toLocaleDateString('he-IL')}</p>
+                  <p><strong>תאריך נוכחי:</strong> ${currentDate.toLocaleDateString('he-IL')}</p>
+                  <p><strong>ימים שעברו:</strong> ${daysSinceCreation}</p>
+                  <p><strong>מצב זמן:</strong> ${daysSinceCreation > 30 ? 
+                    '<span style="color: #dc3545;">חריגה מ-30 ימים</span>' : 
+                    '<span style="color: #28a745;">בזמן תקין</span>'}</p>
+                  <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                    <strong>המלצות:</strong><br>
+                    ${daysSinceCreation > 30 ? 
+                      '• מומלץ לזרז את התיק<br>• בדוק אם נדרשים נתונים נוספים<br>• שקול יצירת קשר עם הלקוח' :
+                      '• התיק בזמן תקין<br>• המשך בתהליך הרגיל'}
+                  </div>
+                </div>
+              `;
+            } else {
+              content = '<p style="text-align: center; color: #666;">תאריך יצירת התיק לא זמין</p>';
+            }
+            break;
+            
+          case 'completeness':
+            title = 'פירוט השלמת תיעוד';
+            const requiredSections = {
+              'פרטי רכב': helperData.vehicle && Object.keys(helperData.vehicle).length > 0,
+              'נתוני נזק': helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0,
+              'פרטי לקוח': helperData.car_details && Object.keys(helperData.car_details).length > 0,
+              'תמונות': helperData.images && helperData.images.length > 0,
+              'חלקים': helperData.damage?.centers?.some(center => center.parts && center.parts.length > 0) || false,
+              'עבודות': helperData.damage?.centers?.some(center => center.repairs && center.repairs.length > 0) || false
+            };
+            
+            const completedSections = Object.values(requiredSections).filter(Boolean).length;
+            const totalSections = Object.keys(requiredSections).length;
+            const completionPercentage = Math.round((completedSections / totalSections) * 100);
+            
+            content = `
+              <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">מצב השלמת התיעוד</h4>
+                <div style="margin-bottom: 15px;">
+                  <strong>אחוז השלמה כולל: ${completionPercentage}%</strong>
+                  <div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; margin: 10px 0;">
+                    <div style="width: ${completionPercentage}%; height: 100%; background: ${completionPercentage > 70 ? '#28a745' : completionPercentage > 40 ? '#ffc107' : '#dc3545'}; border-radius: 10px;"></div>
+                  </div>
+                </div>
+                ${Object.entries(requiredSections).map(([section, completed]) => `
+                  <p>
+                    <span style="color: ${completed ? '#28a745' : '#dc3545'};">
+                      ${completed ? '✅' : '❌'}
+                    </span>
+                    <strong>${section}:</strong> ${completed ? 'הושלם' : 'חסר'}
+                  </p>
+                `).join('')}
+                <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                  <strong>המלצות לשיפור:</strong><br>
+                  ${completionPercentage < 100 ? 
+                    Object.entries(requiredSections)
+                      .filter(([_, completed]) => !completed)
+                      .map(([section, _]) => `• השלם ${section}`)
+                      .join('<br>') :
+                    '• כל הסעיפים הושלמו - מצוין!'}
+                </div>
+              </div>
+            `;
+            break;
+            
+          case 'readiness':
+            title = 'מוכנות לדוח סופי';
+            const readinessChecks = {
+              'פרטי רכב מלאים': helperData.vehicle && helperData.vehicle.manufacturer && helperData.vehicle.model,
+              'מוקדי נזק הוגדרו': helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0,
+              'חלקים נוספו': helperData.damage?.centers?.some(center => center.parts && center.parts.length > 0),
+              'עבודות הוגדרו': helperData.damage?.centers?.some(center => center.repairs && center.repairs.length > 0),
+              'תמונות הועלו': helperData.images && helperData.images.length > 0,
+              'פרטי לקוח': helperData.car_details && helperData.car_details.owner
+            };
+            
+            const passedChecks = Object.values(readinessChecks).filter(Boolean).length;
+            const totalChecks = Object.keys(readinessChecks).length;
+            const readinessScore = Math.round((passedChecks / totalChecks) * 100);
+            
+            content = `
+              <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">בדיקת מוכנות לדוח סופי</h4>
+                <div style="margin-bottom: 15px;">
+                  <strong>ציון מוכנות: ${readinessScore}%</strong>
+                  <div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; margin: 10px 0;">
+                    <div style="width: ${readinessScore}%; height: 100%; background: ${readinessScore > 80 ? '#28a745' : readinessScore > 60 ? '#ffc107' : '#dc3545'}; border-radius: 10px;"></div>
+                  </div>
+                  <p style="color: ${readinessScore > 80 ? '#28a745' : readinessScore > 60 ? '#ffc107' : '#dc3545'};">
+                    ${readinessScore > 80 ? '🟢 מוכן להפקת דוח סופי' : 
+                      readinessScore > 60 ? '🟡 כמעט מוכן - יש פערים קטנים' : 
+                      '🔴 לא מוכן - נדרשים שיפורים'}
+                  </p>
+                </div>
+                ${Object.entries(readinessChecks).map(([check, passed]) => `
+                  <p>
+                    <span style="color: ${passed ? '#28a745' : '#dc3545'};">
+                      ${passed ? '✅' : '❌'}
+                    </span>
+                    <strong>${check}</strong>
+                  </p>
+                `).join('')}
+                <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                  <strong>השלבים הבאים:</strong><br>
+                  ${readinessScore > 80 ? 
+                    '• ניתן להמשיך להפקת דוח סופי<br>• בחר את סוג הדוח המתאים<br>• ודא פעם נוספת את כל הנתונים' :
+                    Object.entries(readinessChecks)
+                      .filter(([_, passed]) => !passed)
+                      .map(([check, _]) => `• השלם: ${check}`)
+                      .join('<br>')}
+                </div>
+              </div>
+            `;
+            break;
+        }
+        
+        showDrillDownModal(title, content);
+        
+      } catch (error) {
+        console.error('Error in professional drill-down analysis:', error);
+        showError('שגיאה בניתוח תקנים מקצועיים');
+      }
+    }
+
     function showDrillDownModal(title, content) {
       // Remove existing modal if any
       const existingModal = document.querySelector('.drill-down-overlay');
@@ -1619,6 +2110,7 @@
     window.openPartsFloating = openPartsFloating;
     window.openInvoiceFloating = openInvoiceFloating;
     window.drillDownDamage = drillDownDamage;
+    window.drillDownProfessional = drillDownProfessional;
     window.closeDrillDownModal = closeDrillDownModal;
     
     // Initialize keyboard shortcuts info
