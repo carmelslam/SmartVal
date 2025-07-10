@@ -453,7 +453,127 @@
     <script>
     
     // ============================================================================
-    // ACTION LOG FUNCTIONS - DEFINED EARLY FOR IMMEDIATE AVAILABILITY
+    // GLOBAL FUNCTIONS - DEFINED EARLY FOR IMMEDIATE AVAILABILITY
+    // ============================================================================
+    
+    // Global dev access function - defined early to be available for onclick
+    async function verifyDevAccess() {
+      const password = prompt("Enter developer password:");
+      if (!password) return;
+      
+      // Get button reference
+      const submitBtn = document.getElementById('devButton');
+      const originalText = submitBtn?.textContent || 'Developer Panel';
+      
+      try {
+        // Show loading state
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'מתחבר למערכת...';
+        }
+        
+        // Use DEV_HUB webhook directly
+        const DEV_HUB_URL = 'https://hook.eu2.make.com/cg8j5gu0wyum6yrbl4rz2myd0pew3znt';
+        
+        console.log('🔍 Attempting DEV_HUB webhook verification...');
+        const fetchResponse = await fetch(DEV_HUB_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            password,
+            action: 'dev_login',
+            timestamp: new Date().toISOString(),
+            user_auth: sessionStorage.getItem('auth')
+          })
+        });
+        
+        console.log('🔍 DEV_HUB fetch response status:', fetchResponse.status);
+        
+        if (!fetchResponse.ok) {
+          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+        }
+        
+        let response;
+        try {
+          response = await fetchResponse.json();
+        } catch (jsonError) {
+          console.log('Response is not JSON, getting text...');
+          response = await fetchResponse.text();
+        }
+        
+        console.log('🔍 DEV_HUB webhook response:', response);
+        
+        // Enhanced dev access validation with multiple patterns
+        const isDevAccess = 
+          // JSON response patterns
+          response?.role === 'dev' || 
+          response?.access === 'dev' ||
+          response?.status === 'dev' ||
+          response?.result === 'dev' ||
+          response?.access_granted === true ||
+          response?.dev === true ||
+          response?.authenticated === true ||
+          response?.valid === true ||
+          response?.success === true ||
+          response?.approved === true ||
+          // String response patterns
+          (typeof response === 'string' && /^(dev|success|granted|approved|valid|authenticated|true)$/i.test(response.trim())) ||
+          response === 'approved' ||
+          response === 'dev' ||
+          response === 'granted';
+        
+        console.log('🔍 Dev access validation result:', isDevAccess);
+        
+        if (isDevAccess) {
+          console.log('✅ Dev access granted via webhook');
+          sessionStorage.setItem('dev-access', 'granted');
+          if (submitBtn) {
+            submitBtn.textContent = '✅ גישה אושרה';
+          }
+          setTimeout(() => {
+            window.location.href = 'dev-module.html';
+          }, 500);
+        } else {
+          console.error('❌ Dev access denied');
+          console.error('Response details:', response);
+          if (submitBtn) {
+            submitBtn.textContent = '❌ גישה נדחתה';
+            setTimeout(() => {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }, 2000);
+          }
+          alert('❌ Access denied: incorrect password or insufficient privileges');
+        }
+        
+      } catch (err) {
+        console.error('Dev login failed:', err);
+        
+        if (submitBtn) {
+          submitBtn.textContent = '❌ שגיאת חיבור';
+          setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }, 2000);
+        }
+        
+        let errorMessage = 'שגיאה בחיבור לשרת האימות';
+        
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'שגיאת רשת - בדוק חיבור לאינטרנט';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'פג זמן החיבור - נסה שוב';
+        }
+        
+        alert(`🚫 Verification failed: ${errorMessage}`);
+      }
+    }
+    
+    // Make function globally available
+    window.verifyDevAccess = verifyDevAccess;
+    
+    // ============================================================================
+    // ACTION LOG FUNCTIONS
     // ============================================================================
     
     // Mock log data for demonstration
@@ -4444,8 +4564,7 @@
 </script>
 
 <script>
-// Global dev access function - non-module script for immediate availability
-async function verifyDevAccess() {
+// External Calendar Integration Template - Google/Outlook Sync Placeholder
   const password = prompt("Enter developer password:");
   if (!password) return;
   
