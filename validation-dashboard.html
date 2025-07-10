@@ -2349,13 +2349,13 @@
     // Floating screen functions
     function openCarDetailsFloating() {
       try {
-        if (typeof window.openCarDetailsModal === 'function') {
-          window.openCarDetailsModal();
+        if (typeof window.toggleCarDetails === 'function') {
+          window.toggleCarDetails();
         } else {
           console.log('🚗 Car details floating screen not available, loading...');
           loadFloatingScreen('car-details-floating.js', () => {
-            if (typeof window.openCarDetailsModal === 'function') {
-              window.openCarDetailsModal();
+            if (typeof window.toggleCarDetails === 'function') {
+              window.toggleCarDetails();
             } else {
               showError('לא ניתן לטעון את מסך פרטי הרכב');
             }
@@ -2369,13 +2369,13 @@
 
     function openLeviFloating() {
       try {
-        if (typeof window.openLeviModal === 'function') {
-          window.openLeviModal();
+        if (typeof window.toggleLeviReport === 'function') {
+          window.toggleLeviReport();
         } else {
           console.log('📊 Levi floating screen not available, loading...');
           loadFloatingScreen('levi-floating.js', () => {
-            if (typeof window.openLeviModal === 'function') {
-              window.openLeviModal();
+            if (typeof window.toggleLeviReport === 'function') {
+              window.toggleLeviReport();
             } else {
               showError('לא ניתן לטעון את מסך דוח לוי יצחק');
             }
@@ -2389,13 +2389,13 @@
 
     function openPartsFloating() {
       try {
-        if (typeof window.openPartsModal === 'function') {
-          window.openPartsModal();
+        if (typeof window.togglePartsSearch === 'function') {
+          window.togglePartsSearch();
         } else {
           console.log('🔧 Parts floating screen not available, loading...');
           loadFloatingScreen('parts-floating.js', () => {
-            if (typeof window.openPartsModal === 'function') {
-              window.openPartsModal();
+            if (typeof window.togglePartsSearch === 'function') {
+              window.togglePartsSearch();
             } else {
               showError('לא ניתן לטעון את מסך חיפוש חלקים');
             }
@@ -2409,13 +2409,13 @@
 
     function openInvoiceFloating() {
       try {
-        if (typeof window.openInvoiceModal === 'function') {
-          window.openInvoiceModal();
+        if (typeof window.toggleInvoiceDetails === 'function') {
+          window.toggleInvoiceDetails();
         } else {
           console.log('🧾 Invoice floating screen not available, loading...');
           loadFloatingScreen('invoice-details-floating.js', () => {
-            if (typeof window.openInvoiceModal === 'function') {
-              window.openInvoiceModal();
+            if (typeof window.toggleInvoiceDetails === 'function') {
+              window.toggleInvoiceDetails();
             } else {
               showError('לא ניתן לטעון את מסך פרטי חשבונית');
             }
@@ -2960,15 +2960,31 @@
           'updateValidationCharts', 'updateProgressIndicators', 'updateStatusDots'
         ];
         
+        // Test floating screen connections
+        const floatingFunctions = [
+          'openCarDetailsFloating', 'openLeviFloating', 'openPartsFloating', 'openInvoiceFloating'
+        ];
+        
         const missingFunctions = requiredFunctions.filter(funcName => 
           typeof window[funcName] === 'undefined' && typeof eval(funcName) === 'undefined'
+        );
+        
+        const missingFloatingFunctions = floatingFunctions.filter(funcName => 
+          typeof window[funcName] === 'undefined'
         );
         
         if (missingFunctions.length > 0) {
           console.error('❌ Missing functions:', missingFunctions);
           return false;
         }
+        
+        if (missingFloatingFunctions.length > 0) {
+          console.error('❌ Missing floating functions:', missingFloatingFunctions);
+          return false;
+        }
+        
         console.log('✅ All required functions exist');
+        console.log('✅ All floating screen functions exist');
         
         // Test 2: Check if key DOM elements exist
         const requiredElements = [
@@ -3003,8 +3019,41 @@
           return false;
         }
         
+        // Test 5: Test floating screen connections
+        try {
+          console.log('🧪 Testing floating screen connections...');
+          
+          // Check if floating scripts loaded their functions
+          const floatingConnections = {
+            'Car Details': typeof window.toggleCarDetails === 'function',
+            'Levi Report': typeof window.toggleLeviReport === 'function', 
+            'Parts Search': typeof window.togglePartsSearch === 'function',
+            'Invoice Details': typeof window.toggleInvoiceDetails === 'function'
+          };
+          
+          let allConnected = true;
+          Object.entries(floatingConnections).forEach(([name, connected]) => {
+            if (connected) {
+              console.log(`✅ ${name} floating screen connected`);
+            } else {
+              console.error(`❌ ${name} floating screen NOT connected`);
+              allConnected = false;
+            }
+          });
+          
+          if (!allConnected) {
+            console.error('❌ Some floating screens are not properly connected');
+            return false;
+          }
+          
+          console.log('✅ All floating screens properly connected');
+        } catch (floatingError) {
+          console.error('❌ Floating screen connection error:', floatingError);
+          return false;
+        }
+        
         console.log('✅ All integration tests passed!');
-        showInfo('בדיקת אינטגרציה הושלמה בהצלחה');
+        showInfo('בדיקת אינטגרציה הושלמה בהצלחה - כולל מסכים מרחפים');
         return true;
         
       } catch (error) {
