@@ -302,6 +302,75 @@
     <script type="module">
       import { MathEngine } from './math.js';
       import { sendToWebhook } from './webhook.js';
+      import { WEBHOOKS } from './webhook.js';
+      
+      // Security and Audit Functions
+      window.verifyAdminAccess = function() {
+        const adminAccess = sessionStorage.getItem('admin-access');
+        const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+        
+        if (!adminAccess || adminAccess !== 'granted') {
+          alert('⚠️ נדרשת הרשאת מנהל\n\nאין לך הרשאות מנהל או שפגה תוקף ההתחברות.');
+          window.location.href = 'selection.html';
+          return false;
+        }
+        
+        // Check if session is expired (30 minutes)
+        if (adminTimestamp) {
+          const sessionTime = new Date(adminTimestamp);
+          const now = new Date();
+          const timeDiff = (now - sessionTime) / (1000 * 60); // minutes
+          
+          if (timeDiff > 30) {
+            alert('⚠️ פג תוקף ההתחברות\n\nפג תוקף ההתחברות כמנהל. נדרש להתחבר מחדש.');
+            sessionStorage.removeItem('admin-access');
+            sessionStorage.removeItem('admin-timestamp');
+            window.location.href = 'selection.html';
+            return false;
+          }
+        }
+        
+        return true;
+      };
+      
+      window.logAdminAction = async function(action, details = {}) {
+        const logEntry = {
+          action: action,
+          timestamp: new Date().toISOString(),
+          admin_session: sessionStorage.getItem('admin-access'),
+          session_timestamp: sessionStorage.getItem('admin-timestamp'),
+          details: details,
+          user_agent: navigator.userAgent,
+          page_url: window.location.href
+        };
+        
+        console.log('📝 Admin Action Log:', logEntry);
+        
+        // Store locally for immediate access
+        let adminLogs = JSON.parse(localStorage.getItem('admin-action-logs') || '[]');
+        adminLogs.push(logEntry);
+        
+        // Keep only last 100 entries
+        if (adminLogs.length > 100) {
+          adminLogs = adminLogs.slice(-100);
+        }
+        
+        localStorage.setItem('admin-action-logs', JSON.stringify(adminLogs));
+        
+        // Send to server for permanent storage
+        try {
+          await fetch(WEBHOOKS.ADMIN_HUB, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'log_admin_action',
+              log_entry: logEntry
+            })
+          });
+        } catch (error) {
+          console.error('Failed to send admin log to server:', error);
+        }
+      };
       
       document.addEventListener('DOMContentLoaded', () => {
         const saveBtn = document.getElementById('save-admin-settings');
@@ -2447,19 +2516,589 @@
       selectedDateReminders.style.display = 'block';
     };
 
-    window.loadCaseForEdit = function() {
+    window.loadCaseForEdit = async function() {
+      // Check admin authentication
+      if (!verifyAdminAccess()) {
+        return;
+      }
+      
       const plate = document.getElementById('editPlateSearch').value.trim();
       if (!plate) {
         alert('אנא הכנס מספר רכב');
         return;
       }
       
-      document.getElementById('editResults').innerHTML = `
-        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7;">
-          <h4>עריכת תיק: ${plate}</h4>
-          <p>פונקציית עריכה נתונים תהיה זמינה בגרסה הבאה</p>
-          <p>נכון לעכשיו ניתן לצפות בנתונים בלבד</p>
+      // Log action for audit trail
+      logAdminAction('load_case_for_edit', { plate: plate });
+      
+      const editResults = document.getElementById('editResults');
+      editResults.innerHTML = `
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #2196f3;">
+          <h4>🔍 טוען תיק: ${plate}</h4>
+          <p>מחפש נתונים במערכת...</p>
         </div>`;
+      
+      try {
+        const response = await fetch(WEBHOOKS.ADMIN_FETCH_CASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            plate: plate,
+            action: 'load_case_for_edit',
+            admin_session: sessionStorage.getItem('admin-access'),
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.found) {
+          displayCaseForEdit(data.case_data, plate);
+        } else {
+          editResults.innerHTML = `
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
+              <h4>⚠️ תיק לא נמצא</h4>
+              <p>לא נמצא תיק עבור מספר רכב: ${plate}</p>
+              <p>בדוק שהמספר נכון או צור תיק חדש</p>
+            </div>`;
+        }
+      } catch (error) {
+        console.error('Error loading case:', error);
+        logAdminAction('load_case_error', { plate: plate, error: error.message });
+        editResults.innerHTML = `
+          <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #dc3545;">
+            <h4>❌ שגיאה בטעינת התיק</h4>
+            <p>אירעה שגיאה בטעינת נתוני התיק</p>
+            <p>נסה שוב או פנה למנהל המערכת</p>
+          </div>`;
+      }
+    };
+
+    window.displayCaseForEdit = function(caseData, plate) {
+      const editResults = document.getElementById('editResults');
+      
+      // Parse helper.json if it exists
+      let helperData = {};
+      try {
+        if (caseData.helper_json) {
+          helperData = typeof caseData.helper_json === 'string' ? JSON.parse(caseData.helper_json) : caseData.helper_json;
+        }
+      } catch (e) {
+        console.error('Error parsing helper.json:', e);
+      }
+      
+      editResults.innerHTML = `
+        <div style="background: #d4edda; padding: 15px; border-radius: 8px; border: 1px solid #28a745; margin-bottom: 20px;">
+          <h4>✅ תיק נטען בהצלחה: ${plate}</h4>
+          <p>בעל הרכב: ${helperData.owner || 'לא מצוין'}</p>
+          <p>סטטוס: ${helperData.status || 'לא מעודכן'}</p>
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+          <h3>📝 עריכת נתוני התיק</h3>
+          
+          <!-- VAT Override Section -->
+          <div style="border: 1px solid #007bff; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #007bff; margin-top: 0;">💰 שינוי מע"מ</h4>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label for="vatOverride">אחוז מע"מ:</label>
+              <input type="number" id="vatOverride" value="${helperData.vat_rate || 17}" min="0" max="50" step="0.1" style="width: 80px; padding: 5px;">
+              <span>%</span>
+              <button onclick="applyVatOverride('${plate}')" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px;">החל שינוי</button>
+            </div>
+            <small style="color: #666;">השינוי יחול על התיק הנוכחי בלבד</small>
+          </div>
+          
+          <!-- File Upload Section -->
+          <div style="border: 1px solid #28a745; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #28a745; margin-top: 0;">📁 העלאת קובץ helper.json</h4>
+            <input type="file" id="helperJsonUpload" accept=".json" style="margin-bottom: 10px;">
+            <button onclick="uploadHelperJson('${plate}')" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px;">העלה קובץ</button>
+            <small style="display: block; color: #666; margin-top: 5px;">העלה קובץ helper.json חדש לשכתוב נתוני התיק</small>
+          </div>
+          
+          <!-- Basic Case Data Edit -->
+          <div style="border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #e0a800; margin-top: 0;">✏️ עריכת נתונים בסיסיים</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <label style="display: block; margin-bottom: 5px;">מספר רכב:</label>
+                <input type="text" id="editPlate" value="${helperData.plate || plate}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px;">שם בעל הרכב:</label>
+                <input type="text" id="editOwner" value="${helperData.owner || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px;">תאריך בדיקה:</label>
+                <input type="date" id="editDate" value="${helperData.inspection_date || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px;">מיקום:</label>
+                <input type="text" id="editLocation" value="${helperData.location || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Report Type Selection -->
+          <div style="border: 1px solid #6f42c1; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #6f42c1; margin-top: 0;">📋 סוג דוח</h4>
+            <select id="reportTypeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="private" ${helperData.report_type === 'private' ? 'selected' : ''}>פרטי (Private)</option>
+              <option value="global" ${helperData.report_type === 'global' ? 'selected' : ''}>גלובלי (Global Opinion)</option>
+              <option value="total_loss" ${helperData.report_type === 'total_loss' ? 'selected' : ''}>אובדן מוחלט (Total Loss)</option>
+              <option value="sale" ${helperData.report_type === 'sale' ? 'selected' : ''}>מכירה במצב ניזוק (Sale)</option>
+            </select>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+            <button onclick="saveAllChanges('${plate}')" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;">💾 שמור שינויים</button>
+            <button onclick="performIntegrityCheck('${plate}')" style="padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px;">🔍 בדוק נתונים</button>
+            <button onclick="createBackup('${plate}')" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px;">📦 צור גיבוי</button>
+            <button onclick="resetCase('${plate}')" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px;">🔄 אפס שינויים</button>
+          </div>
+        </div>
+      `;
+      
+      // Store original data for reset functionality
+      window.originalCaseData = caseData;
+      
+      // Add real-time validation to input fields
+      addValidationListeners(plate);
+    };
+    
+    window.addValidationListeners = function(plate) {
+      // VAT validation
+      const vatInput = document.getElementById('vatOverride');
+      if (vatInput) {
+        vatInput.addEventListener('input', function() {
+          validateVatInput(this);
+        });
+        vatInput.addEventListener('blur', function() {
+          validateVatInput(this, true);
+        });
+      }
+      
+      // Plate number validation
+      const plateInput = document.getElementById('editPlate');
+      if (plateInput) {
+        plateInput.addEventListener('blur', function() {
+          validatePlateNumber(this);
+        });
+      }
+      
+      // Owner name validation
+      const ownerInput = document.getElementById('editOwner');
+      if (ownerInput) {
+        ownerInput.addEventListener('blur', function() {
+          validateOwnerName(this);
+        });
+      }
+      
+      // Date validation
+      const dateInput = document.getElementById('editDate');
+      if (dateInput) {
+        dateInput.addEventListener('change', function() {
+          validateInspectionDate(this);
+        });
+      }
+    };
+    
+    window.validateVatInput = function(input, showWarnings = false) {
+      const value = parseFloat(input.value);
+      const warningDiv = getOrCreateWarningDiv(input, 'vat-warning');
+      
+      // Clear previous styling
+      input.style.borderColor = '';
+      warningDiv.innerHTML = '';
+      
+      if (isNaN(value) || value < 0 || value > 50) {
+        input.style.borderColor = '#dc3545';
+        warningDiv.innerHTML = '<small style="color: #dc3545;">❌ ערך מע"מ חייב להיות בין 0 ל-50%</small>';
+        return false;
+      }
+      
+      if (showWarnings) {
+        if (value < 15 || value > 20) {
+          input.style.borderColor = '#ffc107';
+          warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ ערך מע"מ חריג - בדוק שהערך נכון</small>';
+        }
+        
+        if (value === 0) {
+          input.style.borderColor = '#ffc107';
+          warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ מע"מ 0% - וודא שזה נכון עבור תיק זה</small>';
+        }
+      }
+      
+      return true;
+    };
+    
+    window.validatePlateNumber = function(input) {
+      const value = input.value.trim();
+      const warningDiv = getOrCreateWarningDiv(input, 'plate-warning');
+      
+      // Clear previous styling
+      input.style.borderColor = '';
+      warningDiv.innerHTML = '';
+      
+      if (!value) {
+        input.style.borderColor = '#dc3545';
+        warningDiv.innerHTML = '<small style="color: #dc3545;">❌ מספר רכב הוא שדה חובה</small>';
+        return false;
+      }
+      
+      // Israeli license plate format validation (basic)
+      const platePattern = /^[\d\u05d0-\u05ea]{2,3}[-]?[\d\u05d0-\u05ea]{2,3}[-]?[\d\u05d0-\u05ea]{2,3}$/;
+      if (!platePattern.test(value)) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ פורמט מספר רכב לא סטנדרטי</small>';
+      }
+      
+      return true;
+    };
+    
+    window.validateOwnerName = function(input) {
+      const value = input.value.trim();
+      const warningDiv = getOrCreateWarningDiv(input, 'owner-warning');
+      
+      // Clear previous styling
+      input.style.borderColor = '';
+      warningDiv.innerHTML = '';
+      
+      if (!value) {
+        input.style.borderColor = '#dc3545';
+        warningDiv.innerHTML = '<small style="color: #dc3545;">❌ שם בעל הרכב הוא שדה חובה</small>';
+        return false;
+      }
+      
+      if (value.length < 2) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ שם קצר מדי - בדוק שהשם מלא</small>';
+      }
+      
+      // Check for Hebrew/English mixed inappropriately
+      const hasHebrew = /[\u05d0-\u05ea]/.test(value);
+      const hasEnglish = /[a-zA-Z]/.test(value);
+      if (hasHebrew && hasEnglish) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ שם מכיל עברית ואנגלית - בדוק עקביות</small>';
+      }
+      
+      return true;
+    };
+    
+    window.validateInspectionDate = function(input) {
+      const value = input.value;
+      const warningDiv = getOrCreateWarningDiv(input, 'date-warning');
+      
+      // Clear previous styling
+      input.style.borderColor = '';
+      warningDiv.innerHTML = '';
+      
+      if (!value) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ תאריך בדיקה לא מצוין</small>';
+        return true; // Not critical
+      }
+      
+      const inspectionDate = new Date(value);
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      const oneMonthFromNow = new Date();
+      oneMonthFromNow.setMonth(today.getMonth() + 1);
+      
+      if (inspectionDate > oneMonthFromNow) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ תאריך בעתיד רחוק - בדוק שהתאריך נכון</small>';
+      } else if (inspectionDate < oneYearAgo) {
+        input.style.borderColor = '#ffc107';
+        warningDiv.innerHTML = '<small style="color: #e0a800;">⚠️ תאריך ישן מדי - בדוק שהתאריך נכון</small>';
+      }
+      
+      return true;
+    };
+    
+    window.getOrCreateWarningDiv = function(input, warningId) {
+      let warningDiv = document.getElementById(warningId);
+      if (!warningDiv) {
+        warningDiv = document.createElement('div');
+        warningDiv.id = warningId;
+        warningDiv.style.marginTop = '2px';
+        input.parentNode.appendChild(warningDiv);
+      }
+      return warningDiv;
+    };
+    
+    window.performIntegrityCheck = function(plate) {
+      const issues = [];
+      
+      // Check all validation functions
+      const vatInput = document.getElementById('vatOverride');
+      const plateInput = document.getElementById('editPlate');
+      const ownerInput = document.getElementById('editOwner');
+      const dateInput = document.getElementById('editDate');
+      
+      if (vatInput && !validateVatInput(vatInput, true)) {
+        issues.push('ערך מע"מ לא תקין');
+      }
+      
+      if (plateInput && !validatePlateNumber(plateInput)) {
+        issues.push('מספר רכב לא תקין');
+      }
+      
+      if (ownerInput && !validateOwnerName(ownerInput)) {
+        issues.push('שם בעל הרכב לא תקין');
+      }
+      
+      if (dateInput) {
+        validateInspectionDate(dateInput);
+      }
+      
+      // Display integrity check results
+      if (issues.length > 0) {
+        alert(`⚠️ בעיות באיכות הנתונים:\n\n${issues.join('\n')}\n\nאנא תקן את הבעיות לפני השמירה.`);
+        return false;
+      } else {
+        // Show success message only when called directly (not from saveAllChanges)
+        const currentFunction = (new Error()).stack.split('\n')[2];
+        if (!currentFunction.includes('saveAllChanges')) {
+          alert('✅ בדיקת נתונים הושלמה בהצלחה!\n\nכל הנתונים תקינים וניתן לשמור.');
+        }
+      }
+      
+      return true;
+    };
+
+    window.applyVatOverride = async function(plate) {
+      // Verify admin access
+      if (!verifyAdminAccess()) {
+        return;
+      }
+      
+      const vatValue = document.getElementById('vatOverride').value;
+      
+      if (!vatValue || isNaN(vatValue) || vatValue < 0 || vatValue > 50) {
+        alert('אנא הכנס ערך מע"מ תקין (0-50%)');
+        return;
+      }
+      
+      // Critical action confirmation
+      if (!confirm(`⚠️ אישור שינוי מע"מ\n\nאתה עומד לשנות את אחוז המע"מ ל-${vatValue}% עבור תיק ${plate}.\n\nהאם אתה בטוח?`)) {
+        return;
+      }
+      
+      // Log action for audit trail
+      logAdminAction('vat_override', { 
+        plate: plate, 
+        old_vat: document.getElementById('vatOverride').defaultValue || 'unknown',
+        new_vat: vatValue 
+      });
+      
+      try {
+        const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'vat_override',
+            plate: plate,
+            vat_rate: parseFloat(vatValue),
+            admin_session: sessionStorage.getItem('admin-access'),
+            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (response.ok) {
+          alert(`✅ מע"מ עודכן ל-${vatValue}% עבור תיק ${plate}`);
+          logAdminAction('vat_override_success', { plate: plate, vat_rate: vatValue });
+        } else {
+          throw new Error('Failed to update VAT');
+        }
+      } catch (error) {
+        console.error('Error applying VAT override:', error);
+        logAdminAction('vat_override_error', { plate: plate, error: error.message });
+        alert('❌ שגיאה בעדכון מע"מ');
+      }
+    };
+
+    window.uploadHelperJson = async function(plate) {
+      // Verify admin access
+      if (!verifyAdminAccess()) {
+        return;
+      }
+      
+      const fileInput = document.getElementById('helperJsonUpload');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('אנא בחר קובץ JSON');
+        return;
+      }
+      
+      if (!file.name.endsWith('.json')) {
+        alert('אנא בחר קובץ JSON בלבד');
+        return;
+      }
+      
+      // Critical action confirmation
+      if (!confirm(`⚠️ אישור העלאת קובץ helper.json\n\nאתה עומד להחליף את נתוני התיק עם קובץ: ${file.name}\n\nפעולה זו תשכתב את כל הנתונים הקיימים!\n\nהאם אתה בטוח?`)) {
+        return;
+      }
+      
+      try {
+        const fileText = await file.text();
+        const jsonData = JSON.parse(fileText);
+        
+        // Validate basic structure
+        if (!jsonData.plate && !jsonData.owner) {
+          if (!confirm('הקובץ לא מכיל מספר רכב או בעל רכב. להמשיך?')) {
+            return;
+          }
+        }
+        
+        // Log action for audit trail
+        logAdminAction('upload_helper_json', { 
+          plate: plate,
+          file_name: file.name,
+          file_size: file.size,
+          json_keys: Object.keys(jsonData)
+        });
+        
+        const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upload_helper_json',
+            plate: plate,
+            helper_data: jsonData,
+            admin_session: sessionStorage.getItem('admin-access'),
+            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (response.ok) {
+          alert('✅ קובץ helper.json הועלה בהצלחה');
+          logAdminAction('upload_helper_json_success', { plate: plate, file_name: file.name });
+          // Reload the case to show updated data
+          loadCaseForEdit();
+        } else {
+          throw new Error('Failed to upload helper.json');
+        }
+      } catch (error) {
+        console.error('Error uploading helper.json:', error);
+        logAdminAction('upload_helper_json_error', { plate: plate, error: error.message });
+        alert('❌ שגיאה בהעלאת הקובץ - בדוק שהקובץ תקין');
+      }
+    };
+
+    window.saveAllChanges = async function(plate) {
+      // Verify admin access
+      if (!verifyAdminAccess()) {
+        return;
+      }
+      
+      // Perform data integrity check
+      if (!performIntegrityCheck(plate)) {
+        return;
+      }
+      
+      const changes = {
+        plate: document.getElementById('editPlate').value,
+        owner: document.getElementById('editOwner').value,
+        inspection_date: document.getElementById('editDate').value,
+        location: document.getElementById('editLocation').value,
+        vat_rate: parseFloat(document.getElementById('vatOverride').value),
+        report_type: document.getElementById('reportTypeSelect').value
+      };
+      
+      if (!changes.plate || !changes.owner) {
+        alert('אנא מלא את השדות החובה: מספר רכב ושם בעל הרכב');
+        return;
+      }
+      
+      // Critical action confirmation
+      const changesText = Object.entries(changes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      
+      if (!confirm(`⚠️ אישור שמירת שינויים\n\nאתה עומד לשמור את השינויים הבאים:\n\n${changesText}\n\nהאם אתה בטוח?`)) {
+        return;
+      }
+      
+      // Log action for audit trail
+      logAdminAction('save_all_changes', { 
+        original_plate: plate,
+        changes: changes
+      });
+      
+      try {
+        const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_all_changes',
+            original_plate: plate,
+            changes: changes,
+            admin_session: sessionStorage.getItem('admin-access'),
+            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (response.ok) {
+          alert('✅ כל השינויים נשמרו בהצלחה');
+          logAdminAction('save_all_changes_success', { plate: plate });
+        } else {
+          throw new Error('Failed to save changes');
+        }
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        logAdminAction('save_all_changes_error', { plate: plate, error: error.message });
+        alert('❌ שגיאה בשמירת השינויים');
+      }
+    };
+
+    window.createBackup = async function(plate) {
+      try {
+        const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_backup',
+            plate: plate,
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (response.ok) {
+          alert('✅ גיבוי נוצר בהצלחה');
+        } else {
+          throw new Error('Failed to create backup');
+        }
+      } catch (error) {
+        console.error('Error creating backup:', error);
+        alert('❌ שגיאה ביצירת גיבוי');
+      }
+    };
+
+    window.resetCase = function(plate) {
+      if (!confirm('האם אתה בטוח שברצונך לבטל את כל השינויים?')) {
+        return;
+      }
+      
+      if (window.originalCaseData) {
+        displayCaseForEdit(window.originalCaseData, plate);
+        alert('✅ השינויים בוטלו');
+      } else {
+        alert('❌ לא ניתן לבטל - נתונים מקוריים לא זמינים');
+      }
     };
 
     window.refreshLog = function() {
