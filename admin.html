@@ -305,6 +305,7 @@
       <div id="notificationList"></div>
     </div>
     <div class="footer">All rights reserved © Carmel Cayouf</div>
+    
     <script type="module">
       import { MathEngine } from './math.js';
       import { sendToWebhook } from './webhook.js';
@@ -4459,17 +4460,6 @@ async function verifyDevAccess() {
       submitBtn.textContent = 'מתחבר למערכת...';
     }
     
-    // Check for direct dev module access
-    if (password === 'dev_admin_2025') {
-      sessionStorage.setItem('dev-access', 'granted');
-      if (submitBtn) {
-        submitBtn.textContent = '✅ גישה אושרה';
-      }
-      setTimeout(() => {
-        window.location.href = 'dev-module.html';
-      }, 500);
-      return;
-    }
     
     // Import webhooks dynamically with fallback
     let sendToWebhook;
@@ -4602,19 +4592,21 @@ async function verifyDevAccess() {
     
     alert(`🚫 Verification failed: ${errorMessage}`);
     
-    // Emergency fallback only if it's a network error
-    if (err.message.includes('HTTP') || err.message.includes('network')) {
-      const fallbackAccess = confirm('Server connection failed. Use offline emergency access?');
-      if (fallbackAccess && password === 'dev_admin_2025') {
-        sessionStorage.setItem('dev-access', 'granted-offline');
-        window.location.href = 'dev-module.html';
-      }
-    }
+    // No offline fallback - always require webhook validation
   }
 }
 
 // Ensure function is globally available
 window.verifyDevAccess = verifyDevAccess;
+
+// Ensure function is available when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.verifyDevAccess !== 'function') {
+    console.warn('⚠️ verifyDevAccess not available on DOMContentLoaded');
+  } else {
+    console.log('✅ verifyDevAccess function ready');
+  }
+});
 
 // External Calendar Integration Template - Google/Outlook Sync Placeholder
 window.showCalendarSyncModal = function() {
