@@ -16,11 +16,27 @@
     }
     
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 25%, #475569 50%, #64748b 75%, #94a3b8 100%);
+      background-attachment: fixed;
       min-height: 100vh;
       direction: rtl;
       padding: 20px;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 20%, rgba(120, 113, 208, 0.3) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(255, 117, 117, 0.2) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 60%, rgba(34, 197, 94, 0.2) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
     }
     
     .dashboard-container {
@@ -31,10 +47,32 @@
     .header {
       text-align: center;
       margin-bottom: 30px;
-      padding: 30px;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1), 
+                  0 8px 32px rgba(0,0,0,0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      transition: left 0.8s;
+    }
+    
+    .header:hover::before {
+      left: 100%;
     }
     
     .logo {
@@ -122,16 +160,43 @@
     }
     
     .card {
-      background: white;
-      border-radius: 15px;
-      padding: 25px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      transition: transform 0.3s, box-shadow 0.3s;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08), 
+                  0 4px 16px rgba(0,0,0,0.04),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #059669, #3b82f6, #8b5cf6, #ef4444);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
     }
     
     .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.12), 
+                  0 8px 24px rgba(0,0,0,0.08),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.95);
+    }
+    
+    .card:hover::before {
+      transform: scaleX(1);
     }
     
     .card h3 {
@@ -144,16 +209,54 @@
     
     .status-indicator {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       margin-left: 10px;
+      position: relative;
+      box-shadow: 0 0 0 0 currentColor;
     }
     
-    .status-valid { background: #28a745; }
-    .status-invalid { background: #dc3545; }
-    .status-warning { background: #ffc107; }
-    .status-pending { background: #6c757d; }
+    .status-valid { 
+      background: #059669;
+      animation: pulse-green 2s infinite;
+    }
+    .status-invalid { 
+      background: #dc2626;
+      animation: pulse-red 2s infinite;
+    }
+    .status-warning { 
+      background: #d97706;
+      animation: pulse-yellow 2s infinite;
+    }
+    .status-pending { 
+      background: #64748b;
+      animation: pulse-gray 2s infinite;
+    }
+    
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    }
+    
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+    
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(217, 119, 6, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+    }
+    
+    @keyframes pulse-gray {
+      0% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(100, 116, 139, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0); }
+    }
     
     .metric {
       display: flex;
@@ -173,48 +276,123 @@
     }
     
     .metric-value {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      transition: all 0.3s ease;
+      position: relative;
     }
     
-    .metric-value.error { color: #dc3545; }
-    .metric-value.warning { color: #ffc107; }
-    .metric-value.success { color: #28a745; }
+    .metric-value.large {
+      font-size: 28px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .metric-value.error { 
+      color: #dc2626; 
+      text-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+    }
+    .metric-value.warning { 
+      color: #d97706; 
+      text-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+    }
+    .metric-value.success { 
+      color: #059669; 
+      text-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
+    }
+    
+    .metric-value:hover {
+      transform: scale(1.1);
+    }
+    
+    .metric-counter {
+      display: inline-block;
+      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
     
     .validation-list {
-      max-height: 300px;
+      max-height: 320px;
       overflow-y: auto;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 10px;
-      background: #f9f9f9;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(248, 250, 252, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
     
     .validation-item {
-      padding: 8px 12px;
-      margin: 5px 0;
-      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 6px 0;
+      border-radius: 10px;
       font-size: 14px;
-      line-height: 1.4;
+      line-height: 1.5;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .validation-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    
+    .validation-item:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
     .validation-item.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background: linear-gradient(135deg, rgba(254, 226, 226, 0.8), rgba(252, 165, 165, 0.6));
+      color: #7f1d1d;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .validation-item.error::before {
+      background: #dc2626;
+    }
+    
+    .validation-item.error:hover::before {
+      width: 100%;
+      opacity: 0.1;
     }
     
     .validation-item.warning {
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeaa7;
+      background: linear-gradient(135deg, rgba(254, 243, 199, 0.8), rgba(253, 230, 138, 0.6));
+      color: #78350f;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .validation-item.warning::before {
+      background: #d97706;
+    }
+    
+    .validation-item.warning:hover::before {
+      width: 100%;
+      opacity: 0.1;
     }
     
     .validation-item.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      background: linear-gradient(135deg, rgba(220, 252, 231, 0.8), rgba(167, 243, 208, 0.6));
+      color: #064e3b;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .validation-item.success::before {
+      background: #059669;
+    }
+    
+    .validation-item.success:hover::before {
+      width: 100%;
+      opacity: 0.1;
     }
     
     .actions {
@@ -225,46 +403,83 @@
     }
     
     .btn {
-      padding: 15px 30px;
+      padding: 16px 32px;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 16px;
-      font-weight: bold;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       text-decoration: none;
       display: inline-block;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn:hover::before {
+      left: 100%;
     }
     
     .btn-primary {
-      background: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
     }
     
     .btn-secondary {
-      background: #6c757d;
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
       color: white;
+      box-shadow: 0 8px 20px rgba(100, 116, 139, 0.3);
     }
     
     .btn-success {
-      background: #28a745;
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
       color: white;
+      box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
     }
     
     .btn-danger {
-      background: #dc3545;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       color: white;
+      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
     }
 
     .btn-info {
-      background: #17a2b8;
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
       color: white;
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
     }
     
     .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    }
+    
+    .btn:active {
+      transform: translateY(-2px) scale(1.02);
+      transition: all 0.1s;
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .floating-access {
@@ -363,26 +578,65 @@
     
     .progress-bar {
       width: 100%;
-      height: 20px;
-      background: #e9ecef;
-      border-radius: 10px;
+      height: 24px;
+      background: rgba(226, 232, 240, 0.8);
+      border-radius: 12px;
       overflow: hidden;
-      margin: 10px 0;
+      margin: 12px 0;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
     
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
-      transition: width 0.3s;
-      border-radius: 10px;
+      background: linear-gradient(135deg, #059669 0%, #34d399 50%, #10b981 100%);
+      transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+    }
+    
+    .progress-fill::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+      animation: progress-shine 2s infinite;
+    }
+    
+    @keyframes progress-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
     
     .progress-fill.warning {
-      background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+      background: linear-gradient(135deg, #d97706 0%, #fbbf24 50%, #f59e0b 100%);
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
     }
     
     .progress-fill.error {
-      background: linear-gradient(90deg, #dc3545 0%, #e83e8c 100%);
+      background: linear-gradient(135deg, #dc2626 0%, #f87171 50%, #ef4444 100%);
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
     }
     
     .navigation {
@@ -742,6 +996,20 @@
       console.log('✅ Helper imported successfully');
     } catch (error) {
       console.warn('⚠️ Could not import helper.js:', error);
+      // Fallback to sessionStorage data
+      try {
+        const sessionHelper = sessionStorage.getItem('helper');
+        if (sessionHelper) {
+          helper = JSON.parse(sessionHelper);
+          console.log('✅ Helper loaded from sessionStorage as fallback');
+        } else {
+          console.warn('⚠️ No helper data in sessionStorage either');
+          helper = {}; // Initialize empty helper
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing sessionStorage helper:', parseError);
+        helper = {}; // Initialize empty helper
+      }
     }
 
     let autoRefreshInterval = null;
@@ -817,10 +1085,51 @@
       }
     }
 
+    // Function to refresh helper data from all available sources
+    function refreshHelperData() {
+      try {
+        // Priority 1: Check sessionStorage
+        const sessionHelper = sessionStorage.getItem('helper');
+        if (sessionHelper) {
+          const parsedHelper = JSON.parse(sessionHelper);
+          if (parsedHelper && Object.keys(parsedHelper).length > 0) {
+            helper = parsedHelper;
+            console.log('🔄 Helper data refreshed from sessionStorage');
+            return;
+          }
+        }
+
+        // Priority 2: Use existing helper if it has data
+        if (helper && Object.keys(helper).length > 0) {
+          console.log('🔄 Using existing helper data');
+          return;
+        }
+
+        // Priority 3: Initialize with basic structure
+        helper = {
+          vehicle: {},
+          damage: { centers: [] },
+          car_details: {},
+          meta: {},
+          levi_report: {},
+          expertise: {},
+          depreciation: {}
+        };
+        console.log('🔄 Initialized empty helper structure');
+
+      } catch (error) {
+        console.error('❌ Error refreshing helper data:', error);
+        helper = {};
+      }
+    }
+
     function refreshValidation() {
       console.log('🔄 Refreshing validation data...');
       
       try {
+        // Ensure we have the most up-to-date helper data
+        refreshHelperData();
+        
         // Get validation summary with fallback logic
         let summary = null;
         
@@ -844,6 +1153,11 @@
         updateDepreciationData(summary);
         updateProfessionalStandards(summary);
         
+        // Update visual indicators and charts
+        updateValidationCharts(summary);
+        updateProgressIndicators(summary);
+        updateStatusDots(summary);
+        
         // Update last check time
         document.getElementById('last-check').textContent = new Date().toLocaleTimeString('he-IL');
         
@@ -858,6 +1172,23 @@
         
         // Show fallback data even on error
         try {
+          // Enhanced error notification with actionable feedback
+          const errorNotification = {
+            type: 'validation_error',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+            action: 'refresh_attempted'
+          };
+          
+          // Store error for debugging
+          sessionStorage.setItem('last_validation_error', JSON.stringify(errorNotification));
+          
+          // Show user-friendly error with retry option
+          showEnhancedError('שגיאה בטעינת נתוני האימות', {
+            details: error.message,
+            retryFunction: () => setTimeout(refreshValidation, 2000),
+            showRetry: true
+          });
           const fallbackSummary = createEmptyValidationSummary();
           updateOverallStatus(fallbackSummary);
           updateErrors(fallbackSummary);
@@ -1121,11 +1452,20 @@
       const vehicleYear = document.getElementById('vehicle-year');
       const vehicleValidation = document.getElementById('vehicle-validation');
       
-      const vehicleData = helper.vehicle || {};
+      // Ensure we have consistent helper data
+      const helperData = helper || {};
+      const vehicleData = helperData.vehicle || {};
+      const carDetailsData = helperData.car_details || {};
       
-      vehiclePlate.textContent = vehicleData.plate || 'לא הוזן';
-      vehicleModel.textContent = `${vehicleData.manufacturer || ''} ${vehicleData.model || ''}`.trim() || 'לא הוזן';
-      vehicleYear.textContent = vehicleData.year || 'לא הוזן';
+      // Use multiple sources for vehicle data with fallback
+      const plateNumber = vehicleData.plate || vehicleData.plate_number || carDetailsData.plate || sessionStorage.getItem('plate');
+      const manufacturer = vehicleData.manufacturer || carDetailsData.manufacturer;
+      const model = vehicleData.model || carDetailsData.model;
+      const year = vehicleData.year || carDetailsData.year;
+      
+      vehiclePlate.textContent = plateNumber || 'לא הוזן';
+      vehicleModel.textContent = `${manufacturer || ''} ${model || ''}`.trim() || 'לא הוזן';
+      vehicleYear.textContent = year || 'לא הוזן';
       
       if (summary.details.vehicle) {
         if (summary.details.vehicle.isValid) {
@@ -1151,8 +1491,10 @@
       const totalRepairs = document.getElementById('total-repairs');
       const damageValidation = document.getElementById('damage-validation');
       
-      const damageData = helper.damage || {};
-      const centers = damageData.centers || [];
+      // Ensure we have consistent helper data
+      const helperData = helper || {};
+      const damageData = helperData.damage || {};
+      const centers = damageData.centers || helperData.damage_sections || [];
       
       centersCount.textContent = centers.length;
       
@@ -1191,43 +1533,73 @@
       const invoiceTotal = document.getElementById('invoice-total');
       const invoiceValidation = document.getElementById('invoice-validation');
       
+      // Ensure we have consistent helper data  
       const helperData = helper || {};
-      const reportType = helperData.meta?.report_type || '';
+      const meta = helperData.meta || {};
+      const reportType = meta.report_type || sessionStorage.getItem('reportType') || '';
       const finalReportTypes = ['final', 'Final_Private', 'Final_Global', 'Final_Total', 'Final_Sale'];
-      const isInvoiceRequired = finalReportTypes.some(type => reportType.includes(type));
+      const isInvoiceRequired = finalReportTypes.some(type => reportType.toLowerCase().includes(type.toLowerCase()));
       
       // Update invoice requirement
       invoiceRequired.textContent = isInvoiceRequired ? 'כן' : 'לא';
       invoiceRequired.className = isInvoiceRequired ? 'metric-value warning' : 'metric-value success';
       
-      // Check if invoice was received
-      const invoiceExists = helperData.invoice_uploaded || helperData.invoice_summary || helperData.invoice_data;
-      invoiceReceived.textContent = invoiceExists ? 'כן' : 'לא';
-      invoiceReceived.className = invoiceExists ? 'metric-value success' : 'metric-value error';
+      // Check if invoice was received - comprehensive check
+      const invoiceExists = !!(
+        helperData.invoice_uploaded ||
+        helperData.invoice_summary ||
+        helperData.invoice_data ||
+        helperData.invoices?.length > 0 ||
+        sessionStorage.getItem('invoiceUploaded') === 'true'
+      );
       
-      // Calculate invoice total
+      invoiceReceived.textContent = invoiceExists ? 'כן' : 'לא';
+      // Show error only if invoice is required but not received
+      if (isInvoiceRequired && !invoiceExists) {
+        invoiceReceived.className = 'metric-value error';
+      } else if (invoiceExists) {
+        invoiceReceived.className = 'metric-value success';
+      } else {
+        invoiceReceived.className = 'metric-value';
+      }
+      
+      // Calculate invoice total with comprehensive fallbacks
       const invoiceAmount = helperData.invoice_summary?.total || 
                            helperData.invoice_data?.total || 
-                           helperData.invoice_total || 0;
+                           helperData.invoice_total ||
+                           (helperData.invoices && helperData.invoices[0]?.total) ||
+                           parseFloat(sessionStorage.getItem('invoiceTotal')) || 0;
       invoiceTotal.textContent = `₪${parseFloat(invoiceAmount).toLocaleString('he-IL')}`;
       
-      // Update validation status
-      const hasValidationData = summary.details && summary.details.invoice;
-      if (hasValidationData) {
-        if (summary.details.invoice.isValid) {
-          invoiceStatus.className = 'status-indicator status-valid';
-          invoiceValidation.textContent = 'תקין';
-          invoiceValidation.className = 'metric-value success';
-        } else {
-          invoiceStatus.className = 'status-indicator status-invalid';
-          invoiceValidation.textContent = 'דורש תיקון';
-          invoiceValidation.className = 'metric-value error';
-        }
-      } else {
-        invoiceStatus.className = 'status-indicator status-pending';
-        invoiceValidation.textContent = 'לא נבדק';
-        invoiceValidation.className = 'metric-value';
+      // Update validation status based on actual requirements
+      let validationValid = true;
+      let validationMessage = 'תקין';
+      let validationClass = 'metric-value success';
+      let statusClass = 'status-indicator status-valid';
+
+      // If invoice is required but not received, it's invalid
+      if (isInvoiceRequired && !invoiceExists) {
+        validationValid = false;
+        validationMessage = 'חשבונית נדרשת';
+        validationClass = 'metric-value error';
+        statusClass = 'status-indicator status-invalid';
       }
+      // If invoice exists but wasn't required, show as valid
+      else if (invoiceExists) {
+        validationMessage = 'קיימת';
+        validationClass = 'metric-value success';
+        statusClass = 'status-indicator status-valid';
+      }
+      // If invoice not required and not exists, show as valid
+      else if (!isInvoiceRequired) {
+        validationMessage = 'לא נדרש';
+        validationClass = 'metric-value success';
+        statusClass = 'status-indicator status-valid';
+      }
+
+      invoiceStatus.className = statusClass;
+      invoiceValidation.textContent = validationMessage;
+      invoiceValidation.className = validationClass;
     }
 
     function updateLeviData(summary) {
@@ -1237,41 +1609,61 @@
       const priceAdjustments = document.getElementById('price-adjustments');
       const leviValidation = document.getElementById('levi-validation');
       
+      // Ensure we have consistent helper data
       const helperData = helper || {};
-      const leviData = helperData.levi_report || helperData.levi_data || {};
+      const leviData = helperData.levi_report || helperData.levi_data || helperData.levi || {};
       const carDetails = helperData.car_details || {};
+      const vehicle = helperData.vehicle || {};
       
-      // Check if Levi report exists
-      const hasLeviReport = leviData && Object.keys(leviData).length > 0;
+      // Check if Levi report exists - comprehensive check
+      const hasLeviReport = !!(
+        (leviData && Object.keys(leviData).length > 0) ||
+        carDetails.market_value ||
+        vehicle.market_value ||
+        sessionStorage.getItem('leviReportUploaded') === 'true'
+      );
+      
       leviExists.textContent = hasLeviReport ? 'כן' : 'לא';
       leviExists.className = hasLeviReport ? 'metric-value success' : 'metric-value warning';
       
-      // Update market value
-      const marketVal = leviData.market_value || carDetails.market_value || leviData.שווי_שוק || 0;
+      // Update market value with comprehensive fallbacks
+      const marketVal = leviData.market_value || 
+                       carDetails.market_value || 
+                       vehicle.market_value ||
+                       leviData.שווי_שוק || 
+                       parseFloat(sessionStorage.getItem('marketValue')) || 0;
       marketValue.textContent = `₪${parseFloat(marketVal).toLocaleString('he-IL')}`;
       
       // Calculate price adjustments
-      const adjustments = leviData.adjustments || leviData.price_adjustments || leviData.התאמות_מחיר || [];
-      const adjustmentsCount = Array.isArray(adjustments) ? adjustments.length : 0;
+      const adjustments = leviData.adjustments || 
+                         leviData.price_adjustments || 
+                         leviData.התאמות_מחיר || 
+                         carDetails.price_adjustments ||
+                         [];
+      const adjustmentsCount = Array.isArray(adjustments) ? adjustments.length : 
+                              (adjustments && typeof adjustments === 'object' ? Object.keys(adjustments).length : 0);
       priceAdjustments.textContent = adjustmentsCount;
       
-      // Update validation status
-      const hasValidationData = summary.details && summary.details.levi;
-      if (hasValidationData) {
-        if (summary.details.levi.isValid) {
-          leviStatus.className = 'status-indicator status-valid';
-          leviValidation.textContent = 'תקין';
-          leviValidation.className = 'metric-value success';
-        } else {
-          leviStatus.className = 'status-indicator status-invalid';
-          leviValidation.textContent = 'דורש בדיקה';
-          leviValidation.className = 'metric-value error';
-        }
+      // Update validation status - realistic logic
+      let statusClass, validationMessage, validationClass;
+      
+      if (hasLeviReport && marketVal > 0) {
+        statusClass = 'status-indicator status-valid';
+        validationMessage = 'תקין';
+        validationClass = 'metric-value success';
+      } else if (hasLeviReport && marketVal === 0) {
+        statusClass = 'status-indicator status-warning';
+        validationMessage = 'חסר שווי שוק';
+        validationClass = 'metric-value warning';
       } else {
-        leviStatus.className = 'status-indicator status-pending';
-        leviValidation.textContent = 'לא נבדק';
-        leviValidation.className = 'metric-value';
+        statusClass = 'status-indicator status-warning';
+        validationMessage = 'מומלץ דוח לוי';
+        validationClass = 'metric-value warning';
       }
+      
+      leviStatus.className = statusClass;
+      leviValidation.textContent = validationMessage;
+      leviValidation.className = validationClass;
     }
 
     function updateDepreciationData(summary) {
@@ -1729,8 +2121,166 @@
       document.body.appendChild(notification);
       
       setTimeout(() => {
-        document.body.removeChild(notification);
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
       }, 4000);
+    }
+
+    function showEnhancedError(message, options = {}) {
+      // Enhanced error notification with more features
+      const { details, retryFunction, showRetry = false, duration = 6000 } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        z-index: 10000;
+        font-weight: bold;
+        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-width: 400px;
+        backdrop-filter: blur(10px);
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      let content = `
+        <div style="margin-bottom: 10px; font-size: 16px;">❌ ${message}</div>
+      `;
+      
+      if (details) {
+        content += `
+          <div style="font-size: 12px; opacity: 0.8; margin-bottom: 10px;">
+            פרטים: ${details}
+          </div>
+        `;
+      }
+      
+      if (showRetry && retryFunction) {
+        content += `
+          <button onclick="this.parentElement.retry()" 
+                  style="background: rgba(255,255,255,0.2); 
+                         border: 1px solid rgba(255,255,255,0.3); 
+                         color: white; 
+                         padding: 6px 12px; 
+                         border-radius: 6px; 
+                         cursor: pointer; 
+                         font-size: 12px; 
+                         margin-top: 8px;">
+            🔄 נסה שוב
+          </button>
+        `;
+        notification.retry = retryFunction;
+      }
+      
+      notification.innerHTML = content;
+      document.body.appendChild(notification);
+      
+      // Add CSS animation
+      if (!document.getElementById('error-animations')) {
+        const style = document.createElement('style');
+        style.id = 'error-animations';
+        style.textContent = `
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+          setTimeout(() => {
+            if (document.body.contains(notification)) {
+              document.body.removeChild(notification);
+            }
+          }, 300);
+        }
+      }, duration);
+    }
+
+    function showWarning(message, options = {}) {
+      // Warning notification
+      const { duration = 4000, action } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        z-index: 9999;
+        font-weight: bold;
+        box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+        max-width: 350px;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      let content = `⚠️ ${message}`;
+      if (action) {
+        content += `
+          <button onclick="${action}" 
+                  style="background: rgba(255,255,255,0.2); 
+                         border: 1px solid rgba(255,255,255,0.3); 
+                         color: white; 
+                         padding: 4px 8px; 
+                         border-radius: 4px; 
+                         cursor: pointer; 
+                         font-size: 11px; 
+                         margin-left: 8px;">
+            פעולה
+          </button>
+        `;
+      }
+      
+      notification.innerHTML = content;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, duration);
+    }
+
+    function showInfo(message, options = {}) {
+      // Info notification
+      const { duration = 3000 } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 140px;
+        right: 20px;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        z-index: 9998;
+        font-weight: 500;
+        box-shadow: 0 4px 16px rgba(52, 152, 219, 0.3);
+        max-width: 300px;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      notification.innerHTML = `ℹ️ ${message}`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, duration);
     }
 
     // Floating screen functions
@@ -2132,6 +2682,180 @@
       });
     }
     
+    // Enhanced visual indicator functions
+    function updateValidationCharts(summary) {
+      try {
+        // Create mini charts for validation status overview
+        const chartData = {
+          vehicle: summary.details?.vehicle?.isValid ? 100 : 0,
+          damage: summary.details?.damage?.isValid ? 100 : 0,
+          invoice: summary.details?.invoice?.isValid ? 100 : 0,
+          levi: summary.details?.levi?.isValid ? 100 : 0,
+          depreciation: summary.details?.depreciation?.isValid ? 100 : 0,
+          professional: summary.details?.professional?.isValid ? 100 : 0
+        };
+        
+        // Add visual progress indicators to cards if they don't exist
+        Object.keys(chartData).forEach((type, index) => {
+          const cardElement = document.querySelector(`#${type}-status`)?.closest('.card');
+          if (cardElement && !cardElement.querySelector('.mini-chart')) {
+            const miniChart = document.createElement('div');
+            miniChart.className = 'mini-chart';
+            miniChart.innerHTML = `
+              <div class="chart-bar" style="height: ${chartData[type]}%; left: ${10 + index * 15}%;"></div>
+            `;
+            cardElement.appendChild(miniChart);
+          }
+        });
+        
+        console.log('📊 Validation charts updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating validation charts:', error);
+      }
+    }
+    
+    function updateProgressIndicators(summary) {
+      try {
+        // Enhanced progress animation with better feedback
+        const progressElement = document.getElementById('completion-progress');
+        if (progressElement) {
+          const currentWidth = parseInt(progressElement.style.width) || 0;
+          const targetWidth = summary.isValid ? 100 : 
+                             Math.max(0, Math.round((10 - summary.totalErrors) / 10 * 100));
+          
+          // Smooth animation from current to target
+          let currentStep = currentWidth;
+          const step = (targetWidth - currentWidth) / 20;
+          
+          const animateProgress = () => {
+            if (Math.abs(currentStep - targetWidth) > 1) {
+              currentStep += step;
+              progressElement.style.width = `${Math.round(currentStep)}%`;
+              requestAnimationFrame(animateProgress);
+            } else {
+              progressElement.style.width = `${targetWidth}%`;
+            }
+          };
+          
+          animateProgress();
+        }
+        
+        console.log('📈 Progress indicators updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating progress indicators:', error);
+      }
+    }
+    
+    function updateStatusDots(summary) {
+      try {
+        // Add status dots to show validation state overview
+        const mainCard = document.querySelector('.card');
+        if (mainCard && !mainCard.querySelector('.status-dots')) {
+          const statusDots = document.createElement('div');
+          statusDots.className = 'status-dots';
+          statusDots.innerHTML = `
+            <div class="status-dot" id="dot-vehicle"></div>
+            <div class="status-dot" id="dot-damage"></div>
+            <div class="status-dot" id="dot-invoice"></div>
+            <div class="status-dot" id="dot-levi"></div>
+            <div class="status-dot" id="dot-depreciation"></div>
+            <div class="status-dot" id="dot-professional"></div>
+          `;
+          mainCard.appendChild(statusDots);
+        }
+        
+        // Update status dots based on validation results
+        const statusTypes = ['vehicle', 'damage', 'invoice', 'levi', 'depreciation', 'professional'];
+        statusTypes.forEach(type => {
+          const dot = document.getElementById(`dot-${type}`);
+          if (dot && summary.details && summary.details[type]) {
+            const detail = summary.details[type];
+            dot.className = 'status-dot';
+            
+            if (detail.isValid) {
+              dot.classList.add('active');
+            } else if (detail.warnings && detail.warnings.length > 0) {
+              dot.classList.add('warning');
+            } else {
+              dot.classList.add('error');
+            }
+          }
+        });
+        
+        console.log('🔸 Status dots updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating status dots:', error);
+      }
+    }
+    
+    // Add CSS for new visual elements
+    function addEnhancedVisualsCSS() {
+      const style = document.createElement('style');
+      style.id = 'enhanced-visuals-css';
+      style.textContent = `
+        /* Mini charts for validation metrics */
+        .mini-chart {
+          width: 100%;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          margin: 8px 0;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .chart-bar {
+          position: absolute;
+          bottom: 0;
+          background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+          border-radius: 2px 2px 0 0;
+          transition: height 0.8s ease;
+          width: 8px;
+        }
+        
+        /* Validation status dots */
+        .status-dots {
+          display: flex;
+          gap: 6px;
+          margin: 8px 0;
+          justify-content: center;
+        }
+        
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #e2e8f0;
+          transition: all 0.3s ease;
+        }
+        
+        .status-dot.active {
+          background: #22c55e;
+          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+          transform: scale(1.2);
+        }
+        
+        .status-dot.warning {
+          background: #f59e0b;
+          box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+        
+        .status-dot.error {
+          background: #ef4444;
+          box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+      `;
+      
+      if (!document.getElementById('enhanced-visuals-css')) {
+        document.head.appendChild(style);
+      }
+    }
+    
+    // Initialize enhanced visuals on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      addEnhancedVisualsCSS();
+    });
+
     // Performance monitoring
     window.addEventListener('load', () => {
       const loadTime = performance.now();
