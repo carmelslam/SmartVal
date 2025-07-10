@@ -400,28 +400,17 @@
           submitBtn.disabled = true;
           submitBtn.textContent = 'שומר הגדרות...';
           
-          // Save to server with validation
-          const adminSettings = {
-            vat_rate: vat,
-            timestamp: new Date().toISOString(),
-            admin_user: sessionStorage.getItem('auth') || 'admin'
-          };
-          
-          const response = await sendToWebhook('ADMIN_HUB', {
-            action: 'update_settings',
-            settings: adminSettings
-          });
-          
-          // If server validation passes, save locally
+          // Save VAT locally only (no webhook needed)
           MathEngine.setVatRate(vat);
           sessionStorage.setItem('globalVAT', vat.toString());
+          localStorage.setItem('globalVAT', vat.toString());
           
           submitBtn.textContent = '✅ נשמר בהצלחה';
-          alert(`✅ מע"מ עודכן ל-${vat}% במערכת ובשרת`);
+          alert(`✅ מע"מ עודכן ל-${vat}% במערכת`);
           
         } catch (error) {
-          console.error('Admin settings save error:', error);
-          alert(`❌ שגיאה בשמירת הגדרות: ${error.message}`);
+          console.error('VAT save error:', error);
+          alert(`❌ שגיאה בשמירת מע"מ: ${error.message}`);
           
           // Reset button state
           submitBtn.disabled = false;

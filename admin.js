@@ -29,25 +29,29 @@ const AdminPanel = {
   },
 
   save() {
-    const vatRate = parseFloat(this.vatInput.value || '17');
-    localStorage.setItem('globalVAT', vatRate);
+    try {
+      const vatRate = parseFloat(this.vatInput.value || '17');
+      
+      // Save VAT locally only (no webhook needed)
+      localStorage.setItem('globalVAT', vatRate);
+      sessionStorage.setItem('globalVAT', vatRate);
 
-    const vault = {};
-    this.legalBlocks.forEach(block => {
-      const type = block.dataset.vaultType;
-      vault[type] = block.value.trim();
-    });
+      // Save legal text blocks locally
+      const vault = {};
+      this.legalBlocks.forEach(block => {
+        const type = block.dataset.vaultType;
+        vault[type] = block.value.trim();
+      });
+      
+      // Store legal texts in localStorage
+      localStorage.setItem('legalTexts', JSON.stringify(vault));
+      sessionStorage.setItem('legalTexts', JSON.stringify(vault));
 
-    const payload = {
-      vat_rate: vatRate,
-      vault_texts: vault,
-      override_flags: this.state.overrideFlags,
-      users: this.state.users,
-      timestamp: new Date().toISOString()
-    };
-
-    sendToWebhook('DEV_ADMIN_UPDATE', payload);
-    alert('🧾 שמירת נתונים בוצעה בהצלחה.');
+      alert('🧾 שמירת נתונים בוצעה בהצלחה.');
+    } catch (error) {
+      console.error('Error saving admin settings:', error);
+      alert(`❌ שגיאה בשמירת הגדרות: ${error.message}`);
+    }
   },
 
   preview() {
