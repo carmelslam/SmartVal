@@ -24,8 +24,13 @@ const AdminPanel = {
 
     // optional: load state from localStorage or webhook if needed
 
-    this.saveBtn.addEventListener('click', () => this.save());
-    this.previewBtn.addEventListener('click', () => this.preview());
+    // Add null checks to prevent errors
+    if (this.saveBtn) {
+      this.saveBtn.addEventListener('click', () => this.save());
+    }
+    if (this.previewBtn) {
+      this.previewBtn.addEventListener('click', () => this.preview());
+    }
   },
 
   save() {
