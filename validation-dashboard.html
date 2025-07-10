@@ -1170,6 +1170,9 @@
         
         console.log('✅ Validation data refreshed successfully');
         
+        // Show success notification
+        showInfo('נתוני האימות עודכנו בהצלחה - בדיקת עקביות לוגית שופרה');
+        
       } catch (error) {
         console.error('❌ Error refreshing validation data:', error);
         showError('שגיאה בטעינת נתוני האימות: ' + error.message);
@@ -1227,14 +1230,23 @@
       if (!vehicle.model) vehicleErrors.push('דגם חסר');
       if (!vehicle.year) vehicleErrors.push('שנת ייצור חסרה');
       
-      // Check damage data
+      // Check damage data - FIXED LOGIC
       const damageErrors = [];
       const damageWarnings = [];
       const damage = helperData.damage || {};
       const centers = damage.centers || helperData.damage_sections || [];
       
+      let totalParts = 0;
+      let totalRepairs = 0;
+      centers.forEach(center => {
+        if (center.parts) totalParts += center.parts.length;
+        if (center.repairs) totalRepairs += center.repairs.length;
+      });
+      
       if (centers.length === 0) {
         damageErrors.push('לא הוגדרו מוקדי נזק');
+      } else if (totalParts === 0 && totalRepairs === 0) {
+        damageWarnings.push('מוקדי נזק קיימים אך חסרים חלקים ותיקונים');
       }
       
       // Check invoice requirements (conditional based on report type)
@@ -1256,12 +1268,18 @@
         leviWarnings.push('חסר דוח לוי יצחק או שווי שוק');
       }
 
-      // Check depreciation
+      // Check depreciation - FIXED LOGIC
       const depreciationErrors = [];
       const depreciationWarnings = [];
       
-      if (!helperData.expertise?.depreciation && !helperData.depreciation) {
-        depreciationWarnings.push('לא הוגדרה ירידת ערך');
+      const depreciationData = helperData.depreciation || helperData.expertise?.depreciation || {};
+      const depAmount = depreciationData.amount || depreciationData.depreciation_amount || 0;
+      const depPercent = depreciationData.percentage || depreciationData.depreciation_percentage || 0;
+      
+      if (!depreciationData || Object.keys(depreciationData).length === 0) {
+        depreciationErrors.push('לא הוגדרה ירידת ערך');
+      } else if (depAmount === 0 && depPercent === 0) {
+        depreciationWarnings.push('ירידת ערך הוגדרה אך ללא ערכים');
       }
 
       // Check professional standards
@@ -1521,20 +1539,25 @@
       totalParts.textContent = partsCount;
       totalRepairs.textContent = repairsCount;
       
-      if (summary.details.damage) {
-        if (summary.details.damage.isValid) {
-          damageStatus.className = 'status-indicator status-valid';
-          damageValidation.textContent = 'תקין';
-          damageValidation.className = 'metric-value success';
-        } else {
-          damageStatus.className = 'status-indicator status-invalid';
-          damageValidation.textContent = 'דורש תיקון';
-          damageValidation.className = 'metric-value error';
-        }
+      // FIXED LOGIC: Base validation on actual data instead of summary
+      const hasDamageCenters = centers.length > 0;
+      const hasPartsOrRepairs = partsCount > 0 || repairsCount > 0;
+      
+      if (hasDamageCenters && hasPartsOrRepairs) {
+        // Complete damage data
+        damageStatus.className = 'status-indicator status-valid';
+        damageValidation.textContent = 'תקין';
+        damageValidation.className = 'metric-value success';
+      } else if (hasDamageCenters && !hasPartsOrRepairs) {
+        // Has centers but no parts/repairs
+        damageStatus.className = 'status-indicator status-warning';
+        damageValidation.textContent = 'חסרים חלקים ותיקונים';
+        damageValidation.className = 'metric-value warning';
       } else {
-        damageStatus.className = 'status-indicator status-pending';
-        damageValidation.textContent = 'לא נבדק';
-        damageValidation.className = 'metric-value';
+        // No damage centers at all - critical error
+        damageStatus.className = 'status-indicator status-invalid';
+        damageValidation.textContent = 'לא הוגדרו מוקדי נזק';
+        damageValidation.className = 'metric-value error';
       }
     }
 
@@ -1712,11 +1735,6 @@
       const helperData = helper || {};
       const depreciationData = helperData.depreciation || helperData.expertise?.depreciation || {};
       
-      // Check if depreciation is defined
-      const hasDepreciation = depreciationData && Object.keys(depreciationData).length > 0;
-      depreciationDefined.textContent = hasDepreciation ? 'כן' : 'לא';
-      depreciationDefined.className = hasDepreciation ? 'metric-value success' : 'metric-value warning';
-      
       // Update depreciation amount
       const depAmount = depreciationData.amount || depreciationData.depreciation_amount || 0;
       depreciationAmount.textContent = `₪${parseFloat(depAmount).toLocaleString('he-IL')}`;
@@ -1725,22 +1743,31 @@
       const depPercent = depreciationData.percentage || depreciationData.depreciation_percentage || 0;
       depreciationPercentage.textContent = `${depPercent}%`;
       
-      // Update validation status
-      const hasValidationData = summary.details && summary.details.depreciation;
-      if (hasValidationData) {
-        if (summary.details.depreciation.isValid) {
-          depreciationStatus.className = 'status-indicator status-valid';
-          depreciationValidation.textContent = 'תקין';
-          depreciationValidation.className = 'metric-value success';
-        } else {
-          depreciationStatus.className = 'status-indicator status-invalid';
-          depreciationValidation.textContent = 'דורש הגדרה';
-          depreciationValidation.className = 'metric-value error';
-        }
+      // FIXED LOGIC: Check if depreciation is ACTUALLY defined with meaningful values
+      const hasActualDepreciation = (
+        depreciationData && 
+        Object.keys(depreciationData).length > 0 && 
+        (depAmount > 0 || depPercent > 0)
+      );
+      
+      depreciationDefined.textContent = hasActualDepreciation ? 'כן' : 'לא';
+      depreciationDefined.className = hasActualDepreciation ? 'metric-value success' : 'metric-value warning';
+      
+      // FIXED VALIDATION: Use actual data logic instead of relying on summary
+      if (hasActualDepreciation) {
+        depreciationStatus.className = 'status-indicator status-valid';
+        depreciationValidation.textContent = 'תקין';
+        depreciationValidation.className = 'metric-value success';
+      } else if (depreciationData && Object.keys(depreciationData).length > 0 && depAmount === 0 && depPercent === 0) {
+        // Data exists but values are zero - warning
+        depreciationStatus.className = 'status-indicator status-warning';
+        depreciationValidation.textContent = 'נתונים חסרים';
+        depreciationValidation.className = 'metric-value warning';
       } else {
-        depreciationStatus.className = 'status-indicator status-pending';
-        depreciationValidation.textContent = 'לא נבדק';
-        depreciationValidation.className = 'metric-value';
+        // No depreciation data at all - error
+        depreciationStatus.className = 'status-indicator status-invalid';
+        depreciationValidation.textContent = 'לא הוגדר';
+        depreciationValidation.className = 'metric-value error';
       }
     }
 
