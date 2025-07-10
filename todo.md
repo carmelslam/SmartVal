@@ -1243,79 +1243,119 @@ From admin panel screenshot analysis, the following menu buttons are non-functio
 
 **📋 IMPLEMENTATION REPORT - COMPLETED 2025-07-10:**
 
-**✅ Core Infrastructure Implemented:**
-- **Replaced placeholder loadCaseForEdit function** with full case loading functionality
-- **Integrated ADMIN_FETCH_CASE webhook** for live data retrieval
-- **Built comprehensive data override interface** with organized sections
+**✅ COMPREHENSIVE DATA OVERRIDE MODULE REDESIGN:**
+- **Complete architectural redesign** focused on damage centers and post-finalization corrections
+- **Replaced basic loadCaseForEdit** with advanced `loadFinalizedCaseForEdit()` function
+- **Integrated ADMIN_FETCH_CASE webhook** for finalized case data retrieval
+- **Built collapsible interface** with 7 organized content sections and session memory
 
-**✅ VAT Management Integration:**
-- **Moved VAT override controls** from admin home page to Data Override section
-- **Implemented case-specific VAT modifications** with validation (0-50% range)
-- **Added VAT validation warnings** for unusual rates (< 15% or > 20%)
-- **Separated VAT controls** from file data editing as requested
+**✅ PRIMARY FOCUS: DAMAGE CENTERS EDITING:**
+- **Dynamic damage center management** - Works, repairs, parts per center (MAIN FEATURE)
+- **Individual center editing** with location, depreciation, and descriptions
+- **Comprehensive damage center data structure** supporting complex repairs
+- **Real-time damage center validation** with visual feedback
+- **Structured editing interface** for all damage center components
 
-**✅ File Upload & Data Management:**
-- **Added helper.json file upload** with JSON validation and parsing
-- **Implemented backup snapshot creation** before all modifications
-- **Added data validation** for uploaded JSON structure
-- **Integrated file handling** with existing system patterns
+**✅ COLLAPSIBLE SECTIONS ARCHITECTURE:**
+- **7 collapsible sections** with expand/collapse functionality:
+  1. **Damage Centers** (Primary focus - comprehensive editing)
+  2. **Vehicle Information** (Basic car details)
+  3. **Case Information** (Meta data, dates, report type)
+  4. **Levi Report Data** (Valuation and adjustments)
+  5. **Depreciation Settings** (Global and per-center depreciation)
+  6. **Financial Data** (Fees, VAT, calculations)
+  7. **Static Helper Data** (Rare cases - basic field editing)
+- **Session storage persistence** - Remembers collapsed/expanded state
+- **Quick expand/collapse all** functionality
+- **Visual indicators** for section status
 
-**✅ Report Type Integration:**
-- **Added report type selection dropdown** (Private, Global, Total Loss, Sale)
-- **Connected to existing report generation workflows**
-- **Implemented report type persistence** in helper.json
+**✅ CONTENT GENERATION SYSTEM:**
+- **7 specialized content generation functions** for dynamic HTML creation:
+  - `generateDamageCentersEditor()` - Primary damage center interface
+  - `generateVehicleInfoEditor()` - Vehicle details editing
+  - `generateCaseInfoEditor()` - Case metadata and dates
+  - `generateLeviReportEditor()` - Levi report data
+  - `generateDepreciationEditor()` - Depreciation settings
+  - `generateFinancialDataEditor()` - Financial calculations
+  - `generateStaticHelperDataEditor()` - Basic field editing
+- **Reusable HTML generation** with consistent styling
+- **Dynamic data binding** from helper.json structure
 
-**✅ Security & Administrative Controls:**
-- **Enhanced admin authentication** with 30-minute session expiration
-- **Implemented comprehensive audit logging** (local + server storage)
-- **Added confirmation dialogs** for all critical operations
-- **Integrated session validation** for all data modification functions
+**✅ FINALIZED CASE WORKFLOW:**
+- **Post-finalization corrections only** - Designed for completed cases
+- **FINAL helper.json structure editing** - Working with completed assessments
+- **No pre-validation modifications** - Focused on corrections to finished work
+- **Proper case state management** - Understands system workflow stages
 
-**✅ Advanced Data Validation Engine:**
-- **Real-time field validation** with visual feedback (red borders for errors, yellow for warnings)
-- **Israeli license plate format validation** with pattern matching
-- **Owner name validation** including Hebrew/English consistency checks
-- **Date validation** with logical range checking (not too old/future)
-- **Manual integrity check button** for comprehensive data review
-- **Success/failure messaging** for validation results
+**✅ ENHANCED TECHNICAL IMPLEMENTATION:**
+- **Collapsible section management** with `toggleSection()` and state persistence
+- **Advanced case loading** with `loadFinalizedCaseForEdit()` function
+- **Dynamic content display** with `displayFinalizedCaseForEdit()` function
+- **Session memory system** for UI state (collapsed/expanded sections)
+- **Content generation pipeline** - 7 specialized functions for different data types
 
-**✅ Organized Module Layout (as requested):**
-- **VAT Override Section** (blue border) - Separated for tax-related adjustments
-- **File Upload Section** (green border) - For helper.json file management
-- **Basic Data Edit Section** (yellow border) - For case information editing
-- **Report Type Selection** (purple border) - For report generation settings
-- **Action Buttons** - Save, Backup, Reset, and Data Check functions
+**✅ INTEGRATION WITH EXISTING SYSTEMS:**
+- **Webhook integration** - ADMIN_FETCH_CASE for data retrieval
+- **Security integration** - Admin authentication and audit logging
+- **Helper.json compatibility** - Works with existing data structures
+- **VAT system integration** - Case-specific VAT without affecting global VAT
+- **Make.com workflow integration** - ADMIN_HUB webhook for data modifications
 
-**🔧 Technical Implementation Details:**
-- **Functions Added:** 15+ new JavaScript functions for data override operations
-- **Webhooks Integrated:** ADMIN_HUB, ADMIN_FETCH_CASE with proper payloads
-- **Validation Features:** 5 different validation functions with real-time feedback
-- **Security Features:** Session management, audit logging, confirmation dialogs
-- **File Location:** admin.html (lines 2450-3100+)
+**✅ USER EXPERIENCE IMPROVEMENTS:**
+- **Organized by functionality** - Clear separation of different data types
+- **Visual feedback system** - Color-coded sections and validation
+- **Efficient space usage** - Collapsible sections reduce clutter
+- **Focus on primary needs** - Damage centers prominently featured
+- **Session continuity** - UI state preserved across interactions
 
-**🔒 Security Features Implemented:**
-- Admin session verification for all operations
-- Audit trail logging with timestamps and details
-- Confirmation dialogs for destructive operations
-- Session expiration handling with redirect
-- Local and server-side action logging
+**✅ CORRECTED APPROACH (Based on User Feedback):**
+- **Primary focus on damage centers** - Not basic data editing
+- **Dynamic data corrections** - Not static field modifications
+- **Post-finalization workflow** - Not pre-validation changes
+- **Collapsible UI sections** - All validation sections collapsible
+- **VAT decision respected** - General VAT remains in admin main page
+- **System stability maintained** - No changes to core logic
 
-**📊 Data Sources & Integration:**
-- **Input Sources:** License plate search, file upload, manual editing
-- **Validation Sources:** Real-time field validation, integrity checks
-- **Output Targets:** helper.json updates, backup creation, audit logs
-- **Webhook Integration:** ADMIN_HUB for all data modification operations
+**🔧 TECHNICAL ARCHITECTURE:**
+- **File Location:** admin.html (case 'override' section)
+- **Functions Added:** 10+ new functions for collapsible interface and content generation
+- **Webhooks Used:** ADMIN_FETCH_CASE, ADMIN_HUB
+- **UI Components:** Collapsible sections, dynamic content generation, session storage
+- **Data Processing:** Helper.json parsing, damage center management, validation
 
-**✅ All Original Requirements Fulfilled:**
-- ✅ VAT functionality moved from admin home page
-- ✅ Module layout organized by functionality  
-- ✅ Safety features with warnings and backups
-- ✅ Administrative data modification capabilities
-- ✅ Multi-level approval system (admin authentication)
-- ✅ Complete audit trail implementation
-- ✅ Proper separation of VAT from file data editing
+**🔒 SECURITY & AUDIT:**
+- **Admin session verification** for all operations
+- **Audit trail logging** with comprehensive details
+- **Confirmation dialogs** for critical operations
+- **Session expiration handling** with proper redirects
+- **Data validation** before modifications
 
-**Status: FULLY OPERATIONAL** - Ready for production use with comprehensive admin data override capabilities. 
+**Status: FULLY OPERATIONAL** - Complete Data Override module with primary focus on damage centers editing, collapsible interface, and post-finalization corrections. Ready for production use.
+
+**📝 ADDITIONAL REQUIREMENTS & UPDATES:**
+
+**✅ Static Helper Data Editing:**
+- **Keep static data editing** for rare cases where plate number, owner, dates need correction
+- **Maintain basic case information override** alongside dynamic damage center editing
+- **Validation for static changes** with warnings for critical modifications
+
+**🔽 Collapsible Validation Sections:**
+- **All validation sections must be collapsible** for better UX and space management
+- **Section headers with expand/collapse icons** 
+- **Remember collapsed state** in session storage
+- **Quick expand/collapse all** functionality
+
+**🎯 Primary Focus Areas (Corrected):**
+1. **Damage Centers** - Works, repairs, parts per center (MAIN FOCUS)
+2. **Dynamic Sections** - Levi adjustments, depreciation values
+3. **FINAL helper.json structure** - Post-finalization corrections
+4. **Case-specific overrides** - VAT, report type changes
+5. **Static data** - Basic information (RARE CASES ONLY)
+
+**⚠️ VAT Configuration Decision:**
+- **General VAT remains in admin main page** - Too risky to move due to deep system integration
+- **Case-specific VAT override** - Available in Data Override section
+- **No changes to math.js or core VAT logic** - System stability maintained 
 
 #### 1.5 Action Log (יומן פעולות)
 **Functionality:** System activity monitoring and audit trail

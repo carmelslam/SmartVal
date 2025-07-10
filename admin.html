@@ -763,32 +763,43 @@
             <h2>✏️ שינוי נתונים</h2>
             <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; margin-bottom: 20px;">
               <strong>⚠️ אזהרה:</strong> שינוי נתונים במערכת דורש הרשאות מנהל וגיבוי אוטומטי
+              <br><small>מיועד לתיקון נתונים אחרי סיום התיק - לא להכנת דוחות חדשים</small>
             </div>
             
             <!-- Case Search Section -->
             <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px;">
-              <h3>🔍 חיפוש תיק לעריכה</h3>
+              <h3>🔍 חיפוש תיק מושלם לעריכה</h3>
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <input type="text" id="editPlateSearch" placeholder="הכנס מספר רכב" style="padding: 8px; width: 200px; border: 1px solid #ddd; border-radius: 4px;">
-                <button onclick="loadCaseForEdit()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px; cursor: pointer;">טען תיק לעריכה</button>
+                <button onclick="loadFinalizedCaseForEdit()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px; cursor: pointer;">טען תיק מושלם</button>
               </div>
-              <small style="color: #666;">הכנס מספר רכב לחיפוש התיק במערכת</small>
+              <small style="color: #666;">חיפוש תיקים מושלמים עם דוח סופי - לתיקונים והתאמות בלבד</small>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #2196f3; margin-bottom: 20px;">
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="expandAllSections()" style="padding: 8px 12px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">🔽 פתח הכל</button>
+                <button onclick="collapseAllSections()" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">🔼 סגור הכל</button>
+                <button onclick="performFullIntegrityCheck()" style="padding: 8px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">🔍 בדוק כל הנתונים</button>
+              </div>
             </div>
             
             <!-- Results Section -->
             <div id="editResults" style="margin-top: 20px;">
               <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; text-align: center;">
-                <h4 style="color: #6c757d; margin-bottom: 10px;">🔍 מחכה לחיפוש תיק</h4>
-                <p style="color: #6c757d;">הכנס מספר רכב ולחץ על "טען תיק לעריכה" כדי להתחיל</p>
+                <h4 style="color: #6c757d; margin-bottom: 10px;">📋 מרכז בקרת נתונים</h4>
+                <p style="color: #6c757d;">חפש תיק מושלם כדי לערוך את הנתונים הסופיים</p>
                 <div style="margin-top: 15px;">
-                  <strong>פונקציות זמינות:</strong>
-                  <ul style="text-align: right; margin-top: 10px; padding-right: 20px;">
-                    <li>שינוי מע"מ לתיק ספציפי</li>
-                    <li>העלאת קובץ helper.json חדש</li>
-                    <li>עריכת נתונים בסיסיים (רכב, בעלים, תאריכים)</li>
-                    <li>בחירת סוג דוח</li>
-                    <li>יצירת גיבויים אוטומטיים</li>
-                    <li>בדיקת תקינות נתונים</li>
+                  <strong>תיקונים זמינים לתיקים מושלמים:</strong>
+                  <ul style="text-align: right; margin-top: 10px; padding-right: 20px; color: #495057;">
+                    <li><strong>מרכזי נזק:</strong> עריכת עבודות, תיקונים וחלקים לכל מרכז</li>
+                    <li><strong>התאמות לוי:</strong> תיקון נתוני שווי וירידת ערך</li>
+                    <li><strong>פחת:</strong> עדכון אחוזי פחת כללי ולפי מרכז</li>
+                    <li><strong>מע"מ ספציפי:</strong> שינוי מע"מ לתיק מסוים</li>
+                    <li><strong>סוג דוח:</strong> שינוי בין פרטי/גלובלי/אובדן/מכירה</li>
+                    <li><strong>נתונים סטטיים:</strong> מספר רכב, בעלים (מקרים נדירים)</li>
+                    <li><strong>העלאת helper.json:</strong> החלפה מלאה של נתונים</li>
                   </ul>
                 </div>
               </div>
@@ -2537,7 +2548,7 @@
       selectedDateReminders.style.display = 'block';
     };
 
-    window.loadCaseForEdit = async function() {
+    window.loadFinalizedCaseForEdit = async function() {
       // Check admin authentication
       if (!verifyAdminAccess()) {
         return;
@@ -2550,13 +2561,13 @@
       }
       
       // Log action for audit trail
-      logAdminAction('load_case_for_edit', { plate: plate });
+      logAdminAction('load_finalized_case_for_edit', { plate: plate });
       
       const editResults = document.getElementById('editResults');
       editResults.innerHTML = `
         <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #2196f3;">
-          <h4>🔍 טוען תיק: ${plate}</h4>
-          <p>מחפש נתונים במערכת...</p>
+          <h4>🔍 טוען תיק מושלם: ${plate}</h4>
+          <p>מחפש תיק מושלם עם דוח סופי...</p>
         </div>`;
       
       try {
@@ -2565,7 +2576,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             plate: plate,
-            action: 'load_case_for_edit',
+            action: 'load_finalized_case_for_edit',
+            require_finalized: true,
             admin_session: sessionStorage.getItem('admin-access'),
             timestamp: new Date().toISOString()
           })
@@ -2577,26 +2589,148 @@
         
         const data = await response.json();
         
-        if (data.found) {
-          displayCaseForEdit(data.case_data, plate);
+        if (data.found && data.case_data.finalized) {
+          displayFinalizedCaseForEdit(data.case_data, plate);
+        } else if (data.found && !data.case_data.finalized) {
+          editResults.innerHTML = `
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
+              <h4>⚠️ תיק לא מושלם</h4>
+              <p>תיק ${plate} נמצא אך עדיין לא הושלם</p>
+              <p>יש להשלים את התיק בזרימת העבודה הרגילה לפני עריכה כאן</p>
+            </div>`;
         } else {
           editResults.innerHTML = `
             <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107;">
               <h4>⚠️ תיק לא נמצא</h4>
-              <p>לא נמצא תיק עבור מספר רכב: ${plate}</p>
-              <p>בדוק שהמספר נכון או צור תיק חדש</p>
+              <p>לא נמצא תיק מושלם עבור מספר רכב: ${plate}</p>
+              <p>בדוק שהמספר נכון או שהתיק הושלם</p>
             </div>`;
         }
       } catch (error) {
-        console.error('Error loading case:', error);
-        logAdminAction('load_case_error', { plate: plate, error: error.message });
+        console.error('Error loading finalized case:', error);
+        logAdminAction('load_finalized_case_error', { plate: plate, error: error.message });
         editResults.innerHTML = `
           <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #dc3545;">
             <h4>❌ שגיאה בטעינת התיק</h4>
-            <p>אירעה שגיאה בטעינת נתוני התיק</p>
+            <p>אירעה שגיאה בטעינת נתוני התיק המושלם</p>
             <p>נסה שוב או פנה למנהל המערכת</p>
           </div>`;
       }
+    };
+
+    window.displayFinalizedCaseForEdit = function(caseData, plate) {
+      const editResults = document.getElementById('editResults');
+      
+      // Parse helper.json if it exists
+      let helperData = {};
+      try {
+        if (caseData.helper_json) {
+          helperData = typeof caseData.helper_json === 'string' ? JSON.parse(caseData.helper_json) : caseData.helper_json;
+        }
+      } catch (e) {
+        console.error('Error parsing helper.json:', e);
+      }
+      
+      editResults.innerHTML = `
+        <div style="background: #d4edda; padding: 15px; border-radius: 8px; border: 1px solid #28a745; margin-bottom: 20px;">
+          <h4>✅ תיק מושלם נטען: ${plate}</h4>
+          <p>בעל הרכב: ${helperData.owner || 'לא מצוין'} | סוג דוח: ${helperData.report_type || 'לא מעודכן'}</p>
+          <p>תאריך השלמה: ${helperData.finalized_date || 'לא זמין'}</p>
+        </div>
+        
+        <!-- Damage Centers Section (MAIN FOCUS) -->
+        <div class="collapsible-section" data-section="damage-centers">
+          <div class="section-header" onclick="toggleSection('damage-centers')" style="background: #ff6b35; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">🏗️ מרכזי נזק - עבודות, תיקונים וחלקים</h3>
+            <span class="toggle-icon" id="damage-centers-icon">🔽</span>
+          </div>
+          <div class="section-content" id="damage-centers-content" style="background: white; border: 1px solid #ff6b35; border-top: none; border-radius: 0 0 8px 8px; padding: 20px;">
+            <div id="damageCentersEditor">
+              ${generateDamageCentersEditor(helperData.damage_centers || [])}
+            </div>
+            <button onclick="addNewDamageCenter('${plate}')" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; margin-top: 15px;">➕ הוסף מרכז נזק</button>
+          </div>
+        </div>
+        
+        <!-- Levi Adjustments Section -->
+        <div class="collapsible-section" data-section="levi-adjustments" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('levi-adjustments')" style="background: #6f42c1; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📊 התאמות לוי - שווי וירידת ערך</h3>
+            <span class="toggle-icon" id="levi-adjustments-icon">🔽</span>
+          </div>
+          <div class="section-content" id="levi-adjustments-content" style="background: white; border: 1px solid #6f42c1; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateLeviAdjustmentsEditor(helperData.levi_report || {})}
+          </div>
+        </div>
+        
+        <!-- Depreciation Section -->
+        <div class="collapsible-section" data-section="depreciation" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('depreciation')" style="background: #dc3545; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📉 פחת - כללי ולפי מרכז</h3>
+            <span class="toggle-icon" id="depreciation-icon">🔽</span>
+          </div>
+          <div class="section-content" id="depreciation-content" style="background: white; border: 1px solid #dc3545; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateDepreciationEditor(helperData)}
+          </div>
+        </div>
+        
+        <!-- Case-Specific VAT Section -->
+        <div class="collapsible-section" data-section="case-vat" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('case-vat')" style="background: #007bff; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">💰 מע"מ ספציפי לתיק</h3>
+            <span class="toggle-icon" id="case-vat-icon">🔽</span>
+          </div>
+          <div class="section-content" id="case-vat-content" style="background: white; border: 1px solid #007bff; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateCaseVatEditor(helperData)}
+          </div>
+        </div>
+        
+        <!-- Report Type Section -->
+        <div class="collapsible-section" data-section="report-type" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('report-type')" style="background: #17a2b8; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📋 סוג דוח</h3>
+            <span class="toggle-icon" id="report-type-icon">🔽</span>
+          </div>
+          <div class="section-content" id="report-type-content" style="background: white; border: 1px solid #17a2b8; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateReportTypeEditor(helperData)}
+          </div>
+        </div>
+        
+        <!-- Static Data Section (Rare Cases) -->
+        <div class="collapsible-section" data-section="static-data" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('static-data')" style="background: #6c757d; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📝 נתונים סטטיים (מקרים נדירים)</h3>
+            <span class="toggle-icon" id="static-data-icon">🔽</span>
+          </div>
+          <div class="section-content" id="static-data-content" style="background: white; border: 1px solid #6c757d; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateStaticDataEditor(helperData, plate)}
+          </div>
+        </div>
+        
+        <!-- File Upload Section -->
+        <div class="collapsible-section" data-section="file-upload" style="margin-top: 15px;">
+          <div class="section-header" onclick="toggleSection('file-upload')" style="background: #28a745; color: white; padding: 15px; border-radius: 8px 8px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📁 העלאת helper.json</h3>
+            <span class="toggle-icon" id="file-upload-icon">🔽</span>
+          </div>
+          <div class="section-content" id="file-upload-content" style="background: white; border: 1px solid #28a745; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; display: none;">
+            ${generateFileUploadEditor(plate)}
+          </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+          <button onclick="saveAllFinalizedChanges('${plate}')" style="padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px;">💾 שמור כל השינויים</button>
+          <button onclick="createFinalizedBackup('${plate}')" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px;">📦 צור גיבוי</button>
+          <button onclick="resetFinalizedCase('${plate}')" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px;">🔄 אפס שינויים</button>
+        </div>
+      `;
+      
+      // Store original data for reset functionality
+      window.originalFinalizedCaseData = caseData;
+      
+      // Initialize collapsed state from sessionStorage
+      restoreCollapsedStates();
     };
 
     window.displayCaseForEdit = function(caseData, plate) {
@@ -3120,6 +3254,259 @@
       } else {
         alert('❌ לא ניתן לבטל - נתונים מקוריים לא זמינים');
       }
+    };
+
+    // Collapsible Section Management
+    window.toggleSection = function(sectionId) {
+      const content = document.getElementById(sectionId + '-content');
+      const icon = document.getElementById(sectionId + '-icon');
+      
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.textContent = '🔽';
+        sessionStorage.setItem(`section-${sectionId}`, 'expanded');
+      } else {
+        content.style.display = 'none';
+        icon.textContent = '🔼';
+        sessionStorage.setItem(`section-${sectionId}`, 'collapsed');
+      }
+    };
+
+    window.expandAllSections = function() {
+      const sections = ['damage-centers', 'levi-adjustments', 'depreciation', 'case-vat', 'report-type', 'static-data', 'file-upload'];
+      sections.forEach(sectionId => {
+        const content = document.getElementById(sectionId + '-content');
+        const icon = document.getElementById(sectionId + '-icon');
+        if (content) {
+          content.style.display = 'block';
+          icon.textContent = '🔽';
+          sessionStorage.setItem(`section-${sectionId}`, 'expanded');
+        }
+      });
+    };
+
+    window.collapseAllSections = function() {
+      const sections = ['damage-centers', 'levi-adjustments', 'depreciation', 'case-vat', 'report-type', 'static-data', 'file-upload'];
+      sections.forEach(sectionId => {
+        const content = document.getElementById(sectionId + '-content');
+        const icon = document.getElementById(sectionId + '-icon');
+        if (content) {
+          content.style.display = 'none';
+          icon.textContent = '🔼';
+          sessionStorage.setItem(`section-${sectionId}`, 'collapsed');
+        }
+      });
+    };
+
+    window.restoreCollapsedStates = function() {
+      const sections = ['damage-centers', 'levi-adjustments', 'depreciation', 'case-vat', 'report-type', 'static-data', 'file-upload'];
+      sections.forEach(sectionId => {
+        const state = sessionStorage.getItem(`section-${sectionId}`);
+        const content = document.getElementById(sectionId + '-content');
+        const icon = document.getElementById(sectionId + '-icon');
+        
+        if (content && icon) {
+          if (state === 'collapsed') {
+            content.style.display = 'none';
+            icon.textContent = '🔼';
+          } else {
+            // Default to expanded for damage-centers (main focus), collapsed for others
+            if (sectionId === 'damage-centers') {
+              content.style.display = 'block';
+              icon.textContent = '🔽';
+            } else {
+              content.style.display = 'none';
+              icon.textContent = '🔼';
+            }
+          }
+        }
+      });
+    };
+
+    // Content Generation Functions
+    window.generateDamageCentersEditor = function(damageCenters = []) {
+      if (!damageCenters.length) {
+        return `
+          <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="color: #6c757d;">אין מרכזי נזק</h4>
+            <p style="color: #6c757d;">לחץ על "הוסף מרכז נזק" כדי להתחיל</p>
+          </div>`;
+      }
+      
+      return damageCenters.map((center, index) => `
+        <div class="damage-center-editor" data-center-id="${center.center_id || index}" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4>מרכז נזק ${center.center_id || index + 1}: ${center.location || 'לא מוגדר'}</h4>
+            <button onclick="removeDamageCenter(${center.center_id || index})" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">🗑️ מחק</button>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+              <label>מיקום:</label>
+              <input type="text" id="center-${center.center_id || index}-location" value="${center.location || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label>פחת (%):</label>
+              <input type="number" id="center-${center.center_id || index}-depreciation" value="${center.depreciation || 0}" min="0" max="100" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label>תיאור:</label>
+            <textarea id="center-${center.center_id || index}-description" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; height: 60px;">${center.description || ''}</textarea>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div>
+              <label>תיקונים:</label>
+              <textarea id="center-${center.center_id || index}-repairs" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; height: 80px;" placeholder="רשימת תיקונים...">${(center.repairs || []).map(r => `${r.name}: ${r.cost || 0}₪`).join('\n')}</textarea>
+            </div>
+            <div>
+              <label>חלקים:</label>
+              <textarea id="center-${center.center_id || index}-parts" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; height: 80px;" placeholder="רשימת חלקים...">${(center.parts || []).map(p => `${p.name}: ${p.source || 'לא מוגדר'}`).join('\n')}</textarea>
+            </div>
+            <div>
+              <label>עבודות:</label>
+              <textarea id="center-${center.center_id || index}-works" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; height: 80px;" placeholder="רשימת עבודות...">${(center.works || []).join('\n')}</textarea>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.generateLeviAdjustmentsEditor = function(leviData = {}) {
+      return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <h4>נתונים בסיסיים</h4>
+            <div style="margin-bottom: 15px;">
+              <label>קוד דגם:</label>
+              <input type="text" id="levi-model-code" value="${leviData.model_code || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+              <label>מחיר בסיס:</label>
+              <input type="number" id="levi-base-price" value="${leviData.base_price || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+          <div>
+            <h4>התאמות</h4>
+            ${Object.entries(leviData.adjustments || {}).map(([key, adj]) => `
+              <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #eee; border-radius: 4px;">
+                <strong>${key}:</strong>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                  <input type="number" placeholder="%" value="${adj.percent || ''}" style="width: 60px; padding: 4px;">
+                  <input type="number" placeholder="ערך" value="${adj.value || ''}" style="flex: 1; padding: 4px;">
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    };
+
+    window.generateDepreciationEditor = function(helperData = {}) {
+      return `
+        <div>
+          <div style="margin-bottom: 20px;">
+            <label for="global-depreciation">פחת כללי (%):</label>
+            <input type="number" id="global-depreciation" value="${helperData.global_depreciation || 0}" min="0" max="100" step="0.1" style="width: 100px; padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <small style="color: #666;">פחת כללי החל על כל המקרה</small>
+          </div>
+          <div>
+            <h4>פחת לפי מרכז נזק</h4>
+            <p style="color: #666; margin-bottom: 15px;">פחת ספציפי לכל מרכז נזק מוגדר בסעיף מרכזי הנזק למעלה</p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <strong>סיכום פחת:</strong>
+              <ul style="margin: 10px 0; padding-right: 20px;">
+                <li>פחת כללי: <span id="depreciation-summary-global">${helperData.global_depreciation || 0}%</span></li>
+                <li>פחת ממוצע למרכז: <span id="depreciation-summary-average">חישוב אוטומטי</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>`;
+    };
+
+    window.generateCaseVatEditor = function(helperData = {}) {
+      return `
+        <div>
+          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; margin-bottom: 15px;">
+            <strong>הערה:</strong> שינוי זה משפיע רק על התיק הנוכחי ולא על המערכת הכללית
+          </div>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <label for="case-specific-vat">מע"מ לתיק זה (%):</label>
+            <input type="number" id="case-specific-vat" value="${helperData.vat_rate || 18}" min="0" max="30" step="0.1" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="applyCaseVat()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px;">החל שינוי</button>
+          </div>
+          <small style="color: #666; display: block; margin-top: 10px;">
+            מע"מ מערכתי כללי: ${sessionStorage.getItem('globalVAT') || '18'}% (לא משתנה)
+          </small>
+        </div>`;
+    };
+
+    window.generateReportTypeEditor = function(helperData = {}) {
+      return `
+        <div>
+          <div style="margin-bottom: 15px;">
+            <label for="report-type-select">סוג דוח:</label>
+            <select id="report-type-select" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="private" ${helperData.report_type === 'private' ? 'selected' : ''}>פרטי (Private)</option>
+              <option value="global" ${helperData.report_type === 'global' ? 'selected' : ''}>גלובלי (Global Opinion)</option>
+              <option value="total_loss" ${helperData.report_type === 'total_loss' ? 'selected' : ''}>אובדן מוחלט (Total Loss)</option>
+              <option value="sale" ${helperData.report_type === 'sale' ? 'selected' : ''}>מכירה במצב ניזוק (Sale)</option>
+            </select>
+          </div>
+          <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+            <h5>השפעת שינוי סוג דוח:</h5>
+            <ul style="margin: 10px 0; padding-right: 20px; color: #495057;">
+              <li><strong>פרטי:</strong> דוח מלא עם פירוט עלויות לחוזה פרטי</li>
+              <li><strong>גלובלי:</strong> הערכה כוללת ללא פירוט נזק</li>
+              <li><strong>אובדן מוחלט:</strong> נזק מעל 60%, המכונית לפירוק</li>
+              <li><strong>מכירה במצב ניזוק:</strong> למכירת רכב ללא תיקון</li>
+            </ul>
+          </div>
+        </div>`;
+    };
+
+    window.generateStaticDataEditor = function(helperData = {}, plate) {
+      return `
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; margin-bottom: 15px;">
+          <strong>⚠️ אזהרה:</strong> שינוי נתונים סטטיים משפיע על זהות התיק. השתמש רק במקרים נדירים!
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <label for="static-plate">מספר רכב:</label>
+            <input type="text" id="static-plate" value="${helperData.plate || plate}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            <small style="color: #dc3545;">שינוי מספר רכב עלול לשבור קישורים!</small>
+          </div>
+          <div>
+            <label for="static-owner">שם בעל הרכב:</label>
+            <input type="text" id="static-owner" value="${helperData.owner || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div>
+            <label for="static-inspection-date">תאריך בדיקה:</label>
+            <input type="date" id="static-inspection-date" value="${helperData.inspection_date || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div>
+            <label for="static-location">מיקום:</label>
+            <input type="text" id="static-location" value="${helperData.location || ''}" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+        </div>`;
+    };
+
+    window.generateFileUploadEditor = function(plate) {
+      return `
+        <div>
+          <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px;">
+            <strong>⚠️ אזהרה קריטית:</strong> העלאת helper.json חדש תחליף את כל נתוני התיק!
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label for="helper-json-upload">בחר קובץ helper.json:</label>
+            <input type="file" id="helper-json-upload" accept=".json" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="uploadHelperJsonForFinalized('${plate}')" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px;">📁 העלה קובץ</button>
+            <button onclick="downloadCurrentHelper('${plate}')" style="padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px;">💾 הורד נוכחי</button>
+          </div>
+        </div>`;
     };
 
     window.refreshLog = function() {
