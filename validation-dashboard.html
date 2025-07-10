@@ -881,6 +881,10 @@
           <span class="metric-value" id="levi-exists">לא</span>
         </div>
         <div class="metric">
+          <span class="metric-label">מחיר בסיסי רכב:</span>
+          <span class="metric-value" id="car-basic-price">₪0</span>
+        </div>
+        <div class="metric">
           <span class="metric-label">שווי שוק:</span>
           <span class="metric-value" id="market-value">₪0</span>
         </div>
@@ -971,7 +975,7 @@
     <!-- Navigation -->
     <div class="navigation">
       <a href="selection.html" class="nav-btn secondary">🏠 עמוד הבית</a>
-      <a href="car-details.html" class="nav-btn secondary">🚗 פרטי רכב</a>
+      <a href="admin.html" class="nav-btn secondary">⚙️ חזרה למרכז ניהול</a>
       <a href="enhanced-damage-centers.html" class="nav-btn primary">🧱 מוקדי נזק</a>
     </div>
   </div>
@@ -1619,9 +1623,16 @@
     function updateLeviData(summary) {
       const leviStatus = document.getElementById('levi-status');
       const leviExists = document.getElementById('levi-exists');
+      const carBasicPrice = document.getElementById('car-basic-price');
       const marketValue = document.getElementById('market-value');
       const priceAdjustments = document.getElementById('price-adjustments');
       const leviValidation = document.getElementById('levi-validation');
+      
+      // Check if all required elements exist (carBasicPrice is optional for backward compatibility)
+      if (!leviStatus || !leviExists || !marketValue || !priceAdjustments || !leviValidation) {
+        console.warn('⚠️ Missing Levi data DOM elements');
+        return;
+      }
       
       // Ensure we have consistent helper data
       const helperData = helper || {};
@@ -1639,6 +1650,17 @@
       
       leviExists.textContent = hasLeviReport ? 'כן' : 'לא';
       leviExists.className = hasLeviReport ? 'metric-value success' : 'metric-value warning';
+      
+      // Update car basic price with comprehensive fallbacks
+      const basicPrice = leviData.basic_price || 
+                         leviData.car_basic_price ||
+                         leviData.מחיר_בסיסי ||
+                         carDetails.basic_price ||
+                         vehicle.basic_price ||
+                         parseFloat(sessionStorage.getItem('carBasicPrice')) || 0;
+      if (carBasicPrice) {
+        carBasicPrice.textContent = `₪${parseFloat(basicPrice).toLocaleString('he-IL')}`;
+      }
       
       // Update market value with comprehensive fallbacks
       const marketVal = leviData.market_value || 
@@ -2924,7 +2946,7 @@
         // Test 2: Check if key DOM elements exist
         const requiredElements = [
           'validation-status', 'completion-progress', 'invoice-status', 
-          'levi-status', 'depreciation-status', 'professional-status'
+          'levi-status', 'car-basic-price', 'market-value', 'depreciation-status', 'professional-status'
         ];
         
         const missingElements = requiredElements.filter(id => !document.getElementById(id));
