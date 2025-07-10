@@ -4993,6 +4993,9 @@ window.refreshLog = async function() {
   logContent.innerHTML = '<div style="text-align: center; padding: 15px; color: #ccc; font-size: 12px;"><div style="display: inline-block; animation: spin 1s linear infinite; width: 16px; height: 16px; border: 2px solid #555; border-top: 2px solid #ff6b35; border-radius: 50%;"></div> טוען יומן...</div>';
   
   try {
+    // Initialize test logs if needed
+    window.initializeLogsIfNeeded();
+    
     // Get logs from localStorage
     allLogs = JSON.parse(localStorage.getItem('system-logs') || '[]');
     
@@ -5351,26 +5354,13 @@ window.createTestLogs = function() {
   console.log('Test logs created');
 };
 
-// Auto-refresh logs when log view is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  const originalLoadSection = window.loadSection;
-  window.loadSection = function(id) {
-    originalLoadSection(id);
-    if (id === 'logView') {
-      setTimeout(() => {
-        // Create test logs if none exist
-        const existingLogs = localStorage.getItem('system-logs');
-        if (!existingLogs || JSON.parse(existingLogs).length === 0) {
-          window.createTestLogs();
-        }
-        
-        if (typeof window.refreshLog === 'function') {
-          window.refreshLog();
-        }
-      }, 200);
-    }
-  };
-});
+// Initialize test logs on first refresh if needed
+window.initializeLogsIfNeeded = function() {
+  const existingLogs = localStorage.getItem('system-logs');
+  if (!existingLogs || JSON.parse(existingLogs).length === 0) {
+    window.createTestLogs();
+  }
+};
 </script>
 
   </div>
