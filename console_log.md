@@ -68,61 +68,72 @@ admin.js?v=2025070901:28 Uncaught TypeError: Cannot read properties of null (rea
 init	@	admin.js?v=2025070901:28
 (anonymous)	@	admin.js?v=2025070901:122
 
-dev. button functionality :
-the button doesnt work : 
-console error 1 :
- Error Report: {message: 'Uncaught ReferenceError: verifyDevAccess is not defined', filename: 'https://yaron-cayouf-portal.netlify.app/admin', lineno: 296, colno: 78, error: 'ReferenceError: verifyDevAccess is not defined\n   …s://yaron-cayouf-portal.netlify.app/admin:296:78)', …}
- Understanding the problem
-The error message Uncaught ReferenceError: verifyDevAccess is not defined indicates that your code is trying to call a function or access a variable named verifyDevAccess, but it hasn't been declared or defined anywhere in the scope where it's being used. This means the JavaScript engine doesn't know what verifyDevAccess refers to.
-
-The provided sendErrorReport function is designed to log errors to the console and potentially integrate with external error reporting services. However, the error message you're seeing occurs before sendErrorReport is called, likely in the code that is triggering the error report in the first place. The environment-config.js:398 line in the console output shows where sendErrorReport is being called from, not where the ReferenceError originates. The actual error occurs on line 296 of your /admin page, as indicated by filename: 'https://yaron-cayouf-portal.netlify.app/admin', lineno: 296, colno: 78.
+Parts search results - floating screen 
+errors from console :
+error 1 :
+The error message Uncaught ReferenceError: openPartsResultsFloating is not defined indicates that the JavaScript code is trying to call a function named openPartsResultsFloating, but this function has not been declared or is not accessible in the current scope. The error report shows that this happened on line 961, column 75 of validation-dashboard.html. The provided code snippet for sendErrorReport is likely what logs the error report itself, not the cause of the ReferenceError.
 
 Suggested fix
-You need to find the code on line 296 of your /admin page that is attempting to use verifyDevAccess and either:
+Ensure that the function openPartsResultsFloating is defined within a script tag in your HTML or in a separate JavaScript file that is loaded before the code that attempts to call it. Make sure there are no typos in the function name.
 
-Define the verifyDevAccess function: If you intend to use verifyDevAccess, ensure it is declared and accessible in the scope where it's being called. This might involve adding a function definition in a script tag or importing it from another file.
-Remove or correct the usage of verifyDevAccess: If verifyDevAccess is not a function you intended to use, remove the line of code that is calling it or correct the typo if you meant to call a differently named function.
-To effectively fix this, you will need to examine the code on line 296 of your /admin page (https://yaron-cayouf-portal.netlify.app/admin). The colno: 78 might also help you pinpoint the exact location on that line.
-
-Summary
-The Uncaught ReferenceError: verifyDevAccess is not defined means your code is trying to use something called verifyDevAccess which hasn't been created. To fix this, find where verifyDevAccess is used on line 296 of your admin page and either define it or remove/correct its usage.
-
-error 2 :
-
-admin:296 Uncaught ReferenceError: verifyDevAccess is not defined
-    at HTMLButtonElement.onclick (admin:296:78)
-onclick	@	admin:296
-Understanding the problem
-The error "Uncaught ReferenceError: verifyDevAccess is not defined" means that when the button with the onclick="verifyDevAccess()" attribute is clicked, the browser cannot find a JavaScript function named verifyDevAccess to execute. This typically happens when the script defining the verifyDevAccess function has not been loaded or is not accessible in the scope where the function is being called.
-
-How to verify
-You can verify this by opening the "Sources" tab in Chrome DevTools and checking if a script file containing the verifyDevAccess function is loaded. If it is loaded, check if the function is defined within the global scope or within a scope that is accessible to the button's onclick handler.
-
-Suggested fix
-Ensure that the JavaScript file containing the verifyDevAccess function is correctly linked and loaded in your HTML file, and that the verifyDevAccess function is defined in the global scope or accessible to the onclick handler.
-
-Here's an example of how you might include a script file:
-
-html
-
-<script src="path/to/your/script.js"></script>
-
-Use code snippets with caution
-
-And here's an example of how verifyDevAccess might be defined in your script:
+For example, if openPartsResultsFloating should open a floating element:
 
 js
 
-function verifyDevAccess() {
-  // Your function logic here
-  console.log("verifyDevAccess function called!");
+// Define the function
+function openPartsResultsFloating() {
+  // Code to open the floating element
+  console.log("Opening parts results floating");
+  // Add your actual logic here
 }
+
+// Later in your code, you can call the function:
+// openPartsResultsFloating(); // This call will now work
+
 Use code snippets with caution
 
-Make sure the <script> tag is placed before the button element that uses the onclick attribute, or ensure the script is loaded asynchronously using defer or async.
+Alternatively, if openPartsResultsFloating is meant to be a method of an object, ensure the object is defined and the method exists:
+
+js
+
+const uiHelper = {
+  openPartsResultsFloating: function() {
+    // Code to open the floating element
+    console.log("Opening parts results floating");
+    // Add your actual logic here
+  }
+};
+
+// Later in your code, you would call it like this:
+// uiHelper.openPartsResultsFloating();
+Use code snippets with caution
+
+Locate the code around line 961 in validation-dashboard.html and verify how openPartsResultsFloating is being called. Then, ensure the function is correctly defined and available before that point.
 
 Summary
-The error "Uncaught ReferenceError: verifyDevAccess is not defined" indicates that the JavaScript function verifyDevAccess is not found when a button is clicked. This is usually due to the script defining the function not being loaded or the function not being in an accessible scope. The fix involves ensuring the script is loaded correctly and the function is defined where it can be accessed.
+The error Uncaught ReferenceError: openPartsResultsFloating is not defined means the function being called doesn't exist or isn't in scope. Define the function openPartsResultsFloating before it is called to resolve the error.
 
+error 2 
+Understanding the problem
+The error "Uncaught ReferenceError: openPartsResultsFloating is not defined" means that when the button with the onclick attribute openPartsResultsFloating() was clicked, the browser could not find a function with that name in the current scope.
 
+Suggested fix
+Ensure that a JavaScript function named openPartsResultsFloating is defined and accessible in the global scope or in the scope where the button's onclick event is being processed. You need to add the following code block to your HTML page:
+
+html
+
+<script>
+  // Define the openPartsResultsFloating function
+  function openPartsResultsFloating() {
+    // Add the code to open the parts results floating window here
+    console.log("openPartsResultsFloating function called");
+    // Example: window.open('parts_results.html', '_blank', 'width=600,height=400');
+  }
+</script>
+Use code snippets with caution
+
+Place this script block either in the <head> section of your HTML or just before the closing </body> tag. Make sure the actual implementation of the function (the code that opens the floating window) is included within the function body.
+
+Summary
+The error occurred because the browser tried to execute a JavaScript function (openPartsResultsFloating) that was not defined. The solution is to create a JavaScript function with that exact name.
 
