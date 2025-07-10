@@ -197,10 +197,109 @@
       background: #dc3545;
       color: white;
     }
+
+    .btn-info {
+      background: #17a2b8;
+      color: white;
+    }
     
     .btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .floating-access {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin: 25px 0;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+
+    .floating-access h3 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #17a2b8;
+      text-align: center;
+    }
+
+    .floating-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .clickable-metric {
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: -8px -12px;
+    }
+
+    .clickable-metric:hover {
+      background-color: #f0f9ff;
+      transform: translateX(-5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .drill-down-icon {
+      font-size: 14px;
+      opacity: 0.6;
+      margin-right: 10px;
+      transition: opacity 0.3s;
+    }
+
+    .clickable-metric:hover .drill-down-icon {
+      opacity: 1;
+    }
+
+    .drill-down-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      z-index: 10000;
+      direction: rtl;
+    }
+
+    .drill-down-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    }
+
+    .drill-down-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .drill-down-close {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
     }
     
     .progress-bar {
@@ -390,17 +489,20 @@
       <!-- Damage Data Card -->
       <div class="card">
         <h3>🧱 נתוני נזק <span class="status-indicator" id="damage-status"></span></h3>
-        <div class="metric">
+        <div class="metric clickable-metric" onclick="drillDownDamage('centers')">
           <span class="metric-label">מספר מוקדי נזק:</span>
           <span class="metric-value" id="damage-centers-count">0</span>
+          <span class="drill-down-icon">🔍</span>
         </div>
-        <div class="metric">
+        <div class="metric clickable-metric" onclick="drillDownDamage('parts')">
           <span class="metric-label">סה"כ חלקים:</span>
           <span class="metric-value" id="total-parts">0</span>
+          <span class="drill-down-icon">🔍</span>
         </div>
-        <div class="metric">
+        <div class="metric clickable-metric" onclick="drillDownDamage('repairs')">
           <span class="metric-label">סה"כ תיקונים:</span>
           <span class="metric-value" id="total-repairs">0</span>
+          <span class="drill-down-icon">🔍</span>
         </div>
         <div class="metric">
           <span class="metric-label">סטטוס אימות:</span>
@@ -434,6 +536,17 @@
       <button class="btn btn-danger" onclick="clearValidationData()">🗑️ נקה נתונים</button>
     </div>
 
+    <!-- Floating Screen Access -->
+    <div class="floating-access">
+      <h3>🪟 מסכי מידע מרחפים</h3>
+      <div class="floating-buttons">
+        <button class="btn btn-info" onclick="openCarDetailsFloating()">🚗 פרטי רכב</button>
+        <button class="btn btn-info" onclick="openLeviFloating()">📊 דוח לוי יצחק</button>
+        <button class="btn btn-info" onclick="openPartsFloating()">🔧 חיפוש חלקים</button>
+        <button class="btn btn-info" onclick="openInvoiceFloating()">🧾 פרטי חשבונית</button>
+      </div>
+    </div>
+
     <!-- Auto-refresh control -->
     <div class="card">
       <div class="auto-refresh">
@@ -453,8 +566,25 @@
 
   <!-- Scripts -->
   <script type="module">
-    import { validationSystem } from './validation-system.js';
-    import { helper } from './helper.js';
+    // Import validation system with fallback
+    let validationSystem = null;
+    let helper = null;
+    
+    try {
+      const validationModule = await import('./validation-system.js');
+      validationSystem = validationModule.validationSystem;
+      console.log('✅ Validation system imported successfully');
+    } catch (error) {
+      console.warn('⚠️ Could not import validation-system.js:', error);
+    }
+    
+    try {
+      const helperModule = await import('./helper.js');
+      helper = helperModule.helper;
+      console.log('✅ Helper imported successfully');
+    } catch (error) {
+      console.warn('⚠️ Could not import helper.js:', error);
+    }
 
     let autoRefreshInterval = null;
     let refreshCountdown = 30;
@@ -471,7 +601,9 @@
       }
 
       // Load initial validation data
-      refreshValidation();
+      setTimeout(() => {
+        refreshValidation();
+      }, 500); // Add small delay to ensure modules are loaded
       
       // Setup keyboard shortcuts
       setupKeyboardShortcuts();
@@ -483,25 +615,24 @@
       console.log('🔄 Refreshing validation data...');
       
       try {
-        // Get validation summary
-        const summary = validationSystem.getValidationSummary();
+        // Get validation summary with fallback logic
+        let summary = null;
         
-        // Update overall status
+        if (validationSystem && typeof validationSystem.getValidationSummary === 'function') {
+          summary = validationSystem.getValidationSummary();
+          console.log('📊 Using validation system data:', summary);
+        } else {
+          // Fallback: create summary from helper data directly
+          summary = createValidationSummaryFromHelper();
+          console.log('📊 Using fallback validation data:', summary);
+        }
+        
+        // Update all dashboard sections
         updateOverallStatus(summary);
-        
-        // Update errors
         updateErrors(summary);
-        
-        // Update warnings
         updateWarnings(summary);
-        
-        // Update vehicle data
         updateVehicleData(summary);
-        
-        // Update damage data
         updateDamageData(summary);
-        
-        // Update business rules
         updateBusinessRules(summary);
         
         // Update last check time
@@ -511,8 +642,98 @@
         
       } catch (error) {
         console.error('❌ Error refreshing validation data:', error);
-        showError('שגיאה בטעינת נתוני האימות');
+        showError('שגיאה בטעינת נתוני האימות: ' + error.message);
+        
+        // Show fallback data even on error
+        try {
+          const fallbackSummary = createEmptyValidationSummary();
+          updateOverallStatus(fallbackSummary);
+          updateErrors(fallbackSummary);
+          updateWarnings(fallbackSummary);
+          updateVehicleData(fallbackSummary);
+          updateDamageData(fallbackSummary);
+          updateBusinessRules(fallbackSummary);
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError);
+        }
       }
+    }
+
+    // Create validation summary from helper data
+    function createValidationSummaryFromHelper() {
+      const helperData = helper || {};
+      const errors = [];
+      const warnings = [];
+      
+      // Check vehicle data
+      const vehicleErrors = [];
+      const vehicleWarnings = [];
+      const vehicle = helperData.vehicle || helperData.car_details || {};
+      
+      if (!vehicle.plate && !vehicle.plate_number) vehicleErrors.push('מספר רכב חסר');
+      if (!vehicle.manufacturer) vehicleErrors.push('יצרן חסר');
+      if (!vehicle.model) vehicleErrors.push('דגם חסר');
+      if (!vehicle.year) vehicleErrors.push('שנת ייצור חסרה');
+      
+      // Check damage data
+      const damageErrors = [];
+      const damageWarnings = [];
+      const damage = helperData.damage || {};
+      const centers = damage.centers || helperData.damage_sections || [];
+      
+      if (centers.length === 0) {
+        damageErrors.push('לא הוגדרו מוקדי נזק');
+      }
+      
+      // Check business rules
+      const businessErrors = [];
+      const businessWarnings = [];
+      
+      if (centers.length > 10) {
+        businessWarnings.push('מספר מוקדי נזק גבוה מהרגיל');
+      }
+      
+      const totalErrors = vehicleErrors.length + damageErrors.length + businessErrors.length;
+      const totalWarnings = vehicleWarnings.length + damageWarnings.length + businessWarnings.length;
+      
+      return {
+        isValid: totalErrors === 0,
+        totalErrors,
+        totalWarnings,
+        lastValidation: new Date(),
+        details: {
+          vehicle: {
+            isValid: vehicleErrors.length === 0,
+            errors: vehicleErrors,
+            warnings: vehicleWarnings
+          },
+          damage: {
+            isValid: damageErrors.length === 0,
+            errors: damageErrors,
+            warnings: damageWarnings
+          },
+          business: {
+            isValid: businessErrors.length === 0,
+            errors: businessErrors,
+            warnings: businessWarnings
+          }
+        }
+      };
+    }
+
+    // Create empty validation summary for fallback
+    function createEmptyValidationSummary() {
+      return {
+        isValid: false,
+        totalErrors: 0,
+        totalWarnings: 0,
+        lastValidation: new Date(),
+        details: {
+          vehicle: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          damage: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          business: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] }
+        }
+      };
     }
 
     function updateOverallStatus(summary) {
@@ -765,48 +986,199 @@
       console.log('📊 Exporting validation report...');
       
       try {
-        const report = validationSystem.generateValidationReport();
-        const reportJson = JSON.stringify(report, null, 2);
+        let report = null;
         
-        const blob = new Blob([reportJson], { type: 'application/json' });
+        // Try to get report from validation system
+        if (validationSystem && typeof validationSystem.generateValidationReport === 'function') {
+          report = validationSystem.generateValidationReport();
+        } else {
+          // Generate report from current validation summary
+          const summary = createValidationSummaryFromHelper();
+          report = {
+            timestamp: new Date().toISOString(),
+            summary: summary,
+            helperData: helper || {},
+            recommendations: generateRecommendations(summary)
+          };
+        }
+        
+        // Create comprehensive report
+        const exportReport = {
+          reportInfo: {
+            title: 'דוח אימות נתונים - מערכת ירון כיוף שמאות',
+            generated: new Date().toISOString(),
+            generatedBy: 'לוח בקרת אימות',
+            plateNumber: helper?.vehicle?.plate || helper?.vehicle?.plate_number || helper?.car_details?.plate || 'לא זמין'
+          },
+          validationSummary: report.summary || summary,
+          systemData: {
+            helper: helper || {},
+            validationSystemAvailable: !!validationSystem
+          },
+          recommendations: report.recommendations || []
+        };
+        
+        const reportJson = JSON.stringify(exportReport, null, 2);
+        
+        // Create downloadable file
+        const blob = new Blob([reportJson], { type: 'application/json', charset: 'utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `validation-report-${new Date().toISOString().split('T')[0]}.json`;
+        
+        const plateNumber = exportReport.reportInfo.plateNumber !== 'לא זמין' ? 
+          `_${exportReport.reportInfo.plateNumber}` : '';
+        const filename = `validation-report${plateNumber}_${new Date().toISOString().split('T')[0]}.json`;
+        
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
         console.log('✅ Validation report exported successfully');
-        showSuccess('דוח האימות יוצא בהצלחה');
+        showSuccess(`דוח האימות יוצא בהצלחה: ${filename}`);
         
       } catch (error) {
         console.error('❌ Error exporting validation report:', error);
-        showError('שגיאה בייצוא דוח האימות');
+        showError('שגיאה בייצוא דוח האימות: ' + error.message);
       }
+    }
+
+    function generateRecommendations(summary) {
+      const recommendations = [];
+
+      if (!summary.isValid) {
+        recommendations.push('יש לתקן את השגיאות הבאות לפני המשך');
+      }
+
+      if (summary.totalWarnings > 0) {
+        recommendations.push('יש לבדוק את האזהרות ולוודא שהנתונים נכונים');
+      }
+
+      if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+        recommendations.push('יש לבדוק ולתקן את פרטי הרכב');
+      }
+
+      if (summary.details.damage && !summary.details.damage.isValid) {
+        recommendations.push('יש לבדוק ולתקן את נתוני הנזק');
+      }
+
+      if (summary.details.business && !summary.details.business.isValid) {
+        recommendations.push('יש לבדוק את חוקי העסק והיחסים בין העלויות');
+      }
+
+      return recommendations;
     }
 
     function fixAllErrors() {
       console.log('🔧 Attempting to fix validation errors...');
       
       if (confirm('האם אתה בטוח שברצונך לתקן באופן אוטומטי את השגיאות שנמצאו?')) {
-        // Implement auto-fix logic here
-        showSuccess('תיקון אוטומטי הושלם - אנא בדוק את התוצאות');
-        refreshValidation();
+        try {
+          let fixesApplied = 0;
+          const summary = createValidationSummaryFromHelper();
+          
+          // Auto-fix vehicle data errors
+          if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+            if (helper && helper.vehicle) {
+              // Fix empty plate number
+              if (!helper.vehicle.plate && !helper.vehicle.plate_number) {
+                helper.vehicle.plate_number = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty manufacturer
+              if (!helper.vehicle.manufacturer) {
+                helper.vehicle.manufacturer = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty model
+              if (!helper.vehicle.model) {
+                helper.vehicle.model = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty year
+              if (!helper.vehicle.year) {
+                helper.vehicle.year = new Date().getFullYear();
+                fixesApplied++;
+              }
+            }
+          }
+          
+          // Auto-fix damage data errors
+          if (summary.details.damage && !summary.details.damage.isValid) {
+            if (helper && (!helper.damage || !helper.damage.centers)) {
+              // Initialize empty damage structure
+              if (!helper.damage) helper.damage = {};
+              if (!helper.damage.centers) helper.damage.centers = [];
+              fixesApplied++;
+            }
+          }
+          
+          // Save changes if any fixes were applied
+          if (fixesApplied > 0) {
+            console.log(`🔧 Applied ${fixesApplied} automatic fixes`);
+            showSuccess(`תיקון אוטומטי הושלם - ${fixesApplied} שגיאות תוקנו`);
+          } else {
+            console.log('🔧 No automatic fixes available');
+            showSuccess('לא נמצאו שגיאות שניתן לתקן באופן אוטומטי');
+          }
+          
+          // Refresh validation to show updated data
+          setTimeout(() => {
+            refreshValidation();
+          }, 1000);
+          
+        } catch (error) {
+          console.error('❌ Error during auto-fix:', error);
+          showError('שגיאה בתיקון אוטומטי: ' + error.message);
+        }
       }
     }
 
     function clearValidationData() {
-      if (confirm('האם אתה בטוח שברצונך לנקות את כל נתוני האימות?')) {
-        // Clear validation history
-        validationSystem.validationHistory = [];
-        validationSystem.errors.clear();
-        validationSystem.warnings.clear();
-        
-        console.log('🗑️ Validation data cleared');
-        showSuccess('נתוני האימות נוקו');
-        refreshValidation();
+      if (confirm('האם אתה בטוח שברצונך לנקות את כל נתוני האימות?\n\nפעולה זו תמחק את היסטוריית האימות ותאפס את המטמון.')) {
+        try {
+          // Clear validation system data if available
+          if (validationSystem) {
+            if (validationSystem.validationHistory) {
+              validationSystem.validationHistory = [];
+            }
+            if (validationSystem.errors && typeof validationSystem.errors.clear === 'function') {
+              validationSystem.errors.clear();
+            }
+            if (validationSystem.warnings && typeof validationSystem.warnings.clear === 'function') {
+              validationSystem.warnings.clear();
+            }
+          }
+          
+          // Clear any cached validation data from sessionStorage
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.includes('validation') || key.includes('cache')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+          
+          // Reset UI elements to show clean state
+          document.getElementById('validation-status').textContent = 'נוקה';
+          document.getElementById('completion-percentage').textContent = '0%';
+          document.getElementById('completion-progress').style.width = '0%';
+          document.getElementById('total-errors').textContent = '0';
+          document.getElementById('total-warnings').textContent = '0';
+          document.getElementById('last-check').textContent = 'נוקה';
+          
+          console.log('🗑️ Validation data cleared successfully');
+          showSuccess('נתוני האימות נוקו בהצלחה');
+          
+          // Refresh validation after clearing
+          setTimeout(() => {
+            refreshValidation();
+          }, 2000);
+          
+        } catch (error) {
+          console.error('❌ Error clearing validation data:', error);
+          showError('שגיאה בניקוי נתוני האימות: ' + error.message);
+        }
       }
     }
 
@@ -877,12 +1249,238 @@
       }, 4000);
     }
 
+    // Floating screen functions
+    function openCarDetailsFloating() {
+      try {
+        if (typeof window.openCarDetailsModal === 'function') {
+          window.openCarDetailsModal();
+        } else {
+          console.log('🚗 Car details floating screen not available, loading...');
+          loadFloatingScreen('car-details-floating.js', () => {
+            if (typeof window.openCarDetailsModal === 'function') {
+              window.openCarDetailsModal();
+            } else {
+              showError('לא ניתן לטעון את מסך פרטי הרכב');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening car details floating:', error);
+        showError('שגיאה בפתיחת מסך פרטי רכב');
+      }
+    }
+
+    function openLeviFloating() {
+      try {
+        if (typeof window.openLeviModal === 'function') {
+          window.openLeviModal();
+        } else {
+          console.log('📊 Levi floating screen not available, loading...');
+          loadFloatingScreen('levi-floating.js', () => {
+            if (typeof window.openLeviModal === 'function') {
+              window.openLeviModal();
+            } else {
+              showError('לא ניתן לטעון את מסך דוח לוי יצחק');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening Levi floating:', error);
+        showError('שגיאה בפתיחת מסך דוח לוי יצחק');
+      }
+    }
+
+    function openPartsFloating() {
+      try {
+        if (typeof window.openPartsModal === 'function') {
+          window.openPartsModal();
+        } else {
+          console.log('🔧 Parts floating screen not available, loading...');
+          loadFloatingScreen('parts-floating.js', () => {
+            if (typeof window.openPartsModal === 'function') {
+              window.openPartsModal();
+            } else {
+              showError('לא ניתן לטעון את מסך חיפוש חלקים');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening parts floating:', error);
+        showError('שגיאה בפתיחת מסך חיפוש חלקים');
+      }
+    }
+
+    function openInvoiceFloating() {
+      try {
+        if (typeof window.openInvoiceModal === 'function') {
+          window.openInvoiceModal();
+        } else {
+          console.log('🧾 Invoice floating screen not available, loading...');
+          loadFloatingScreen('invoice-details-floating.js', () => {
+            if (typeof window.openInvoiceModal === 'function') {
+              window.openInvoiceModal();
+            } else {
+              showError('לא ניתן לטעון את מסך פרטי חשבונית');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening invoice floating:', error);
+        showError('שגיאה בפתיחת מסך פרטי חשבונית');
+      }
+    }
+
+    function loadFloatingScreen(scriptName, callback) {
+      const script = document.createElement('script');
+      script.src = scriptName;
+      script.onload = callback;
+      script.onerror = () => {
+        console.error(`Failed to load ${scriptName}`);
+        showError(`לא ניתן לטעון את הסקריפט ${scriptName}`);
+      };
+      document.head.appendChild(script);
+    }
+
+    // Drill-down analysis functions
+    function drillDownDamage(type) {
+      console.log(`🔍 Drilling down into damage data: ${type}`);
+      
+      try {
+        const damageData = helper?.damage || {};
+        const centers = damageData.centers || helper?.damage_sections || [];
+        
+        let content = '';
+        let title = '';
+        
+        switch (type) {
+          case 'centers':
+            title = 'פירוט מוקדי נזק';
+            if (centers.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו מוקדי נזק</p>';
+            } else {
+              content = centers.map((center, index) => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h4 style="color: #667eea; margin-bottom: 10px;">מוקד נזק ${index + 1}</h4>
+                  <p><strong>מיקום:</strong> ${center.location || center.area || 'לא הוזן'}</p>
+                  <p><strong>תיאור:</strong> ${center.description || center.damage_description || 'לא הוזן'}</p>
+                  <p><strong>חלקים:</strong> ${center.parts?.length || 0}</p>
+                  <p><strong>תיקונים:</strong> ${center.repairs?.length || center.works?.length || 0}</p>
+                </div>
+              `).join('');
+            }
+            break;
+            
+          case 'parts':
+            title = 'פירוט חלקים';
+            let allParts = [];
+            centers.forEach((center, centerIndex) => {
+              if (center.parts) {
+                center.parts.forEach(part => {
+                  allParts.push({...part, centerIndex: centerIndex + 1});
+                });
+              }
+            });
+            
+            if (allParts.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו חלקים</p>';
+            } else {
+              content = allParts.map(part => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h5 style="color: #28a745; margin-bottom: 8px;">${part.name || part.description || 'חלק ללא שם'}</h5>
+                  <p><strong>מוקד:</strong> ${part.centerIndex}</p>
+                  <p><strong>מחיר:</strong> ₪${parseFloat(part.price || part.cost || 0).toLocaleString('he-IL')}</p>
+                  <p><strong>כמות:</strong> ${part.quantity || 1}</p>
+                  ${part.partNumber ? `<p><strong>מק"ט:</strong> ${part.partNumber}</p>` : ''}
+                </div>
+              `).join('');
+            }
+            break;
+            
+          case 'repairs':
+            title = 'פירוט תיקונים';
+            let allRepairs = [];
+            centers.forEach((center, centerIndex) => {
+              const repairs = center.repairs || center.works || [];
+              repairs.forEach(repair => {
+                allRepairs.push({...repair, centerIndex: centerIndex + 1});
+              });
+            });
+            
+            if (allRepairs.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו תיקונים</p>';
+            } else {
+              content = allRepairs.map(repair => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h5 style="color: #dc3545; margin-bottom: 8px;">${repair.description || repair.work_description || 'תיקון ללא תיאור'}</h5>
+                  <p><strong>מוקד:</strong> ${repair.centerIndex}</p>
+                  <p><strong>עלות:</strong> ₪${parseFloat(repair.cost || repair.price || 0).toLocaleString('he-IL')}</p>
+                  <p><strong>שעות עבודה:</strong> ${repair.hours || repair.work_hours || 'לא הוזן'}</p>
+                  ${repair.type ? `<p><strong>סוג:</strong> ${repair.type}</p>` : ''}
+                </div>
+              `).join('');
+            }
+            break;
+        }
+        
+        showDrillDownModal(title, content);
+        
+      } catch (error) {
+        console.error('Error in drill-down analysis:', error);
+        showError('שגיאה בניתוח נתונים מפורט');
+      }
+    }
+
+    function showDrillDownModal(title, content) {
+      // Remove existing modal if any
+      const existingModal = document.querySelector('.drill-down-overlay');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'drill-down-overlay';
+      overlay.onclick = closeDrillDownModal;
+      
+      // Create modal
+      const modal = document.createElement('div');
+      modal.className = 'drill-down-modal';
+      modal.innerHTML = `
+        <div class="drill-down-header">
+          <h3 style="margin: 0; color: #667eea;">${title}</h3>
+          <button class="drill-down-close" onclick="closeDrillDownModal()">×</button>
+        </div>
+        <div class="drill-down-content">
+          ${content}
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      // Prevent modal from closing when clicking inside it
+      modal.onclick = (e) => e.stopPropagation();
+    }
+
+    function closeDrillDownModal() {
+      const overlay = document.querySelector('.drill-down-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
     // Export functions to global scope
     window.refreshValidation = refreshValidation;
     window.exportValidationReport = exportValidationReport;
     window.fixAllErrors = fixAllErrors;
     window.clearValidationData = clearValidationData;
     window.toggleAutoRefresh = toggleAutoRefresh;
+    window.openCarDetailsFloating = openCarDetailsFloating;
+    window.openLeviFloating = openLeviFloating;
+    window.openPartsFloating = openPartsFloating;
+    window.openInvoiceFloating = openInvoiceFloating;
+    window.drillDownDamage = drillDownDamage;
+    window.closeDrillDownModal = closeDrillDownModal;
     
     // Initialize keyboard shortcuts info
     setTimeout(() => {
@@ -909,5 +1507,12 @@
       console.log(`📊 Validation Dashboard loaded in ${loadTime.toFixed(2)}ms`);
     });
   </script>
+
+  <!-- Floating Screen Scripts -->
+  <script src="car-details-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="parts-floating.js"></script>
+  <script src="invoice-details-floating.js"></script>
+  <script src="assistant-floating.js"></script>
 </body>
 </html>
