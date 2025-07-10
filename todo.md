@@ -1161,9 +1161,12 @@ Data is inside the same square fields as we have now .
 
 19. a total selection page makeover 
 
+20. is Nicole expecting a voice input by default ? current issue :inconsistant error ,  if a query was sent using the plate number or the text input or both but not usin STT voice query, the webhook sometimes returns false, and creates an error .
+change the page title from  ניקול – עוזרת דיגיטלית to   ניקול – מנהלת הידע
+
 
 16. in selection page move the expertise summary to be under the wizard 
-17. General :
+**. General :**
 *  Run a deep check across system files ensure that all  modules are configured correctly :
 * configurations, dependencies, workflows and data flow are according to the specs and documentations 
 *  Ensure all webhooks are active and connect correctly 
@@ -2139,5 +2142,5 @@ Both search modules in the admin panel are now fully functional with comprehensi
 - **Professional integration preparation** for future API connections
 
 ---
-***all tasks are done ✅*** search by field page needs css and layout fixing 
+***all tasks are done ✅*** ***search by field page needs css and layout fixing***
 **Ready for implementation - all tasks approved for development.**
