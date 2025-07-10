@@ -1,5 +1,15 @@
 import { updateHelper } from './helper.js';
 
+// Import logging system if available
+let Logger;
+try {
+  import('./logging-system.js').then(module => {
+    Logger = module.Logger;
+  });
+} catch (error) {
+  console.warn('Logging system not available in webhook module');
+}
+
 // ✅ Centralized Webhook Handler – Clean + Unified
 export const WEBHOOKS = {
   PASSWORD_PAGE: 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk',
@@ -48,7 +58,21 @@ export const SEARCH_MODULE = WEBHOOKS.SEARCH_MODULE;
 export async function sendToWebhook(id, payload) {
   const url = WEBHOOKS[id];
   if (!url) {
-    throw new Error(`Webhook [${id}] not registered`);
+    const error = new Error(`Webhook [${id}] not registered`);
+    if (Logger) {
+      Logger.error('webhook', 'send', `Webhook not found: ${id}`, { webhookId: id });
+    }
+    throw error;
+  }
+
+  // Log webhook attempt
+  if (Logger) {
+    Logger.systemEvent('webhook', 'send_request', `Sending request to ${id}`, {
+      webhookId: id,
+      url: url,
+      payloadSize: JSON.stringify(payload).length,
+      payloadKeys: typeof payload === 'object' ? Object.keys(payload) : []
+    });
   }
 
   const options = {
@@ -59,9 +83,38 @@ export async function sendToWebhook(id, payload) {
     options.headers = { 'Content-Type': 'application/json' };
   }
 
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (Logger) {
+        Logger.error('webhook', 'http_error', `HTTP error for ${id}: ${res.status} ${res.statusText}`, {
+          webhookId: id,
+          status: res.status,
+          statusText: res.statusText,
+          url: url
+        });
+      }
+      throw error;
+    }
+
+    // Log successful request
+    if (Logger) {
+      Logger.systemEvent('webhook', 'request_success', `Webhook ${id} request successful`, {
+        webhookId: id,
+        status: res.status
+      });
+    }
+
+  } catch (error) {
+    if (Logger) {
+      Logger.error('webhook', 'request_failed', `Webhook ${id} request failed: ${error.message}`, {
+        webhookId: id,
+        error: error.message,
+        url: url
+      });
+    }
+    throw error;
   }
 
   try {
@@ -71,23 +124,61 @@ export async function sendToWebhook(id, payload) {
     if (data && typeof data === 'object') {
       // Check for explicit error indicators
       if (data.error === true || data.status === 'error' || data.success === false) {
-        throw new Error(data.message || data.error_message || 'Server validation failed');
+        const error = new Error(data.message || data.error_message || 'Server validation failed');
+        if (Logger) {
+          Logger.error('webhook', 'server_error', `Server error for ${id}: ${error.message}`, {
+            webhookId: id,
+            serverResponse: data
+          });
+        }
+        throw error;
       }
       
       // Check for Make.com automation failures
       if (data.make_status === 'error' || data.automation_failed === true) {
-        throw new Error(data.make_error || 'Make.com automation execution failed');
+        const error = new Error(data.make_error || 'Make.com automation execution failed');
+        if (Logger) {
+          Logger.error('webhook', 'automation_error', `Make.com automation failed for ${id}: ${error.message}`, {
+            webhookId: id,
+            makeError: data.make_error,
+            serverResponse: data
+          });
+        }
+        throw error;
       }
       
       // Check for validation errors array
       if (Array.isArray(data.errors) && data.errors.length > 0) {
-        throw new Error(`Validation errors: ${data.errors.join(', ')}`);
+        const error = new Error(`Validation errors: ${data.errors.join(', ')}`);
+        if (Logger) {
+          Logger.error('webhook', 'validation_error', `Validation errors for ${id}: ${error.message}`, {
+            webhookId: id,
+            validationErrors: data.errors
+          });
+        }
+        throw error;
       }
       
       // Check for admin/permission errors
       if (data.access_denied === true || data.permission_error === true) {
-        throw new Error(data.permission_message || 'Access denied - insufficient permissions');
+        const error = new Error(data.permission_message || 'Access denied - insufficient permissions');
+        if (Logger) {
+          Logger.error('webhook', 'permission_error', `Permission denied for ${id}: ${error.message}`, {
+            webhookId: id,
+            permissionMessage: data.permission_message
+          });
+        }
+        throw error;
       }
+    }
+    
+    // Log successful response processing
+    if (Logger) {
+      Logger.systemEvent('webhook', 'response_success', `Webhook ${id} response processed successfully`, {
+        webhookId: id,
+        dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
+        hasData: !!data
+      });
     }
     
     return data;
@@ -97,6 +188,12 @@ export async function sendToWebhook(id, payload) {
       throw e;
     }
     // Otherwise, it's a JSON parsing error
+    if (Logger) {
+      Logger.warn('webhook', 'json_parse_error', `Failed to parse JSON response for ${id}`, {
+        webhookId: id,
+        error: e.message
+      });
+    }
     console.warn('Response is not valid JSON, returning undefined');
     return undefined;
   }

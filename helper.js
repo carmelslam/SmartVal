@@ -11,6 +11,16 @@ import {
   UNIFIED_SCHEMAS
 } from './data-flow-standardizer.js';
 
+// Import logging system if available
+let Logger;
+try {
+  import('./logging-system.js').then(module => {
+    Logger = module.Logger;
+  });
+} catch (error) {
+  console.warn('Logging system not available in helper module');
+}
+
 const CAR_DETAILS_TEMPLATE = {
   plate: '',
   owner: '',
@@ -373,6 +383,15 @@ export function updateHelper(section, data) {
       timestamp: new Date()
     });
     
+    // Action log
+    if (Logger) {
+      Logger.userAction('helper', 'update_data', `Updated ${section} data`, {
+        section: section,
+        dataKeys: Object.keys(sanitizedData),
+        dataSize: JSON.stringify(sanitizedData).length
+      }, helper.meta?.plate || helper.car_details?.plate);
+    }
+    
     saveHelperToStorage();
     return true;
   } catch (error) {
@@ -417,6 +436,15 @@ export function saveHelperToStorage() {
       dataSize: JSON.stringify(sanitizedHelper).length,
       timestamp: new Date()
     });
+    
+    // Action log
+    if (Logger) {
+      Logger.systemEvent('helper', 'data_saved', 'Helper data saved to storage', {
+        dataSize: JSON.stringify(sanitizedHelper).length,
+        validationErrors: validationErrors.length,
+        hasPlate: !!(sanitizedHelper.meta?.plate || sanitizedHelper.car_details?.plate)
+      }, sanitizedHelper.meta?.plate || sanitizedHelper.car_details?.plate);
+    }
     
     return true;
   } catch (error) {
@@ -498,6 +526,16 @@ export function loadHelperFromStorage() {
       integrityScore: Object.values(integrityReport.completeness).reduce((a, b) => a + b, 0) / Object.keys(integrityReport.completeness).length || 0,
       timestamp: new Date()
     });
+    
+    // Action log
+    if (Logger) {
+      Logger.systemEvent('helper', 'data_loaded', `Helper data loaded from ${dataSource}`, {
+        dataSize: data.length,
+        source: dataSource,
+        validationErrors: validationErrors.length,
+        integrityScore: Object.values(integrityReport.completeness).reduce((a, b) => a + b, 0) / Object.keys(integrityReport.completeness).length || 0
+      }, sanitizedData.meta?.plate || sanitizedData.car_details?.plate);
+    }
     
     return true;
     
