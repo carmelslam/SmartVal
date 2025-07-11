@@ -166,7 +166,7 @@
         <button id="loadCaseBtn" onclick="loadExistingCaseWithPassword()" style="padding:10px 20px; background:#1e3a8a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
           טען תיק קיים
         </button>
-        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;">
+        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;" title="צור תיק חדש עם מספר הרכב הנוכחי">
           צור תיק חדש
         </button>
       </div>
@@ -235,6 +235,9 @@
       <button class="nav-btn home-btn" onclick="window.location.href='selection.html'">
         חזור לדף הבחירה
       </button>
+      <button class="nav-btn" id="reloadExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white; display: none;">
+        טען מחדש חוות דעת
+      </button>
       <button class="nav-btn logout-btn" onclick="logout()">
         יציאה מהמערכת
       </button>
@@ -266,9 +269,30 @@
         if (helper) {
           plateDataLoaded = true;
           document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '✓ נתוני הרכב נטענו מהיסטוריה';
+          document.getElementById('plateStatus').style.color = '#059669';
+          
+          // Display progress indicators for existing data
+          try {
+            const caseData = JSON.parse(helper);
+            displayCaseProgress(caseData);
+            showDataIntegrityStatus(caseData, 'existing');
+            
+            // Show reload expertise button if case has some data
+            if (caseData.damage_sections?.length > 0 || caseData.car_details) {
+              document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
+            }
+          } catch (e) {
+            console.error('Error parsing helper data:', e);
+          }
+          
           updateContinueButton();
+          updateButtonStates();
         }
       }
+      
+      // Update button states based on plate input
+      updateButtonStates();
     }
 
     // Handle plate input changes
@@ -288,7 +312,7 @@
         // Try to fetch existing case data
         const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
         
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           // Store the data
           sessionStorage.setItem('helper', JSON.stringify(response.data));
           sessionStorage.setItem('plate', plateNumber);
@@ -352,6 +376,37 @@
     function updateContinueButton() {
       const continueBtn = document.getElementById('continueBtn');
       continueBtn.disabled = !selectedReportType || !plateDataLoaded;
+    }
+    
+    // Update button states based on case status
+    function updateButtonStates() {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      const loadBtn = document.getElementById('loadCaseBtn');
+      const createBtn = document.getElementById('createNewCaseBtn');
+      
+      if (!plateNumber) {
+        loadBtn.disabled = true;
+        createBtn.disabled = true;
+        return;
+      }
+      
+      loadBtn.disabled = false;
+      createBtn.disabled = false;
+      
+      if (helper) {
+        // Case exists - emphasize load button
+        loadBtn.style.background = '#1e3a8a';
+        loadBtn.textContent = 'טען תיק קיים';
+        createBtn.style.background = '#6b7280';
+        createBtn.textContent = 'צור תיק חדש (מחיקת נתונים)';
+      } else {
+        // No case - emphasize create button
+        loadBtn.style.background = '#6b7280';
+        loadBtn.textContent = 'טען תיק קיים';
+        createBtn.style.background = '#059669';
+        createBtn.textContent = 'צור תיק חדש';
+      }
     }
 
     window.selectReport = function(type) {
@@ -477,7 +532,7 @@
 
         const response = await sendToWebhook('ADMIN_FETCH_CASE', payload);
         
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           const caseData = response.data;
           
           // Store the data
@@ -496,7 +551,13 @@
           displayCaseProgress(caseData);
           showDataIntegrityStatus(caseData, 'existing');
           
+          // Show reload expertise button if case has data
+          if (caseData.damage_sections?.length > 0 || caseData.car_details) {
+            document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
+          }
+          
           updateContinueButton();
+          updateButtonStates();
           
         } else {
           // Case not found - offer to create new
@@ -534,6 +595,15 @@
         return;
       }
       
+      // Check if there's already case data and warn user
+      const existingHelper = sessionStorage.getItem('helper');
+      if (existingHelper) {
+        const confirm = window.confirm('יש כבר נתוני תיק במערכת. יצירת תיק חדש תמחק את הנתונים הקיימים. האם להמשיך?');
+        if (!confirm) {
+          return;
+        }
+      }
+      
       const basicData = {
         meta: {
           plate: plateNumber,
@@ -566,6 +636,56 @@
       showDataIntegrityStatus(basicData, 'new');
       
       updateContinueButton();
+      updateButtonStates();
+    }
+
+    // Reload expertise report function
+    window.reloadExpertiseReport = async function() {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      if (!helper) {
+        alert('נתוני התיק לא נמצאו במערכת');
+        return;
+      }
+      
+      const reloadBtn = document.getElementById('reloadExpertiseBtn');
+      const originalText = reloadBtn.textContent;
+      
+      try {
+        reloadBtn.disabled = true;
+        reloadBtn.textContent = 'טוען חוות דעת...';
+        
+        const caseData = JSON.parse(helper);
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData.meta?.case_id,
+          helper: caseData
+        };
+        
+        const response = await sendToWebhook('CALL_EXPERTISE', payload);
+        
+        if (response?.success) {
+          alert('חוות הדעת נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
+          console.log('✅ Expertise report requested successfully');
+        } else {
+          alert('שגיאה בשליחת בקשה לחוות דעת. אנא נסה שוב.');
+          console.error('❌ Failed to request expertise report:', response);
+        }
+        
+      } catch (error) {
+        console.error('Error requesting expertise report:', error);
+        alert('שגיאה בשליחת בקשה לחוות דעת. אנא נסה שוב.');
+        
+      } finally {
+        reloadBtn.disabled = false;
+        reloadBtn.textContent = originalText;
+      }
     }
 
     // Display case progress indicators
@@ -617,6 +737,10 @@
         statusText = '📋 תיק חדש נוצר - ניתן להתחיל בעבודה על הדו"חות';
         statusDiv.style.background = '#dbeafe';
         statusDiv.style.color = '#1e40af';
+      } else if (type === 'existing') {
+        statusText = '🔄 תיק קיים נטען מהיסטוריה - ניתן להמשיך בעבודה או להפיק דו"חות';
+        statusDiv.style.background = '#dcfce7';
+        statusDiv.style.color = '#166534';
       } else if (completionCount === 0) {
         statusText = '📝 תיק קיים ללא נתונים - ניתן להתחיל בעבודה';
         statusDiv.style.background = '#fef3c7';
@@ -645,6 +769,7 @@
       
       plateInput.addEventListener('input', function() {
         clearTimeout(plateTimeout);
+        updateButtonStates(); // Update button states immediately
         plateTimeout = setTimeout(() => {
           handlePlateInput();
         }, 500); // Debounce for 500ms

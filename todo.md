@@ -1355,7 +1355,7 @@ E. Upload existing case button needs to take in consideration the fact that :
 F. Explain teh logic of the button create a new case - if its just to create a new case is not needed here it needs to be deleted , report creation cannot happen if teh detailes are nor stored in the helper, if its create a new report entry to the helper for example - then its something else -  ***if teh logic here is something else - explain teh logic***
 
 
-11. Nicole the knowledge manager ✅: the Nicole module has several issues that need to be fixed : 
+11. Nicole the knowledge manager ✅: 
     1. The text / audio field are still mandatory this need to be also optional , if the 2 fields are empty then Nicole cannot be activated. At least one fields either plate or free query field need to be filled - but both are optional . 
     2. When sending a query we still have an error message that reads : שגיאה בשליחת השאלה: The string did not match the expected pattern.. the webhook is activated correctly but it doesn't register any json . So it's possible blow is not sending a json at all . 
     3. The microphone options sometimes causes screen to freeze and to be not responsive and sometimes it displays an error : שגיאה בזיהוי קול: audio-capture
@@ -1375,7 +1375,7 @@ F. Explain teh logic of the button create a new case - if its just to create a n
 
 13. Push notifications: ***status : chrome and iphone can subscribe , mac safari doesnt register subscribtion , iphone recieves push, mac doesnt recive push messages despite chrome has been subscribed*** the one signal still doesn't work , we don't have a subscription prompt and notification are not displayed. The current setup of the notification is already working on another demo system Tevin has before , so it needs to work here too . In all pages we have this message in the top left :התראות כבויות that opened a message : לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן. But there is no option to enable notifications since there is no prompt received . 
 
-14. The wizard section : this section is by far the most needed work and modification in the system , it integrates with the parts module and as for now there are a lot of problems and duplications :
+14. The wizard section **high prioriy** : this section is by far the most needed work and modification in the system , it integrates with the parts module and as for now there are a lot of problems and duplications :
     1. In the wizard : 
         1. Missing input fields - fields for input are missing in all bulks , name , description, work . 
         2. Repairs are missing from the wizard and needs to be added.
@@ -1387,12 +1387,13 @@ F. Explain teh logic of the button create a new case - if its just to create a n
     2. Those two modules require from you a deep understanding of the logic and flow , a deep check of the current structure and all the files in the repo , and rebuilding the logic from scratch combining all expertise related files in the repo as I already explained before. 
     3. The wizard is the body pert of the expertise html builder and it files the placeholders . The builder's other part is the car details pulled from the helper . 
 
-15. Orphan pages : There are HTMLs that are included in the structure but are not asssigned to any flow.  you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
+15. Orphan pages  ✅: : 
+There are HTMLs that are included in the structure but are not asssigned to any flow.  you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
     1. Evaluate and think how and where to combine them 
     2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
     3. I think best place for them is in the admin hub  
 
-16. add another return to selection button under the continue botton .
+16. Fee module : add another return to selection button under the continue botton .
 
 17. make sure the onsignal is enabeld on all pages 
 
@@ -1407,9 +1408,13 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 22 dark mode option 
 
-23, 
+23. check for orphan pages
 
-16. in selection page move the expertise summary to be under the wizard 
+24. dev module : **low priority** total fix and integration 
+
+
+
+
 **. General :**
 *  Run a deep check across system files ensure that all  modules are configured correctly :
 * configurations, dependencies, workflows and data flow are according to the specs and documentations 
