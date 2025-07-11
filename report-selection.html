@@ -939,8 +939,14 @@
         const response = await sendToWebhook('CALL_EXPERTISE', payload);
         
         if (response?.success) {
-          alert('האקספירטיזה נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
-          console.log('✅ Expertise report requested successfully');
+          const successMessage = response.message || 'האקספירטיזה נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
+          alert(successMessage);
+          console.log('✅ Expertise report requested successfully', response);
+          
+          // If PDF URL is returned, automatically show floating PDF
+          if (response.pdf_url) {
+            showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+          }
         } else {
           // Use the error message from the response if available
           const errorMsg = response?.error || 'שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.';
@@ -1020,8 +1026,14 @@
         const response = await sendToWebhook('CALL_ESTIMATE', payload);
         
         if (response?.success) {
-          alert('האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
-          console.log('✅ Estimate report requested successfully');
+          const successMessage = response.message || 'האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
+          alert(successMessage);
+          console.log('✅ Estimate report requested successfully', response);
+          
+          // If PDF URL is returned, automatically show floating PDF
+          if (response.pdf_url) {
+            showFloatingPDF(response.pdf_url, 'אומדן PDF');
+          }
         } else {
           // Use the error message from the response if available
           const errorMsg = response?.error || 'שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.';
@@ -1164,7 +1176,34 @@
       const iframe = document.getElementById('pdfViewer');
       
       titleElement.textContent = title;
+      
+      // Handle PDF URL display with fallback options
+      console.log(`🔍 Attempting to display PDF: ${pdfUrl}`);
+      
+      // Try to load PDF in iframe
       iframe.src = pdfUrl;
+      
+      // Add error handling for iframe loading
+      iframe.onload = function() {
+        console.log('✅ PDF loaded successfully in iframe');
+      };
+      
+      iframe.onerror = function() {
+        console.error('❌ Failed to load PDF in iframe');
+        // Fallback: show link to open in new tab
+        iframe.style.display = 'none';
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.style.cssText = 'padding: 20px; text-align: center; direction: rtl;';
+        fallbackDiv.innerHTML = `
+          <h3 style="color: #1e3a8a; margin-bottom: 15px;">לא ניתן להציג את הPDF בחלון זה</h3>
+          <p style="margin-bottom: 15px;">אנא לחץ על הקישור להצגת הקובץ:</p>
+          <a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 10px 20px; background: #1e3a8a; color: white; text-decoration: none; border-radius: 6px;">
+            פתח PDF בחלון חדש
+          </a>
+        `;
+        iframe.parentNode.appendChild(fallbackDiv);
+      };
+      
       overlay.style.display = 'flex';
       
       // Setup event listeners for controls

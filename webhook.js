@@ -90,8 +90,83 @@ export async function sendToWebhook(id, payload) {
       throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
     }
 
-    const data = await res.json();
-    console.log(`📥 Response data:`, data);
+    // Try to parse as JSON, but handle plain text responses like "Accepted"
+    let data;
+    const responseText = await res.text();
+    console.log(`📥 Raw response:`, responseText);
+    
+    try {
+      data = JSON.parse(responseText);
+      console.log(`📥 Parsed JSON data:`, data);
+    } catch (jsonError) {
+      // Handle plain text responses
+      const trimmedResponse = responseText.trim();
+      console.log(`📝 Plain text response: "${trimmedResponse}"`);
+      
+      // Check if response is "Accepted" (processing started)
+      if (trimmedResponse === 'Accepted' || trimmedResponse === 'accepted') {
+        console.log(`✅ Webhook ${id} returned "Accepted" - processing started`);
+        const hebrewMessage = id === 'CALL_EXPERTISE' ? 
+          'הבקשה לאקספירטיזה התקבלה לעיבוד! תקבל התראה כשהקובץ יהיה מוכן.' :
+          id === 'CALL_ESTIMATE' ?
+          'הבקשה לאומדן התקבלה לעיבוד! תקבל התראה כשהקובץ יהיה מוכן.' :
+          'הבקשה התקבלה לעיבוד!';
+          
+        return { 
+          success: true, 
+          message: hebrewMessage,
+          processing: true,
+          raw_response: trimmedResponse,
+          webhook_id: id,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // Check if response is a URL (potential PDF view link)
+      if (trimmedResponse.startsWith('http://') || trimmedResponse.startsWith('https://')) {
+        console.log(`🔗 Webhook ${id} returned URL: ${trimmedResponse}`);
+        const hebrewMessage = id === 'CALL_EXPERTISE' ? 
+          'קישור לאקספירטיזה התקבל!' :
+          id === 'CALL_ESTIMATE' ?
+          'קישור לאומדן התקבל!' :
+          'קישור למסמך התקבל!';
+          
+        return { 
+          success: true, 
+          message: hebrewMessage,
+          pdf_url: trimmedResponse,
+          raw_response: trimmedResponse,
+          webhook_id: id,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // Handle other plain text responses (like "No files found")
+      console.log(`📄 Plain text response received: ${trimmedResponse}`);
+      
+      // Check for common "no results" responses
+      if (trimmedResponse.toLowerCase().includes('no files') || 
+          trimmedResponse.toLowerCase().includes('not found') ||
+          trimmedResponse.toLowerCase().includes('no results')) {
+        return { 
+          success: true, 
+          message: 'לא נמצאו קבצים במערכת',
+          no_files: true,
+          raw_response: trimmedResponse,
+          webhook_id: id,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // For any other plain text response, return it as-is
+      return { 
+        success: true, 
+        message: trimmedResponse,
+        raw_response: trimmedResponse,
+        webhook_id: id,
+        timestamp: new Date().toISOString()
+      };
+    }
     
     // Enhanced validation for business logic errors
     if (data && typeof data === 'object') {
@@ -125,6 +200,29 @@ export async function sendToWebhook(id, payload) {
     }
     
     console.log(`✅ Webhook ${id} completed successfully`);
+    
+    // Check if JSON response contains PDF URL
+    if (data && (data.pdf_url || data.url || data.link)) {
+      const pdfUrl = data.pdf_url || data.url || data.link;
+      console.log(`📄 PDF URL found in JSON response: ${pdfUrl}`);
+      
+      // Add Hebrew message for PDF availability
+      const hebrewMessage = id === 'CALL_EXPERTISE' ? 
+        'אקספירטיזה מוכנה לצפייה!' :
+        id === 'CALL_ESTIMATE' ?
+        'אומדן מוכן לצפייה!' :
+        'המסמך מוכן לצפייה!';
+      
+      return {
+        ...data,
+        success: true,
+        message: hebrewMessage,
+        pdf_url: pdfUrl,
+        webhook_id: id,
+        timestamp: new Date().toISOString()
+      };
+    }
+    
     return data;
   } catch (e) {
     console.error(`❌ Webhook ${id} failed:`, e);
@@ -134,8 +232,6 @@ export async function sendToWebhook(id, payload) {
     
     if (e.message.includes('Failed to fetch')) {
       errorMessage = 'Network error: Could not connect to webhook service. Please check your internet connection.';
-    } else if (e.message.includes('JSON')) {
-      errorMessage = 'Invalid response format from server';
     } else if (e.message.includes('HTTP')) {
       errorMessage = e.message; // Use the HTTP error message
     } else if (e.message.includes('Server validation')) {
