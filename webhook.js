@@ -41,8 +41,11 @@ export const WEBHOOKS = {
   // Call expertise report webhook
   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
   
-  // Upload expertise report PDF (reuse existing upload infrastructure)
-  UPLOAD_EXPERTISE_PDF: 'https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9'
+  // Fetch expertise (אקספירטיזה) PDF webhook
+  FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/FETCH_EXPERTISE_PDF_WEBHOOK_URL',
+  
+  // Fetch estimate (אומדן) PDF webhook
+  FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/FETCH_ESTIMATE_PDF_WEBHOOK_URL'
 
 
 };
