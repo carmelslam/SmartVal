@@ -103,6 +103,17 @@
 - **Proper Data Flow:** Car details now always populated from beginning of workflow
 - **Backward Compatibility:** Maintains fallback to helper data for direct navigation
 
+### 11. ✅ Enhanced Error Handling for "No Case Found" Scenarios
+**Implementation:** Improved user feedback when plate number search returns no results
+**Problem Solved:** When Nicole responds with "no case found", plate number persisted in field without proper user feedback
+**Changes Applied:**
+- **Smart Response Detection:** Detects "no case found" responses from Nicole/system
+- **Visual Feedback:** Plate input field turns red when no case is found
+- **Auto-Clear:** Plate number disappears after 3 seconds with red styling
+- **Proper Error Messages:** Clear Hebrew error messages for different scenarios
+- **Basic Case Creation:** When case doesn't exist, creates minimal structure with plate number for new workflows
+- **Data Cleanup:** Properly clears sessionStorage when no case is found
+
 ---
 
 ## Technical Implementation Details

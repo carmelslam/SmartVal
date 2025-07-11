@@ -518,26 +518,69 @@
           document.getElementById('plateStatus').style.display = 'block';
           document.getElementById('plateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
           document.getElementById('plateStatus').style.color = '#059669';
+          
+          // Reset input field styling
+          document.getElementById('plateInput').style.color = '';
+          document.getElementById('plateInput').style.borderColor = '';
         } else {
-          // If no existing case, create basic structure
-          const basicData = {
-            meta: {
-              plate: plateNumber,
-              case_id: `CASE-${plateNumber}-${Date.now()}`,
-              created_at: new Date().toISOString()
-            },
-            vehicle: {
-              plate_number: plateNumber
-            }
-          };
+          // Check if Nicole responded with "no case found" or similar
+          const responseText = response?.data || response?.message || '';
+          const isNoCaseFound = responseText.toLowerCase().includes('no case') || 
+                               responseText.toLowerCase().includes('not found') ||
+                               responseText.toLowerCase().includes('לא נמצא');
           
-          sessionStorage.setItem('helper', JSON.stringify(basicData));
-          sessionStorage.setItem('plate', plateNumber);
-          
-          plateDataLoaded = true;
-          document.getElementById('plateStatus').style.display = 'block';
-          document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר - תיק חדש';
-          document.getElementById('plateStatus').style.color = '#3b82f6';
+          if (isNoCaseFound) {
+            // Handle "no case found" scenario
+            plateDataLoaded = false;
+            document.getElementById('plateStatus').style.display = 'block';
+            document.getElementById('plateStatus').textContent = '❌ לא נמצא תיק עבור מספר רכב זה';
+            document.getElementById('plateStatus').style.color = '#dc2626';
+            
+            // Make input field red and clear it after 3 seconds
+            const plateInput = document.getElementById('plateInput');
+            plateInput.style.color = '#dc2626';
+            plateInput.style.borderColor = '#dc2626';
+            
+            setTimeout(() => {
+              plateInput.value = '';
+              plateInput.style.color = '';
+              plateInput.style.borderColor = '';
+              document.getElementById('plateStatus').style.display = 'none';
+            }, 3000);
+            
+            // Clear any existing helper data
+            sessionStorage.removeItem('helper');
+            sessionStorage.removeItem('plate');
+            sessionStorage.removeItem('caseLoaded');
+            
+          } else {
+            // If no existing case, create basic structure with plate number
+            const basicData = {
+              meta: {
+                plate: plateNumber,
+                case_id: `CASE-${plateNumber}-${Date.now()}`,
+                created_at: new Date().toISOString()
+              },
+              general_info: {
+                plate_number: plateNumber
+              },
+              car_details: {
+                plate: plateNumber
+              }
+            };
+            
+            sessionStorage.setItem('helper', JSON.stringify(basicData));
+            sessionStorage.setItem('plate', plateNumber);
+            
+            plateDataLoaded = true;
+            document.getElementById('plateStatus').style.display = 'block';
+            document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר - תיק חדש';
+            document.getElementById('plateStatus').style.color = '#3b82f6';
+            
+            // Reset input field styling
+            document.getElementById('plateInput').style.color = '';
+            document.getElementById('plateInput').style.borderColor = '';
+          }
         }
         
         updateContinueButton();
@@ -545,25 +588,28 @@
       } catch (error) {
         console.error('Error loading plate data:', error);
         
-        // Even on error, save basic plate data
-        const basicData = {
-          meta: {
-            plate: plateNumber,
-            case_id: `CASE-${plateNumber}-${Date.now()}`,
-            created_at: new Date().toISOString()
-          },
-          vehicle: {
-            plate_number: plateNumber
-          }
-        };
-        
-        sessionStorage.setItem('helper', JSON.stringify(basicData));
-        sessionStorage.setItem('plate', plateNumber);
-        
-        plateDataLoaded = true;
+        // Handle network/system errors
+        plateDataLoaded = false;
         document.getElementById('plateStatus').style.display = 'block';
-        document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר';
+        document.getElementById('plateStatus').textContent = '⚠️ שגיאת מערכת - נסה שוב';
         document.getElementById('plateStatus').style.color = '#f59e0b';
+        
+        // Make input field orange (warning) and clear it after 3 seconds
+        const plateInput = document.getElementById('plateInput');
+        plateInput.style.color = '#f59e0b';
+        plateInput.style.borderColor = '#f59e0b';
+        
+        setTimeout(() => {
+          plateInput.value = '';
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
+          document.getElementById('plateStatus').style.display = 'none';
+        }, 3000);
+        
+        // Clear any existing helper data
+        sessionStorage.removeItem('helper');
+        sessionStorage.removeItem('plate');
+        sessionStorage.removeItem('caseLoaded');
         
         updateContinueButton();
       }
