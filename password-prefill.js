@@ -103,6 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
     window.prefillUserPassword();
   }, 500);
+  
+  // Also run immediately after DOM is ready
+  window.prefillUserPassword();
 });
 
 // Also run when page becomes visible (in case user switches tabs)
@@ -114,8 +117,37 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
+// Test function for manual debugging
+window.testPasswordPrefill = function() {
+  console.log('🔑 Testing password prefill system...');
+  
+  // Set a test password
+  sessionStorage.setItem('prefillPassword', 'test123');
+  console.log('🔑 Test password stored:', sessionStorage.getItem('prefillPassword'));
+  
+  // Run prefill
+  window.prefillUserPassword();
+  
+  // Check if password field was filled
+  const passwordInput = document.getElementById('passwordInput');
+  if (passwordInput) {
+    console.log('🔑 Password field value:', passwordInput.value);
+    console.log('🔑 Password field found:', !!passwordInput);
+  } else {
+    console.log('🔑 Password field not found');
+  }
+  
+  // List all possible password fields
+  const allPasswordFields = document.querySelectorAll('input[type="password"], input[type="text"][placeholder*="סיסמה"], input[type="text"][placeholder*="password"]');
+  console.log('🔑 All password fields found:', allPasswordFields.length);
+  allPasswordFields.forEach((field, index) => {
+    console.log(`🔑 Field ${index + 1}:`, field.id || field.name || field.placeholder, 'Value:', field.value);
+  });
+};
+
 // Export for manual use
 window.passwordPrefill = {
   prefillUserPassword: window.prefillUserPassword,
-  storeMainGatePassword: window.storeMainGatePassword
+  storeMainGatePassword: window.storeMainGatePassword,
+  testPasswordPrefill: window.testPasswordPrefill
 };
