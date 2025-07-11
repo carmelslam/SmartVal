@@ -517,6 +517,9 @@
           sessionStorage.setItem('plate', plateNumber);
           sessionStorage.setItem('caseLoaded', 'true');
           
+          // Debug: Log successful case loading
+          console.log('✅ Case loaded successfully:', response.data);
+          
           plateDataLoaded = true;
           document.getElementById('plateStatus').style.display = 'block';
           document.getElementById('plateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
@@ -525,11 +528,17 @@
           // Reset input field styling
           document.getElementById('plateInput').style.color = '';
           document.getElementById('plateInput').style.borderColor = '';
+          
+          // Populate builders immediately when case is loaded
+          populateBuildersFromHelper(response.data);
         } else {
           // Check if Nicole responded with "no case found" or similar
           const responseText = response?.data || response?.message || '';
           console.log('🔍 Response text to check:', responseText);
-          const isNoCaseFound = responseText.toLowerCase().includes('no case') || 
+          console.log('🔍 Response success:', response?.success);
+          
+          const isNoCaseFound = !response?.success || 
+                               responseText.toLowerCase().includes('no case') || 
                                responseText.toLowerCase().includes('not found') ||
                                responseText.includes('לא נמצא') ||
                                responseText.includes('תיק לא נמצא') ||
@@ -573,7 +582,8 @@
                 plate_number: plateNumber
               },
               car_details: {
-                plate: plateNumber
+                plate: plateNumber,
+                plate_number: plateNumber
               }
             };
             
@@ -588,6 +598,9 @@
             // Reset input field styling
             document.getElementById('plateInput').style.color = '';
             document.getElementById('plateInput').style.borderColor = '';
+            
+            // Populate builders with basic data
+            populateBuildersFromHelper(basicData);
           }
         }
         
@@ -959,7 +972,13 @@
         sessionStorage.setItem('builderData_carDetails', JSON.stringify(caseData.car_details));
         console.log('✅ Car details stored for auto-fill:', caseData.car_details);
       } else {
-        console.log('⚠️ No car_details found in caseData');
+        // If no car_details, create basic structure from available data
+        const basicCarDetails = {
+          plate: caseData.meta?.plate || caseData.general_info?.plate_number || '',
+          plate_number: caseData.meta?.plate || caseData.general_info?.plate_number || ''
+        };
+        sessionStorage.setItem('builderData_carDetails', JSON.stringify(basicCarDetails));
+        console.log('⚠️ No car_details found, created basic structure:', basicCarDetails);
       }
       
       // Store general info (includes plate number, owner, etc.)
@@ -967,7 +986,12 @@
         sessionStorage.setItem('builderData_generalInfo', JSON.stringify(caseData.general_info));
         console.log('✅ General info stored for auto-fill:', caseData.general_info);
       } else {
-        console.log('⚠️ No general_info found in caseData');
+        // If no general_info, create basic structure from available data
+        const basicGeneralInfo = {
+          plate_number: caseData.meta?.plate || ''
+        };
+        sessionStorage.setItem('builderData_generalInfo', JSON.stringify(basicGeneralInfo));
+        console.log('⚠️ No general_info found, created basic structure:', basicGeneralInfo);
       }
       
       // Store meta info (includes plate number)
@@ -975,7 +999,13 @@
         sessionStorage.setItem('builderData_meta', JSON.stringify(caseData.meta));
         console.log('✅ Meta info stored for auto-fill:', caseData.meta);
       } else {
-        console.log('⚠️ No meta found in caseData');
+        // If no meta, create basic structure from available data
+        const basicMeta = {
+          plate: caseData.general_info?.plate_number || '',
+          case_id: `CASE-${caseData.general_info?.plate_number || 'unknown'}-${Date.now()}`
+        };
+        sessionStorage.setItem('builderData_meta', JSON.stringify(basicMeta));
+        console.log('⚠️ No meta found, created basic structure:', basicMeta);
       }
       
       // Debug: Log the full case data structure
