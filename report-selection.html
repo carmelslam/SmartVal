@@ -250,9 +250,6 @@
         <button id="loadCaseBtn" onclick="loadExistingCaseWithPassword()" style="padding:10px 20px; background:#1e3a8a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
           טען תיק קיים
         </button>
-        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;" title="צור סשן עבודה זמני עם מספר הרכב הנוכחי לצורך הפקת דוחות">
-          צור סשן עבודה זמני
-        </button>
       </div>
       
       <div id="plateStatus" style="margin-top:10px; font-size:14px; color:#059669; display:none; text-align:right;">
@@ -304,7 +301,8 @@
         </button>
       </div>
       <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 14px; text-align: center; color: #92400e;">
-        💡 הכנס מספר רכב וטען תיק כדי לראות את כל הפעולות הזמינות
+        💡 הכנס מספר רכב וטען תיק כדי לראות את כל הפעולות הזמינות<br>
+        הכפתור מזהה אוטומטית אם המשתמש ממשיך עבודה או מתחיל מחדש
       </div>
     </div>
     
@@ -509,33 +507,26 @@
       const plateNumber = document.getElementById('plateInput').value.trim();
       const helper = sessionStorage.getItem('helper');
       const loadBtn = document.getElementById('loadCaseBtn');
-      const createBtn = document.getElementById('createNewCaseBtn');
       
       if (!plateNumber) {
         loadBtn.disabled = true;
-        createBtn.disabled = true;
         hideDocumentActionButtons();
         return;
       }
       
       loadBtn.disabled = false;
-      createBtn.disabled = false;
       
       if (helper) {
-        // Case exists - emphasize load button
+        // Case exists - show load button as active
         loadBtn.style.background = '#1e3a8a';
         loadBtn.textContent = 'טען תיק קיים';
-        createBtn.style.background = '#6b7280';
-        createBtn.textContent = 'צור סשן עבודה זמני';
         
         // Update document action buttons based on case data
         updateDocumentActionButtons();
       } else {
-        // No case - both buttons equal
+        // No case - show load button as primary action
         loadBtn.style.background = '#1e3a8a';
         loadBtn.textContent = 'טען תיק קיים';
-        createBtn.style.background = '#059669';
-        createBtn.textContent = 'צור סשן עבודה זמני';
         
         // Hide document action buttons when no case
         hideDocumentActionButtons();
@@ -860,52 +851,6 @@
       console.log('✅ Builders populated and ready for auto-fill');
     }
 
-    // Create new case session (for report generation only)
-    window.createNewCase = function () {
-      const plateNumber = document.getElementById('plateInput').value.trim();
-      
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
-        return;
-      }
-      
-      // This creates a temporary case session for report generation
-      // It doesn't delete existing cases, just creates a minimal working session
-      
-      const basicData = {
-        meta: {
-          plate: plateNumber,
-          case_id: `CASE-${plateNumber}-${Date.now()}`,
-          created_at: new Date().toISOString(),
-          status: 'new'
-        },
-        car_details: {
-          plate: plateNumber
-        },
-        progress: {
-          expertise: { completed: false, timestamp: null },
-          depreciation: { completed: false, timestamp: null },
-          estimate: { completed: false, timestamp: null },
-          fees: { completed: false, timestamp: null }
-        }
-      };
-      
-      sessionStorage.setItem('helper', JSON.stringify(basicData));
-      sessionStorage.setItem('plate', plateNumber);
-      sessionStorage.setItem('caseLoaded', 'true');
-      
-      plateDataLoaded = true;
-      
-      document.getElementById('plateStatus').style.display = 'block';
-      document.getElementById('plateStatus').textContent = '✓ סשן עבודה זמני נוצר';
-      document.getElementById('plateStatus').style.color = '#3b82f6';
-      
-      displayCaseProgress(basicData);
-      showDataIntegrityStatus(basicData, 'new');
-      
-      updateContinueButton();
-      updateButtonStates();
-    }
 
     // Reload expertise (אקספירטיזה) report function
     window.reloadExpertiseReport = async function() {
@@ -1291,11 +1236,7 @@
       if (caseData.estimate_data?.completed) completionCount++;
       if (caseData.fee_data?.completed) completionCount++;
       
-      if (type === 'new') {
-        statusText = '📋 תיק חדש נוצר - ניתן להתחיל בעבודה על הדו"חות';
-        statusDiv.style.background = '#dbeafe';
-        statusDiv.style.color = '#1e40af';
-      } else if (type === 'existing') {
+      if (type === 'existing') {
         statusText = '🔄 תיק קיים נטען מהיסטוריה - ניתן להמשיך בעבודה או להפיק דו"חות';
         statusDiv.style.background = '#dcfce7';
         statusDiv.style.color = '#166534';
