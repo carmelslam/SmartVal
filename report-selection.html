@@ -505,20 +505,46 @@
       try {
         console.log('Loading data for plate:', plateNumber);
         
-        // Try to fetch existing case data
-        const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
+        // First check if main system already determined this case doesn't exist
+        // Check for any existing indicators that case was not found
+        const existingHelper = sessionStorage.getItem('helper');
+        const mainSystemCaseStatus = sessionStorage.getItem('mainSystemCaseNotFound');
+        const plateNotFoundFlag = sessionStorage.getItem('caseNotFound_' + plateNumber);
         
-        // Debug: Log the actual response
-        console.log('🔍 Raw response from ADMIN_FETCH_CASE:', response);
-        
-        if (response?.success && response?.data) {
-          // Store the data
-          sessionStorage.setItem('helper', JSON.stringify(response.data));
-          sessionStorage.setItem('plate', plateNumber);
-          sessionStorage.setItem('caseLoaded', 'true');
+        if (mainSystemCaseStatus === 'true' || plateNotFoundFlag === 'true') {
+          console.log('🚫 Main system already determined case not found - respecting that decision');
           
-          // Debug: Log successful case loading
-          console.log('✅ Case loaded successfully:', response.data);
+          // Handle "no case found" scenario immediately
+          plateDataLoaded = false;
+          document.getElementById('plateStatus').style.display = 'block';
+          document.getElementById('plateStatus').textContent = '❌ לא נמצא תיק עבור מספר רכב זה';
+          document.getElementById('plateStatus').style.color = '#dc2626';
+          
+          // Make input field red and clear it after 3 seconds
+          const plateInput = document.getElementById('plateInput');
+          plateInput.style.color = '#dc2626';
+          plateInput.style.borderColor = '#dc2626';
+          
+          setTimeout(() => {
+            plateInput.value = '';
+            plateInput.style.color = '';
+            plateInput.style.borderColor = '';
+            document.getElementById('plateStatus').style.display = 'none';
+          }, 3000);
+          
+          // Clear any existing helper data
+          sessionStorage.removeItem('helper');
+          sessionStorage.removeItem('plate');
+          sessionStorage.removeItem('caseLoaded');
+          
+          updateContinueButton();
+          return;
+        }
+        
+        // Check if we should use existing helper data or make new call
+        if (existingHelper) {
+          console.log('📋 Using existing helper data from main system');
+          const caseData = JSON.parse(existingHelper);
           
           plateDataLoaded = true;
           document.getElementById('plateStatus').style.display = 'block';
@@ -530,79 +556,35 @@
           document.getElementById('plateInput').style.borderColor = '';
           
           // Populate builders immediately when case is loaded
-          populateBuildersFromHelper(response.data);
-        } else {
-          // Check if Nicole responded with "no case found" or similar
-          const responseText = response?.data || response?.message || '';
-          console.log('🔍 Response text to check:', responseText);
-          console.log('🔍 Response success:', response?.success);
-          
-          const isNoCaseFound = !response?.success || 
-                               responseText.toLowerCase().includes('no case') || 
-                               responseText.toLowerCase().includes('not found') ||
-                               responseText.includes('לא נמצא') ||
-                               responseText.includes('תיק לא נמצא') ||
-                               responseText.includes('לא נמצא במערכת');
-          
-          console.log('🔍 Is no case found?', isNoCaseFound);
-          
-          if (isNoCaseFound) {
-            // Handle "no case found" scenario
-            plateDataLoaded = false;
-            document.getElementById('plateStatus').style.display = 'block';
-            document.getElementById('plateStatus').textContent = '❌ לא נמצא תיק עבור מספר רכב זה';
-            document.getElementById('plateStatus').style.color = '#dc2626';
-            
-            // Make input field red and clear it after 3 seconds
-            const plateInput = document.getElementById('plateInput');
-            plateInput.style.color = '#dc2626';
-            plateInput.style.borderColor = '#dc2626';
-            
-            setTimeout(() => {
-              plateInput.value = '';
-              plateInput.style.color = '';
-              plateInput.style.borderColor = '';
-              document.getElementById('plateStatus').style.display = 'none';
-            }, 3000);
-            
-            // Clear any existing helper data
-            sessionStorage.removeItem('helper');
-            sessionStorage.removeItem('plate');
-            sessionStorage.removeItem('caseLoaded');
-            
-          } else {
-            // If no existing case, create basic structure with plate number
-            const basicData = {
-              meta: {
-                plate: plateNumber,
-                case_id: `CASE-${plateNumber}-${Date.now()}`,
-                created_at: new Date().toISOString()
-              },
-              general_info: {
-                plate_number: plateNumber
-              },
-              car_details: {
-                plate: plateNumber,
-                plate_number: plateNumber
-              }
-            };
-            
-            sessionStorage.setItem('helper', JSON.stringify(basicData));
-            sessionStorage.setItem('plate', plateNumber);
-            
-            plateDataLoaded = true;
-            document.getElementById('plateStatus').style.display = 'block';
-            document.getElementById('plateStatus').textContent = '✓ מספר רכב נשמר - תיק חדש';
-            document.getElementById('plateStatus').style.color = '#3b82f6';
-            
-            // Reset input field styling
-            document.getElementById('plateInput').style.color = '';
-            document.getElementById('plateInput').style.borderColor = '';
-            
-            // Populate builders with basic data
-            populateBuildersFromHelper(basicData);
-          }
+          populateBuildersFromHelper(caseData);
+          updateContinueButton();
+          return;
         }
+        
+        // IMPORTANT: If we reach here, it means the main system didn't find a case
+        // The report selection page should NOT make its own call to the same webhook
+        // because it will potentially get a different result than the main system
+        console.log('🚫 LOGIC ERROR: Main system should have already processed this plate');
+        console.log('🚫 Report selection page should not make independent calls to the same webhook');
+        
+        // Instead of making a call, we should assume the case doesn't exist
+        // and show the proper "not found" UI
+        plateDataLoaded = false;
+        document.getElementById('plateStatus').style.display = 'block';
+        document.getElementById('plateStatus').textContent = '❌ לא נמצא תיק עבור מספר רכב זה';
+        document.getElementById('plateStatus').style.color = '#dc2626';
+        
+        // Make input field red and clear it after 3 seconds
+        const plateInput = document.getElementById('plateInput');
+        plateInput.style.color = '#dc2626';
+        plateInput.style.borderColor = '#dc2626';
+        
+        setTimeout(() => {
+          plateInput.value = '';
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
+          document.getElementById('plateStatus').style.display = 'none';
+        }, 3000);
         
         updateContinueButton();
         
