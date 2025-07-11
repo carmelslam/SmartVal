@@ -13,6 +13,7 @@ function init() {
   const buildersReady = sessionStorage.getItem('buildersPopulated');
   let builderCarDetails = null;
   let builderGeneralInfo = null;
+  let builderMeta = null;
   
   if (buildersReady) {
     console.log('🔧 Loading data from report selection page...');
@@ -38,6 +39,17 @@ function init() {
         console.error('Error parsing general info:', e);
       }
     }
+    
+    // Load meta info from report selection page
+    const metaData = sessionStorage.getItem('builderData_meta');
+    if (metaData) {
+      try {
+        builderMeta = JSON.parse(metaData);
+        console.log('✅ Meta info loaded from report selection:', builderMeta);
+      } catch (e) {
+        console.error('Error parsing meta info:', e);
+      }
+    }
   }
   
   // Use standardized data access
@@ -54,8 +66,8 @@ function init() {
   const dep = helper.expertise?.depreciation || {};
 
   // Populate fixed data - prioritize builder data from report selection page
-  if ($('pageTitle')) $('pageTitle').innerText = `תיק מס. ${meta.case_id || meta.plate || '...'}`;
-  if ($('carPlate')) $('carPlate').innerText = (builderGeneralInfo?.plate_number || meta.plate || vehicle.plate_number || '');
+  if ($('pageTitle')) $('pageTitle').innerText = `תיק מס. ${builderMeta?.case_id || meta.case_id || builderMeta?.plate || meta.plate || '...'}`;
+  if ($('carPlate')) $('carPlate').innerText = (builderGeneralInfo?.plate_number || builderMeta?.plate || meta.plate || vehicle.plate_number || '');
   if ($('carManufacturer')) $('carManufacturer').innerText = (builderCarDetails?.manufacturer || vehicle.manufacturer || '');
   if ($('carModel')) $('carModel').innerText = (builderCarDetails?.model || vehicle.model || '');
   if ($('carYear')) $('carYear').innerText = (builderCarDetails?.year || vehicle.year || '');

@@ -508,6 +508,9 @@
         // Try to fetch existing case data
         const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
         
+        // Debug: Log the actual response
+        console.log('🔍 Raw response from ADMIN_FETCH_CASE:', response);
+        
         if (response?.success && response?.data) {
           // Store the data
           sessionStorage.setItem('helper', JSON.stringify(response.data));
@@ -525,9 +528,14 @@
         } else {
           // Check if Nicole responded with "no case found" or similar
           const responseText = response?.data || response?.message || '';
+          console.log('🔍 Response text to check:', responseText);
           const isNoCaseFound = responseText.toLowerCase().includes('no case') || 
                                responseText.toLowerCase().includes('not found') ||
-                               responseText.toLowerCase().includes('לא נמצא');
+                               responseText.includes('לא נמצא') ||
+                               responseText.includes('תיק לא נמצא') ||
+                               responseText.includes('לא נמצא במערכת');
+          
+          console.log('🔍 Is no case found?', isNoCaseFound);
           
           if (isNoCaseFound) {
             // Handle "no case found" scenario
@@ -949,14 +957,29 @@
       // Store car details (ALWAYS populated - exist from beginning of workflow)
       if (caseData.car_details) {
         sessionStorage.setItem('builderData_carDetails', JSON.stringify(caseData.car_details));
-        console.log('✅ Car details stored for auto-fill');
+        console.log('✅ Car details stored for auto-fill:', caseData.car_details);
+      } else {
+        console.log('⚠️ No car_details found in caseData');
       }
       
       // Store general info (includes plate number, owner, etc.)
       if (caseData.general_info) {
         sessionStorage.setItem('builderData_generalInfo', JSON.stringify(caseData.general_info));
-        console.log('✅ General info stored for auto-fill');
+        console.log('✅ General info stored for auto-fill:', caseData.general_info);
+      } else {
+        console.log('⚠️ No general_info found in caseData');
       }
+      
+      // Store meta info (includes plate number)
+      if (caseData.meta) {
+        sessionStorage.setItem('builderData_meta', JSON.stringify(caseData.meta));
+        console.log('✅ Meta info stored for auto-fill:', caseData.meta);
+      } else {
+        console.log('⚠️ No meta found in caseData');
+      }
+      
+      // Debug: Log the full case data structure
+      console.log('🔍 Full caseData structure:', caseData);
       
       // Store builder-ready data (only if previously filled)
       if (caseData.damage_sections) {
