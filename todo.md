@@ -1539,26 +1539,26 @@ There are HTMLs that are included in the structure but are not asssigned to any 
     2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
     3. I think best place for them is in the admin hub  
 
-16. Fee module : add another return to selection button under the continue botton .
+16. Fee module : add another return to selection button under the continue botton . **medium priority**
 
-17. make sure the onsignal is enabeld on all pages 
+17. make sure the onsignal is enabeld on all pages  **high priority**
 
-18. make sure the floating system assistant is visisble on all pages 
+18. make sure the floating system assistant is visisble on all pages **medium priority**
 
-19. a total selection page makeover 
+19. a total selection page makeover **high priority** to reflect the workflows logics 
 
 20. is Nicole expecting a voice input by default ? current issue :inconsistant error ,  if a query was sent using the plate number or the text input or both but not usin STT voice query, the webhook sometimes returns false, and creates an error .
 change the page title from  ניקול – עוזרת דיגיטלית to   ניקול – מנהלת הידע
 
-21. automatic logout should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
+21. automatic logout **high priority** should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
 
-22 dark mode option 
+22 dark mode option **low priority**
 
 23. check for orphan pages
 
 24. dev module : **low priority** total fix and integration 
 
-25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - maybe its the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
+25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
 
 
 
@@ -1568,6 +1568,7 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 * configurations, dependencies, workflows and data flow are according to the specs and documentations 
 *  Ensure all webhooks are active and connect correctly 
 * Ensure that there is a unification of styles across system, layouts, fonts , button shapes and classifications and colors. 
+* ensure passwors fields are prefilled when user filles the password in teh login page - the gate page.
 * Change the system default font from Ariel to simply family font : sans-serif; no assistant no Ariel , or choose a modern look font , I hate Ariel .
 
 ---

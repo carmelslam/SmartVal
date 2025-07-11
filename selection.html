@@ -162,25 +162,57 @@
 
       sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber })
         .then(response => {
-          if (response.success && response.data) {
-            const caseData = response.data;
-            sessionStorage.setItem('helper', JSON.stringify(caseData));
-            sessionStorage.setItem('plate', plateNumber);
-            sessionStorage.setItem('caseLoaded', 'true');
-            
-            document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
-            document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
-            document.getElementById('caseVehicle').textContent = 
-              `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
-            
-            document.getElementById('caseInfo').classList.add('show');
-            
-            // Reset input field styling on success
-            const plateInput = document.getElementById('plateNumber');
-            plateInput.style.color = '';
-            plateInput.style.borderColor = '';
-            
-            alert('התיק נטען בהצלחה');
+          console.log('🔍 ADMIN_FETCH_CASE response:', response);
+          
+          // Check if response is successful and has data
+          // Note: sendToWebhook returns data directly, not as response.data
+          if (response && response.success !== false && response && typeof response === 'object' && !response.error) {
+            // Check if response has actual case data (not just success message)
+            if (response.meta || response.car_details || response.general_info) {
+              const caseData = response;
+              sessionStorage.setItem('helper', JSON.stringify(caseData));
+              sessionStorage.setItem('plate', plateNumber);
+              sessionStorage.setItem('caseLoaded', 'true');
+              
+              document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
+              document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
+              document.getElementById('caseVehicle').textContent = 
+                `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
+              
+              document.getElementById('caseInfo').classList.add('show');
+              
+              // Reset input field styling on success
+              const plateInput = document.getElementById('plateNumber');
+              plateInput.style.color = '';
+              plateInput.style.borderColor = '';
+              
+              alert('התיק נטען בהצלחה');
+            } else {
+              // Response is successful but no case data found
+              console.log('🚫 Case not found - applying red styling and clearing field');
+              
+              // Show alert first
+              alert('תיק לא נמצא במערכת');
+              
+              // Make input field red and clear it after 3 seconds
+              const plateInput = document.getElementById('plateNumber');
+              plateInput.style.color = '#dc2626';
+              plateInput.style.borderColor = '#dc2626';
+              
+              setTimeout(() => {
+                plateInput.value = '';
+                plateInput.style.color = '';
+                plateInput.style.borderColor = '';
+              }, 3000);
+              
+              // Clear any existing helper data
+              sessionStorage.removeItem('helper');
+              sessionStorage.removeItem('plate');
+              sessionStorage.removeItem('caseLoaded');
+              
+              // Hide case info if it was showing
+              document.getElementById('caseInfo').classList.remove('show');
+            }
           } else {
             // Handle "no case found" with same behavior as report selection page
             console.log('🚫 Case not found - applying red styling and clearing field');
