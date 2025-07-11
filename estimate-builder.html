@@ -762,6 +762,41 @@
 
     function loadVehicleInfo() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Check if data was prepared by report selection page
+      let carDetails = helper.car_details || {};
+      let generalInfo = helper.general_info || {};
+      let meta = helper.meta || {};
+      
+      const buildersReady = sessionStorage.getItem('buildersPopulated');
+      if (buildersReady) {
+        console.log('🔧 Loading car details from report selection page...');
+        
+        // Load car details from report selection page
+        const carDetailsData = sessionStorage.getItem('builderData_carDetails');
+        if (carDetailsData) {
+          try {
+            const builderCarDetails = JSON.parse(carDetailsData);
+            carDetails = { ...carDetails, ...builderCarDetails };
+            console.log('✅ Car details loaded from report selection:', builderCarDetails);
+          } catch (e) {
+            console.error('Error parsing car details:', e);
+          }
+        }
+        
+        // Load general info from report selection page
+        const generalInfoData = sessionStorage.getItem('builderData_generalInfo');
+        if (generalInfoData) {
+          try {
+            const builderGeneralInfo = JSON.parse(generalInfoData);
+            generalInfo = { ...generalInfo, ...builderGeneralInfo };
+            console.log('✅ General info loaded from report selection:', builderGeneralInfo);
+          } catch (e) {
+            console.error('Error parsing general info:', e);
+          }
+        }
+      }
+      
       const vehicleInfo = document.getElementById('vehicle-info');
       
       vehicleInfo.innerHTML = `
@@ -770,25 +805,25 @@
           <div class="row">
             <div class="field">
               <label>מספר רכב:</label>
-              <input type="text" value="${helper.car_details?.plate || ''}" readonly>
+              <input type="text" value="${generalInfo.plate_number || carDetails.plate || ''}" readonly>
             </div>
             <div class="field">
               <label>יצרן:</label>
-              <input type="text" value="${helper.car_details?.manufacturer || ''}" readonly>
+              <input type="text" value="${carDetails.manufacturer || ''}" readonly>
             </div>
             <div class="field">
               <label>דגם:</label>
-              <input type="text" value="${helper.car_details?.model || ''}" readonly>
+              <input type="text" value="${carDetails.model || ''}" readonly>
             </div>
           </div>
           <div class="row">
             <div class="field">
               <label>שנת יצור:</label>
-              <input type="text" value="${helper.car_details?.year || ''}" readonly>
+              <input type="text" value="${carDetails.year || ''}" readonly>
             </div>
             <div class="field">
               <label>תאריך בדיקה:</label>
-              <input type="text" value="${helper.meta?.inspection_date || ''}" readonly>
+              <input type="text" value="${meta.inspection_date || carDetails.report_date || ''}" readonly>
             </div>
           </div>
         </div>

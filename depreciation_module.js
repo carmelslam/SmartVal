@@ -9,6 +9,37 @@ function $(id) {
 function init() {
   console.log('Depreciation module initializing...');
   
+  // Check if data was prepared by report selection page
+  const buildersReady = sessionStorage.getItem('buildersPopulated');
+  let builderCarDetails = null;
+  let builderGeneralInfo = null;
+  
+  if (buildersReady) {
+    console.log('🔧 Loading data from report selection page...');
+    
+    // Load car details from report selection page
+    const carDetailsData = sessionStorage.getItem('builderData_carDetails');
+    if (carDetailsData) {
+      try {
+        builderCarDetails = JSON.parse(carDetailsData);
+        console.log('✅ Car details loaded from report selection:', builderCarDetails);
+      } catch (e) {
+        console.error('Error parsing car details:', e);
+      }
+    }
+    
+    // Load general info from report selection page
+    const generalInfoData = sessionStorage.getItem('builderData_generalInfo');
+    if (generalInfoData) {
+      try {
+        builderGeneralInfo = JSON.parse(generalInfoData);
+        console.log('✅ General info loaded from report selection:', builderGeneralInfo);
+      } catch (e) {
+        console.error('Error parsing general info:', e);
+      }
+    }
+  }
+  
   // Use standardized data access
   const meta = helper.meta || {};
   const vehicleData = getVehicleData();
@@ -22,14 +53,14 @@ function init() {
   const calc = helper.expertise?.calculations || {};
   const dep = helper.expertise?.depreciation || {};
 
-  // Populate fixed data
+  // Populate fixed data - prioritize builder data from report selection page
   if ($('pageTitle')) $('pageTitle').innerText = `תיק מס. ${meta.case_id || meta.plate || '...'}`;
-  if ($('carPlate')) $('carPlate').innerText = meta.plate || vehicle.plate_number || '';
-  if ($('carManufacturer')) $('carManufacturer').innerText = vehicle.manufacturer || '';
-  if ($('carModel')) $('carModel').innerText = vehicle.model || '';
-  if ($('carYear')) $('carYear').innerText = vehicle.year || '';
-  if ($('carBasePrice')) $('carBasePrice').innerText = levi.base_price || '';
-  if ($('carReportDate')) $('carReportDate').innerText = levi.report_date || '';
+  if ($('carPlate')) $('carPlate').innerText = (builderGeneralInfo?.plate_number || meta.plate || vehicle.plate_number || '');
+  if ($('carManufacturer')) $('carManufacturer').innerText = (builderCarDetails?.manufacturer || vehicle.manufacturer || '');
+  if ($('carModel')) $('carModel').innerText = (builderCarDetails?.model || vehicle.model || '');
+  if ($('carYear')) $('carYear').innerText = (builderCarDetails?.year || vehicle.year || '');
+  if ($('carBasePrice')) $('carBasePrice').innerText = (builderCarDetails?.base_price || levi.base_price || '');
+  if ($('carReportDate')) $('carReportDate').innerText = (builderCarDetails?.report_date || levi.report_date || '');
 
   if ($('totalClaim')) $('totalClaim').innerText = calc.total_damage || '';
   if ($('grossPercent')) $('grossPercent').innerText = calc.damage_percent ? `${calc.damage_percent}%` : '';
