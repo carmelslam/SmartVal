@@ -6,7 +6,7 @@ export const WEBHOOKS = {
   OPEN_CASE_UI: 'https://hook.eu2.make.com/zhvqbvx2yp69rikm6euv0r2du8l6sh61',
   SUBMIT_LEVI_REPORT: 'https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9',
   SAVE_LEVI_RESULTS: 'https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9',
-  SAVE_MANUAL_LEVI: 'https://hook.eu2.make.com/[MANUAL_LEVI_WEBHOOK_URL]',
+  // SAVE_MANUAL_LEVI: 'https://hook.eu2.make.com/[MANUAL_LEVI_WEBHOOK_URL]', // Placeholder - disabled
 
   UPLOAD_PICTURES: 'https://hook.eu2.make.com/yksx9gtoxggvpalsjw2n1ut4kdi4jt24',
   TRANSFORM_PICTURES: 'https://hook.eu2.make.com/pum6ogmlxfe2edi8wd5i1d9oybcus76f',
@@ -41,8 +41,8 @@ export const WEBHOOKS = {
   // Call expertise report webhook
   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
   
-  // Fetch PDF webhooks
-  FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
+  // Fetch PDF webhooks - using dedicated endpoints
+  FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/lvlni0nc6dmas8mjdvd39jcbx4rlsxon', // Use LAUNCH_EXPERTISE for PDF fetching
   FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p'
 
 
@@ -53,9 +53,18 @@ export const SEARCH_MODULE = WEBHOOKS.SEARCH_MODULE;
 
 // General JSON payload webhook sender
 export async function sendToWebhook(id, payload) {
+  console.log(`🔗 Sending webhook: ${id}`, payload);
+  
   const url = WEBHOOKS[id];
   if (!url) {
+    console.error(`❌ Webhook [${id}] not registered`);
     throw new Error(`Webhook [${id}] not registered`);
+  }
+
+  // Check for placeholder URLs
+  if (url.includes('[') && url.includes(']')) {
+    console.error(`❌ Webhook [${id}] has placeholder URL: ${url}`);
+    throw new Error(`Webhook [${id}] is not properly configured (placeholder URL)`);
   }
 
   const options = {
@@ -66,44 +75,68 @@ export async function sendToWebhook(id, payload) {
     options.headers = { 'Content-Type': 'application/json' };
   }
 
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-  }
-
   try {
+    console.log(`🌐 Calling webhook URL: ${url}`);
+    const res = await fetch(url, options);
+    
+    console.log(`📡 Response status: ${res.status} ${res.statusText}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ HTTP Error: ${res.status} - ${errorText}`);
+      throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
+    }
+
     const data = await res.json();
+    console.log(`📥 Response data:`, data);
     
     // Enhanced validation for business logic errors
     if (data && typeof data === 'object') {
       // Check for explicit error indicators
       if (data.error === true || data.status === 'error' || data.success === false) {
-        throw new Error(data.message || data.error_message || 'Server validation failed');
+        const errorMsg = data.message || data.error_message || 'Server validation failed';
+        console.error(`❌ Server validation error: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       
       // Check for Make.com automation failures
       if (data.make_status === 'error' || data.automation_failed === true) {
-        throw new Error(data.make_error || 'Make.com automation execution failed');
+        const errorMsg = data.make_error || 'Make.com automation execution failed';
+        console.error(`❌ Make.com automation error: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       
       // Check for validation errors array
       if (Array.isArray(data.errors) && data.errors.length > 0) {
-        throw new Error(`Validation errors: ${data.errors.join(', ')}`);
+        const errorMsg = `Validation errors: ${data.errors.join(', ')}`;
+        console.error(`❌ Validation errors: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       
       // Check for admin/permission errors
       if (data.access_denied === true || data.permission_error === true) {
-        throw new Error(data.permission_message || 'Access denied - insufficient permissions');
+        const errorMsg = data.permission_message || 'Access denied - insufficient permissions';
+        console.error(`❌ Permission error: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
     }
     
+    console.log(`✅ Webhook ${id} completed successfully`);
     return data;
   } catch (e) {
+    console.error(`❌ Webhook ${id} failed:`, e);
+    
     // If it's already an error we threw above, re-throw it
-    if (e.message && !e.message.includes('JSON')) {
+    if (e.message && !e.message.includes('JSON') && !e.message.includes('Failed to fetch')) {
       throw e;
     }
-    // Otherwise, it's a JSON parsing error
+    
+    // Network or parsing error
+    if (e.message.includes('Failed to fetch')) {
+      throw new Error(`Network error: Could not connect to webhook service. Please check your internet connection.`);
+    }
+    
+    // JSON parsing error
     console.warn('Response is not valid JSON, returning undefined');
     return undefined;
   }
