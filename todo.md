@@ -1337,11 +1337,23 @@ Data is inside the same square fields as we have now .
 
 8. Selection page -  בחר דוח להפקה . The report selection page opens correctly from selection page correctly but when selecting estimate report we get page doesn't exist 404 : Page not found - Looks like you've followed a broken link or entered a URL that doesn't exist on this site. If this is your site, and you weren't expecting a 404 for this path, please visit Netlify's "page not found" support guide for troubleshooting tips.
 
-9. Report selection page : currently selecting a final report or estimate to produce opens the depreciation page or the estimate builder respectively before producing - this is a weak link and risky points because of the following logic : what happens if the user has already completed the depreciation and fees or  estimate bulks but he didn't produce the report ? If the selected options opens empty new pages that are conditional to producing the report then the user is forced to re enter everything again - bad UX . Solution : when selecting the report option from select report page , the opened pages : depreciation or estimate builder , behave differently based on previous work the user has done . If the user didn't do nth then the forms are empty and he needs to fill as expected . If the user already had done work ( either finalized or partially completed forms) - the pages need to pull out the day from helper and refill the fields previously filled by the user ( since we said the logic is per event not session- that means anytime the system logs out / or saves the data is stored and updated in the helper and sent to server ) - then the user can edit or continue working to produce the report ( same logic with the fee fields) . 
-10. To achieve this integrity and data flow we need to add in the report selection page a plate number and password fields - if the session is active they are prefilled if it's a dedicated session for report producing then 2 options 2
+9. Report selection page **GENERAL**:
+ currently selecting a final report or estimate to produce opens the depreciation page or the estimate builder respectively before producing - this is a weak link and risky points because of the following logic : 
+what happens if the user has already completed the depreciation and fees or  estimate bulks but he didn't produce the report ? If the selected options opens empty new pages that are conditional to producing the report then the user is forced to re enter everything again - bad UX . Solution : when selecting the report option from select report page , the opened pages : depreciation or estimate builder , behave differently based on previous work the user has done . If the user didn't do nth then the forms are empty and he needs to fill as expected . If the user already had done work ( either finalized or partially completed forms) - the pages need to pull out the data from helper and refill the fields previously filled by the user ( since we said the logic is per event not session- that means anytime the system logs out / or saves the data is stored and updated in the helper and sent to server ) - then the user can edit or continue working to produce the report ( same logic with the fee fields) . 
+A. To achieve this integrity and data flow we need to add in the report selection page a plate number and password fields - if the session is active they are prefilled if it's a dedicated session for report producing then 2 options 2
     1. the user needs to input the plate number , this submit button acts like the טען תיק קיים in the selection page , that fetches the helper .
     2. The button is inactive and message displayed : טען תיק קיים על מנת להמשיך להפקת דו״חות - 
         - Decide on the best way to proceed with this that is efficient, uses resources wisely and lightly and at the same time user friendly .
+  ***this configuration is set up already but needs deep check and verification***
+B. The estimate report direct to a broken link > detailed in console report is in the console_log.md 
+C. The selection page itself triggeres an error > if there is the plate number is enterd and one of teh butttons is selected / ot not . there is a console error - - **check logic nad see if this needs fixing** i couldnt detrmin teh origins and triggers of this error , if its in teh page itself or in the button,>  detailed in console report is in the console_log.md 
+D. in the selection page add a relaod experise report this will call make to send back a pdf , if this is possible webhook in the js is :   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
+E. Upload existing case button needs to take in consideration the fact that :
+   1. if teh session is on and the user already uplaoded teh case from teh selction main page , then the detailes are autopopulated nad the field is prefileed 
+   2. this buttton needs to have teh same relations with the mian upload existing function in the main selection page as teh uplaod existing case uplaod button in teh case status module in  that admin hub 
+   3, errors that this button triggers are also  >  detailed in console report is in the console_log.md 
+F. Explain teh logic of the button create a new case - if its just to create a new case is not needed here it needs to be deleted , report creation cannot happen if teh detailes are nor stored in the helper, if its create a new report entry to the helper for example - then its something else -  ***if teh logic here is something else - explain teh logic***
+
 
 11. Nicole the knowledge manager ✅: the Nicole module has several issues that need to be fixed : 
     1. The text / audio field are still mandatory this need to be also optional , if the 2 fields are empty then Nicole cannot be activated. At least one fields either plate or free query field need to be filled - but both are optional . 
@@ -1394,6 +1406,8 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 21. automatic logout should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
 
 22 dark mode option 
+
+23, 
 
 16. in selection page move the expertise summary to be under the wizard 
 **. General :**
