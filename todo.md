@@ -1420,12 +1420,12 @@ Data is inside the same square fields as we have now .
         4. In the total section under the fields section : סה"כ הפרשים displays the sum of costs without vat , add another field for accumulated vat and add afield of accumulated total cost ( with vat) .
         5. The current סה"כ סופי עם הפרשים: field is not part of the הפרשים it's the adjusted summary value after reducing הפרשים . So it needs to be out of the container in its own section under סה״כ נכלל בחוות הדעת as the final value to be inserted in the report summary . The base value in this field is the סה״כ נכלל בחוות הדעת / or total in the summery section , if no הפרשים it's unchanged , if הפרשים exist , it needs to auto calculate: original summary total (minus) total הפרשים
 
-7. Admin hub : 
+7. Admin hub :  ✅ 
     1. The administrator hub selection from the selection page , still doesn't work , the admin page doesn't acc the validated password and displays : Access denied: incorrect password
 
-8. Selection page -  בחר דוח להפקה . The report selection page opens correctly from selection page correctly but when selecting estimate report we get page doesn't exist 404 : Page not found - Looks like you've followed a broken link or entered a URL that doesn't exist on this site. If this is your site, and you weren't expecting a 404 for this path, please visit Netlify's "page not found" support guide for troubleshooting tips.
+8. Selection page  ✅  -  בחר דוח להפקה . The report selection page opens correctly from selection page correctly but when selecting estimate report we get page doesn't exist 404 : Page not found - Looks like you've followed a broken link or entered a URL that doesn't exist on this site. If this is your site, and you weren't expecting a 404 for this path, please visit Netlify's "page not found" support guide for troubleshooting tips.
 
-9. Report selection page **GENERAL**:
+9. Report selection page **GENERAL**: ✅ 
  currently selecting a final report or estimate to produce opens the depreciation page or the estimate builder respectively before producing - this is a weak link and risky points because of the following logic : 
 what happens if the user has already completed the depreciation and fees or  estimate bulks but he didn't produce the report ? If the selected options opens empty new pages that are conditional to producing the report then the user is forced to re enter everything again - bad UX . Solution : when selecting the report option from select report page , the opened pages : depreciation or estimate builder , behave differently based on previous work the user has done . If the user didn't do nth then the forms are empty and he needs to fill as expected . If the user already had done work ( either finalized or partially completed forms) - the pages need to pull out the data from helper and refill the fields previously filled by the user ( since we said the logic is per event not session- that means anytime the system logs out / or saves the data is stored and updated in the helper and sent to server ) - then the user can edit or continue working to produce the report ( same logic with the fee fields) . 
 A. To achieve this integrity and data flow we need to add in the report selection page a plate number and password fields - if the session is active they are prefilled if it's a dedicated session for report producing then 2 options 2
@@ -1453,7 +1453,7 @@ F. Explain teh logic of the button create a new case - if its just to create a n
         3. Change the icon in the answer from 🤖to Nicol's emoji 👩
         4. Response TTS check, when nicole answers to also speak and not just send textual message 
 
-12. The system help assistant 🤖that we have across system in all pages :***NOT FIXED - needs mor knowledge base*** 
+12. The system help assistant 🤖that we have across system in all pages :***NOT FIXED - needs mor knowledge base* - low priority** 
     1. Purpose of this assistant is to help user with the system technical actions, workflows, debugging solutions , handling errors and so on , this is not Nicole this is an inner assistant to learn the system 
     2. As for now the knowledge of this assistant is very limited and it directs the user to the system manual that doesn't exist . 
     3. You need to build a comprehensive guide for this assistant to be able to answer complex and technical questions about the system operation and help the user with the work flow 

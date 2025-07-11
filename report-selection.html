@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>בחירת דו"ח - ירון כיוף שמאות</title>
   <!-- Updated: Jul 11, 2025 - Report Selection Enhanced -->
+  <!-- Password Prefill: Include password-prefill.js in all user modules for automatic password filling -->
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
   <style>
     body {
@@ -415,8 +416,79 @@
         }
       }
       
+      // Prefill password from main gate login
+      prefillPasswordFromMainGate();
+      
       // Update button states based on plate input
       updateButtonStates();
+    }
+
+    // Prefill password field from main gate login
+    function prefillPasswordFromMainGate() {
+      // Check for main gate password in sessionStorage (various possible keys)
+      const possiblePasswordKeys = [
+        'mainGatePassword',
+        'userPassword', 
+        'loginPassword',
+        'password',
+        'auth_password'
+      ];
+      
+      let mainGatePassword = null;
+      
+      // Find the password from possible storage keys
+      for (const key of possiblePasswordKeys) {
+        const stored = sessionStorage.getItem(key);
+        if (stored) {
+          mainGatePassword = stored;
+          console.log(`🔑 Found password in sessionStorage key: ${key}`);
+          break;
+        }
+      }
+      
+      // Also check if password was passed via URL parameters (for some workflows)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlPassword = urlParams.get('password');
+      if (urlPassword) {
+        mainGatePassword = urlPassword;
+        console.log('🔑 Found password in URL parameters');
+      }
+      
+      if (mainGatePassword) {
+        const passwordInput = document.getElementById('passwordInput');
+        if (passwordInput) {
+          passwordInput.value = mainGatePassword;
+          console.log('🔑 Password prefilled from main gate login');
+          
+          // Store the password for other modules to use
+          sessionStorage.setItem('prefillPassword', mainGatePassword);
+        }
+      }
+    }
+
+    // Global function to prefill passwords across all modules (not admin/dev)
+    window.prefillUserPassword = function() {
+      const prefillPassword = sessionStorage.getItem('prefillPassword');
+      
+      if (prefillPassword) {
+        // Find all password inputs in the page (common IDs used across modules)
+        const passwordSelectors = [
+          '#passwordInput',
+          '#password',
+          '#platePassword',
+          '#casePassword',
+          '#accessPassword',
+          'input[type="password"]'
+        ];
+        
+        passwordSelectors.forEach(selector => {
+          const input = document.querySelector(selector);
+          if (input && !input.value) {
+            input.value = prefillPassword;
+            console.log(`🔑 Password prefilled for selector: ${selector}`);
+          }
+        });
+      }
     }
 
     // Handle plate input changes
@@ -1290,5 +1362,6 @@
     });
   </script>
   <script src="logout-sound.js"></script>
+  <script src="password-prefill.js"></script>
 </body>
 </html>
