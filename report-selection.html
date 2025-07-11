@@ -296,16 +296,16 @@
     </div>
     
     <div class="report-option" data-type="final" onclick="selectReport('final')">
-      <div class="report-title">חוות דעת סופית</div>
+      <div class="report-title">אקספירטיזה סופית</div>
       <div class="report-description">
-        חוות דעת מקיפה הכוללת ירידת ערך, שכר טרחה ודו"ח סופי
+        אקספירטיזה מקיפה הכוללת ירידת ערך, שכר טרחה ודו"ח סופי
       </div>
       <ul class="report-features">
-        <li>✓ חוות דעת פרטית</li>
-        <li>✓ חוות דעת גלובלית</li>
-        <li>✓ חוות דעת מכירה מצבו הניזוק</li>
-        <li>✓ חוות דעת טוטלוסט</li>
-        <li>✓ חוות דעת אובדן להלכה</li>
+        <li>✓ אקספירטיזה פרטית</li>
+        <li>✓ אקספירטיזה גלובלית</li>
+        <li>✓ אקספירטיזה מכירה מצבו הניזוק</li>
+        <li>✓ אקספירטיזה טוטלוסט</li>
+        <li>✓ אקספירטיזה אובדן להלכה</li>
         <li>✓ חישוב ירידת ערך</li>
         <li>✓ מודול שכר טרחה</li>
       </ul>
@@ -322,15 +322,32 @@
       <button class="nav-btn" id="reloadExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white; display: none;">
         טען מחדש אקספירטיזה
       </button>
-      <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #7c3aed; color: white; display: none;">
-        הצג אקספירטיזה PDF
-      </button>
-      <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #dc2626; color: white; display: none;">
-        הצג אומדן PDF
-      </button>
       <button class="nav-btn logout-btn" onclick="logout()">
         יציאה מהמערכת
       </button>
+    </div>
+    
+    <!-- Document Actions Section -->
+    <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
+        פעולות מסמכים
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white; display: none;">
+          הצג אקספירטיזה PDF
+        </button>
+        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #06b6d4; color: white; display: none;">
+          הצג אומדן PDF
+        </button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white; display: none;">
+          בקש אקספירטיזה
+        </button>
+        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #f59e0b; color: white; display: none;">
+          בקש אומדן
+        </button>
+      </div>
     </div>
     
     <div class="footer">All rights reserved © Carmel Cayouf</div>
@@ -494,6 +511,7 @@
       if (!plateNumber) {
         loadBtn.disabled = true;
         createBtn.disabled = true;
+        hideDocumentActionButtons();
         return;
       }
       
@@ -506,13 +524,82 @@
         loadBtn.textContent = 'טען תיק קיים';
         createBtn.style.background = '#6b7280';
         createBtn.textContent = 'צור סשן עבודה זמני';
+        
+        // Update document action buttons based on case data
+        updateDocumentActionButtons();
       } else {
         // No case - both buttons equal
         loadBtn.style.background = '#1e3a8a';
         loadBtn.textContent = 'טען תיק קיים';
         createBtn.style.background = '#059669';
         createBtn.textContent = 'צור סשן עבודה זמני';
+        
+        // Hide document action buttons when no case
+        hideDocumentActionButtons();
       }
+    }
+    
+    // Update document action buttons based on case data
+    function updateDocumentActionButtons() {
+      const helper = sessionStorage.getItem('helper');
+      if (!helper) {
+        hideDocumentActionButtons();
+        return;
+      }
+      
+      try {
+        const caseData = JSON.parse(helper);
+        
+        // Check for expertise existence
+        const expertiseExists = caseData.expertise_data?.completed || caseData.documents?.expertise_pdf;
+        const estimateExists = caseData.estimate_data?.completed || caseData.documents?.estimate_pdf;
+        
+        // Get button elements
+        const requestExpertiseBtn = document.getElementById('requestExpertiseBtn');
+        const requestEstimateBtn = document.getElementById('requestEstimateBtn');
+        const fetchExpertiseBtn = document.getElementById('fetchExpertiseBtn');
+        const fetchEstimateBtn = document.getElementById('fetchEstimateBtn');
+        
+        // Show request buttons (always available when case is loaded)
+        requestExpertiseBtn.style.display = 'block';
+        requestEstimateBtn.style.display = 'block';
+        
+        // Show/hide fetch buttons based on document existence
+        if (expertiseExists) {
+          fetchExpertiseBtn.style.display = 'block';
+          requestExpertiseBtn.textContent = 'בקש אקספירטיזה מחדש';
+          requestExpertiseBtn.style.background = '#f59e0b'; // Orange for re-request
+        } else {
+          fetchExpertiseBtn.style.display = 'none';
+          requestExpertiseBtn.textContent = 'בקש אקספירטיזה';
+          requestExpertiseBtn.style.background = '#059669'; // Green for new request
+        }
+        
+        if (estimateExists) {
+          fetchEstimateBtn.style.display = 'block';
+          requestEstimateBtn.textContent = 'בקש אומדן מחדש';
+          requestEstimateBtn.style.background = '#dc2626'; // Red for re-request
+        } else {
+          fetchEstimateBtn.style.display = 'none';
+          requestEstimateBtn.textContent = 'בקש אומדן';
+          requestEstimateBtn.style.background = '#f59e0b'; // Orange for new request
+        }
+        
+      } catch (error) {
+        console.error('Error parsing case data:', error);
+        hideDocumentActionButtons();
+      }
+    }
+    
+    // Hide all document action buttons
+    function hideDocumentActionButtons() {
+      const buttons = ['requestExpertiseBtn', 'requestEstimateBtn', 'fetchExpertiseBtn', 'fetchEstimateBtn'];
+      buttons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+          button.style.display = 'none';
+        }
+      });
     }
 
     window.selectReport = function(type) {
@@ -614,7 +701,7 @@
       }
     }
 
-    // Enhanced case loading with dependency on main selection page
+    // Upload case button with dependency on main selection page
     window.loadExistingCaseWithPassword = async function () {
       const plateNumber = document.getElementById('plateInput').value.trim();
       const password = document.getElementById('passwordInput').value.trim();
@@ -631,32 +718,30 @@
         loadBtn.disabled = true;
         loadBtn.textContent = 'בודק תלות במערכת...';
         
-        // Check if main selection page already loaded a case
+        // MAIN DEPENDENCY CHECK: Check if main selection page has loaded a case
         const existingHelper = sessionStorage.getItem('helper');
         const existingPlate = sessionStorage.getItem('plate');
         const caseLoaded = sessionStorage.getItem('caseLoaded');
         
         if (existingHelper && existingPlate && caseLoaded === 'true') {
-          // Case already loaded from main selection - use existing data
+          // Main selection page has loaded a case - populate builders from helper
           const caseData = JSON.parse(existingHelper);
           
           // Verify plate number matches
           if (existingPlate === plateNumber) {
             plateDataLoaded = true;
             
-            // Update UI
+            // Update UI to show dependency
             document.getElementById('plateStatus').style.display = 'block';
-            document.getElementById('plateStatus').textContent = '✓ תיק נטען מהעמוד הראשי';
+            document.getElementById('plateStatus').textContent = '✓ תיק נטען מהעמוד הראשי - מאכלס את הבנאים';
             document.getElementById('plateStatus').style.color = '#059669';
+            
+            // Populate builders with helper data
+            populateBuildersFromHelper(caseData);
             
             // Display case progress
             displayCaseProgress(caseData);
-            showDataIntegrityStatus(caseData, 'existing');
-            
-            // Show reload expertise button if case has data
-            if (caseData.damage_sections?.length > 0 || caseData.car_details) {
-              document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
-            }
+            showDataIntegrityStatus(caseData, 'main_selection_loaded');
             
             updateContinueButton();
             updateButtonStates();
@@ -665,7 +750,7 @@
         }
         
         // No existing case from main selection - act as shadow
-        loadBtn.textContent = 'טוען נתונים...';
+        loadBtn.textContent = 'פועל כצלל של העמוד הראשי...';
         
         const payload = { plate: plateNumber };
         if (password) {
@@ -684,19 +769,17 @@
           
           plateDataLoaded = true;
           
-          // Update UI
+          // Update UI to show shadow operation
           document.getElementById('plateStatus').style.display = 'block';
-          document.getElementById('plateStatus').textContent = '✓ תיק נטען בהצלחה (צללי)';
+          document.getElementById('plateStatus').textContent = '✓ תיק נטען בהצלחה (פעולת צלל)';
           document.getElementById('plateStatus').style.color = '#059669';
           
-          // Analyze and display case progress
-          displayCaseProgress(caseData);
-          showDataIntegrityStatus(caseData, 'existing');
+          // Populate builders with loaded data
+          populateBuildersFromHelper(caseData);
           
-          // Show reload expertise button if case has data
-          if (caseData.damage_sections?.length > 0 || caseData.car_details) {
-            document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
-          }
+          // Display case progress
+          displayCaseProgress(caseData);
+          showDataIntegrityStatus(caseData, 'shadow_loaded');
           
           updateContinueButton();
           updateButtonStates();
@@ -707,7 +790,7 @@
           document.getElementById('plateStatus').textContent = '⚠️ תיק לא נמצא במערכת';
           document.getElementById('plateStatus').style.color = '#f59e0b';
           
-          if (confirm('תיק לא נמצא במערכת. האם ברצונך לחזור לעמוד הבחירה לטעינת תיק?')) {
+          if (confirm('תיק לא נמצא במערכת. מומלץ לטעון תיק תחילה בעמוד הבחירה הראשי. האם לעבור לעמוד הבחירה?')) {
             window.location.href = 'selection.html';
           }
         }
@@ -720,7 +803,7 @@
         document.getElementById('plateStatus').style.color = '#dc2626';
         
         // Suggest using main selection page
-        if (confirm('שגיאה בטעינת התיק. האם ברצונך לחזור לעמוד הבחירה?')) {
+        if (confirm('שגיאה בטעינת התיק. מומלץ לטעון תיק תחילה בעמוד הבחירה הראשי. האם לעבור לעמוד הבחירה?')) {
           window.location.href = 'selection.html';
         }
         
@@ -728,6 +811,36 @@
         loadBtn.disabled = false;
         loadBtn.textContent = originalText;
       }
+    }
+
+    // Function to populate builders from helper data
+    function populateBuildersFromHelper(caseData) {
+      console.log('🔧 Populating builders from helper data');
+      
+      // This function will prepare the builders so when user clicks "Build Report"
+      // the destination pages will be auto-populated
+      
+      // Store builder-ready data
+      if (caseData.damage_sections) {
+        sessionStorage.setItem('builderData_damage', JSON.stringify(caseData.damage_sections));
+      }
+      
+      if (caseData.depreciation_data) {
+        sessionStorage.setItem('builderData_depreciation', JSON.stringify(caseData.depreciation_data));
+      }
+      
+      if (caseData.estimate_data) {
+        sessionStorage.setItem('builderData_estimate', JSON.stringify(caseData.estimate_data));
+      }
+      
+      if (caseData.fee_data) {
+        sessionStorage.setItem('builderData_fees', JSON.stringify(caseData.fee_data));
+      }
+      
+      // Mark that builders are ready
+      sessionStorage.setItem('buildersPopulated', 'true');
+      
+      console.log('✅ Builders populated and ready for auto-fill');
     }
 
     // Create new case session (for report generation only)
@@ -813,7 +926,8 @@
           console.log('✅ Expertise report requested successfully');
         } else {
           alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-          console.error('❌ Failed to request expertise report:', response);
+          // Log the entire response object if it exists, otherwise log the error
+          console.error('❌ Failed to request expertise report:', response || 'Error during webhook call');
         }
         
       } catch (error) {
@@ -823,6 +937,55 @@
       } finally {
         reloadBtn.disabled = false;
         reloadBtn.textContent = originalText;
+      }
+    }
+
+    // Request estimate (אומדן) report function
+    window.requestEstimateReport = async function() {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      if (!helper) {
+        alert('נתוני התיק לא נמצאו במערכת');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('requestEstimateBtn');
+      const originalText = requestBtn.textContent;
+      
+      try {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'מבקש אומדן...';
+        
+        const caseData = JSON.parse(helper);
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData.meta?.case_id,
+          helper: caseData
+        };
+        
+        const response = await sendToWebhook('SUBMIT_ESTIMATE', payload);
+        
+        if (response?.success) {
+          alert('האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
+          console.log('✅ Estimate report requested successfully');
+        } else {
+          alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
+          console.error('❌ Failed to request estimate report:', response);
+        }
+        
+      } catch (error) {
+        console.error('Error requesting estimate report:', error);
+        alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
+        
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
       }
     }
 
@@ -991,6 +1154,32 @@
         element.style.color = '#6b7280';
         span.textContent = 'לא הושלם';
       }
+    }
+
+    // Populate builders from helper data
+    function populateBuildersFromHelper(caseData) {
+      // Store comprehensive case data for builders
+      const builderData = {
+        plate: caseData.plate || sessionStorage.getItem('plate'),
+        case_id: caseData.meta?.case_id,
+        damage_sections: caseData.damage_sections || [],
+        estimate_data: caseData.estimate_data || {},
+        depreciation_data: caseData.depreciation_data || {},
+        fee_data: caseData.fee_data || {},
+        documents: caseData.documents || {},
+        progress: caseData.progress || {},
+        metadata: {
+          populated_from: 'report_selection',
+          timestamp: new Date().toISOString(),
+          source: 'helper_data'
+        }
+      };
+      
+      // Store for builder pages
+      sessionStorage.setItem('builderData', JSON.stringify(builderData));
+      sessionStorage.setItem('autoPopulate', 'true');
+      
+      console.log('📝 Builder data prepared for auto-population:', builderData);
     }
 
     // Show data integrity status

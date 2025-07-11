@@ -41,11 +41,9 @@ export const WEBHOOKS = {
   // Call expertise report webhook
   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
   
-  // Fetch expertise (אקספירטיזה) PDF webhook
-  FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/FETCH_EXPERTISE_PDF_WEBHOOK_URL',
-  
-  // Fetch estimate (אומדן) PDF webhook
-  FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/FETCH_ESTIMATE_PDF_WEBHOOK_URL'
+  // Fetch PDF webhooks
+  FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
+  FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p'
 
 
 };
