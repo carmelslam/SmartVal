@@ -328,25 +328,28 @@
     </div>
     
     <!-- Document Actions Section -->
-    <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+    <div id="documentActionsSection" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
       <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
         פעולות מסמכים
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white; display: none;">
+        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
           הצג אקספירטיזה PDF
         </button>
-        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #06b6d4; color: white; display: none;">
+        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #06b6d4; color: white;">
           הצג אומדן PDF
         </button>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white; display: none;">
+        <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white;">
           בקש אקספירטיזה
         </button>
-        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #f59e0b; color: white; display: none;">
+        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #f59e0b; color: white;">
           בקש אומדן
         </button>
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 14px; text-align: center; color: #92400e;">
+        💡 הכנס מספר רכב וטען תיק כדי לראות את כל הפעולות הזמינות
       </div>
     </div>
     
@@ -560,27 +563,39 @@
         const fetchExpertiseBtn = document.getElementById('fetchExpertiseBtn');
         const fetchEstimateBtn = document.getElementById('fetchEstimateBtn');
         
-        // Show request buttons (always available when case is loaded)
-        requestExpertiseBtn.style.display = 'block';
-        requestEstimateBtn.style.display = 'block';
+        // Enable all request buttons when case is loaded
+        requestExpertiseBtn.disabled = false;
+        requestEstimateBtn.disabled = false;
+        requestExpertiseBtn.style.opacity = '1';
+        requestEstimateBtn.style.opacity = '1';
+        requestExpertiseBtn.style.cursor = 'pointer';
+        requestEstimateBtn.style.cursor = 'pointer';
         
-        // Show/hide fetch buttons based on document existence
+        // Enable/disable fetch buttons based on document existence
         if (expertiseExists) {
-          fetchExpertiseBtn.style.display = 'block';
+          fetchExpertiseBtn.disabled = false;
+          fetchExpertiseBtn.style.opacity = '1';
+          fetchExpertiseBtn.style.cursor = 'pointer';
           requestExpertiseBtn.textContent = 'בקש אקספירטיזה מחדש';
           requestExpertiseBtn.style.background = '#f59e0b'; // Orange for re-request
         } else {
-          fetchExpertiseBtn.style.display = 'none';
+          fetchExpertiseBtn.disabled = true;
+          fetchExpertiseBtn.style.opacity = '0.5';
+          fetchExpertiseBtn.style.cursor = 'not-allowed';
           requestExpertiseBtn.textContent = 'בקש אקספירטיזה';
           requestExpertiseBtn.style.background = '#059669'; // Green for new request
         }
         
         if (estimateExists) {
-          fetchEstimateBtn.style.display = 'block';
+          fetchEstimateBtn.disabled = false;
+          fetchEstimateBtn.style.opacity = '1';
+          fetchEstimateBtn.style.cursor = 'pointer';
           requestEstimateBtn.textContent = 'בקש אומדן מחדש';
           requestEstimateBtn.style.background = '#dc2626'; // Red for re-request
         } else {
-          fetchEstimateBtn.style.display = 'none';
+          fetchEstimateBtn.disabled = true;
+          fetchEstimateBtn.style.opacity = '0.5';
+          fetchEstimateBtn.style.cursor = 'not-allowed';
           requestEstimateBtn.textContent = 'בקש אומדן';
           requestEstimateBtn.style.background = '#f59e0b'; // Orange for new request
         }
@@ -597,7 +612,9 @@
       buttons.forEach(buttonId => {
         const button = document.getElementById(buttonId);
         if (button) {
-          button.style.display = 'none';
+          button.disabled = true;
+          button.style.opacity = '0.5';
+          button.style.cursor = 'not-allowed';
         }
       });
     }
@@ -1156,31 +1173,6 @@
       }
     }
 
-    // Populate builders from helper data
-    function populateBuildersFromHelper(caseData) {
-      // Store comprehensive case data for builders
-      const builderData = {
-        plate: caseData.plate || sessionStorage.getItem('plate'),
-        case_id: caseData.meta?.case_id,
-        damage_sections: caseData.damage_sections || [],
-        estimate_data: caseData.estimate_data || {},
-        depreciation_data: caseData.depreciation_data || {},
-        fee_data: caseData.fee_data || {},
-        documents: caseData.documents || {},
-        progress: caseData.progress || {},
-        metadata: {
-          populated_from: 'report_selection',
-          timestamp: new Date().toISOString(),
-          source: 'helper_data'
-        }
-      };
-      
-      // Store for builder pages
-      sessionStorage.setItem('builderData', JSON.stringify(builderData));
-      sessionStorage.setItem('autoPopulate', 'true');
-      
-      console.log('📝 Builder data prepared for auto-population:', builderData);
-    }
 
     // Show data integrity status
     function showDataIntegrityStatus(caseData, type) {
