@@ -41,6 +41,9 @@ export const WEBHOOKS = {
   // Call expertise report webhook
   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
   
+  // Call estimate report webhook
+  CALL_ESTIMATE: 'https://hook.eu2.make.com/c24t8du4gye39lbgk7f4b7hc8lmojo50',
+  
   // Fetch PDF webhooks - using dedicated endpoints
   FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/lvlni0nc6dmas8mjdvd39jcbx4rlsxon', // Use LAUNCH_EXPERTISE for PDF fetching
   FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p'
@@ -126,19 +129,33 @@ export async function sendToWebhook(id, payload) {
   } catch (e) {
     console.error(`❌ Webhook ${id} failed:`, e);
     
-    // If it's already an error we threw above, re-throw it
-    if (e.message && !e.message.includes('JSON') && !e.message.includes('Failed to fetch')) {
-      throw e;
-    }
+    // Always return a proper response object instead of throwing
+    let errorMessage = 'Unknown error occurred';
     
-    // Network or parsing error
     if (e.message.includes('Failed to fetch')) {
-      throw new Error(`Network error: Could not connect to webhook service. Please check your internet connection.`);
+      errorMessage = 'Network error: Could not connect to webhook service. Please check your internet connection.';
+    } else if (e.message.includes('JSON')) {
+      errorMessage = 'Invalid response format from server';
+    } else if (e.message.includes('HTTP')) {
+      errorMessage = e.message; // Use the HTTP error message
+    } else if (e.message.includes('Server validation')) {
+      errorMessage = e.message; // Use the server validation error
+    } else if (e.message.includes('Make.com automation')) {
+      errorMessage = e.message; // Use the Make.com error
+    } else if (e.message.includes('not registered')) {
+      errorMessage = e.message; // Use the webhook registration error
+    } else if (e.message.includes('placeholder')) {
+      errorMessage = e.message; // Use the placeholder error
+    } else {
+      errorMessage = e.message || 'Unknown error occurred';
     }
     
-    // JSON parsing error
-    console.warn('Response is not valid JSON, returning undefined');
-    return undefined;
+    return { 
+      success: false, 
+      error: errorMessage,
+      webhook_id: id,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 

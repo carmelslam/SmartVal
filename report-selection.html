@@ -942,9 +942,26 @@
           alert('האקספירטיזה נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
           console.log('✅ Expertise report requested successfully');
         } else {
-          alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-          // Log the entire response object if it exists, otherwise log the error
-          console.error('❌ Failed to request expertise report:', response || 'Error during webhook call');
+          // Use the error message from the response if available
+          const errorMsg = response?.error || 'שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.';
+          
+          // Provide specific Hebrew error messages
+          let hebrewErrorMsg = 'שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.';
+          
+          if (errorMsg.includes('Network error')) {
+            hebrewErrorMsg = 'שגיאת רשת: בדוק את החיבור לאינטרנט ונסה שוב.';
+          } else if (errorMsg.includes('not registered')) {
+            hebrewErrorMsg = 'שגיאת תצורה: webhook לא מוגדר כראוי. פנה למנהל המערכת.';
+          } else if (errorMsg.includes('HTTP')) {
+            hebrewErrorMsg = 'שגיאת שרת: השירות אינו זמין כרגע. נסה שוב מאוחר יותר.';
+          } else if (errorMsg.includes('Server validation')) {
+            hebrewErrorMsg = 'שגיאת אימות: הנתונים אינם תקינים. בדוק את פרטי התיק.';
+          } else if (errorMsg.includes('Invalid response')) {
+            hebrewErrorMsg = 'שגיאת תשובה: השרת החזיר תשובה לא תקינה.';
+          }
+          
+          alert(hebrewErrorMsg);
+          console.error('❌ Failed to request expertise report:', response);
         }
         
       } catch (error) {
@@ -1000,13 +1017,31 @@
           helper: caseData
         };
         
-        const response = await sendToWebhook('SUBMIT_ESTIMATE', payload);
+        const response = await sendToWebhook('CALL_ESTIMATE', payload);
         
         if (response?.success) {
           alert('האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
           console.log('✅ Estimate report requested successfully');
         } else {
-          alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
+          // Use the error message from the response if available
+          const errorMsg = response?.error || 'שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.';
+          
+          // Provide specific Hebrew error messages
+          let hebrewErrorMsg = 'שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.';
+          
+          if (errorMsg.includes('Network error')) {
+            hebrewErrorMsg = 'שגיאת רשת: בדוק את החיבור לאינטרנט ונסה שוב.';
+          } else if (errorMsg.includes('not registered')) {
+            hebrewErrorMsg = 'שגיאת תצורה: webhook לא מוגדר כראוי. פנה למנהל המערכת.';
+          } else if (errorMsg.includes('HTTP')) {
+            hebrewErrorMsg = 'שגיאת שרת: השירות אינו זמין כרגע. נסה שוב מאוחר יותר.';
+          } else if (errorMsg.includes('Server validation')) {
+            hebrewErrorMsg = 'שגיאת אימות: הנתונים אינם תקינים. בדוק את פרטי התיק.';
+          } else if (errorMsg.includes('Invalid response')) {
+            hebrewErrorMsg = 'שגיאת תשובה: השרת החזיר תשובה לא תקינה.';
+          }
+          
+          alert(hebrewErrorMsg);
           console.error('❌ Failed to request estimate report:', response);
         }
         
