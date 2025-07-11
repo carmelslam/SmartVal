@@ -1,99 +1,122 @@
-report selection page issues :
-
-uplaod button errors : 
-
-Understanding the problem
-The error message "Failed to request expertise report: undefined" indicates that the response variable in your console.error statement is undefined. This happens because the sendToWebhook function likely threw an error or did not return a value when an error occurred during the webhook call.
-
-Suggested fix
-Modify the catch block to handle potential errors during the webhook call and provide a more informative error message in the console.
-
-js
-
-const response = await sendToWebhook('CALL_EXPERTISE', payload);
-
-        if (response?.success) {
-          alert('חוות הדעת נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
-          console.log('✅ Expertise report requested successfully');
-        } else {
-          alert('שגיאה בשליחת בקשה לחוות דעת. אנא נסה שוב.');
-          // Log the entire response object if it exists, otherwise log the error
-          console.error('❌ Failed to request expertise report:', response || 'Error during webhook call');
-        }
-
-Use code snippets with caution
-
-Summary
-The error "Failed to request expertise report: undefined" means the response from sendToWebhook was undefined. The fix involves ensuring the catch block logs a meaningful message, potentially including the actual error, when the webhook call fails.
- 
- admin hub / case status errors:
- the case status generates errors when selecting the desied display after fetching the plate number file from teh drive.
- these functions worked before now they are broken : תצ"צ כללי , אקספירטיזה, חוו"ד 
- this is the generated error reprort:
- error 1 : admin.html:3734 Uncaught TypeError: Cannot read properties of null (reading 'style')
-    at window.toggleSection (admin.html:3734:19)
-    at HTMLButtonElement.onclick (admin.html:1:1)
-window.toggleSection	@	admin.html:3734
-onclick	@	admin.html:1
+CALL BUTTONS FROM REPORT SELECTION PAGE :
+webhook.js:130 ❌ Webhook CALL_ESTIMATE failed: SyntaxError: Unexpected token 'A', "Accepted" is not valid JSON
+sendToWebhook	@	webhook.js:130
+await in sendToWebhook		
+window.requestEstimateReport	@	report-selection.html:1020
+onclick	@	report-selection.html:347
 Explanation
 
 Understanding the problem
-The error "Uncaught TypeError: Cannot read properties of null (reading 'style')" means that you are trying to access the style property of a variable that is currently null. In this case, the variable is likely the content variable, which is supposed to represent an HTML element. This happens when document.getElementById(sectionId + '-content') does not find an element with the specified ID, and thus returns null.
+The error message "Webhook CALL_ESTIMATE failed: SyntaxError: Unexpected token 'A', 'Accepted' is not valid JSON" indicates that the code attempted to parse the string "Accepted" as JSON, but it failed because "Accepted" is not valid JSON. JSON requires data to be in key-value pairs, arrays, or basic data types like strings, numbers, booleans, or null, enclosed in curly braces {} or square brackets [] for objects or arrays respectively. A bare string like "Accepted" is not a valid JSON document.
+
+The sendToWebhook function likely received a response from a webhook that was expected to be JSON, but instead received the plain string "Accepted". When it tried to parse this string using JSON.parse() or similar, the parsing failed, resulting in the SyntaxError.
 
 Suggested fix
-Ensure that the HTML element with the ID constructed from sectionId + '-content' actually exists on the page before attempting to access its style property. You can add a check to see if the element was found:
+Ensure that the webhook endpoint you are communicating with returns a response that is valid JSON. If the webhook's successful response is truly meant to be "Accepted", you should handle this in your code by checking the response content directly without attempting to parse it as JSON. If the webhook is supposed to return structured data, investigate the webhook's implementation to ensure it's sending back a correctly formatted JSON response.
+
+If the webhook is sending valid JSON, the issue might be with how your code is receiving or handling the response data before parsing.
+
+Here's an example of how you might handle a non-JSON response like "Accepted":
 
 js
 
-// Collapsible Section Management
-    window.toggleSection = function(sectionId) {
-      const content = document.getElementById(sectionId + '-content');
-      const icon = document.getElementById(sectionId + '-icon');
+console.error(`❌ Webhook ${id} failed:`, e);
 
-      // Add a check to ensure the element exists
-      if (content) {
-        if (content.style.display === 'none') {
-          content.style.display = 'block';
-          if (icon) { // Also check if the icon element exists
-            icon.textContent = '🔽';
-          }
-          sessionStorage.setItem(`section-${sectionId}`, 'expanded');
-        } else {
-          content.style.display = 'none';
-          if (icon) { // Also check if the icon element exists
-            icon.textContent = '🔼';
-          }
-          sessionStorage.setItem(`section-${sectionId}`, 'collapsed');
-        }
-      } else {
-        console.error(`Element with ID ${sectionId}-content not found.`);
-      }
-    };
+    let errorMessage = 'Unknown error occurred';
+
+    // Check if the response is the expected non-JSON success message
+    if (e instanceof SyntaxError && e.message.includes('"Accepted" is not valid JSON')) {
+        // Handle the "Accepted" response as a successful outcome
+        console.log(`✅ Webhook ${id} succeeded with "Accepted" response.`);
+        // You might want to return or handle this success differently
+        // based on your application logic.
+        return { success: true, message: "Estimate call accepted" };
+    } else {
+        // Always return a proper response object instead of throwing
+        // For other errors, use the error message
+        errorMessage = e.message || errorMessage;
+    }
+
+    return { success: false, message: errorMessage }; // Return an error object for actual errors
 
 Use code snippets with caution
 
+Alternatively, if the webhook is supposed to return JSON, fix the webhook's response to be valid JSON, for example:
+
+json
+
+{
+  "status": "Accepted"
+}
+Use code snippets with caution
+
+And then parse it in your code.
+
 Summary
-The error occurs because document.getElementById() returned null. The fix is to check if the element was found before trying to access its properties.
+The SyntaxError: Unexpected token 'A', "Accepted" is not valid JSON occurs because your code attempted to parse the non-JSON string "Accepted" as if it were JSON. To fix this, ensure the webhook returns valid JSON, or modify your code to handle non-JSON responses correctly.
 
 error 2 :
-💥 Error Report: {message: "Uncaught TypeError: Cannot read properties of null (reading 'style')", filename: 'https://yaron-cayouf-portal.netlify.app/admin.html', lineno: 3734, colno: 19, error: 'TypeError: Cannot read properties of null (reading…//yaron-cayouf-portal.netlify.app/admin.html:1:1)', …}
-sendErrorReport @ environment-config.js:398
-(anonymous) @ environment-config.js:379
-Explanation
+
+❌ Failed to request estimate report: {success: false, error: 'Invalid response format from server', webhook_id: 'CALL_ESTIMATE', timestamp: '2025-07-11T11:26:12.011Z'}
+window.requestEstimateReport @ report-selection.html:1045
+await in window.requestEstimateReport
+onclick @ report-selection.html:347Understand this error
 
 Understanding the problem
-The error message Uncaught TypeError: Cannot read properties of null (reading 'style') indicates that you are trying to access the style property of a variable or expression that currently holds the value null. This usually happens when you try to manipulate the style of an HTML element that doesn't exist or hasn't been found in the DOM.
+This message indicates that a request to a server endpoint (CALL_ESTIMATE) failed because the response received from the server was not in the expected format. The success: false and error: 'Invalid response format from server' fields in the logged object confirm this. The webhook_id suggests this might be related to a webhook or API call.
 
-The error report shows that this error occurred at line 3734 in the file https://yaron-cayouf-portal.netlify.app/admin.html.
-
-The provided code for sendErrorReport is not the direct cause of the TypeError. This function is being called because the TypeError happened elsewhere in your code, likely within the admin.html file around line 3734, and your error reporting mechanism is catching and reporting it.
-
-How to verify
-Open your web application in Chrome.
-Open DevTools and go to the "Elements" tab.
-Examine the HTML structure of your page to confirm whether the element you are trying to access around line 3734 of your JavaScript code actually exists and has the expected ID, class, or tag name.
-In the "Console" tab, click on the link next to the error message (https://yaron-cayouf-portal.netlify.app/admin.html:3734:19) to jump to the exact line of code where the error occurred. Inspect the variable or expression that is null right before the access to the .style property.
 Suggested fix
-The fix involves identifying the line of code around line 3734 where you are attempting to access the style property and ensuring that the element you are targeting actually exists before trying to manipulate its style.
+The problem lies on the server-side, which is sending a response in an unexpected format. To fix this, you will need to investigate the server code that handles the CALL_ESTIMATE request and ensure it is returning data in the format expected by the client-side code that made the request. This might involve checking the data structure, content type, or any potential errors occurring on the server.
 
-Locate the code around line 3734 in your admin.html file (or a JavaScript file sourced by it). Look for code that tries to access an element, likely using methods like document.getElementById, document.querySelector, or similar.
+Summary
+The "Failed to request estimate report: Invalid response format from server" error means the server sent data that the client couldn't understand. The fix requires debugging the server-side code to ensure it returns the correct data format.
+
+error 3 :
+webhook.js:130 ❌ Webhook CALL_EXPERTISE failed: SyntaxError: Unexpected token 'A', "Accepted" is not valid JSON
+sendToWebhook	@	webhook.js:130
+await in sendToWebhook		
+window.reloadExpertiseReport	@	report-selection.html:939
+onclick	@	report-selection.html:344
+
+Understanding the problem
+The error message indicates that a webhook call failed because the response received from the webhook endpoint was not valid JSON. Specifically, it encountered the text "Accepted" at the beginning of the response, which is not a valid starting character for a JSON object or array.
+
+Suggested fix
+The webhook endpoint needs to return a response that is properly formatted as JSON. This might involve:
+
+Checking the server-side code for the webhook: Ensure that the code handling the webhook request on the server is setting the Content-Type header to application/json and that the response body is a valid JSON string.
+Removing any extraneous output before the JSON: Sometimes, server-side scripts might output plain text or HTML before the actual JSON data, causing this error. Make sure only the JSON is being returned.
+For example, if your server-side code is in PHP, ensure you are encoding your data with json_encode and setting the header:
+
+Code
+
+php
+<?php
+header('Content-Type: application/json');
+echo json_encode(['status' => 'success', 'message' => 'Data processed']);
+?>
+
+Use code snippets with caution
+
+Summary
+The "Unexpected token 'A', 'Accepted' is not valid JSON" error means the webhook received a response that was not in the expected JSON format. The fix involves ensuring the webhook endpoint returns a valid JSON response.
+
+error 4 
+Failed to request expertise report: {success: false, error: 'Invalid response format from server', webhook_id: 'CALL_EXPERTISE', timestamp: '2025-07-11T11:30:59.416Z'}
+window.reloadExpertiseReport @ report-selection.html:964
+await in window.reloadExpertiseReport
+onclick @ report-selection.html:344Understand this error
+Understanding the problem
+The console message indicates that a request for an "expertise report" failed because the server returned data in an unexpected format. Your code is logging this error message, including the server's response which shows success: false and an error: 'Invalid response format from server'.
+
+Suggested fix
+This issue lies with the server's response, not your front-end code. The server needs to be updated to return data in the format that the front-end is expecting.
+
+You should communicate with the backend developers to:
+
+Understand the expected response format for the "expertise report" request.
+Identify why the server is currently returning an "Invalid response format". This might involve checking the server-side code for errors in data processing or serialization.
+Implement the necessary changes on the server to return the correct data format.
+Summary
+The "Failed to request expertise report: Invalid response format from server" error signifies a problem with the data format returned by the server, not an issue with your client-side JavaScript. The fix requires changes to the server-side code to ensure it sends data in the expected format.
+
