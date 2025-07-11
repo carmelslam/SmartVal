@@ -166,8 +166,8 @@
         <button id="loadCaseBtn" onclick="loadExistingCaseWithPassword()" style="padding:10px 20px; background:#1e3a8a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
           טען תיק קיים
         </button>
-        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;" title="צור תיק חדש עם מספר הרכב הנוכחי">
-          צור תיק חדש
+        <button id="createNewCaseBtn" onclick="createNewCase()" style="padding:10px 20px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-right:10px;" title="צור סשן עבודה זמני עם מספר הרכב הנוכחי לצורך הפקת דוחות">
+          צור סשן עבודה זמני
         </button>
       </div>
       
@@ -238,6 +238,9 @@
       <button class="nav-btn" id="reloadExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white; display: none;">
         טען מחדש חוות דעת
       </button>
+      <button class="nav-btn" id="uploadExpertiseBtn" onclick="uploadExpertiseReport()" style="background: #7c3aed; color: white; display: none;">
+        העלה חוות דעת PDF
+      </button>
       <button class="nav-btn logout-btn" onclick="logout()">
         יציאה מהמערכת
       </button>
@@ -278,9 +281,10 @@
             displayCaseProgress(caseData);
             showDataIntegrityStatus(caseData, 'existing');
             
-            // Show reload expertise button if case has some data
+            // Show reload expertise and upload buttons if case has some data
             if (caseData.damage_sections?.length > 0 || caseData.car_details) {
               document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
+              document.getElementById('uploadExpertiseBtn').style.display = 'inline-block';
             }
           } catch (e) {
             console.error('Error parsing helper data:', e);
@@ -384,28 +388,35 @@
       const helper = sessionStorage.getItem('helper');
       const loadBtn = document.getElementById('loadCaseBtn');
       const createBtn = document.getElementById('createNewCaseBtn');
+      const uploadBtn = document.getElementById('uploadExpertiseBtn');
       
       if (!plateNumber) {
         loadBtn.disabled = true;
         createBtn.disabled = true;
+        uploadBtn.style.display = 'none';
         return;
       }
       
       loadBtn.disabled = false;
       createBtn.disabled = false;
       
+      // Show upload button if we have a plate number
+      if (plateNumber) {
+        uploadBtn.style.display = 'inline-block';
+      }
+      
       if (helper) {
         // Case exists - emphasize load button
         loadBtn.style.background = '#1e3a8a';
         loadBtn.textContent = 'טען תיק קיים';
         createBtn.style.background = '#6b7280';
-        createBtn.textContent = 'צור תיק חדש (מחיקת נתונים)';
+        createBtn.textContent = 'צור סשן עבודה זמני';
       } else {
-        // No case - emphasize create button
-        loadBtn.style.background = '#6b7280';
+        // No case - both buttons equal
+        loadBtn.style.background = '#1e3a8a';
         loadBtn.textContent = 'טען תיק קיים';
         createBtn.style.background = '#059669';
-        createBtn.textContent = 'צור תיק חדש';
+        createBtn.textContent = 'צור סשן עבודה זמני';
       }
     }
 
@@ -551,9 +562,10 @@
           displayCaseProgress(caseData);
           showDataIntegrityStatus(caseData, 'existing');
           
-          // Show reload expertise button if case has data
+          // Show reload expertise and upload buttons if case has data
           if (caseData.damage_sections?.length > 0 || caseData.car_details) {
             document.getElementById('reloadExpertiseBtn').style.display = 'inline-block';
+            document.getElementById('uploadExpertiseBtn').style.display = 'inline-block';
           }
           
           updateContinueButton();
@@ -586,7 +598,7 @@
       }
     }
 
-    // Create new case function
+    // Create new case session (for report generation only)
     window.createNewCase = function () {
       const plateNumber = document.getElementById('plateInput').value.trim();
       
@@ -595,14 +607,8 @@
         return;
       }
       
-      // Check if there's already case data and warn user
-      const existingHelper = sessionStorage.getItem('helper');
-      if (existingHelper) {
-        const confirm = window.confirm('יש כבר נתוני תיק במערכת. יצירת תיק חדש תמחק את הנתונים הקיימים. האם להמשיך?');
-        if (!confirm) {
-          return;
-        }
-      }
+      // This creates a temporary case session for report generation
+      // It doesn't delete existing cases, just creates a minimal working session
       
       const basicData = {
         meta: {
@@ -629,7 +635,7 @@
       plateDataLoaded = true;
       
       document.getElementById('plateStatus').style.display = 'block';
-      document.getElementById('plateStatus').textContent = '✓ תיק חדש נוצר';
+      document.getElementById('plateStatus').textContent = '✓ סשן עבודה זמני נוצר';
       document.getElementById('plateStatus').style.color = '#3b82f6';
       
       displayCaseProgress(basicData);
@@ -686,6 +692,110 @@
         reloadBtn.disabled = false;
         reloadBtn.textContent = originalText;
       }
+    }
+
+    // Upload expertise report PDF function
+    window.uploadExpertiseReport = async function() {
+      const plateNumber = document.getElementById('plateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      // Create file input element
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.pdf';
+      fileInput.style.display = 'none';
+      
+      fileInput.onchange = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (file.type !== 'application/pdf') {
+          alert('אנא בחר קובץ PDF בלבד');
+          return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert('קובץ גדול מדי. גודל מקסימלי: 10MB');
+          return;
+        }
+        
+        const uploadBtn = document.getElementById('uploadExpertiseBtn');
+        const originalText = uploadBtn.textContent;
+        
+        try {
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = 'מעלה קובץ...';
+          
+          // Convert file to base64
+          const base64 = await fileToBase64(file);
+          
+          const caseData = helper ? JSON.parse(helper) : null;
+          const payload = {
+            plate: plateNumber,
+            case_id: caseData?.meta?.case_id || `CASE-${plateNumber}-${Date.now()}`,
+            file: {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              content: base64
+            },
+            document_type: 'expertise_report',
+            timestamp: new Date().toISOString()
+          };
+          
+          const response = await sendToWebhook('UPLOAD_EXPERTISE_PDF', payload);
+          
+          if (response?.success) {
+            alert('חוות הדעת הועלתה בהצלחה!');
+            console.log('✅ Expertise PDF uploaded successfully');
+            
+            // Update helper with uploaded document info
+            if (caseData) {
+              if (!caseData.uploaded_documents) {
+                caseData.uploaded_documents = [];
+              }
+              caseData.uploaded_documents.push({
+                type: 'expertise_report',
+                filename: file.name,
+                uploaded_at: new Date().toISOString(),
+                size: file.size
+              });
+              sessionStorage.setItem('helper', JSON.stringify(caseData));
+            }
+            
+          } else {
+            alert('שגיאה בהעלאת חוות הדעת. אנא נסה שוב.');
+            console.error('❌ Failed to upload expertise PDF:', response);
+          }
+          
+        } catch (error) {
+          console.error('Error uploading expertise PDF:', error);
+          alert('שגיאה בהעלאת חוות הדעת. אנא נסה שוב.');
+          
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = originalText;
+          document.body.removeChild(fileInput);
+        }
+      };
+      
+      document.body.appendChild(fileInput);
+      fileInput.click();
+    }
+    
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
     }
 
     // Display case progress indicators

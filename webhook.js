@@ -39,7 +39,10 @@ export const WEBHOOKS = {
   PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
   
   // Call expertise report webhook
-  CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux'
+  CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
+  
+  // Upload expertise report PDF (reuse existing upload infrastructure)
+  UPLOAD_EXPERTISE_PDF: 'https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9'
 
 
 };
