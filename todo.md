@@ -1558,7 +1558,115 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 24. dev module : **low priority** total fix and integration 
 
-25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
+25. **High Priority:** Reprot Generation Workflow, Continuation of the Report Selection Page: Following the initial pages, the Estimate Builder in the Estimate Report Generation or the Depreciation/Fee in the Final Report Generation necessitates a validation process. The “Final Report Validation” module from the Selection Page serves as a foundational concept that requires modification and relocation according to the principles outlined below.
+
+- Each report, estimate, and final report must undergo a validation process prior to generation.
+- Expertise generates the Expertise Report using the Expertise Builder and the Draft Report using the Final Report Builder HTML.
+- The Estimate and Final Reports utilize the Draft Report to finalize to the desired report using the Final Report Builder in draft state.
+
+26. **High Priority:** Validation Pages: Validation pages are created for each report separately in two locations:
+
+- The Report Workflow
+- The Generate Report Wizard (except Expertise)
+
+The Validation Page is a template utilized in both locations. Validation is required for:
+
+- Expertise Report
+- Estimate Report (both types)
+- Final Report (all types)
+
+Validation is performed at two levels:
+
+- System Level:
+  - Automatically checks the validity and integrity of the report’s sections.
+  - Checks for gaps and misalignments.
+  - Extracts main information such as titles of sections/subsections, their descriptions, and properties.
+  - Total costs
+
+- Legal Text: Displays the correct legal text in a window, editable, and requires validation.
+  - All validation items are editable.
+
+- User Level:
+  - Reviews the automatic validation.
+  - Edits fields or legal text as needed.
+  - Saves and confirms.
+  - User modifications become the system truth.
+
+Validation pages are constructed according to each report structure, sections, and legality features:
+
+- Expertise:
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+  - Summary: Status and Comments
+
+- All are editable and can be ignored if missing.
+
+- Estimate Report: Based on the Final Report HTML Builder
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+
+**Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Final Report:**
+
+**Fee Module:**
+
+*   **Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+*   **Car + General Details:**
+    *   **Levi Report Upload:**
+        *   **Name:**
+        *   **Description:**
+        *   **Works:**
+            *   **Total Works:**
+            *   **Total Costs:**
+        *   **Parts:**
+            **Total Parts:**
+
+*   **Total Costs:**
+
+*   **Repairs:**
+
+    *   **Total Repairs:**
+
+    *   **Total Costs:**
+
+**Levi Price Adjustments Calculations:**
+
+*   **Base Price:**
+
+*   **Adjustments:**
+
+*   **Damage Percentage Calculations:**
+
+*   **Market Price:**
+
+**Depreciation Module Integrity:**
+
+*   **Depreciation per Damage Center and Global:**
+
+*   **Final Report Summary:**
+
+**Legal Text:** Display the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Validation is based on the section of each report and its pulling of the actual data for final review.**
+
+
 
 
 
