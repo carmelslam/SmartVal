@@ -3154,3 +3154,127 @@ All user-reported issues have been resolved. The system now provides:
 
 ***Latest Session Fixes Completed ✅***
 **Password prefill system fully implemented and main selection page logic fixed to match report selection page behavior.**
+
+
+*MAIN SELECTION PAGE MAKEOVER*
+Main selection page - layout
+
+General :
+
+The navigation page logic is based on workflows  and standalone modules rather than a module navigation that targets modules and pages 
+The logic needs to balance between integrity of main workflows : expertise -> estimate -> final report , the integrity of inner flows inside each workflow and the need to allow flexibility to the user in working on the case.
+Main principles :
+Parent work flows are fixed , in order to generate a final report, the user needs to start with expertise for it is the workflow that generates 90% of the data . Estimate is an optional parent and final report workflow is the objective pf the system and it is based on former parents.
+Children workflows - inside the main workflow are flexible , they allow the user to pick up in any place that is an entry point and continue from there, even if a former module that is in the logic of the flow is not filled the user can go back afterwards and fill that module and it will be integrated seamlessly in the system .
+Tools workflows, those workflows are stands lone workflows, they serve the system integrity and they have no dependency on a a status of a certain workflow.
+Each work flow has internal flow that flows from one completed page to another. Workflows can have duplicates in navigation, meaning more than one entry point can trigger the same flow, this is meant to balance between the flow of a specific workflow and the flexibility of the user to start in selected points rather than be forced to go through the whole flow in order to arrive to the desired module.
+The navigation page needs to be modern, user friendly, and span all the system scope. The navigation needs to be dynamic, meaning if a one option/ flow are not available due to dependency or restriction, the button of that workflow is disabled momentarily.
+The navigation page allows view past report of the case n a floating screen pdf, 
+The upload case style , functionality and layout without change 
+
+
+
+Inner flows : full illustartion in the selection page folder
+Parent  
+Workflow - Open Expertise ->
+
+Open new  file (new file page html)
+|.         |
+|          |__general info (link to the general info page) 
+
+|                             |
+|                             |
+                               |__ Levi (link to the Levi module ) 
+
+Parent  
+
+|
+damage centers wizard module- open new damage center - damage center name 
+                        |   
+                        | damage description
+
+                         
+                              |
+                              |
+                              |__ work module 
+
+Opens parts search module, reopens for parts selection 
+
+
+
+                                                  Required parts  module 
+
+
+
+
+
+
+                                                 Required repairs  module 
+
+
+
+Parent  
+
+
+expertise summary  page
+              |
+              |__ Expertise validation page - automatic       
+                     system audit + user validation 
+
+
+                      
+                            |
+                            |__ review ( builder)+ submit report
+
+
+
+
+Parent  
+Workflow - create Estimate Report ->
+
+Review draft report
+Parent   
+| 
+|
+Estimate builder page 
+                
+                |__ Estimate validation page -automatic  system audit + user validation ) 
+
+
+                              |                    
+                              |__ review builder + submit report
+
+
+
+
+
+
+Parent  
+Workflow - create Final Report ->
+
+Review draft report ( last updated)
+Parent   
+|
+| 
+Depreciation module 
+|             
+|              |
+                |__ fee module 
+                   |
+                   |_ final report  validation page   -automatic  system audit + user   validation )
+                            
+
+           
+                              |__ review builder + submit report
+
+Parent  
+
+| 
+Fee Module
+                     |
+                     |_ final report  validation page   -automatic  system audit + user   validation )
+                           
+
+        
+                              |__ review builder + submit report
+
