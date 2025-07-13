@@ -550,15 +550,25 @@
           <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
         </div>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
-          <div>שדה</div>
-          <div style="text-align: center;">ערך נוכחי</div>
-          <div style="text-align: center;">נתונים מאוחסנים</div>
-          <div style="text-align: center;">פעולות</div>
+        <div class="validation-item">
+          <span class="validation-label">מספר רכב מוגדר</span>
+          <span class="validation-status" id="vehicle-plate">⏳</span>
         </div>
-        
-        <div id="vehicle-validation-items">
-          <!-- Will be populated by JavaScript -->
+        <div class="validation-item">
+          <span class="validation-label">פרטי יצרן ודגם</span>
+          <span class="validation-status" id="vehicle-details">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">מפרט רכב ושנת יצור</span>
+          <span class="validation-status" id="vehicle-specs">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">פרטי בעלים</span>
+          <span class="validation-status" id="vehicle-owner">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">פרטי ביטוח</span>
+          <span class="validation-status" id="vehicle-insurance">⏳</span>
         </div>
       </div>
       <div class="validation-buttons">
@@ -890,53 +900,10 @@
       `;
     }
 
-    // Populate enhanced validation items for vehicle section
+    // Restore original vehicle validation items (working version)
     function populateEnhancedValidationItems() {
-      const container = document.getElementById('vehicle-validation-items');
-      if (!container) return;
-      
-      const data = currentValidationData;
-      const helper = data.raw_helper;
-      
-      console.log('🔍 Debug helper data:', helper); // Debug log
-      
-      container.innerHTML = 
-        createEnhancedValidationItem(
-          'מספר רכב', 
-          data.plate || data.car_details.plate, 
-          helper.plate || helper.meta?.plate || helper.car_details?.plate || 'לא מוגדר', 
-          'plate'
-        ) +
-        createEnhancedValidationItem(
-          'יצרן', 
-          data.car_details.manufacturer, 
-          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || 'לא מוגדר', 
-          'manufacturer'
-        ) +
-        createEnhancedValidationItem(
-          'דגם', 
-          data.car_details.model, 
-          helper.model || helper.car_details?.model || helper.vehicle?.model || 'לא מוגדר', 
-          'model'
-        ) +
-        createEnhancedValidationItem(
-          'שנת יצור', 
-          data.car_details.year, 
-          helper.year || helper.car_details?.year || helper.vehicle?.year || 'לא מוגדר', 
-          'year'
-        ) +
-        createEnhancedValidationItem(
-          'שם בעלים', 
-          data.client.name, 
-          helper.owner || helper.client?.name || helper.meta?.owner || 'לא מוגדר', 
-          'owner_name'
-        ) +
-        createEnhancedValidationItem(
-          'חברת ביטוח', 
-          data.client.insurance_company, 
-          helper.insurance_company || helper.client?.insurance_company || 'לא מוגדר', 
-          'insurance'
-        );
+      // Keep original working vehicle validation - don't use enhanced display for vehicle section
+      console.log('✅ Vehicle section using original working validation structure');
     }
 
     function loadValidationData() {
@@ -1095,74 +1062,69 @@
     async function validateVehicleSection() {
       const issues = [];
       const validItems = [];
+      const data = currentValidationData;
       
-      // Get current values from the enhanced validation display
-      const plateValue = getCurrentFieldValue('plate');
-      const manufacturerValue = getCurrentFieldValue('manufacturer');
-      const modelValue = getCurrentFieldValue('model');
-      const yearValue = getCurrentFieldValue('year');
-      const ownerValue = getCurrentFieldValue('owner_name');
-      const insuranceValue = getCurrentFieldValue('insurance');
+      // Use original data extraction approach (working version)
+      const plateValue = data.plate || data.car_details?.plate || '';
+      const manufacturerValue = data.car_details?.manufacturer || '';
+      const modelValue = data.car_details?.model || '';
+      const yearValue = data.car_details?.year || '';
+      const ownerValue = data.client?.name || '';
+      const insuranceValue = data.client?.insurance_company || '';
       
       // Validate plate number
-      if (plateValue && plateValue !== 'לא זמין' && plateValue.length >= 6) {
+      if (plateValue && plateValue.length >= 6) {
         validItems.push('vehicle-plate');
-        setFieldValidationStatus('plate', '✓');
+        updateElementIfExists('vehicle-plate', '✓');
       } else {
         issues.push('מספר רכב חסר או לא תקין');
-        setFieldValidationStatus('plate', '❌');
+        updateElementIfExists('vehicle-plate', '❌');
       }
       
       // Validate vehicle details  
-      if (manufacturerValue && manufacturerValue !== 'לא זמין' && modelValue && modelValue !== 'לא זמין') {
+      if (manufacturerValue && modelValue) {
         validItems.push('vehicle-details');
-        setFieldValidationStatus('manufacturer', '✓');
-        setFieldValidationStatus('model', '✓');
+        updateElementIfExists('vehicle-details', '✓');
       } else {
         issues.push('פרטי יצרן או דגם חסרים');
-        setFieldValidationStatus('manufacturer', manufacturerValue && manufacturerValue !== 'לא זמין' ? '✓' : '❌');
-        setFieldValidationStatus('model', modelValue && modelValue !== 'לא זמין' ? '✓' : '❌');
+        updateElementIfExists('vehicle-details', '❌');
       }
       
       // Validate vehicle specs
-      if (yearValue && yearValue !== 'לא זמין' && yearValue > 1990 && yearValue <= new Date().getFullYear()) {
+      if (yearValue && yearValue > 1990 && yearValue <= new Date().getFullYear()) {
         validItems.push('vehicle-specs');
-        setFieldValidationStatus('year', '✓');
+        updateElementIfExists('vehicle-specs', '✓');
       } else {
         issues.push('שנת יצור לא תקינה');
-        setFieldValidationStatus('year', '❌');
+        updateElementIfExists('vehicle-specs', '❌');
       }
       
       // Validate owner details (warning only, not blocking)
-      if (ownerValue && ownerValue !== 'לא זמין') {
+      if (ownerValue) {
         validItems.push('vehicle-owner');
-        setFieldValidationStatus('owner_name', '✓');
+        updateElementIfExists('vehicle-owner', '✓');
       } else {
         issues.push('פרטי בעלים חסרים (אזהרה)');
-        setFieldValidationStatus('owner_name', '⚠️');
+        updateElementIfExists('vehicle-owner', '⚠️');
       }
       
-      // Validate insurance details (warning only, not blocking)
-      if (insuranceValue && insuranceValue !== 'לא זמין') {
+      // Validate insurance details (warning only, not blocking)  
+      if (insuranceValue) {
         validItems.push('vehicle-insurance');
-        setFieldValidationStatus('insurance', '✓');
+        updateElementIfExists('vehicle-insurance', '✓');
       } else {
         issues.push('פרטי ביטוח חסרים (אזהרה)');
-        setFieldValidationStatus('insurance', '⚠️');
+        updateElementIfExists('vehicle-insurance', '⚠️');
       }
       
       // Only count critical errors (not warnings)
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
-      // Stricter validation: require at least 3 valid critical items (plate, manufacturer, model, year)
-      const requiredItems = ['vehicle-plate', 'vehicle-details', 'vehicle-specs'];
-      const missingRequired = requiredItems.filter(item => !validItems.includes(item));
-      
       return {
-        success: criticalErrors === 0 && missingRequired.length === 0,
+        success: criticalErrors === 0,
         warnings: issues.filter(i => i.includes('אזהרה')).length,
-        errors: criticalErrors + missingRequired.length,
-        issues: issues.concat(missingRequired.map(item => `שדה חובה חסר: ${item}`)),
+        errors: criticalErrors,
+        issues: issues,
         validItems: validItems.length
       };
     }
@@ -1809,10 +1771,6 @@
         // If next section needs enhanced display, populate it
         if (nextSectionName === 'levi') {
           populateLeviValidationItems();
-        } else if (nextSectionName === 'damage') {
-          populateDamageValidationItems();
-        } else if (nextSectionName === 'estimate') {
-          populateEstimateValidationItems();
         }
         
         // Auto-validate next section
@@ -2058,15 +2016,7 @@
       }, 5000);
     }
 
-    // Make functions globally available
-    window.validateSection = validateSection;
-    window.editSection = editSection;
-    window.approveSection = approveSection;
-    window.validateLegalText = validateLegalText;
-    window.editLegalText = editLegalText;
-    window.requestManualReview = requestManualReview;
-    window.saveValidationData = saveValidationData;
-    window.reviewEstimateReport = reviewEstimateReport;
+    // Functions are already globally available through window.functionName definitions above
   </script>
 </body>
 </html>
