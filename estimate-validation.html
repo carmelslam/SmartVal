@@ -2019,13 +2019,32 @@
     function getLeviDataFromSources() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
+      console.log('🔍 DEBUGGING: Full helper object structure:', JSON.stringify(helper, null, 2));
+      
       // Priority 1: Try to get from current DOM (if validation runs in same context as builder)
       const domBasePrice = getBuilderFieldValue('carBasePrice');
       const domMarketValue = getBuilderFieldValue('carMarketValue') || getBuilderFieldValue('sumMarketValue');
       
-      // Priority 2: Try to get from helper (saved data)
-      const helperBasePrice = helper?.vehicle_value_base || helper?.levi?.base_price || helper?.levi_report?.base_price || '';
-      const helperMarketValue = helper?.calculations?.market_value || helper?.levi?.market_value || helper?.levi_report?.final_price || '';
+      // Priority 2: Try to get from helper (saved data) - COMPREHENSIVE SEARCH
+      let helperBasePrice = '';
+      let helperMarketValue = '';
+      
+      // Search for base price in all possible locations
+      if (helper.vehicle_value_base) helperBasePrice = helper.vehicle_value_base;
+      else if (helper.levi?.base_price) helperBasePrice = helper.levi.base_price;
+      else if (helper.levi_report?.base_price) helperBasePrice = helper.levi_report.base_price;
+      else if (helper.car_details?.base_price) helperBasePrice = helper.car_details.base_price;
+      else if (helper.base_price) helperBasePrice = helper.base_price;
+      else if (helper.expertise?.levi_report?.base_price) helperBasePrice = helper.expertise.levi_report.base_price;
+      
+      // Search for market value in all possible locations
+      if (helper.calculations?.market_value) helperMarketValue = helper.calculations.market_value;
+      else if (helper.levi?.market_value) helperMarketValue = helper.levi.market_value;
+      else if (helper.levi_report?.final_price) helperMarketValue = helper.levi_report.final_price;
+      else if (helper.levi_report?.market_value) helperMarketValue = helper.levi_report.market_value;
+      else if (helper.market_value) helperMarketValue = helper.market_value;
+      else if (helper.expertise?.levi_report?.final_price) helperMarketValue = helper.expertise.levi_report.final_price;
+      else if (helper.car_details?.market_value) helperMarketValue = helper.car_details.market_value;
       
       // Priority 3: Try to get from builder session state
       const builderState = sessionStorage.getItem('builderCurrentState');
@@ -2036,9 +2055,28 @@
           const state = JSON.parse(builderState);
           sessionBasePrice = state.carBasePrice || '';
           sessionMarketValue = state.carMarketValue || state.sumMarketValue || '';
+          console.log('🔍 DEBUGGING: Builder session state:', state);
         } catch (error) {
           console.log('Error parsing builder state:', error);
         }
+      }
+      
+      // Priority 4: Try to get from any numeric field that looks like price data
+      if (!helperBasePrice && !helperMarketValue) {
+        console.log('🔍 DEBUGGING: Searching for any numeric price-like fields in helper...');
+        const searchForPrices = (obj, path = '') => {
+          for (const [key, value] of Object.entries(obj)) {
+            if (typeof value === 'object' && value !== null) {
+              searchForPrices(value, path + key + '.');
+            } else if (typeof value === 'number' || (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value))) {
+              const numValue = parseFloat(value);
+              if (numValue > 1000 && numValue < 10000000) { // Reasonable car price range
+                console.log(`🔍 Found potential price field: ${path}${key} = ${value}`);
+              }
+            }
+          }
+        };
+        searchForPrices(helper);
       }
       
       // Use the best available data (prioritize DOM > Session > Helper)
@@ -2053,7 +2091,12 @@
         helperBasePrice,
         helperMarketValue,
         finalBasePrice: basePrice,
-        finalMarketValue: marketValue
+        finalMarketValue: marketValue,
+        helperKeys: Object.keys(helper),
+        hasCalculations: !!helper.calculations,
+        hasLevi: !!helper.levi,
+        hasLeviReport: !!helper.levi_report,
+        hasExpertise: !!helper.expertise
       });
       
       return {
