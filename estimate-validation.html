@@ -550,25 +550,15 @@
           <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
         </div>
         
-        <div class="validation-item">
-          <span class="validation-label">מספר רכב מוגדר</span>
-          <span class="validation-status" id="vehicle-plate">⏳</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
         </div>
-        <div class="validation-item">
-          <span class="validation-label">פרטי יצרן ודגם</span>
-          <span class="validation-status" id="vehicle-details">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">מפרט רכב ושנת יצור</span>
-          <span class="validation-status" id="vehicle-specs">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">פרטי בעלים</span>
-          <span class="validation-status" id="vehicle-owner">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">פרטי ביטוח</span>
-          <span class="validation-status" id="vehicle-insurance">⏳</span>
+        
+        <div id="vehicle-validation-items">
+          <!-- Will be populated by JavaScript with 3-column enhanced display -->
         </div>
       </div>
       <div class="validation-buttons">
@@ -856,7 +846,7 @@
     function initializeValidationSystem() {
       loadValidationData();
       loadLegalTextValidation();
-      populateEnhancedValidationItems();
+      populateEnhancedValidationItems(); // Populate vehicle section with enhanced display
       startInitialValidation();
     }
 
@@ -900,10 +890,55 @@
       `;
     }
 
-    // Restore original vehicle validation items (working version)
+    // Enhanced validation items for vehicle section (working 3-column version)
     function populateEnhancedValidationItems() {
-      // Keep original working vehicle validation - don't use enhanced display for vehicle section
-      console.log('✅ Vehicle section using original working validation structure');
+      const container = document.getElementById('vehicle-validation-items');
+      if (!container) return;
+      
+      const data = currentValidationData;
+      const helper = data.raw_helper;
+      
+      console.log('🔍 Populating vehicle validation items with enhanced display');
+      
+      container.innerHTML = 
+        createEnhancedValidationItem(
+          'מספר רכב', 
+          data.plate || data.car_details?.plate || '', 
+          helper.plate || helper.meta?.plate || helper.car_details?.plate || '', 
+          'plate'
+        ) +
+        createEnhancedValidationItem(
+          'יצרן', 
+          data.car_details?.manufacturer || '', 
+          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '', 
+          'manufacturer'
+        ) +
+        createEnhancedValidationItem(
+          'דגם', 
+          data.car_details?.model || '', 
+          helper.model || helper.car_details?.model || helper.vehicle?.model || '', 
+          'model'
+        ) +
+        createEnhancedValidationItem(
+          'שנת יצור', 
+          data.car_details?.year || '', 
+          helper.year || helper.car_details?.year || helper.vehicle?.year || '', 
+          'year'
+        ) +
+        createEnhancedValidationItem(
+          'שם בעלים', 
+          data.client?.name || '', 
+          helper.owner || helper.client?.name || helper.meta?.client_name || '', 
+          'owner_name'
+        ) +
+        createEnhancedValidationItem(
+          'חברת ביטוח', 
+          data.client?.insurance_company || '', 
+          helper.insurance_company || helper.client?.insurance_company || '', 
+          'insurance'
+        );
+      
+      console.log('✅ Vehicle validation items populated successfully');
     }
 
     function loadValidationData() {
@@ -1062,59 +1097,60 @@
     async function validateVehicleSection() {
       const issues = [];
       const validItems = [];
-      const data = currentValidationData;
       
-      // Use original data extraction approach (working version)
-      const plateValue = data.plate || data.car_details?.plate || '';
-      const manufacturerValue = data.car_details?.manufacturer || '';
-      const modelValue = data.car_details?.model || '';
-      const yearValue = data.car_details?.year || '';
-      const ownerValue = data.client?.name || '';
-      const insuranceValue = data.client?.insurance_company || '';
+      // Get current values from the enhanced validation display (working version)
+      const plateValue = getCurrentFieldValue('plate');
+      const manufacturerValue = getCurrentFieldValue('manufacturer');
+      const modelValue = getCurrentFieldValue('model');
+      const yearValue = getCurrentFieldValue('year');
+      const ownerValue = getCurrentFieldValue('owner_name');
+      const insuranceValue = getCurrentFieldValue('insurance');
       
       // Validate plate number
-      if (plateValue && plateValue.length >= 6) {
+      if (plateValue && plateValue !== 'לא זמין' && plateValue.length >= 6) {
         validItems.push('vehicle-plate');
-        updateElementIfExists('vehicle-plate', '✓');
+        setFieldValidationStatus('plate', '✓');
       } else {
         issues.push('מספר רכב חסר או לא תקין');
-        updateElementIfExists('vehicle-plate', '❌');
+        setFieldValidationStatus('plate', '❌');
       }
       
       // Validate vehicle details  
-      if (manufacturerValue && modelValue) {
+      if (manufacturerValue && manufacturerValue !== 'לא זמין' && modelValue && modelValue !== 'לא זמין') {
         validItems.push('vehicle-details');
-        updateElementIfExists('vehicle-details', '✓');
+        setFieldValidationStatus('manufacturer', '✓');
+        setFieldValidationStatus('model', '✓');
       } else {
         issues.push('פרטי יצרן או דגם חסרים');
-        updateElementIfExists('vehicle-details', '❌');
+        setFieldValidationStatus('manufacturer', manufacturerValue && manufacturerValue !== 'לא זמין' ? '✓' : '❌');
+        setFieldValidationStatus('model', modelValue && modelValue !== 'לא זמין' ? '✓' : '❌');
       }
       
       // Validate vehicle specs
-      if (yearValue && yearValue > 1990 && yearValue <= new Date().getFullYear()) {
+      if (yearValue && yearValue !== 'לא זמין' && yearValue > 1990 && yearValue <= new Date().getFullYear()) {
         validItems.push('vehicle-specs');
-        updateElementIfExists('vehicle-specs', '✓');
+        setFieldValidationStatus('year', '✓');
       } else {
         issues.push('שנת יצור לא תקינה');
-        updateElementIfExists('vehicle-specs', '❌');
+        setFieldValidationStatus('year', '❌');
       }
       
       // Validate owner details (warning only, not blocking)
-      if (ownerValue) {
+      if (ownerValue && ownerValue !== 'לא זמין') {
         validItems.push('vehicle-owner');
-        updateElementIfExists('vehicle-owner', '✓');
+        setFieldValidationStatus('owner_name', '✓');
       } else {
         issues.push('פרטי בעלים חסרים (אזהרה)');
-        updateElementIfExists('vehicle-owner', '⚠️');
+        setFieldValidationStatus('owner_name', '⚠️');
       }
       
-      // Validate insurance details (warning only, not blocking)  
-      if (insuranceValue) {
+      // Validate insurance details (warning only, not blocking)
+      if (insuranceValue && insuranceValue !== 'לא זמין') {
         validItems.push('vehicle-insurance');
-        updateElementIfExists('vehicle-insurance', '✓');
+        setFieldValidationStatus('insurance', '✓');
       } else {
         issues.push('פרטי ביטוח חסרים (אזהרה)');
-        updateElementIfExists('vehicle-insurance', '⚠️');
+        setFieldValidationStatus('insurance', '⚠️');
       }
       
       // Only count critical errors (not warnings)
