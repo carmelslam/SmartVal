@@ -804,8 +804,8 @@
             break;
             
           case 'internalBrowser':
-            if (window.toggleInternalBrowser) {
-              window.toggleInternalBrowser();
+            if (window.openInternalBrowser) {
+              window.openInternalBrowser('https://www.google.com', 'חיפוש מידע');
             } else {
               console.error('❌ Internal browser script not loaded');
               showAlert('שגיאה: דפדפן פנימי לא נטען', 'error');
@@ -1181,8 +1181,32 @@
     }
 
     function setupPostSessionActions() {
-      document.getElementById('save-estimate').addEventListener('click', () => {
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
+      console.log('🔄 Setting up action buttons...');
+      
+      // Check if elements exist
+      const saveBtn = document.getElementById('save-estimate');
+      const previewBtn = document.getElementById('preview-estimate');
+      const generateBtn = document.getElementById('generate-estimate');
+      
+      console.log('📊 Button elements found:', {
+        saveBtn: !!saveBtn,
+        previewBtn: !!previewBtn,
+        generateBtn: !!generateBtn
+      });
+      
+      if (!saveBtn || !previewBtn || !generateBtn) {
+        console.error('❌ Some action buttons not found in DOM');
+        return;
+      }
+      
+      saveBtn.addEventListener('click', () => {
+        console.log('💾 Save estimate button clicked');
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        if (!selectedTypeElement) {
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
+        }
+        const selectedType = selectedTypeElement.value;
         const additionalNotes = document.getElementById('additional-notes').value;
         
         // Update helper with estimate type and additional data
@@ -1201,8 +1225,14 @@
         showAlert('אומדן נשמר בהצלחה');
       });
 
-      document.getElementById('preview-estimate').addEventListener('click', () => {
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
+      previewBtn.addEventListener('click', () => {
+        console.log('👁️ Preview estimate button clicked');
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        if (!selectedTypeElement) {
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
+        }
+        const selectedType = selectedTypeElement.value;
         
         // Update helper with current estimate type
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -1214,8 +1244,14 @@
         window.location.href = 'estimate-validation.html';
       });
 
-      document.getElementById('generate-estimate').addEventListener('click', () => {
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
+      generateBtn.addEventListener('click', () => {
+        console.log('📄 Generate estimate button clicked');
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        if (!selectedTypeElement) {
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
+        }
+        const selectedType = selectedTypeElement.value;
         const additionalNotes = document.getElementById('additional-notes').value;
         
         // Update helper with all estimate data
@@ -1300,5 +1336,10 @@
       }
     });
   </script>
+
+  <!-- Floating Screens Scripts -->
+  <script src="levi-floating.js"></script>
+  <script src="car-details-floating.js"></script>
+  <script src="internal-browser.js"></script>
 </body>
 </html>
