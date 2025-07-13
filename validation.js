@@ -71,5 +71,14 @@ const ValidationEngine = {
   }
 };
 
+// Export the validation function for estimate-report.js
+export function validateData(helper) {
+  return ValidationEngine.validate(helper);
+}
+
+// Export the ValidationEngine as well
+export { ValidationEngine };
+
+// Also make it available globally
 window.validationEngine = ValidationEngine;
 console.log("✅ validation.js loaded with bulk + report-type field validation");
