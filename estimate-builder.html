@@ -320,6 +320,34 @@
       </div>
     </div>
 
+    <!-- SUMMARY SECTION WITH ORANGE STYLING -->
+    <div class="form-section" style="background: linear-gradient(135deg, #ff8c00 0%, #ff7300 100%); color: white; border-radius: 12px; padding: 20px;">
+      <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 26px;">סיכום תביעה</h3>
+      
+      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">ערך השוק של הרכב:</label>
+            <input type="text" id="sumMarketValue" style="background: white; color: #333;" />
+          </div>
+          <div>
+            <label style="color: #333;">סה״כ תביעה:</label>
+            <input type="text" id="sumClaim" style="background: white; color: #333;" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">מע״מ (18%):</label>
+            <input type="text" id="sumVAT" style="background: white; color: #333;" />
+          </div>
+          <div>
+            <label style="color: #333;">סה״כ תביעה:</label>
+            <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ADDITIONAL NOTES -->
     <div class="form-section">
       <h3>הערות נוספות לאומדן</h3>
@@ -465,10 +493,19 @@
       const selectedType = selectedTypeElement.value;
       const additionalNotes = document.getElementById('additional-notes')?.value || '';
       
+      // Get summary data
+      const summaryData = {
+        market_value: document.getElementById('sumMarketValue')?.value || '',
+        total_claim: document.getElementById('sumClaim')?.value || '',
+        vat: document.getElementById('sumVAT')?.value || '',
+        total_with_vat: document.getElementById('sumTotalClaim')?.value || ''
+      };
+      
       // Save to helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_type = selectedType;
       helper.estimate_notes = additionalNotes;
+      helper.estimate_summary = summaryData;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       alert('אומדן נשמר בהצלחה');
@@ -482,8 +519,20 @@
       }
       
       const selectedType = selectedTypeElement.value;
+      const additionalNotes = document.getElementById('additional-notes')?.value || '';
+      
+      // Get summary data
+      const summaryData = {
+        market_value: document.getElementById('sumMarketValue')?.value || '',
+        total_claim: document.getElementById('sumClaim')?.value || '',
+        vat: document.getElementById('sumVAT')?.value || '',
+        total_with_vat: document.getElementById('sumTotalClaim')?.value || ''
+      };
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_type = selectedType;
+      helper.estimate_notes = additionalNotes;
+      helper.estimate_summary = summaryData;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       sessionStorage.setItem('selectedReportType', 'estimate');
       
@@ -499,9 +548,19 @@
       
       const selectedType = selectedTypeElement.value;
       const additionalNotes = document.getElementById('additional-notes')?.value || '';
+      
+      // Get summary data
+      const summaryData = {
+        market_value: document.getElementById('sumMarketValue')?.value || '',
+        total_claim: document.getElementById('sumClaim')?.value || '',
+        vat: document.getElementById('sumVAT')?.value || '',
+        total_with_vat: document.getElementById('sumTotalClaim')?.value || ''
+      };
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_type = selectedType;
       helper.estimate_notes = additionalNotes;
+      helper.estimate_summary = summaryData;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       sessionStorage.setItem('selectedReportType', 'estimate');
       
@@ -548,8 +607,69 @@
         // Update page title with plate
         document.getElementById('pageTitle').textContent = `רכב מס. ${helper.meta?.plate || '...'}`;
         
+        // Load summary data
+        loadSummaryData(helper);
+        
       } catch (error) {
         console.error('Error loading data from helper:', error);
+      }
+    }
+
+    // LOAD SUMMARY DATA AND CALCULATIONS
+    function loadSummaryData(helper) {
+      try {
+        // Check if we have saved summary data first
+        if (helper.estimate_summary) {
+          document.getElementById('sumMarketValue').value = helper.estimate_summary.market_value || '';
+          document.getElementById('sumClaim').value = helper.estimate_summary.total_claim || '';
+          document.getElementById('sumVAT').value = helper.estimate_summary.vat || '';
+          document.getElementById('sumTotalClaim').value = helper.estimate_summary.total_with_vat || '';
+        } else {
+          // Load from helper calculations if no saved summary
+          const marketValue = helper.expertise?.calculations?.market_value || 0;
+          const totalClaim = helper.expertise?.calculations?.total_damage || 0;
+          
+          // Set market value and claim
+          document.getElementById('sumMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+          document.getElementById('sumClaim').value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+          
+          // Calculate VAT (18%)
+          const vat = totalClaim * 0.18;
+          document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
+          
+          // Calculate total with VAT
+          const totalWithVAT = totalClaim + vat;
+          document.getElementById('sumTotalClaim').value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
+        }
+        
+        // Load saved estimate notes if available
+        if (helper.estimate_notes) {
+          document.getElementById('additional-notes').value = helper.estimate_notes;
+        }
+        
+        // Add event listeners for real-time calculations
+        addSummaryCalculationListeners();
+        
+      } catch (error) {
+        console.error('Error loading summary data:', error);
+      }
+    }
+
+    // ADD CALCULATION LISTENERS FOR SUMMARY
+    function addSummaryCalculationListeners() {
+      const sumClaimInput = document.getElementById('sumClaim');
+      const sumVATInput = document.getElementById('sumVAT');
+      const sumTotalInput = document.getElementById('sumTotalClaim');
+
+      if (sumClaimInput) {
+        sumClaimInput.addEventListener('input', function() {
+          const claimValue = parseFloat(this.value.replace(/[₪,]/g, '')) || 0;
+          const vat = claimValue * 0.18;
+          const total = claimValue + vat;
+          
+          sumVATInput.value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
+          sumTotalInput.value = total ? `₪${Math.round(total).toLocaleString()}` : '';
+        });
       }
     }
 
