@@ -915,13 +915,15 @@
     function loadValidationData() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Enhanced data extraction from estimate-builder format
+      // OPTIMAL FLOW: Validation should read from builder state, not helper directly
+      // Helper → Builder → Validation (this validation reads from builder current state)
+      
       currentValidationData = {
-        // Basic metadata
+        // Basic metadata (from helper or builder override)
         meta: helper.meta || {},
         plate: helper.plate || helper.meta?.plate || '',
         
-        // Car details from multiple possible sources
+        // Car details (builder should override helper)
         car_details: {
           plate: helper.plate || helper.meta?.plate || '',
           manufacturer: helper.manufacturer || helper.car_details?.manufacturer || '',
@@ -931,7 +933,7 @@
           engine: helper.engine || helper.car_details?.engine || ''
         },
         
-        // Client/owner information
+        // Client/owner information (builder should override helper)
         client: {
           name: helper.owner || helper.client?.name || '',
           phone_number: helper.client?.phone_number || '',
@@ -939,23 +941,25 @@
           insurance_company: helper.client?.insurance_company || ''
         },
         
-        // Levi report data
+        // Levi report data (SHOULD READ FROM BUILDER STATE)
+        // For now using helper until builder integration is complete
         levi_report: helper.levi_report || helper.expertise?.levi_report || {},
         
-        // Damage centers from estimate-builder format
+        // Damage centers (SHOULD READ FROM BUILDER STATE)
         damage_blocks: helper.expertise?.damage_blocks || [],
         
-        // Legal text from estimate builder
+        // Legal text (SHOULD READ FROM BUILDER STATE)
         estimate_legal_text: helper.estimate_legal_text || '',
         
-        // Estimate calculations and totals
+        // Estimate calculations and totals (SHOULD READ FROM BUILDER STATE)
         estimate_totals: extractEstimateTotals(helper),
         
-        // Store raw helper for reference
+        // Store raw helper for fallback reference only
         raw_helper: helper
       };
       
-      console.log('📊 Enhanced validation data loaded:', currentValidationData);
+      console.log('📊 Validation data loaded (should read from builder):', currentValidationData);
+      console.log('⚠️ TODO: Update to read from builder current state instead of helper directly');
     }
 
     // Extract estimate totals from damage blocks
@@ -1204,14 +1208,19 @@
         updateElementIfExists('levi-display-final', '₪0');
       }
       
-      // Validate dynamic price adjustments (additions/subtractions)
+      // Validate dynamic price adjustments (additions/subtractions) - using corrected data extraction
       const data = currentValidationData;
-      const levi = data.levi_report || {};
-      if (levi.adjustments || data.raw_helper?.levi_report?.adjustments) {
-        const adjustments = levi.adjustments || data.raw_helper.levi_report.adjustments;
+      const helper = data.raw_helper;
+      
+      // Find adjustments from multiple possible locations (same as populateLeviValidationItems)
+      const levi = helper?.levi_report || helper?.levi || helper?.expertise?.levi_report || {};
+      const adjustments = levi?.adjustments || helper?.levi?.adjustments || {};
+      
+      if (adjustments && Object.keys(adjustments).length > 0) {
+        console.log('🔍 Validating adjustments:', adjustments);
         Object.keys(adjustments).forEach(key => {
           const adjustment = adjustments[key];
-          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined)) {
+          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined || adjustment.amount !== undefined)) {
             const adjFieldKey = `levi_adj_${key.replace(/\s+/g, '_')}`;
             const adjValue = getCurrentFieldValue(adjFieldKey);
             
@@ -1232,11 +1241,15 @@
             }
           }
         });
+      } else {
+        console.log('🔍 No adjustments found for validation');
+        // No adjustments is not an error, just informational
+        issues.push('לא נמצאו התאמות מחיר (אזהרה)');
       }
       
       // Calculate total adjustments for display
-      const adjustments = marketValue - basePrice;
-      updateElementIfExists('levi-display-adjustments', MathEngine.formatCurrency(adjustments));
+      const adjustmentValue = marketValue - basePrice;
+      updateElementIfExists('levi-display-adjustments', MathEngine.formatCurrency(adjustmentValue));
       
       // CRITICAL ERRORS COUNT - Fix auto-completion issue
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
@@ -1813,41 +1826,67 @@
       if (!container) return;
       
       const data = currentValidationData;
-      const levi = data.levi_report || {};
       const helper = data.raw_helper;
       
-      console.log('📄 Populating Levi validation items with enhanced 3-column display');
+      console.log('📄 Debug Levi data structure:', {
+        levi_report: helper?.levi_report,
+        levi: helper?.levi,
+        vehicle_value_base: helper?.vehicle_value_base,
+        calculations: helper?.calculations
+      });
+      
+      // Find Levi data from multiple possible locations in helper
+      const levi = helper?.levi_report || helper?.levi || helper?.expertise?.levi_report || {};
+      const basePrice = helper?.vehicle_value_base || levi?.base_price || helper?.levi?.base_price || '';
+      const adjustments = levi?.adjustments || helper?.levi?.adjustments || {};
+      const marketValue = helper?.calculations?.market_value || levi?.final_price || levi?.market_value || '';
+      
+      console.log('📄 Extracted Levi data:', {
+        basePrice,
+        adjustments,
+        marketValue,
+        adjustmentsKeys: Object.keys(adjustments)
+      });
       
       let leviHTML = '';
       
       // 1. Base Price validation (replaces model validation)
-      const basePrice = levi.base_price || helper?.levi_report?.base_price || '';
-      const storedBasePrice = helper?.levi_report?.base_price || helper?.base_price || '';
-      
       leviHTML += createEnhancedValidationItem(
         'מחיר בסיס', 
         basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : '', 
-        storedBasePrice ? `₪${parseFloat(storedBasePrice).toLocaleString()}` : '', 
+        basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : '', 
         'levi_base_price'
       );
       
       // 2. Dynamic validation rows for each price adjustment (addition/subtraction)
-      if (levi.adjustments || helper?.levi_report?.adjustments) {
-        const adjustments = levi.adjustments || helper.levi_report.adjustments;
+      if (adjustments && Object.keys(adjustments).length > 0) {
+        console.log('📄 Processing adjustments:', adjustments);
         Object.keys(adjustments).forEach(key => {
           const adjustment = adjustments[key];
-          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined)) {
+          console.log(`📄 Processing adjustment ${key}:`, adjustment);
+          
+          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined || adjustment.amount !== undefined)) {
+            // Handle different adjustment data structures
+            const adjValue = adjustment.amount || adjustment.value || 0;
+            const adjPercentage = adjustment.percentage || 0;
+            
             // Determine if it's addition or subtraction
-            const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+            const isAddition = adjPercentage > 0 || adjValue > 0;
             const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
             const adjustmentSymbol = isAddition ? '+' : '-';
             
             // Format the display values
-            const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
-            const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+            const percentageDisplay = adjPercentage ? `${adjustmentSymbol}${Math.abs(adjPercentage)}%` : '';
+            const valueDisplay = adjValue ? `${adjustmentSymbol}₪${Math.abs(adjValue).toLocaleString()}` : '';
             const combinedDisplay = percentageDisplay && valueDisplay ? 
               `${percentageDisplay} (${valueDisplay})` : 
               (percentageDisplay || valueDisplay);
+            
+            console.log(`📄 Created display for ${key}:`, {
+              isAddition,
+              adjustmentType,
+              combinedDisplay
+            });
             
             // Create validation row showing addition/subtraction clearly
             leviHTML += createEnhancedValidationItem(
@@ -1858,16 +1897,22 @@
             );
           }
         });
+      } else {
+        console.log('📄 No adjustments found in helper data');
+        // Show a placeholder if no adjustments exist
+        leviHTML += createEnhancedValidationItem(
+          'התאמות מחיר', 
+          'לא נמצאו התאמות',
+          'לא נמצאו התאמות', 
+          'levi_no_adjustments'
+        );
       }
       
       // 3. Market Price validation (final calculated price)
-      const marketValue = levi.final_price || levi.market_value || helper?.levi_report?.final_price || '';
-      const storedMarketValue = helper?.levi_report?.final_price || helper?.market_value || '';
-      
       leviHTML += createEnhancedValidationItem(
         'שווי שוק סופי', 
         marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '', 
-        storedMarketValue ? `₪${parseFloat(storedMarketValue).toLocaleString()}` : '', 
+        marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '', 
         'levi_market_value'
       );
       
