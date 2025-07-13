@@ -1,8 +1,11 @@
-// estimate-generator.js — Post-Session Estimate Generation Engine
+// estimate-generator.js — Enhanced Estimate Generation Engine
 
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
-import { getVehicleData, getDamageData, getValuationData } from './helper.js';
+import { getVehicleData, getDamageData, getValuationData, updateHelper } from './helper.js';
+import { loadLegalText } from './vault-loader.js';
+import { validateData } from './validation.js';
+import { estimateCoordinator } from './estimate-report.js';
 
 const vault = window.vaultTexts || {};
 
@@ -24,18 +27,36 @@ function fillVaultTemplate(text, replacements) {
   });
 }
 
-// Build Estimate Text Blocks
-function buildEstimateVaultBlocks() {
+// Build Estimate Text Blocks using vault loader
+async function buildEstimateVaultBlocks() {
   const estimateKey = `estimate_${estimateType}`;
-  const baseText = vault[estimateKey] || {};
-
-  return {
-    legal_basis: fillVaultTemplate(baseText.text || '', getEstimateReplacementMap()),
-    title: baseText.title || 'אומדן ראשוני',
-    intellectual: vault.intellectual_property || '',
-    assessor_intro: vault.assessor_introduction || '',
-    assessor_qual: vault.assessor_qualifications || ''
-  };
+  
+  try {
+    // Use vault loader for consistent text loading
+    const legalText = await loadLegalText(estimateKey);
+    const intellectualProperty = await loadLegalText('intellectual_property');
+    const assessorIntro = await loadLegalText('assessor_introduction');
+    const assessorQual = await loadLegalText('assessor_qualifications');
+    
+    return {
+      legal_basis: fillVaultTemplate(legalText || '', getEstimateReplacementMap()),
+      title: vault[estimateKey]?.title || 'אומדן ראשוני',
+      intellectual: intellectualProperty || '',
+      assessor_intro: assessorIntro || '',
+      assessor_qual: assessorQual || ''
+    };
+  } catch (error) {
+    console.error('❌ Error loading vault texts:', error);
+    // Fallback to existing vault system
+    const baseText = vault[estimateKey] || {};
+    return {
+      legal_basis: fillVaultTemplate(baseText.text || '', getEstimateReplacementMap()),
+      title: baseText.title || 'אומדן ראשוני',
+      intellectual: vault.intellectual_property || '',
+      assessor_intro: vault.assessor_introduction || '',
+      assessor_qual: vault.assessor_qualifications || ''
+    };
+  }
 }
 
 // Value Mapping Logic for Estimates (no fees/depreciation)
@@ -91,62 +112,150 @@ function calculateEstimateSummary() {
   };
 }
 
-// Inject Estimate Report
-function injectEstimateHTML() {
+// Inject Estimate Report with enhanced validation and coordination
+async function injectEstimateHTML() {
   const container = document.getElementById("estimate-output");
   if (!container) return;
 
-  if (!helper || !helper.meta) {
+  try {
+    // Validate basic data
+    const validation = validateData({ 
+      helper, 
+      required: ['meta', 'car_details'], 
+      type: 'estimate' 
+    });
+    
+    if (!validation.valid) {
+      container.innerHTML = `
+        <div style="border: 2px solid red; padding: 20px; font-size: 18px; color: red; text-align: center;">
+          ⚠️ אין נתונים זמינים להצגת האומדן.<br>
+          ${validation.errors?.join('<br>') || 'ודא שהוזן מידע קודם דרך שלב האקספרטיזה או שטעינת הנתונים הצליחה.'}
+        </div>
+      `;
+      return;
+    }
+
+    // Initialize coordinator if needed
+    if (!estimateCoordinator.isReady()) {
+      await estimateCoordinator.initialize();
+    }
+
+    const htmlTemplate = document.getElementById("estimate-template-html").innerHTML;
+    const vaultBlocks = await buildEstimateVaultBlocks();
+    const summary = calculateEstimateSummary();
+    const coordinatorData = estimateCoordinator.getEstimateData();
+    
+    const map = { 
+      helper, 
+      vault: vaultBlocks, 
+      meta: helper.meta, 
+      title: getEstimateTitle(),
+      summary: summary,
+      estimate: coordinatorData
+    };
+
+    // Use render function if available, otherwise fallback
+    let rendered;
+    if (typeof renderHTMLBlock === 'function') {
+      rendered = renderHTMLBlock(htmlTemplate, map);
+    } else {
+      // Simple template replacement fallback
+      rendered = htmlTemplate.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+        const value = getNestedValue(map, path.trim());
+        return value !== undefined ? value : match;
+      });
+    }
+    
+    // Sanitize if function available
+    const safeHTML = typeof sanitizeHTML === 'function' ? sanitizeHTML(rendered) : rendered;
+    container.innerHTML = applyDraftWatermark(safeHTML);
+    
+    console.log('✅ Estimate HTML injected successfully');
+    
+  } catch (error) {
+    console.error('❌ Error injecting estimate HTML:', error);
     container.innerHTML = `
-      <div style="border: 2px solid red; padding: 20px; font-size: 18px; color: red; text-align: center;">
-        ⚠️ אין נתונים זמינים להצגת האומדן.<br>
-        ודא שהוזן מידע קודם דרך שלב האקספרטיזה או שטעינת הנתונים הצליחה.
+      <div style="border: 2px solid orange; padding: 20px; font-size: 18px; color: orange; text-align: center;">
+        ⚠️ שגיאה בטעינת האומדן: ${error.message}<br>
+        אנא נסה לרענן את הדף או לחזור לשלב הקודם.
       </div>
     `;
-    return;
   }
-
-  const htmlTemplate = document.getElementById("estimate-template-html").innerHTML;
-  const vaultBlocks = buildEstimateVaultBlocks();
-  const summary = calculateEstimateSummary();
-  const map = { 
-    helper, 
-    vault: vaultBlocks, 
-    meta: helper.meta, 
-    title: getEstimateTitle(),
-    summary: summary
-  };
-
-  const rendered = renderHTMLBlock(htmlTemplate, map);
-  const safeHTML = sanitizeHTML(rendered);
-  container.innerHTML = applyDraftWatermark(safeHTML);
 }
 
-// Export Estimate
-function exportEstimate() {
-  const html = document.getElementById("estimate-output").innerHTML;
-  const plate = sessionStorage.getItem('plate') || helper.car_details?.plate || 'unknown';
-  
-  // Update helper with estimate data
-  helper.meta.estimate_generated = true;
-  helper.meta.estimate_type = estimateType;
-  helper.meta.estimate_timestamp = Date.now();
-  helper.estimate_summary = calculateEstimateSummary();
-  
-  sessionStorage.setItem("helper", JSON.stringify(helper));
+// Helper function to get nested object values
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
+}
 
-  sendToWebhook('SUBMIT_ESTIMATE', {
-    html,
-    meta: helper.meta,
-    estimate_type: estimateType,
-    plate: plate,
-    summary: helper.estimate_summary,
-    date: new Date().toISOString()
-  }).then(res => {
-    alert('האומדן נשלח בהצלחה');
-  }).catch(() => {
-    alert('שליחה נכשלה');
-  });
+// Export Estimate using coordination system
+async function exportEstimate() {
+  try {
+    // Initialize coordinator if needed
+    if (!estimateCoordinator.isReady()) {
+      await estimateCoordinator.initialize();
+    }
+    
+    // Validate estimate data
+    const validation = estimateCoordinator.validateEstimateData();
+    if (!validation.overall) {
+      alert('האומדן לא עובר אימות. אנא בדוק את הנתונים ונסה שוב.');
+      console.error('❌ Estimate validation failed:', validation);
+      return;
+    }
+    
+    // Export data through coordinator
+    const exportedData = estimateCoordinator.exportEstimateData();
+    
+    // Generate report via coordinator
+    const response = await estimateCoordinator.generateEstimateReport();
+    
+    if (response.success) {
+      alert('האומדן נוצר ונשלח בהצלחה!');
+      
+      // Update helper with generation data
+      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      currentHelper.meta = currentHelper.meta || {};
+      currentHelper.meta.estimate_generated = true;
+      currentHelper.meta.estimate_type = estimateType;
+      currentHelper.meta.estimate_timestamp = Date.now();
+      currentHelper.estimate_summary = calculateEstimateSummary();
+      
+      // Use helper update function for consistency
+      updateHelper(currentHelper);
+      
+      console.log('✅ Estimate exported successfully');
+    } else {
+      throw new Error(response.error || 'Failed to generate estimate report');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error exporting estimate:', error);
+    
+    // Fallback to direct webhook
+    try {
+      const html = document.getElementById("estimate-output").innerHTML;
+      const plate = sessionStorage.getItem('plate') || helper.car_details?.plate || 'unknown';
+      
+      const response = await sendToWebhook('SUBMIT_ESTIMATE', {
+        html,
+        meta: helper.meta,
+        estimate_type: estimateType,
+        plate: plate,
+        summary: calculateEstimateSummary(),
+        date: new Date().toISOString()
+      });
+      
+      if (response.success) {
+        alert('האומדן נשלח בהצלחה (גיבוי)');
+      } else {
+        alert('שליחה נכשלה: ' + (response.error || 'שגיאה לא ידועה'));
+      }
+    } catch (fallbackError) {
+      console.error('❌ Fallback export also failed:', fallbackError);
+      alert('שגיאה בשליחת האומדן. אנא נסה שוב או פנה לתמיכה.');
+    }
+  }
 }
 
 // Print Estimate
@@ -154,11 +263,41 @@ function printEstimate() {
   window.print();
 }
 
-// Set Estimate Type
-function setEstimateType(type) {
-  helper.meta.estimate_type = type;
-  sessionStorage.setItem("helper", JSON.stringify(helper));
-  injectEstimateHTML();
+// Set Estimate Type using coordination system
+async function setEstimateType(type) {
+  try {
+    // Validate estimate type
+    if (!['אובדן_להלכה', 'טוטלוס'].includes(type)) {
+      throw new Error(`Invalid estimate type: ${type}`);
+    }
+    
+    // Initialize coordinator if needed
+    if (!estimateCoordinator.isReady()) {
+      await estimateCoordinator.initialize();
+    }
+    
+    // Set type through coordinator
+    await estimateCoordinator.setEstimateType(type);
+    
+    // Update local helper
+    helper.meta = helper.meta || {};
+    helper.meta.estimate_type = type;
+    updateHelper(helper);
+    
+    // Re-inject HTML with new type
+    await injectEstimateHTML();
+    
+    console.log('✅ Estimate type set to:', type);
+    
+  } catch (error) {
+    console.error('❌ Error setting estimate type:', error);
+    
+    // Fallback to direct update
+    helper.meta = helper.meta || {};
+    helper.meta.estimate_type = type;
+    sessionStorage.setItem("helper", JSON.stringify(helper));
+    await injectEstimateHTML();
+  }
 }
 
 // Update Damage Centers (for validation/override)
@@ -170,14 +309,39 @@ function updateDamageCenter(index, updates) {
   injectEstimateHTML();
 }
 
-// Add Additional Notes
-function addEstimateNotes(notes) {
-  if (!helper.estimate_notes) helper.estimate_notes = [];
-  helper.estimate_notes.push({
-    text: notes,
-    timestamp: Date.now()
-  });
-  sessionStorage.setItem("helper", JSON.stringify(helper));
+// Add Additional Notes using coordination system
+async function addEstimateNotes(notes) {
+  try {
+    // Initialize coordinator if needed
+    if (!estimateCoordinator.isReady()) {
+      await estimateCoordinator.initialize();
+    }
+    
+    // Add notes through coordinator
+    estimateCoordinator.addNotes(notes);
+    
+    // Also maintain legacy format for compatibility
+    if (!helper.estimate_notes) helper.estimate_notes = [];
+    helper.estimate_notes.push({
+      text: notes,
+      timestamp: Date.now()
+    });
+    
+    updateHelper(helper);
+    
+    console.log('📝 Estimate notes added:', notes);
+    
+  } catch (error) {
+    console.error('❌ Error adding estimate notes:', error);
+    
+    // Fallback to direct update
+    if (!helper.estimate_notes) helper.estimate_notes = [];
+    helper.estimate_notes.push({
+      text: notes,
+      timestamp: Date.now()
+    });
+    sessionStorage.setItem("helper", JSON.stringify(helper));
+  }
 }
 
 window.estimateGenerator = {

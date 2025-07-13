@@ -484,35 +484,6 @@
       margin-top: 40px;
       font-size: 14px;
     }
-
-    .form-section {
-      background: #fafbfc;
-      border: 1px solid #e1e8ed;
-      border-radius: 10px;
-      padding: 25px;
-      margin-bottom: 20px;
-    }
-
-    .form-section h3 {
-      margin: 0 0 20px 0;
-      color: #1e3a8a;
-      font-size: 20px;
-      border-bottom: 2px solid #3b82f6;
-      padding-bottom: 10px;
-    }
-
-    .btn.add {
-      background: linear-gradient(135deg, #28a745, #20c997);
-      color: white;
-      padding: 8px 16px;
-      font-size: 12px;
-      margin-top: 10px;
-    }
-
-    .btn.add:hover {
-      background: linear-gradient(135deg, #20c997, #17a2b8);
-      transform: translateY(-1px);
-    }
   </style>
 </head>
 <body>
@@ -808,10 +779,7 @@
       if (helper && helper.meta && helper.meta.plate) {
         console.log('📋 Loading existing case data for plate:', helper.meta.plate);
         loadVehicleInfo();
-        loadDamageCentersValidation();
-        setupEstimateTypeHandlers();
-        setupPostSessionActions();
-        calculateEstimateTotals();
+        // Additional session initialization can be added here
       }
     }
 
@@ -1024,12 +992,6 @@
         const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
         const additionalNotes = document.getElementById('additional-notes').value;
         
-        // Update helper with estimate type and additional data
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        helper.estimate_notes = additionalNotes;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
         if (window.estimateGenerator) {
           window.estimateGenerator.setType(selectedType);
           if (additionalNotes) {
@@ -1041,76 +1003,22 @@
       });
 
       document.getElementById('preview-estimate').addEventListener('click', () => {
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
-        
-        // Update helper with current estimate type
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        sessionStorage.setItem('selectedReportType', 'estimate');
-        
-        // Proceed to validation
-        window.location.href = 'estimate-validation.html';
+        // Generate preview
+        showAlert('תצוגה מקדימה תיפתח בחלון חדש');
       });
 
       document.getElementById('generate-estimate').addEventListener('click', () => {
         const selectedType = document.querySelector('input[name="estimate-type"]:checked').value;
-        const additionalNotes = document.getElementById('additional-notes').value;
         
-        // Update helper with all estimate data
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        helper.estimate_notes = additionalNotes;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        sessionStorage.setItem('selectedReportType', 'estimate');
-        
-        // Proceed to validation
-        window.location.href = 'estimate-validation.html';
+        if (window.estimateGenerator) {
+          window.estimateGenerator.setType(selectedType);
+          window.estimateGenerator.export();
+        }
       });
-    }
-
-    // Depreciation functions for enhanced estimate builder
-    function addDepField() {
-      const table = document.getElementById('depreciationBulkTable');
-      const index = table.children.length;
-      
-      const row = document.createElement('div');
-      row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
-      row.innerHTML = `
-        <input type="text" placeholder="החלק הניזוק" id="depPart${index}" />
-        <input type="text" placeholder="מהות התיקון" id="depRepair${index}" />
-        <input type="number" placeholder="%" id="depPercent${index}" onchange="calculateDepValue(${index})" />
-        <input type="number" placeholder="₪" id="depValue${index}" readonly style="background:#f4f6fa;" />
-        <button type="button" onclick="removeDepField(${index})" style="background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;">הסר</button>
-      `;
-      table.appendChild(row);
-    }
-
-    function removeDepField(index) {
-      const table = document.getElementById('depreciationBulkTable');
-      if (table.children[index]) {
-        table.children[index].remove();
-      }
-    }
-
-    function calculateDepValue(index) {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const marketValue = helper.calculations?.market_value || 0;
-      const percentInput = document.getElementById(`depPercent${index}`);
-      const valueInput = document.getElementById(`depValue${index}`);
-      
-      if (percentInput && valueInput && marketValue > 0) {
-        const percent = parseFloat(percentInput.value) || 0;
-        const value = Math.round(marketValue * percent / 100);
-        valueInput.value = value;
-      }
     }
 
     // Make functions global
     window.toggleDamageOverride = toggleDamageOverride;
-    window.addDepField = addDepField;
-    window.removeDepField = removeDepField;
-    window.calculateDepValue = calculateDepValue;
 
     // Enhanced form validation
     document.addEventListener('input', (e) => {

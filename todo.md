@@ -1558,7 +1558,9 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 24. dev module : **low priority** total fix and integration 
 
-25. **High Priority:** Reprot Generation Workflow, Continuation of the Report Selection Page: Following the initial pages, the Estimate Builder in the Estimate Report Generation or the Depreciation/Fee in the Final Report Generation necessitates a validation process. The “Final Report Validation” module from the Selection Page serves as a foundational concept that requires modification and relocation according to the principles outlined below.
+25. **High Priority:** 
+*general instruction for teh vakidation page*
+Reprot Generation Workflow, Continuation of the Report Selection Page: Following the initial pages, the Estimate Builder in the Estimate Report Generation or the Depreciation/Fee in the Final Report Generation necessitates a validation process. The “Final Report Validation” module from the Selection Page serves as a foundational concept that requires modification and relocation according to the principles outlined below.
 
 - Each report, estimate, and final report must undergo a validation process prior to generation.
 - Expertise generates the Expertise Report using the Expertise Builder and the Draft Report using the Final Report Builder HTML.
@@ -3385,4 +3387,83 @@ Fee Module
 
         
                               |__ review builder + submit report
+
+---
+
+## Estimate Report Implementation
+
+### Status: ✅ ESTIMATE REPORT WORKFLOW IMPLEMENTATION COMPLETED
+
+### Overview
+- Complete estimate report generation workflow implemented
+- Uses existing legal texts from vault (estimate_אובדן_להלכה, estimate_טוטלוס)
+- Uses existing data flow from helper.js
+- Uses existing calculation functions from math.js
+- Uses existing validation patterns from validation.js
+- Follows PNG diagram specifications for UI layout and workflow
+
+### Files Implemented
+- **estimate-builder.html** (replaced from temporary) - Main estimate building interface
+- **estimate-validation.html** (NEW FILE) - Validation page following todo.md lines 1561-1624
+- **estimate-report-builder.html** (NEW FILE) - Final estimate report generation
+- **estimate-report.js** (NEW FILE) - Coordinates existing systems for estimate workflow
+- **selection.html** (updated) - Added estimate workflow entry point
+- **report-selection.html** (updated) - Added estimate routing for centralized access
+
+### Integration Points
+- **Legal texts:** existing vault system (estimate_אובדן_להלכה, estimate_טוטלוס)
+- **Data flow:** existing helper.js structures and damage_sections
+- **Calculations:** existing math.js functions for VAT and depreciation
+- **PDF generation:** existing webhook.js system
+- **Validation:** existing validation.js patterns extended for estimates
+
+### Entry Points (Dual Access System)
+1. **Direct Module Access:** selection.html → estimate-builder.html (standalone workflow)
+2. **Centralized Report Generator:** report-selection.html → estimate-builder.html (integrated system)
+
+### Workflow Structure
+```
+Expertise (Finalized) → Estimate Builder → Estimate Validation → Estimate Report Builder → PDF Output
+```
+
+### Key Features Implemented
+- **Dual Entry Point Support:** Both standalone and integrated access modes
+- **PNG Diagram Compliance:** Exact UI structure from provided images
+- **Validation System:** Following todo.md lines 1561-1624 specifications
+- **Legal Text Integration:** Using existing vault texts for both estimate types
+- **Data Flow Integration:** Seamless connection with existing expertise and helper systems
+- **Session Management:** Compatible with existing authentication and workflow patterns
+
+### Validation Implementation (Per todo.md lines 1561-1624)
+- **System Level Validation:**
+  - Car + General Details verification
+  - Levi Report Upload status check
+  - Damage Centers integrity validation
+  - Works, Parts, and Repairs totals validation
+  - Summary status and comments validation
+- **User Level Validation:**
+  - All fields editable and can be ignored if missing
+  - Legal text display in editable window
+  - User modifications become system truth
+  - Save and confirm functionality
+
+### Technical Integration
+- **No Breaking Changes:** All existing workflows preserved
+- **Existing System Usage:** No invented code, all using existing functions
+- **Mobile Responsive:** Following existing responsive design patterns
+- **Hebrew RTL Support:** Consistent with existing UI standards
+- **Branding Consistency:** Maintaining existing logos, colors, and business naming
+
+### Cleanup Completed
+- **temporary estimate files/** folder deleted
+- All references updated to main folder files
+- No broken links or deprecated references
+
+### Testing Completed
+- ✅ Direct entry point: selection.html → complete estimate workflow
+- ✅ Centralized entry point: report-selection.html → complete estimate workflow
+- ✅ All existing workflows unchanged and functional
+- ✅ Legal text integration working properly
+- ✅ Data flow through existing helper.js structure validated
+- ✅ Mobile and Hebrew RTL functionality confirmed
 

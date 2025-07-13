@@ -165,6 +165,28 @@ export const helper = {
     total: ''
   },
 
+  estimate_data: {
+    type: 'אובדן_להלכה', // Default estimate type
+    legal_text: '',
+    notes: '',
+    calculations: {
+      base_damage: 0,
+      vat_rate: 18,
+      vat_amount: 0,
+      total_estimate: 0
+    },
+    validation: {
+      car_details: false,
+      damage_sections: false,
+      calculations: false,
+      legal_text: false,
+      overall: false
+    },
+    completed: false,
+    generated_at: '',
+    report_url: ''
+  },
+
   invoice: {
     garage_name: '',
     garage_email: '',
@@ -745,6 +767,136 @@ export function getValuationData() {
 export function getFinancialData() {
   const standardized = getStandardizedData();
   return standardized ? standardized.financials : helper.invoice || {};
+}
+
+// Estimate data access and management functions
+export function getEstimateData() {
+  return helper.estimate_data || {
+    type: 'אובדן_להלכה',
+    legal_text: '',
+    notes: '',
+    calculations: {
+      base_damage: 0,
+      vat_rate: 18,
+      vat_amount: 0,
+      total_estimate: 0
+    },
+    validation: {
+      car_details: false,
+      damage_sections: false,
+      calculations: false,
+      legal_text: false,
+      overall: false
+    },
+    completed: false,
+    generated_at: '',
+    report_url: ''
+  };
+}
+
+export function updateEstimateData(estimateData) {
+  try {
+    if (!estimateData || typeof estimateData !== 'object') {
+      throw new Error('Invalid estimate data provided');
+    }
+    
+    // Merge with existing data
+    helper.estimate_data = {
+      ...helper.estimate_data,
+      ...estimateData,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Save to storage
+    saveHelperToStorage();
+    
+    console.log('✅ Estimate data updated in helper');
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error updating estimate data:', error);
+    errorHandler.createError('estimate_update', 'medium', error.message);
+    return false;
+  }
+}
+
+export function calculateEstimateTotals() {
+  try {
+    // Get base damage from expertise or damage sections
+    let baseDamage = 0;
+    
+    if (helper.expertise?.calculations?.base_damage) {
+      baseDamage = parseFloat(helper.expertise.calculations.base_damage) || 0;
+    } else if (helper.damage_sections && Array.isArray(helper.damage_sections)) {
+      baseDamage = helper.damage_sections.reduce((total, section) => {
+        const sectionTotal = (section.works_total || 0) + 
+                            (section.parts_total || 0) + 
+                            (section.repairs_total || 0);
+        return total + parseFloat(sectionTotal) || 0;
+      }, 0);
+    }
+    
+    // Use VAT rate from math engine for consistency
+    const vatRate = MathEngine.getVatRate();
+    const vatAmount = Math.round(baseDamage * vatRate / 100);
+    const totalEstimate = baseDamage + vatAmount;
+    
+    // Update estimate data
+    const estimateCalculations = {
+      base_damage: baseDamage,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_estimate: totalEstimate,
+      calculated_at: new Date().toISOString()
+    };
+    
+    updateEstimateData({ calculations: estimateCalculations });
+    
+    console.log('💰 Estimate calculations updated:', estimateCalculations);
+    return estimateCalculations;
+    
+  } catch (error) {
+    console.error('❌ Error calculating estimate totals:', error);
+    return {
+      base_damage: 0,
+      vat_rate: 18,
+      vat_amount: 0,
+      total_estimate: 0
+    };
+  }
+}
+
+export function validateEstimateCompletion() {
+  try {
+    const estimateData = getEstimateData();
+    const validation = {
+      car_details: !!(helper.car_details?.manufacturer && helper.meta?.plate),
+      damage_sections: !!(helper.damage_sections && helper.damage_sections.length > 0),
+      calculations: !!(estimateData.calculations?.total_estimate > 0),
+      legal_text: !!(estimateData.legal_text && estimateData.legal_text.length > 0),
+      overall: false
+    };
+    
+    validation.overall = validation.car_details && 
+                        validation.damage_sections && 
+                        validation.calculations && 
+                        validation.legal_text;
+    
+    // Update validation in helper
+    updateEstimateData({ validation, completed: validation.overall });
+    
+    return validation;
+    
+  } catch (error) {
+    console.error('❌ Error validating estimate completion:', error);
+    return {
+      car_details: false,
+      damage_sections: false,
+      calculations: false,
+      legal_text: false,
+      overall: false
+    };
+  }
 }
 
 // Data synchronization helpers

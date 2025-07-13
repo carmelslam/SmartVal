@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: sans-serif;
+      direction: rtl;
+      margin: 20px;
+    }
+    h1, h2, h3 {
+      color: #003366;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      border: 3px solid #003366 !important;
+    }
+    th, td {
+      padding: 8px;
+      text-align: right;
+      border: 1px solid #aaa;
+    }
+    th {
+      color: #003366 !important;
+      background: #fff8e1 !important;
+      border-bottom: 3px solid #003366 !important;
+      text-align: center !important;
+    }
+    .section {
+      margin-bottom: 30px;
+      page-break-after: always;
+    }
+    .signature-stamp {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+    }
+    .signature-stamp img {
+      height: 100px;
+    }
+    .signature-stamp .center-text {
+      flex-grow: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .car-details {
+      border: 2px solid #000;
+      border-radius: 25px;
+      padding: 20px;
+      margin-bottom: 40px;
+    }
+    .car-details-title {
+      color: #003366;
+      font-weight: bold;
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .car-details-table {
+      width: 100%;
+      border: none;
+      font-size: 16px;
+    }
+    .car-details-table td {
+      padding: 5px 10px;
+    }
+    .intellectual-box {
+      border: 2px solid #000;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    .buttons {
+      text-align: center;
+      margin-top: 40px;
+    }
+    .buttons button {
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .estimate-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #475569 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 30px;
+      border-radius: 15px;
+    }
+    .estimate-disclaimer {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      font-weight: bold;
+      text-align: center;
+    }
+    .estimate-totals {
+      background: #e8f5e8;
+      border: 2px solid #28a745;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .control-buttons {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .control-buttons button {
+      margin: 0 10px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+    .btn-success:hover {
+      background: #218838;
+    }
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+  </style>
+  <script src="./math-preview.js"></script>
+</head>
+<body>
+  <div class="estimate-header">
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" style="width: 80px; margin-bottom: 15px;">
+    <h1>ירון כיוף שמאות - פורטל</h1>
+    <h2>שמאות והערכת נזקי רכב ורכוש</h2>
+    <h3>בונה דו"ח אומדן</h3>
+  </div>
+
+  <div class="estimate-disclaimer">
+    <h3>הודעה חשובה - אומדן בלבד</h3>
+    <p>מסמך זה הינו אומדן ראשוני בלבד ואינו מהווה התחייבות כספית או חוזית מכל סוג שהוא.</p>
+    <p>הערכים הסופיים עשויים להשתנות בהתאם לתוצאות הביצוע בפועל ולחשבוניות הסופיות.</p>
+  </div>
+
+  <div class="control-buttons">
+    <button class="btn-secondary" onclick="editEstimate()">✏️ ערוך אומדן</button>
+    <button class="btn-primary" onclick="previewEstimate()">👁️ תצוגה מקדימה</button>
+    <button class="btn-success" onclick="generateEstimateReport()">📄 הפק דו"ח אומדן</button>
+    <button class="btn-secondary" onclick="goHome()">🏠 חזור לדף הבית</button>
+  </div>
+
+  <div id="estimate-output"></div>
+
+  <div id="template-html">
+   
+  <!-- Section 1 - Header -->
+  <div class="report-header">
+    <div class="car-details-title">אומדן נזקי רכב</div>
+    <table style="width: 100%; margin-top: 10px;">
+      <tr>
+        <td style="width: 40%; text-align: right;">
+          <p>לכבוד:<br>{{meta.client_name}}<br>{{meta.address}}</p>
+        </td>
+        <td style="width: 20%;"></td>
+        <td style="width: 40%; text-align: right;">
+          <p>תאריך: {{meta.today}}</p>
+          <p>תיק מספר: YC/{{meta.plate}}/2025</p>
+          <p>עוסק מורשה: 02921217</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="car-details">
+    <div class="car-details-title">פרטי האומדן</div> 
+    <table class="car-details-table">
+    <tbody>
+      <tr>
+        <td><strong>בעל הרכב:</strong> {{meta.client_name}}</td>
+        <td><strong>דגם:</strong> {{helper.vehicle.model}}</td>
+      </tr>
+      <tr>
+        <td><strong>מספר טלפון:</strong> {{meta.phone_number}}</td>
+        <td><strong>מספר שלדה:</strong> {{helper.vehicle.chassis}}</td>
+      </tr>
+      <tr>
+        <td><strong>תאריך הבדיקה:</strong> {{meta.inspection_date}}</td>
+        <td><strong>שנת יצור:</strong> {{helper.vehicle.year}}</td>
+      </tr>
+      <tr>
+        <td><strong>מקום הבדיקה:</strong> {{meta.location}}</td>
+        <td><strong>מד ק"מ:</strong> {{helper.vehicle.km}}</td>
+      </tr>
+      <tr>
+        <td><strong>מספר רישוי:</strong> {{meta.plate}}</td>
+        <td><strong>סוג הרכב:</strong> {{helper.vehicle.ownership_type}}</td>
+      </tr>
+      <tr>
+        <td><strong>יצרן:</strong> {{helper.vehicle.manufacturer}}</td>
+        <td><strong>סוג הנזק:</strong> {{meta.damage}}</td>
+      </tr>
+    </tbody>
+    </table>
+  </div>
+
+  <!-- Section 2 - Estimate Introduction -->
+  <div class="section" style="page-break-before: always;">
+    <p style="font-size: 16px;">
+      בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
+    </p>
+    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">תיאור הנזק:</p>
+    <p style="font-size: 16px;">
+      {{helper.damage.description}}
+    </p>
+    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">אומדן עלויות:</p>
+    <p style="font-size: 16px;">
+      האומדן מבוסס על מחירי שוק נוכחיים ועל בדיקה ראשונית של הנזקים. עלויות סופיות עשויות להשתנות.
+    </p>
+  </div>
+
+  <!-- Section 3 - Damage Breakdown -->
+  <div class="section">
+    {{#each helper.damage_blocks}}
+      <div class="car-details">
+        <div class="car-details-title">אומדן מוקד {{this.label}}</div>
+        {{{this.table}}}
+      </div>
+    {{/each}}
+  </div>
+
+  <!-- Section 4 - Summary Table -->
+  {{#if (gt (length helper.damage_blocks) 1)}}
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">סיכום אומדן לפי מוקדים</div>
+      <table class="car-details-table">
+        <thead>
+          <tr>
+            <th>מוקד</th>
+            <th>אומדן עלות</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each helper.damage_summary}}
+          <tr>
+            <td>{{this.label}}</td>
+            <td>{{money this.total}}</td>
+          </tr>
+          {{/each}}
+          <tr>
+            <td><strong>סה"כ אומדן כלל המוקדים כולל מע"מ</strong></td>
+            <td><strong>{{money helper.damage_total}}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- Section 5 - Estimate Totals -->
+  <div class="section">
+    <div class="estimate-totals">
+      <div class="car-details-title">סיכום האומדן</div>
+      <table class="car-details-table">
+        <tr><th>תיאור</th><th>אומדן עלות</th></tr>
+        <tr><td>סה"כ אומדן נזקים</td><td>{{money helper.calculations.base_damage}}</td></tr>
+        <tr><td>מע"מ ({{helper.calculations.vat_rate}}%)</td><td>{{money helper.calculations.vat_amount}}</td></tr>
+        <tr><td><strong>סה"כ אומדן כולל מע"מ</strong></td><td><strong>{{money helper.calculations.total_estimate}}</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 6 - Legal Text and Disclaimers -->
+  <div class="section">
+    <div style="font-size: 16px; line-height: 1.8;">
+      <strong>הערות חשובות לגבי האומדן:</strong><br>
+      {{lookup vault.estimate_legal_text helper.estimate_type}}<br><br>
+
+      <strong>הצהרת שמאי:</strong><br>
+      {{lookup vault.assessor_declaration 'estimate'}}<br><br>
+
+      <div class="estimate-disclaimer">
+        <strong>אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</strong><br>
+        העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 7 - Signature -->
+  <div class="signature-stamp" style="margin-top: 40px;">
+    <div class="center-text" style="font-size: 18px; font-weight: bold;">בכבוד רב,</div>
+  </div>
+
+  <div style="margin-top: 40px; text-align: left;">
+    <br><br>
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
+  </div>
+  
+  <div style="margin-top: 20px; text-align: center;">
+    <p><strong>ירון כיוף - שמאי מורשה מס' 1097</strong></p>
+    <p>ירון כיוף - שמאות והערכת נזקי רכב ורכוש</p>
+  </div>
+
+  <div id="math-preview" style="margin-top: 20px;"></div>
+  </div>
+
+  <script type="module">
+    import { helper, updateHelper } from './helper.js';
+    import { MathEngine } from './math.js';
+    import { sendToWebhook } from './webhook.js';
+    import { getVehicleData, getDamageData } from './helper.js';
+
+    // Authentication and data validation
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🔄 Estimate Report Builder: Initializing...');
+      
+      const auth = sessionStorage.getItem("auth");
+      if (!auth) {
+        console.error('❌ No authentication found');
+        alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const helperData = sessionStorage.getItem('helper');
+      const selectedReportType = sessionStorage.getItem('selectedReportType');
+      const validationCompleted = sessionStorage.getItem('estimateValidationCompleted');
+      
+      if (!helperData || selectedReportType !== 'estimate') {
+        console.error('❌ Missing required data for estimate report builder');
+        alert('שגיאה: נתונים חסרים לבניית אומדן. חוזר לדף הבחירה...');
+        window.location.href = 'selection.html';
+        return;
+      }
+
+      if (!validationCompleted) {
+        console.warn('⚠️ Validation not completed, redirecting to validation');
+        alert('יש להשלים תחילה את תהליך האימות');
+        window.location.href = 'estimate-validation.html';
+        return;
+      }
+
+      console.log('✅ Estimate Report Builder: All validations passed');
+      initializeEstimateBuilder();
+    });
+
+    function initializeEstimateBuilder() {
+      loadEstimateData();
+      injectEstimateHTML();
+    }
+
+    function loadEstimateData() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Ensure estimate calculations are up to date
+      if (!helper.calculations || !helper.calculations.total_estimate) {
+        calculateEstimateTotals(helper);
+      }
+      
+      // Update session storage with calculated data
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+    }
+
+    function calculateEstimateTotals(helper) {
+      // Get base damage from expertise or validation
+      const baseDamage = helper.expertise?.calculations?.base_damage || 
+                        helper.damage_sections?.reduce((total, section) => {
+                          return total + (section.works_total || 0) + (section.parts_total || 0) + (section.repairs_total || 0);
+                        }, 0) || 0;
+
+      const vatRate = MathEngine.getVatRate();
+      const vatAmount = Math.round(baseDamage * vatRate / 100);
+      const totalEstimate = baseDamage + vatAmount;
+
+      // Update helper with calculations
+      helper.calculations = helper.calculations || {};
+      helper.calculations.base_damage = baseDamage;
+      helper.calculations.vat_rate = vatRate;
+      helper.calculations.vat_amount = vatAmount;
+      helper.calculations.total_estimate = totalEstimate;
+    }
+
+    function injectEstimateHTML() {
+      const container = document.getElementById("estimate-output");
+      if (!container) return;
+
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (!helper || !helper.meta) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #dc2626;">
+            <h3>שגיאה: נתוני התיק לא נמצאו</h3>
+            <p>אנא חזור לדף הבחירה וטען את התיק מחדש</p>
+            <button onclick="window.location.href='selection.html'" class="btn-secondary">חזור לדף הבית</button>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        // Get template and inject data
+        const template = document.getElementById('template-html').innerHTML;
+        
+        // Simple template replacement for estimate data
+        let html = template;
+        
+        // Replace meta data
+        html = html.replace(/\{\{meta\.client_name\}\}/g, helper.meta.client_name || '');
+        html = html.replace(/\{\{meta\.address\}\}/g, helper.meta.address || '');
+        html = html.replace(/\{\{meta\.today\}\}/g, new Date().toLocaleDateString('he-IL'));
+        html = html.replace(/\{\{meta\.plate\}\}/g, helper.meta.plate || '');
+        html = html.replace(/\{\{meta\.phone_number\}\}/g, helper.meta.phone_number || '');
+        html = html.replace(/\{\{meta\.inspection_date\}\}/g, helper.meta.inspection_date || '');
+        html = html.replace(/\{\{meta\.location\}\}/g, helper.meta.location || '');
+        html = html.replace(/\{\{meta\.damage\}\}/g, helper.meta.damage || '');
+        
+        // Replace vehicle data
+        const vehicle = helper.vehicle || helper.car_details || {};
+        html = html.replace(/\{\{helper\.vehicle\.model\}\}/g, vehicle.model || '');
+        html = html.replace(/\{\{helper\.vehicle\.chassis\}\}/g, vehicle.chassis || '');
+        html = html.replace(/\{\{helper\.vehicle\.year\}\}/g, vehicle.year || '');
+        html = html.replace(/\{\{helper\.vehicle\.km\}\}/g, vehicle.km || '');
+        html = html.replace(/\{\{helper\.vehicle\.ownership_type\}\}/g, vehicle.ownership_type || '');
+        html = html.replace(/\{\{helper\.vehicle\.manufacturer\}\}/g, vehicle.manufacturer || '');
+        
+        // Replace damage description
+        const damage = helper.damage || helper.expertise?.damage || {};
+        html = html.replace(/\{\{helper\.damage\.description\}\}/g, damage.description || 'תיאור נזק לא זמין');
+        
+        // Replace calculations
+        const calc = helper.calculations || {};
+        html = html.replace(/\{\{money helper\.calculations\.base_damage\}\}/g, formatCurrency(calc.base_damage || 0));
+        html = html.replace(/\{\{helper\.calculations\.vat_rate\}\}/g, calc.vat_rate || 18);
+        html = html.replace(/\{\{money helper\.calculations\.vat_amount\}\}/g, formatCurrency(calc.vat_amount || 0));
+        html = html.replace(/\{\{money helper\.calculations\.total_estimate\}\}/g, formatCurrency(calc.total_estimate || 0));
+        
+        // Replace damage blocks (simplified for estimate)
+        if (helper.damage_sections && helper.damage_sections.length > 0) {
+          const damageBlocksHTML = helper.damage_sections.map((section, index) => `
+            <div class="car-details">
+              <div class="car-details-title">אומדן מוקד ${index + 1}: ${section.zone || 'לא מוגדר'}</div>
+              <table class="car-details-table">
+                <tr><th>סוג</th><th>תיאור</th><th>אומדן עלות</th></tr>
+                <tr><td>עבודות</td><td>${section.works?.length || 0} פריטים</td><td>${formatCurrency(section.works_total || 0)}</td></tr>
+                <tr><td>חלקים</td><td>${section.parts?.length || 0} פריטים</td><td>${formatCurrency(section.parts_total || 0)}</td></tr>
+                <tr><td>תיקונים</td><td>${section.repairs?.length || 0} פריטים</td><td>${formatCurrency(section.repairs_total || 0)}</td></tr>
+                <tr><td><strong>סה"כ מוקד</strong></td><td></td><td><strong>${formatCurrency((section.works_total || 0) + (section.parts_total || 0) + (section.repairs_total || 0))}</strong></td></tr>
+              </table>
+            </div>
+          `).join('');
+          
+          html = html.replace(/\{\{#each helper\.damage_blocks\}\}[\s\S]*?\{\{\/each\}\}/g, damageBlocksHTML);
+        }
+        
+        // Load legal text from vault (estimate type specific)
+        loadEstimateLegalText(helper.estimate_type || 'אובדן_להלכה').then(legalText => {
+          html = html.replace(/\{\{lookup vault\.estimate_legal_text helper\.estimate_type\}\}/g, legalText);
+          html = html.replace(/\{\{lookup vault\.assessor_declaration 'estimate'\}\}/g, 
+            'אני החתום מטה, ירון כיוף, שמאי מוגשר מס\' 1097, מצהיר כי אומדן זה נערך על פי בדיקתי ובהתאם לידיעותיי המקצועיות.');
+          
+          container.innerHTML = html;
+        });
+        
+      } catch (error) {
+        console.error('Error generating estimate report:', error);
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #dc2626;">
+            <h3>שגיאה ביצירת האומדן</h3>
+            <p>אירעה שגיאה ביצירת דו"ח האומדן. אנא נסה שוב.</p>
+            <button onclick="window.location.reload()" class="btn-primary">נסה שוב</button>
+          </div>
+        `;
+      }
+    }
+
+    async function loadEstimateLegalText(estimateType) {
+      try {
+        // Load from vault using existing system
+        const vault = window.vaultTexts || {};
+        const legalText = vault[`estimate_${estimateType}`]?.text || 
+          'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
+        return legalText;
+      } catch (error) {
+        console.error('Error loading legal text:', error);
+        return 'טקסט משפטי לא זמין';
+      }
+    }
+
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('he-IL', {
+        style: 'currency',
+        currency: 'ILS',
+        minimumFractionDigits: 0
+      }).format(amount || 0);
+    }
+
+    // Global functions for buttons
+    window.editEstimate = function() {
+      window.location.href = 'estimate-builder.html';
+    };
+
+    window.previewEstimate = function() {
+      window.print();
+    };
+
+    window.generateEstimateReport = async function() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      try {
+        const payload = {
+          type: 'estimate',
+          plate: helper.meta?.plate,
+          helper: helper,
+          estimate_type: helper.estimate_type || 'אובדן_להלכה',
+          timestamp: new Date().toISOString()
+        };
+
+        const response = await sendToWebhook('GENERATE_ESTIMATE_REPORT', payload);
+        
+        if (response?.success) {
+          alert('דו"ח האומדן נוצר בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
+          
+          // Return to appropriate page based on entry mode
+          const workflowMode = sessionStorage.getItem('workflowMode');
+          if (workflowMode === 'centralized') {
+            window.location.href = 'report-selection.html';
+          } else {
+            window.location.href = 'selection.html';
+          }
+        } else {
+          alert('שגיאה ביצירת דו"ח האומדן: ' + (response?.error || 'שגיאה לא ידועה'));
+        }
+      } catch (error) {
+        console.error('Error generating estimate report:', error);
+        alert('שגיאה ביצירת דו"ח האומדן. אנא נסה שוב.');
+      }
+    };
+
+    window.goHome = function() {
+      const workflowMode = sessionStorage.getItem('workflowMode');
+      if (workflowMode === 'centralized') {
+        window.location.href = 'report-selection.html';
+      } else {
+        window.location.href = 'selection.html';
+      }
+    };
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🔄 Estimate Report Builder loaded and ready');
+    });
+  </script>
+</body>
+</html>
