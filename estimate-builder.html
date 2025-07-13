@@ -617,6 +617,7 @@
       <div class="toggle-icon">🌐</div>
       <div class="toggle-text">דפדפן פנימי</div>
     </div>
+  </div>
 
   <div class="container">
     <div class="header">
@@ -717,6 +718,9 @@
           </button>
           <button type="button" class="btn btn-secondary" onclick="window.location.href='selection.html'">
             🏠 חזור לדף הבית
+          </button>
+          <button type="button" class="btn btn-warning" onclick="alert('TEST: Button onclick works!')">
+            🧪 TEST
           </button>
         </div>
       </form>
@@ -1170,71 +1174,117 @@
       });
     }
 
-    // GLOBAL BUTTON FUNCTIONS - COPIED STYLE FROM DEPRECIATION MODULE
+    // GLOBAL BUTTON FUNCTIONS - WITH COMPREHENSIVE DEBUGGING
     window.saveEstimate = function() {
-      console.log('💾 Save estimate button clicked');
-      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-      if (!selectedTypeElement) {
-        showAlert('אנא בחר סוג אומדן', 'error');
-        return;
-      }
-      const selectedType = selectedTypeElement.value;
-      const additionalNotes = document.getElementById('additional-notes').value;
-      
-      // Update helper with estimate type and additional data
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_type = selectedType;
-      helper.estimate_notes = additionalNotes;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      if (window.estimateGenerator) {
-        window.estimateGenerator.setType(selectedType);
-        if (additionalNotes) {
-          window.estimateGenerator.addNotes(additionalNotes);
+      try {
+        console.log('💾 Save estimate button clicked');
+        alert('DEBUG: Save estimate button was clicked!');
+        
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        console.log('Selected type element:', selectedTypeElement);
+        
+        if (!selectedTypeElement) {
+          alert('ERROR: אנא בחר סוג אומדן');
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
         }
+        
+        const selectedType = selectedTypeElement.value;
+        const additionalNotes = document.getElementById('additional-notes')?.value || '';
+        
+        console.log('Estimate data:', { selectedType, additionalNotes });
+        
+        // Update helper with estimate type and additional data
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_type = selectedType;
+        helper.estimate_notes = additionalNotes;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        if (window.estimateGenerator) {
+          window.estimateGenerator.setType(selectedType);
+          if (additionalNotes) {
+            window.estimateGenerator.addNotes(additionalNotes);
+          }
+        }
+        
+        alert('SUCCESS: אומדן נשמר בהצלחה');
+        showAlert('אומדן נשמר בהצלחה', 'success');
+        
+      } catch (error) {
+        console.error('❌ Error in saveEstimate:', error);
+        alert('ERROR: שגיאה בשמירת האומדן - ' + error.message);
       }
-      
-      showAlert('אומדן נשמר בהצלחה', 'success');
     };
 
     window.previewEstimate = function() {
-      console.log('👁️ Preview estimate button clicked');
-      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-      if (!selectedTypeElement) {
-        showAlert('אנא בחר סוג אומדן', 'error');
-        return;
+      try {
+        console.log('👁️ Preview estimate button clicked');
+        alert('DEBUG: Preview estimate button was clicked!');
+        
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        console.log('Selected type element:', selectedTypeElement);
+        
+        if (!selectedTypeElement) {
+          alert('ERROR: אנא בחר סוג אומדן');
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
+        }
+        
+        const selectedType = selectedTypeElement.value;
+        console.log('Selected type:', selectedType);
+        
+        // Update helper with current estimate type
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_type = selectedType;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        sessionStorage.setItem('selectedReportType', 'estimate');
+        
+        alert('SUCCESS: מעביר לתצוגה מקדימה...');
+        
+        // Proceed to validation
+        window.location.href = 'estimate-validation.html';
+        
+      } catch (error) {
+        console.error('❌ Error in previewEstimate:', error);
+        alert('ERROR: שגיאה בתצוגה מקדימה - ' + error.message);
       }
-      const selectedType = selectedTypeElement.value;
-      
-      // Update helper with current estimate type
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_type = selectedType;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      
-      // Proceed to validation
-      window.location.href = 'estimate-validation.html';
     };
 
     window.generateEstimate = function() {
-      console.log('📄 Generate estimate button clicked');
-      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-      if (!selectedTypeElement) {
-        showAlert('אנא בחר סוג אומדן', 'error');
-        return;
+      try {
+        console.log('📄 Generate estimate button clicked');
+        alert('DEBUG: Generate estimate button was clicked!');
+        
+        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+        console.log('Selected type element:', selectedTypeElement);
+        
+        if (!selectedTypeElement) {
+          alert('ERROR: אנא בחר סוג אומדן');
+          showAlert('אנא בחר סוג אומדן', 'error');
+          return;
+        }
+        
+        const selectedType = selectedTypeElement.value;
+        const additionalNotes = document.getElementById('additional-notes')?.value || '';
+        
+        console.log('Generate data:', { selectedType, additionalNotes });
+        
+        // Update helper with all estimate data
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_type = selectedType;
+        helper.estimate_notes = additionalNotes;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        sessionStorage.setItem('selectedReportType', 'estimate');
+        
+        alert('SUCCESS: מעביר ליצירת דו"ח...');
+        
+        // Proceed to validation
+        window.location.href = 'estimate-validation.html';
+        
+      } catch (error) {
+        console.error('❌ Error in generateEstimate:', error);
+        alert('ERROR: שגיאה ביצירת האומדן - ' + error.message);
       }
-      const selectedType = selectedTypeElement.value;
-      const additionalNotes = document.getElementById('additional-notes').value;
-      
-      // Update helper with all estimate data
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_type = selectedType;
-      helper.estimate_notes = additionalNotes;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      
-      // Proceed to validation
-      window.location.href = 'estimate-validation.html';
     };
 
     // Depreciation functions for enhanced estimate builder
