@@ -791,36 +791,75 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Load car details (now editable)
-        if (helper.car_details || helper.meta) {
-          document.getElementById('carPlate').value = helper.meta?.plate || helper.car_details?.plate || '';
-          document.getElementById('carManufacturer').value = helper.car_details?.manufacturer || '';
-          document.getElementById('carModel').value = helper.car_details?.model || '';
-          document.getElementById('carYear').value = helper.car_details?.year || '';
-          document.getElementById('carBasePrice').value = helper.car_details?.base_price ? `₪${helper.car_details.base_price}` : '';
-          document.getElementById('carMarketValue').value = helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '';
-          document.getElementById('carReportDate').value = helper.car_details?.report_date || '';
+        // Load car details - AUTO-FILLED from helper data (pulled from helper)
+        if (helper.car_details || helper.meta || helper.vehicle || helper.levi_report || helper.levisummary) {
+          // Auto-fill plate number from multiple sources
+          const plateValue = helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '';
+          document.getElementById('carPlate').value = plateValue;
+          
+          // Auto-fill manufacturer from multiple sources  
+          const manufacturerValue = helper.car_details?.manufacturer || helper.vehicle?.manufacturer || helper.levi_report?.manufacturer || '';
+          document.getElementById('carManufacturer').value = manufacturerValue;
+          
+          // Auto-fill model from multiple sources
+          const modelValue = helper.car_details?.model || helper.vehicle?.model || helper.levi_report?.model || '';
+          document.getElementById('carModel').value = modelValue;
+          
+          // Auto-fill year from multiple sources
+          const yearValue = helper.car_details?.year || helper.vehicle?.year || helper.levi_report?.year || '';
+          document.getElementById('carYear').value = yearValue;
+          
+          // Auto-fill base price from Levi report
+          const basePriceValue = helper.levi_report?.base_price || helper.levisummary?.base_price || helper.car_details?.base_price || '';
+          document.getElementById('carBasePrice').value = basePriceValue ? `₪${parseFloat(basePriceValue).toLocaleString()}` : '';
+          
+          // Auto-fill market value from Levi report final price
+          const marketValue = helper.levi_report?.final_price || helper.levisummary?.final_price || helper.expertise?.calculations?.market_value || '';
+          document.getElementById('carMarketValue').value = marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '';
+          
+          // Auto-fill report date
+          const reportDate = helper.levi_report?.report_date || helper.car_details?.report_date || new Date().toISOString().split('T')[0];
+          document.getElementById('carReportDate').value = reportDate;
         }
         
-        // Load claims data (now editable)
-        if (helper.expertise?.calculations) {
-          const calc = helper.expertise.calculations;
-          document.getElementById('totalClaim').value = calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '';
-          document.getElementById('leviPriceList').value = helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '';
-          document.getElementById('grossPercent').value = calc.damage_percent ? `${calc.damage_percent}%` : '';
-          document.getElementById('authorizedClaim').value = calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '';
+        // Load claims data - AUTO-FILLED from helper calculations and damage data
+        if (helper.expertise?.calculations || helper.damage_sections || helper.expertise?.damage_blocks) {
+          const calc = helper.expertise?.calculations || {};
+          
+          // Auto-fill total claim from damage calculations
+          const totalDamage = calc.total_damage || calculateTotalFromDamageSections(helper) || '';
+          document.getElementById('totalClaim').value = totalDamage ? `₪${parseFloat(totalDamage).toLocaleString()}` : '';
+          
+          // Auto-fill Levi price list from final price
+          const leviPrice = helper.levi_report?.final_price || helper.levisummary?.final_price || '';
+          document.getElementById('leviPriceList').value = leviPrice ? `₪${parseFloat(leviPrice).toLocaleString()}` : '';
+          
+          // Auto-fill damage percentage
+          const damagePercent = calc.damage_percent || calculateDamagePercentageFromValues(totalDamage, leviPrice) || '';
+          document.getElementById('grossPercent').value = damagePercent ? `${damagePercent}%` : '';
+          
+          // Auto-fill authorized claim (same as total claim)
+          document.getElementById('authorizedClaim').value = totalDamage ? `₪${parseFloat(totalDamage).toLocaleString()}` : '';
         }
         
-        // Load contact data (now editable)
-        if (helper.client) {
-          document.getElementById('ownerName').value = helper.client.name || '';
-          document.getElementById('ownerAddress').value = helper.client.address || '';
-          document.getElementById('ownerPhone').value = helper.client.phone || '';
-          document.getElementById('insuranceCompany').value = helper.client.insurance_company || '';
-          document.getElementById('insuranceEmail').value = helper.client.insurance_email || '';
-          document.getElementById('insuranceAgent').value = helper.client.insurance_agent || '';
-          document.getElementById('agentPhone').value = helper.client.agent_phone || '';
-          document.getElementById('agentEmail').value = helper.client.agent_email || '';
+        // Load contact data - AUTO-FILLED from helper client data
+        if (helper.client || helper.car_details) {
+          // Auto-fill owner name from multiple sources
+          const ownerName = helper.client?.name || helper.car_details?.owner || '';
+          document.getElementById('ownerName').value = ownerName;
+          
+          // Auto-fill contact details
+          document.getElementById('ownerAddress').value = helper.client?.address || helper.car_details?.ownerAddress || '';
+          document.getElementById('ownerPhone').value = helper.client?.phone_number || helper.client?.phone || helper.car_details?.ownerPhone || '';
+          
+          // Auto-fill insurance details
+          document.getElementById('insuranceCompany').value = helper.client?.insurance_company || helper.car_details?.insuranceCompany || '';
+          document.getElementById('insuranceEmail').value = helper.client?.insurance_email || helper.car_details?.insuranceEmail || '';
+          
+          // Auto-fill agent details
+          document.getElementById('insuranceAgent').value = helper.client?.insurance_agent || helper.car_details?.agentName || '';
+          document.getElementById('agentPhone').value = helper.client?.insurance_agent_phone || helper.client?.agent_phone || helper.car_details?.agentPhone || '';
+          document.getElementById('agentEmail').value = helper.client?.insurance_agent_email || helper.client?.agent_email || helper.car_details?.agentEmail || '';
         }
         
         // Update page title with plate
@@ -1377,6 +1416,48 @@
       });
     });
 
+    // HELPER FUNCTIONS FOR AUTO-FILL CALCULATIONS
+    function calculateTotalFromDamageSections(helper) {
+      try {
+        if (helper.damage_sections && Array.isArray(helper.damage_sections)) {
+          return helper.damage_sections.reduce((total, section) => {
+            const sectionTotal = (parseFloat(section.works_total) || 0) + 
+                                (parseFloat(section.parts_total) || 0) + 
+                                (parseFloat(section.repairs_total) || 0);
+            return total + sectionTotal;
+          }, 0);
+        }
+        
+        if (helper.expertise?.damage_blocks && Array.isArray(helper.expertise.damage_blocks)) {
+          return helper.expertise.damage_blocks.reduce((total, block) => {
+            const blockTotal = (parseFloat(block.work_cost) || 0) + 
+                              (parseFloat(block.parts_cost) || 0);
+            return total + blockTotal;
+          }, 0);
+        }
+        
+        return 0;
+      } catch (error) {
+        console.error('Error calculating total from damage sections:', error);
+        return 0;
+      }
+    }
+    
+    function calculateDamagePercentageFromValues(totalDamage, marketValue) {
+      try {
+        const damage = parseFloat(totalDamage) || 0;
+        const market = parseFloat(marketValue) || 0;
+        
+        if (market > 0 && damage > 0) {
+          return Math.round((damage / market) * 100);
+        }
+        return 0;
+      } catch (error) {
+        console.error('Error calculating damage percentage:', error);
+        return 0;
+      }
+    }
+
     // Make functions global
     window.loadDataFromHelper = loadDataFromHelper;
     window.loadLegalText = loadLegalText;
@@ -1387,6 +1468,8 @@
     window.loadLeviAdjustments = loadLeviAdjustments;
     window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
     window.calculateDamagePercentage = calculateDamagePercentage;
+    window.calculateTotalFromDamageSections = calculateTotalFromDamageSections;
+    window.calculateDamagePercentageFromValues = calculateDamagePercentageFromValues;
   </script>
   
   <script src="internal-browser.js"></script>
