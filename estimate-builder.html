@@ -705,18 +705,18 @@
           </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons - COPIED STYLE FROM DEPRECIATION MODULE -->
         <div class="action-buttons">
-          <button type="button" id="save-estimate" class="btn btn-primary">
+          <button type="button" class="btn btn-primary" onclick="saveEstimate()">
             💾 שמור אומדן
           </button>
-          <button type="button" id="preview-estimate" class="btn btn-secondary">
+          <button type="button" class="btn btn-secondary" onclick="previewEstimate()">
             👁️ תצוגה מקדימה
           </button>
-          <button type="button" id="generate-estimate" class="btn btn-success">
+          <button type="button" class="btn btn-success" onclick="generateEstimate()">
             📄 צור דו"ח אומדן
           </button>
-          <button type="button" onclick="window.location.href='selection.html'" class="btn btn-secondary">
+          <button type="button" class="btn btn-secondary" onclick="window.location.href='selection.html'">
             🏠 חזור לדף הבית
           </button>
         </div>
@@ -945,8 +945,7 @@
       // Set up estimate type handlers
       setupEstimateTypeHandlers();
       
-      // Set up action buttons
-      setupPostSessionActions();
+      // Action buttons now use direct onclick handlers (depreciation module style)
       
       // Calculate initial totals
       calculateEstimateTotals();
@@ -1172,91 +1171,72 @@
       });
     }
 
-    function setupPostSessionActions() {
-      console.log('🔄 Setting up action buttons...');
-      
-      // Check if elements exist
-      const saveBtn = document.getElementById('save-estimate');
-      const previewBtn = document.getElementById('preview-estimate');
-      const generateBtn = document.getElementById('generate-estimate');
-      
-      console.log('📊 Button elements found:', {
-        saveBtn: !!saveBtn,
-        previewBtn: !!previewBtn,
-        generateBtn: !!generateBtn
-      });
-      
-      if (!saveBtn || !previewBtn || !generateBtn) {
-        console.error('❌ Some action buttons not found in DOM');
+    // GLOBAL BUTTON FUNCTIONS - COPIED STYLE FROM DEPRECIATION MODULE
+    window.saveEstimate = function() {
+      console.log('💾 Save estimate button clicked');
+      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+      if (!selectedTypeElement) {
+        showAlert('אנא בחר סוג אומדן', 'error');
         return;
       }
+      const selectedType = selectedTypeElement.value;
+      const additionalNotes = document.getElementById('additional-notes').value;
       
-      saveBtn.addEventListener('click', () => {
-        console.log('💾 Save estimate button clicked');
-        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-        if (!selectedTypeElement) {
-          showAlert('אנא בחר סוג אומדן', 'error');
-          return;
+      // Update helper with estimate type and additional data
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.estimate_type = selectedType;
+      helper.estimate_notes = additionalNotes;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      if (window.estimateGenerator) {
+        window.estimateGenerator.setType(selectedType);
+        if (additionalNotes) {
+          window.estimateGenerator.addNotes(additionalNotes);
         }
-        const selectedType = selectedTypeElement.value;
-        const additionalNotes = document.getElementById('additional-notes').value;
-        
-        // Update helper with estimate type and additional data
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        helper.estimate_notes = additionalNotes;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        if (window.estimateGenerator) {
-          window.estimateGenerator.setType(selectedType);
-          if (additionalNotes) {
-            window.estimateGenerator.addNotes(additionalNotes);
-          }
-        }
-        
-        showAlert('אומדן נשמר בהצלחה');
-      });
+      }
+      
+      showAlert('אומדן נשמר בהצלחה', 'success');
+    };
 
-      previewBtn.addEventListener('click', () => {
-        console.log('👁️ Preview estimate button clicked');
-        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-        if (!selectedTypeElement) {
-          showAlert('אנא בחר סוג אומדן', 'error');
-          return;
-        }
-        const selectedType = selectedTypeElement.value;
-        
-        // Update helper with current estimate type
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        sessionStorage.setItem('selectedReportType', 'estimate');
-        
-        // Proceed to validation
-        window.location.href = 'estimate-validation.html';
-      });
+    window.previewEstimate = function() {
+      console.log('👁️ Preview estimate button clicked');
+      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+      if (!selectedTypeElement) {
+        showAlert('אנא בחר סוג אומדן', 'error');
+        return;
+      }
+      const selectedType = selectedTypeElement.value;
+      
+      // Update helper with current estimate type
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.estimate_type = selectedType;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      sessionStorage.setItem('selectedReportType', 'estimate');
+      
+      // Proceed to validation
+      window.location.href = 'estimate-validation.html';
+    };
 
-      generateBtn.addEventListener('click', () => {
-        console.log('📄 Generate estimate button clicked');
-        const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
-        if (!selectedTypeElement) {
-          showAlert('אנא בחר סוג אומדן', 'error');
-          return;
-        }
-        const selectedType = selectedTypeElement.value;
-        const additionalNotes = document.getElementById('additional-notes').value;
-        
-        // Update helper with all estimate data
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        helper.estimate_notes = additionalNotes;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        sessionStorage.setItem('selectedReportType', 'estimate');
-        
-        // Proceed to validation
-        window.location.href = 'estimate-validation.html';
-      });
-    }
+    window.generateEstimate = function() {
+      console.log('📄 Generate estimate button clicked');
+      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+      if (!selectedTypeElement) {
+        showAlert('אנא בחר סוג אומדן', 'error');
+        return;
+      }
+      const selectedType = selectedTypeElement.value;
+      const additionalNotes = document.getElementById('additional-notes').value;
+      
+      // Update helper with all estimate data
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.estimate_type = selectedType;
+      helper.estimate_notes = additionalNotes;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      sessionStorage.setItem('selectedReportType', 'estimate');
+      
+      // Proceed to validation
+      window.location.href = 'estimate-validation.html';
+    };
 
     // Depreciation functions for enhanced estimate builder
     function addDepField() {
@@ -1318,11 +1298,11 @@
         switch (e.key) {
           case 's':
             e.preventDefault();
-            document.getElementById('save-estimate')?.click();
+            if (window.saveEstimate) window.saveEstimate();
             break;
           case 'p':
             e.preventDefault();
-            document.getElementById('preview-estimate')?.click();
+            if (window.previewEstimate) window.previewEstimate();
             break;
         }
       }
