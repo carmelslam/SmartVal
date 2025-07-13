@@ -558,6 +558,15 @@
             <input type="text" id="depCompensation" style="background: white; color: #333;" />
           </div>
         </div>
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">שווי השרידים (אופציונלי) - מופחת מהסכום:</label>
+            <input type="text" id="salvageValue" style="background: #fff5f5; color: #333; border: 1px solid #f87171;" placeholder="₪0" />
+          </div>
+          <div style="display: flex; align-items: center; font-size: 13px; color: #666; padding: 8px;">
+            ➖ שדה אופציונלי - מופחת מהסכום הסופי אם מולא
+          </div>
+        </div>
       </div>
       
       <!-- תוספות והורדות SECTION - MOVED BEFORE VAT CALCULATION -->
@@ -738,7 +747,8 @@
         total_claim: document.getElementById('sumClaim')?.value || '',
         vat: document.getElementById('sumVAT')?.value || '',
         total_with_vat: document.getElementById('sumTotalClaim')?.value || '',
-        dep_compensation: document.getElementById('depCompensation')?.value || ''
+        dep_compensation: document.getElementById('depCompensation')?.value || '',
+        salvage_value: document.getElementById('salvageValue')?.value || ''
       };
       
       // Get depreciation data
@@ -866,6 +876,7 @@
           document.getElementById('sumVAT').value = helper.estimate_summary.vat || '';
           document.getElementById('sumTotalClaim').value = helper.estimate_summary.total_with_vat || '';
           document.getElementById('depCompensation').value = helper.estimate_summary.dep_compensation || '';
+          document.getElementById('salvageValue').value = helper.estimate_summary.salvage_value || '';
         } else {
           // Load from helper calculations if no saved summary
           const marketValue = helper.expertise?.calculations?.market_value || 0;
@@ -948,13 +959,14 @@
             depCompensationInput.value = globalDepValue;
           }
           
-          // Get values - market price + claim + compensation = total
+          // Get values - market price + claim + compensation - salvage = total
           const marketValue = parseFloat(sumMarketValueInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           const depValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
+          const salvageValue = parseFloat(document.getElementById('salvageValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
           
-          // Calculate subtotal: claim + compensation = total (market price is separate)
-          const subtotal = claimValue + depValue;
+          // Calculate subtotal: claim + compensation - salvage value = subtotal (market price is separate)
+          const subtotal = claimValue + depValue - salvageValue;
           
           // Automatic calculation with math.js - Calculate VAT (18% on subtotal)
           const vatRate = 0.18;
@@ -1007,6 +1019,12 @@
       const globalDepValueInput = document.getElementById('globalDepValue');
       if (globalDepValueInput) {
         globalDepValueInput.addEventListener('input', calculateSummaryTotals);
+      }
+      
+      // ADD EVENT LISTENER FOR SALVAGE VALUE TO TRIGGER RECALCULATION
+      const salvageValueInput = document.getElementById('salvageValue');
+      if (salvageValueInput) {
+        salvageValueInput.addEventListener('input', calculateSummaryTotals);
       }
       
       // Add listeners for custom additions if they exist
@@ -1163,7 +1181,7 @@
       });
       
       // Summary data listeners
-      ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation'].forEach(id => {
+      ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
           element.addEventListener('change', updateHelperFromField);
@@ -1218,14 +1236,15 @@
             'agentEmail': 'agent_email'
           };
           helper.client[mapping[fieldId]] = value;
-        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation'].includes(fieldId)) {
+        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].includes(fieldId)) {
           helper.estimate_summary = helper.estimate_summary || {};
           const mapping = {
             'sumMarketValue': 'market_value',
             'sumClaim': 'total_claim',
             'sumVAT': 'vat',
             'sumTotalClaim': 'total_with_vat',
-            'depCompensation': 'dep_compensation'
+            'depCompensation': 'dep_compensation',
+            'salvageValue': 'salvage_value'
           };
           helper.estimate_summary[mapping[fieldId]] = value;
         }
@@ -1240,6 +1259,11 @@
         
         // Update legal text with new data
         loadLegalText();
+        
+        // Special handling for salvage value changes
+        if (fieldId === 'salvageValue') {
+          console.log('Salvage value updated:', value);
+        }
         
       } catch (error) {
         console.error('Error updating helper from field:', error);
@@ -1351,7 +1375,18 @@
         '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
         '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
         '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
-        '%שווי_שרידים%': helper.estimate_salvage_value ? `₪${helper.estimate_salvage_value.toLocaleString()}` : '[שווי שרידים]'
+        '%שווי_שרידים%': (() => {
+          const salvageInput = document.getElementById('salvageValue')?.value;
+          const helperSalvage = helper.estimate_summary?.salvage_value || helper.estimate_salvage_value;
+          
+          if (salvageInput && salvageInput.trim() !== '' && salvageInput !== '₪0') {
+            return salvageInput;
+          } else if (helperSalvage && helperSalvage !== '₪0') {
+            return helperSalvage;
+          } else {
+            return '[שווי שרידים]';
+          }
+        })()
       };
       
       // Replace placeholders
