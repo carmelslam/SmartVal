@@ -1770,9 +1770,9 @@
         query
       }));
       
-      // Open parts search in new window/modal
-      const partsSearchUrl = 'parts-module.html?query=' + encodeURIComponent(query);
-      window.open(partsSearchUrl, 'partsSearch', 'width=800,height=600,scrollbars=yes');
+      // Open independent parts search module
+      const partsSearchUrl = 'parts search.html?query=' + encodeURIComponent(query);
+      window.open(partsSearchUrl, 'partsSearch', 'width=1000,height=700,scrollbars=yes,resizable=yes');
     }
 
     // ADD/REMOVE ROW FUNCTIONS
@@ -2108,6 +2108,56 @@
     window.updateCostDisplay = updateCostDisplay;
     window.updateAllCostDisplays = updateAllCostDisplays;
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
+
+    // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'PARTS_SELECTED') {
+        try {
+          const { parts, target } = event.data;
+          const { centerIndex, partIndex } = target;
+          
+          // Find the specific part row
+          const targetCard = document.querySelector(`.editable-damage-card[data-center-index="${centerIndex}"]`);
+          if (targetCard) {
+            const partRows = targetCard.querySelectorAll('.part-row');
+            const targetRow = partRows[partIndex];
+            
+            if (targetRow && parts.length > 0) {
+              // Fill the first selected part into the target row
+              const firstPart = parts[0];
+              const nameInput = targetRow.querySelector('.part-name');
+              const descInput = targetRow.querySelector('.part-desc');
+              const priceInput = targetRow.querySelector('.part-price');
+              const sourceInput = targetRow.querySelector('.part-source');
+              
+              if (nameInput) nameInput.value = firstPart.name || '';
+              if (descInput) descInput.value = firstPart.description || '';
+              if (priceInput) priceInput.value = firstPart.price || '';
+              if (sourceInput) sourceInput.value = firstPart.source || '';
+              
+              // Add additional parts if more than one selected
+              if (parts.length > 1) {
+                const partsList = targetCard.querySelector('.parts-list');
+                for (let i = 1; i < parts.length; i++) {
+                  const part = parts[i];
+                  const newPartIndex = partsList.children.length;
+                  const newPartHTML = createEditablePartRow(part, centerIndex, newPartIndex);
+                  partsList.insertAdjacentHTML('beforeend', newPartHTML);
+                }
+              }
+              
+              // Save changes and update costs
+              saveDamageCenterChanges();
+              updateAllCostDisplays();
+              
+              console.log(`✅ Added ${parts.length} parts to damage center ${centerIndex + 1}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error processing parts selection:', error);
+        }
+      }
+    });
   </script>
   
   <script src="internal-browser.js"></script>
