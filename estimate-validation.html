@@ -1075,65 +1075,95 @@
       const issues = [];
       const validItems = [];
       
+      // Get current values from the enhanced validation display
+      const plateValue = getCurrentFieldValue('plate');
+      const manufacturerValue = getCurrentFieldValue('manufacturer');
+      const modelValue = getCurrentFieldValue('model');
+      const yearValue = getCurrentFieldValue('year');
+      const ownerValue = getCurrentFieldValue('owner_name');
+      const insuranceValue = getCurrentFieldValue('insurance');
+      
       // Validate plate number
-      const plate = currentValidationData.plate || currentValidationData.car_details.plate;
-      if (plate && plate.length >= 6) {
+      if (plateValue && plateValue !== 'לא זמין' && plateValue.length >= 6) {
         validItems.push('vehicle-plate');
-        document.getElementById('vehicle-plate').textContent = '✓';
+        setFieldValidationStatus('plate', '✓');
       } else {
         issues.push('מספר רכב חסר או לא תקין');
-        document.getElementById('vehicle-plate').textContent = '❌';
+        setFieldValidationStatus('plate', '❌');
       }
       
       // Validate vehicle details  
-      const manufacturer = currentValidationData.car_details.manufacturer;
-      const model = currentValidationData.car_details.model;
-      if (manufacturer && model) {
+      if (manufacturerValue && manufacturerValue !== 'לא זמין' && modelValue && modelValue !== 'לא זמין') {
         validItems.push('vehicle-details');
-        document.getElementById('vehicle-details').textContent = '✓';
+        setFieldValidationStatus('manufacturer', '✓');
+        setFieldValidationStatus('model', '✓');
       } else {
         issues.push('פרטי יצרן או דגם חסרים');
-        document.getElementById('vehicle-details').textContent = '❌';
+        setFieldValidationStatus('manufacturer', manufacturerValue && manufacturerValue !== 'לא זמין' ? '✓' : '❌');
+        setFieldValidationStatus('model', modelValue && modelValue !== 'לא זמין' ? '✓' : '❌');
       }
       
       // Validate vehicle specs
-      const year = currentValidationData.car_details.year;
-      if (year && year > 1990 && year <= new Date().getFullYear()) {
+      if (yearValue && yearValue !== 'לא זמין' && yearValue > 1990 && yearValue <= new Date().getFullYear()) {
         validItems.push('vehicle-specs');
-        document.getElementById('vehicle-specs').textContent = '✓';
+        setFieldValidationStatus('year', '✓');
       } else {
         issues.push('שנת יצור לא תקינה');
-        document.getElementById('vehicle-specs').textContent = '❌';
+        setFieldValidationStatus('year', '❌');
       }
       
-      // Validate owner details
-      const owner = currentValidationData.client.name;
-      const phone = currentValidationData.client.phone_number;
-      if (owner || phone) {
+      // Validate owner details (warning only, not blocking)
+      if (ownerValue && ownerValue !== 'לא זמין') {
         validItems.push('vehicle-owner');
-        document.getElementById('vehicle-owner').textContent = '✓';
+        setFieldValidationStatus('owner_name', '✓');
       } else {
-        issues.push('פרטי בעלים חסרים');
-        document.getElementById('vehicle-owner').textContent = '⚠️';
+        issues.push('פרטי בעלים חסרים (אזהרה)');
+        setFieldValidationStatus('owner_name', '⚠️');
       }
       
-      // Validate insurance details
-      const insurance = currentValidationData.client.insurance_company;
-      if (insurance) {
+      // Validate insurance details (warning only, not blocking)
+      if (insuranceValue && insuranceValue !== 'לא זמין') {
         validItems.push('vehicle-insurance');
-        document.getElementById('vehicle-insurance').textContent = '✓';
+        setFieldValidationStatus('insurance', '✓');
       } else {
-        issues.push('פרטי ביטוח חסרים');
-        document.getElementById('vehicle-insurance').textContent = '⚠️';
+        issues.push('פרטי ביטוח חסרים (אזהרה)');
+        setFieldValidationStatus('insurance', '⚠️');
       }
+      
+      // Only count critical errors (not warnings)
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
       return {
-        success: issues.length === 0,
-        warnings: issues.filter(i => i.includes('חסרים')).length,
-        errors: issues.filter(i => !i.includes('חסרים')).length,
+        success: criticalErrors === 0,
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
+        errors: criticalErrors,
         issues: issues,
         validItems: validItems.length
       };
+    }
+
+    // Helper function to get current field value from enhanced display
+    function getCurrentFieldValue(fieldKey) {
+      const element = document.getElementById(`current-${fieldKey}`);
+      return element ? element.textContent.trim() : '';
+    }
+
+    // Helper function to set validation status for a field
+    function setFieldValidationStatus(fieldKey, status) {
+      const element = document.getElementById(`current-${fieldKey}`);
+      if (element) {
+        // Update the visual indicator (could add a small status icon)
+        if (status === '✓') {
+          element.classList.remove('data-error', 'data-warning');
+          element.classList.add('data-match');
+        } else if (status === '⚠️') {
+          element.classList.remove('data-error', 'data-match');
+          element.classList.add('data-warning');
+        } else {
+          element.classList.remove('data-match', 'data-warning');
+          element.classList.add('data-error');
+        }
+      }
     }
 
     async function validateLeviSection() {
