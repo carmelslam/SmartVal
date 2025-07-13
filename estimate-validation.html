@@ -547,9 +547,13 @@
               <span class="cost-label">סה"כ תיקונים:</span>
               <span class="cost-value" id="damage-total-repairs">₪0</span>
             </div>
-            <div class="cost-item" style="grid-column: 1 / -1; border-top: 2px solid #3b82f6; padding-top: 10px; margin-top: 10px;">
+            <div class="cost-item" style="border-top: 2px solid #3b82f6; padding-top: 10px; margin-top: 10px;">
               <span class="cost-label" style="font-weight: bold;">סה"כ נזקים ללא מע"מ:</span>
               <span class="cost-value" style="font-size: 18px; color: #dc2626;" id="damage-total-before-vat">₪0</span>
+            </div>
+            <div class="cost-item" style="padding-top: 10px;">
+              <span class="cost-label" style="font-weight: bold;">סה"כ נזקים כולל מע"מ:</span>
+              <span class="cost-value" style="font-size: 18px; color: #16a34a;" id="damage-total-with-vat">₪0</span>
             </div>
           </div>
         </div>
@@ -986,11 +990,17 @@
         document.getElementById('damage-costs').textContent = '❌';
       }
       
+      // Calculate VAT for damage totals
+      const vatRate = MathEngine.getVatRate();
+      const vatAmount = Math.round(totalDamage * vatRate / 100);
+      const totalWithVat = totalDamage + vatAmount;
+      
       // Update cost display
       document.getElementById('damage-total-works').textContent = MathEngine.formatCurrency(totalWorks);
       document.getElementById('damage-total-parts').textContent = MathEngine.formatCurrency(totalParts);
       document.getElementById('damage-total-repairs').textContent = MathEngine.formatCurrency(totalRepairs);
       document.getElementById('damage-total-before-vat').textContent = MathEngine.formatCurrency(totalDamage);
+      document.getElementById('damage-total-with-vat').textContent = MathEngine.formatCurrency(totalWithVat);
       
       return {
         success: issues.length === 0,
@@ -1095,6 +1105,12 @@
         const partsTotal = center.parts ? center.parts.reduce((sum, part) => sum + (parseFloat(part.cost) || 0), 0) : 0;
         const repairsTotal = center.repairs ? center.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0) : 0;
         
+        // Calculate VAT for each category
+        const vatRate = MathEngine.getVatRate();
+        const worksVat = Math.round(worksTotal * vatRate / 100);
+        const partsVat = Math.round(partsTotal * vatRate / 100);
+        const repairsVat = Math.round(repairsTotal * vatRate / 100);
+        
         const div = document.createElement('div');
         div.className = 'damage-center';
         div.innerHTML = `
@@ -1103,17 +1119,20 @@
             <div class="damage-stat">
               <div class="damage-stat-label">עבודות</div>
               <div class="damage-stat-value">${center.works?.length || 0}</div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 5px;">${MathEngine.formatCurrency(worksTotal)}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 3px;">ללא מע"מ: ${MathEngine.formatCurrency(worksTotal)}</div>
+              <div style="font-size: 11px; color: #16a34a; font-weight: bold;">כולל מע"מ: ${MathEngine.formatCurrency(worksTotal + worksVat)}</div>
             </div>
             <div class="damage-stat">
               <div class="damage-stat-label">חלקים</div>
               <div class="damage-stat-value">${center.parts?.length || 0}</div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 5px;">${MathEngine.formatCurrency(partsTotal)}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 3px;">ללא מע"מ: ${MathEngine.formatCurrency(partsTotal)}</div>
+              <div style="font-size: 11px; color: #16a34a; font-weight: bold;">כולל מע"מ: ${MathEngine.formatCurrency(partsTotal + partsVat)}</div>
             </div>
             <div class="damage-stat">
               <div class="damage-stat-label">תיקונים</div>
               <div class="damage-stat-value">${center.repairs?.length || 0}</div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 5px;">${MathEngine.formatCurrency(repairsTotal)}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 3px;">ללא מע"מ: ${MathEngine.formatCurrency(repairsTotal)}</div>
+              <div style="font-size: 11px; color: #16a34a; font-weight: bold;">כולל מע"מ: ${MathEngine.formatCurrency(repairsTotal + repairsVat)}</div>
             </div>
           </div>
         `;
