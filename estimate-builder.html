@@ -853,20 +853,25 @@
       // AUTO-FILL LOGIC: Allow both scenarios
       // 1. Coming from report selection with existing data -> auto-fill
       // 2. Coming from report selection without data -> start empty but allow manual entry
-      // 3. Coming from estimate workflow -> normal validation
+      // 3. Coming from estimate workflow -> normal validation but more flexible
       
       const isFromReportSelection = selectedReportType === 'estimate';
       
-      if (!isFromReportSelection) {
-        // Coming from estimate workflow - require plate number
-        if (!plateNumber) {
-          console.error('❌ No plate number found in estimate workflow');
-          showAlert('שגיאה: לא נמצא מספר רכב. אנא התחל מדף הבחירה', 'error');
-          setTimeout(() => {
-            window.location.href = 'selection.html';
-          }, 3000);
-          return;
-        }
+      console.log('🔍 Entry point analysis:', {
+        isFromReportSelection,
+        selectedReportType,
+        hasPlate: !!plateNumber,
+        hasHelper: !!helperData
+      });
+      
+      // Only enforce strict validation if we have neither report type nor plate
+      if (!selectedReportType && !plateNumber) {
+        console.error('❌ No route information found - missing both report type and plate');
+        showAlert('שגיאה: לא נמצא מידע על המסלול. אנא התחל מדף הבחירה', 'error');
+        setTimeout(() => {
+          window.location.href = 'selection.html';
+        }, 3000);
+        return;
       }
       
       // Handle different entry points
