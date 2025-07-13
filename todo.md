@@ -1615,6 +1615,7 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 *******************************************************************************************
 
+
 # Admin Panel & Module System Enhancement Tasks ✅ *all finished - doesnt include teh DEV module, - needs a samll fix of the date selection fields on mobile in teh search fields section*
 
 ## Status: Comprehensive Implementation Required

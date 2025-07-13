@@ -896,6 +896,25 @@
         // Add event listeners for real-time calculations
         addSummaryCalculationListeners();
         
+        // TRIGGER INITIAL AUTO-FILL FOR SUMMARY FIELDS
+        setTimeout(() => {
+          if (window.addSummaryCalculationListeners) {
+            const calculateEvent = new Event('input', { bubbles: true });
+            
+            // Trigger auto-fill from totalClaim to sumClaim
+            const totalClaimField = document.getElementById('totalClaim');
+            if (totalClaimField && totalClaimField.value) {
+              totalClaimField.dispatchEvent(calculateEvent);
+            }
+            
+            // Trigger auto-fill from globalDepValue to depCompensation
+            const globalDepField = document.getElementById('globalDepValue');
+            if (globalDepField && globalDepField.value) {
+              globalDepField.dispatchEvent(calculateEvent);
+            }
+          }
+        }, 200);
+        
       } catch (error) {
         console.error('Error loading summary data:', error);
       }
@@ -915,6 +934,18 @@
           const carMarketValue = document.getElementById('carMarketValue')?.value.replace(/[₪,]/g, '') || '0';
           if (carMarketValue && carMarketValue !== '0' && sumMarketValueInput) {
             sumMarketValueInput.value = `₪${parseFloat(carMarketValue).toLocaleString()}`;
+          }
+          
+          // AUTO-FILL SUMMARY CLAIM FROM CLAIMS SECTION
+          const totalClaimValue = document.getElementById('totalClaim')?.value;
+          if (totalClaimValue && sumClaimInput) {
+            sumClaimInput.value = totalClaimValue;
+          }
+          
+          // AUTO-FILL DEPRECIATION COMPENSATION FROM GLOBAL DEPRECIATION VALUE
+          const globalDepValue = document.getElementById('globalDepValue')?.value;
+          if (globalDepValue && depCompensationInput) {
+            depCompensationInput.value = globalDepValue;
           }
           
           // Get values - market price + claim + compensation = total
@@ -965,6 +996,17 @@
       const carMarketValueInput = document.getElementById('carMarketValue');
       if (carMarketValueInput) {
         carMarketValueInput.addEventListener('input', calculateSummaryTotals);
+      }
+      
+      // ADD EVENT LISTENERS FOR SOURCE FIELDS TO AUTO-UPDATE SUMMARY
+      const totalClaimInput = document.getElementById('totalClaim');
+      if (totalClaimInput) {
+        totalClaimInput.addEventListener('input', calculateSummaryTotals);
+      }
+      
+      const globalDepValueInput = document.getElementById('globalDepValue');
+      if (globalDepValueInput) {
+        globalDepValueInput.addEventListener('input', calculateSummaryTotals);
       }
       
       // Add listeners for custom additions if they exist
@@ -1368,6 +1410,20 @@
           
           const calculatedValue = (marketValue * percent) / 100;
           globalDepValueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+          
+          // TRIGGER SUMMARY UPDATE when global depreciation value changes
+          if (window.addSummaryCalculationListeners) {
+            const sumCalculate = document.querySelector('[data-summary-calculate]');
+            if (sumCalculate) {
+              sumCalculate.click();
+            }
+          }
+          
+          // Direct trigger for summary calculations
+          setTimeout(() => {
+            const event = new Event('input', { bubbles: true });
+            globalDepValueInput.dispatchEvent(event);
+          }, 100);
         });
       }
     }
