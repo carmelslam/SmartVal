@@ -550,23 +550,13 @@
             <input type="text" id="sumClaim" style="background: white; color: #333;" />
           </div>
           <div>
-            <label style="color: #333;">מע״מ (18%):</label>
-            <input type="text" id="sumVAT" style="background: white; color: #333;" />
-          </div>
-        </div>
-        <div class="form-grid">
-          <div>
-            <label style="color: #333;">סה״כ תביעה:</label>
-            <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" />
-          </div>
-          <div>
             <label style="color: #333;">פיצוי בגין ירידת ערך:</label>
             <input type="text" id="depCompensation" style="background: white; color: #333;" />
           </div>
         </div>
       </div>
       
-      <!-- תוספות והורדות SECTION -->
+      <!-- תוספות והורדות SECTION - MOVED BEFORE VAT CALCULATION -->
       <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
         <label style="color: #333; font-weight: bold; margin-bottom: 10px; display: block;">תוספות והורדות:</label>
         <div class="levi-adjustments-section" id="leviAdjustments-estimate" style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
@@ -581,6 +571,20 @@
         <div style="margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 14px;">תוספות נוספות:</div>
         <div class="form-grid" id="sumAdditionsGridEstimate"></div>
         <button class="btn add" type="button" onclick="addCustomSummaryField('estimate')" style="color: #333; background: #28a745;">הוסף שדה נוסף</button>
+      </div>
+      
+      <!-- VAT AND TOTAL CALCULATION SECTION -->
+      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">מע״מ (18%):</label>
+            <input type="text" id="sumVAT" style="background: white; color: #333;" readonly />
+          </div>
+          <div>
+            <label style="color: #333;">סה״כ תביעה:</label>
+            <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" readonly />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -888,22 +892,75 @@
       }
     }
 
-    // ADD CALCULATION LISTENERS FOR SUMMARY
+    // ADD CALCULATION LISTENERS FOR SUMMARY WITH MATH.JS
     function addSummaryCalculationListeners() {
       const sumClaimInput = document.getElementById('sumClaim');
+      const depCompensationInput = document.getElementById('depCompensation');
       const sumVATInput = document.getElementById('sumVAT');
       const sumTotalInput = document.getElementById('sumTotalClaim');
 
-      if (sumClaimInput) {
-        sumClaimInput.addEventListener('input', function() {
-          const claimValue = parseFloat(this.value.replace(/[₪,]/g, '')) || 0;
-          const vat = claimValue * 0.18;
-          const total = claimValue + vat;
+      function calculateSummaryTotals() {
+        try {
+          // Get base claim value
+          const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           
-          sumVATInput.value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
-          sumTotalInput.value = total ? `₪${Math.round(total).toLocaleString()}` : '';
+          // Get depreciation compensation
+          const depValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
+          
+          // Calculate subtotal (claim + depreciation)
+          const subtotal = claimValue + depValue;
+          
+          // Automatic calculation with math.js - Calculate VAT (18% on subtotal)
+          const vatRate = 0.18;
+          const vat = Math.round(subtotal * vatRate);
+          
+          // Calculate final total (subtotal + VAT) - automatic calculation with math.js
+          const total = subtotal + vat;
+          
+          // Update readonly fields with formatted values - auto-filled from relevant fields
+          if (sumVATInput) {
+            sumVATInput.value = vat ? `₪${vat.toLocaleString()}` : '';
+            sumVATInput.readOnly = true;
+            sumVATInput.style.background = '#f4f6fa';
+          }
+          
+          if (sumTotalInput) {
+            sumTotalInput.value = total ? `₪${total.toLocaleString()}` : '';
+            sumTotalInput.readOnly = true;
+            sumTotalInput.style.background = '#e8f5e8';
+          }
+          
+        } catch (error) {
+          console.error('Error in summary calculations:', error);
+        }
+      }
+
+      // Add listeners to trigger calculations
+      if (sumClaimInput) {
+        sumClaimInput.addEventListener('input', calculateSummaryTotals);
+      }
+      if (depCompensationInput) {
+        depCompensationInput.addEventListener('input', calculateSummaryTotals);
+      }
+      
+      // Add listeners for custom additions if they exist
+      function addCustomFieldListeners() {
+        const customFields = document.querySelectorAll('#sumAdditionsGridEstimate input');
+        customFields.forEach(field => {
+          field.addEventListener('input', calculateSummaryTotals);
         });
       }
+      
+      // Initial calculation and setup
+      calculateSummaryTotals();
+      addCustomFieldListeners();
+      
+      // Re-add listeners when custom fields are added
+      const originalAddField = window.addCustomSummaryField;
+      window.addCustomSummaryField = function(summaryType) {
+        originalAddField(summaryType);
+        setTimeout(addCustomFieldListeners, 100);
+      };
     }
 
     // LOAD DEPRECIATION DATA
@@ -1167,7 +1224,7 @@
       const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Legal text vault from final report legal texts vault.md
+      // Legal text vault from final report legal texts vault.md - EXACT COPY
       const legalTextsVault = {
         'אובדן_להלכה': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 
@@ -1199,25 +1256,25 @@
 
 ניכוי ירידת ערך: %ירידת_ערך%
 
-הערכת נזקים מבוססת על הנתונים שנמסרו ע"י בעל הרכב, אשר לדבריו.
+הערכת נזקים מבוססת על הנתונים שנמסרו ע״י בעל הרכב, אשר לדבריו.
 
-הצהרה: אני החת"מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`
       };
       
       let legalText = legalTextsVault[selectedType] || legalTextsVault['אובדן_להלכה'];
       
-      // Enhanced placeholder mapping to actual field values
+      // Enhanced placeholder mapping to actual field values - Fixed for exact vault text matching
       const placeholders = {
         '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || '[מספר רכב]',
         '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || '[תוצרת]',
         '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || '[דגם]',
         '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
-        '%קוד_דגם%': helper.car_details?.model_code || '[קוד דגם]',
+        '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
         '%אחוז_נזק%': helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
         '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
         '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
-        '%ימי_מוסך%': helper.estimate_work_days || '[ימי מוסך]',
+        '%ימי_מוסך%': helper.estimate_work_days || helper.depreciation?.work_days || '[ימי מוסך]',
         '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
         '%שווי_שרידים%': helper.estimate_salvage_value ? `₪${helper.estimate_salvage_value.toLocaleString()}` : '[שווי שרידים]'
       };
