@@ -1386,7 +1386,9 @@ Comprehensive System Fix Plan - UPDATED                      │ │
 │ │ maintains its intended functionality and UI without          │ │
 │ │ interference from other modules.                             │ │
 │ ╰──────────
-audit 3 todo : 
+
+*******************************************************************************************
+**GENERAL NOTES AND THINGS TO FIX**
 Audit 3 : 
 Read all the issues that were found in audit 3 . Go through the issues I found. Learn them and evaluate throughout the whole system files, detect connections , relations and dependencies and evaluate functionality .
 Run your own deep check and conclude the issues broadness  inside the system .
@@ -1446,7 +1448,7 @@ Change the section with the price adjustments layout so each line contains all t
 Example : 
 סוג בעלות :
 פרטי - 5% - 2500₪- 70,000₪
-Data is inside the same square fields as we have now .
+Data is inside the same square fields as we have now .✅ 
 
 4. Multi pictures upload page : ✅
     1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
@@ -1560,6 +1562,12 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
 
+26. fix errors in teh case staus displays - errors are in teh console_log.dm
+
+27. depreciation module: add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth.
+
+28. 
+
 
 
 
@@ -1571,7 +1579,7 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 * ensure passwors fields are prefilled when user filles the password in teh login page - the gate page.
 * Change the system default font from Ariel to simply family font : sans-serif; no assistant no Ariel , or choose a modern look font , I hate Ariel .
 
----
+*******************************************************************************************
 
 # Admin Panel & Module System Enhancement Tasks ✅ *all finished - doesnt include teh DEV module, - needs a samll fix of the date selection fields on mobile in teh search fields section*
 
