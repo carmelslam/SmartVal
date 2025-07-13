@@ -1565,9 +1565,9 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 26. fix errors in the case staus displays - errors are in teh console_log.dm
 
 27. depreciation module: add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
-
-28. 
-
+ match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page .
+ 
+ 28. match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several componenta that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
 
 
 

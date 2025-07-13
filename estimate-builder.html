@@ -523,9 +523,13 @@
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <input type="number" id="globalDep1" placeholder="% ירידת ערך" />
-          <input type="number" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
+          <input type="text" id="globalDep1" placeholder="% ירידת ערך" />
+          <input type="text" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
         </div>
+      </div>
+      <div style="margin-top:14px;">
+        <label>ימי מוסך משוערים:</label>
+        <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" />
       </div>
     </div>
 
@@ -892,8 +896,9 @@
       }
     }
 
-    // ADD CALCULATION LISTENERS FOR SUMMARY WITH MATH.JS
+    // ADD CALCULATION LISTENERS FOR SUMMARY WITH MATH.JS - CORRECTED LOGIC
     function addSummaryCalculationListeners() {
+      const sumMarketValueInput = document.getElementById('sumMarketValue');
       const sumClaimInput = document.getElementById('sumClaim');
       const depCompensationInput = document.getElementById('depCompensation');
       const sumVATInput = document.getElementById('sumVAT');
@@ -901,13 +906,18 @@
 
       function calculateSummaryTotals() {
         try {
-          // Get base claim value
-          const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
+          // Auto-fill market value from car details market price
+          const carMarketValue = document.getElementById('carMarketValue')?.value.replace(/[₪,]/g, '') || '0';
+          if (carMarketValue && carMarketValue !== '0' && sumMarketValueInput) {
+            sumMarketValueInput.value = `₪${parseFloat(carMarketValue).toLocaleString()}`;
+          }
           
-          // Get depreciation compensation
+          // Get values - market price + claim + compensation = total
+          const marketValue = parseFloat(sumMarketValueInput?.value.replace(/[₪,]/g, '') || '0') || 0;
+          const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           const depValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           
-          // Calculate subtotal (claim + depreciation)
+          // Calculate subtotal: claim + compensation = total (market price is separate)
           const subtotal = claimValue + depValue;
           
           // Automatic calculation with math.js - Calculate VAT (18% on subtotal)
@@ -935,12 +945,21 @@
         }
       }
 
-      // Add listeners to trigger calculations
+      // Add listeners to trigger calculations for all relevant fields
+      if (sumMarketValueInput) {
+        sumMarketValueInput.addEventListener('input', calculateSummaryTotals);
+      }
       if (sumClaimInput) {
         sumClaimInput.addEventListener('input', calculateSummaryTotals);
       }
       if (depCompensationInput) {
         depCompensationInput.addEventListener('input', calculateSummaryTotals);
+      }
+      
+      // Auto-update when car market value changes
+      const carMarketValueInput = document.getElementById('carMarketValue');
+      if (carMarketValueInput) {
+        carMarketValueInput.addEventListener('input', calculateSummaryTotals);
       }
       
       // Add listeners for custom additions if they exist
@@ -1199,23 +1218,32 @@
       row.innerHTML = `
         <div><input type="text" placeholder="החלק הניזוק" value="${data?.damaged_part || ''}" /></div>
         <div><input type="text" placeholder="מהות התיקון" value="${data?.repair_type || ''}" /></div>
-        <div><input type="number" placeholder="% ירידת ערך" value="${data?.percent || ''}" /></div>
-        <div><input type="number" placeholder="ערך ב-₪" value="${data?.value || ''}" readonly style="background:#f4f6fa;" /></div>
+        <div><input type="text" placeholder="% ירידת ערך" value="${data?.percent || ''}" /></div>
+        <div><input type="text" placeholder="ערך ב-₪" value="${data?.value || ''}" readonly style="background:#f4f6fa;" /></div>
         <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
       `;
       
       container.appendChild(row);
       
       // Add listeners for calculation
-      const percentInput = row.querySelector('input[type="number"]:nth-of-type(1)');
-      const valueInput = row.querySelector('input[type="number"]:nth-of-type(2)');
+      const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+      const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
       
       percentInput.addEventListener('input', function() {
-        const percent = parseFloat(this.value) || 0;
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const marketValue = helper.expertise?.calculations?.market_value || 0;
+        let percent = parseFloat(this.value) || 0;
+        
+        // Auto-add % symbol if not present and user enters a number
+        if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+          this.value = percent + '%';
+        }
+        
+        // Calculate value from market price automatically
+        const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+        const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+        const marketValue = parseFloat(marketValueStr) || 0;
+        
         const calculatedValue = (marketValue * percent) / 100;
-        valueInput.value = calculatedValue ? Math.round(calculatedValue).toLocaleString() : '';
+        valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
       });
     }
 
@@ -1271,10 +1299,10 @@
         '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
         '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
-        '%אחוז_נזק%': helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
+        '%אחוז_נזק%': calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
         '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
         '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
-        '%ימי_מוסך%': helper.estimate_work_days || helper.depreciation?.work_days || '[ימי מוסך]',
+        '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
         '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
         '%שווי_שרידים%': helper.estimate_salvage_value ? `₪${helper.estimate_salvage_value.toLocaleString()}` : '[שווי שרידים]'
       };
@@ -1287,10 +1315,58 @@
       document.getElementById('legal-text-content').textContent = legalText;
     }
 
+    // ADD GLOBAL DEPRECIATION CALCULATION
+    function updateGlobalDepreciationCalculation() {
+      const globalDepInput = document.getElementById('globalDep1');
+      const globalDepValueInput = document.getElementById('globalDepValue');
+      
+      if (globalDepInput && globalDepValueInput) {
+        globalDepInput.addEventListener('input', function() {
+          let percent = parseFloat(this.value) || 0;
+          
+          // Auto-add % symbol if not present and user enters a number
+          if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+            this.value = percent + '%';
+          }
+          
+          // Calculate value from market price automatically
+          const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+          const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+          const marketValue = parseFloat(marketValueStr) || 0;
+          
+          const calculatedValue = (marketValue * percent) / 100;
+          globalDepValueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+        });
+      }
+    }
+    
+    // CALCULATE DAMAGE PERCENTAGE
+    function calculateDamagePercentage() {
+      try {
+        const totalClaim = parseFloat(document.getElementById('sumClaim')?.value.replace(/[₪,]/g, '') || '0') || 0;
+        const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
+        
+        if (marketValue > 0 && totalClaim > 0) {
+          const percentage = (totalClaim / marketValue) * 100;
+          return Math.round(percentage) + '%';
+        }
+        return '[אחוז נזק]';
+      } catch (error) {
+        return '[אחוז נזק]';
+      }
+    }
+
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
       loadDataFromHelper();
       loadLegalText();
+      updateGlobalDepreciationCalculation();
+      
+      // Add listener to garage days field
+      const garageDaysField = document.getElementById('garageDays');
+      if (garageDaysField) {
+        garageDaysField.addEventListener('input', loadLegalText);
+      }
       
       // Update legal text when estimate type changes
       document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
@@ -1309,6 +1385,8 @@
     window.addCustomSummaryField = addCustomSummaryField;
     window.loadDamageCentersSummary = loadDamageCentersSummary;
     window.loadLeviAdjustments = loadLeviAdjustments;
+    window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
+    window.calculateDamagePercentage = calculateDamagePercentage;
   </script>
   
   <script src="internal-browser.js"></script>
