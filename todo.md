@@ -1422,7 +1422,7 @@ Comprehensive System Fix Plan - UPDATED                      │ │
 │ ╰──────────
 
 *******************************************************************************************
-**GENERAL NOTES AND THINGS TO FIX**
+**GENERAL NOTES AND THINGS TO FIX - USER INSTRUCTIONS**
 Audit 3 : 
 Read all the issues that were found in audit 3 . Go through the issues I found. Learn them and evaluate throughout the whole system files, detect connections , relations and dependencies and evaluate functionality .
 Run your own deep check and conclude the issues broadness  inside the system .
@@ -1590,7 +1590,7 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 22 dark mode option **low priority**
 
-23. check for orphan pages
+23. check for orphan pages **medium priority**
 
 24. dev module : **low priority** total fix and integration 
 
@@ -1715,17 +1715,20 @@ We need key changes to make it useful .
 6. The user validation section stays as is for now 
 7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to .
 8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , 
-9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons 
+9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons .
+*addons*
+10. the validation page is missing the review option for teh fileed report builder 
+11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
 
 
 
 
-26. fix errors in the *case staus displays* - errors are in teh console_log.dm **high priority**
+26. fix errors in the *case staus displays* - these functions were opertaional and working good, somehow they got broken-  errors are in teh console_log.dm **high priority**
 
-27. **depreciation module:** add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
- match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page .
+27. **depreciation module:** match logic and structure to the estimate builder page but keep teh current content **important** add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
+ match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page . the current depreciation page has more options and fields than the estimate those need to stay untouched.
  
- 28. **final report valdition** match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several componenta that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
+ 28. **final report valdition** match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several components that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
 
  29. update the expertise - calling the metadat and creating version 2 - the version is just for documentaion  **low priority** 
 
