@@ -904,38 +904,46 @@
         const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
-        // Check if we have saved summary data first
-        if (helper.estimate_summary) {
-          document.getElementById('sumMarketValue').value = helper.estimate_summary.market_value || '';
-          document.getElementById('sumClaim').value = helper.estimate_summary.total_claim || '';
-          document.getElementById('sumVAT').value = helper.estimate_summary.vat || '';
-          document.getElementById('sumTotalClaim').value = helper.estimate_summary.total_with_vat || '';
-          document.getElementById('depCompensation').value = helper.estimate_summary.dep_compensation || '';
-        } else {
-          // Load from helper calculations if no saved summary
-          const marketValue = helper.expertise?.calculations?.market_value || 0;
-          const totalClaim = helper.expertise?.calculations?.total_damage || 0;
-          
-          // Set market value and claim
-          document.getElementById('sumMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          document.getElementById('sumClaim').value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
-          
-          // Calculate VAT (18%)
-          const vat = totalClaim * 0.18;
-          document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
-          
-          // Calculate total with VAT
-          const totalWithVAT = totalClaim + vat;
-          document.getElementById('sumTotalClaim').value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
-          
-          // Set depreciation compensation
-          const depCompensation = helper.expertise?.calculations?.depreciation_compensation || 0;
-          document.getElementById('depCompensation').value = depCompensation ? `₪${depCompensation.toLocaleString()}` : '';
-        }
+        // AUTO-FILL SUMMARY DATA FROM ALL SOURCES - PROPERLY LINKED
+        // Market Value - ALWAYS from Levi final price
+        const marketValue = helper.levi_report?.final_price || helper.levisummary?.final_price || helper.expertise?.calculations?.market_value || 0;
+        document.getElementById('sumMarketValue').value = marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '';
+        
+        // Total Claim - from damage calculations or sections
+        const totalClaim = helper.expertise?.calculations?.total_damage || calculateTotalFromDamageSections(helper) || 0;
+        document.getElementById('sumClaim').value = totalClaim ? `₪${parseFloat(totalClaim).toLocaleString()}` : '';
+        
+        // Depreciation Compensation - CALCULATE from global percentage
+        const globalDepPercent = parseFloat(helper.estimate_depreciation?.global_percent?.replace('%', '')) || 0;
+        const depCompensation = marketValue * (globalDepPercent / 100);
+        document.getElementById('depCompensation').value = depCompensation ? `₪${Math.round(depCompensation).toLocaleString()}` : '';
+        
+        // Calculate subtotal (claim + depreciation compensation)
+        const subtotal = parseFloat(totalClaim) + parseFloat(depCompensation);
+        
+        // Calculate VAT (18% on subtotal)
+        const vat = subtotal * 0.18;
+        document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
+        
+        // Calculate final total (subtotal + VAT)
+        const finalTotal = subtotal + vat;
+        document.getElementById('sumTotalClaim').value = finalTotal ? `₪${Math.round(finalTotal).toLocaleString()}` : '';
         
         // Load saved estimate notes if available
         if (helper.estimate_notes) {
           document.getElementById('additional-notes').value = helper.estimate_notes;
+        }
+        
+        // Load garage days from helper - PROPERLY LINKED
+        const garageDays = helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '';
+        if (garageDays && document.getElementById('garageDays')) {
+          document.getElementById('garageDays').value = garageDays;
+        }
+        
+        // Load global depreciation percentage - PROPERLY LINKED
+        const globalDepPercent = helper.estimate_depreciation?.global_percent || helper.expertise?.depreciation?.global_percent || '';
+        if (globalDepPercent && document.getElementById('globalDep1')) {
+          document.getElementById('globalDep1').value = globalDepPercent;
         }
         
         // Load saved legal text if available, otherwise load from vault
@@ -943,7 +951,7 @@
           document.getElementById('legal-text-content').value = helper.estimate_legal_text;
         } else {
           // Load default legal text from vault on first load
-          loadLegalTextFromVault();
+          setTimeout(loadLegalTextFromVault, 500); // Delay to ensure all fields are loaded
         }
         
         // Add event listeners for real-time calculations
@@ -975,8 +983,19 @@
           const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           const depValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
           
-          // Calculate subtotal: claim + compensation = total (market price is separate)
-          const subtotal = claimValue + depValue;
+          // PROPERLY LINK DEPRECIATION COMPENSATION TO GLOBAL PERCENTAGE
+          // Auto-calculate depreciation compensation from global percentage
+          const globalDepPercent = parseFloat(document.getElementById('globalDep1')?.value?.replace('%', '') || '0');
+          if (globalDepPercent > 0 && marketValue > 0) {
+            const calculatedDepValue = (marketValue * globalDepPercent) / 100;
+            if (depCompensationInput && Math.abs(depValue - calculatedDepValue) > 1) {
+              depCompensationInput.value = `₪${Math.round(calculatedDepValue).toLocaleString()}`;
+            }
+          }
+          
+          // Calculate subtotal: claim + compensation (market price is separate)
+          const finalDepValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
+          const subtotal = claimValue + finalDepValue;
           
           // Automatic calculation with math.js - Calculate VAT (18% on subtotal)
           const vatRate = 0.18;
@@ -1349,7 +1368,7 @@
       
       let legalText = legalTextsVault[selectedType] || legalTextsVault['אובדן_להלכה'];
       
-      // Enhanced placeholder mapping to actual field values - Fixed for exact vault text matching
+      // COMPLETE placeholder mapping - ALL VARIABLES PROPERLY LINKED
       const placeholders = {
         '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || '[מספר רכב]',
         '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || '[תוצרת]',
@@ -1419,18 +1438,22 @@
       
       // Enhanced placeholder mapping to actual field values
       const placeholders = {
-        '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || '[מספר רכב]',
-        '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || '[תוצרת]',
-        '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || '[דגם]',
-        '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
-        '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
-        '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
-        '%אחוז_נזק%': calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
-        '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
-        '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || helper.damage_centers?.length || '[מספר מוקדים]',
+        '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || helper.car_details?.plate || '[מספר רכב]',
+        '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '[תוצרת]',
+        '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || helper.vehicle?.model || '[דגם]',
+        '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || helper.vehicle?.year || '[שנה]',
+        '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || helper.car_details?.owner || '[שם בעל הרכב]',
+        '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || helper.levisummary?.model_code || '[קוד דגם]',
+        '%אחוז_נזק%': (calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || 0) + '%',
+        '%ירידת_ערך%': (document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '0').replace('%', '') + '%',
+        '%מוקדי_נזק%': (helper.expertise?.damage_blocks?.length || helper.damage_centers?.length || helper.damage_sections?.length || 0).toString(),
         '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
-        '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
-        '%שווי_שרידים%': helper.estimate_salvage_value ? `₪${helper.estimate_salvage_value.toLocaleString()}` : '[שווי שרידים]'
+        '%שווי_רכב%': document.getElementById('sumMarketValue')?.value || document.getElementById('carMarketValue')?.value || (helper.levi_report?.final_price ? `₪${parseFloat(helper.levi_report.final_price).toLocaleString()}` : '[שווי רכב]'),
+        '%שווי_שרידים%': helper.estimate_salvage_value ? `₪${helper.estimate_salvage_value.toLocaleString()}` : '[שווי שרידים]',
+        '%סה_כ_תביעה%': document.getElementById('sumClaim')?.value || '[סה״כ תביעה]',
+        '%פיצוי_ירידת_ערך%': document.getElementById('depCompensation')?.value || '[פיצוי ירידת ערך]',
+        '%מע_מ%': document.getElementById('sumVAT')?.value || '[מע״מ]',
+        '%סה_כ_סופי%': document.getElementById('sumTotalClaim')?.value || '[סה״כ סופי]'
       };
       
       // Replace placeholders
@@ -1491,16 +1514,21 @@
     // CALCULATE DAMAGE PERCENTAGE
     function calculateDamagePercentage() {
       try {
-        const totalClaim = parseFloat(document.getElementById('sumClaim')?.value.replace(/[₪,]/g, '') || '0') || 0;
-        const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
+        // Get values from multiple sources - PROPERLY LINKED
+        const totalClaimField = document.getElementById('sumClaim')?.value || document.getElementById('totalClaim')?.value || '0';
+        const marketValueField = document.getElementById('sumMarketValue')?.value || document.getElementById('carMarketValue')?.value || '0';
+        
+        const totalClaim = parseFloat(totalClaimField.replace(/[₪,]/g, '')) || 0;
+        const marketValue = parseFloat(marketValueField.replace(/[₪,]/g, '')) || 0;
         
         if (marketValue > 0 && totalClaim > 0) {
           const percentage = (totalClaim / marketValue) * 100;
-          return Math.round(percentage) + '%';
+          return Math.round(percentage);
         }
-        return '[אחוז נזק]';
+        return 0;
       } catch (error) {
-        return '[אחוז נזק]';
+        console.error('Error calculating damage percentage:', error);
+        return 0;
       }
     }
 
