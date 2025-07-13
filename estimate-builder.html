@@ -864,15 +864,21 @@
         hasHelper: !!helperData
       });
       
-      // Only enforce strict validation if we have neither report type nor plate
-      if (!selectedReportType && !plateNumber) {
-        console.error('❌ No route information found - missing both report type and plate');
-        showAlert('שגיאה: לא נמצא מידע על המסלול. אנא התחל מדף הבחירה', 'error');
+      // More flexible validation - only redirect if we're clearly in a bad state
+      // Allow direct access or when coming from valid workflows
+      
+      // If coming from a different report type, redirect appropriately
+      if (selectedReportType === 'final') {
+        console.warn('⚠️ Redirecting to final report builder');
+        showAlert('מעביר לבניית דו"ח סופי...', 'warning');
         setTimeout(() => {
-          window.location.href = 'selection.html';
-        }, 3000);
+          window.location.href = 'depreciation-module.html';
+        }, 2000);
         return;
       }
+      
+      // For all other cases (estimate, no type, or direct access), allow through
+      console.log('✅ Allowing access to estimate builder');
       
       // Handle different entry points
       let helper = null;
@@ -905,16 +911,6 @@
           damage_sections: [],
           calculations: {}
         };
-      }
-      
-      // Validate report type routing (only redirect if clearly wrong)
-      if (selectedReportType && selectedReportType === 'final') {
-        console.warn('⚠️ Redirecting to final report builder');
-        showAlert('מעביר לבניית דו"ח סופי...', 'warning');
-        setTimeout(() => {
-          window.location.href = 'depreciation-module.html';
-        }, 2000);
-        return;
       }
       
       console.log('✅ Estimate Builder: Initialization complete');

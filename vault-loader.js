@@ -144,6 +144,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('✅ Vault loader initialized with legal texts');
 });
 
+// Convenience function for loading legal text
+export function loadLegalText(key, subkey = 'text') {
+  return vaultLoader.getText(key, subkey);
+}
+
 // Export for module use
 export { VaultLoader, vaultLoader };
 export default vaultLoader;
