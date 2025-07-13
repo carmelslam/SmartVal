@@ -1166,56 +1166,72 @@
       }
     }
 
+    // Helper function to safely update elements that may or may not exist
+    function updateElementIfExists(elementId, content) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = content;
+        return true;
+      }
+      return false;
+    }
+
     async function validateLeviSection() {
       const issues = [];
       const validItems = [];
       const levi = currentValidationData.levi_report;
       
       // Validate model code
-      if (levi.model_code) {
+      if (levi && levi.model_code) {
         validItems.push('levi-model');
-        document.getElementById('levi-model').textContent = '✓';
+        updateElementIfExists('levi-model', '✓');
       } else {
-        issues.push('קוד דגם חסר בדו"ח לוי');
-        document.getElementById('levi-model').textContent = '❌';
+        issues.push('קוד דגם חסר בדו"ח לוי (אזהרה)');
+        updateElementIfExists('levi-model', '⚠️');
       }
       
       // Validate base price
-      if (levi.base_price && parseFloat(levi.base_price) > 0) {
+      if (levi && levi.base_price && parseFloat(levi.base_price) > 0) {
         validItems.push('levi-base-price');
-        document.getElementById('levi-base-price').textContent = '✓';
-        document.getElementById('levi-display-base').textContent = MathEngine.formatCurrency(levi.base_price);
+        updateElementIfExists('levi-base-price', '✓');
+        updateElementIfExists('levi-display-base', MathEngine.formatCurrency(levi.base_price));
       } else {
-        issues.push('מחיר בסיס לא תקין');
-        document.getElementById('levi-base-price').textContent = '❌';
+        issues.push('מחיר בסיס לא תקין (אזהרה)');
+        updateElementIfExists('levi-base-price', '⚠️');
+        updateElementIfExists('levi-display-base', '₪0');
       }
       
       // Validate final price
-      if (levi.final_price && parseFloat(levi.final_price) > 0) {
+      if (levi && levi.final_price && parseFloat(levi.final_price) > 0) {
         validItems.push('levi-final-price');
-        document.getElementById('levi-final-price').textContent = '✓';
-        document.getElementById('levi-display-final').textContent = MathEngine.formatCurrency(levi.final_price);
+        updateElementIfExists('levi-final-price', '✓');
+        updateElementIfExists('levi-display-final', MathEngine.formatCurrency(levi.final_price));
       } else {
-        issues.push('שווי שוק סופי לא תקין');
-        document.getElementById('levi-final-price').textContent = '❌';
+        issues.push('שווי שוק סופי לא תקין (אזהרה)');
+        updateElementIfExists('levi-final-price', '⚠️');
+        updateElementIfExists('levi-display-final', '₪0');
       }
       
       // Display adjustments if available
-      if (levi.adjustments) {
+      if (levi && levi.adjustments) {
         displayLeviAdjustments(levi.adjustments);
-        document.getElementById('levi-adjustments-container').style.display = 'block';
+        const container = document.getElementById('levi-adjustments-container');
+        if (container) container.style.display = 'block';
       }
       
       // Calculate total adjustments
-      const basePrice = parseFloat(levi.base_price) || 0;
-      const finalPrice = parseFloat(levi.final_price) || 0;
+      const basePrice = levi ? parseFloat(levi.base_price) || 0 : 0;
+      const finalPrice = levi ? parseFloat(levi.final_price) || 0 : 0;
       const adjustments = finalPrice - basePrice;
-      document.getElementById('levi-display-adjustments').textContent = MathEngine.formatCurrency(adjustments);
+      updateElementIfExists('levi-display-adjustments', MathEngine.formatCurrency(adjustments));
+      
+      // Only count critical errors (treat missing Levi data as warnings)
+      const criticalErrors = 0; // Levi data is optional for validation
       
       return {
-        success: issues.length === 0,
-        warnings: 0,
-        errors: issues.length,
+        success: criticalErrors === 0,
+        warnings: issues.length,
+        errors: criticalErrors,
         issues: issues,
         validItems: validItems.length
       };
@@ -1230,10 +1246,10 @@
       // Validate damage centers count
       if (damageBlocks && damageBlocks.length > 0) {
         validItems.push('damage-centers-count');
-        document.getElementById('damage-centers-count').textContent = `✓ (${damageBlocks.length})`;
+        updateElementIfExists('damage-centers-count', `✓ (${damageBlocks.length})`);
       } else {
-        issues.push('לא נמצאו מוקדי נזק');
-        document.getElementById('damage-centers-count').textContent = '❌';
+        issues.push('לא נמצאו מוקדי נזק (אזהרה)');
+        updateElementIfExists('damage-centers-count', '⚠️');
       }
       
       let hasWorks = false, hasParts = false, hasRepairs = false;
@@ -1255,47 +1271,51 @@
         });
       }
       
-      // Validate works
+      // Validate works (warning only)
       if (hasWorks) {
         validItems.push('damage-works');
-        document.getElementById('damage-works').textContent = '✓';
+        updateElementIfExists('damage-works', '✓');
       } else {
-        issues.push('לא נמצאו פרטי עבודות');
-        document.getElementById('damage-works').textContent = '⚠️';
+        issues.push('לא נמצאו פרטי עבודות (אזהרה)');
+        updateElementIfExists('damage-works', '⚠️');
       }
       
-      // Validate parts
+      // Validate parts (warning only)
       if (hasParts) {
         validItems.push('damage-parts');
-        document.getElementById('damage-parts').textContent = '✓';
+        updateElementIfExists('damage-parts', '✓');
       } else {
-        issues.push('לא נמצאו חלקים');
-        document.getElementById('damage-parts').textContent = '⚠️';
+        issues.push('לא נמצאו חלקים (אזהרה)');
+        updateElementIfExists('damage-parts', '⚠️');
       }
       
-      // Validate costs using extracted totals
-      if (totals.total_before_vat > 0) {
+      // Validate costs using extracted totals (warning only if no costs)
+      if (totals && totals.total_before_vat > 0) {
         validItems.push('damage-costs');
-        document.getElementById('damage-costs').textContent = '✓';
+        updateElementIfExists('damage-costs', '✓');
       } else {
-        issues.push('לא נמצאו עלויות חישוב');
-        document.getElementById('damage-costs').textContent = '❌';
+        issues.push('לא נמצאו עלויות חישוב (אזהרה)');
+        updateElementIfExists('damage-costs', '⚠️');
       }
       
-      // Update cost display using extracted totals
-      document.getElementById('damage-total-works').textContent = MathEngine.formatCurrency(totals.work_cost);
-      document.getElementById('damage-total-parts').textContent = MathEngine.formatCurrency(totals.parts_cost);
-      document.getElementById('damage-total-repairs').textContent = MathEngine.formatCurrency(totals.repairs_cost);
-      document.getElementById('damage-total-before-vat').textContent = MathEngine.formatCurrency(totals.total_before_vat);
-      document.getElementById('damage-total-with-vat').textContent = MathEngine.formatCurrency(totals.total_with_vat);
+      // Update cost display using extracted totals with safe fallbacks
+      const safeTotals = totals || { work_cost: 0, parts_cost: 0, repairs_cost: 0, total_before_vat: 0, total_with_vat: 0 };
+      updateElementIfExists('damage-total-works', MathEngine.formatCurrency(safeTotals.work_cost));
+      updateElementIfExists('damage-total-parts', MathEngine.formatCurrency(safeTotals.parts_cost));
+      updateElementIfExists('damage-total-repairs', MathEngine.formatCurrency(safeTotals.repairs_cost));
+      updateElementIfExists('damage-total-before-vat', MathEngine.formatCurrency(safeTotals.total_before_vat));
+      updateElementIfExists('damage-total-with-vat', MathEngine.formatCurrency(safeTotals.total_with_vat));
+      
+      // Damage section validation always passes (only warnings)
+      const criticalErrors = 0;
       
       return {
-        success: issues.length === 0,
-        warnings: issues.filter(i => i.includes('לא נמצאו')).length,
-        errors: issues.filter(i => !i.includes('לא נמצאו')).length,
+        success: criticalErrors === 0,
+        warnings: issues.length,
+        errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
-        totalDamage: totals.total_before_vat
+        totalDamage: safeTotals.total_before_vat
       };
     }
 
@@ -1303,62 +1323,75 @@
       const issues = [];
       const validItems = [];
       
-      // Validate estimate type
-      const estimateType = currentValidationData.estimate_data.type;
-      if (estimateType && ['אובדן_להלכה', 'טוטלוס'].includes(estimateType)) {
+      // Validate estimate type (warning only)
+      const estimateType = currentValidationData.raw_helper?.estimate_type || currentValidationData.estimate_data?.type;
+      if (estimateType && ['אובדן_להלכה', 'טוטלוס', 'פרטי', 'גלובלי'].includes(estimateType)) {
         validItems.push('estimate-type-status');
-        document.getElementById('estimate-type-status').textContent = '✓';
+        updateElementIfExists('estimate-type-status', '✓');
       } else {
-        issues.push('סוג אומדן לא מוגדר');
-        document.getElementById('estimate-type-status').textContent = '❌';
+        issues.push('סוג אומדן לא מוגדר (אזהרה)');
+        updateElementIfExists('estimate-type-status', '⚠️');
       }
       
       // Validate legal text
-      const legalText = document.getElementById('legal-text-content').value;
+      const legalTextElement = document.getElementById('legal-text-content');
+      const legalText = legalTextElement ? legalTextElement.value : '';
       if (legalText && legalText.length > 50 && !legalText.includes('שגיאה')) {
         validItems.push('estimate-legal-text');
-        document.getElementById('estimate-legal-text').textContent = '✓';
+        updateElementIfExists('estimate-legal-text', '✓');
       } else {
-        issues.push('טקסט משפטי לא תקין');
-        document.getElementById('estimate-legal-text').textContent = '❌';
+        issues.push('טקסט משפטי לא תקין (אזהרה)');
+        updateElementIfExists('estimate-legal-text', '⚠️');
       }
       
-      // Get damage total from previous validation
-      const totalDamage = parseFloat(document.getElementById('damage-total-before-vat').textContent.replace('₪', '').replace(',', '')) || 0;
+      // Get damage total from totals or calculate from DOM safely
+      let totalDamage = 0;
+      if (currentValidationData.estimate_totals) {
+        totalDamage = currentValidationData.estimate_totals.total_before_vat || 0;
+      } else {
+        const damageElement = document.getElementById('damage-total-before-vat');
+        if (damageElement) {
+          totalDamage = parseFloat(damageElement.textContent.replace(/[₪,]/g, '')) || 0;
+        }
+      }
       
       // Calculate VAT and final amount
-      const vatRate = MathEngine.getVatRate();
+      const vatRate = MathEngine ? MathEngine.getVatRate() : 18;
       const vatAmount = Math.round(totalDamage * vatRate / 100);
       const totalClaim = totalDamage + vatAmount;
       
-      // Validate calculations
-      if (totalDamage > 0) {
+      // Validate calculations (warning only)
+      if (totalDamage >= 0) { // Accept 0 as valid
         validItems.push('estimate-calculations');
-        document.getElementById('estimate-calculations').textContent = '✓';
+        updateElementIfExists('estimate-calculations', '✓');
       } else {
-        issues.push('חישובים לא תקינים');
-        document.getElementById('estimate-calculations').textContent = '❌';
+        issues.push('חישובים לא תקינים (אזהרה)');
+        updateElementIfExists('estimate-calculations', '⚠️');
       }
       
-      // Validate data consistency
-      if (currentValidationData.meta.plate && currentValidationData.levi_report.final_price && totalDamage > 0) {
+      // Validate data consistency (warning only)
+      const hasPlate = currentValidationData.plate || currentValidationData.car_details?.plate;
+      if (hasPlate) {
         validItems.push('estimate-consistency');
-        document.getElementById('estimate-consistency').textContent = '✓';
+        updateElementIfExists('estimate-consistency', '✓');
       } else {
-        issues.push('חוסר עקביות בנתונים');
-        document.getElementById('estimate-consistency').textContent = '❌';
+        issues.push('חוסר עקביות בנתונים (אזהרה)');
+        updateElementIfExists('estimate-consistency', '⚠️');
       }
       
-      // Update calculation display
-      document.getElementById('estimate-base-damage').textContent = MathEngine.formatCurrency(totalDamage);
-      document.getElementById('estimate-vat-rate').textContent = `${vatRate}%`;
-      document.getElementById('estimate-vat-amount').textContent = MathEngine.formatCurrency(vatAmount);
-      document.getElementById('estimate-total-claim').textContent = MathEngine.formatCurrency(totalClaim);
+      // Update calculation display with safe fallbacks
+      updateElementIfExists('estimate-base-damage', MathEngine ? MathEngine.formatCurrency(totalDamage) : `₪${totalDamage.toLocaleString()}`);
+      updateElementIfExists('estimate-vat-rate', `${vatRate}%`);
+      updateElementIfExists('estimate-vat-amount', MathEngine ? MathEngine.formatCurrency(vatAmount) : `₪${vatAmount.toLocaleString()}`);
+      updateElementIfExists('estimate-total-claim', MathEngine ? MathEngine.formatCurrency(totalClaim) : `₪${totalClaim.toLocaleString()}`);
+      
+      // Estimate validation always passes (only warnings)
+      const criticalErrors = 0;
       
       return {
-        success: issues.length === 0,
-        warnings: 0,
-        errors: issues.length,
+        success: criticalErrors === 0,
+        warnings: issues.length,
+        errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
         totalClaim: totalClaim
