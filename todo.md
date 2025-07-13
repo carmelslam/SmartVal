@@ -1594,7 +1594,131 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 24. dev module : **low priority** total fix and integration 
 
-25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
+25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the expertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
+
+26. **High Priority:** Validation Pages: Validation pages are created for each report separately in two locations:
+
+- The Report Workflow
+- The Generate Report Wizard (except Expertise)
+
+The Validation Page is a template utilized in both locations. Validation is required for:
+
+- Expertise Report
+- Estimate Report (both types)
+- Final Report (all types)
+
+Validation is performed at two levels:
+
+- System Level:
+  - Automatically checks the validity and integrity of the report’s sections.
+  - Checks for gaps and misalignments.
+  - Extracts main information such as titles of sections/subsections, their descriptions, and properties.
+  - Total costs
+
+- Legal Text: Displays the correct legal text in a window, editable, and requires validation.
+  - All validation items are editable.
+
+- User Level:
+  - Reviews the automatic validation.
+  - Edits fields or legal text as needed.
+  - Saves and confirms.
+  - User modifications become the system truth.
+
+Validation pages are constructed according to each report structure, sections, and legality features:
+
+- Expertise:
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+  - Summary: Status and Comments
+
+- All are editable and can be ignored if missing.
+
+- Estimate Report: Based on the Final Report HTML Builder
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+
+**Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Final Report:**
+
+**Fee Module:**
+
+*   **Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+*   **Car + General Details:**
+    *   **Levi Report Upload:**
+        *   **Name:**
+        *   **Description:**
+        *   **Works:**
+            *   **Total Works:**
+            *   **Total Costs:**
+        *   **Parts:**
+            **Total Parts:**
+
+*   **Total Costs:**
+
+*   **Repairs:**
+
+    *   **Total Repairs:**
+
+    *   **Total Costs:**
+
+**Levi Price Adjustments Calculations:**
+
+*   **Base Price:**
+
+*   **Adjustments:**
+
+*   **Damage Percentage Calculations:**
+
+*   **Market Price:**
+
+**Depreciation Module Integrity:**
+
+*   **Depreciation per Damage Center and Global:**
+
+*   **Final Report Summary:**
+
+**Legal Text:** Display the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Validation is based on the section of each report and its pulling of the actual data for final review.**
+
+
+
+Estimate Validation page : follow ups 
+
+Current estimate validation page is widely ok .
+We need key changes to make it useful .
+1. Each section pulls the relevant data from the helper / the builder as follows 
+    1. whatever available data in the builder should be the source of the validation section 
+    2. Damage center subtotals are pulled from the damage center section
+    3. Any other data that doesn’t exist in the builder or the damage center section , is pulled from the  helper directly.
+2. Each section has an automatic system validation that checks the integrity of data and report required sections 
+3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌ 
+4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report 
+5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder .
+6. The user validation section stays as is for now 
+7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to .
+8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , 
+9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons 
+
+
+
 
 26. fix errors in the *case staus displays* - errors are in teh console_log.dm **high priority**
 
@@ -1604,6 +1728,8 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
  28. **final report valdition** match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several componenta that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
 
  29. update the expertise - calling the metadat and creating version 2 - the version is just for documentaion  **low priority** 
+
+
 
 
 
