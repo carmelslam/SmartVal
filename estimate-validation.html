@@ -549,25 +549,19 @@
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div class="validation-item">
-          <span class="validation-label">קוד דגם ואימות מודל</span>
-          <span class="validation-status" id="levi-model">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">מחיר בסיס מאושר</span>
-          <span class="validation-status" id="levi-base-price">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">שווי שוק סופי</span>
-          <span class="validation-status" id="levi-final-price">⏳</span>
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
         </div>
         
-        <!-- Levi Adjustments Display -->
-        <div class="levi-adjustments" id="levi-adjustments-container" style="display:none;">
-          <div class="levi-adjustments-title">התאמות מחיר מדו"ח לוי יצחק</div>
-          <div id="levi-adjustments-content">
-            <!-- Will be populated dynamically -->
-          </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
+        </div>
+        
+        <div id="levi-validation-items">
+          <!-- Will be populated by JavaScript with enhanced 3-column display -->
         </div>
         
         <!-- Cost Summary -->
@@ -1179,58 +1173,70 @@
     async function validateLeviSection() {
       const issues = [];
       const validItems = [];
-      const levi = currentValidationData.levi_report;
       
-      // Validate model code
-      if (levi && levi.model_code) {
-        validItems.push('levi-model');
-        updateElementIfExists('levi-model', '✓');
-      } else {
-        issues.push('קוד דגם חסר בדו"ח לוי (אזהרה)');
-        updateElementIfExists('levi-model', '⚠️');
-      }
+      // Get current values from enhanced validation display (same as car details)
+      const basePriceValue = getCurrentFieldValue('levi_base_price');
+      const marketValueValue = getCurrentFieldValue('levi_market_value');
       
-      // Validate base price
-      if (levi && levi.base_price && parseFloat(levi.base_price) > 0) {
+      console.log('🔍 Levi validation - Base price:', basePriceValue, 'Market value:', marketValueValue);
+      
+      // Validate base price - CRITICAL field (not optional)
+      const basePrice = parseFloat(basePriceValue?.replace(/[₪,]/g, '')) || 0;
+      if (basePrice > 1000) { // Minimum reasonable car value
         validItems.push('levi-base-price');
-        updateElementIfExists('levi-base-price', '✓');
-        updateElementIfExists('levi-display-base', MathEngine.formatCurrency(levi.base_price));
+        setFieldValidationStatus('levi_base_price', '✓');
+        updateElementIfExists('levi-display-base', MathEngine.formatCurrency(basePrice));
       } else {
-        issues.push('מחיר בסיס לא תקין (אזהרה)');
-        updateElementIfExists('levi-base-price', '⚠️');
+        issues.push('מחיר בסיס חסר או לא תקין (נדרש מעל ₪1,000)');
+        setFieldValidationStatus('levi_base_price', '❌');
         updateElementIfExists('levi-display-base', '₪0');
       }
       
-      // Validate final price
-      if (levi && levi.final_price && parseFloat(levi.final_price) > 0) {
-        validItems.push('levi-final-price');
-        updateElementIfExists('levi-final-price', '✓');
-        updateElementIfExists('levi-display-final', MathEngine.formatCurrency(levi.final_price));
+      // Validate market value - CRITICAL field (not optional)
+      const marketValue = parseFloat(marketValueValue?.replace(/[₪,]/g, '')) || 0;
+      if (marketValue > 1000) { // Minimum reasonable car value
+        validItems.push('levi-market-value');
+        setFieldValidationStatus('levi_market_value', '✓');
+        updateElementIfExists('levi-display-final', MathEngine.formatCurrency(marketValue));
       } else {
-        issues.push('שווי שוק סופי לא תקין (אזהרה)');
-        updateElementIfExists('levi-final-price', '⚠️');
+        issues.push('שווי שוק סופי חסר או לא תקין (נדרש מעל ₪1,000)');
+        setFieldValidationStatus('levi_market_value', '❌');
         updateElementIfExists('levi-display-final', '₪0');
       }
       
-      // Display adjustments if available
-      if (levi && levi.adjustments) {
-        displayLeviAdjustments(levi.adjustments);
-        const container = document.getElementById('levi-adjustments-container');
-        if (container) container.style.display = 'block';
+      // Validate adjustments (if they exist) 
+      const data = currentValidationData;
+      const levi = data.levi_report || {};
+      if (levi.adjustments || data.raw_helper?.levi_report?.adjustments) {
+        const adjustments = levi.adjustments || data.raw_helper.levi_report.adjustments;
+        Object.keys(adjustments).forEach(key => {
+          const adjustment = adjustments[key];
+          if (adjustment && (adjustment.percentage || adjustment.value)) {
+            const adjFieldKey = `levi_adj_${key.replace(/\s+/g, '_')}`;
+            const adjValue = getCurrentFieldValue(adjFieldKey);
+            if (adjValue && adjValue !== 'לא זמין') {
+              validItems.push(adjFieldKey);
+              setFieldValidationStatus(adjFieldKey, '✓');
+            }
+          }
+        });
       }
       
-      // Calculate total adjustments
-      const basePrice = levi ? parseFloat(levi.base_price) || 0 : 0;
-      const finalPrice = levi ? parseFloat(levi.final_price) || 0 : 0;
-      const adjustments = finalPrice - basePrice;
+      // Calculate total adjustments for display
+      const adjustments = marketValue - basePrice;
       updateElementIfExists('levi-display-adjustments', MathEngine.formatCurrency(adjustments));
       
-      // Only count critical errors (treat missing Levi data as warnings)
-      const criticalErrors = 0; // Levi data is optional for validation
+      // CRITICAL ERRORS COUNT - Fix auto-completion issue
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
+      
+      // STRICT VALIDATION: Both base price and market value are REQUIRED
+      const hasCriticalData = basePrice > 1000 && marketValue > 1000;
+      
+      console.log('🔍 Levi validation result - Critical errors:', criticalErrors, 'Has critical data:', hasCriticalData);
       
       return {
-        success: criticalErrors === 0,
-        warnings: issues.length,
+        success: criticalErrors === 0 && hasCriticalData, // Must have valid data AND no errors
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length
@@ -1552,6 +1558,35 @@
         case 'insurance':
           helper.insurance_company = newValue;
           break;
+        
+        // Levi fields
+        case 'levi_base_price':
+          const basePrice = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
+          if (!helper.levi_report) helper.levi_report = {};
+          helper.levi_report.base_price = basePrice;
+          helper.base_price = basePrice; // Fallback location
+          break;
+        case 'levi_market_value':
+          const marketValue = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
+          if (!helper.levi_report) helper.levi_report = {};
+          helper.levi_report.final_price = marketValue;
+          helper.levi_report.market_value = marketValue;
+          helper.market_value = marketValue; // Fallback location
+          break;
+        
+        // Levi adjustment fields (dynamic)
+        default:
+          if (fieldKey.startsWith('levi_adj_')) {
+            const adjKey = fieldKey.replace('levi_adj_', '').replace(/_/g, ' ');
+            const adjValue = parseFloat(newValue.replace(/[₪,+-]/g, '')) || 0;
+            if (!helper.levi_report) helper.levi_report = {};
+            if (!helper.levi_report.adjustments) helper.levi_report.adjustments = {};
+            helper.levi_report.adjustments[adjKey] = {
+              value: adjValue,
+              percentage: 0 // Can be updated if needed
+            };
+          }
+          break;
       }
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -1570,8 +1605,17 @@
         'model': 'דגם',
         'year': 'שנת יצור',
         'owner_name': 'שם בעלים',
-        'insurance': 'חברת ביטוח'
+        'insurance': 'חברת ביטוח',
+        'levi_base_price': 'מחיר בסיס',
+        'levi_market_value': 'שווי שוק סופי'
       };
+      
+      // Handle dynamic Levi adjustment fields
+      if (fieldKey.startsWith('levi_adj_')) {
+        const adjKey = fieldKey.replace('levi_adj_', '').replace(/_/g, ' ');
+        return `התאמת מחיר: ${adjKey}`;
+      }
+      
       return labels[fieldKey] || fieldKey;
     }
 
@@ -1751,10 +1795,63 @@
       return titles[sectionName] || sectionName;
     }
 
-    // Enhanced validation items for other sections (to be implemented)
+    // Enhanced validation items for Levi section (3-column structure like car details)
     function populateLeviValidationItems() {
-      console.log('📄 Levi section validation items - using current structure for now');
-      // For now, keep existing structure - can be enhanced later
+      const container = document.getElementById('levi-validation-items');
+      if (!container) return;
+      
+      const data = currentValidationData;
+      const levi = data.levi_report || {};
+      const helper = data.raw_helper;
+      
+      console.log('📄 Populating Levi validation items with enhanced 3-column display');
+      
+      let leviHTML = '';
+      
+      // 1. Base Price validation (replaces model validation)
+      const basePrice = levi.base_price || helper?.levi_report?.base_price || '';
+      const storedBasePrice = helper?.levi_report?.base_price || helper?.base_price || '';
+      
+      leviHTML += createEnhancedValidationItem(
+        'מחיר בסיס', 
+        basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : '', 
+        storedBasePrice ? `₪${parseFloat(storedBasePrice).toLocaleString()}` : '', 
+        'levi_base_price'
+      );
+      
+      // 2. Dynamic validation rows for each price adjustment
+      if (levi.adjustments || helper?.levi_report?.adjustments) {
+        const adjustments = levi.adjustments || helper.levi_report.adjustments;
+        Object.keys(adjustments).forEach(key => {
+          const adjustment = adjustments[key];
+          if (adjustment && (adjustment.percentage || adjustment.value)) {
+            const adjustmentType = adjustment.percentage > 0 ? 'תוספת' : 'הפחתה';
+            const adjustmentSymbol = adjustment.percentage > 0 ? '+' : '-';
+            const adjustmentValue = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+            
+            leviHTML += createEnhancedValidationItem(
+              `${key} (${adjustmentType})`, 
+              adjustmentValue,
+              adjustmentValue, // Same for stored since it comes from Levi report
+              `levi_adj_${key.replace(/\s+/g, '_')}`
+            );
+          }
+        });
+      }
+      
+      // 3. Market Price validation (final calculated price)
+      const marketValue = levi.final_price || levi.market_value || helper?.levi_report?.final_price || '';
+      const storedMarketValue = helper?.levi_report?.final_price || helper?.market_value || '';
+      
+      leviHTML += createEnhancedValidationItem(
+        'שווי שוק סופי', 
+        marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '', 
+        storedMarketValue ? `₪${parseFloat(storedMarketValue).toLocaleString()}` : '', 
+        'levi_market_value'
+      );
+      
+      container.innerHTML = leviHTML;
+      console.log('✅ Levi validation items populated with enhanced 3-column structure');
     }
 
     function populateDamageValidationItems() {
