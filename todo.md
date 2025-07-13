@@ -1717,14 +1717,14 @@ We need key changes to make it useful .
 8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , 
 9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons .
 *addons*
-10. the validation page is missing the review option for teh fileed report builder 
+10. the validation page is missing the review option for the filled report builder 
 11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
-12, the damge percentage on the text is not correct 
-13. the text in teh the validation needs to be  taken from teh text in the builder not from teh vault 
-14. the levi validation is not pulling data - it shows 0 
-16. fifnsh the validation page with teh same logic 
+12, the damge percentage in the text is not correct 
+13. the text in  the validation needs to be  taken from the text in the builder not from the vault 
+14. the levi validation is not pulling data - it shows 0 ✅ 
+16. finish the validation page with the same logic 
 17. *validation flow :* The optimal flow should be Helper → Builder → Validation, with updates looping back to the Helper. Validation primarily retrieves data from the Builder, which itself pulls initial data from the Helper, enabling edits that override the Helper and establish the Builder as the source of truth. In the Builder, the תוספות והורדות section must specifically draw adjustments from the Helper, clearly stating their descriptions, percentages, and values. Editing a field within either the Builder or Validation updates and overrides the Helper accordingly. While Validation should ideally never source directly from the Helper, minimal fallback cases are permitted if data is missing from the Builder—however, these cases must be minimized to zero, precisely why the Builder has been enhanced to maintain full data integrity throughout the workflow. Complete Data Flow: Initially, the Builder loads data from the Helper. The user then makes edits directly in the Builder, with changes stored temporarily in the DOM. Upon clicking "Save Estimate," these edits are committed, and the Builder selectively overrides only the changed data within the Helper. Finally, Validation retrieves data from the Helper, which now reflects all Builder updates and overrides, serving as the accurate source of truth for validation purposes.
-
+18. add a depreciation section in the validation page . use the same logic, the depreciation is only in the builder and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי:
 
 
 
