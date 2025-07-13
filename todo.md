@@ -1562,9 +1562,9 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the xpertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state.
 
-26. fix errors in teh case staus displays - errors are in teh console_log.dm
+26. fix errors in the case staus displays - errors are in teh console_log.dm
 
-27. depreciation module: add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth.
+27. depreciation module: add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
 
 28. 
 
