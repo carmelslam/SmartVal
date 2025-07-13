@@ -1007,7 +1007,18 @@
       // Auto-update when car market value changes
       const carMarketValueInput = document.getElementById('carMarketValue');
       if (carMarketValueInput) {
-        carMarketValueInput.addEventListener('input', calculateSummaryTotals);
+        carMarketValueInput.addEventListener('input', () => {
+          calculateSummaryTotals();
+          triggerGlobalDepreciationCalc(); // Recalculate global depreciation when market value changes
+        });
+      }
+      
+      // Auto-update when summary market value changes
+      if (sumMarketValueInput) {
+        sumMarketValueInput.addEventListener('input', () => {
+          calculateSummaryTotals();
+          triggerGlobalDepreciationCalc(); // Recalculate global depreciation when market value changes
+        });
       }
       
       // ADD EVENT LISTENERS FOR SOURCE FIELDS TO AUTO-UPDATE SUMMARY
@@ -1438,10 +1449,30 @@
             this.value = percent + '%';
           }
           
-          // Calculate value from market price automatically
-          const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
-          const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
-          const marketValue = parseFloat(marketValueStr) || 0;
+          // Calculate value from market price automatically - try multiple sources
+          let marketValue = 0;
+          
+          // First try summary market value (priority)
+          const sumMarketValueField = document.getElementById('sumMarketValue');
+          if (sumMarketValueField && sumMarketValueField.value) {
+            const sumMarketStr = sumMarketValueField.value.replace(/[₪,]/g, '') || '0';
+            marketValue = parseFloat(sumMarketStr) || 0;
+          }
+          
+          // If no summary value, try car details market value
+          if (marketValue === 0) {
+            const carMarketValueField = document.getElementById('carMarketValue');
+            if (carMarketValueField && carMarketValueField.value) {
+              const carMarketStr = carMarketValueField.value.replace(/[₪,]/g, '') || '0';
+              marketValue = parseFloat(carMarketStr) || 0;
+            }
+          }
+          
+          console.log('Global depreciation calculation:', {
+            percent,
+            marketValue,
+            calculation: (marketValue * percent) / 100
+          });
           
           const calculatedValue = (marketValue * percent) / 100;
           globalDepValueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
@@ -1479,11 +1510,23 @@
       }
     }
 
+    // TRIGGER GLOBAL DEPRECIATION CALCULATION
+    function triggerGlobalDepreciationCalc() {
+      const globalDepInput = document.getElementById('globalDep1');
+      if (globalDepInput && globalDepInput.value) {
+        const event = new Event('input', { bubbles: true });
+        globalDepInput.dispatchEvent(event);
+      }
+    }
+
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
       loadDataFromHelper();
       loadLegalText();
       updateGlobalDepreciationCalculation();
+      
+      // Trigger initial calculation after page loads
+      setTimeout(triggerGlobalDepreciationCalc, 500);
       
       // Add listener to garage days field
       const garageDaysField = document.getElementById('garageDays');
@@ -1522,6 +1565,7 @@
     window.loadLeviAdjustments = loadLeviAdjustments;
     window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
     window.calculateDamagePercentage = calculateDamagePercentage;
+    window.triggerGlobalDepreciationCalc = triggerGlobalDepreciationCalc;
   </script>
   
   <script src="internal-browser.js"></script>
