@@ -173,32 +173,6 @@
       gap: 10px;
       align-items: center;
     }
-    
-    /* Enhanced 5-Column Validation Display for Levi/Financial sections */
-    .validation-item-financial {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr auto;
-      gap: 10px;
-      padding: 15px 0;
-      border-bottom: 1px solid #e2e8f0;
-      align-items: center;
-    }
-    .validation-item-financial:last-child {
-      border-bottom: none;
-    }
-    .financial-field-name {
-      font-weight: 500;
-      color: #374151;
-    }
-    .financial-calculation {
-      font-size: 12px;
-      color: #64748b;
-      text-align: center;
-      padding: 6px 8px;
-      background: #f8fafc;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
-    }
     .current-value {
       font-weight: 600;
       color: #1e3a8a;
@@ -558,7 +532,7 @@
         </div>
         
         <div id="vehicle-validation-items">
-          <!-- Will be populated by JavaScript with 3-column enhanced display -->
+          <!-- Will be populated by JavaScript -->
         </div>
       </div>
       <div class="validation-buttons">
@@ -575,24 +549,29 @@
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
-          <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
+        <div class="validation-item">
+          <span class="validation-label">קוד דגם ואימות מודל</span>
+          <span class="validation-status" id="levi-model">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">מחיר בסיס מאושר</span>
+          <span class="validation-status" id="levi-base-price">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">שווי שוק סופי</span>
+          <span class="validation-status" id="levi-final-price">⏳</span>
         </div>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
-          <div>שדה</div>
-          <div style="text-align: center;">ערך נוכחי</div>
-          <div style="text-align: center;">נתונים מאוחסנים</div>
-          <div style="text-align: center;">חישוב/אחוז</div>
-          <div style="text-align: center;">פעולות</div>
-        </div>
-        
-        <div id="levi-validation-items">
-          <!-- Will be populated by JavaScript -->
+        <!-- Levi Adjustments Display -->
+        <div class="levi-adjustments" id="levi-adjustments-container" style="display:none;">
+          <div class="levi-adjustments-title">התאמות מחיר מדו"ח לוי יצחק</div>
+          <div id="levi-adjustments-content">
+            <!-- Will be populated dynamically -->
+          </div>
         </div>
         
         <!-- Cost Summary -->
-        <div class="cost-summary" style="margin-top: 20px;">
+        <div class="cost-summary">
           <div class="cost-summary-title">סיכום שווי רכב</div>
           <div class="cost-grid">
             <div class="cost-item">
@@ -846,7 +825,7 @@
     function initializeValidationSystem() {
       loadValidationData();
       loadLegalTextValidation();
-      populateEnhancedValidationItems(); // Populate vehicle section with enhanced display
+      populateEnhancedValidationItems();
       startInitialValidation();
     }
 
@@ -890,7 +869,7 @@
       `;
     }
 
-    // Enhanced validation items for vehicle section (working 3-column version)
+    // Populate enhanced validation items for vehicle section
     function populateEnhancedValidationItems() {
       const container = document.getElementById('vehicle-validation-items');
       if (!container) return;
@@ -898,47 +877,45 @@
       const data = currentValidationData;
       const helper = data.raw_helper;
       
-      console.log('🔍 Populating vehicle validation items with enhanced display');
+      console.log('🔍 Debug helper data:', helper); // Debug log
       
       container.innerHTML = 
         createEnhancedValidationItem(
           'מספר רכב', 
-          data.plate || data.car_details?.plate || '', 
-          helper.plate || helper.meta?.plate || helper.car_details?.plate || '', 
+          data.plate || data.car_details.plate, 
+          helper.plate || helper.meta?.plate || helper.car_details?.plate || 'לא מוגדר', 
           'plate'
         ) +
         createEnhancedValidationItem(
           'יצרן', 
-          data.car_details?.manufacturer || '', 
-          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '', 
+          data.car_details.manufacturer, 
+          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || 'לא מוגדר', 
           'manufacturer'
         ) +
         createEnhancedValidationItem(
           'דגם', 
-          data.car_details?.model || '', 
-          helper.model || helper.car_details?.model || helper.vehicle?.model || '', 
+          data.car_details.model, 
+          helper.model || helper.car_details?.model || helper.vehicle?.model || 'לא מוגדר', 
           'model'
         ) +
         createEnhancedValidationItem(
           'שנת יצור', 
-          data.car_details?.year || '', 
-          helper.year || helper.car_details?.year || helper.vehicle?.year || '', 
+          data.car_details.year, 
+          helper.year || helper.car_details?.year || helper.vehicle?.year || 'לא מוגדר', 
           'year'
         ) +
         createEnhancedValidationItem(
           'שם בעלים', 
-          data.client?.name || '', 
-          helper.owner || helper.client?.name || helper.meta?.client_name || '', 
+          data.client.name, 
+          helper.owner || helper.client?.name || helper.meta?.owner || 'לא מוגדר', 
           'owner_name'
         ) +
         createEnhancedValidationItem(
           'חברת ביטוח', 
-          data.client?.insurance_company || '', 
-          helper.insurance_company || helper.client?.insurance_company || '', 
+          data.client.insurance_company, 
+          helper.insurance_company || helper.client?.insurance_company || 'לא מוגדר', 
           'insurance'
         );
-      
-      console.log('✅ Vehicle validation items populated successfully');
     }
 
     function loadValidationData() {
@@ -1098,7 +1075,7 @@
       const issues = [];
       const validItems = [];
       
-      // Get current values from the enhanced validation display (working version)
+      // Get current values from the enhanced validation display
       const plateValue = getCurrentFieldValue('plate');
       const manufacturerValue = getCurrentFieldValue('manufacturer');
       const modelValue = getCurrentFieldValue('model');
@@ -1204,60 +1181,56 @@
       const validItems = [];
       const levi = currentValidationData.levi_report;
       
-      // Get current values from enhanced display
-      const basePriceValue = getCurrentFieldValue('levi_base_price');
-      const marketValueValue = getCurrentFieldValue('levi_market_value');
-      
-      console.log('🔍 Levi validation - Base price:', basePriceValue, 'Market value:', marketValueValue);
-      
-      // Validate base price - treat as critical for Levi section
-      const basePrice = parseFloat(basePriceValue?.replace(/[₪,]/g, '')) || 0;
-      if (basePrice > 0) {
-        validItems.push('levi-base-price');
-        setFieldValidationStatus('levi_base_price', '✓');
-        updateElementIfExists('levi-display-base', MathEngine.formatCurrency(basePrice));
+      // Validate model code
+      if (levi && levi.model_code) {
+        validItems.push('levi-model');
+        updateElementIfExists('levi-model', '✓');
       } else {
-        issues.push('מחיר בסיס חסר או לא תקין');
-        setFieldValidationStatus('levi_base_price', '❌');
+        issues.push('קוד דגם חסר בדו"ח לוי (אזהרה)');
+        updateElementIfExists('levi-model', '⚠️');
+      }
+      
+      // Validate base price
+      if (levi && levi.base_price && parseFloat(levi.base_price) > 0) {
+        validItems.push('levi-base-price');
+        updateElementIfExists('levi-base-price', '✓');
+        updateElementIfExists('levi-display-base', MathEngine.formatCurrency(levi.base_price));
+      } else {
+        issues.push('מחיר בסיס לא תקין (אזהרה)');
+        updateElementIfExists('levi-base-price', '⚠️');
         updateElementIfExists('levi-display-base', '₪0');
       }
       
-      // Validate market value - treat as critical for Levi section
-      const marketValue = parseFloat(marketValueValue?.replace(/[₪,]/g, '')) || 0;
-      if (marketValue > 0) {
-        validItems.push('levi-market-value');
-        setFieldValidationStatus('levi_market_value', '✓');
-        updateElementIfExists('levi-display-final', MathEngine.formatCurrency(marketValue));
+      // Validate final price
+      if (levi && levi.final_price && parseFloat(levi.final_price) > 0) {
+        validItems.push('levi-final-price');
+        updateElementIfExists('levi-final-price', '✓');
+        updateElementIfExists('levi-display-final', MathEngine.formatCurrency(levi.final_price));
       } else {
-        issues.push('שווי שוק סופי חסר או לא תקין');
-        setFieldValidationStatus('levi_market_value', '❌');
+        issues.push('שווי שוק סופי לא תקין (אזהרה)');
+        updateElementIfExists('levi-final-price', '⚠️');
         updateElementIfExists('levi-display-final', '₪0');
       }
       
-      // Calculate adjustments
-      const adjustments = marketValue - basePrice;
+      // Display adjustments if available
+      if (levi && levi.adjustments) {
+        displayLeviAdjustments(levi.adjustments);
+        const container = document.getElementById('levi-adjustments-container');
+        if (container) container.style.display = 'block';
+      }
+      
+      // Calculate total adjustments
+      const basePrice = levi ? parseFloat(levi.base_price) || 0 : 0;
+      const finalPrice = levi ? parseFloat(levi.final_price) || 0 : 0;
+      const adjustments = finalPrice - basePrice;
       updateElementIfExists('levi-display-adjustments', MathEngine.formatCurrency(adjustments));
       
-      // Stricter validation: require both base price and market value with valid amounts
-      const hasValidBasePrice = basePrice > 1000; // Minimum reasonable car value
-      const hasValidMarketValue = marketValue > 1000; // Minimum reasonable car value
-      
-      if (!hasValidBasePrice) {
-        issues.push('מחיר בסיס לא תקין (נדרש מעל ₪1,000)');
-      }
-      if (!hasValidMarketValue) {
-        issues.push('שווי שוק לא תקין (נדרש מעל ₪1,000)');
-      }
-      
-      // Count critical errors after all validations
-      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
-      const bothValuesExist = hasValidBasePrice && hasValidMarketValue;
-      
-      console.log('🔍 Levi validation result - Critical errors:', criticalErrors, 'Issues:', issues, 'Valid prices:', bothValuesExist);
+      // Only count critical errors (treat missing Levi data as warnings)
+      const criticalErrors = 0; // Levi data is optional for validation
       
       return {
-        success: criticalErrors === 0 && bothValuesExist,
-        warnings: 0,
+        success: criticalErrors === 0,
+        warnings: issues.length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length
@@ -1333,32 +1306,12 @@
       updateElementIfExists('damage-total-before-vat', MathEngine.formatCurrency(safeTotals.total_before_vat));
       updateElementIfExists('damage-total-with-vat', MathEngine.formatCurrency(safeTotals.total_with_vat));
       
-      // Stricter damage section validation
-      let criticalErrors = 0;
-      
-      // Must have at least one damage center
-      if (!damageBlocks || damageBlocks.length === 0) {
-        criticalErrors++;
-        issues.push('נדרש לפחות מוקד נזק אחד');
-      }
-      
-      // Must have actual damage content (works, parts, or repairs)
-      if (damageBlocks && damageBlocks.length > 0 && !hasWorks && !hasParts && !hasRepairs) {
-        criticalErrors++;
-        issues.push('נדרש תוכן נזק בפועל (עבודות, חלקים או תיקונים)');
-      }
-      
-      // Must have reasonable damage costs (at least ₪100)
-      if (safeTotals.total_before_vat < 100) {
-        criticalErrors++;
-        issues.push('עלות נזקים נמוכה מדי (נדרש לפחות ₪100)');
-      }
-      
-      console.log('🔍 Damage validation result - Critical errors:', criticalErrors, 'Has content:', hasWorks || hasParts || hasRepairs, 'Total:', safeTotals.total_before_vat);
+      // Damage section validation always passes (only warnings)
+      const criticalErrors = 0;
       
       return {
         success: criticalErrors === 0,
-        warnings: issues.filter(i => i.includes('אזהרה')).length,
+        warnings: issues.length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
@@ -1432,39 +1385,12 @@
       updateElementIfExists('estimate-vat-amount', MathEngine ? MathEngine.formatCurrency(vatAmount) : `₪${vatAmount.toLocaleString()}`);
       updateElementIfExists('estimate-total-claim', MathEngine ? MathEngine.formatCurrency(totalClaim) : `₪${totalClaim.toLocaleString()}`);
       
-      // Stricter estimate section validation
-      let criticalErrors = 0;
-      
-      // Validate legal text
-      if (!legalText || legalText.length < 50 || legalText.includes('שגיאה')) {
-        criticalErrors++;
-        issues.push('טקסט משפטי לא תקין או חסר');
-      }
-      
-      // Validate reasonable total damage amount
-      if (totalDamage < 100) {
-        criticalErrors++;
-        issues.push('סכום נזק כולל נמוך מדי (נדרש לפחות ₪100)');
-      }
-      
-      // Validate estimate type exists
-      const estimateType = currentValidationData.raw_helper?.estimate_type;
-      if (!estimateType || !['אובדן_להלכה', 'טוטלוס', 'פרטי', 'גלובלי'].includes(estimateType)) {
-        criticalErrors++;
-        issues.push('סוג אומדן לא מוגדר או לא תקין');
-      }
-      
-      // Validate basic plate number exists for consistency
-      if (!hasPlate) {
-        criticalErrors++;
-        issues.push('מספר רכב חסר לבדיקת עקביות');
-      }
-      
-      console.log('🔍 Estimate validation result - Critical errors:', criticalErrors, 'Legal text length:', legalText.length, 'Total damage:', totalDamage);
+      // Estimate validation always passes (only warnings)
+      const criticalErrors = 0;
       
       return {
         success: criticalErrors === 0,
-        warnings: issues.filter(i => i.includes('אזהרה')).length,
+        warnings: issues.length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
@@ -1608,7 +1534,6 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       switch(fieldKey) {
-        // Vehicle fields
         case 'plate':
           helper.plate = newValue;
           break;
@@ -1626,17 +1551,6 @@
           break;
         case 'insurance':
           helper.insurance_company = newValue;
-          break;
-        
-        // Levi fields
-        case 'levi_base_price':
-          if (!helper.levi_report) helper.levi_report = {};
-          helper.levi_report.base_price = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
-          break;
-        case 'levi_market_value':
-          if (!helper.levi_report) helper.levi_report = {};
-          helper.levi_report.final_price = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
-          helper.levi_report.market_value = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
           break;
       }
       
@@ -1807,6 +1721,10 @@
         // If next section needs enhanced display, populate it
         if (nextSectionName === 'levi') {
           populateLeviValidationItems();
+        } else if (nextSectionName === 'damage') {
+          populateDamageValidationItems();
+        } else if (nextSectionName === 'estimate') {
+          populateEstimateValidationItems();
         }
         
         // Auto-validate next section
@@ -1833,141 +1751,20 @@
       return titles[sectionName] || sectionName;
     }
 
-    // Create financial validation item with 5-column display
-    function createFinancialValidationItem(label, currentValue, storedValue, calculationType, calculationValue, fieldKey, editType = 'inline') {
-      // Clean and normalize values
-      const cleanCurrent = currentValue && currentValue !== 'undefined' ? String(currentValue).trim() : '';
-      const cleanStored = storedValue && storedValue !== 'undefined' && storedValue !== 'לא מוגדר' ? String(storedValue).trim() : '';
-      
-      const isMatch = cleanCurrent === cleanStored && cleanCurrent !== '';
-      const hasStoredData = cleanStored !== '' && cleanStored !== 'לא מוגדר';
-      
-      let statusClass;
-      if (isMatch) {
-        statusClass = 'data-match';
-      } else if (hasStoredData) {
-        statusClass = 'data-warning';
-      } else {
-        statusClass = 'data-error';
-      }
-      
-      return `
-        <div class="validation-item-financial" data-field="${fieldKey}">
-          <div class="financial-field-name">${label}</div>
-          <div class="current-value ${statusClass}" id="current-${fieldKey}">
-            ${cleanCurrent || 'לא זמין'}
-          </div>
-          <div class="stored-value">
-            ${hasStoredData ? cleanStored : 'לא קיים בעזר'}
-          </div>
-          <div class="financial-calculation">
-            ${calculationType ? `${calculationType}: ${calculationValue}` : 'לא חושב'}
-          </div>
-          <div class="action-buttons">
-            ${editType === 'inline' ? 
-              `<button class="edit-inline" onclick="startInlineEdit('${fieldKey}')">✏️</button>` : 
-              `<button class="edit-builder" onclick="editInBuilder('${fieldKey}')">📝</button>`
-            }
-            ${!isMatch && (cleanCurrent || hasStoredData) ? `<button class="ignore" onclick="ignoreDiscrepancy('${fieldKey}')">🚫</button>` : ''}
-          </div>
-        </div>
-      `;
-    }
-
-    // Enhanced validation items for Levi section
+    // Enhanced validation items for other sections (to be implemented)
     function populateLeviValidationItems() {
-      const container = document.getElementById('levi-validation-items');
-      if (!container) return;
-      
-      const data = currentValidationData;
-      const levi = data.levi_report || {};
-      const helper = data.raw_helper;
-      
-      console.log('📄 Debug Levi data:', levi);
-      
-      // Base price
-      const basePrice = levi.base_price || helper?.levi_report?.base_price || '';
-      const storedBasePrice = helper?.levi_report?.base_price || helper?.base_price || '';
-      
-      // Market value (final price)
-      const marketValue = levi.final_price || levi.market_value || helper?.levi_report?.final_price || '';
-      const storedMarketValue = helper?.levi_report?.final_price || helper?.market_value || '';
-      
-      container.innerHTML = 
-        createFinancialValidationItem(
-          'מחיר בסיס', 
-          basePrice, 
-          storedBasePrice, 
-          'בסיס', 
-          basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : '₪0',
-          'levi_base_price'
-        ) +
-        createFinancialValidationItem(
-          'שווי שוק סופי', 
-          marketValue, 
-          storedMarketValue, 
-          'סופי', 
-          marketValue ? `₪${parseFloat(marketValue).toLocaleString()}` : '₪0',
-          'levi_market_value'
-        );
-      
-      // Add adjustment items if they exist
-      if (levi.adjustments) {
-        let adjustmentsHTML = '';
-        Object.keys(levi.adjustments).forEach(key => {
-          const adjustment = levi.adjustments[key];
-          if (adjustment && (adjustment.percentage || adjustment.value)) {
-            const adjType = adjustment.percentage > 0 ? 'תוספת' : 'הפחתה';
-            const adjCalc = `${Math.abs(adjustment.percentage || 0)}% = ₪${Math.abs(adjustment.value || 0).toLocaleString()}`;
-            
-            adjustmentsHTML += createFinancialValidationItem(
-              key,
-              adjustment.value ? `₪${adjustment.value.toLocaleString()}` : '',
-              adjustment.value ? `₪${adjustment.value.toLocaleString()}` : '',
-              adjType,
-              adjCalc,
-              `levi_adj_${key.replace(/\s+/g, '_')}`
-            );
-          }
-        });
-        container.innerHTML += adjustmentsHTML;
-      }
+      console.log('📄 Levi section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
     }
 
     function populateDamageValidationItems() {
-      console.log('🔧 Implementing enhanced damage section validation items');
-      
-      // For damage section, we'll enhance the existing validation 
-      // but keep the current structure since it's already functional
-      const damageBlocks = currentValidationData.damage_blocks || [];
-      
-      if (damageBlocks.length > 0) {
-        displayDamageCentersEnhanced(damageBlocks);
-        console.log('✅ Damage centers displayed with enhanced validation');
-      } else {
-        console.log('⚠️ No damage blocks found for validation');
-      }
+      console.log('🔧 Damage section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
     }
 
     function populateEstimateValidationItems() {
-      console.log('📊 Implementing enhanced estimate section validation items');
-      
-      // For estimate section, ensure all calculations are properly validated
-      const totals = currentValidationData.estimate_totals || {};
-      const helper = currentValidationData.raw_helper;
-      
-      // Update all estimate calculation displays
-      if (totals.total_before_vat !== undefined) {
-        updateElementIfExists('estimate-base-damage', MathEngine ? MathEngine.formatCurrency(totals.total_before_vat) : `₪${totals.total_before_vat.toLocaleString()}`);
-      }
-      
-      if (totals.total_with_vat !== undefined) {
-        const vatAmount = totals.total_with_vat - totals.total_before_vat;
-        updateElementIfExists('estimate-vat-amount', MathEngine ? MathEngine.formatCurrency(vatAmount) : `₪${vatAmount.toLocaleString()}`);
-        updateElementIfExists('estimate-total-claim', MathEngine ? MathEngine.formatCurrency(totals.total_with_vat) : `₪${totals.total_with_vat.toLocaleString()}`);
-      }
-      
-      console.log('✅ Estimate calculations updated and enhanced validation applied');
+      console.log('📊 Estimate section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
     }
 
     // Other Actions
@@ -2052,7 +1849,15 @@
       }, 5000);
     }
 
-    // Functions are already globally available through window.functionName definitions above
+    // Make functions globally available
+    window.validateSection = validateSection;
+    window.editSection = editSection;
+    window.approveSection = approveSection;
+    window.validateLegalText = validateLegalText;
+    window.editLegalText = editLegalText;
+    window.requestManualReview = requestManualReview;
+    window.saveValidationData = saveValidationData;
+    window.reviewEstimateReport = reviewEstimateReport;
   </script>
 </body>
 </html>
