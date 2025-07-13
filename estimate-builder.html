@@ -1445,7 +1445,7 @@
         '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || helper.vehicle?.year || '[שנה]',
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || helper.car_details?.owner || '[שם בעל הרכב]',
         '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || helper.levisummary?.model_code || '[קוד דגם]',
-        '%אחוז_נזק%': Math.round(calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || 0) + '%',
+        '%אחוז_נזק%': (calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || 0) + '%',
         '%ירידת_ערך%': (document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '0').replace('%', '') + '%',
         '%מוקדי_נזק%': (helper.expertise?.damage_blocks?.length || helper.damage_centers?.length || helper.damage_sections?.length || 0).toString(),
         '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
@@ -1515,13 +1515,11 @@
     // CALCULATE DAMAGE PERCENTAGE
     function calculateDamagePercentage() {
       try {
-        // Get values from multiple sources - PROPERLY LINKED
         const totalClaimField = document.getElementById('sumClaim')?.value || document.getElementById('totalClaim')?.value || '0';
         const marketValueField = document.getElementById('sumMarketValue')?.value || document.getElementById('carMarketValue')?.value || '0';
         
         const totalClaim = parseFloat(totalClaimField.replace(/[₪,]/g, '')) || 0;
         const marketValue = parseFloat(marketValueField.replace(/[₪,]/g, '')) || 0;
-        
         
         if (marketValue > 0 && totalClaim > 0) {
           const percentage = (totalClaim / marketValue) * 100;
