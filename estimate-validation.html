@@ -831,25 +831,38 @@
 
     // Create enhanced validation item with 3-column display
     function createEnhancedValidationItem(label, currentValue, storedValue, fieldKey, editType = 'inline') {
-      const isMatch = currentValue === storedValue;
-      const statusClass = isMatch ? 'data-match' : (storedValue ? 'data-warning' : 'data-error');
+      // Clean and normalize values
+      const cleanCurrent = currentValue && currentValue !== 'undefined' ? String(currentValue).trim() : '';
+      const cleanStored = storedValue && storedValue !== 'undefined' && storedValue !== 'לא מוגדר' ? String(storedValue).trim() : '';
+      
+      const isMatch = cleanCurrent === cleanStored && cleanCurrent !== '';
+      const hasStoredData = cleanStored !== '' && cleanStored !== 'לא מוגדר';
+      
+      let statusClass;
+      if (isMatch) {
+        statusClass = 'data-match';
+      } else if (hasStoredData) {
+        statusClass = 'data-warning';
+      } else {
+        statusClass = 'data-error';
+      }
       
       return `
         <div class="validation-item-enhanced" data-field="${fieldKey}">
           <div class="validation-label">${label}</div>
           <div class="validation-columns">
             <div class="current-value ${statusClass}" id="current-${fieldKey}">
-              ${currentValue || 'לא זמין'}
+              ${cleanCurrent || 'לא זמין'}
             </div>
             <div class="stored-value">
-              ${storedValue || 'לא נמצא בעזר'}
+              ${hasStoredData ? cleanStored : 'לא קיים בעזר'}
             </div>
             <div class="action-buttons">
               ${editType === 'inline' ? 
                 `<button class="edit-inline" onclick="startInlineEdit('${fieldKey}')">✏️</button>` : 
                 `<button class="edit-builder" onclick="editInBuilder('${fieldKey}')">📝</button>`
               }
-              ${!isMatch ? `<button class="ignore" onclick="ignoreDiscrepancy('${fieldKey}')">🚫</button>` : ''}
+              ${!isMatch && (cleanCurrent || hasStoredData) ? `<button class="ignore" onclick="ignoreDiscrepancy('${fieldKey}')">🚫</button>` : ''}
             </div>
           </div>
         </div>
@@ -862,42 +875,45 @@
       if (!container) return;
       
       const data = currentValidationData;
+      const helper = data.raw_helper;
+      
+      console.log('🔍 Debug helper data:', helper); // Debug log
       
       container.innerHTML = 
         createEnhancedValidationItem(
           'מספר רכב', 
-          data.plate, 
-          data.car_details.plate, 
+          data.plate || data.car_details.plate, 
+          helper.plate || helper.meta?.plate || helper.car_details?.plate || 'לא מוגדר', 
           'plate'
         ) +
         createEnhancedValidationItem(
           'יצרן', 
           data.car_details.manufacturer, 
-          data.raw_helper.manufacturer, 
+          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || 'לא מוגדר', 
           'manufacturer'
         ) +
         createEnhancedValidationItem(
           'דגם', 
           data.car_details.model, 
-          data.raw_helper.model, 
+          helper.model || helper.car_details?.model || helper.vehicle?.model || 'לא מוגדר', 
           'model'
         ) +
         createEnhancedValidationItem(
           'שנת יצור', 
           data.car_details.year, 
-          data.raw_helper.year, 
+          helper.year || helper.car_details?.year || helper.vehicle?.year || 'לא מוגדר', 
           'year'
         ) +
         createEnhancedValidationItem(
           'שם בעלים', 
           data.client.name, 
-          data.raw_helper.owner, 
+          helper.owner || helper.client?.name || helper.meta?.owner || 'לא מוגדר', 
           'owner_name'
         ) +
         createEnhancedValidationItem(
           'חברת ביטוח', 
           data.client.insurance_company, 
-          data.raw_helper.insurance_company, 
+          helper.insurance_company || helper.client?.insurance_company || 'לא מוגדר', 
           'insurance'
         );
     }
@@ -1619,27 +1635,74 @@
       
       validationProgress[sectionName] = true;
       
-      // Enable next section
+      // Enable and move to next section
       const sections = ['vehicle', 'levi', 'damage', 'estimate'];
       const currentIndex = sections.indexOf(sectionName);
+      
       if (currentIndex < sections.length - 1) {
         const nextSectionName = sections[currentIndex + 1];
         const nextSection = document.getElementById(`section-${nextSectionName}`);
+        const nextStatus = nextSection.querySelector('.section-status');
         const nextButtons = nextSection.querySelectorAll('.btn');
+        
+        // Update next section to current
+        nextSection.classList.remove('pending');
+        nextSection.classList.add('current');
+        nextStatus.textContent = 'בבדיקה';
+        nextStatus.className = 'section-status status-current';
         
         // Enable buttons for next section
         nextButtons[0].disabled = false; // validate button
         nextButtons[1].disabled = false; // edit button
         
+        // If next section needs enhanced display, populate it
+        if (nextSectionName === 'levi') {
+          populateLeviValidationItems();
+        } else if (nextSectionName === 'damage') {
+          populateDamageValidationItems();
+        } else if (nextSectionName === 'estimate') {
+          populateEstimateValidationItems();
+        }
+        
         // Auto-validate next section
         setTimeout(() => {
           validateSection(nextSectionName);
         }, 500);
+        
+        // Scroll to next section
+        nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       
       updateValidationProgress();
+      showAlert(`${getSectionTitle(sectionName)} אושר בהצלחה! עובר לסעיף הבא...`, 'success');
       console.log(`Section ${sectionName} approved`);
     };
+    
+    function getSectionTitle(sectionName) {
+      const titles = {
+        'vehicle': 'פרטי רכב ומקרה',
+        'levi': 'דו"ח לוי יצחק',
+        'damage': 'מוקדי נזק',
+        'estimate': 'חישובי אומדן'
+      };
+      return titles[sectionName] || sectionName;
+    }
+
+    // Enhanced validation items for other sections (to be implemented)
+    function populateLeviValidationItems() {
+      console.log('📄 Levi section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
+    }
+
+    function populateDamageValidationItems() {
+      console.log('🔧 Damage section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
+    }
+
+    function populateEstimateValidationItems() {
+      console.log('📊 Estimate section validation items - using current structure for now');
+      // For now, keep existing structure - can be enhanced later
+    }
 
     // Other Actions
     window.validateLegalText = function() {
