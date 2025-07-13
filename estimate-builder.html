@@ -1129,29 +1129,25 @@
             <button onclick="removeDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
           </div>
 
-          <!-- Editable Sections Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-            
-            <!-- Parts Section -->
-            <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px;">
-              <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">חלקים נדרשים:</h4>
-              <div class="parts-list" data-center="${index}">
-                ${parts.map((part, partIndex) => createEditablePartRow(part, index, partIndex)).join('')}
-              </div>
-              <button onclick="addPartRow(${index})" class="btn" style="background: #28a745; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף חלק</button>
+          <!-- Parts Section (Full Width Row) -->
+          <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">חלקים נדרשים:</h4>
+            <div class="parts-list" data-center="${index}">
+              ${parts.map((part, partIndex) => createEditablePartRow(part, index, partIndex)).join('')}
             </div>
-
-            <!-- Works Section -->
-            <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px;">
-              <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">עבודות נדרשות:</h4>
-              <div class="works-list" data-center="${index}">
-                ${works.map((work, workIndex) => createEditableWorkRow(work, index, workIndex)).join('')}
-              </div>
-              <button onclick="addWorkRow(${index})" class="btn" style="background: #17a2b8; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף עבודה</button>
-            </div>
+            <button onclick="addPartRow(${index})" class="btn" style="background: #28a745; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף חלק</button>
           </div>
 
-          <!-- Repairs Section (Full Width) -->
+          <!-- Works Section (Full Width Row) -->
+          <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">עבודות נדרשות:</h4>
+            <div class="works-list" data-center="${index}">
+              ${works.map((work, workIndex) => createEditableWorkRow(work, index, workIndex)).join('')}
+            </div>
+            <button onclick="addWorkRow(${index})" class="btn" style="background: #17a2b8; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף עבודה</button>
+          </div>
+
+          <!-- Repairs Section (Full Width Row) -->
           <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
             <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">תיקונים נדרשים:</h4>
             <div class="repairs-list" data-center="${index}">
@@ -1181,16 +1177,23 @@
       const partSource = part?.source || '';
       
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div style="position: relative;">
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
             <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
                    style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
                    onkeyup="showPartSuggestions(this, ${centerIndex}, ${partIndex})" />
             <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
           </div>
-          <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
-          <button onclick="removePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
-          <input type="hidden" value="${partPrice}" class="part-price" />
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
+            <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+            <input type="number" value="${partPrice}" placeholder="0" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+          </div>
+          <button onclick="removePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: end;">מחק</button>
           <input type="hidden" value="${partSource}" class="part-source" />
         </div>
       `;
@@ -1207,14 +1210,25 @@
       
       const workType = typeof work === 'object' ? work.type : work;
       const workNote = typeof work === 'object' ? work.note : '';
+      const workCost = typeof work === 'object' ? work.cost : 0;
       
       return `
-        <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
-          <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-            ${workTypes.map(type => `<option value="${type}" ${type === workType ? 'selected' : ''}>${type}</option>`).join('')}
-          </select>
-          <input type="text" value="${workNote}" placeholder="הערות נוספות" class="work-note" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
-          <button onclick="removeWorkRow(${centerIndex}, ${workIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
+        <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סוג עבודה:</label>
+            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateWorkCostFromType(this, ${centerIndex}, ${workIndex})">
+              ${workTypes.map(type => `<option value="${type}" ${type === workType ? 'selected' : ''}>${type}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">הערות:</label>
+            <input type="text" value="${workNote}" placeholder="הערות נוספות" class="work-note" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+            <input type="number" value="${workCost}" placeholder="0" class="work-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+          </div>
+          <button onclick="removeWorkRow(${centerIndex}, ${workIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: end;">מחק</button>
         </div>
       `;
     }
@@ -1222,10 +1236,18 @@
     // CREATE EDITABLE REPAIR ROW
     function createEditableRepairRow(repair, centerIndex, repairIndex) {
       const repairText = typeof repair === 'object' ? repair.description : repair;
+      const repairCost = typeof repair === 'object' ? repair.cost : 0;
       
       return `
-        <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
-          <textarea placeholder="תיאור התיקון" class="repair-text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 60px; resize: vertical;">${repairText}</textarea>
+        <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 3fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור התיקון:</label>
+            <textarea placeholder="תיאור התיקון" class="repair-text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 60px; resize: vertical;">${repairText}</textarea>
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+            <input type="number" value="${repairCost}" placeholder="0" class="repair-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+          </div>
           <button onclick="removeRepairRow(${centerIndex}, ${repairIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; height: 32px; margin-top: 14px;">מחק</button>
         </div>
       `;
@@ -1866,9 +1888,10 @@
           card.querySelectorAll('.work-row').forEach(row => {
             const type = row.querySelector('.work-type').value;
             const note = row.querySelector('.work-note').value;
+            const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
             
             if (type) {
-              works.push({ type, note });
+              works.push({ type, note, cost });
             }
           });
           
@@ -1876,16 +1899,18 @@
           const repairs = [];
           card.querySelectorAll('.repair-row').forEach(row => {
             const text = row.querySelector('.repair-text').value;
+            const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
             
             if (text.trim()) {
-              repairs.push(text);
+              repairs.push({ description: text, cost });
             }
           });
           
-          // Calculate costs
+          // Calculate costs using individual cost fields
           const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
-          const workCost = calculateWorkCost(works);
-          const repairsCost = partsCost + workCost;
+          const workCost = works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+          const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+          const totalCost = partsCost + workCost + repairsCost;
           
           helper.expertise.damage_blocks.push({
             damage_center_name: centerName,
@@ -1913,13 +1938,16 @@
     // ADD EVENT LISTENERS
     function addDamageCenterEventListeners() {
       // Add listeners for all input fields to trigger save and cost calculation on change
-      document.querySelectorAll('.damage-center-name, .part-name, .part-desc, .work-type, .work-note, .repair-text').forEach(input => {
+      document.querySelectorAll('.damage-center-name, .part-name, .part-desc, .part-price, .work-type, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
         input.addEventListener('change', () => {
           saveDamageCenterChanges();
           updateAllCostDisplays();
         });
         input.addEventListener('blur', () => {
           saveDamageCenterChanges();
+          updateAllCostDisplays();
+        });
+        input.addEventListener('input', () => {
           updateAllCostDisplays();
         });
       });
@@ -1934,8 +1962,8 @@
       });
     }
 
-    // COST CALCULATION FUNCTIONS
-    function calculateWorkCost(works) {
+    // UPDATE WORK COST FROM TYPE SELECTION
+    function updateWorkCostFromType(selectElement, centerIndex, workIndex) {
       const workRates = {
         'עבודות צבע': 1200,
         'עבודות חשמל': 800,
@@ -1951,15 +1979,39 @@
         'אחר': 500
       };
       
+      const selectedType = selectElement.value;
+      const suggestedCost = workRates[selectedType] || 500;
+      
+      // Update the cost field with suggested value
+      const workRow = selectElement.closest('.work-row');
+      const costInput = workRow.querySelector('.work-cost');
+      if (costInput && costInput.value == 0) {
+        costInput.value = suggestedCost;
+      }
+      
+      // Trigger save and recalculation
+      saveDamageCenterChanges();
+      updateAllCostDisplays();
+    }
+
+    // COST CALCULATION FUNCTIONS
+    function calculateWorkCost(works) {
       return works.reduce((total, work) => {
-        const workType = typeof work === 'object' ? work.type : work;
-        const rate = workRates[workType] || 500;
-        return total + rate;
+        const cost = typeof work === 'object' ? (work.cost || 0) : 0;
+        return total + parseFloat(cost);
+      }, 0);
+    }
+
+    function calculateRepairsCost(repairs) {
+      return repairs.reduce((total, repair) => {
+        const cost = typeof repair === 'object' ? (repair.cost || 0) : 0;
+        return total + parseFloat(cost);
       }, 0);
     }
 
     function updateCostDisplay(card, partsCost, workCost, repairsCost) {
-      const totalWithVAT = repairsCost * 1.18;
+      const totalCost = partsCost + workCost + repairsCost;
+      const totalWithVAT = totalCost * 1.18;
       
       // Update display elements
       const workDisplay = card.querySelector('.work-costs-display');
@@ -1969,28 +2021,30 @@
       
       if (workDisplay) workDisplay.textContent = `₪${workCost.toLocaleString()}`;
       if (partsDisplay) partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
-      if (repairsDisplay) repairsDisplay.textContent = `₪${repairsCost.toLocaleString()}`;
+      if (repairsDisplay) repairsDisplay.textContent = `₪${totalCost.toLocaleString()}`;
       if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
     }
 
     function updateAllCostDisplays() {
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        // Recalculate costs for this card
-        const parts = [];
+        // Recalculate costs for this card using individual cost fields
+        let partsCost = 0;
         card.querySelectorAll('.part-row').forEach(row => {
           const price = parseFloat(row.querySelector('.part-price').value) || 0;
-          if (price > 0) parts.push({ price });
+          partsCost += price;
         });
         
-        const works = [];
+        let workCost = 0;
         card.querySelectorAll('.work-row').forEach(row => {
-          const type = row.querySelector('.work-type').value;
-          if (type) works.push({ type });
+          const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+          workCost += cost;
         });
         
-        const partsCost = parts.reduce((sum, part) => sum + part.price, 0);
-        const workCost = calculateWorkCost(works);
-        const repairsCost = partsCost + workCost;
+        let repairsCost = 0;
+        card.querySelectorAll('.repair-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
+          repairsCost += cost;
+        });
         
         updateCostDisplay(card, partsCost, workCost, repairsCost);
       });
@@ -2050,6 +2104,7 @@
     window.saveDamageCenterChanges = saveDamageCenterChanges;
     window.addDamageCenterEventListeners = addDamageCenterEventListeners;
     window.calculateWorkCost = calculateWorkCost;
+    window.updateWorkCostFromType = updateWorkCostFromType;
     window.updateCostDisplay = updateCostDisplay;
     window.updateAllCostDisplays = updateAllCostDisplays;
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
