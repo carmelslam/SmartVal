@@ -1719,6 +1719,9 @@ We need key changes to make it useful .
 *addons*
 10. the validation page is missing the review option for teh fileed report builder 
 11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
+12, the damge percentage on the text is not correct 
+13. the text in teh the validation needs to be  taken from teh text in the builder not from teh vault 
+14. 
 
 
 

@@ -1204,19 +1204,31 @@
         updateElementIfExists('levi-display-final', '₪0');
       }
       
-      // Validate adjustments (if they exist) 
+      // Validate dynamic price adjustments (additions/subtractions)
       const data = currentValidationData;
       const levi = data.levi_report || {};
       if (levi.adjustments || data.raw_helper?.levi_report?.adjustments) {
         const adjustments = levi.adjustments || data.raw_helper.levi_report.adjustments;
         Object.keys(adjustments).forEach(key => {
           const adjustment = adjustments[key];
-          if (adjustment && (adjustment.percentage || adjustment.value)) {
+          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined)) {
             const adjFieldKey = `levi_adj_${key.replace(/\s+/g, '_')}`;
             const adjValue = getCurrentFieldValue(adjFieldKey);
-            if (adjValue && adjValue !== 'לא זמין') {
-              validItems.push(adjFieldKey);
-              setFieldValidationStatus(adjFieldKey, '✓');
+            
+            // Validate that the adjustment shows proper addition/subtraction format
+            if (adjValue && adjValue !== 'לא זמין' && adjValue !== 'לא מוגדר') {
+              const isValidFormat = adjValue.includes('+') || adjValue.includes('-') || adjValue.includes('₪') || adjValue.includes('%');
+              if (isValidFormat) {
+                validItems.push(adjFieldKey);
+                setFieldValidationStatus(adjFieldKey, '✓');
+              } else {
+                issues.push(`פורמט לא תקין עבור התאמת מחיר: ${key} (אזהרה)`);
+                setFieldValidationStatus(adjFieldKey, '⚠️');
+              }
+            } else {
+              // Missing adjustment data is warning, not critical error
+              issues.push(`התאמת מחיר חסרה: ${key} (אזהרה)`);
+              setFieldValidationStatus(adjFieldKey, '⚠️');
             }
           }
         });
@@ -1610,10 +1622,10 @@
         'levi_market_value': 'שווי שוק סופי'
       };
       
-      // Handle dynamic Levi adjustment fields
+      // Handle dynamic Levi adjustment fields with addition/subtraction info
       if (fieldKey.startsWith('levi_adj_')) {
         const adjKey = fieldKey.replace('levi_adj_', '').replace(/_/g, ' ');
-        return `התאמת מחיר: ${adjKey}`;
+        return `התאמת מחיר - ${adjKey}`;
       }
       
       return labels[fieldKey] || fieldKey;
@@ -1819,20 +1831,29 @@
         'levi_base_price'
       );
       
-      // 2. Dynamic validation rows for each price adjustment
+      // 2. Dynamic validation rows for each price adjustment (addition/subtraction)
       if (levi.adjustments || helper?.levi_report?.adjustments) {
         const adjustments = levi.adjustments || helper.levi_report.adjustments;
         Object.keys(adjustments).forEach(key => {
           const adjustment = adjustments[key];
-          if (adjustment && (adjustment.percentage || adjustment.value)) {
-            const adjustmentType = adjustment.percentage > 0 ? 'תוספת' : 'הפחתה';
-            const adjustmentSymbol = adjustment.percentage > 0 ? '+' : '-';
-            const adjustmentValue = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined)) {
+            // Determine if it's addition or subtraction
+            const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+            const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+            const adjustmentSymbol = isAddition ? '+' : '-';
             
+            // Format the display values
+            const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
+            const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+            const combinedDisplay = percentageDisplay && valueDisplay ? 
+              `${percentageDisplay} (${valueDisplay})` : 
+              (percentageDisplay || valueDisplay);
+            
+            // Create validation row showing addition/subtraction clearly
             leviHTML += createEnhancedValidationItem(
-              `${key} (${adjustmentType})`, 
-              adjustmentValue,
-              adjustmentValue, // Same for stored since it comes from Levi report
+              `${key} - ${adjustmentType}`, 
+              combinedDisplay || 'לא מוגדר',
+              combinedDisplay || 'לא מוגדר', // Same for stored since it comes from Levi report
               `levi_adj_${key.replace(/\s+/g, '_')}`
             );
           }
