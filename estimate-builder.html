@@ -11,8 +11,83 @@
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       margin: 0;
       padding: 20px;
+      padding-top: 90px; /* Space for floating toggles */
       direction: rtl;
       text-align: right;
+    }
+
+    /* FLOATING SCREENS STYLING */
+    .floating-toggles-top {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .toggle-square {
+      width: 80px;
+      height: 70px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .toggle-square:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .toggle-square.active {
+      border-color: #fbbf24;
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+    }
+
+    .toggle-icon {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .toggle-text {
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    @media (max-width: 768px) {
+      .floating-toggles-top {
+        gap: 4px;
+        padding: 6px;
+      }
+      
+      .toggle-square {
+        width: 70px;
+        height: 60px;
+      }
+      
+      .toggle-icon {
+        font-size: 18px;
+      }
+      
+      .toggle-text {
+        font-size: 9px;
+      }
     }
 
     .container {
@@ -472,6 +547,18 @@
       border: 1px solid #f5c6cb;
     }
 
+    .alert.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .alert.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
     .alert.show {
       display: block;
     }
@@ -516,6 +603,22 @@
   </style>
 </head>
 <body>
+  <!-- FLOATING SCREEN TOGGLES - TOP OF PAGE -->
+  <div class="floating-toggles-top">
+    <div class="toggle-square" onclick="toggleFloatingScreen('leviReport')">
+      <div class="toggle-icon">📊</div>
+      <div class="toggle-text">דו"ח לוי יצחק</div>
+    </div>
+    <div class="toggle-square" onclick="toggleFloatingScreen('carDetails')">
+      <div class="toggle-icon">🚗</div>
+      <div class="toggle-text">פרטי רכב</div>
+    </div>
+    <div class="toggle-square" onclick="toggleFloatingScreen('internalBrowser')">
+      <div class="toggle-icon">🌐</div>
+      <div class="toggle-text">דפדפן פנימי</div>
+    </div>
+  </div>
+
   <div class="container">
     <div class="header">
       <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
@@ -635,6 +738,11 @@
   <script type="module" src="./math.js"></script>
   <script type="module" src="./webhook.js"></script>
   <script type="module" src="./vault-loader.js"></script>
+  
+  <!-- FLOATING SCREENS SCRIPTS -->
+  <script type="module" src="./levi-floating.js"></script>
+  <script type="module" src="./car-details-floating.js"></script>
+  <script type="module" src="./internal-browser.js"></script>
 
   <script>
     // Utility functions for UI feedback
@@ -671,6 +779,49 @@
       }
     };
 
+    // FLOATING SCREENS TOGGLE FUNCTION
+    window.toggleFloatingScreen = function(screenType) {
+      console.log(`🔄 Toggling floating screen: ${screenType}`);
+      
+      try {
+        switch(screenType) {
+          case 'leviReport':
+            if (window.toggleLeviFloating) {
+              window.toggleLeviFloating();
+            } else {
+              console.error('❌ Levi floating script not loaded');
+              showAlert('שגיאה: מודול דו"ח לוי יצחק לא נטען', 'error');
+            }
+            break;
+            
+          case 'carDetails':
+            if (window.toggleCarDetailsFloating) {
+              window.toggleCarDetailsFloating();
+            } else {
+              console.error('❌ Car details floating script not loaded');
+              showAlert('שגיאה: מודול פרטי רכב לא נטען', 'error');
+            }
+            break;
+            
+          case 'internalBrowser':
+            if (window.toggleInternalBrowser) {
+              window.toggleInternalBrowser();
+            } else {
+              console.error('❌ Internal browser script not loaded');
+              showAlert('שגיאה: דפדפן פנימי לא נטען', 'error');
+            }
+            break;
+            
+          default:
+            console.error(`❌ Unknown screen type: ${screenType}`);
+            showAlert('שגיאה: סוג מסך לא מוכר', 'error');
+        }
+      } catch (error) {
+        console.error('❌ Error toggling floating screen:', error);
+        showAlert('שגיאה בפתיחת המסך הצף', 'error');
+      }
+    };
+
     // Enhanced authentication and data validation check
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🔄 Estimate Builder: Initializing...');
@@ -699,60 +850,69 @@
         reportType: selectedReportType
       });
       
-      // Validate required data
-      if (!plateNumber) {
-        console.error('❌ No plate number found');
-        showAlert('שגיאה: לא נמצא מספר רכב. אנא חזור לעמוד הבחירת דו"ח', 'error');
-        setTimeout(() => {
-          window.location.href = 'report-selection.html';
-        }, 3000);
-        return;
-      }
+      // AUTO-FILL LOGIC: Allow both scenarios
+      // 1. Coming from report selection with existing data -> auto-fill
+      // 2. Coming from report selection without data -> start empty but allow manual entry
+      // 3. Coming from estimate workflow -> normal validation
       
-      if (!helperData) {
-        console.error('❌ No helper data found');
-        showAlert('שגיאה: לא נמצאו נתוני התיק. אנא חזור לעמוד הבחירת דו"ח', 'error');
-        setTimeout(() => {
-          window.location.href = 'report-selection.html';
-        }, 3000);
-        return;
-      }
+      const isFromReportSelection = selectedReportType === 'estimate';
       
-      // Validate that this is the correct report type
-      if (selectedReportType !== 'estimate') {
-        console.warn('⚠️ Wrong report type selected:', selectedReportType);
-        showAlert('שגיאה: נבחר סוג דו"ח שגוי. מעביר לדף הנכון...', 'warning');
-        
-        if (selectedReportType === 'final') {
+      if (!isFromReportSelection) {
+        // Coming from estimate workflow - require plate number
+        if (!plateNumber) {
+          console.error('❌ No plate number found in estimate workflow');
+          showAlert('שגיאה: לא נמצא מספר רכב. אנא התחל מדף הבחירה', 'error');
           setTimeout(() => {
-            window.location.href = 'depreciation-module.html';
-          }, 2000);
-        } else {
-          setTimeout(() => {
-            window.location.href = 'report-selection.html';
-          }, 2000);
+            window.location.href = 'selection.html';
+          }, 3000);
+          return;
         }
-        return;
       }
       
-      // Validate helper data structure
-      let helper;
-      try {
-        helper = JSON.parse(helperData);
-        if (!helper || typeof helper !== 'object') {
-          throw new Error('Invalid helper data structure');
+      // Handle different entry points
+      let helper = null;
+      
+      if (helperData) {
+        // Try to parse existing helper data
+        try {
+          helper = JSON.parse(helperData);
+          if (!helper || typeof helper !== 'object') {
+            throw new Error('Invalid helper data structure');
+          }
+          console.log('✅ Helper data loaded successfully');
+          showAlert('בונה אומדן - נתונים קיימים נטענו בהצלחה', 'success');
+        } catch (error) {
+          console.error('⚠️ Invalid helper data, starting empty:', error);
+          helper = null;
+          showAlert('נתונים קיימים פגומים - מתחיל ריק', 'warning');
         }
-      } catch (error) {
-        console.error('❌ Invalid helper data:', error);
-        showAlert('שגיאה: נתוני התיק פגומים. אנא טען את התיק מחדש', 'error');
+      }
+      
+      if (!helper) {
+        // No data or invalid data - start empty
+        console.log('📝 Starting with empty builder');
+        showAlert('בונה אומדן - מתחיל ביצירת אומדן חדש', 'info');
+        // Initialize empty helper structure
+        helper = {
+          meta: { plate: plateNumber || '' },
+          vehicle: {},
+          client: {},
+          damage_sections: [],
+          calculations: {}
+        };
+      }
+      
+      // Validate report type routing (only redirect if clearly wrong)
+      if (selectedReportType && selectedReportType === 'final') {
+        console.warn('⚠️ Redirecting to final report builder');
+        showAlert('מעביר לבניית דו"ח סופי...', 'warning');
         setTimeout(() => {
-          window.location.href = 'selection.html';
-        }, 3000);
+          window.location.href = 'depreciation-module.html';
+        }, 2000);
         return;
       }
       
-      console.log('✅ Estimate Builder: All validations passed');
-      showAlert('בונה אומדן - נתונים נטענו בהצלחה', 'success');
+      console.log('✅ Estimate Builder: Initialization complete');
 
       // Check for post-session mode
       const urlParams = new URLSearchParams(window.location.search);
