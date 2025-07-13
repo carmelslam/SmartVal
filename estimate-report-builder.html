@@ -228,49 +228,29 @@
     </table>
   </div>
 
-  <!-- Section 1.5 - Levi Price Adjustments -->
-  {{#if helper.expertise.levi_report}}
+  <!-- Section 1.5 - Levi Adjustments (bulk two) - EXACT COPY FROM FINAL REPORT BUILDER -->
   <div class="car-details">
-    <div class="car-details-title">התאמות מחיר מדו"ח לוי יצחק</div>
+    <div class="car-details-title">אחוז הנזק הגולמי</div>
     <table class="car-details-table">
-      <thead>
-        <tr>
-          <th style="width: 40%;">פריט התאמה</th>
-          <th style="width: 20%;">אחוז</th>
-          <th style="width: 20%;">ערך בש"ח</th>
-          <th style="width: 20%;">הערות</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>מחיר בסיס מלוי יצחק</strong></td>
-          <td>-</td>
-          <td><strong>{{money helper.expertise.levi_report.base_price}}</strong></td>
-          <td>קוד דגם: {{helper.expertise.levi_report.model_code}}</td>
-        </tr>
-        {{#each helper.expertise.levi_report.adjustments}}
-        <tr>
-          <td>{{@key}}</td>
-          <td>{{#if this.percentage}}{{this.percentage}}%{{else}}-{{/if}}</td>
-          <td>{{money this.value}}</td>
-          <td>{{#if this.description}}{{this.description}}{{else}}-{{/if}}</td>
-        </tr>
-        {{/each}}
-        <tr style="border-top: 2px solid #003366; font-weight: bold;">
-          <td><strong>שווי שוק סופי</strong></td>
-          <td>-</td>
-          <td><strong>{{money helper.expertise.levi_report.final_price}}</strong></td>
-          <td>לאחר כל ההתאמות</td>
-        </tr>
-      </tbody>
+      <tr><th>תיאור</th><th>ערך</th></tr>
+      <tr><td>סה"כ הנזק כולל מע"מ</td><td>{{money helper.calculations.total_damage}}</td></tr>
+      <tr><td>ערך הרכב לנזק גולמי כולל מע"מ</td><td>{{money helper.calculations.vehicle_value_gross}}</td></tr>
+      <tr><td><strong>אחוז הנזק הגולמי</strong></td><td><strong>{{percent helper.calculations.damage_percent}}</strong></td></tr>
     </table>
-    
-    <div class="intellectual-box">
-      <strong>הערה:</strong> שווי הרכב חושב בהתאם למחירון לוי יצחק והתאמות מתאימות למצב הרכב, 
-      ק"מ, שנת ייצור ומאפיינים נוספים כפי שנמסרו על ידי בעל הרכב.
-    </div>
   </div>
-  {{/if}}
+
+  <!-- Section 1.6 - Levi Adjustments (bulk three) - EXACT COPY FROM FINAL REPORT BUILDER -->
+  <div class="car-details">
+    <div class="car-details-title">חישוב ערך השוק של הרכב</div>
+    <table class="car-details-table">
+      <tr><th>תיאור</th><th>ערך</th></tr>
+      <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>{{money helper.vehicle_value_base}}</td></tr>
+      {{#each helper.levi.adjustments}}
+        <tr><td>{{this.label}}</td><td>{{money this.amount}}</td></tr>
+      {{/each}}
+      <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
+    </table>
+  </div>
 
   <!-- Section 2 - Estimate Introduction -->
   <div class="section" style="page-break-before: always;">
@@ -326,6 +306,80 @@
   </div>
   {{/if}}
 
+  <!-- Section 4.5 - Depreciation Opening Block - EXACT COPY FROM FINAL REPORT BUILDER -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">ירידת ערך</div>
+      <p style="font-size: 18px; font-weight: bold;">
+        מממצאי בדיקתנו עולה כי הרכב נפגע והיה צורך בעבודות ותיקונים הבאים:
+      </p>
+      <table class="car-details-table">
+        <tr><th>מוקד נזק</th><th>עבודות / תיקונים</th></tr>
+        {{#each helper.damage_blocks}}
+          <tr>
+            <td>{{this.center}}</td>
+            <td>
+              {{#each this.repairs}}{{this}}, {{/each}}
+              {{#each this.works}}{{this}}, {{/each}}
+            </td>
+          </tr>
+        {{/each}}
+      </table>
+      <p style="font-size: 18px; font-weight: bold;">
+        אנו בדעה כי ממצאים אלה ייגרמו להפחתות ערכו המסחרי של הרכב לעומת רכב זהה מאותו תוצרת, דגם ושנת ייצור שלא עבר תאונות דרכים.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 4.6 - Depreciation Bulk 2 - EXACT COPY FROM FINAL REPORT BUILDER -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
+      <table class="car-details-table">
+        <tr><th>החלק הניזוק</th><th>מהות התיקון</th><th>% ירידת ערך</th><th>מוקד</th></tr>
+        {{#each helper.expertise.depreciation.centers}}
+          <tr>
+            <td>{{this.part}}</td>
+            <td>{{this.repair}}</td>
+            <td>{{percent this.percent}}</td>
+            <td>{{this.center}}</td>
+          </tr>
+        {{/each}}
+      </table>
+      <p style="font-size: 18px; font-weight: bold;">
+        ערך השוק של הרכב הינו {{money helper.calculations.market_value}} ש"ח כולל מע"מ, לפיכך הפיצוי לירידת הערך יהיה {{percent helper.depreciation.global_percent}} = {{money helper.depreciation.global_amount}} ש"ח
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 4.7 - Depreciation Bulk 3 (Final Summary) - EXACT COPY FROM FINAL REPORT BUILDER -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">סיכום האומדן</div>
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>סה"כ תביעה שהוגשה</td>
+          <td>{{money helper.calculations.total_damage}}</td>
+        </tr>
+        <tr>
+          <td>פיצוי בגין ירידת ערך</td>
+          <td>{{money helper.depreciation.global_amount}}</td>
+        </tr>
+        <tr>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה"כ נכלל באומדן</strong></td>
+          <td><strong>{{money helper.calculations.total_compensation}}</strong></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
   <!-- Section 5 - Estimate Totals -->
   <div class="section">
     <div class="estimate-totals">
@@ -339,14 +393,14 @@
     </div>
   </div>
 
-  <!-- Section 6 - Legal Text and Disclaimers -->
+  <!-- Section 6 - Legal Text and Disclaimers - ESTIMATE SPECIFIC -->
   <div class="section">
     <div style="font-size: 16px; line-height: 1.8;">
       <strong>הערות חשובות לגבי האומדן:</strong><br>
-      {{lookup vault.estimate_legal_text helper.estimate_type}}<br><br>
+      {{lookup vault.estimate_אובדן_להלכה helper.estimate_type}}<br><br>
 
       <strong>הצהרת שמאי:</strong><br>
-      {{lookup vault.assessor_declaration 'estimate'}}<br><br>
+      אני החת"מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.<br><br>
 
       <div class="estimate-disclaimer">
         <strong>אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</strong><br>
