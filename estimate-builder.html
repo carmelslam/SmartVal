@@ -477,6 +477,7 @@
           <div><label>חישוב הערך לנזק גולמי:</label><input type="text" id="leviPriceList" /></div>
           <div><label>חישוב האחוז הגולמי:</label><input type="text" id="grossPercent" /></div>
           <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" /></div>
+          <div><label>אחוז נזק מחושב:</label><input type="text" id="calculatedDamagePercent" readonly style="background: #f0f8ff; border: 2px solid #007bff;" /></div>
         </div>
       </div>
     </div>
@@ -1017,6 +1018,15 @@
             sumTotalInput.style.background = '#e8f5e8';
           }
           
+          // Calculate and update damage percentage for consistency
+          const currentDamagePercent = calculateDamagePercentage();
+          console.log('Updated damage percentage:', currentDamagePercent);
+          
+          // Update legal text when calculations change to ensure damage percentage is consistent
+          setTimeout(() => {
+            loadLegalText();
+          }, 100);
+          
         } catch (error) {
           console.error('Error in summary calculations:', error);
         }
@@ -1444,7 +1454,27 @@
         '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || helper.vehicle?.year || '[שנה]',
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || helper.car_details?.owner || '[שם בעל הרכב]',
         '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || helper.levisummary?.model_code || '[קוד דגם]',
-        '%אחוז_נזק%': (calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || 0) + '%',
+        '%אחוז_נזק%': (() => {
+          const calculatedPercent = calculateDamagePercentage();
+          const helperPercent = helper.expertise?.calculations?.damage_percent || 0;
+          
+          // Make sure we get a clean number, not already formatted percentage
+          let finalPercent = 0;
+          if (calculatedPercent && calculatedPercent > 0) {
+            finalPercent = calculatedPercent;
+          } else if (helperPercent) {
+            // Remove % if it exists in helper data
+            finalPercent = parseFloat(String(helperPercent).replace('%', '')) || 0;
+          }
+          
+          console.log('Damage percentage for legal text:', {
+            calculated: calculatedPercent,
+            helper: helperPercent,
+            final: finalPercent
+          });
+          
+          return Math.round(finalPercent) + '%';
+        })(),
         '%ירידת_ערך%': (document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '0').replace('%', '') + '%',
         '%מוקדי_נזק%': (helper.expertise?.damage_blocks?.length || helper.damage_centers?.length || helper.damage_sections?.length || 0).toString(),
         '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
@@ -1521,10 +1551,33 @@
         const totalClaim = parseFloat(totalClaimField.replace(/[₪,]/g, '')) || 0;
         const marketValue = parseFloat(marketValueField.replace(/[₪,]/g, '')) || 0;
         
+        console.log('Damage percentage calculation:', {
+          totalClaimField,
+          marketValueField, 
+          totalClaim,
+          marketValue
+        });
+        
         if (marketValue > 0 && totalClaim > 0) {
           const percentage = (totalClaim / marketValue) * 100;
-          return Math.round(percentage);
+          const rounded = Math.round(percentage);
+          console.log('Calculated damage percentage:', percentage, 'rounded:', rounded);
+          
+          // Update the visual damage percentage field in claims section
+          const damagePercentField = document.getElementById('calculatedDamagePercent');
+          if (damagePercentField) {
+            damagePercentField.value = `${rounded}%`;
+          }
+          
+          return rounded;
         }
+        
+        // Clear the visual field if no valid calculation
+        const damagePercentField = document.getElementById('calculatedDamagePercent');
+        if (damagePercentField) {
+          damagePercentField.value = '';
+        }
+        
         return 0;
       } catch (error) {
         console.error('Error calculating damage percentage:', error);
