@@ -3019,6 +3019,122 @@
       console.log('🔍 === DEBUG CALCULATIONS COMPLETE ===');
     }
     window.debugCalculations = debugCalculations;
+    
+    // 🌍 GLOBAL CALCULATION INTERFACE FOR FINAL REPORT MODULES
+    window.EstimateCalculations = {
+      // Main calculation functions
+      updateGrossMarketValueField: updateGrossMarketValueField,
+      updateGrossPercentageField: updateGrossPercentageField,
+      updateSummaryTotalsFromDamageCenters: updateSummaryTotalsFromDamageCenters,
+      updateAllCostDisplays: updateAllCostDisplays,
+      calculateDamagePercentage: calculateDamagePercentage,
+      
+      // Cost calculation functions
+      calculateRepairsCost: calculateRepairsCost,
+      calculatePartsCost: calculatePartsCost,
+      calculateWorkCost: calculateWorkCost,
+      updateCostDisplay: updateCostDisplay,
+      
+      // Helper utilities
+      updateHelperFromField: updateHelperFromField,
+      loadDataFromHelper: loadDataFromHelper,
+      saveDamageCenterChanges: saveDamageCenterChanges,
+      debugCalculations: debugCalculations,
+      
+      // Get calculated values from helper
+      getGrossMarketValue: function() {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          return helper.calculations?.vehicle_value_gross || 0;
+        } catch (error) {
+          console.error('Error getting gross market value:', error);
+          return 0;
+        }
+      },
+      
+      getFullMarketValue: function() {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          return helper.calculations?.market_value || helper.levi_report?.final_price || 0;
+        } catch (error) {
+          console.error('Error getting full market value:', error);
+          return 0;
+        }
+      },
+      
+      getTotalClaim: function() {
+        try {
+          const totalClaimField = document.getElementById('totalClaim');
+          if (totalClaimField) {
+            return parseFloat(totalClaimField.value.replace(/[₪,]/g, '')) || 0;
+          }
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          return helper.claims_data?.total_claim || 0;
+        } catch (error) {
+          console.error('Error getting total claim:', error);
+          return 0;
+        }
+      },
+      
+      getGrossPercentage: function() {
+        try {
+          const grossPercentField = document.getElementById('grossPercent');
+          if (grossPercentField) {
+            return parseFloat(grossPercentField.value.replace(/[%]/g, '')) || 0;
+          }
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          return helper.claims_data?.gross_percent || 0;
+        } catch (error) {
+          console.error('Error getting gross percentage:', error);
+          return 0;
+        }
+      },
+      
+      // Get damage centers data
+      getDamageCentersData: function() {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          return helper.expertise?.damage_centers || [];
+        } catch (error) {
+          console.error('Error getting damage centers data:', error);
+          return [];
+        }
+      },
+      
+      // Calculate totals from damage centers
+      calculateDamageCentersTotals: function() {
+        const damageCenters = this.getDamageCentersData();
+        let totalParts = 0;
+        let totalWorks = 0;
+        let totalRepairs = 0;
+        
+        damageCenters.forEach(center => {
+          totalParts += this.calculatePartsCost(center.parts || []);
+          totalWorks += this.calculateWorkCost(center.works || []);
+          totalRepairs += this.calculateRepairsCost(center.repairs || []);
+        });
+        
+        return {
+          parts: totalParts,
+          works: totalWorks,
+          repairs: totalRepairs,
+          total: totalParts + totalWorks + totalRepairs,
+          totalWithVAT: (totalParts + totalWorks + totalRepairs) * 1.18
+        };
+      },
+      
+      // Force refresh all calculations
+      refreshAllCalculations: function() {
+        this.updateAllCostDisplays();
+        this.updateSummaryTotalsFromDamageCenters();
+        this.updateGrossMarketValueField();
+        this.updateGrossPercentageField();
+        console.log('✅ All calculations refreshed from EstimateCalculations interface');
+      }
+    };
+    
+    // Make it also available via window for backward compatibility
+    window.getEstimateCalculations = () => window.EstimateCalculations;
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {

@@ -42,6 +42,71 @@ const CAR_DETAILS_TEMPLATE = {
   damageType: ''
 };
 
+// 🧮 GLOBAL CALCULATION INTERFACE FOR ALL MODULES
+export const CalculationInterface = {
+  // Get calculations from sessionStorage helper
+  getCalculations: function() {
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      return helper.calculations || {};
+    } catch (error) {
+      console.error('Error getting calculations:', error);
+      return {};
+    }
+  },
+  
+  // Get key calculation values
+  getGrossMarketValue: function() {
+    return this.getCalculations().vehicle_value_gross || 0;
+  },
+  
+  getFullMarketValue: function() {
+    return this.getCalculations().market_value || this.getCalculations().final_price || 0;
+  },
+  
+  getDamagePercentage: function() {
+    return this.getCalculations().damage_percent || 0;
+  },
+  
+  getTotalDamage: function() {
+    return this.getCalculations().total_damage || 0;
+  },
+  
+  // Use Math Engine for calculations
+  calculateDamagePercentage: function(totalDamage, marketValue) {
+    return MathEngine.computeDamagePercentage(totalDamage, marketValue);
+  },
+  
+  calculateWithVAT: function(amount, vatRate = 18) {
+    return MathEngine.applyVAT(amount, vatRate);
+  },
+  
+  // Format values for display
+  formatCurrency: function(amount) {
+    return MathEngine.formatCurrency(amount);
+  },
+  
+  formatPercentage: function(value) {
+    return `${MathEngine.round(value)}%`;
+  },
+  
+  // Update calculations in helper
+  updateCalculations: function(newCalculations) {
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.calculations = { ...helper.calculations, ...newCalculations };
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Calculations updated in helper:', newCalculations);
+    } catch (error) {
+      console.error('Error updating calculations:', error);
+    }
+  }
+};
+
+// Make Math Engine globally accessible
+window.MathEngine = MathEngine;
+window.CalculationInterface = CalculationInterface;
+
 export const helper = {
   meta: {
     case_id: '',
