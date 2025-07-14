@@ -1420,8 +1420,32 @@
 
     // LOAD LEVI ADJUSTMENTS
     // UNIFIED ADJUSTMENTS SYSTEM - Combines Levi adjustments and custom additions
+    // Debounce mechanism to prevent duplicate loading
+    let loadAdjustmentsTimeout;
+    
     function loadAllAdjustments(helper) {
       try {
+        console.log('🔄 loadAllAdjustments called (will be debounced)');
+        
+        // Clear any existing timeout to prevent duplicate calls
+        if (loadAdjustmentsTimeout) {
+          clearTimeout(loadAdjustmentsTimeout);
+          console.log('⚠️ Cleared previous loadAllAdjustments timeout');
+        }
+        
+        // Debounce the loading to prevent rapid multiple calls
+        loadAdjustmentsTimeout = setTimeout(() => {
+          loadAllAdjustmentsImmediate(helper);
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error in loadAllAdjustments debounce:', error);
+      }
+    }
+    
+    function loadAllAdjustmentsImmediate(helper) {
+      try {
+        console.log('🔄 Loading all adjustments (immediate)');
         const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
         
         // Add null check for DOM element
@@ -1430,12 +1454,17 @@
           return;
         }
         
+        // Clear the container first to prevent duplication
+        adjustmentsContainer.innerHTML = '';
+        
         let adjustmentsHTML = '';
         
         // 1. Load Levi adjustments (read-only from Levi report)
         if (helper.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
           console.log('📄 Loading Levi adjustments:', helper.levi_report.adjustments);
+          console.log('📄 Levi adjustments count:', helper.levi_report.adjustments.length);
           helper.levi_report.adjustments.forEach((adjustment, index) => {
+            console.log(`📄 Processing Levi adjustment ${index}:`, adjustment);
             adjustmentsHTML += createAdjustmentRow({
               description: adjustment.description || 'התאמה מלוי יצחק',
               percentage: adjustment.percentage || 0,
@@ -1452,7 +1481,9 @@
         // 2. Load custom adjustments (editable, stored in helper.levi.custom_adjustments)
         if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
           console.log('📄 Loading custom adjustments:', helper.levi.custom_adjustments);
+          console.log('📄 Custom adjustments count:', helper.levi.custom_adjustments.length);
           helper.levi.custom_adjustments.forEach((adjustment, index) => {
+            console.log(`📄 Processing custom adjustment ${index}:`, adjustment);
             adjustmentsHTML += createAdjustmentRow({
               description: adjustment.description || 'התאמה מותאמת אישית',
               percentage: adjustment.percentage || 0,
