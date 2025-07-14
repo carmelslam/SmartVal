@@ -1646,8 +1646,53 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('✅ Summary totals calculated and updated in helper:', helper.summary_totals);
         
+        // Trigger floating screen updates when helper changes
+        triggerFloatingScreenRefresh();
+        
       } catch (error) {
         console.error('Error calculating summary totals:', error);
+      }
+    }
+
+    // TRIGGER FLOATING SCREEN REFRESH - Updates all helper-dependent floating screens
+    function triggerFloatingScreenRefresh() {
+      try {
+        console.log('🔄 Triggering floating screen refresh after helper update');
+        
+        // Refresh Levi floating screen if open
+        if (window.refreshLeviData && typeof window.refreshLeviData === 'function') {
+          console.log('🔄 Refreshing Levi floating screen');
+          window.refreshLeviData();
+        }
+        
+        // Refresh Car Details floating screen if open
+        if (window.refreshCarData && typeof window.refreshCarData === 'function') {
+          console.log('🔄 Refreshing Car Details floating screen');
+          window.refreshCarData();
+        }
+        
+        // Refresh Invoice floating screen if open
+        if (window.refreshInvoiceData && typeof window.refreshInvoiceData === 'function') {
+          console.log('🔄 Refreshing Invoice floating screen');
+          window.refreshInvoiceData();
+        }
+        
+        // Refresh Parts Search floating screen if open
+        if (window.refreshPartsData && typeof window.refreshPartsData === 'function') {
+          console.log('🔄 Refreshing Parts Search floating screen');
+          window.refreshPartsData();
+        }
+        
+        // Dispatch custom event for any other modules listening
+        window.dispatchEvent(new CustomEvent('helperDataUpdated', {
+          detail: { 
+            timestamp: new Date().toISOString(),
+            source: 'estimate-builder'
+          }
+        }));
+        
+      } catch (error) {
+        console.error('Error triggering floating screen refresh:', error);
       }
     }
 
@@ -1764,6 +1809,9 @@
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Trigger floating screen updates when helper changes
+        triggerFloatingScreenRefresh();
         
         // Update page title if plate changed
         if (fieldId === 'carPlate') {
