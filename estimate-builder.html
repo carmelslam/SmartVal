@@ -2697,43 +2697,137 @@
         // Initialize structures
         helper.levi_report = helper.levi_report || {};
         helper.levi_report.adjustments = [];
+        helper.expertise = helper.expertise || {};
+        helper.expertise.levi_report = helper.expertise.levi_report || {};
+        
+        // Initialize parameter data for aggregation
+        const parameterData = {
+          registration: { percent: 0, value: 0, total: 0 },
+          features: { percent: 0, value: 0, total: 0 },
+          ownership: { percent: 0, value: 0, total: 0 },
+          km: { percent: 0, value: 0, total: 0 },
+          owners: { percent: 0, value: 0, total: 0 }
+        };
         
         // Collect features adjustments
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         featuresRows.forEach(row => {
-          const description = row.querySelector('input[placeholder="תיאור המאפיין"]').value;
-          const type = row.querySelector('select').value;
-          const percent = parseFloat(row.querySelector('input[placeholder="%"]').value.replace('%', '')) || 0;
-          const value = parseFloat(row.querySelector('input[placeholder="₪"]').value.replace(/[₪,]/g, '')) || 0;
+          const description = row.querySelector('input[placeholder="תיאור המאפיין"]')?.value || '';
+          const type = row.querySelector('select')?.value || 'plus';
+          const percent = parseFloat(row.querySelector('input[placeholder="%"]')?.value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
           
           if (description && value !== 0) {
+            const adjustmentValue = type === 'plus' ? value : -value;
             helper.levi_report.adjustments.push({
               description,
               type: 'features',
               percent,
-              value: type === 'plus' ? value : -value,
-              total: type === 'plus' ? value : -value
+              value: adjustmentValue,
+              total: adjustmentValue
             });
+            
+            // Aggregate features data
+            parameterData.features.percent += type === 'plus' ? percent : -percent;
+            parameterData.features.value += adjustmentValue;
+            parameterData.features.total += adjustmentValue;
           }
         });
         
         // Collect registration adjustments
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         registrationRows.forEach(row => {
-          const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]').value;
-          const type = row.querySelector('select').value;
-          const percent = parseFloat(row.querySelector('input[placeholder="%"]').value.replace('%', '')) || 0;
-          const value = parseFloat(row.querySelector('input[placeholder="₪"]').value.replace(/[₪,]/g, '')) || 0;
+          const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]')?.value || '';
+          const type = row.querySelector('select')?.value || 'plus';
+          const percent = parseFloat(row.querySelector('input[placeholder="%"]')?.value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
           
           if (description && value !== 0) {
+            const adjustmentValue = type === 'plus' ? value : -value;
             helper.levi_report.adjustments.push({
               description,
               type: 'registration',
               percent,
-              value: type === 'plus' ? value : -value,
-              total: type === 'plus' ? value : -value
+              value: adjustmentValue,
+              total: adjustmentValue
             });
+            
+            // Aggregate registration data
+            parameterData.registration.percent += type === 'plus' ? percent : -percent;
+            parameterData.registration.value += adjustmentValue;
+            parameterData.registration.total += adjustmentValue;
           }
+        });
+        
+        // Collect other adjustments from allAdjustmentsRows-estimate and map to parameters
+        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+        allAdjustmentRows.forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs.length >= 3) {
+            const description = inputs[0].value || '';
+            const type = row.querySelector('select')?.value || 'plus';
+            const percent = parseFloat(inputs[1].value) || 0;
+            const value = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (description && value !== 0) {
+              const adjustmentValue = type === 'plus' ? value : -value;
+              let parameterType = 'other';
+              
+              // Detect parameter type from description
+              const descLower = description.toLowerCase();
+              if (description.includes('בעלות') || descLower.includes('ownership')) {
+                parameterType = 'ownership';
+              } else if (description.includes('ק״מ') || descLower.includes('km') || description.includes('קילומטר')) {
+                parameterType = 'km';
+              } else if (description.includes('מספר בעלים') || descLower.includes('owners')) {
+                parameterType = 'owners';
+              }
+              
+              helper.levi_report.adjustments.push({
+                description,
+                type: parameterType,
+                percent,
+                value: adjustmentValue,
+                total: adjustmentValue
+              });
+              
+              // Aggregate parameter data if recognized
+              if (parameterData[parameterType]) {
+                parameterData[parameterType].percent += type === 'plus' ? percent : -percent;
+                parameterData[parameterType].value += adjustmentValue;
+                parameterData[parameterType].total += adjustmentValue;
+              }
+            }
+          }
+        });
+        
+        // Update structured helper.expertise.levi_report with Hebrew keys for floating screen
+        Object.assign(helper.expertise.levi_report, {
+          // Registration
+          'עליה לכביש': parameterData.registration.percent > 0 ? `${parameterData.registration.percent}%` : '',
+          'עליה לכביש %': parameterData.registration.percent,
+          'ערך ש״ח עליה לכביש': parameterData.registration.value,
+          'שווי מצטבר עליה לכביש': parameterData.registration.total,
+          // Features
+          'מאפיינים': parameterData.features.percent > 0 ? `${parameterData.features.percent}%` : '',
+          'מאפיינים %': parameterData.features.percent,
+          'ערך ש״ח מאפיינים': parameterData.features.value,
+          'שווי מצטבר מאפיינים': parameterData.features.total,
+          // Ownership
+          'בעלות': parameterData.ownership.percent > 0 ? `${parameterData.ownership.percent}%` : '',
+          'בעלות %': parameterData.ownership.percent,
+          'ערך ש״ח בעלות': parameterData.ownership.value,
+          'שווי מצטבר בעלות': parameterData.ownership.total,
+          // KM
+          'מס ק״מ': parameterData.km.percent > 0 ? `${parameterData.km.percent}%` : '',
+          'מס ק״מ %': parameterData.km.percent,
+          'ערך ש״ח מס ק״מ': parameterData.km.value,
+          'שווי מצטבר מס ק״מ': parameterData.km.total,
+          // Owners
+          'מספר בעלים': parameterData.owners.percent > 0 ? `${parameterData.owners.percent}%` : '',
+          'מספר בעלים %': parameterData.owners.percent,
+          'ערך ש״ח מספר בעלים': parameterData.owners.value,
+          'שווי מצטבר מספר בעלים': parameterData.owners.total
         });
         
         // Update helper
@@ -2742,7 +2836,11 @@
         // Trigger floating screen refresh
         triggerFloatingScreenRefresh();
         
-        console.log('✅ Helper updated from adjustments:', helper.levi_report.adjustments);
+        console.log('✅ Helper updated from adjustments:', {
+          adjustments: helper.levi_report.adjustments,
+          parameters: parameterData,
+          structured: helper.expertise.levi_report
+        });
         
       } catch (error) {
         console.error('Error updating helper from adjustments:', error);
@@ -3384,6 +3482,9 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('Estimate adjustments updated:', adjustments);
+      
+      // Update Levi parameter mapping
+      updateHelperFromAdjustments();
     }
     
     // REFRESH SECOND BULK FIELDS
