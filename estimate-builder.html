@@ -2615,18 +2615,46 @@
       }
     }
     
-    // Calculate adjustment value from percentage
+    // Calculate adjustment value from percentage - ENHANCED
     function calculateAdjustmentValue(percentInput) {
       const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
       if (!row) return;
       
       const percent = parseFloat(percentInput.value.replace('%', '')) || 0;
-      const basicPrice = parseFloat(document.getElementById('basicPrice').value.replace(/[₪,]/g, '')) || 0;
+      let basicPrice = parseFloat(document.getElementById('basicPrice').value.replace(/[₪,]/g, '')) || 0;
+      
+      // If basic price is not available from the field, try to get it from helper
+      if (basicPrice === 0) {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.levi_report?.base_price) {
+          basicPrice = parseFloat(helper.levi_report.base_price);
+        } else if (helper.expertise?.levi_report?.base_price) {
+          basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+        } else if (helper.levisummary?.base_price) {
+          basicPrice = parseFloat(helper.levisummary.base_price);
+        } else if (helper.car_details?.base_price) {
+          basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+        } else if (helper.car_details?.market_value) {
+          basicPrice = parseFloat(helper.car_details.market_value.toString().replace(/[₪,]/g, ''));
+        }
+        
+        // If we found a basic price, update the field
+        if (basicPrice > 0) {
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField) {
+            basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
+          }
+        }
+      }
+      
       const valueInput = row.querySelector('input[placeholder="₪"]');
       
       if (basicPrice > 0 && percent !== 0) {
         const calculatedValue = (basicPrice * percent) / 100;
         valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+        console.log(`💰 Calculated adjustment value: ${percent}% × ₪${basicPrice.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+      } else {
+        console.warn(`⚠️ Cannot calculate adjustment value - basicPrice: ${basicPrice}, percent: ${percent}`);
       }
     }
     
@@ -2796,6 +2824,14 @@
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
               inputs[1].value = adj.percent ? `${adj.percent}%` : '';
               inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              
+              // Trigger calculation for the percentage field
+              const percentInput = inputs[1];
+              if (percentInput && percentInput.value) {
+                setTimeout(() => {
+                  calculateAdjustmentValue(percentInput);
+                }, 100);
+              }
             }
           });
         }
@@ -2823,6 +2859,14 @@
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
               inputs[1].value = adj.percent ? `${adj.percent}%` : '';
               inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              
+              // Trigger calculation for the percentage field
+              const percentInput = inputs[1];
+              if (percentInput && percentInput.value) {
+                setTimeout(() => {
+                  calculateAdjustmentValue(percentInput);
+                }, 100);
+              }
             }
           });
         }
@@ -2894,10 +2938,23 @@
         // Calculate initial gross market value
         updateGrossMarketValueCalculation();
         
+        // Trigger calculation for all existing adjustment rows
+        setTimeout(() => {
+          const allPercentInputs = document.querySelectorAll('#featuresAdjustmentsList input[placeholder="%"], #registrationAdjustmentsList input[placeholder="%"]');
+          allPercentInputs.forEach(input => {
+            if (input.value) {
+              calculateAdjustmentValue(input);
+            }
+          });
+          
+          // Recalculate final values
+          updateGrossMarketValueCalculation();
+        }, 300);
+        
         // Load second bulk data if available
         setTimeout(() => {
           loadSecondBulkData();
-        }, 200);
+        }, 500);
         
       } catch (error) {
         console.error('Error loading gross calculation data:', error);
@@ -4319,22 +4376,45 @@
         
         console.log('📥 Loading helper data:', helper);
         
-        // Auto-fill basic price field from helper
+        // Auto-fill basic price field from helper - ENHANCED
         const basicPriceField = document.getElementById('basicPrice');
-        if (basicPriceField && !basicPriceField.value) {
+        if (basicPriceField) {
           let basicPrice = 0;
           
+          // Try multiple sources for basic price
           if (helper.levi_report?.base_price) {
             basicPrice = parseFloat(helper.levi_report.base_price);
+            console.log('📄 Found base price in helper.levi_report.base_price:', basicPrice);
           } else if (helper.expertise?.levi_report?.base_price) {
             basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+            console.log('📄 Found base price in helper.expertise.levi_report.base_price:', basicPrice);
           } else if (helper.levisummary?.base_price) {
             basicPrice = parseFloat(helper.levisummary.base_price);
+            console.log('📄 Found base price in helper.levisummary.base_price:', basicPrice);
+          } else if (helper.car_details?.base_price) {
+            basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+            console.log('📄 Found base price in helper.car_details.base_price:', basicPrice);
+          } else if (helper.car_details?.market_value) {
+            basicPrice = parseFloat(helper.car_details.market_value.toString().replace(/[₪,]/g, ''));
+            console.log('📄 Found base price in helper.car_details.market_value:', basicPrice);
           }
           
           if (basicPrice > 0) {
             basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
-            console.log('✅ Auto-filled basic price:', basicPrice);
+            console.log('✅ Auto-filled basic price field:', basicPrice);
+            
+            // Trigger calculation after loading
+            setTimeout(() => {
+              updateGrossMarketValueCalculation();
+            }, 100);
+          } else {
+            console.warn('⚠️ No base price found in helper, basic price field will be empty');
+            console.log('Debug helper data:', {
+              levi_report: helper.levi_report,
+              expertise: helper.expertise,
+              levisummary: helper.levisummary,
+              car_details: helper.car_details
+            });
           }
         }
         
@@ -4619,6 +4699,32 @@
     window.loadFullMarketValueData = loadFullMarketValueData;
     window.addFullMarketAdjustment = addFullMarketAdjustment;
     window.debugCalculations = debugCalculations;
+    
+    // Manual trigger for all calculations
+    window.forceCalculateAllAdjustments = function() {
+      console.log('🔄 Forcing calculation of all adjustments...');
+      
+      // First ensure basic price is loaded
+      loadHelperData();
+      
+      setTimeout(() => {
+        // Calculate all adjustment values
+        const allPercentInputs = document.querySelectorAll('#featuresAdjustmentsList input[placeholder="%"], #registrationAdjustmentsList input[placeholder="%"]');
+        console.log(`Found ${allPercentInputs.length} percentage inputs`);
+        
+        allPercentInputs.forEach((input, index) => {
+          if (input.value) {
+            console.log(`Calculating adjustment ${index + 1}: ${input.value}`);
+            calculateAdjustmentValue(input);
+          }
+        });
+        
+        // Update gross market value calculation
+        updateGrossMarketValueCalculation();
+        
+        console.log('✅ All adjustment calculations completed');
+      }, 200);
+    };
     
     console.log('🎯 3-bulk system functions loaded and ready');
   </script>

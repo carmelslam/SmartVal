@@ -53,6 +53,21 @@
 - **Total claim from damage centers showing 0**: This should be fixed by the proper parts cost calculation
 - **Field validation not working**: This should be fixed by the proper helper updates
 
+✅ **8. Fixed basic price field not loading** (ערך הרכב ע"פ מחירון כולל מע"מ)
+- **Issue**: Basic price field (`basicPrice`) was empty even when helper had data
+- **Fix**: Enhanced `loadHelperData()` function to try multiple sources for basic price
+- **Code**: Added fallback chain: `levi_report.base_price` → `expertise.levi_report.base_price` → `levisummary.base_price` → `car_details.base_price` → `car_details.market_value`
+
+✅ **9. Fixed adjustment value calculation** (ערך fields empty)
+- **Issue**: Adjustment ערך fields were empty because calculation wasn't triggered
+- **Fix**: Enhanced `calculateAdjustmentValue()` function with helper fallback and auto-trigger
+- **Code**: Added calculation trigger in `loadGrossCalculationData()` and enhanced percentage calculation
+
+✅ **10. Fixed gross market value calculation** (ערך הרכב לנזק גולמי כולל מע"מ showing ₪0)
+- **Issue**: Gross market value result was ₪0 due to missing calculations
+- **Fix**: Added proper calculation trigger and timing in initialization
+- **Code**: Added `setTimeout()` with proper calculation order
+
 ## Next Steps:
 
 1. **Test the page in browser**
@@ -60,6 +75,8 @@
 3. **Verify helper updates work**
 4. **Test floating screen refresh**
 5. **Verify field persistence on page refresh**
+6. **Test adjustment value calculations**
+7. **Use `forceCalculateAllAdjustments()` in console if needed**
 
 ---
 
