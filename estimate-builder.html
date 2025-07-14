@@ -501,15 +501,115 @@
       </div>
     </div>
 
-    <!-- COLLAPSIBLE PRICE DATA -->
+    <!-- GROSS DAMAGE PERCENTAGE CALCULATION -->
     <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
-      <div id="priceData" style="display:none;">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">חישוב אחוז הנזק (הצג/הסתר)</button>
+      <div id="grossCalc" style="display:none;">
         <div class="form-grid">
-          <div><label>סה״כ תביעה:</label><input type="text" id="totalClaim" style="background: #f8f9fa;" readonly /></div>
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" /></div>
+          <div></div>
+        </div>
+        
+        <!-- Features Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">תוספות מאפיינים:</h4>
+          <div id="featuresAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="featuresAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addFeatureAdjustment()">הוסף תוספת מאפיין</button>
+          </div>
+        </div>
+        
+        <!-- Registration Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">עליה לכביש:</h4>
+          <div id="registrationAdjustments">
+            <div id="registrationAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
+          </div>
+        </div>
+        
+        <!-- Gross Market Value Result -->
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; border: 2px solid #4a90e2;">
+          <div class="form-grid">
+            <div><label><strong>ערך הרכב לנזק גולמי כולל מע"מ:</strong></label><input type="text" id="grossMarketValueResult" style="background: #f8f9fa; font-weight: bold;" readonly /></div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROSS DAMAGE PERCENTAGE RESULT -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('grossPercentageResult')">אחוז הנזק הגולמי (הצג/הסתר)</button>
+      <div id="grossPercentageResult" style="display:none;">
+        <div class="form-grid">
+          <div><label>סה״כ עלות נזקים:</label><input type="text" id="totalClaim" style="background: #f8f9fa;" readonly /></div>
           <div><label>ערך הרכב לנזק גולמי:</label><input type="text" id="leviPriceList" style="background: #f8f9fa;" readonly /></div>
-          <div><label>חישוב האחוז הגולמי:</label><input type="text" id="grossPercent" style="background: #f8f9fa;" readonly /></div>
-          <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" /></div>
+        </div>
+        
+        <!-- Gross Percentage Result -->
+        <div style="margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 8px; border: 2px solid #e74c3c;">
+          <div class="form-grid">
+            <div><label><strong>אחוז הנזק הגולמי:</strong></label><input type="text" id="grossPercent" style="background: #f8f9fa; font-weight: bold; color: #e74c3c;" readonly /></div>
+            <div></div>
+          </div>
+          <div style="margin-top: 10px; font-size: 14px; color: #666;">
+            <strong>חישוב:</strong> סה״כ עלות נזקים ÷ ערך הרכב לנזק גולמי × 100
+          </div>
+        </div>
+        
+        <!-- Additional Claims Data -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">נתונים נוספים:</h4>
+          <div class="form-grid">
+            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" /></div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL MARKET VALUE CALCULATION -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('fullMarketValue')">חישוב ערך השוק של הרכב (הצג/הסתר)</button>
+      <div id="fullMarketValue" style="display:none;">
+        <div class="form-grid">
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="fullBasicPrice" placeholder="₪" readonly style="background: #f8f9fa;" /></div>
+          <div></div>
+        </div>
+        
+        <!-- All Adjustments Section -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">כל ההתאמות (עליה לכביש + מאפיינים + גורמים נוספים):</h4>
+          <div id="allAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="allAdjustmentsList">
+              <!-- This will be populated from helper data -->
+            </div>
+            <button class="btn add" type="button" onclick="addFullMarketAdjustment()">הוסף התאמה</button>
+          </div>
+        </div>
+        
+        <!-- Full Market Value Result -->
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; border: 2px solid #28a745;">
+          <div class="form-grid">
+            <div><label><strong>ערך השוק המלא של הרכב כולל מע"מ:</strong></label><input type="text" id="fullMarketValueResult" style="background: #f8f9fa; font-weight: bold; color: #28a745;" readonly /></div>
+            <div></div>
+          </div>
+          <div style="margin-top: 10px; font-size: 14px; color: #666;">
+            <strong>חישוב:</strong> מחיר בסיס + כל ההתאמות
+          </div>
         </div>
       </div>
     </div>
@@ -572,23 +672,6 @@
           <div style="display: flex; align-items: center; font-size: 13px; color: #666; padding: 8px;">
             ➖ שדה אופציונלי - מופחת מהסכום הסופי אם מולא
           </div>
-        </div>
-      </div>
-      
-      <!-- תוספות והורדות SECTION - MOVED BEFORE VAT CALCULATION -->
-      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-        <label style="color: #333; font-weight: bold; margin-bottom: 10px; display: block;">תוספות והורדות:</label>
-        <div class="unified-adjustments-section" id="unifiedAdjustments-estimate" style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-          <div style="font-weight: bold; margin-bottom: 8px; color: #495057; font-size: 14px;">התאמות מדו"ח לוי יצחק וגורמים נוספים:</div>
-          <div class="levi-adjustments-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; font-size: 13px;">
-            <div style="font-weight: bold;">מהות ההתאמה</div>
-            <div style="font-weight: bold;">סוג</div>
-            <div style="font-weight: bold;">אחוז</div>
-            <div style="font-weight: bold;">ערך (₪)</div>
-            <div style="font-weight: bold;">פעולות</div>
-          </div>
-          <div id="allAdjustmentsRows-estimate"></div>
-          <button class="btn add" type="button" onclick="addCustomAdjustmentField()" style="color: #333; background: #28a745; margin-top: 8px; font-size: 13px;">הוסף התאמה נוספת</button>
         </div>
       </div>
       
@@ -861,7 +944,7 @@
         setTimeout(() => {
           updateAllCostDisplays();
           updateSummaryTotalsFromDamageCenters();
-          updateGrossFields();
+          loadGrossCalculationData(); // Load gross calculation data from helper
         }, 200);
         
         // Load contact data (now editable) and sync to car_details
@@ -1820,6 +1903,41 @@
       try {
         console.log('🔄 Triggering floating screen refresh after helper update');
         
+        // Update helper with current 3-bulk calculations
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure calculations structure exists
+        helper.calculations = helper.calculations || {};
+        helper.expertise = helper.expertise || {};
+        helper.expertise.calculations = helper.expertise.calculations || {};
+        
+        // Update with current bulk calculations
+        const grossMarketValue = window.EstimateCalculations.getGrossMarketValue();
+        const fullMarketValue = window.EstimateCalculations.getFullMarketValue();
+        const totalClaim = window.EstimateCalculations.getTotalClaim();
+        const grossPercentage = window.EstimateCalculations.getGrossPercentage();
+        
+        helper.calculations.vehicle_value_gross = grossMarketValue;
+        helper.calculations.market_value = fullMarketValue;
+        helper.calculations.full_market_value = fullMarketValue;
+        helper.calculations.total_damage = totalClaim;
+        helper.calculations.damage_percent = grossPercentage;
+        
+        // Update expertise calculations for compatibility
+        helper.expertise.calculations.vehicle_value_gross = grossMarketValue;
+        helper.expertise.calculations.market_value = fullMarketValue;
+        helper.expertise.calculations.total_damage = totalClaim;
+        helper.expertise.calculations.damage_percent = grossPercentage;
+        
+        // Update claims_data for UI consistency
+        helper.claims_data = helper.claims_data || {};
+        helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
+        helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
+        helper.claims_data.gross_percent = `${grossPercentage.toFixed(2)}%`;
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
         // Debug: Check which refresh functions are available
         console.log('Debug: Available refresh functions:', {
           refreshLeviData: typeof window.refreshLeviData,
@@ -1832,32 +1950,24 @@
         if (window.refreshLeviData && typeof window.refreshLeviData === 'function') {
           console.log('🔄 Refreshing Levi floating screen');
           window.refreshLeviData();
-        } else {
-          console.log('⚠️ refreshLeviData not available or not a function');
         }
         
         // Refresh Car Details floating screen if open
         if (window.refreshCarData && typeof window.refreshCarData === 'function') {
           console.log('🔄 Refreshing Car Details floating screen');
           window.refreshCarData();
-        } else {
-          console.log('⚠️ refreshCarData not available or not a function');
         }
         
         // Refresh Invoice floating screen if open
         if (window.refreshInvoiceData && typeof window.refreshInvoiceData === 'function') {
           console.log('🔄 Refreshing Invoice floating screen');
           window.refreshInvoiceData();
-        } else {
-          console.log('⚠️ refreshInvoiceData not available or not a function');
         }
         
-        // Refresh Parts Search floating screen (corrected function name)
+        // Refresh Parts Search floating screen
         if (window.refreshPartsResults && typeof window.refreshPartsResults === 'function') {
           console.log('🔄 Refreshing Parts Search floating screen');
           window.refreshPartsResults();
-        } else {
-          console.log('⚠️ refreshPartsResults not available or not a function');
         }
         
         // Alternative: Try to reload data directly from iframe/floating screens
@@ -1872,6 +1982,7 @@
                 iframe.contentWindow.postMessage({
                   type: 'refreshData',
                   source: 'estimate-builder',
+                  calculations: helper.calculations,
                   timestamp: new Date().toISOString()
                 }, '*');
               } catch (e) {
@@ -1885,9 +1996,17 @@
         window.dispatchEvent(new CustomEvent('helperDataUpdated', {
           detail: { 
             timestamp: new Date().toISOString(),
-            source: 'estimate-builder'
+            source: 'estimate-builder',
+            calculations: helper.calculations
           }
         }));
+        
+        console.log('✅ Helper updated with 3-bulk calculations:', {
+          grossMarketValue,
+          fullMarketValue,
+          totalClaim,
+          grossPercentage
+        });
         
       } catch (error) {
         console.error('Error triggering floating screen refresh:', error);
@@ -1978,13 +2097,22 @@
           element.addEventListener('change', function(event) {
             updateHelperFromField(event);
             
-            // Trigger gross calculations when total claim changes
+            // Update gross percentage when total claim changes
             if (id === 'totalClaim') {
-              setTimeout(updateGrossFields, 100);
+              updateGrossPercentageFromGrossValue();
             }
           });
         }
       });
+      
+      // Basic price field event listener for gross calculation
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField) {
+        basicPriceField.addEventListener('change', function(event) {
+          updateHelperFromField(event);
+          updateGrossMarketValueCalculation();
+        });
+      }
       
       // Contact data listeners
       ['ownerName', 'ownerAddress', 'ownerPhone', 'insuranceCompany', 'insuranceEmail', 'insuranceAgent', 'agentPhone', 'agentEmail'].forEach(id => {
@@ -2021,7 +2149,7 @@
         console.log(`📝 Field change detected: ${fieldId} = "${value}"`);
         
         // Update the appropriate helper section based on field
-        if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'].includes(fieldId)) {
+        if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate', 'basicPrice'].includes(fieldId)) {
           helper.car_details = helper.car_details || {};
           helper.vehicle = helper.vehicle || {};
           
@@ -2033,7 +2161,8 @@
             'carModelCode': 'model_code',
             'carBasePrice': 'base_price',
             'carMarketValue': 'market_value',
-            'carReportDate': 'report_date'
+            'carReportDate': 'report_date',
+            'basicPrice': 'basic_price'
           };
           
           // Update car_details (builder format)
@@ -2461,128 +2590,442 @@
       }
     }
 
-    // DEBUG HELPER DATA
-    function debugHelperData() {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('🔍 === COMPLETE HELPER DATA ===');
-      console.log('Full helper:', helper);
-      console.log('Levi report:', helper.levi_report);
-      console.log('Levi summary:', helper.levisummary);
-      console.log('Calculations:', helper.calculations);
-      console.log('Expertise:', helper.expertise);
-      console.log('Car details:', helper.car_details);
-      console.log('Vehicle:', helper.vehicle);
+    // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
+    
+    // Add feature adjustment row
+    function addFeatureAdjustment() {
+      const container = document.getElementById('featuresAdjustmentsList');
+      const rowId = 'featureAdj_' + Date.now();
       
-      // Check what basic price and additions we have
-      if (helper.levi_report) {
-        console.log('🚗 Levi Report Data:');
-        console.log('- Base price:', helper.levi_report.base_price);
-        console.log('- Final price:', helper.levi_report.final_price);
-        console.log('- Features value:', helper.levi_report.features_value);
-        console.log('- Registration value:', helper.levi_report.registration_value);
-        console.log('- Adjustments:', helper.levi_report.adjustments);
-      }
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation()" />
+          <select onchange="updateGrossMarketValueCalculation()">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select>
+          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation()" />
+          <button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button>
+        </div>
+      `;
       
-      if (helper.levisummary) {
-        console.log('📋 Levi Summary Data:');
-        console.log('- Base price:', helper.levisummary.base_price);
-        console.log('- Final price:', helper.levisummary.final_price);
-        console.log('- Price adjustments:', helper.levisummary.price_adjustments);
-      }
-      
-      console.log('🔍 === END HELPER DATA ===');
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateGrossMarketValueCalculation();
     }
     
-    // SIMPLE UPDATE BOTH GROSS FIELDS (NO RECURSION)
-    function updateGrossFields() {
+    // Add registration adjustment row
+    function addRegistrationAdjustment() {
+      const container = document.getElementById('registrationAdjustmentsList');
+      const rowId = 'regAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation()" />
+          <select onchange="updateGrossMarketValueCalculation()">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select>
+          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation()" />
+          <button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateGrossMarketValueCalculation();
+    }
+    
+    // Remove adjustment row
+    function removeAdjustmentRow(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+        updateGrossMarketValueCalculation();
+      }
+    }
+    
+    // Calculate and update gross market value
+    function updateGrossMarketValueCalculation() {
+      try {
+        // Get basic price
+        const basicPriceField = document.getElementById('basicPrice');
+        const basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        
+        let totalAdjustments = 0;
+        
+        // Calculate features adjustments
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const type = row.querySelector('select').value;
+          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
+          totalAdjustments += (type === 'plus') ? value : -value;
+        });
+        
+        // Calculate registration adjustments
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const type = row.querySelector('select').value;
+          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
+          totalAdjustments += (type === 'plus') ? value : -value;
+        });
+        
+        // Calculate gross market value
+        const grossMarketValue = basicPrice + totalAdjustments;
+        
+        // Update result field
+        const resultField = document.getElementById('grossMarketValueResult');
+        if (resultField) {
+          resultField.value = `₪${grossMarketValue.toLocaleString()}`;
+        }
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.calculations = helper.calculations || {};
+        helper.calculations.vehicle_value_gross = grossMarketValue;
+        helper.calculations.basic_price = basicPrice;
+        helper.calculations.total_adjustments = totalAdjustments;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`💰 Gross Market Value: ${basicPrice} + ${totalAdjustments} = ${grossMarketValue}`);
+        
+        // Update second bulk fields immediately
+        setTimeout(() => {
+          updateGrossPercentageFromGrossValue();
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error calculating gross market value:', error);
+      }
+    }
+    
+    // Load data from helper for gross calculation
+    function loadGrossCalculationData() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Get the field elements
-        const leviPriceListField = document.getElementById('leviPriceList');
-        const grossPercentField = document.getElementById('grossPercent');
-        const totalClaimField = document.getElementById('totalClaim');
-        
-        console.log('🔍 Calculating gross market value...');
-        
-        // Calculate GROSS market value (basic price + only eligible additions)
-        let grossMarketValue = 0;
-        let basicPrice = 0;
-        let eligibleAdditions = 0;
-        
-        // Try to get basic price
-        if (helper.levi_report?.base_price) {
-          basicPrice = parseFloat(helper.levi_report.base_price);
-        } else if (helper.levisummary?.base_price) {
-          basicPrice = parseFloat(helper.levisummary.base_price);
-        } else if (helper.expertise?.calculations?.base_price) {
-          basicPrice = parseFloat(helper.expertise.calculations.base_price);
+        // Load basic price
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && helper.levi_report?.base_price) {
+          basicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
         }
         
-        // Add eligible additions for gross calculation (features + registration only)
-        if (helper.levi_report) {
-          const featuresValue = parseFloat(helper.levi_report.features_value || 0);
-          const registrationValue = parseFloat(helper.levi_report.registration_value || 0);
-          eligibleAdditions = featuresValue + registrationValue;
+        // Load features adjustments from helper
+        if (helper.levi_report?.adjustments) {
+          const featuresAdjustments = helper.levi_report.adjustments.filter(adj => 
+            adj.type === 'features' || adj.description?.includes('מאפיינים')
+          );
           
-          console.log(`🔧 Levi Report - Basic: ${basicPrice}, Features: ${featuresValue}, Registration: ${registrationValue}`);
-        } else if (helper.levisummary?.price_adjustments) {
-          // Look for specific eligible adjustments in levisummary
-          const adjustments = helper.levisummary.price_adjustments;
-          adjustments.forEach(adj => {
-            const description = (adj.description || '').toLowerCase();
-            if (description.includes('מאפיינים') || description.includes('features') || 
-                description.includes('עליה לכביש') || description.includes('registration')) {
-              eligibleAdditions += parseFloat(adj.value || 0);
+          featuresAdjustments.forEach(adj => {
+            addFeatureAdjustment();
+            // Populate the last added row with data
+            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
             }
           });
+        }
+        
+        // Load registration adjustments from helper
+        if (helper.levi_report?.adjustments) {
+          const registrationAdjustments = helper.levi_report.adjustments.filter(adj => 
+            adj.type === 'registration' || adj.description?.includes('עليה לכביש')
+          );
           
-          console.log(`🔧 Levi Summary - Basic: ${basicPrice}, Eligible additions: ${eligibleAdditions}`);
+          registrationAdjustments.forEach(adj => {
+            addRegistrationAdjustment();
+            // Populate the last added row with data
+            const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
         }
         
-        grossMarketValue = basicPrice + eligibleAdditions;
+        // Calculate initial gross market value
+        updateGrossMarketValueCalculation();
         
-        console.log(`💰 Calculated Gross Market Value: ${basicPrice} + ${eligibleAdditions} = ${grossMarketValue}`);
+        // Load second bulk data if available
+        setTimeout(() => {
+          loadSecondBulkData();
+        }, 200);
         
-        // If we still don't have a value, try manual fallback
-        if (grossMarketValue <= 0) {
-          if (helper.levi_report?.final_price) {
-            grossMarketValue = parseFloat(helper.levi_report.final_price);
-            console.log(`🔧 Using final_price as fallback: ${grossMarketValue}`);
-          } else if (helper.expertise?.calculations?.market_value) {
-            grossMarketValue = parseFloat(helper.expertise.calculations.market_value);
-            console.log(`🔧 Using expertise market_value as fallback: ${grossMarketValue}`);
-          }
-        }
-        
-        // Update gross market value field
-        if (grossMarketValue > 0) {
-          leviPriceListField.value = `₪${grossMarketValue.toLocaleString()}`;
-          console.log(`💰 Updated gross market value field: ₪${grossMarketValue.toLocaleString()}`);
-          
-          // Update gross percentage field
-          const totalClaim = parseFloat(totalClaimField?.value?.replace(/[₪,]/g, '') || '0');
-          if (totalClaim > 0) {
-            const grossPercentage = (totalClaim / grossMarketValue) * 100;
-            const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
-            
-            grossPercentField.value = formattedPercentage;
-            console.log(`📊 Updated gross percentage: ${totalClaim} ÷ ${grossMarketValue} = ${formattedPercentage}`);
-            
-            // Update helper
-            helper.calculations = helper.calculations || {};
-            helper.calculations.vehicle_value_gross = grossMarketValue;
-            helper.claims_data = helper.claims_data || {};
-            helper.claims_data.gross_percent = formattedPercentage;
-            helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-          }
-        } else {
-          console.warn('⚠️ Could not calculate gross market value - no basic price found');
-        }
       } catch (error) {
-        console.error('Error updating gross fields:', error);
+        console.error('Error loading gross calculation data:', error);
       }
+    }
+    
+    // Load data for second bulk (gross percentage)
+    function loadSecondBulkData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Load claims data if available
+        if (helper.claims_data) {
+          const totalClaimField = document.getElementById('totalClaim');
+          const leviPriceListField = document.getElementById('leviPriceList');
+          const grossPercentField = document.getElementById('grossPercent');
+          
+          if (totalClaimField && helper.claims_data.total_claim) {
+            totalClaimField.value = helper.claims_data.total_claim;
+          }
+          
+          if (leviPriceListField && helper.claims_data.levi_price_list) {
+            leviPriceListField.value = helper.claims_data.levi_price_list;
+          }
+          
+          if (grossPercentField && helper.claims_data.gross_percent) {
+            grossPercentField.value = helper.claims_data.gross_percent;
+          }
+        }
+        
+        // If no saved data, calculate from current state
+        if (!helper.claims_data?.total_claim) {
+          updateGrossPercentageFromGrossValue();
+        }
+        
+      } catch (error) {
+        console.error('Error loading second bulk data:', error);
+      }
+    }
+    
+    // Update gross percentage when gross market value changes
+    function updateGrossPercentageFromGrossValue() {
+      // Get gross market value from the first bulk
+      const grossMarketValue = parseFloat(document.getElementById('grossMarketValueResult')?.value.replace(/[₪,]/g, '')) || 0;
+      
+      // Get total claim from damage centers calculation
+      const totalClaim = calculateTotalClaimFromDamageCenters();
+      
+      console.log('🔍 Updating gross percentage from gross value:', {
+        grossMarketValue,
+        totalClaim
+      });
+      
+      // Update the second bulk fields
+      const totalClaimField = document.getElementById('totalClaim');
+      const leviPriceListField = document.getElementById('leviPriceList');
+      
+      if (totalClaimField && totalClaim > 0) {
+        totalClaimField.value = `₪${totalClaim.toLocaleString()}`;
+      }
+      
+      if (leviPriceListField && grossMarketValue > 0) {
+        leviPriceListField.value = `₪${grossMarketValue.toLocaleString()}`;
+      }
+      
+      // Calculate and update gross percentage
+      if (grossMarketValue > 0 && totalClaim > 0) {
+        const grossPercentage = (totalClaim / grossMarketValue) * 100;
+        const grossPercentField = document.getElementById('grossPercent');
+        if (grossPercentField) {
+          const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
+          grossPercentField.value = formattedPercentage;
+          
+          // Update helper
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.claims_data = helper.claims_data || {};
+          helper.claims_data.gross_percent = formattedPercentage;
+          helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
+          helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log(`📊 Gross percentage updated: ${totalClaim.toLocaleString()} ÷ ${grossMarketValue.toLocaleString()} = ${formattedPercentage}`);
+        }
+      }
+    }
+    
+    // CALCULATE TOTAL CLAIM FROM DAMAGE CENTERS
+    function calculateTotalClaimFromDamageCenters() {
+      try {
+        let totalClaim = 0;
+        
+        // Get damage centers from the summary or helper
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        if (damageCentersContent) {
+          const damageRows = damageCentersContent.querySelectorAll('.damage-center-row');
+          damageRows.forEach(row => {
+            const totalField = row.querySelector('.total-field');
+            if (totalField && totalField.value) {
+              const total = parseFloat(totalField.value.replace(/[₪,]/g, '')) || 0;
+              totalClaim += total;
+            }
+          });
+        }
+        
+        // Fallback: try to get from summary section
+        if (totalClaim === 0) {
+          const sumClaimField = document.getElementById('sumClaim');
+          if (sumClaimField && sumClaimField.value) {
+            totalClaim = parseFloat(sumClaimField.value.replace(/[₪,]/g, '')) || 0;
+          }
+        }
+        
+        // Fallback: try to get from helper
+        if (totalClaim === 0) {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.expertise?.damage_blocks) {
+            helper.expertise.damage_blocks.forEach(block => {
+              totalClaim += (parseFloat(block.parts_cost) || 0) + 
+                           (parseFloat(block.work_cost) || 0) + 
+                           (parseFloat(block.repairs_cost) || 0);
+            });
+          }
+        }
+        
+        console.log('💰 Total claim from damage centers:', totalClaim);
+        return totalClaim;
+      } catch (error) {
+        console.error('Error calculating total claim from damage centers:', error);
+        return 0;
+      }
+    }
+    
+    // SIMPLE CALCULATION FUNCTIONS FOR NEW SYSTEM
+    function calculateGrossMarketValue() {
+      updateGrossMarketValueCalculation();
+    }
+    
+    function calculateGrossPercentage() {
+      updateGrossPercentageFromGrossValue();
+    }
+    
+    function calculateFullMarketValue() {
+      updateFullMarketValueCalculation();
+    }
+    
+    // FULL MARKET VALUE CALCULATION FUNCTIONS
+    
+    // Add full market adjustment row
+    function addFullMarketAdjustment() {
+      const container = document.getElementById('allAdjustmentsList');
+      const rowId = 'fullAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <input type="text" placeholder="תיאור ההתאמה" onchange="updateFullMarketValueCalculation()" />
+          <select onchange="updateFullMarketValueCalculation()">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select>
+          <input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation()" />
+          <button class="btn remove" onclick="removeFullMarketAdjustmentRow('${rowId}')">מחק</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
+    // Remove full market adjustment row
+    function removeFullMarketAdjustmentRow(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+        updateFullMarketValueCalculation();
+      }
+    }
+    
+    // Calculate and update full market value
+    function updateFullMarketValueCalculation() {
+      try {
+        // Get basic price (same as gross market value calculation)
+        const basicPriceField = document.getElementById('fullBasicPrice');
+        const basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        
+        let totalAdjustments = 0;
+        
+        // Calculate all adjustments from the third bulk
+        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
+        allAdjustmentRows.forEach(row => {
+          const type = row.querySelector('select').value;
+          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
+          totalAdjustments += (type === 'plus') ? value : -value;
+        });
+        
+        // Calculate full market value
+        const fullMarketValue = basicPrice + totalAdjustments;
+        
+        // Update result field
+        const resultField = document.getElementById('fullMarketValueResult');
+        if (resultField) {
+          resultField.value = `₪${fullMarketValue.toLocaleString()}`;
+        }
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.calculations = helper.calculations || {};
+        helper.calculations.market_value = fullMarketValue;
+        helper.calculations.full_market_value = fullMarketValue;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`💰 Full Market Value: ${basicPrice} + ${totalAdjustments} = ${fullMarketValue}`);
+        
+        // Update summary section if needed
+        const sumMarketValueField = document.getElementById('sumMarketValue');
+        if (sumMarketValueField) {
+          sumMarketValueField.value = `₪${fullMarketValue.toLocaleString()}`;
+        }
+        
+      } catch (error) {
+        console.error('Error calculating full market value:', error);
+      }
+    }
+    
+    // Load data from helper for full market value calculation
+    function loadFullMarketValueData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Load basic price (same as gross calculation)
+        const fullBasicPriceField = document.getElementById('fullBasicPrice');
+        const basicPriceField = document.getElementById('basicPrice');
+        if (fullBasicPriceField && basicPriceField) {
+          fullBasicPriceField.value = basicPriceField.value;
+        } else if (fullBasicPriceField && helper.levi_report?.base_price) {
+          fullBasicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
+        }
+        
+        // Load ALL adjustments from helper (this includes everything from Levi + custom)
+        if (helper.levi_report?.adjustments) {
+          helper.levi_report.adjustments.forEach(adj => {
+            addFullMarketAdjustment();
+            // Populate the last added row with data
+            const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
+        }
+        
+        // Load custom adjustments if any
+        if (helper.custom_adjustments) {
+          helper.custom_adjustments.forEach(adj => {
+            addFullMarketAdjustment();
+            const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
+        }
+        
+        // Calculate initial full market value
+        updateFullMarketValueCalculation();
+        
+      } catch (error) {
+        console.error('Error loading full market value data:', error);
+      }
+    }
+    
+    // REFRESH SECOND BULK FIELDS
+    function refreshSecondBulkFields() {
+      updateGrossPercentageFromGrossValue();
     }
     
     // UPDATE GROSS PERCENTAGE FIELD
@@ -3143,8 +3586,7 @@
           }
         }, 100);
         
-        // Also trigger gross calculations since total claim changed
-        setTimeout(updateGrossFields, 150);
+        // New bulk system will handle gross calculations when total claim changes
       }
     }
 
@@ -3181,7 +3623,14 @@
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
     window.updateGrossMarketValueField = updateGrossMarketValueField;
     window.updateGrossPercentageField = updateGrossPercentageField;
-    window.updateGrossFields = updateGrossFields;
+    window.calculateGrossMarketValue = calculateGrossMarketValue;
+    window.calculateGrossPercentage = calculateGrossPercentage;
+    window.calculateFullMarketValue = calculateFullMarketValue;
+    window.addFeatureAdjustment = addFeatureAdjustment;
+    window.addRegistrationAdjustment = addRegistrationAdjustment;
+    window.removeAdjustmentRow = removeAdjustmentRow;
+    window.updateGrossMarketValueCalculation = updateGrossMarketValueCalculation;
+    window.loadGrossCalculationData = loadGrossCalculationData;
     
     // FORCE MANUAL CALCULATION - Last resort function
     function forceManualCalculation() {
@@ -3262,7 +3711,7 @@
       // Force refresh all calculations
       updateAllCostDisplays();
       updateSummaryTotalsFromDamageCenters();
-      updateGrossFields();
+      // New bulk system will handle gross calculations
       
       // Check values after refresh
       setTimeout(() => {
@@ -3283,7 +3732,6 @@
     }
     window.debugCalculations = debugCalculations;
     window.forceManualCalculation = forceManualCalculation;
-    window.debugHelperData = debugHelperData;
     
     // 🌍 GLOBAL CALCULATION INTERFACE FOR FINAL REPORT MODULES
     window.EstimateCalculations = {
@@ -3306,9 +3754,16 @@
       saveDamageCenterChanges: saveDamageCenterChanges,
       debugCalculations: debugCalculations,
       
-      // Get calculated values from helper
+      // Get calculated values from 3-bulk system
       getGrossMarketValue: function() {
         try {
+          // First try to get from the gross market value result field (Bulk 1)
+          const grossMarketValueField = document.getElementById('grossMarketValueResult');
+          if (grossMarketValueField && grossMarketValueField.value) {
+            return parseFloat(grossMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+          }
+          
+          // Fallback to helper data
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           return helper.calculations?.vehicle_value_gross || 0;
         } catch (error) {
@@ -3319,8 +3774,15 @@
       
       getFullMarketValue: function() {
         try {
+          // First try to get from the full market value result field (Bulk 3)
+          const fullMarketValueField = document.getElementById('fullMarketValueResult');
+          if (fullMarketValueField && fullMarketValueField.value) {
+            return parseFloat(fullMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+          }
+          
+          // Fallback to helper data
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          return helper.calculations?.market_value || helper.levi_report?.final_price || 0;
+          return helper.calculations?.market_value || helper.calculations?.full_market_value || helper.levi_report?.final_price || 0;
         } catch (error) {
           console.error('Error getting full market value:', error);
           return 0;
@@ -3329,12 +3791,22 @@
       
       getTotalClaim: function() {
         try {
+          // First try to get from the total claim field (Bulk 2)
           const totalClaimField = document.getElementById('totalClaim');
-          if (totalClaimField) {
+          if (totalClaimField && totalClaimField.value) {
             return parseFloat(totalClaimField.value.replace(/[₪,]/g, '')) || 0;
           }
+          
+          // Fallback: calculate from damage centers
+          const totalFromDamageCenters = calculateTotalClaimFromDamageCenters();
+          if (totalFromDamageCenters > 0) {
+            return totalFromDamageCenters;
+          }
+          
+          // Final fallback to helper data
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          return helper.claims_data?.total_claim || 0;
+          return parseFloat(helper.claims_data?.total_claim?.replace(/[₪,]/g, '') || '0') || 
+                 parseFloat(helper.calculations?.total_damage) || 0;
         } catch (error) {
           console.error('Error getting total claim:', error);
           return 0;
@@ -3343,12 +3815,23 @@
       
       getGrossPercentage: function() {
         try {
+          // First try to get from the gross percentage field (Bulk 2)
           const grossPercentField = document.getElementById('grossPercent');
-          if (grossPercentField) {
+          if (grossPercentField && grossPercentField.value) {
             return parseFloat(grossPercentField.value.replace(/[%]/g, '')) || 0;
           }
+          
+          // Calculate from current values if not available
+          const grossMarketValue = this.getGrossMarketValue();
+          const totalClaim = this.getTotalClaim();
+          if (grossMarketValue > 0 && totalClaim > 0) {
+            return (totalClaim / grossMarketValue) * 100;
+          }
+          
+          // Fallback to helper data
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          return helper.claims_data?.gross_percent || 0;
+          return parseFloat(helper.claims_data?.gross_percent?.replace(/[%]/g, '') || '0') || 
+                 parseFloat(helper.calculations?.damage_percent) || 0;
         } catch (error) {
           console.error('Error getting gross percentage:', error);
           return 0;
@@ -3392,8 +3875,35 @@
       refreshAllCalculations: function() {
         this.updateAllCostDisplays();
         this.updateSummaryTotalsFromDamageCenters();
-        updateGrossFields(); // Use the new simple function
-        console.log('✅ All calculations refreshed from EstimateCalculations interface');
+        
+        // Refresh all 3 bulks
+        setTimeout(() => {
+          try {
+            // Refresh Bulk 1 (Gross Market Value)
+            if (typeof updateGrossMarketValueCalculation === 'function') {
+              updateGrossMarketValueCalculation();
+            }
+            
+            // Refresh Bulk 2 (Gross Percentage)
+            if (typeof refreshSecondBulkFields === 'function') {
+              refreshSecondBulkFields();
+            }
+            
+            // Refresh Bulk 3 (Full Market Value)
+            if (typeof updateFullMarketValueCalculation === 'function') {
+              updateFullMarketValueCalculation();
+            }
+            
+            // Trigger floating screen refresh with updated calculations
+            if (typeof triggerFloatingScreenRefresh === 'function') {
+              triggerFloatingScreenRefresh();
+            }
+            
+            console.log('✅ All 3-bulk calculations refreshed from EstimateCalculations interface');
+          } catch (error) {
+            console.error('Error refreshing 3-bulk calculations:', error);
+          }
+        }, 100);
       }
     };
     
@@ -3449,6 +3959,93 @@
         }
       }
     });
+    
+    // INITIALIZE 3-BULK SYSTEM ON PAGE LOAD
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Initializing 3-bulk system...');
+      
+      // Load saved helper data first
+      loadHelperData();
+      
+      // Initialize gross calculation data
+      setTimeout(() => {
+        loadGrossCalculationData();
+        console.log('✅ Bulk 1 & 2 initialized');
+      }, 500);
+      
+      // Initialize full market value calculation
+      setTimeout(() => {
+        loadFullMarketValueData();
+        console.log('✅ Bulk 3 initialized');
+        console.log('✅ Complete 3-bulk system initialized');
+      }, 700);
+      
+      // Add event listeners for damage center changes
+      const damageCentersContent = document.getElementById('damageCentersContent');
+      if (damageCentersContent) {
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' || mutation.type === 'subtree') {
+              // When damage centers change, update second bulk
+              setTimeout(() => {
+                refreshSecondBulkFields();
+              }, 100);
+            }
+          });
+        });
+        
+        observer.observe(damageCentersContent, {
+          childList: true,
+          subtree: true
+        });
+      }
+    });
+    
+    // ENHANCED SAVE DAMAGE CENTER CHANGES TO TRIGGER BULK UPDATES
+    const originalSaveDamageCenterChanges = saveDamageCenterChanges;
+    saveDamageCenterChanges = function() {
+      originalSaveDamageCenterChanges.call(this);
+      
+      // After saving damage centers, update second bulk
+      setTimeout(() => {
+        refreshSecondBulkFields();
+      }, 100);
+    };
+    
+    // ENHANCED UPDATE ALL COST DISPLAYS TO TRIGGER BULK UPDATES
+    const originalUpdateAllCostDisplays = updateAllCostDisplays;
+    updateAllCostDisplays = function() {
+      originalUpdateAllCostDisplays.call(this);
+      
+      // After updating costs, update second bulk
+      setTimeout(() => {
+        refreshSecondBulkFields();
+      }, 100);
+    };
+    
+    // ENHANCED CALCULATE SUMMARY TOTALS TO TRIGGER BULK UPDATES
+    const originalCalculateSummaryTotals = calculateSummaryTotals;
+    calculateSummaryTotals = function() {
+      originalCalculateSummaryTotals.call(this);
+      
+      // After calculating summary totals, update second bulk
+      setTimeout(() => {
+        refreshSecondBulkFields();
+      }, 100);
+    };
+    
+    // GLOBAL FUNCTIONS FOR EXTERNAL ACCESS
+    window.calculateGrossMarketValue = calculateGrossMarketValue;
+    window.calculateGrossPercentage = calculateGrossPercentage;
+    window.calculateFullMarketValue = calculateFullMarketValue;
+    window.refreshSecondBulkFields = refreshSecondBulkFields;
+    window.updateGrossMarketValueCalculation = updateGrossMarketValueCalculation;
+    window.updateGrossPercentageFromGrossValue = updateGrossPercentageFromGrossValue;
+    window.updateFullMarketValueCalculation = updateFullMarketValueCalculation;
+    window.loadFullMarketValueData = loadFullMarketValueData;
+    window.addFullMarketAdjustment = addFullMarketAdjustment;
+    
+    console.log('🎯 3-bulk system functions loaded and ready');
   </script>
   
   <script src="internal-browser.js"></script>
