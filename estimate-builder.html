@@ -2623,7 +2623,7 @@
       const percent = parseFloat(percentInput.value.replace('%', '')) || 0;
       let basicPrice = parseFloat(document.getElementById('basicPrice').value.replace(/[₪,]/g, '')) || 0;
       
-      // If basic price is not available from the field, try to get it from helper
+      // If basic price is not available from the field, try to get BASE PRICE from helper
       if (basicPrice === 0) {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (helper.levi_report?.base_price) {
@@ -2634,8 +2634,9 @@
           basicPrice = parseFloat(helper.levisummary.base_price);
         } else if (helper.car_details?.base_price) {
           basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
-        } else if (helper.car_details?.market_value) {
-          basicPrice = parseFloat(helper.car_details.market_value.toString().replace(/[₪,]/g, ''));
+        } else {
+          // REMOVED market_value fallback - we need BASE price only for calculations
+          console.warn('⚠️ No Levi BASE PRICE found for adjustment calculation');
         }
         
         // If we found a basic price, update the field
@@ -2784,15 +2785,18 @@
         if (basicPriceField) {
           let basicPrice = 0;
           
-          // Try different sources for basic price
+          // Try different sources for BASE PRICE (not market value) - FIXED PRIORITY
           if (helper.levi_report?.base_price) {
             basicPrice = parseFloat(helper.levi_report.base_price);
           } else if (helper.expertise?.levi_report?.base_price) {
             basicPrice = parseFloat(helper.expertise.levi_report.base_price);
           } else if (helper.levisummary?.base_price) {
             basicPrice = parseFloat(helper.levisummary.base_price);
-          } else if (helper.car_details?.market_value) {
-            basicPrice = parseFloat(helper.car_details.market_value.replace(/[₪,]/g, ''));
+          } else if (helper.car_details?.base_price) {
+            basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+          } else {
+            // REMOVED market_value fallback - we need BASE price only
+            console.warn('⚠️ No Levi BASE PRICE found for basic price field');
           }
           
           if (basicPrice > 0) {
@@ -4381,22 +4385,22 @@
         if (basicPriceField) {
           let basicPrice = 0;
           
-          // Try multiple sources for basic price
+          // Try multiple sources for BASE PRICE (not market value) - FIXED PRIORITY
           if (helper.levi_report?.base_price) {
             basicPrice = parseFloat(helper.levi_report.base_price);
-            console.log('📄 Found base price in helper.levi_report.base_price:', basicPrice);
+            console.log('📄 Found BASE PRICE in helper.levi_report.base_price:', basicPrice);
           } else if (helper.expertise?.levi_report?.base_price) {
             basicPrice = parseFloat(helper.expertise.levi_report.base_price);
-            console.log('📄 Found base price in helper.expertise.levi_report.base_price:', basicPrice);
+            console.log('📄 Found BASE PRICE in helper.expertise.levi_report.base_price:', basicPrice);
           } else if (helper.levisummary?.base_price) {
             basicPrice = parseFloat(helper.levisummary.base_price);
-            console.log('📄 Found base price in helper.levisummary.base_price:', basicPrice);
+            console.log('📄 Found BASE PRICE in helper.levisummary.base_price:', basicPrice);
           } else if (helper.car_details?.base_price) {
             basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
-            console.log('📄 Found base price in helper.car_details.base_price:', basicPrice);
-          } else if (helper.car_details?.market_value) {
-            basicPrice = parseFloat(helper.car_details.market_value.toString().replace(/[₪,]/g, ''));
-            console.log('📄 Found base price in helper.car_details.market_value:', basicPrice);
+            console.log('📄 Found BASE PRICE in helper.car_details.base_price:', basicPrice);
+          } else {
+            // REMOVED market_value fallback - we need BASE price only
+            console.warn('⚠️ No BASE PRICE found in helper - this field requires Levi base price, not market value');
           }
           
           if (basicPrice > 0) {

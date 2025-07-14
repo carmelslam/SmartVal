@@ -56,7 +56,12 @@
 ✅ **8. Fixed basic price field not loading** (ערך הרכב ע"פ מחירון כולל מע"מ)
 - **Issue**: Basic price field (`basicPrice`) was empty even when helper had data
 - **Fix**: Enhanced `loadHelperData()` function to try multiple sources for basic price
-- **Code**: Added fallback chain: `levi_report.base_price` → `expertise.levi_report.base_price` → `levisummary.base_price` → `car_details.base_price` → `car_details.market_value`
+- **Code**: Added fallback chain: `levi_report.base_price` → `expertise.levi_report.base_price` → `levisummary.base_price` → `car_details.base_price` → ~~`car_details.market_value`~~ (REMOVED)
+
+✅ **11. Fixed basic price to use BASE PRICE only (not market value)**
+- **Issue**: Field was pulling market value instead of Levi base price
+- **Fix**: Removed `car_details.market_value` fallback from all calculation functions
+- **Code**: Updated `loadHelperData()`, `loadGrossCalculationData()`, and `calculateAdjustmentValue()` to use BASE PRICE only
 
 ✅ **9. Fixed adjustment value calculation** (ערך fields empty)
 - **Issue**: Adjustment ערך fields were empty because calculation wasn't triggered
