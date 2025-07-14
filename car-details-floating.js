@@ -319,15 +319,15 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // helper.vehicle fields
-    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number);
-    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer);
-    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model);
-    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year);
-    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km);
-    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis);
-    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code);
-    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type);
+    // helper.vehicle fields (with fallback to car_details)
+    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
+    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model || carDetails.model);
+    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year || carDetails.year);
+    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km || carDetails.km);
+    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
+    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type || carDetails.fuel_type);
 
     // helper.car_details fields  
     document.getElementById("car-owner").textContent = formatValue(carDetails.owner);

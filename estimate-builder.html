@@ -807,7 +807,7 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Load car details (now editable)
+        // Load car details (now editable) and sync vehicle structure
         if (helper.car_details || helper.meta) {
           document.getElementById('carPlate').value = helper.meta?.plate || helper.car_details?.plate || '';
           document.getElementById('carManufacturer').value = helper.car_details?.manufacturer || '';
@@ -816,6 +816,14 @@
           document.getElementById('carBasePrice').value = helper.car_details?.base_price ? `₪${helper.car_details.base_price}` : '';
           document.getElementById('carMarketValue').value = helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '';
           document.getElementById('carReportDate').value = helper.car_details?.report_date || '';
+          
+          // Ensure vehicle structure is populated on load
+          helper.vehicle = helper.vehicle || {};
+          helper.vehicle.manufacturer = helper.car_details?.manufacturer || helper.vehicle.manufacturer || '';
+          helper.vehicle.model = helper.car_details?.model || helper.vehicle.model || '';
+          helper.vehicle.year = helper.car_details?.year || helper.vehicle.year || '';
+          helper.vehicle.plate_number = helper.meta?.plate || helper.car_details?.plate || helper.vehicle.plate_number || '';
+          sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
         // Load claims data (now editable)
@@ -1950,6 +1958,8 @@
         const fieldId = event.target.id;
         const value = event.target.value;
         
+        console.log(`📝 Field change detected: ${fieldId} = "${value}"`);
+        
         // Update the appropriate helper section based on field
         if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carBasePrice', 'carMarketValue', 'carReportDate'].includes(fieldId)) {
           helper.car_details = helper.car_details || {};
@@ -1971,14 +1981,18 @@
           // Also update vehicle structure (floating screen format)
           if (fieldId === 'carManufacturer') {
             helper.vehicle.manufacturer = value;
+            console.log('🚗 Updated vehicle manufacturer:', value);
           } else if (fieldId === 'carModel') {
             helper.vehicle.model = value;
+            console.log('🚗 Updated vehicle model:', value);
           } else if (fieldId === 'carYear') {
             helper.vehicle.year = value;
+            console.log('🚗 Updated vehicle year:', value);
           } else if (fieldId === 'carPlate') {
             helper.vehicle.plate_number = value;
             helper.meta = helper.meta || {};
             helper.meta.plate = value;
+            console.log('🚗 Updated vehicle plate:', value);
           }
           
           // Also update meta for plate
