@@ -364,6 +364,16 @@
     console.log('🔍 DEBUG: Helper in Levi floating screen:', helper);
     console.log('🔍 DEBUG: Helper.levi.custom_adjustments:', helper.levi?.custom_adjustments);
     console.log('🔍 DEBUG: Helper.expertise.levi_report:', helper.expertise?.levi_report);
+    console.log('🔍 DEBUG: Helper.levi_report.adjustments:', helper.levi_report?.adjustments);
+    
+    // Debug: Check specific Hebrew keys
+    console.log('🔍 DEBUG: Hebrew keys from helper.expertise.levi_report:', {
+      'עליה לכביש': helper.expertise?.levi_report?.['עליה לכביש'],
+      'בעלות': helper.expertise?.levi_report?.['בעלות'],
+      'מס ק״מ': helper.expertise?.levi_report?.['מס ק״מ'],
+      'מספר בעלים': helper.expertise?.levi_report?.['מספר בעלים'],
+      'מאפיינים': helper.expertise?.levi_report?.['מאפיינים']
+    });
     
     loadLeviData();
   };
@@ -504,6 +514,8 @@
   }
 
   function updateLeviDisplay(data) {
+    console.log('🔄 updateLeviDisplay called with data:', data);
+    
     const formatPrice = (value) => {
       const num = parseFloat(value) || 0;
       return num > 0 ? `₪${num.toLocaleString()}` : "₪0";
