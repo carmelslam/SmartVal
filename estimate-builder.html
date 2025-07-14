@@ -1423,9 +1423,63 @@
     // Debounce mechanism to prevent duplicate loading
     let loadAdjustmentsTimeout;
     
+    // CRITICAL FIX: Function to clean up duplicate data in helper
+    function cleanupHelperDuplicates(helper) {
+      try {
+        // Clean up levi_report adjustments
+        if (helper.levi_report?.adjustments) {
+          const seenAdjustments = new Set();
+          const cleanedAdjustments = [];
+          
+          helper.levi_report.adjustments.forEach(adj => {
+            const key = `${adj.description}-${adj.value}-${adj.percent}`;
+            if (!seenAdjustments.has(key)) {
+              seenAdjustments.add(key);
+              cleanedAdjustments.push(adj);
+            }
+          });
+          
+          const removedCount = helper.levi_report.adjustments.length - cleanedAdjustments.length;
+          if (removedCount > 0) {
+            console.log(`🧹 Removed ${removedCount} duplicate levi_report adjustments`);
+          }
+          
+          helper.levi_report.adjustments = cleanedAdjustments;
+        }
+        
+        // Clean up custom adjustments
+        if (helper.levi?.custom_adjustments) {
+          const seenCustom = new Set();
+          const cleanedCustom = [];
+          
+          helper.levi.custom_adjustments.forEach(adj => {
+            const key = `${adj.description}-${adj.value}-${adj.percentage}`;
+            if (!seenCustom.has(key)) {
+              seenCustom.add(key);
+              cleanedCustom.push(adj);
+            }
+          });
+          
+          const removedCustomCount = helper.levi.custom_adjustments.length - cleanedCustom.length;
+          if (removedCustomCount > 0) {
+            console.log(`🧹 Removed ${removedCustomCount} duplicate custom adjustments`);
+          }
+          
+          helper.levi.custom_adjustments = cleanedCustom;
+        }
+        
+        return helper;
+      } catch (error) {
+        console.error('Error cleaning helper duplicates:', error);
+        return helper;
+      }
+    }
+    
     function loadAllAdjustments(helper) {
       try {
-        console.log('🔄 loadAllAdjustments called (will be debounced)');
+        // Get caller information for debugging
+        const caller = new Error().stack.split('\n')[2].trim();
+        console.log('🔄 loadAllAdjustments called (will be debounced) from:', caller);
         
         // Clear any existing timeout to prevent duplicate calls
         if (loadAdjustmentsTimeout) {
@@ -1454,8 +1508,20 @@
           return;
         }
         
-        // Clear the container first to prevent duplication
+        // CRITICAL FIX: Clean up duplicate data in helper before loading
+        helper = cleanupHelperDuplicates(helper);
+        
+        // Save the cleaned helper back to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('🧹 Helper cleaned up and saved, proceeding with load...');
+        
+        // AGGRESSIVE FIX: Clear the container completely and verify it's empty
         adjustmentsContainer.innerHTML = '';
+        
+        // Force a DOM update to ensure the container is truly empty
+        adjustmentsContainer.offsetHeight; // Force reflow
+        
+        console.log('🧹 Container cleared, current children count:', adjustmentsContainer.children.length);
         
         let adjustmentsHTML = '';
         
@@ -2768,6 +2834,35 @@
     
     // Expose test function globally
     window.addTestAdjustments = addTestAdjustments;
+    
+    // CRITICAL FIX: Add function to completely reset adjustment data
+    function resetAdjustmentData() {
+      console.log('🧹 RESET: Completely clearing all adjustment data');
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Clear all adjustment data
+      if (helper.levi_report) {
+        helper.levi_report.adjustments = [];
+      }
+      if (helper.levi) {
+        helper.levi.custom_adjustments = [];
+      }
+      
+      // Clear DOM
+      const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
+      if (adjustmentsContainer) {
+        adjustmentsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">נתוני התאמות נמחקו - השתמש בכפתור "הוסף התאמה נוספת"</div>';
+      }
+      
+      // Save cleaned helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('✅ RESET: All adjustment data cleared');
+    }
+    
+    // Expose reset function globally for testing
+    window.resetAdjustmentData = resetAdjustmentData;
     
     // Update helper from adjustments
     function updateHelperFromAdjustments() {
