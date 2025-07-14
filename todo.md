@@ -85,6 +85,168 @@
 
 ---
 
+# HELPER DATA STRUCTURE MAPPING INVESTIGATION
+
+## Root Cause Analysis
+
+After analyzing the estimate-builder.html file and helper.js structure, I've identified the core issues causing the console errors:
+
+### 1. BASE PRICE Mapping Issue (Line 4403)
+**Error**: `No BASE PRICE found in helper - this field requires Levi base price, not market value`
+
+**Current Code Analysis**:
+- The code searches for base_price in these paths:
+  - `helper.levi_report.base_price`
+  - `helper.expertise.levi_report.base_price` 
+  - `helper.levisummary.base_price`
+  - `helper.car_details.base_price`
+
+**Expected Data Structure** (from helper.js):
+```json
+{
+  "expertise": {
+    "levi_report": {
+      "base_price": "value",
+      "final_price": "value",
+      "adjustments": {...}
+    }
+  },
+  "levisummary": {
+    "base_price": "value",
+    "final_price": "value"
+  }
+}
+```
+
+**Issue**: The Levi data might be stored in a different location or format than expected.
+
+### 2. vehicle_value_gross Calculation Issue (Lines 2553, 3345)
+**Error**: `No vehicle_value_gross found after all fallback attempts`
+
+**Current Code Analysis**:
+- The code tries to calculate vehicle_value_gross from:
+  - `helper.calculations.vehicle_value_gross`
+  - `helper.expertise.calculations.vehicle_value_gross`
+  - Calculated from Levi data: `base_price + features_value + registration_value`
+  - Various fallback sources
+
+**Expected Calculation**:
+```javascript
+vehicleValueGross = basePrice + featuresValue + registrationValue;
+```
+
+**Issue**: The calculation depends on proper Levi data structure and base_price availability.
+
+### 3. Damage Centers Total Issue (Line 3086)
+**Error**: `Total claim from damage centers: 0`
+
+**Current Code Analysis**:
+- The code tries to sum damage costs from:
+  - `helper.expertise.damage_blocks[]`
+  - Each block's `parts_cost + work_cost + repairs_cost`
+
+**Expected Data Structure**:
+```json
+{
+  "expertise": {
+    "damage_blocks": [
+      {
+        "parts_cost": "value",
+        "work_cost": "value", 
+        "repairs_cost": "value"
+      }
+    ]
+  }
+}
+```
+
+**Issue**: The damage_blocks array might be empty or the cost fields might be named differently.
+
+## Recommended Implementation Plan
+
+### Phase 1: Add Debug Logging to Understand Current Structure
+1. Add comprehensive logging to show actual sessionStorage helper structure
+2. Log all available data paths during field population
+3. Create a debug function to dump current helper state
+
+### Phase 2: Fix Base Price Mapping
+1. Identify where Levi data is actually stored in sessionStorage
+2. Update the base price lookup chain to match real data structure
+3. Add fallback mechanisms for different data formats
+
+### Phase 3: Fix vehicle_value_gross Calculation
+1. Ensure base_price is properly retrieved
+2. Fix the calculation logic to use correct data paths
+3. Update helper.calculations.vehicle_value_gross consistently
+
+### Phase 4: Fix Damage Centers Total
+1. Identify actual damage data structure in helper
+2. Update the damage total calculation to use correct field names
+3. Ensure damage_blocks array is populated correctly
+
+### Phase 5: Testing and Verification
+1. Test all field mappings with real sessionStorage data
+2. Verify calculations work correctly
+3. Ensure helper updates persist correctly
+
+## Technical Notes
+
+- The helper.js file defines the expected structure, but actual data might be stored differently
+- The system uses multiple fallback paths, suggesting data inconsistency issues
+- sessionStorage is the primary data store, with localStorage as backup
+- The data standardization functions in helper.js should help normalize different formats
+
+## Debug Functions Added
+
+### 1. Enhanced Debug Logging in loadHelperData()
+- Added comprehensive logging when base price is not found
+- Logs all possible data paths and their values
+- Shows full helper structure and sessionStorage content
+
+### 2. Global Debug Function: debugHelperDataStructure()
+**Usage in Browser Console:**
+```javascript
+debugHelperDataStructure();
+```
+
+**Features:**
+- Investigates all possible base price locations
+- Checks vehicle_value_gross calculation paths
+- Examines damage data structures
+- Shows calculation objects
+- Displays Levi data locations
+- Outputs raw sessionStorage content
+
+**Output Sections:**
+- Helper Overview (keys, size)
+- Base Price Investigation (✅ FOUND / ❌ MISSING)
+- Vehicle Value Gross Investigation
+- Damage Data Investigation
+- Calculation Investigation
+- Levi Data Investigation
+- Raw Session Storage
+
+## How to Use for Investigation
+
+1. **Load the estimate-builder.html page in browser**
+2. **Open browser console**
+3. **Run the debug function:**
+   ```javascript
+   debugHelperDataStructure();
+   ```
+4. **Look for ✅ FOUND entries to see where data is actually stored**
+5. **Use the findings to update the mapping code**
+
+## Expected Next Steps
+
+Based on the debug output, you should:
+1. **Identify the correct data paths** where base_price, vehicle_value_gross, and damage data are stored
+2. **Update the mapping code** to use the actual data locations
+3. **Test the fixes** to ensure fields populate correctly
+4. **Verify calculations** work with the correct data paths
+
+---
+
 ## Summary of Changes:
 
 **Total Functions Added**: 4

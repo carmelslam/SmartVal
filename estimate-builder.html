@@ -4419,6 +4419,36 @@
               levisummary: helper.levisummary,
               car_details: helper.car_details
             });
+            
+            // Enhanced debugging: Log full helper structure
+            console.group('🔍 FULL HELPER STRUCTURE DEBUG');
+            console.log('Complete helper object keys:', Object.keys(helper));
+            console.log('Helper size:', JSON.stringify(helper).length);
+            
+            // Check all possible base price locations
+            console.log('All possible base price locations:');
+            console.log('- helper.levi_report?.base_price:', helper.levi_report?.base_price);
+            console.log('- helper.expertise?.levi_report?.base_price:', helper.expertise?.levi_report?.base_price);
+            console.log('- helper.levisummary?.base_price:', helper.levisummary?.base_price);
+            console.log('- helper.car_details?.base_price:', helper.car_details?.base_price);
+            console.log('- helper.vehicle?.base_price:', helper.vehicle?.base_price);
+            console.log('- helper.calculations?.base_price:', helper.calculations?.base_price);
+            console.log('- helper.expertise?.calculations?.base_price:', helper.expertise?.calculations?.base_price);
+            
+            // Check vehicle_value_gross locations
+            console.log('All possible vehicle_value_gross locations:');
+            console.log('- helper.calculations?.vehicle_value_gross:', helper.calculations?.vehicle_value_gross);
+            console.log('- helper.expertise?.calculations?.vehicle_value_gross:', helper.expertise?.calculations?.vehicle_value_gross);
+            
+            // Check damage data locations
+            console.log('All possible damage data locations:');
+            console.log('- helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
+            console.log('- helper.damage_centers:', helper.damage_centers);
+            console.log('- helper.damage_sections:', helper.damage_sections);
+            
+            // Log sessionStorage raw data
+            console.log('Raw sessionStorage helper:', sessionStorage.getItem('helper'));
+            console.groupEnd();
           }
         }
         
@@ -4703,6 +4733,108 @@
     window.loadFullMarketValueData = loadFullMarketValueData;
     window.addFullMarketAdjustment = addFullMarketAdjustment;
     window.debugCalculations = debugCalculations;
+    
+    // Global debug function for helper data structure investigation
+    window.debugHelperDataStructure = function() {
+      console.group('🔍 HELPER DATA STRUCTURE INVESTIGATION');
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      console.log('=== HELPER OVERVIEW ===');
+      console.log('Helper keys:', Object.keys(helper));
+      console.log('Helper size:', JSON.stringify(helper).length, 'characters');
+      
+      console.log('\n=== BASE PRICE INVESTIGATION ===');
+      const basePriceLocations = {
+        'helper.levi_report?.base_price': helper.levi_report?.base_price,
+        'helper.expertise?.levi_report?.base_price': helper.expertise?.levi_report?.base_price,
+        'helper.levisummary?.base_price': helper.levisummary?.base_price,
+        'helper.car_details?.base_price': helper.car_details?.base_price,
+        'helper.vehicle?.base_price': helper.vehicle?.base_price,
+        'helper.calculations?.base_price': helper.calculations?.base_price,
+        'helper.expertise?.calculations?.base_price': helper.expertise?.calculations?.base_price
+      };
+      
+      Object.entries(basePriceLocations).forEach(([path, value]) => {
+        if (value !== undefined) {
+          console.log(`✅ FOUND: ${path} = ${value}`);
+        } else {
+          console.log(`❌ MISSING: ${path}`);
+        }
+      });
+      
+      console.log('\n=== VEHICLE VALUE GROSS INVESTIGATION ===');
+      const vehicleValueLocations = {
+        'helper.calculations?.vehicle_value_gross': helper.calculations?.vehicle_value_gross,
+        'helper.expertise?.calculations?.vehicle_value_gross': helper.expertise?.calculations?.vehicle_value_gross,
+        'helper.levi_report?.final_price': helper.levi_report?.final_price,
+        'helper.expertise?.levi_report?.final_price': helper.expertise?.levi_report?.final_price,
+        'helper.levisummary?.final_price': helper.levisummary?.final_price
+      };
+      
+      Object.entries(vehicleValueLocations).forEach(([path, value]) => {
+        if (value !== undefined) {
+          console.log(`✅ FOUND: ${path} = ${value}`);
+        } else {
+          console.log(`❌ MISSING: ${path}`);
+        }
+      });
+      
+      console.log('\n=== DAMAGE DATA INVESTIGATION ===');
+      const damageLocations = {
+        'helper.expertise?.damage_blocks': helper.expertise?.damage_blocks,
+        'helper.damage_centers': helper.damage_centers,
+        'helper.damage_sections': helper.damage_sections,
+        'helper.expertise?.damage_sections': helper.expertise?.damage_sections
+      };
+      
+      Object.entries(damageLocations).forEach(([path, value]) => {
+        if (value !== undefined) {
+          console.log(`✅ FOUND: ${path} = ${Array.isArray(value) ? value.length + ' items' : typeof value}`);
+          if (Array.isArray(value) && value.length > 0) {
+            console.log(`  First item keys:`, Object.keys(value[0]));
+          }
+        } else {
+          console.log(`❌ MISSING: ${path}`);
+        }
+      });
+      
+      console.log('\n=== CALCULATION INVESTIGATION ===');
+      const calculationLocations = {
+        'helper.calculations': helper.calculations,
+        'helper.expertise?.calculations': helper.expertise?.calculations
+      };
+      
+      Object.entries(calculationLocations).forEach(([path, value]) => {
+        if (value !== undefined) {
+          console.log(`✅ FOUND: ${path} =`, value);
+        } else {
+          console.log(`❌ MISSING: ${path}`);
+        }
+      });
+      
+      console.log('\n=== LEVI DATA INVESTIGATION ===');
+      const leviLocations = {
+        'helper.levi_report': helper.levi_report,
+        'helper.expertise?.levi_report': helper.expertise?.levi_report,
+        'helper.levisummary': helper.levisummary
+      };
+      
+      Object.entries(leviLocations).forEach(([path, value]) => {
+        if (value !== undefined) {
+          console.log(`✅ FOUND: ${path} =`, value);
+        } else {
+          console.log(`❌ MISSING: ${path}`);
+        }
+      });
+      
+      console.log('\n=== RAW SESSION STORAGE ===');
+      console.log('sessionStorage.getItem("helper"):', sessionStorage.getItem('helper'));
+      
+      console.groupEnd();
+      
+      return helper;
+    };
     
     // Manual trigger for all calculations
     window.forceCalculateAllAdjustments = function() {
