@@ -697,6 +697,25 @@ export function updateCalculations() {
     vehicle_value_base: marketValue,
     total_damage: baseDamage
   };
+  
+  // Ensure calculations section exists at root level too (for backward compatibility)
+  if (!helper.calculations) {
+    helper.calculations = {};
+  }
+  
+  // Preserve vehicle_value_gross if it exists (from Levi calculations)
+  if (helper.calculations.vehicle_value_gross) {
+    helper.expertise.calculations.vehicle_value_gross = helper.calculations.vehicle_value_gross;
+  }
+  
+  // Update root level calculations for backward compatibility
+  helper.calculations = {
+    ...helper.calculations,
+    ...result,
+    vehicle_value_base: marketValue,
+    total_damage: baseDamage,
+    market_value: marketValue
+  };
 }
 
 // ============================================================================

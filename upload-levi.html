@@ -1664,6 +1664,24 @@ class LeviProcessor {
         source: result.source || result.report_source || 'unknown'
       };
       
+      // Calculate GROSS MARKET VALUE for damage calculations (base + features + registration ONLY)
+      const basePrice = parseFloat(result.pricing?.base_price || result['מחיר בסיס'] || 0);
+      const featuresValue = parseFloat(result.adjustments?.features?.value || 
+                                     result['ערך ש״ח מאפיינים'] || 0);
+      const registrationValue = parseFloat(result.adjustments?.registration?.value || 
+                                          result['ערך ש״ח עליה לכביש'] || 0);
+      
+      const grossMarketValue = basePrice + featuresValue + registrationValue;
+      
+      // Update calculations section
+      if (!helper.calculations) helper.calculations = {};
+      helper.calculations.vehicle_value_gross = Math.round(grossMarketValue);
+      helper.calculations.market_value = Math.round(parseFloat(result.pricing?.final_price || result['מחיר סופי לרכב'] || 0));
+      
+      console.log(`💰 OCR Calculated market values:
+        - Gross Market Value (base+features+registration): ₪${Math.round(grossMarketValue).toLocaleString()}
+        - Full Market Value (all adjustments): ₪${helper.calculations.market_value.toLocaleString()}`);
+      
       // Update meta information
       helper.meta = helper.meta || {};
       helper.meta.last_levi_processed = new Date().toISOString();
@@ -1672,8 +1690,11 @@ class LeviProcessor {
       // Update session storage
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      // Update via helper system
-      updateHelper(helper);
+      // Update via helper system (update each section individually)
+      updateHelper('levisummary', helper.levisummary);
+      updateHelper('expertise', helper.expertise);
+      updateHelper('calculations', helper.calculations);
+      updateHelper('meta', helper.meta);
       
     } catch (e) {
       console.warn('Could not update helper with Levi results:', e);
@@ -1884,9 +1905,14 @@ window.calculateFinalPrice = function() {
   // Save to sessionStorage
   sessionStorage.setItem('helper', JSON.stringify(helper));
   
-  console.log(`💰 Calculated market values:
+  console.log(`💰 Manual Entry Calculated market values:
+    - Base Price: ₪${basePrice.toLocaleString()}
+    - Features Value: ₪${featuresValue.toLocaleString()}
+    - Registration Value: ₪${registrationValue.toLocaleString()}
     - Gross Market Value (base+features+registration): ₪${Math.round(grossMarketValue).toLocaleString()}
     - Full Market Value (all adjustments): ₪${Math.round(runningTotal).toLocaleString()}`);
+  
+  console.log('✅ helper.calculations updated:', helper.calculations);
   
   // Save manual data to helper system (same as OCR behavior)
   saveManualDataToHelper();

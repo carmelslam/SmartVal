@@ -857,6 +857,12 @@
         // Update gross market value field with calculated value
         updateGrossMarketValueField();
         
+        // Force refresh of all cost displays and calculations
+        setTimeout(() => {
+          updateAllCostDisplays();
+          updateSummaryTotalsFromDamageCenters();
+        }, 200);
+        
         // Load contact data (now editable) and sync to car_details
         if (helper.client) {
           document.getElementById('ownerName').value = helper.client.name || '';
@@ -2388,6 +2394,13 @@
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         const vehicleValueGross = helper.calculations?.vehicle_value_gross;
         
+        console.log('🔍 Checking vehicle_value_gross:', {
+          helper_calculations: helper.calculations,
+          vehicle_value_gross: vehicleValueGross,
+          levi_report_final_price: helper.levi_report?.final_price,
+          expertise_calculations: helper.expertise?.calculations
+        });
+        
         if (vehicleValueGross && vehicleValueGross > 0) {
           const leviPriceListField = document.getElementById('leviPriceList');
           if (leviPriceListField) {
@@ -2399,6 +2412,18 @@
             sessionStorage.setItem('helper', JSON.stringify(helper));
             
             console.log(`💰 Updated gross market value field: ₪${vehicleValueGross.toLocaleString()}`);
+          }
+        } else {
+          // Try fallback from levi_report.final_price
+          const fallbackPrice = helper.levi_report?.final_price || helper.expertise?.calculations?.market_value;
+          if (fallbackPrice && fallbackPrice > 0) {
+            const leviPriceListField = document.getElementById('leviPriceList');
+            if (leviPriceListField) {
+              leviPriceListField.value = `₪${fallbackPrice.toLocaleString()}`;
+              console.log(`💰 Used fallback price for gross market value: ₪${fallbackPrice.toLocaleString()}`);
+            }
+          } else {
+            console.warn('⚠️ No vehicle_value_gross found in helper.calculations');
           }
         }
         
@@ -2843,10 +2868,22 @@
       const repairsDisplay = card.querySelector('.repairs-costs-display');
       const totalDisplay = card.querySelector('.total-with-vat-display');
       
-      if (workDisplay) workDisplay.textContent = `₪${workCost.toLocaleString()}`;
-      if (partsDisplay) partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
-      if (repairsDisplay) repairsDisplay.textContent = `₪${repairsCost.toLocaleString()}`; // FIXED: Show only repairs cost, not total
-      if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      if (workDisplay) {
+        workDisplay.textContent = `₪${workCost.toLocaleString()}`;
+        console.log(`💼 Work costs updated: ₪${workCost.toLocaleString()}`);
+      }
+      if (partsDisplay) {
+        partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
+        console.log(`🔧 Parts costs updated: ₪${partsCost.toLocaleString()}`);
+      }
+      if (repairsDisplay) {
+        repairsDisplay.textContent = `₪${repairsCost.toLocaleString()}`;
+        console.log(`🔨 Repairs costs updated (ONLY repairs): ₪${repairsCost.toLocaleString()}`);
+      }
+      if (totalDisplay) {
+        totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+        console.log(`💰 Total with VAT updated: ₪${Math.round(totalWithVAT).toLocaleString()}`);
+      }
     }
 
     function updateAllCostDisplays() {
@@ -2964,6 +3001,24 @@
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
     window.updateGrossMarketValueField = updateGrossMarketValueField;
     window.updateGrossPercentageField = updateGrossPercentageField;
+    
+    // DEBUG HELPER FUNCTION
+    function debugCalculations() {
+      console.log('🔍 === DEBUG CALCULATIONS ===');
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('Helper data:', helper);
+      console.log('Calculations:', helper.calculations);
+      console.log('Levi report:', helper.levi_report);
+      console.log('Expertise:', helper.expertise);
+      
+      // Force refresh all calculations
+      updateAllCostDisplays();
+      updateSummaryTotalsFromDamageCenters();
+      updateGrossMarketValueField();
+      
+      console.log('🔍 === DEBUG CALCULATIONS COMPLETE ===');
+    }
+    window.debugCalculations = debugCalculations;
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {
