@@ -1304,6 +1304,18 @@
         // Add event listeners for custom adjustments
         addAdjustmentEventListeners();
         
+        // Trigger initial calculation for existing custom adjustments
+        setTimeout(() => {
+          if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+            console.log('🔄 Triggering initial calculation for existing adjustments');
+            helper.levi.custom_adjustments.forEach((adjustment, index) => {
+              if (adjustment.percentage && adjustment.percentage !== 0) {
+                calculateAdjustmentValue('custom', index, adjustment.percentage);
+              }
+            });
+          }
+        }, 200);
+        
       } catch (error) {
         console.error('Error loading all adjustments:', error);
         document.getElementById('allAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות</div>';
@@ -1358,8 +1370,8 @@
                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
                    placeholder="0" step="0.1" min="0" />
             <input type="number" value="${Math.abs(value)}" data-field="value" data-source="${source}" data-index="${index}"
-                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
-                   placeholder="0" step="100" min="0" />
+                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center; background: #f8f9fa;" 
+                   placeholder="אוטומטי" step="100" min="0" readonly title="מחושב אוטומטית: אחוז × מחיר בסיס" />
             <button type="button" onclick="removeCustomAdjustment('${source}', ${index})" 
                     style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
           </div>
@@ -1392,6 +1404,15 @@
       loadAllAdjustments(helper);
       
       console.log('Added new custom adjustment, total custom adjustments:', helper.levi.custom_adjustments.length);
+      
+      // Trigger initial calculation for the new adjustment if it has a percentage
+      const newIndex = helper.levi.custom_adjustments.length - 1;
+      setTimeout(() => {
+        const newAdjustment = helper.levi.custom_adjustments[newIndex];
+        if (newAdjustment && newAdjustment.percentage !== 0) {
+          calculateAdjustmentValue('custom', newIndex, newAdjustment.percentage);
+        }
+      }, 100);
     }
     
     // REMOVE CUSTOM ADJUSTMENT
@@ -1431,6 +1452,11 @@
           }
           
           updateCustomAdjustmentInHelper(source, index, field, value);
+          
+          // Auto-calculate value when percentage changes
+          if (field === 'percentage') {
+            calculateAdjustmentValue(source, index, value);
+          }
         });
         
         element.addEventListener('change', function() {
@@ -1444,6 +1470,69 @@
           }
         });
       });
+    }
+    
+    // AUTO-CALCULATE ADJUSTMENT VALUE FROM PERCENTAGE
+    function calculateAdjustmentValue(source, index, percentage) {
+      if (source !== 'custom') return;
+      
+      // Get base price from car details
+      const basePrice = getBasePriceForCalculation();
+      
+      if (basePrice > 0 && percentage !== 0) {
+        const calculatedValue = Math.round((basePrice * Math.abs(percentage)) / 100);
+        
+        console.log(`Auto-calculating adjustment value: ${percentage}% × ₪${basePrice.toLocaleString()} = ₪${calculatedValue.toLocaleString()}`);
+        
+        // Update the value field in DOM
+        const valueInput = document.querySelector(`input[data-field="value"][data-source="${source}"][data-index="${index}"]`);
+        if (valueInput) {
+          valueInput.value = calculatedValue;
+        }
+        
+        // Update helper with calculated value
+        updateCustomAdjustmentInHelper(source, index, 'value', calculatedValue);
+      }
+    }
+    
+    // GET BASE PRICE FOR CALCULATION
+    function getBasePriceForCalculation() {
+      // Try multiple sources for base price
+      let basePrice = 0;
+      
+      // Priority 1: Car base price field
+      const carBasePriceField = document.getElementById('carBasePrice');
+      if (carBasePriceField && carBasePriceField.value) {
+        const carBasePriceStr = carBasePriceField.value.replace(/[₪,]/g, '') || '0';
+        basePrice = parseFloat(carBasePriceStr) || 0;
+      }
+      
+      // Priority 2: Helper data
+      if (basePrice === 0) {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        basePrice = helper?.vehicle_value_base || 
+                   helper?.car_details?.base_price || 
+                   helper?.levi?.base_price || 
+                   helper?.levi_report?.base_price || 0;
+      }
+      
+      console.log('Base price for calculation:', basePrice);
+      return basePrice;
+    }
+    
+    // RECALCULATE ALL ADJUSTMENT VALUES (when base price changes)
+    function recalculateAllAdjustmentValues() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+        console.log('🔄 Recalculating all adjustment values due to base price change');
+        
+        helper.levi.custom_adjustments.forEach((adjustment, index) => {
+          if (adjustment.percentage && adjustment.percentage !== 0) {
+            calculateAdjustmentValue('custom', index, adjustment.percentage);
+          }
+        });
+      }
     }
     
     // UPDATE CUSTOM ADJUSTMENT IN HELPER
@@ -1492,7 +1581,17 @@
       ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carBasePrice', 'carMarketValue', 'carReportDate'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
-          element.addEventListener('change', updateHelperFromField);
+          element.addEventListener('change', function() {
+            updateHelperFromField();
+            
+            // Recalculate adjustment values when base price changes
+            if (id === 'carBasePrice') {
+              console.log('📊 Base price changed, recalculating all adjustment values');
+              setTimeout(() => {
+                recalculateAllAdjustmentValues();
+              }, 100);
+            }
+          });
         }
       });
       
