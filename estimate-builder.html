@@ -1301,20 +1301,21 @@
         
         adjustmentsContainer.innerHTML = adjustmentsHTML;
         
-        // Add event listeners for custom adjustments
-        addAdjustmentEventListeners();
-        
-        // Trigger initial calculation for existing custom adjustments
+        // Add event listeners for all adjustments
         setTimeout(() => {
+          addAdjustmentEventListeners();
+          
+          // Trigger initial auto-calculation for existing custom adjustments
           if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
             console.log('🔄 Triggering initial calculation for existing adjustments');
             helper.levi.custom_adjustments.forEach((adjustment, index) => {
               if (adjustment.percentage && adjustment.percentage !== 0) {
+                console.log(`🚀 Initial calculation for adjustment ${index}: ${adjustment.percentage}%`);
                 calculateAdjustmentValue('custom', index, adjustment.percentage);
               }
             });
           }
-        }, 200);
+        }, 300);
         
       } catch (error) {
         console.error('Error loading all adjustments:', error);
@@ -1405,14 +1406,24 @@
       
       console.log('Added new custom adjustment, total custom adjustments:', helper.levi.custom_adjustments.length);
       
-      // Trigger initial calculation for the new adjustment if it has a percentage
+      // Ensure event listeners are attached to the new row
       const newIndex = helper.levi.custom_adjustments.length - 1;
       setTimeout(() => {
+        console.log('🆕 Setting up new adjustment row with event listeners');
+        addAdjustmentEventListeners();
+        
+        // Focus on the new row's description field
+        const newDescriptionInput = document.querySelector(`input[data-field="description"][data-source="custom"][data-index="${newIndex}"]`);
+        if (newDescriptionInput) {
+          newDescriptionInput.focus();
+        }
+        
+        // Trigger initial calculation if it has a percentage
         const newAdjustment = helper.levi.custom_adjustments[newIndex];
         if (newAdjustment && newAdjustment.percentage !== 0) {
           calculateAdjustmentValue('custom', newIndex, newAdjustment.percentage);
         }
-      }, 100);
+      }, 150);
     }
     
     // REMOVE CUSTOM ADJUSTMENT
@@ -1428,19 +1439,38 @@
         // Reload all adjustments
         loadAllAdjustments(helper);
         
+        // Re-attach event listeners after removal
+        setTimeout(() => {
+          addAdjustmentEventListeners();
+        }, 100);
+        
         console.log('Removed custom adjustment at index:', index);
       }
     }
     
     // ADD EVENT LISTENERS FOR ADJUSTMENT FIELDS
     function addAdjustmentEventListeners() {
+      // Remove existing event listeners to prevent duplicates
+      const existingInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"], #allAdjustmentsRows-estimate select[data-source="custom"]');
+      existingInputs.forEach(element => {
+        // Clone element to remove all event listeners
+        const newElement = element.cloneNode(true);
+        element.parentNode.replaceChild(newElement, element);
+      });
+      
+      // Add fresh event listeners to all adjustment inputs
       const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"], #allAdjustmentsRows-estimate select[data-source="custom"]');
       
+      console.log(`🔗 Adding event listeners to ${adjustmentInputs.length} adjustment inputs`);
+      
       adjustmentInputs.forEach(element => {
+        // Input event for real-time updates
         element.addEventListener('input', function() {
           const source = this.dataset.source;
           const index = parseInt(this.dataset.index);
           const field = this.dataset.field;
+          
+          console.log(`📝 Input changed: ${field} for ${source}[${index}] = ${this.value}`);
           
           let value;
           if (field === 'description') {
@@ -1455,10 +1485,12 @@
           
           // Auto-calculate value when percentage changes
           if (field === 'percentage') {
+            console.log(`🔢 Triggering auto-calculation for percentage: ${value}%`);
             calculateAdjustmentValue(source, index, value);
           }
         });
         
+        // Change event for final updates
         element.addEventListener('change', function() {
           // Trigger calculation update on change
           calculateSummaryTotals();
@@ -1466,9 +1498,20 @@
           // If adjustment type changed, reload to update display
           if (this.dataset.field === 'adjustmentType') {
             const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-            loadAllAdjustments(helper);
+            setTimeout(() => loadAllAdjustments(helper), 50);
           }
         });
+        
+        // For percentage fields, trigger auto-calculation on focus out
+        if (element.dataset.field === 'percentage') {
+          element.addEventListener('blur', function() {
+            const value = parseFloat(this.value) || 0;
+            if (value !== 0) {
+              console.log(`🎯 Blur event: Recalculating for percentage ${value}%`);
+              calculateAdjustmentValue(this.dataset.source, parseInt(this.dataset.index), value);
+            }
+          });
+        }
       });
     }
     
@@ -1944,6 +1987,30 @@
       loadDataFromHelper();
       loadLegalText();
       updateGlobalDepreciationCalculation();
+      
+      // Initialize adjustment system with event listeners
+      setTimeout(() => {
+        console.log('🚀 Initializing adjustment system on page load');
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Load all adjustments if they exist
+        if (helper.levi?.custom_adjustments || helper.levi?.adjustments) {
+          loadAllAdjustments(helper);
+        }
+        
+        // Ensure event listeners are attached
+        addAdjustmentEventListeners();
+        
+        // Trigger initial auto-calculation for existing adjustments
+        if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+          console.log('🔄 Running initial auto-calculation for existing adjustments');
+          helper.levi.custom_adjustments.forEach((adjustment, index) => {
+            if (adjustment.percentage && adjustment.percentage !== 0) {
+              calculateAdjustmentValue('custom', index, adjustment.percentage);
+            }
+          });
+        }
+      }, 400);
       
       // Trigger initial calculation after page loads
       setTimeout(triggerGlobalDepreciationCalc, 500);
