@@ -2528,6 +2528,9 @@
       const newPartIndex = partsList.children.length;
       const newPartHTML = createEditablePartRow({}, centerIndex, newPartIndex);
       partsList.insertAdjacentHTML('beforeend', newPartHTML);
+      
+      // Add event listeners to new row
+      setTimeout(addDamageCenterEventListeners, 50);
     }
 
     function addWorkRow(centerIndex) {
@@ -2535,6 +2538,9 @@
       const newWorkIndex = worksList.children.length;
       const newWorkHTML = createEditableWorkRow('', centerIndex, newWorkIndex);
       worksList.insertAdjacentHTML('beforeend', newWorkHTML);
+      
+      // Add event listeners to new row
+      setTimeout(addDamageCenterEventListeners, 50);
     }
 
     function addRepairRow(centerIndex) {
@@ -2542,6 +2548,9 @@
       const newRepairIndex = repairsList.children.length;
       const newRepairHTML = createEditableRepairRow('', centerIndex, newRepairIndex);
       repairsList.insertAdjacentHTML('beforeend', newRepairHTML);
+      
+      // Add event listeners to new row
+      setTimeout(addDamageCenterEventListeners, 50);
     }
 
     function removePartRow(centerIndex, partIndex) {
@@ -2684,19 +2693,26 @@
 
     // ADD EVENT LISTENERS
     function addDamageCenterEventListeners() {
-      // Add listeners for all input fields to trigger save and cost calculation on change
+      // Remove existing listeners by cloning elements (prevents duplicates)
       document.querySelectorAll('.damage-center-name, .part-name, .part-desc, .part-price, .work-type, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
-        input.addEventListener('change', () => {
-          saveDamageCenterChanges();
-          updateAllCostDisplays();
-        });
-        input.addEventListener('blur', () => {
-          saveDamageCenterChanges();
-          updateAllCostDisplays();
-        });
-        input.addEventListener('input', () => {
-          updateAllCostDisplays();
-        });
+        // Check if already has listeners
+        if (!input.hasAttribute('data-listeners-added')) {
+          input.addEventListener('change', () => {
+            saveDamageCenterChanges();
+            updateAllCostDisplays();
+          });
+          input.addEventListener('blur', () => {
+            saveDamageCenterChanges();
+            updateAllCostDisplays();
+          });
+          input.addEventListener('input', () => {
+            updateAllCostDisplays();
+          });
+          
+          // Mark as having listeners to prevent duplicates
+          input.setAttribute('data-listeners-added', 'true');
+          console.log(`📝 Added event listeners to: ${input.className}`);
+        }
       });
       
       // Hide suggestions when clicking outside
@@ -2711,34 +2727,14 @@
 
     // UPDATE WORK COST FROM TYPE SELECTION
     function updateWorkCostFromType(selectElement, centerIndex, workIndex) {
-      const workRates = {
-        'עבודות צבע': 1200,
-        'עבודות חשמל': 800,
-        'עבודות מכונאות': 1000,
-        'עבודות מזגן': 900,
-        'עבודות ריפוד': 700,
-        'עבודות זגגות': 600,
-        'איטום וזיפות': 400,
-        'בדיקת מתלה': 300,
-        'הנזק מחייב תקנה 309': 1500,
-        'כיול רדאר': 500,
-        'העברת חיישנים': 350,
-        'אחר': 500
-      };
+      // REMOVED: Predefined work rates that were forcing costs
+      // Work costs should be manually entered based on specific case requirements
       
-      const selectedType = selectElement.value;
-      const suggestedCost = workRates[selectedType] || 500;
-      
-      // Update the cost field with suggested value
-      const workRow = selectElement.closest('.work-row');
-      const costInput = workRow.querySelector('.work-cost');
-      if (costInput && costInput.value == 0) {
-        costInput.value = suggestedCost;
-      }
-      
-      // Trigger save and recalculation
+      // Only trigger save and recalculation without changing cost
       saveDamageCenterChanges();
       updateAllCostDisplays();
+      
+      console.log(`🔧 Work type changed: ${selectElement.value} (cost remains manual)`);
     }
 
     // COST CALCULATION FUNCTIONS
@@ -2768,7 +2764,7 @@
       
       if (workDisplay) workDisplay.textContent = `₪${workCost.toLocaleString()}`;
       if (partsDisplay) partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
-      if (repairsDisplay) repairsDisplay.textContent = `₪${totalCost.toLocaleString()}`;
+      if (repairsDisplay) repairsDisplay.textContent = `₪${repairsCost.toLocaleString()}`; // FIXED: Show only repairs cost, not total
       if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
     }
 
@@ -2804,11 +2800,26 @@
       let totalClaim = 0;
       
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        const repairsDisplay = card.querySelector('.repairs-costs-display');
-        if (repairsDisplay) {
-          const amount = parseFloat(repairsDisplay.textContent.replace(/[₪,]/g, '')) || 0;
-          totalClaim += amount;
-        }
+        // Calculate total cost for each damage center (parts + works + repairs)
+        let partsCost = 0;
+        card.querySelectorAll('.part-row').forEach(row => {
+          const price = parseFloat(row.querySelector('.part-price').value) || 0;
+          partsCost += price;
+        });
+        
+        let workCost = 0;
+        card.querySelectorAll('.work-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+          workCost += cost;
+        });
+        
+        let repairsCost = 0;
+        card.querySelectorAll('.repair-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
+          repairsCost += cost;
+        });
+        
+        totalClaim += partsCost + workCost + repairsCost;
       });
       
       // Update summary fields
