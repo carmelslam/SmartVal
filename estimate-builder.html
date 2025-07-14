@@ -861,15 +861,8 @@
         setTimeout(() => {
           updateAllCostDisplays();
           updateSummaryTotalsFromDamageCenters();
-          updateGrossMarketValueField();
-          updateGrossPercentageField();
+          updateGrossFields();
         }, 200);
-        
-        // Additional trigger for gross calculations after a delay
-        setTimeout(() => {
-          updateGrossMarketValueField();
-          updateGrossPercentageField();
-        }, 500);
         
         // Load contact data (now editable) and sync to car_details
         if (helper.client) {
@@ -1985,9 +1978,9 @@
           element.addEventListener('change', function(event) {
             updateHelperFromField(event);
             
-            // Trigger gross percentage recalculation when total claim changes
+            // Trigger gross calculations when total claim changes
             if (id === 'totalClaim') {
-              setTimeout(updateGrossPercentageField, 100);
+              setTimeout(updateGrossFields, 100);
             }
           });
         }
@@ -2462,13 +2455,68 @@
           console.warn('⚠️ No vehicle_value_gross found after all fallback attempts');
         }
         
-        // Also update the gross percentage calculation
-        updateGrossPercentageField();
+        // Do NOT call updateGrossPercentageField here to avoid infinite loop
       } catch (error) {
         console.error('Error updating gross market value field:', error);
       }
     }
 
+    // SIMPLE UPDATE BOTH GROSS FIELDS (NO RECURSION)
+    function updateGrossFields() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        
+        // Get the field elements
+        const leviPriceListField = document.getElementById('leviPriceList');
+        const grossPercentField = document.getElementById('grossPercent');
+        const totalClaimField = document.getElementById('totalClaim');
+        
+        // Try to get vehicle_value_gross from anywhere
+        if (!vehicleValueGross) {
+          const fallbackSources = [
+            helper.levi_report?.final_price,
+            helper.expertise?.calculations?.market_value,
+            helper.levisummary?.final_price
+          ];
+          
+          for (const fallback of fallbackSources) {
+            if (fallback && fallback > 0) {
+              vehicleValueGross = fallback;
+              console.log(`🔧 Using fallback for vehicle_value_gross: ${vehicleValueGross}`);
+              break;
+            }
+          }
+        }
+        
+        // Update gross market value field
+        if (vehicleValueGross && vehicleValueGross > 0) {
+          leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
+          console.log(`💰 Updated gross market value: ₪${vehicleValueGross.toLocaleString()}`);
+          
+          // Update gross percentage field
+          const totalClaim = parseFloat(totalClaimField?.value?.replace(/[₪,]/g, '') || '0');
+          if (totalClaim > 0) {
+            const grossPercentage = (totalClaim / vehicleValueGross) * 100;
+            const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
+            
+            grossPercentField.value = formattedPercentage;
+            console.log(`📊 Updated gross percentage: ${formattedPercentage}`);
+            
+            // Update helper
+            helper.calculations = helper.calculations || {};
+            helper.calculations.vehicle_value_gross = vehicleValueGross;
+            helper.claims_data = helper.claims_data || {};
+            helper.claims_data.gross_percent = formattedPercentage;
+            helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        }
+      } catch (error) {
+        console.error('Error updating gross fields:', error);
+      }
+    }
+    
     // UPDATE GROSS PERCENTAGE FIELD
     function updateGrossPercentageField() {
       try {
@@ -2525,11 +2573,7 @@
             leviPriceListFieldValue: document.getElementById('leviPriceList')?.value
           });
           
-          // If we can't calculate, try to trigger the gross market value update first
-          if (!vehicleValueGross) {
-            console.log('🔧 Triggering gross market value update...');
-            updateGrossMarketValueField();
-          }
+          // Do NOT call updateGrossMarketValueField here to avoid infinite loop
         }
       } catch (error) {
         console.error('Error updating gross percentage field:', error);
@@ -3031,8 +3075,8 @@
           }
         }, 100);
         
-        // Also trigger gross percentage recalculation since total claim changed
-        setTimeout(updateGrossPercentageField, 150);
+        // Also trigger gross calculations since total claim changed
+        setTimeout(updateGrossFields, 150);
       }
     }
 
@@ -3069,6 +3113,7 @@
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
     window.updateGrossMarketValueField = updateGrossMarketValueField;
     window.updateGrossPercentageField = updateGrossPercentageField;
+    window.updateGrossFields = updateGrossFields;
     
     // FORCE MANUAL CALCULATION - Last resort function
     function forceManualCalculation() {
@@ -3149,8 +3194,7 @@
       // Force refresh all calculations
       updateAllCostDisplays();
       updateSummaryTotalsFromDamageCenters();
-      updateGrossMarketValueField();
-      updateGrossPercentageField();
+      updateGrossFields();
       
       // Check values after refresh
       setTimeout(() => {
@@ -3279,8 +3323,7 @@
       refreshAllCalculations: function() {
         this.updateAllCostDisplays();
         this.updateSummaryTotalsFromDamageCenters();
-        this.updateGrossMarketValueField();
-        this.updateGrossPercentageField();
+        updateGrossFields(); // Use the new simple function
         console.log('✅ All calculations refreshed from EstimateCalculations interface');
       }
     };
