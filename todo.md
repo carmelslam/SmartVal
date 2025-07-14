@@ -1732,7 +1732,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
 
 19. Validation and estimate errors: 14.7.25
     * The damages and repairs validation section doesnt   update after changing the builder . 
-    * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper 
+    * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
     * the button בדוק  טקסט משפטי doesn’t  work 
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .

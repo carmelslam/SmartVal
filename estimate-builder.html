@@ -1261,6 +1261,7 @@
         
         // 1. Load Levi adjustments (read-only from Levi report)
         if (helper.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
+          console.log('📄 Loading Levi adjustments:', helper.levi_report.adjustments);
           helper.levi_report.adjustments.forEach((adjustment, index) => {
             adjustmentsHTML += createAdjustmentRow({
               description: adjustment.description || 'התאמה מלוי יצחק',
@@ -1271,10 +1272,13 @@
               readonly: true
             });
           });
+        } else {
+          console.log('📄 No Levi adjustments found in helper.levi_report.adjustments');
         }
         
         // 2. Load custom adjustments (editable, stored in helper.levi.custom_adjustments)
         if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+          console.log('📄 Loading custom adjustments:', helper.levi.custom_adjustments);
           helper.levi.custom_adjustments.forEach((adjustment, index) => {
             adjustmentsHTML += createAdjustmentRow({
               description: adjustment.description || 'התאמה מותאמת אישית',
@@ -1285,6 +1289,8 @@
               readonly: false
             });
           });
+        } else {
+          console.log('📄 No custom adjustments found in helper.levi.custom_adjustments');
         }
         
         if (!adjustmentsHTML) {
@@ -1306,9 +1312,23 @@
     function createAdjustmentRow(params) {
       const { description, percentage, value, source, index, readonly } = params;
       const rowId = `adjustment-${source}-${index}`;
-      const isAddition = percentage >= 0 && value >= 0;
-      const typeLabel = source === 'levi' ? 'לוי יצחק' : (isAddition ? 'תוספת' : 'הפחתה');
-      const typeColor = source === 'levi' ? '#007bff' : (isAddition ? '#28a745' : '#dc3545');
+      const isAddition = percentage > 0 || value > 0;
+      const isSubtraction = percentage < 0 || value < 0;
+      let typeLabel, typeColor;
+      
+      if (source === 'levi') {
+        typeLabel = 'לוי יצחק';
+        typeColor = '#007bff';
+      } else if (isAddition) {
+        typeLabel = 'תוספת';
+        typeColor = '#28a745';
+      } else if (isSubtraction) {
+        typeLabel = 'הפחתה';
+        typeColor = '#dc3545';
+      } else {
+        typeLabel = 'ניטרלי';
+        typeColor = '#6c757d';
+      }
       
       if (readonly) {
         // Read-only Levi adjustments
@@ -1324,12 +1344,15 @@
           </div>
         `;
       } else {
-        // Editable custom adjustments
+        // Editable custom adjustments with badge
         return `
           <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
-            <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
-                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px;" 
-                   placeholder="תיאור ההתאמה" />
+            <div style="position: relative;">
+              <span style="background: ${typeColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; position: absolute; top: -20px; right: 0px; z-index: 10;">${typeLabel}</span>
+              <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
+                     style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; width: 100%;" 
+                     placeholder="תיאור ההתאמה" />
+            </div>
             <input type="number" value="${percentage}" data-field="percentage" data-source="${source}" data-index="${index}"
                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
                    placeholder="0" step="0.1" />

@@ -1223,67 +1223,62 @@
         updateElementIfExists('levi-display-final', '₪0');
       }
       
-      // Validate dynamic price adjustments - check both builder DOM and helper
-      const leviAdjustmentsContainer = document.getElementById('leviAdjustmentsRows-estimate');
+      // Validate dynamic price adjustments - unified approach for all adjustment types
       let adjustmentCount = 0;
+      const data = currentValidationData;
+      const helper = data.raw_helper;
       
-      if (leviAdjustmentsContainer && leviAdjustmentsContainer.children.length > 0) {
-        console.log('🔍 Validating adjustments from builder DOM');
-        Array.from(leviAdjustmentsContainer.children).forEach((row, index) => {
-          const inputs = row.querySelectorAll('input');
-          if (inputs.length >= 3) {
-            const label = inputs[0].value || `התאמה ${index + 1}`;
-            const percentage = parseFloat(inputs[1].value) || 0;
-            const value = parseFloat(inputs[2].value) || 0;
-            
-            const adjFieldKey = `levi_adj_${index}`;
-            const adjValue = getCurrentFieldValue(adjFieldKey);
-            
-            if (percentage !== 0 || value !== 0) {
-              adjustmentCount++;
-              const isValidFormat = adjValue && (adjValue.includes('+') || adjValue.includes('-') || adjValue.includes('₪') || adjValue.includes('%'));
-              if (isValidFormat) {
-                validItems.push(adjFieldKey);
-                setFieldValidationStatus(adjFieldKey, '✓');
-              } else {
-                issues.push(`פורמט לא תקין עבור התאמת מחיר: ${label} (אזהרה)`);
-                setFieldValidationStatus(adjFieldKey, '⚠️');
-              }
+      console.log('🔍 Validating all adjustments from helper data');
+      
+      // A. Validate Levi adjustments (from levi_report)
+      if (helper?.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
+        console.log('🔍 Validating Levi adjustments:', helper.levi_report.adjustments.length);
+        helper.levi_report.adjustments.forEach((adjustment, index) => {
+          const adjFieldKey = `levi_adj_levi_${index}`;
+          const adjValue = getCurrentFieldValue(adjFieldKey);
+          
+          if (adjValue && adjValue !== 'לא זמין' && adjValue !== 'לא מוגדר') {
+            const isValidFormat = adjValue.includes('+') || adjValue.includes('-') || adjValue.includes('₪') || adjValue.includes('%');
+            if (isValidFormat) {
+              validItems.push(adjFieldKey);
+              setFieldValidationStatus(adjFieldKey, '✓');
+            } else {
+              issues.push(`פורמט לא תקין עבור התאמת לוי יצחק: ${adjustment.description || 'התאמה'} (אזהרה)`);
+              setFieldValidationStatus(adjFieldKey, '⚠️');
+            }
+            adjustmentCount++;
+          } else {
+            issues.push(`התאמת לוי יצחק חסרה: ${adjustment.description || 'התאמה'} (אזהרה)`);
+            setFieldValidationStatus(adjFieldKey, '⚠️');
+          }
+        });
+      }
+      
+      // B. Validate custom adjustments (from levi.custom_adjustments)
+      if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+        console.log('🔍 Validating custom adjustments:', helper.levi.custom_adjustments.length);
+        helper.levi.custom_adjustments.forEach((adjustment, index) => {
+          const adjFieldKey = `levi_adj_custom_${index}`;
+          const adjValue = getCurrentFieldValue(adjFieldKey);
+          
+          if (adjValue && adjValue !== 'לא זמין' && adjValue !== 'לא מוגדר') {
+            const isValidFormat = adjValue.includes('+') || adjValue.includes('-') || adjValue.includes('₪') || adjValue.includes('%');
+            if (isValidFormat) {
+              validItems.push(adjFieldKey);
+              setFieldValidationStatus(adjFieldKey, '✓');
+            } else {
+              issues.push(`פורמט לא תקין עבור התאמה מותאמת: ${adjustment.description || 'התאמה'} (אזהרה)`);
+              setFieldValidationStatus(adjFieldKey, '⚠️');
+            }
+            adjustmentCount++;
+          } else {
+            // Empty custom adjustments are OK (optional)
+            if (adjustment.description || adjustment.percentage !== 0 || adjustment.value !== 0) {
+              issues.push(`התאמה מותאמת חסרה: ${adjustment.description || 'התאמה'} (אזהרה)`);
+              setFieldValidationStatus(adjFieldKey, '⚠️');
             }
           }
         });
-      } else {
-        console.log('🔍 Fallback: Validating adjustments from helper data');
-        // Fallback to helper data for adjustments
-        const data = currentValidationData;
-        const helper = data.raw_helper;
-        const levi = helper?.levi_report || helper?.levi || helper?.expertise?.levi_report || {};
-        const adjustments = levi?.adjustments || helper?.levi?.adjustments || {};
-        
-        if (adjustments && Object.keys(adjustments).length > 0) {
-          Object.keys(adjustments).forEach(key => {
-            const adjustment = adjustments[key];
-            if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined || adjustment.amount !== undefined)) {
-              adjustmentCount++;
-              const adjFieldKey = `levi_adj_${key.replace(/\s+/g, '_')}`;
-              const adjValue = getCurrentFieldValue(adjFieldKey);
-              
-              if (adjValue && adjValue !== 'לא זמין' && adjValue !== 'לא מוגדר') {
-                const isValidFormat = adjValue.includes('+') || adjValue.includes('-') || adjValue.includes('₪') || adjValue.includes('%');
-                if (isValidFormat) {
-                  validItems.push(adjFieldKey);
-                  setFieldValidationStatus(adjFieldKey, '✓');
-                } else {
-                  issues.push(`פורמט לא תקין עבור התאמת מחיר: ${key} (אזהרה)`);
-                  setFieldValidationStatus(adjFieldKey, '⚠️');
-                }
-              } else {
-                issues.push(`התאמת מחיר חסרה: ${key} (אזהרה)`);
-                setFieldValidationStatus(adjFieldKey, '⚠️');
-              }
-            }
-          });
-        }
       }
       
       if (adjustmentCount === 0) {
@@ -1881,6 +1876,12 @@
       // Get data from all available sources
       const leviData = getLeviDataFromSources();
       const { basePrice, marketValue, helper } = leviData;
+      
+      console.log('📄 DEBUGGING: Full helper structure for adjustments:', {
+        helper_levi_report_adjustments: helper?.levi_report?.adjustments,
+        helper_levi_custom_adjustments: helper?.levi?.custom_adjustments,
+        helper_keys: Object.keys(helper || {})
+      });
       
       let leviHTML = '';
       
