@@ -1,3 +1,36 @@
+# 🔧 MANUAL EDIT BUTTON NAVIGATION FIX
+
+## Status: 🔄 IN PROGRESS
+**Date:** July 14, 2025
+**Issue:** "Manual Edit" (עריכה ידנית) button for Levi section incorrectly navigates to upload-levi.html instead of estimate-builder.html
+**Location:** estimate-validation.html, line 1791 in editSection function
+
+### Problem Analysis:
+- Found 4 manual edit buttons in estimate-validation.html (lines 540, 588, 651, 705)
+- Each button calls `editSection()` function with different parameters
+- The Levi section button (line 588) calls `editSection('levi')`
+- Current navigation in editSection function (line 1791): goes to 'upload-levi.html'
+- Should navigate to estimate-builder.html like other sections
+
+### Plan:
+1. ✅ **Identify the issue** - Located editSection function and problematic navigation
+2. ⏳ **Fix navigation** - Change levi case to redirect to estimate-builder.html
+3. ⏳ **Verify consistency** - Ensure all manual edit buttons go to builder interface
+4. ⏳ **Test functionality** - Confirm button works correctly
+
+### Current editSection Function Analysis:
+- vehicle: ✅ Goes to estimate-builder.html#vehicle-details (correct)
+- levi: ❌ Goes to upload-levi.html (should go to builder)
+- damage: ✅ Goes to damage-center-flow.html (correct)
+- estimate: ✅ Goes to estimate-builder.html#estimate-type (correct)
+
+### Implementation:
+**File:** /Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation /IntegratedAppBuild/System Building Team /code /new code /evalsystem/estimate-validation.html
+**Line:** 1791
+**Change:** window.location.href = 'upload-levi.html' → window.location.href = 'estimate-builder.html#levi-details'
+
+---
+
 # 🚨 EMERGENCY FIX COMPLETED - Estimate Builder Restored
 
 ## Status: ✅ ESTIMATE BUILDER FULLY RESTORED
