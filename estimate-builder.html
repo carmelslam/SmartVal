@@ -835,7 +835,7 @@
           document.getElementById('authorizedClaim').value = calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '';
         }
         
-        // Load contact data (now editable)
+        // Load contact data (now editable) and sync to car_details
         if (helper.client) {
           document.getElementById('ownerName').value = helper.client.name || '';
           document.getElementById('ownerAddress').value = helper.client.address || '';
@@ -845,6 +845,21 @@
           document.getElementById('insuranceAgent').value = helper.client.insurance_agent || '';
           document.getElementById('agentPhone').value = helper.client.agent_phone || '';
           document.getElementById('agentEmail').value = helper.client.agent_email || '';
+          
+          // Sync client data to car_details structure for floating screen compatibility
+          helper.car_details = helper.car_details || {};
+          helper.car_details.owner = helper.client.name || '';
+          helper.car_details.ownerAddress = helper.client.address || '';
+          helper.car_details.ownerPhone = helper.client.phone || '';
+          helper.car_details.insuranceCompany = helper.client.insurance_company || '';
+          helper.car_details.agentName = helper.client.insurance_agent || '';
+          helper.car_details.agentPhone = helper.client.agent_phone || '';
+          
+          // Note: garageName and garagePhone are not in the builder, so they'll remain empty
+          helper.car_details.garageName = helper.car_details.garageName || '';
+          helper.car_details.garagePhone = helper.car_details.garagePhone || '';
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
         // Update page title with plate
