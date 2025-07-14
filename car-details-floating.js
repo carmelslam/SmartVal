@@ -342,7 +342,7 @@
     document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
     document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
     document.getElementById("agent-name").textContent = formatValue(carDetails.agentName);
-    document.getElementById("agent-phone").textContent = formatValue(carDetails.insurance_agent_phone);
+    document.getElementById("agent-phone").textContent = formatValue(carDetails.agentPhone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
