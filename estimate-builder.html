@@ -552,6 +552,20 @@
       </div>
     </div>
 
+    <!-- ESTIMATE ADJUSTMENTS SECTION -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('estimateAdjustments')">התאמות אומדן (הצג/הסתר)</button>
+      <div id="estimateAdjustments" style="display:none;">
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות מלוי והתאמות מותאמות אישית:</h4>
+          <div id="allAdjustmentsRows-estimate">
+            <!-- This will be populated by loadAllAdjustments() function -->
+          </div>
+          <button class="btn add" type="button" onclick="addEstimateAdjustment()">הוסף התאמה</button>
+        </div>
+      </div>
+    </div>
+
     <!-- GROSS DAMAGE PERCENTAGE RESULT -->
     <div class="form-section">
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossPercentageResult')">אחוז הנזק הגולמי (הצג/הסתר)</button>
@@ -3279,6 +3293,85 @@
         const valueInput = inputs[2]; // value field is the third input
         valueInput.value = `₪${calculatedValue.toLocaleString()}`;
       }
+    }
+    
+    // ESTIMATE ADJUSTMENTS FUNCTIONS
+    
+    // Add estimate adjustment row
+    function addEstimateAdjustment() {
+      const container = document.getElementById('allAdjustmentsRows-estimate');
+      if (!container) {
+        console.error('Container allAdjustmentsRows-estimate not found');
+        return;
+      }
+      
+      const rowId = 'estAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; padding:8px; border:1px solid #e0e0e0; border-radius:4px;" data-source="custom">
+          <input type="text" placeholder="תיאור ההתאמה" onchange="updateEstimateAdjustments()" />
+          <select onchange="updateEstimateAdjustments()">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select>
+          <input type="number" step="0.01" placeholder="%" onchange="calculateEstimateAdjustmentValue(this); updateEstimateAdjustments();" />
+          <input type="text" placeholder="₪" onchange="updateEstimateAdjustments()" />
+          <button class="btn remove" onclick="removeEstimateAdjustmentRow('${rowId}')">מחק</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateEstimateAdjustments();
+    }
+    
+    // Remove estimate adjustment row
+    function removeEstimateAdjustmentRow(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+        updateEstimateAdjustments();
+      }
+    }
+    
+    // Calculate estimate adjustment value from percentage
+    function calculateEstimateAdjustmentValue(percentageInput) {
+      const row = percentageInput.closest('div');
+      const basicPriceInput = document.getElementById('basicPrice');
+      const basicPrice = parseFloat(basicPriceInput.value.replace(/[₪,]/g, '')) || 0;
+      const percentage = parseFloat(percentageInput.value) || 0;
+      
+      if (percentage && basicPrice) {
+        const calculatedValue = basicPrice * percentage / 100;
+        const inputs = row.querySelectorAll('input');
+        const valueInput = inputs[2]; // value field is the third input
+        valueInput.value = `₪${calculatedValue.toLocaleString()}`;
+      }
+    }
+    
+    // Update estimate adjustments in helper
+    function updateEstimateAdjustments() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const adjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+      const adjustments = [];
+      
+      adjustmentRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const description = inputs[0].value;
+        const type = row.querySelector('select').value;
+        const percentage = parseFloat(inputs[1].value) || 0;
+        const value = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+        
+        if (description && (percentage || value)) {
+          adjustments.push({ description, type, percentage, value });
+        }
+      });
+      
+      // Save to helper
+      if (!helper.levi) helper.levi = {};
+      helper.levi.custom_adjustments = adjustments;
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('Estimate adjustments updated:', adjustments);
     }
     
     // REFRESH SECOND BULK FIELDS
