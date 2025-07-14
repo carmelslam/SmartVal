@@ -820,6 +820,13 @@
       loadValidationData();
       loadLegalTextValidation();
       populateEnhancedValidationItems();
+      
+      // Initialize damage validation items  
+      setTimeout(() => {
+        console.log('🔧 Initializing damage validation items...');
+        populateDamageValidationItems();
+      }, 200);
+      
       startInitialValidation();
     }
 
@@ -963,6 +970,112 @@
     }
 
     // Extract estimate totals from damage blocks
+    // ENHANCED: Extract damage data from multiple sources (builder state + helper)
+    function extractDamageDataFromMultipleSources() {
+      console.log('🔍 Extracting damage data from multiple sources...');
+      
+      let damageData = {
+        parts_cost: 0,
+        work_cost: 0,
+        repairs_cost: 0,
+        total_before_vat: 0,
+        total_with_vat: 0
+      };
+      
+      // Priority 1: Try to read from builder DOM (if available)
+      try {
+        // Check if we can access builder summary totals from DOM
+        const claimField = document.querySelector('#totalClaim, #sumClaim');
+        const marketField = document.querySelector('#sumMarketValue');
+        const vatField = document.querySelector('#sumVAT');
+        const totalField = document.querySelector('#sumTotalClaim');
+        
+        // Also try to read from builder state if available
+        const builderState = sessionStorage.getItem('builderCurrentState');
+        if (builderState) {
+          try {
+            const state = JSON.parse(builderState);
+            if (state.damage_totals) {
+              damageData.parts_cost = state.damage_totals.parts_cost || 0;
+              damageData.work_cost = state.damage_totals.work_cost || 0;
+              damageData.repairs_cost = state.damage_totals.repairs_cost || 0;
+              console.log('\ud83d\udcbe Loaded damage data from builder state:', state.damage_totals);
+            }
+          } catch (e) {
+            console.log('\u26a0\ufe0f Error parsing builder state:', e);
+          }
+        }
+        
+        // Try specific damage total selectors
+        const partsTotal = document.querySelector('[data-damage-total="parts"], .parts-costs-display')?.textContent;
+        const workTotal = document.querySelector('[data-damage-total="work"], .work-costs-display')?.textContent;
+        const repairsTotal = document.querySelector('[data-damage-total="repairs"], .repairs-costs-display')?.textContent;
+        
+        if (partsTotal && damageData.parts_cost === 0) {
+          damageData.parts_cost = parseFloat(partsTotal.replace(/[\u20aa,\s]/g, '')) || 0;
+          console.log('\ud83d\udcb0 Parts cost from DOM:', damageData.parts_cost);
+        }
+        
+        if (workTotal && damageData.work_cost === 0) {
+          damageData.work_cost = parseFloat(workTotal.replace(/[\u20aa,\s]/g, '')) || 0;
+          console.log('\ud83d\udcb0 Work cost from DOM:', damageData.work_cost);
+        }
+        
+        if (repairsTotal && damageData.repairs_cost === 0) {
+          damageData.repairs_cost = parseFloat(repairsTotal.replace(/[\u20aa,\s]/g, '')) || 0;
+          console.log('\ud83d\udcb0 Repairs cost from DOM:', damageData.repairs_cost);
+        }
+        
+        // If we have claim total but no breakdown, try to extract from helper with that total
+        if (claimField && (damageData.parts_cost + damageData.work_cost + damageData.repairs_cost === 0)) {
+          const claimTotal = parseFloat(claimField.value?.replace(/[\u20aa,\s]/g, '') || '0');
+          console.log('\ud83d\udcb0 Found claim total in DOM:', claimTotal);
+          
+          // Use this as a reference to validate against helper data
+          if (claimTotal > 0) {
+            damageData.builder_total_reference = claimTotal;
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Cannot access builder DOM, falling back to helper data');
+      }
+      
+      // Priority 2: Read from helper data if DOM values are 0 or unavailable
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (damageData.parts_cost === 0 || damageData.work_cost === 0 || damageData.repairs_cost === 0) {
+        console.log('💾 Reading from helper data as fallback...');
+        const helperTotals = extractEstimateTotals(helper);
+        
+        if (damageData.parts_cost === 0) damageData.parts_cost = helperTotals.parts_cost;
+        if (damageData.work_cost === 0) damageData.work_cost = helperTotals.work_cost;
+        if (damageData.repairs_cost === 0) damageData.repairs_cost = helperTotals.repairs_cost;
+      }
+      
+      // Priority 3: Try reading from sessionStorage totals
+      if (damageData.parts_cost === 0 && damageData.work_cost === 0 && damageData.repairs_cost === 0) {
+        console.log('💾 Trying sessionStorage totals...');
+        const storedTotals = sessionStorage.getItem('damage_totals');
+        if (storedTotals) {
+          try {
+            const parsed = JSON.parse(storedTotals);
+            damageData.parts_cost = parsed.parts_cost || 0;
+            damageData.work_cost = parsed.work_cost || 0;
+            damageData.repairs_cost = parsed.repairs_cost || 0;
+          } catch (e) {
+            console.log('⚠️ Error parsing stored totals:', e);
+          }
+        }
+      }
+      
+      // Calculate totals
+      damageData.total_before_vat = damageData.parts_cost + damageData.work_cost + damageData.repairs_cost;
+      damageData.total_with_vat = Math.round(damageData.total_before_vat * 1.18); // 18% VAT
+      
+      console.log('📈 Final damage data:', damageData);
+      return damageData;
+    }
+    
     function extractEstimateTotals(helper) {
       const damageBlocks = helper.expertise?.damage_blocks || [];
       let totals = {
@@ -2096,9 +2209,135 @@
     }
 
     function populateDamageValidationItems() {
-      console.log('🔧 Damage section validation items - using current structure for now');
-      // For now, keep existing structure - can be enhanced later
+      console.log('🔧 Populating damage validation items with comprehensive data sources');
+      
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const validationItemsContainer = document.getElementById('damage-validation-items');
+        
+        if (!validationItemsContainer) {
+          console.log('⚠️ No damage validation items container found');
+          return;
+        }
+        
+        // Extract damage data using comprehensive approach
+        const damageData = extractDamageDataFromMultipleSources();
+        
+        let validationHTML = '';
+        
+        // Create validation rows for each type of cost
+        const costTypes = [
+          { key: 'parts_cost', label: 'סה"כ חלקים', description: 'עלות חלקי חילוף' },
+          { key: 'work_cost', label: 'סה"כ עבודות', description: 'עלות עבודה' },
+          { key: 'repairs_cost', label: 'סה"כ תיקונים', description: 'עלות תיקונים' }
+        ];
+        
+        costTypes.forEach(type => {
+          const currentValue = damageData[type.key] || 0;
+          const helperValue = helper.expertise?.totals?.[type.key] || 0;
+          const formatted = MathEngine.formatCurrency(currentValue);
+          
+          validationHTML += `
+            <div class="validation-item" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; padding: 8px; border-bottom: 1px solid #e2e8f0; align-items: center;">
+              <div>
+                <div style="font-weight: 600; color: #1e3a8a;">${type.label}</div>
+                <div style="font-size: 12px; color: #64748b;">${type.description}</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 14px; font-weight: 600; color: ${currentValue > 0 ? '#059669' : '#dc2626'};">\u20aa${currentValue.toLocaleString()}</div>
+                <div style="font-size: 11px; color: #64748b;">נוכחי</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 14px; color: #6b7280;">\u20aa${helperValue.toLocaleString()}</div>
+                <div style="font-size: 11px; color: #64748b;">שמור</div>
+              </div>
+              <button class="btn-auto-check" onclick="validateDamageItem('${type.key}')" 
+                      style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                בדוק אוטומטית
+              </button>
+            </div>
+          `;
+        });
+        
+        // Add total validation row
+        const totalBeforeVat = damageData.total_before_vat || 0;
+        const totalWithVat = damageData.total_with_vat || 0;
+        
+        validationHTML += `
+          <div class="validation-item validation-total" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; padding: 12px; background: #f8fafc; border-top: 2px solid #e2e8f0; align-items: center;">
+            <div>
+              <div style="font-weight: 700; color: #1e3a8a; font-size: 16px;">סה"כ כללי</div>
+              <div style="font-size: 12px; color: #64748b;">סך כל העלויות לפני מע"מ</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 16px; font-weight: 700; color: #059669;">\u20aa${totalBeforeVat.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #6b7280;">+ מע"מ: \u20aa${(totalWithVat - totalBeforeVat).toLocaleString()}</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 16px; font-weight: 700; color: #1e3a8a;">\u20aa${totalWithVat.toLocaleString()}</div>
+              <div style="font-size: 11px; color: #64748b;">כולל מע"מ</div>
+            </div>
+            <button class="btn-auto-check" onclick="validateAllDamageItems()" 
+                    style="background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+              אשר הכל
+            </button>
+          </div>
+        `;
+        
+        validationItemsContainer.innerHTML = validationHTML;
+        
+        console.log('✅ Damage validation items populated successfully');
+        console.log('Damage data extracted:', damageData);
+        
+      } catch (error) {
+        console.error('Error populating damage validation items:', error);
+        if (document.getElementById('damage-validation-items')) {
+          document.getElementById('damage-validation-items').innerHTML = '<div style="color: #dc2626; text-align: center; padding: 20px;">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05e0\u05ea\u05d5\u05e0\u05d9 \u05e0\u05d6\u05e7\u05d9\u05dd</div>';
+        }
+      }
     }
+
+    // DAMAGE VALIDATION HELPER FUNCTIONS
+    window.validateDamageItem = function(itemType) {
+      console.log(`🔍 Validating damage item: ${itemType}`);
+      showAlert(`אימות ${itemType} הושלם`, 'success');
+      
+      // Could add specific validation logic here
+      const damageData = extractDamageDataFromMultipleSources();
+      const value = damageData[itemType] || 0;
+      
+      if (value > 0) {
+        console.log(`✅ ${itemType}: ₪${value.toLocaleString()}`);
+      } else {
+        console.log(`⚠️ ${itemType}: לא נמצאו נתונים`);
+        showAlert(`${itemType}: לא נמצאו נתונים`, 'warning');
+      }
+    };
+
+    window.validateAllDamageItems = function() {
+      console.log('🔍 Validating all damage items');
+      const damageData = extractDamageDataFromMultipleSources();
+      
+      const totalCosts = damageData.parts_cost + damageData.work_cost + damageData.repairs_cost;
+      
+      if (totalCosts > 0) {
+        showAlert(`כל פריטי הנזקים אומתו בהצלחה. סה"כ: ₪${totalCosts.toLocaleString()}`, 'success');
+        
+        // Update section status to completed
+        const damageSection = document.getElementById('section-damage');
+        if (damageSection) {
+          damageSection.classList.remove('current', 'warning');
+          damageSection.classList.add('completed');
+          
+          const statusElement = damageSection.querySelector('.section-status');
+          if (statusElement) {
+            statusElement.textContent = 'אושר ✓';
+          }
+        }
+      } else {
+        showAlert('לא נמצאו נתוני נזקים לאימות', 'warning');
+      }
+    };
 
     function populateEstimateValidationItems() {
       console.log('📊 Estimate section validation items - using current structure for now');

@@ -1764,7 +1764,7 @@ We need key changes to make it useful .
 and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: ❌
 
 19. Validation and estimate errors: 14.7.25
-    * The damages and repairs validation section doesnt   update after changing the builder . 
+    * The damages and repairs validation section doesntupdate after changing the builder . 
     * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
     *Add  to the validation the same footing screens of the builder and the report review page.
     * the expertise damge centers and costs validation section are not pulling the data correctly. also in the bulder the calculations for this part are not corrrect 
