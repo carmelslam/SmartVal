@@ -1659,29 +1659,66 @@
       try {
         console.log('🔄 Triggering floating screen refresh after helper update');
         
+        // Debug: Check which refresh functions are available
+        console.log('Debug: Available refresh functions:', {
+          refreshLeviData: typeof window.refreshLeviData,
+          refreshCarData: typeof window.refreshCarData, 
+          refreshInvoiceData: typeof window.refreshInvoiceData,
+          refreshPartsResults: typeof window.refreshPartsResults
+        });
+        
         // Refresh Levi floating screen if open
         if (window.refreshLeviData && typeof window.refreshLeviData === 'function') {
           console.log('🔄 Refreshing Levi floating screen');
           window.refreshLeviData();
+        } else {
+          console.log('⚠️ refreshLeviData not available or not a function');
         }
         
         // Refresh Car Details floating screen if open
         if (window.refreshCarData && typeof window.refreshCarData === 'function') {
           console.log('🔄 Refreshing Car Details floating screen');
           window.refreshCarData();
+        } else {
+          console.log('⚠️ refreshCarData not available or not a function');
         }
         
         // Refresh Invoice floating screen if open
         if (window.refreshInvoiceData && typeof window.refreshInvoiceData === 'function') {
           console.log('🔄 Refreshing Invoice floating screen');
           window.refreshInvoiceData();
+        } else {
+          console.log('⚠️ refreshInvoiceData not available or not a function');
         }
         
-        // Refresh Parts Search floating screen if open
-        if (window.refreshPartsData && typeof window.refreshPartsData === 'function') {
+        // Refresh Parts Search floating screen (corrected function name)
+        if (window.refreshPartsResults && typeof window.refreshPartsResults === 'function') {
           console.log('🔄 Refreshing Parts Search floating screen');
-          window.refreshPartsData();
+          window.refreshPartsResults();
+        } else {
+          console.log('⚠️ refreshPartsResults not available or not a function');
         }
+        
+        // Alternative: Try to reload data directly from iframe/floating screens
+        setTimeout(() => {
+          // Try to refresh via postMessage to floating screens
+          const floatingScreens = document.querySelectorAll('.floating-screen[style*="block"]');
+          floatingScreens.forEach(screen => {
+            console.log('🔄 Found open floating screen:', screen.id);
+            const iframe = screen.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+              try {
+                iframe.contentWindow.postMessage({
+                  type: 'refreshData',
+                  source: 'estimate-builder',
+                  timestamp: new Date().toISOString()
+                }, '*');
+              } catch (e) {
+                console.log('Could not post message to iframe:', e);
+              }
+            }
+          });
+        }, 100);
         
         // Dispatch custom event for any other modules listening
         window.dispatchEvent(new CustomEvent('helperDataUpdated', {

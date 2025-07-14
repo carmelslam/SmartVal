@@ -231,6 +231,12 @@
 
   window.showCarDetails = window.toggleCarDetails;
 
+  // Expose refresh function to global scope for automatic updates from builder
+  window.refreshCarData = function () {
+    console.log('🔄 Car Details floating screen: refreshCarData called');
+    loadCarData();
+  };
+
   // Make modal draggable
   function makeDraggable(modal) {
     let isDragging = false;
@@ -263,9 +269,8 @@
     });
   }
 
-  window.refreshCarData = function () {
-    loadCarData();
-  };
+  // Remove old duplicate function that was causing issues
+  // window.refreshCarData is now defined above with logging
 
   function loadCarData() {
     try {

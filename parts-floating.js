@@ -608,6 +608,15 @@
     `).join('');
   }
 
+  // Expose refresh function to global scope for automatic updates from builder
+  window.refreshPartsResults = function () {
+    console.log('🔄 Parts floating screen: refreshPartsResults called');
+    // For parts search, we'll refresh the current search results if any exist
+    if (searchResults && searchResults.length > 0) {
+      displayResults(searchResults);
+    }
+  };
+
   // Add floating button to access parts search from any page
   if (!document.getElementById("partsFloatBtn")) {
     const floatBtn = document.createElement("button");

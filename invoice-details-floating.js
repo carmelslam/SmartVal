@@ -215,6 +215,12 @@
 
   window.showInvoiceDetails = window.toggleInvoiceDetails;
 
+  // Expose refresh function to global scope for automatic updates from builder
+  window.refreshInvoiceData = function () {
+    console.log('🔄 Invoice floating screen: refreshInvoiceData called');
+    loadInvoiceData();
+  };
+
   // Make modal draggable
   function makeDraggable(modal) {
     let isDragging = false;
@@ -247,9 +253,8 @@
     });
   }
 
-  window.refreshInvoiceData = function () {
-    loadInvoiceData();
-  };
+  // Remove old duplicate function that was causing issues  
+  // window.refreshInvoiceData is now defined above with logging
 
   function loadInvoiceData() {
     try {

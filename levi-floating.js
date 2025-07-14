@@ -355,6 +355,12 @@
     }
   };
 
+  // Expose refresh function to global scope for automatic updates from builder
+  window.refreshLeviData = function () {
+    console.log('🔄 Levi floating screen: refreshLeviData called');
+    loadLeviData();
+  };
+
   // Make modal draggable
   function makeDraggable(modal) {
     let isDragging = false;
@@ -387,9 +393,8 @@
     });
   }
 
-  window.refreshLeviData = function () {
-    loadLeviData();
-  };
+  // Remove old duplicate function that was causing issues
+  // window.refreshLeviData is now defined above with logging
 
   function loadLeviData() {
     try {
