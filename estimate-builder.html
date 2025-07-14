@@ -1695,32 +1695,41 @@
           helper.levi.custom_adjustments.forEach((adjustment, index) => {
             const desc = adjustment.description ? adjustment.description.toLowerCase() : '';
             
-            // Map based on description keywords OR index position (for comprehensive mapping)
-            if (desc.includes('עליה לכביש') || desc.includes('registration') || index === 0) {
+            console.log(`🔍 Mapping adjustment ${index}: "${adjustment.description}" (${adjustment.percentage}%, ₪${adjustment.value})`);
+            
+            // Map based on description keywords ONLY (check specific terms first to avoid conflicts)
+            if (desc.includes('עליה לכביש') || desc.includes('registration') || desc.includes('רישוי')) {
               helper.expertise.levi_report.registration = adjustment.description || 'עליה לכביש';
               helper.expertise.levi_report.registration_percent = Math.abs(adjustment.percentage || 0);
               helper.expertise.levi_report.registration_value = Math.abs(adjustment.value || 0);
               helper.expertise.levi_report.registration_total = Math.abs(adjustment.value || 0);
-            } else if (desc.includes('בעלות') || desc.includes('ownership') || index === 1) {
-              helper.expertise.levi_report.ownership = adjustment.description || 'בעלות';
-              helper.expertise.levi_report.ownership_percent = Math.abs(adjustment.percentage || 0);
-              helper.expertise.levi_report.ownership_value = Math.abs(adjustment.value || 0);
-              helper.expertise.levi_report.ownership_total = Math.abs(adjustment.value || 0);
-            } else if (desc.includes('ק״מ') || desc.includes('km') || index === 2) {
-              helper.expertise.levi_report.km = adjustment.description || 'מס ק״מ';
-              helper.expertise.levi_report.km_percent = Math.abs(adjustment.percentage || 0);
-              helper.expertise.levi_report.km_value = Math.abs(adjustment.value || 0);
-              helper.expertise.levi_report.km_total = Math.abs(adjustment.value || 0);
-            } else if (desc.includes('בעלים') || desc.includes('owners') || index === 3) {
+              console.log(`✅ Mapped to registration: ${adjustment.description}`);
+            } else if (desc.includes('מספר בעלים') || desc.includes('owners')) {
               helper.expertise.levi_report.owners = adjustment.description || 'מספר בעלים';
               helper.expertise.levi_report.owners_percent = Math.abs(adjustment.percentage || 0);
               helper.expertise.levi_report.owners_value = Math.abs(adjustment.value || 0);
               helper.expertise.levi_report.owners_total = Math.abs(adjustment.value || 0);
-            } else if (desc.includes('מאפיינים') || desc.includes('features') || index === 4) {
+              console.log(`✅ Mapped to owners: ${adjustment.description}`);
+            } else if (desc.includes('בעלות') || desc.includes('ownership')) {
+              helper.expertise.levi_report.ownership = adjustment.description || 'בעלות';
+              helper.expertise.levi_report.ownership_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.ownership_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.ownership_total = Math.abs(adjustment.value || 0);
+              console.log(`✅ Mapped to ownership: ${adjustment.description}`);
+            } else if (desc.includes('ק״מ') || desc.includes('km') || desc.includes('קילומטרים')) {
+              helper.expertise.levi_report.km = adjustment.description || 'מס ק״מ';
+              helper.expertise.levi_report.km_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.km_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.km_total = Math.abs(adjustment.value || 0);
+              console.log(`✅ Mapped to km: ${adjustment.description}`);
+            } else if (desc.includes('מאפיינים') || desc.includes('features')) {
               helper.expertise.levi_report.features = adjustment.description || 'מאפיינים';
               helper.expertise.levi_report.features_percent = Math.abs(adjustment.percentage || 0);
               helper.expertise.levi_report.features_value = Math.abs(adjustment.value || 0);
               helper.expertise.levi_report.features_total = Math.abs(adjustment.value || 0);
+              console.log(`✅ Mapped to features: ${adjustment.description}`);
+            } else {
+              console.log(`⚠️ No mapping found for: "${adjustment.description}" - will be stored in helper for validation/report`);
             }
           });
         }
