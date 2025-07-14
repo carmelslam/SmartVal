@@ -861,7 +861,15 @@
         setTimeout(() => {
           updateAllCostDisplays();
           updateSummaryTotalsFromDamageCenters();
+          updateGrossMarketValueField();
+          updateGrossPercentageField();
         }, 200);
+        
+        // Additional trigger for gross calculations after a delay
+        setTimeout(() => {
+          updateGrossMarketValueField();
+          updateGrossPercentageField();
+        }, 500);
         
         // Load contact data (now editable) and sync to car_details
         if (helper.client) {
@@ -2445,6 +2453,13 @@
         const totalClaimValue = totalClaimField?.value || '';
         const totalClaim = parseFloat(totalClaimValue.replace(/[₪,]/g, '')) || 0;
         
+        console.log('🔍 Gross percentage calculation:', {
+          vehicleValueGross: vehicleValueGross,
+          totalClaim: totalClaim,
+          totalClaimRaw: totalClaimValue,
+          helperCalculations: helper.calculations
+        });
+        
         if (vehicleValueGross && vehicleValueGross > 0 && totalClaim > 0) {
           // Calculate gross percentage: (Total Claim ÷ Gross Market Value) × 100
           const grossPercentage = (totalClaim / vehicleValueGross) * 100;
@@ -2467,6 +2482,11 @@
             
             console.log(`📊 Updated gross percentage: ${totalClaim.toLocaleString()} ÷ ${vehicleValueGross.toLocaleString()} = ${formattedPercentage}`);
           }
+        } else {
+          console.warn('⚠️ Cannot calculate gross percentage - missing values:', {
+            vehicleValueGross: vehicleValueGross,
+            totalClaim: totalClaim
+          });
         }
       } catch (error) {
         console.error('Error updating gross percentage field:', error);
@@ -2915,7 +2935,7 @@
     }
 
     function updateSummaryTotalsFromDamageCenters() {
-      let totalClaim = 0;
+      let totalClaimBeforeVAT = 0;
       
       document.querySelectorAll('.editable-damage-card').forEach(card => {
         // Calculate total cost for each damage center (parts + works + repairs)
@@ -2937,23 +2957,28 @@
           repairsCost += cost;
         });
         
-        totalClaim += partsCost + workCost + repairsCost;
+        totalClaimBeforeVAT += partsCost + workCost + repairsCost;
       });
+      
+      // Calculate total claim with VAT (18%)
+      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * 1.18);
       
       // Update summary fields
       const sumClaimField = document.getElementById('sumClaim');
       const totalClaimField = document.getElementById('totalClaim');
       
-      if (totalClaim > 0) {
-        const formattedAmount = `₪${totalClaim.toLocaleString()}`;
+      if (totalClaimWithVAT > 0) {
+        const formattedAmount = `₪${totalClaimWithVAT.toLocaleString()}`;
         
-        // Update both summary claim and total claim fields
+        // Update both summary claim and total claim fields WITH VAT
         if (sumClaimField) {
           sumClaimField.value = formattedAmount;
         }
         if (totalClaimField) {
           totalClaimField.value = formattedAmount;
         }
+        
+        console.log(`💰 Updated total claim with VAT: ${totalClaimBeforeVAT.toLocaleString()} → ${totalClaimWithVAT.toLocaleString()}`);
         
         // Trigger summary recalculation
         setTimeout(() => {
@@ -3011,10 +3036,31 @@
       console.log('Levi report:', helper.levi_report);
       console.log('Expertise:', helper.expertise);
       
+      // Check current field values
+      const leviPriceListField = document.getElementById('leviPriceList');
+      const grossPercentField = document.getElementById('grossPercent');
+      const totalClaimField = document.getElementById('totalClaim');
+      
+      console.log('🔍 Current field values:', {
+        leviPriceList: leviPriceListField?.value || 'NOT FOUND',
+        grossPercent: grossPercentField?.value || 'NOT FOUND',
+        totalClaim: totalClaimField?.value || 'NOT FOUND'
+      });
+      
       // Force refresh all calculations
       updateAllCostDisplays();
       updateSummaryTotalsFromDamageCenters();
       updateGrossMarketValueField();
+      updateGrossPercentageField();
+      
+      // Check values after refresh
+      setTimeout(() => {
+        console.log('🔍 After refresh field values:', {
+          leviPriceList: leviPriceListField?.value || 'NOT FOUND',
+          grossPercent: grossPercentField?.value || 'NOT FOUND',
+          totalClaim: totalClaimField?.value || 'NOT FOUND'
+        });
+      }, 100);
       
       console.log('🔍 === DEBUG CALCULATIONS COMPLETE ===');
     }
