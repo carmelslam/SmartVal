@@ -1561,7 +1561,7 @@
         // Editable custom adjustments with type dropdown (5-column layout)
         const currentAdjustmentType = adjustmentType || 'addition';
         return `
-          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
+          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;" data-source="${source}" data-loaded-from-helper="true">
             <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px;" 
                    placeholder="תיאור ההתאמה" />
@@ -2785,9 +2785,15 @@
         
         // Initialize structures
         helper.levi_report = helper.levi_report || {};
+        // CRITICAL FIX: Clear adjustments array to prevent exponential duplication
         helper.levi_report.adjustments = [];
         helper.expertise = helper.expertise || {};
         helper.expertise.levi_report = helper.expertise.levi_report || {};
+        
+        // CRITICAL FIX: Also clear any existing custom adjustments to prevent duplication
+        if (helper.levi) {
+          helper.levi.custom_adjustments = [];
+        }
         
         // First, preserve existing vehicle data from the main form
         const basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 
@@ -2869,8 +2875,9 @@
         });
         
         // Collect other adjustments from allAdjustmentsRows-estimate and map to parameters
-        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
-        console.log('🔍 DEBUG: Found all adjustment rows:', allAdjustmentRows.length);
+        // CRITICAL FIX: Only process manually added adjustments, not ones loaded from helper
+        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"][data-user-created="true"]');
+        console.log('🔍 DEBUG: Found user-created adjustment rows:', allAdjustmentRows.length);
         allAdjustmentRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
           if (inputs.length >= 3) {
@@ -3556,7 +3563,7 @@
       const rowId = 'estAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; padding:8px; border:1px solid #e0e0e0; border-radius:4px;" data-source="custom">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; padding:8px; border:1px solid #e0e0e0; border-radius:4px;" data-source="custom" data-user-created="true">
           <input type="text" placeholder="תיאור ההתאמה" onchange="updateEstimateAdjustments()" />
           <select onchange="updateEstimateAdjustments()">
             <option value="plus">תוספת (+)</option>
@@ -5054,11 +5061,12 @@
         loadGrossCalculationData();
         console.log('✅ Bulk 1 & 2 initialized');
         
-        // Initialize helper with current vehicle data for Levi floating screen
-        setTimeout(() => {
-          updateHelperFromAdjustments();
-          console.log('🔧 Initial helper update completed for Levi floating screen');
-        }, 500);
+        // REMOVED: Auto-call updateHelperFromAdjustments on page load to prevent duplication
+        // updateHelperFromAdjustments should only be called when user makes actual changes
+        // setTimeout(() => {
+        //   updateHelperFromAdjustments();
+        //   console.log('🔧 Initial helper update completed for Levi floating screen');
+        // }, 500);
       }, 500);
       
       // Initialize full market value calculation
