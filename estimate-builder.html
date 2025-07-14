@@ -1400,6 +1400,13 @@
     function loadAllAdjustments(helper) {
       try {
         const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
+        
+        // Add null check for DOM element
+        if (!adjustmentsContainer) {
+          console.warn('DOM element allAdjustmentsRows-estimate not found, skipping adjustments load');
+          return;
+        }
+        
         let adjustmentsHTML = '';
         
         // 1. Load Levi adjustments (read-only from Levi report)
@@ -1918,11 +1925,25 @@
         helper.expertise = helper.expertise || {};
         helper.expertise.calculations = helper.expertise.calculations || {};
         
-        // Update with current bulk calculations
-        const grossMarketValue = window.EstimateCalculations.getGrossMarketValue();
-        const fullMarketValue = window.EstimateCalculations.getFullMarketValue();
-        const totalClaim = window.EstimateCalculations.getTotalClaim();
-        const grossPercentage = window.EstimateCalculations.getGrossPercentage();
+        // Update with current bulk calculations - with safety checks
+        let grossMarketValue = 0;
+        let fullMarketValue = 0;
+        let totalClaim = 0;
+        let grossPercentage = 0;
+        
+        if (window.EstimateCalculations && typeof window.EstimateCalculations === 'object') {
+          grossMarketValue = window.EstimateCalculations.getGrossMarketValue();
+          fullMarketValue = window.EstimateCalculations.getFullMarketValue();
+          totalClaim = window.EstimateCalculations.getTotalClaim();
+          grossPercentage = window.EstimateCalculations.getGrossPercentage();
+        } else {
+          console.warn('EstimateCalculations not yet initialized, using fallback values');
+          // Try to get values from DOM or helper as fallback
+          grossMarketValue = parseFloat(document.getElementById('grossMarketValueResult')?.value.replace(/[₪,]/g, '') || '0') || 0;
+          fullMarketValue = parseFloat(document.getElementById('fullMarketValueResult')?.value.replace(/[₪,]/g, '') || '0') || 0;
+          totalClaim = parseFloat(document.getElementById('totalClaim')?.value.replace(/[₪,]/g, '') || '0') || 0;
+          grossPercentage = parseFloat(document.getElementById('grossPercent')?.value.replace(/[%]/g, '') || '0') || 0;
+        }
         
         helper.calculations.vehicle_value_gross = grossMarketValue;
         helper.calculations.market_value = fullMarketValue;
@@ -3216,6 +3237,126 @@
         console.error('Error updating gross percentage field:', error);
       }
     }
+    
+    // UPDATE GROSS MARKET VALUE FIELD
+    function updateGrossMarketValueField() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        
+        console.log('🔍 Updating gross market value field:', {
+          vehicleValueGross: vehicleValueGross,
+          helperCalculations: helper.calculations
+        });
+        
+        // If no vehicle_value_gross, try to calculate from current gross calculation
+        if (!vehicleValueGross) {
+          const grossMarketValueField = document.getElementById('grossMarketValueResult');
+          if (grossMarketValueField && grossMarketValueField.value) {
+            vehicleValueGross = parseFloat(grossMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+            console.log(`🔧 Got vehicle_value_gross from grossMarketValueResult field: ${vehicleValueGross}`);
+          }
+        }
+        
+        // If still no value, try to get from levi_price_list field
+        if (!vehicleValueGross) {
+          const leviPriceListField = document.getElementById('leviPriceList');
+          if (leviPriceListField && leviPriceListField.value) {
+            vehicleValueGross = parseFloat(leviPriceListField.value.replace(/[₪,]/g, '')) || 0;
+            console.log(`🔧 Got vehicle_value_gross from leviPriceList field: ${vehicleValueGross}`);
+          }
+        }
+        
+        // Update the leviPriceList field with the gross market value
+        const leviPriceListField = document.getElementById('leviPriceList');
+        if (leviPriceListField && vehicleValueGross > 0) {
+          leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
+          console.log(`📊 Updated leviPriceList field with gross market value: ${vehicleValueGross}`);
+        }
+        
+        // Update helper if we found a value
+        if (vehicleValueGross > 0) {
+          helper.calculations = helper.calculations || {};
+          helper.calculations.vehicle_value_gross = vehicleValueGross;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Updated helper with vehicle_value_gross: ${vehicleValueGross}`);
+        } else {
+          console.warn('⚠️ No vehicle_value_gross found after all fallback attempts');
+        }
+        
+      } catch (error) {
+        console.error('Error updating gross market value field:', error);
+      }
+    }
+    
+    // DEBUG CALCULATIONS
+    function debugCalculations() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        console.log('🐛 DEBUG CALCULATIONS:', {
+          helper_calculations: helper.calculations,
+          helper_expertise_calculations: helper.expertise?.calculations,
+          helper_claims_data: helper.claims_data,
+          grossMarketValueResult: document.getElementById('grossMarketValueResult')?.value,
+          fullMarketValueResult: document.getElementById('fullMarketValueResult')?.value,
+          totalClaim: document.getElementById('totalClaim')?.value,
+          leviPriceList: document.getElementById('leviPriceList')?.value,
+          grossPercent: document.getElementById('grossPercent')?.value,
+          basicPrice: document.getElementById('basicPrice')?.value,
+          carMarketValue: document.getElementById('carMarketValue')?.value,
+          sumMarketValue: document.getElementById('sumMarketValue')?.value,
+          sumClaim: document.getElementById('sumClaim')?.value,
+          sumTotalClaim: document.getElementById('sumTotalClaim')?.value
+        });
+        
+      } catch (error) {
+        console.error('Error in debug calculations:', error);
+      }
+    }
+    
+    // CALCULATE DAMAGE PERCENTAGE
+    function calculateDamagePercentage() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get total claim from damage centers or helper
+        let totalClaim = 0;
+        const totalClaimField = document.getElementById('totalClaim');
+        if (totalClaimField && totalClaimField.value) {
+          totalClaim = parseFloat(totalClaimField.value.replace(/[₪,]/g, '')) || 0;
+        } else {
+          totalClaim = calculateTotalClaimFromDamageCenters();
+        }
+        
+        // Get gross market value from helper or DOM
+        let grossMarketValue = helper.calculations?.vehicle_value_gross || 0;
+        if (!grossMarketValue) {
+          const grossMarketValueField = document.getElementById('grossMarketValueResult');
+          if (grossMarketValueField && grossMarketValueField.value) {
+            grossMarketValue = parseFloat(grossMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+          }
+        }
+        
+        // Calculate damage percentage
+        let damagePercentage = 0;
+        if (grossMarketValue > 0 && totalClaim > 0) {
+          damagePercentage = (totalClaim / grossMarketValue) * 100;
+        }
+        
+        console.log('🔢 Damage percentage calculation:', {
+          totalClaim,
+          grossMarketValue,
+          damagePercentage
+        });
+        
+        return damagePercentage;
+        
+      } catch (error) {
+        console.error('Error calculating damage percentage:', error);
+        return 0;
+      }
+    }
 
     // TRIGGER GLOBAL DEPRECIATION CALCULATION
     function triggerGlobalDepreciationCalc() {
@@ -3226,11 +3367,17 @@
       }
     }
 
-    // Initialize on load
+    // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
-      loadDataFromHelper();
-      loadLegalText();
-      updateGlobalDepreciationCalculation();
+      // First initialize the EstimateCalculations object
+      console.log('🚀 Initializing EstimateCalculations object first');
+      
+      // Then load data from helper after EstimateCalculations is available
+      setTimeout(() => {
+        loadDataFromHelper();
+        loadLegalText();
+        updateGlobalDepreciationCalculation();
+      }, 100);
       
       // Initialize adjustment system with event listeners
       setTimeout(() => {
@@ -3670,6 +3817,13 @@
     function calculateRepairsCost(repairs) {
       return repairs.reduce((total, repair) => {
         const cost = typeof repair === 'object' ? (repair.cost || 0) : 0;
+        return total + parseFloat(cost);
+      }, 0);
+    }
+
+    function calculatePartsCost(parts) {
+      return parts.reduce((total, part) => {
+        const cost = typeof part === 'object' ? (part.price || 0) : 0;
         return total + parseFloat(cost);
       }, 0);
     }
@@ -4378,11 +4532,14 @@
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 Initializing 3-bulk system...');
       
-      // Load saved helper data first
-      loadHelperData();
-      
-      // Add field change listeners - CRITICAL FOR HELPER UPDATES
-      addFieldChangeListeners();
+      // Wait for all objects to be initialized before loading data
+      setTimeout(() => {
+        // Load saved helper data first
+        loadHelperData();
+        
+        // Add field change listeners - CRITICAL FOR HELPER UPDATES
+        addFieldChangeListeners();
+      }, 200);
       
       // Initialize gross calculation data
       setTimeout(() => {
@@ -4461,6 +4618,7 @@
     window.updateFullMarketValueCalculation = updateFullMarketValueCalculation;
     window.loadFullMarketValueData = loadFullMarketValueData;
     window.addFullMarketAdjustment = addFullMarketAdjustment;
+    window.debugCalculations = debugCalculations;
     
     console.log('🎯 3-bulk system functions loaded and ready');
   </script>
