@@ -454,6 +454,10 @@
           <input type="text" id="carYear" />
         </div>
         <div>
+          <label>קוד דגם:</label>
+          <input type="text" id="carModelCode" />
+        </div>
+        <div>
           <label>מחיר בסיס:</label>
           <input type="text" id="carBasePrice" />
         </div>
@@ -813,6 +817,7 @@
           document.getElementById('carManufacturer').value = helper.car_details?.manufacturer || '';
           document.getElementById('carModel').value = helper.car_details?.model || '';
           document.getElementById('carYear').value = helper.car_details?.year || '';
+          document.getElementById('carModelCode').value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
           document.getElementById('carBasePrice').value = helper.car_details?.base_price ? `₪${helper.car_details.base_price}` : '';
           document.getElementById('carMarketValue').value = helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '';
           document.getElementById('carReportDate').value = helper.car_details?.report_date || '';
@@ -822,6 +827,7 @@
           helper.vehicle.manufacturer = helper.car_details?.manufacturer || helper.vehicle.manufacturer || '';
           helper.vehicle.model = helper.car_details?.model || helper.vehicle.model || '';
           helper.vehicle.year = helper.car_details?.year || helper.vehicle.year || '';
+          helper.vehicle.model_code = helper.car_details?.model_code || helper.vehicle.model_code || '';
           helper.vehicle.plate_number = helper.meta?.plate || helper.car_details?.plate || helper.vehicle.plate_number || '';
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
@@ -1935,7 +1941,7 @@
     // ADD FIELD CHANGE LISTENERS
     function addFieldChangeListeners() {
       // Car details listeners
-      ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carBasePrice', 'carMarketValue', 'carReportDate'].forEach(id => {
+      ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
           element.addEventListener('change', function(event) {
@@ -1995,7 +2001,7 @@
         console.log(`📝 Field change detected: ${fieldId} = "${value}"`);
         
         // Update the appropriate helper section based on field
-        if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carBasePrice', 'carMarketValue', 'carReportDate'].includes(fieldId)) {
+        if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'].includes(fieldId)) {
           helper.car_details = helper.car_details || {};
           helper.vehicle = helper.vehicle || {};
           
@@ -2004,6 +2010,7 @@
             'carManufacturer': 'manufacturer',
             'carModel': 'model',
             'carYear': 'year',
+            'carModelCode': 'model_code',
             'carBasePrice': 'base_price',
             'carMarketValue': 'market_value',
             'carReportDate': 'report_date'
@@ -2022,6 +2029,9 @@
           } else if (fieldId === 'carYear') {
             helper.vehicle.year = value;
             console.log('🚗 Updated vehicle year:', value);
+          } else if (fieldId === 'carModelCode') {
+            helper.vehicle.model_code = value;
+            console.log('🚗 Updated vehicle model code:', value);
           } else if (fieldId === 'carPlate') {
             helper.vehicle.plate_number = value;
             helper.meta = helper.meta || {};
@@ -2227,7 +2237,7 @@
         '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || '[דגם]',
         '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
-        '%קוד_דגם%': helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
+        '%קוד_דגם%': document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
         '%אחוז_נזק%': calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
         '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
         '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
