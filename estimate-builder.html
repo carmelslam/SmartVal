@@ -2744,6 +2744,22 @@
         helper.expertise = helper.expertise || {};
         helper.expertise.levi_report = helper.expertise.levi_report || {};
         
+        // First, preserve existing vehicle data from the main form
+        const basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 
+                          parseFloat(document.getElementById('carBasePrice')?.value.replace(/[₪,]/g, '')) || 0;
+        const vehicleData = {
+          plate: document.getElementById('carPlate')?.value || helper.vehicle?.plate || '',
+          manufacturer: document.getElementById('carManufacturer')?.value || helper.vehicle?.manufacturer || '',
+          model: document.getElementById('carModel')?.value || helper.vehicle?.model || '',
+          year: document.getElementById('carYear')?.value || helper.vehicle?.year || '',
+          model_code: document.getElementById('carModelCode')?.value || helper.vehicle?.model_code || '',
+          base_price: basicPrice,
+          market_value: parseFloat(document.getElementById('carMarketValue')?.value.replace(/[₪,]/g, '')) || basicPrice,
+          final_price: basicPrice // Will be updated with adjustments
+        };
+        
+        console.log('🔍 DEBUG: Vehicle data from form:', vehicleData);
+        
         // Initialize parameter data for aggregation
         const parameterData = {
           registration: { percent: 0, value: 0, total: 0 },
@@ -2851,8 +2867,23 @@
           }
         });
         
+        // Calculate final price with adjustments
+        const totalAdjustments = parameterData.registration.value + parameterData.features.value + 
+                                parameterData.ownership.value + parameterData.km.value + parameterData.owners.value;
+        vehicleData.final_price = vehicleData.base_price + totalAdjustments;
+        
         // Update structured helper.expertise.levi_report with Hebrew keys for floating screen
         Object.assign(helper.expertise.levi_report, {
+          // Basic vehicle info
+          'סוג רכב': 'רכב פרטי',
+          'יצרן': vehicleData.manufacturer,
+          'קוד דגם': vehicleData.model_code,
+          'קטגוריה': 'רכב פרטי',
+          'שנת יצור': vehicleData.year,
+          'שם דגם מלא': `${vehicleData.manufacturer} ${vehicleData.model}`,
+          'מחיר בסיס': vehicleData.base_price,
+          'מחיר סופי לרכב': vehicleData.final_price,
+          
           // Registration
           'עליה לכביש': parameterData.registration.percent > 0 ? `${parameterData.registration.percent}%` : '',
           'עליה לכביש %': parameterData.registration.percent,
@@ -4977,6 +5008,12 @@
       setTimeout(() => {
         loadGrossCalculationData();
         console.log('✅ Bulk 1 & 2 initialized');
+        
+        // Initialize helper with current vehicle data for Levi floating screen
+        setTimeout(() => {
+          updateHelperFromAdjustments();
+          console.log('🔧 Initial helper update completed for Levi floating screen');
+        }, 500);
       }, 500);
       
       // Initialize full market value calculation
