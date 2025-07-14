@@ -1766,7 +1766,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
 19. Validation and estimate errors: 14.7.25
     * The damages and repairs validation section doesntupdate after changing the builder . 
     * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
-    *Add  to the validation the same footing screens of the builder and the report review page.
+    * Add  to the validation the same footing screens of the builder and the report review page.
     * the expertise damge centers and costs validation section are not pulling the data correctly. also in the bulder the calculations for this part are not corrrect 
     * the button בדוק  טקסט משפטי doesn’t  work 
     * The report builder has double html - there are 2 reports in one page . 
