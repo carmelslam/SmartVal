@@ -596,9 +596,10 @@
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">כל ההתאמות (עליה לכביש + מאפיינים + גורמים נוספים):</h4>
           <div id="allAdjustments">
-            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
               <div><label>תיאור:</label></div>
               <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
               <div><label>ערך:</label></div>
               <div><label>פעולות:</label></div>
             </div>
@@ -3112,12 +3113,13 @@
       const rowId = 'fullAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <input type="text" placeholder="תיאור ההתאמה" onchange="updateFullMarketValueCalculation()" />
           <select onchange="updateFullMarketValueCalculation()">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select>
+          <input type="number" step="0.01" placeholder="%" onchange="calculateAdjustmentValue(this); updateFullMarketValueCalculation();" />
           <input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation()" />
           <button class="btn remove" onclick="removeFullMarketAdjustmentRow('${rowId}')">מחק</button>
         </div>
@@ -3149,8 +3151,16 @@
         const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
         allAdjustmentRows.forEach(row => {
           const type = row.querySelector('select').value;
-          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
-          totalAdjustments += (type === 'plus') ? value : -value;
+          const inputs = row.querySelectorAll('input');
+          const percentageInput = inputs[1]; // percentage field
+          const valueInput = inputs[2]; // value field
+          
+          const percentage = parseFloat(percentageInput.value) || 0;
+          const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+          
+          // Use value field if filled, otherwise calculate from percentage
+          const adjustmentValue = value || (basicPrice * percentage / 100);
+          totalAdjustments += (type === 'plus') ? adjustmentValue : -adjustmentValue;
         });
         
         // Calculate full market value
@@ -3167,6 +3177,24 @@
         helper.calculations = helper.calculations || {};
         helper.calculations.market_value = fullMarketValue;
         helper.calculations.full_market_value = fullMarketValue;
+        
+        // Save adjustments to helper
+        const adjustments = [];
+        allAdjustmentRows.forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          const description = inputs[0].value;
+          const type = row.querySelector('select').value;
+          const percentage = parseFloat(inputs[1].value) || 0;
+          const value = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+          
+          if (description && (percentage || value)) {
+            adjustments.push({ description, type, percentage, value });
+          }
+        });
+        
+        if (!helper.custom_adjustments) helper.custom_adjustments = {};
+        helper.custom_adjustments.full_market_adjustments = adjustments;
+        
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
         console.log(`💰 Full Market Value: ${basicPrice} + ${totalAdjustments} = ${fullMarketValue}`);
@@ -3203,22 +3231,26 @@
             // Populate the last added row with data
             const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
             if (lastRow) {
-              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              const inputs = lastRow.querySelectorAll('input');
+              inputs[0].value = adj.description || ''; // description
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              inputs[1].value = adj.percentage || ''; // percentage
+              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`; // value
             }
           });
         }
         
         // Load custom adjustments if any
-        if (helper.custom_adjustments) {
-          helper.custom_adjustments.forEach(adj => {
+        if (helper.custom_adjustments?.full_market_adjustments) {
+          helper.custom_adjustments.full_market_adjustments.forEach(adj => {
             addFullMarketAdjustment();
             const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
             if (lastRow) {
-              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
-              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              const inputs = lastRow.querySelectorAll('input');
+              inputs[0].value = adj.description || ''; // description
+              lastRow.querySelector('select').value = adj.type || 'plus';
+              inputs[1].value = adj.percentage || ''; // percentage
+              inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
             }
           });
         }
@@ -3228,6 +3260,21 @@
         
       } catch (error) {
         console.error('Error loading full market value data:', error);
+      }
+    }
+    
+    // Helper function to calculate adjustment value from percentage
+    function calculateAdjustmentValue(percentageInput) {
+      const row = percentageInput.closest('div');
+      const basicPriceInput = document.getElementById('fullBasicPrice');
+      const basicPrice = parseFloat(basicPriceInput.value.replace(/[₪,]/g, '')) || 0;
+      const percentage = parseFloat(percentageInput.value) || 0;
+      
+      if (percentage && basicPrice) {
+        const calculatedValue = basicPrice * percentage / 100;
+        const inputs = row.querySelectorAll('input');
+        const valueInput = inputs[2]; // value field is the third input
+        valueInput.value = `₪${calculatedValue.toLocaleString()}`;
       }
     }
     
