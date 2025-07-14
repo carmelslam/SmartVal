@@ -1774,7 +1774,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
 
  
     * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
-    * Add  to the validation the same footing screens of the builder and the report review page. ❌
+    * Add  to the validation the same floating screens of the builder and the report review page. ❌
     * 
     **the report builder**
     * The report builder has double html - there are 2 reports in one page . 

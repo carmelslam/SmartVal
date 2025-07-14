@@ -469,6 +469,17 @@
       // Deep merge with defaults to ensure all properties exist
       leviData = deepMerge(defaultData, leviData);
 
+      // Add fallback for model_code from helper vehicle/car_details if empty in levi data
+      if (!leviData.model_code || leviData.model_code.trim() === '') {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          leviData.model_code = helper.vehicle?.model_code || helper.car_details?.model_code || '';
+          console.log('🚗 Added model_code fallback from helper:', leviData.model_code);
+        } catch (error) {
+          console.warn('Could not get model_code fallback from helper:', error);
+        }
+      }
+
       // Update UI with validated data
       updateLeviDisplay(leviData);
 
