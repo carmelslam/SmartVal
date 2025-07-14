@@ -506,7 +506,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">חישוב אחוז הנזק (הצג/הסתר)</button>
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
-          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" /></div>
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
           <div></div>
         </div>
         
@@ -514,9 +514,10 @@
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">תוספות מאפיינים:</h4>
           <div id="featuresAdjustments">
-            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
               <div><label>תיאור:</label></div>
               <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
               <div><label>ערך:</label></div>
               <div><label>פעולות:</label></div>
             </div>
@@ -529,6 +530,13 @@
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">עליה לכביש:</h4>
           <div id="registrationAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
             <div id="registrationAdjustmentsList"></div>
             <button class="btn add" type="button" onclick="addRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
           </div>
@@ -2598,13 +2606,14 @@
       const rowId = 'featureAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation()" />
-          <select onchange="updateGrossMarketValueCalculation()">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
+          <select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select>
-          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation()" />
+          <input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
+          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
           <button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button>
         </div>
       `;
@@ -2619,13 +2628,14 @@
       const rowId = 'regAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation()" />
-          <select onchange="updateGrossMarketValueCalculation()">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
+          <select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select>
-          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation()" />
+          <input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
+          <input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" />
           <button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button>
         </div>
       `;
@@ -2640,6 +2650,82 @@
       if (row) {
         row.remove();
         updateGrossMarketValueCalculation();
+        updateHelperFromAdjustments();
+      }
+    }
+    
+    // Calculate adjustment value from percentage
+    function calculateAdjustmentValue(percentInput) {
+      const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
+      if (!row) return;
+      
+      const percent = parseFloat(percentInput.value.replace('%', '')) || 0;
+      const basicPrice = parseFloat(document.getElementById('basicPrice').value.replace(/[₪,]/g, '')) || 0;
+      const valueInput = row.querySelector('input[placeholder="₪"]');
+      
+      if (basicPrice > 0 && percent !== 0) {
+        const calculatedValue = (basicPrice * percent) / 100;
+        valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      }
+    }
+    
+    // Update helper from adjustments
+    function updateHelperFromAdjustments() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize structures
+        helper.levi_report = helper.levi_report || {};
+        helper.levi_report.adjustments = [];
+        
+        // Collect features adjustments
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const description = row.querySelector('input[placeholder="תיאור המאפיין"]').value;
+          const type = row.querySelector('select').value;
+          const percent = parseFloat(row.querySelector('input[placeholder="%"]').value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]').value.replace(/[₪,]/g, '')) || 0;
+          
+          if (description && value !== 0) {
+            helper.levi_report.adjustments.push({
+              description,
+              type: 'features',
+              percent,
+              value: type === 'plus' ? value : -value,
+              total: type === 'plus' ? value : -value
+            });
+          }
+        });
+        
+        // Collect registration adjustments
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]').value;
+          const type = row.querySelector('select').value;
+          const percent = parseFloat(row.querySelector('input[placeholder="%"]').value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]').value.replace(/[₪,]/g, '')) || 0;
+          
+          if (description && value !== 0) {
+            helper.levi_report.adjustments.push({
+              description,
+              type: 'registration',
+              percent,
+              value: type === 'plus' ? value : -value,
+              total: type === 'plus' ? value : -value
+            });
+          }
+        });
+        
+        // Update helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Trigger floating screen refresh
+        triggerFloatingScreenRefresh();
+        
+        console.log('✅ Helper updated from adjustments:', helper.levi_report.adjustments);
+        
+      } catch (error) {
+        console.error('Error updating helper from adjustments:', error);
       }
     }
     
@@ -2656,7 +2742,8 @@
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         featuresRows.forEach(row => {
           const type = row.querySelector('select').value;
-          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const value = parseFloat(inputs[inputs.length - 1].value.replace(/[₪,]/g, '')) || 0;
           totalAdjustments += (type === 'plus') ? value : -value;
         });
         
@@ -2664,7 +2751,8 @@
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         registrationRows.forEach(row => {
           const type = row.querySelector('select').value;
-          const value = parseFloat(row.querySelector('input[type="text"]:last-of-type').value.replace(/[₪,]/g, '')) || 0;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const value = parseFloat(inputs[inputs.length - 1].value.replace(/[₪,]/g, '')) || 0;
           totalAdjustments += (type === 'plus') ? value : -value;
         });
         
@@ -2702,44 +2790,142 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Load basic price
+        // Load basic price from multiple sources
         const basicPriceField = document.getElementById('basicPrice');
-        if (basicPriceField && helper.levi_report?.base_price) {
-          basicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
+        if (basicPriceField) {
+          let basicPrice = 0;
+          
+          // Try different sources for basic price
+          if (helper.levi_report?.base_price) {
+            basicPrice = parseFloat(helper.levi_report.base_price);
+          } else if (helper.expertise?.levi_report?.base_price) {
+            basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+          } else if (helper.levisummary?.base_price) {
+            basicPrice = parseFloat(helper.levisummary.base_price);
+          } else if (helper.car_details?.market_value) {
+            basicPrice = parseFloat(helper.car_details.market_value.replace(/[₪,]/g, ''));
+          }
+          
+          if (basicPrice > 0) {
+            basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
+            console.log('🔧 Loading basic price from helper:', basicPrice);
+          }
         }
         
-        // Load features adjustments from helper
+        // Load features adjustments from helper (from Levi data)
         if (helper.levi_report?.adjustments) {
-          const featuresAdjustments = helper.levi_report.adjustments.filter(adj => 
-            adj.type === 'features' || adj.description?.includes('מאפיינים')
-          );
+          const featuresAdjustments = helper.levi_report.adjustments.filter(adj => {
+            const desc = adj.description?.toLowerCase() || '';
+            return adj.type === 'features' || 
+                   desc.includes('מאפיינים') || 
+                   desc.includes('features') ||
+                   desc.includes('אבזור') ||
+                   desc.includes('ציוד');
+          });
+          
+          console.log('🔧 Loading features adjustments from Levi:', featuresAdjustments);
           
           featuresAdjustments.forEach(adj => {
             addFeatureAdjustment();
             // Populate the last added row with data
             const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (lastRow) {
-              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              const inputs = lastRow.querySelectorAll('input[type="text"]');
+              inputs[0].value = adj.description || '';
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              inputs[1].value = adj.percent ? `${adj.percent}%` : '';
+              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
             }
           });
         }
         
-        // Load registration adjustments from helper
+        // Load registration adjustments from helper (from Levi data) - FIXED
         if (helper.levi_report?.adjustments) {
-          const registrationAdjustments = helper.levi_report.adjustments.filter(adj => 
-            adj.type === 'registration' || adj.description?.includes('עليה לכביש')
-          );
+          const registrationAdjustments = helper.levi_report.adjustments.filter(adj => {
+            const desc = adj.description?.toLowerCase() || '';
+            return adj.type === 'registration' || 
+                   desc.includes('עליה לכביש') || 
+                   desc.includes('registration') ||
+                   desc.includes('רישום') ||
+                   desc.includes('העליה לכביש');
+          });
+          
+          console.log('🔧 Loading registration adjustments from Levi:', registrationAdjustments);
           
           registrationAdjustments.forEach(adj => {
             addRegistrationAdjustment();
             // Populate the last added row with data
             const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (lastRow) {
-              lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || '';
+              const inputs = lastRow.querySelectorAll('input[type="text"]');
+              inputs[0].value = adj.description || '';
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(adj.value).toLocaleString()}`;
+              inputs[1].value = adj.percent ? `${adj.percent}%` : '';
+              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
+        }
+        
+        // Also check for direct registration fields in levi_report (structured data)
+        if (helper.expertise?.levi_report?.adjustments?.registration) {
+          const regAdj = helper.expertise.levi_report.adjustments.registration;
+          const registrationValue = parseFloat(regAdj.value || regAdj.total || 0);
+          
+          if (registrationValue !== 0) {
+            console.log('🔧 Loading registration from expertise.levi_report.adjustments:', regAdj);
+            addRegistrationAdjustment();
+            const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = 'עליה לכביש';
+              lastRow.querySelector('select').value = registrationValue >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(registrationValue).toLocaleString()}`;
+            }
+          }
+        }
+        
+        // Also check for features in structured data
+        if (helper.expertise?.levi_report?.adjustments?.features) {
+          const featAdj = helper.expertise.levi_report.adjustments.features;
+          const featuresValue = parseFloat(featAdj.value || featAdj.total || 0);
+          
+          if (featuresValue !== 0) {
+            console.log('🔧 Loading features from expertise.levi_report.adjustments:', featAdj);
+            addFeatureAdjustment();
+            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (lastRow) {
+              lastRow.querySelector('input[type="text"]:first-of-type').value = 'מאפיינים';
+              lastRow.querySelector('select').value = featuresValue >= 0 ? 'plus' : 'minus';
+              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(featuresValue).toLocaleString()}`;
+            }
+          }
+        }
+        
+        // Check for additional adjustments from levisummary (backup structure)
+        if (helper.levisummary?.adjustments) {
+          helper.levisummary.adjustments.forEach(adj => {
+            const desc = adj.description?.toLowerCase() || '';
+            const value = parseFloat(adj.value || 0);
+            
+            if (value !== 0) {
+              if (desc.includes('עליה לכביש') || desc.includes('registration')) {
+                console.log('🔧 Loading registration from levisummary:', adj);
+                addRegistrationAdjustment();
+                const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+                if (lastRow) {
+                  lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || 'עליה לכביש';
+                  lastRow.querySelector('select').value = value >= 0 ? 'plus' : 'minus';
+                  lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(value).toLocaleString()}`;
+                }
+              } else if (desc.includes('מאפיינים') || desc.includes('features')) {
+                console.log('🔧 Loading features from levisummary:', adj);
+                addFeatureAdjustment();
+                const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+                if (lastRow) {
+                  lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || 'מאפיינים';
+                  lastRow.querySelector('select').value = value >= 0 ? 'plus' : 'minus';
+                  lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(value).toLocaleString()}`;
+                }
+              }
             }
           });
         }
@@ -3346,6 +3532,9 @@
         // Clear existing damage blocks
         helper.expertise.damage_blocks = [];
         
+        // Store damage center names for depreciation section
+        const damageCenterNames = [];
+        
         // Collect data from all damage center cards
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
           const centerName = card.querySelector('.damage-center-name').value;
@@ -3398,8 +3587,14 @@
             works,
             repairs,
             parts_cost: partsCost,
-            work_cost: workCost
+            work_cost: workCost,
+            repairs_cost: repairsCost
           });
+          
+          // Store damage center name for depreciation section
+          if (centerName.trim()) {
+            damageCenterNames.push(centerName.trim());
+          }
           
           // Update cost display for this card
           updateCostDisplay(card, partsCost, workCost, repairsCost);
@@ -3408,10 +3603,73 @@
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
+        // Update depreciation section with damage center names
+        updateDepreciationFromDamageCenters(damageCenterNames);
+        
+        // Trigger floating screen refresh
+        triggerFloatingScreenRefresh();
+        
         console.log('Damage centers saved:', helper.expertise.damage_blocks);
         
       } catch (error) {
         console.error('Error saving damage center changes:', error);
+      }
+    }
+    
+    // UPDATE DEPRECIATION SECTION FROM DAMAGE CENTERS
+    function updateDepreciationFromDamageCenters(damageCenterNames) {
+      try {
+        const depreciationTable = document.getElementById('depreciationBulkTable');
+        if (!depreciationTable) return;
+        
+        // Clear existing depreciation rows
+        depreciationTable.innerHTML = '';
+        
+        // Add a row for each damage center
+        damageCenterNames.forEach(centerName => {
+          const row = document.createElement('div');
+          row.className = 'dep-row';
+          row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
+          
+          row.innerHTML = `
+            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="updateHelperFromField(event)" /></div>
+            <div><input type="text" placeholder="מהות התיקון" onchange="updateHelperFromField(event)" /></div>
+            <div><input type="text" placeholder="% ירידת ערך" onchange="updateHelperFromField(event)" /></div>
+            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
+            <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
+          `;
+          
+          depreciationTable.appendChild(row);
+          
+          // Add calculation listener to the percentage field
+          const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+          const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+          
+          percentInput.addEventListener('input', function() {
+            let percent = parseFloat(this.value) || 0;
+            
+            // Auto-add % symbol if not present and user enters a number
+            if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+              this.value = percent + '%';
+            }
+            
+            // Calculate value from market price automatically
+            const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+            const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+            const marketValue = parseFloat(marketValueStr) || 0;
+            
+            const calculatedValue = (marketValue * percent) / 100;
+            valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+            
+            // Update helper with depreciation data
+            updateHelperFromField({ target: this });
+          });
+        });
+        
+        console.log('✅ Depreciation section updated with damage centers:', damageCenterNames);
+        
+      } catch (error) {
+        console.error('Error updating depreciation from damage centers:', error);
       }
     }
 
@@ -3959,6 +4217,91 @@
         }
       }
     });
+    
+    // LOAD HELPER DATA AND POPULATE FIELDS
+    function loadHelperData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        console.log('📥 Loading helper data:', helper);
+        
+        // Auto-fill basic price field from helper
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && !basicPriceField.value) {
+          let basicPrice = 0;
+          
+          if (helper.levi_report?.base_price) {
+            basicPrice = parseFloat(helper.levi_report.base_price);
+          } else if (helper.expertise?.levi_report?.base_price) {
+            basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+          } else if (helper.levisummary?.base_price) {
+            basicPrice = parseFloat(helper.levisummary.base_price);
+          }
+          
+          if (basicPrice > 0) {
+            basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
+            console.log('✅ Auto-filled basic price:', basicPrice);
+          }
+        }
+        
+        // Auto-fill car details fields
+        const carFields = {
+          carPlate: helper.meta?.plate || helper.car_details?.plate || '',
+          carManufacturer: helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '',
+          carModel: helper.car_details?.model || helper.vehicle?.model || '',
+          carYear: helper.car_details?.year || helper.vehicle?.year || '',
+          carModelCode: helper.car_details?.model_code || helper.vehicle?.model_code || '',
+          carBasePrice: helper.levi_report?.base_price || helper.expertise?.levi_report?.base_price || '',
+          carMarketValue: helper.car_details?.market_value || helper.vehicle?.market_value || helper.levi_report?.final_price || '',
+          carReportDate: helper.car_details?.report_date || helper.levi_report?.report_date || ''
+        };
+        
+        Object.entries(carFields).forEach(([fieldId, value]) => {
+          const field = document.getElementById(fieldId);
+          if (field && !field.value && value) {
+            field.value = value;
+          }
+        });
+        
+        // Load damage centers from helper
+        if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+          loadDamageCentersFromHelper(helper.expertise.damage_blocks);
+        }
+        
+        console.log('✅ Helper data loaded successfully');
+        
+      } catch (error) {
+        console.error('Error loading helper data:', error);
+      }
+    }
+    
+    // LOAD DAMAGE CENTERS FROM HELPER
+    function loadDamageCentersFromHelper(damageBlocks) {
+      try {
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        if (!damageCentersContent) return;
+        
+        // Clear existing content
+        damageCentersContent.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
+        
+        // Add each damage center from helper
+        damageBlocks.forEach((block, index) => {
+          const newCardHTML = createEditableDamageCenterCard(block, index);
+          document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
+        });
+        
+        // Add event listeners
+        setTimeout(() => {
+          addDamageCenterEventListeners();
+          updateAllCostDisplays();
+        }, 100);
+        
+        console.log('✅ Damage centers loaded from helper:', damageBlocks.length);
+        
+      } catch (error) {
+        console.error('Error loading damage centers from helper:', error);
+      }
+    }
     
     // INITIALIZE 3-BULK SYSTEM ON PAGE LOAD
     document.addEventListener('DOMContentLoaded', function() {
