@@ -575,8 +575,9 @@
         <label style="color: #333; font-weight: bold; margin-bottom: 10px; display: block;">תוספות והורדות:</label>
         <div class="unified-adjustments-section" id="unifiedAdjustments-estimate" style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
           <div style="font-weight: bold; margin-bottom: 8px; color: #495057; font-size: 14px;">התאמות מדו"ח לוי יצחק וגורמים נוספים:</div>
-          <div class="levi-adjustments-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; font-size: 13px;">
+          <div class="levi-adjustments-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; font-size: 13px;">
             <div style="font-weight: bold;">מהות ההתאמה</div>
+            <div style="font-weight: bold;">סוג</div>
             <div style="font-weight: bold;">אחוז</div>
             <div style="font-weight: bold;">ערך (₪)</div>
             <div style="font-weight: bold;">פעולות</div>
@@ -1286,7 +1287,8 @@
               value: adjustment.value || 0,
               source: 'custom',
               index: index,
-              readonly: false
+              readonly: false,
+              adjustmentType: adjustment.adjustmentType || 'addition'
             });
           });
         } else {
@@ -1310,55 +1312,54 @@
     
     // Create unified adjustment row HTML
     function createAdjustmentRow(params) {
-      const { description, percentage, value, source, index, readonly } = params;
+      const { description, percentage, value, source, index, readonly, adjustmentType } = params;
       const rowId = `adjustment-${source}-${index}`;
-      const isAddition = percentage > 0 || value > 0;
-      const isSubtraction = percentage < 0 || value < 0;
-      let typeLabel, typeColor;
       
+      // Determine type and colors
+      let typeLabel, typeColor;
       if (source === 'levi') {
         typeLabel = 'לוי יצחק';
         typeColor = '#007bff';
-      } else if (isAddition) {
-        typeLabel = 'תוספת';
-        typeColor = '#28a745';
-      } else if (isSubtraction) {
-        typeLabel = 'הפחתה';
-        typeColor = '#dc3545';
       } else {
-        typeLabel = 'ניטרלי';
-        typeColor = '#6c757d';
+        // For custom adjustments, use the explicit type or infer from values
+        const currentType = adjustmentType || (percentage < 0 || value < 0 ? 'subtraction' : 'addition');
+        typeLabel = currentType === 'addition' ? 'תוספת' : 'הפחתה';
+        typeColor = currentType === 'addition' ? '#28a745' : '#dc3545';
       }
       
       if (readonly) {
-        // Read-only Levi adjustments
+        // Read-only Levi adjustments (5-column layout)
         return `
-          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef; background: #f8f9fa;">
+          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef; background: #f8f9fa;">
             <div style="font-size: 13px;">
               <span style="background: ${typeColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">${typeLabel}</span>
               ${description}
             </div>
+            <div style="font-size: 13px; text-align: center; color: ${typeColor}; font-weight: bold;">${typeLabel}</div>
             <div style="font-size: 13px; text-align: center;">${percentage}%</div>
             <div style="font-size: 13px; text-align: center;">₪${value.toLocaleString()}</div>
             <div style="font-size: 11px; color: #666;">קריאה בלבד</div>
           </div>
         `;
       } else {
-        // Editable custom adjustments with badge
+        // Editable custom adjustments with type dropdown (5-column layout)
+        const currentAdjustmentType = adjustmentType || 'addition';
         return `
-          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
-            <div style="position: relative;">
-              <span style="background: ${typeColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; position: absolute; top: -20px; right: 0px; z-index: 10;">${typeLabel}</span>
-              <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
-                     style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; width: 100%;" 
-                     placeholder="תיאור ההתאמה" />
-            </div>
-            <input type="number" value="${percentage}" data-field="percentage" data-source="${source}" data-index="${index}"
+          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
+            <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
+                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px;" 
+                   placeholder="תיאור ההתאמה" />
+            <select data-field="adjustmentType" data-source="${source}" data-index="${index}"
+                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; background: white;">
+              <option value="addition" ${currentAdjustmentType === 'addition' ? 'selected' : ''} style="color: #28a745;">תוספת</option>
+              <option value="subtraction" ${currentAdjustmentType === 'subtraction' ? 'selected' : ''} style="color: #dc3545;">הפחתה</option>
+            </select>
+            <input type="number" value="${Math.abs(percentage)}" data-field="percentage" data-source="${source}" data-index="${index}"
                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
-                   placeholder="0" step="0.1" />
-            <input type="number" value="${value}" data-field="value" data-source="${source}" data-index="${index}"
+                   placeholder="0" step="0.1" min="0" />
+            <input type="number" value="${Math.abs(value)}" data-field="value" data-source="${source}" data-index="${index}"
                    style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
-                   placeholder="0" step="100" />
+                   placeholder="0" step="100" min="0" />
             <button type="button" onclick="removeCustomAdjustment('${source}', ${index})" 
                     style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
           </div>
@@ -1374,11 +1375,12 @@
       if (!helper.levi) helper.levi = {};
       if (!helper.levi.custom_adjustments) helper.levi.custom_adjustments = [];
       
-      // Add new empty adjustment
+      // Add new empty adjustment with default type
       const newAdjustment = {
         description: '',
         percentage: 0,
-        value: 0
+        value: 0,
+        adjustmentType: 'addition'
       };
       
       helper.levi.custom_adjustments.push(newAdjustment);
@@ -1411,21 +1413,35 @@
     
     // ADD EVENT LISTENERS FOR ADJUSTMENT FIELDS
     function addAdjustmentEventListeners() {
-      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"]');
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"], #allAdjustmentsRows-estimate select[data-source="custom"]');
       
-      adjustmentInputs.forEach(input => {
-        input.addEventListener('input', function() {
+      adjustmentInputs.forEach(element => {
+        element.addEventListener('input', function() {
           const source = this.dataset.source;
           const index = parseInt(this.dataset.index);
           const field = this.dataset.field;
-          const value = field === 'description' ? this.value : parseFloat(this.value) || 0;
+          
+          let value;
+          if (field === 'description') {
+            value = this.value;
+          } else if (field === 'adjustmentType') {
+            value = this.value;
+          } else {
+            value = parseFloat(this.value) || 0;
+          }
           
           updateCustomAdjustmentInHelper(source, index, field, value);
         });
         
-        input.addEventListener('change', function() {
+        element.addEventListener('change', function() {
           // Trigger calculation update on change
           calculateSummaryTotals();
+          
+          // If adjustment type changed, reload to update display
+          if (this.dataset.field === 'adjustmentType') {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            loadAllAdjustments(helper);
+          }
         });
       });
     }
@@ -1437,13 +1453,30 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments[index]) {
-        helper.levi.custom_adjustments[index][field] = value;
+        const adjustment = helper.levi.custom_adjustments[index];
+        
+        // Update the field
+        adjustment[field] = value;
+        
+        // Apply proper signs based on adjustment type when updating numeric fields
+        if (field === 'percentage' || field === 'value') {
+          const adjustmentType = adjustment.adjustmentType || 'addition';
+          const absoluteValue = Math.abs(value);
+          
+          if (adjustmentType === 'subtraction') {
+            adjustment[field] = -absoluteValue;
+          } else {
+            adjustment[field] = absoluteValue;
+          }
+        }
+        
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        console.log(`Updated custom adjustment ${index}.${field} to:`, value);
+        console.log(`Updated custom adjustment ${index}.${field} to:`, adjustment[field]);
+        console.log('Full adjustment object:', adjustment);
         
         // Update the helper field for validation
-        updateHelperField(`levi.custom_adjustments.${index}.${field}`, value);
+        updateHelperField(`levi.custom_adjustments.${index}.${field}`, adjustment[field]);
       }
     }
     

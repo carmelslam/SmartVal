@@ -1924,9 +1924,19 @@
       if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
         console.log('📄 Found custom adjustments:', helper.levi.custom_adjustments.length);
         helper.levi.custom_adjustments.forEach((adjustment, index) => {
-          const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
-          const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-          const adjustmentSymbol = isAddition ? '+' : '-';
+          // Use explicit adjustmentType if available, otherwise infer from values
+          let adjustmentTypeText;
+          if (adjustment.adjustmentType === 'subtraction') {
+            adjustmentTypeText = 'הפחתה מהמחיר';
+          } else if (adjustment.adjustmentType === 'addition') {
+            adjustmentTypeText = 'תוספת למחיר';
+          } else {
+            // Fallback to value-based detection
+            const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+            adjustmentTypeText = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+          }
+          
+          const adjustmentSymbol = adjustmentTypeText === 'תוספת למחיר' ? '+' : '-';
           
           const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
           const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
@@ -1935,7 +1945,7 @@
             (percentageDisplay || valueDisplay || 'לא מוגדר');
           
           leviHTML += createEnhancedValidationItem(
-            `${adjustment.description || 'התאמה מותאמת אישית'} - ${adjustmentType}`, 
+            `${adjustment.description || 'התאמה מותאמת אישית'} - ${adjustmentTypeText}`, 
             combinedDisplay,
             combinedDisplay,
             `levi_adj_custom_${index}`
