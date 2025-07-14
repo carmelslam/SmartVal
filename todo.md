@@ -1711,7 +1711,8 @@ We need key changes to make it useful .
 2. Each section has an automatic system validation that checks the integrity of data and report required sections ✅
 3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌ ✅
 4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report ✅
-5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder .❌
+5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder 13. Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+
 6. The user validation section stays as is for now  ✅
 7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to.❌
 8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , ✅
@@ -1720,7 +1721,7 @@ We need key changes to make it useful .
 10. the validation page is missing the review option for the filled report builder ✅
 11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',❌
 12, the damge percentage in the text is not correct ❌
-13. Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+13. 
 14. the levi validation is not pulling data - it shows 0 - ✅
 16. finish the validation page with the same logic ❌
 
@@ -1737,7 +1738,8 @@ and it should update the helper, note that the helper doesnt have depreciation d
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
     * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
     * The tables in the builder are too wide attached illustration 
-    * Add the same footing screens of the builder in the validation and the report review page.
+    * Add  to the validation the same footing screens of the builder and the report review page.
+    *in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and editd are posssible woth a date selector 
 
 20. General issues :
     * All reports , builders, flowing screens, and main system products are updated and filled from the helper directly
@@ -1757,7 +1759,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
 
 
 
-26. fix errors in the *case staus displays* - these functions were opertaional and working good, somehow they got broken-  errors are in teh console_log.dm **high priority**
+26. fix errors in the *case staus displays*  in the admin hub- these functions were opertaional and working good, somehow they got broken-  errors are in teh console_log.dm **high priority**
 
 27. **depreciation module:** match logic and structure to the estimate builder page but keep teh current content **important** add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
  match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page . the current depreciation page has more options and fields than the estimate those need to stay untouched.

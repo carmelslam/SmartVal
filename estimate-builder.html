@@ -573,18 +573,17 @@
       <!-- תוספות והורדות SECTION - MOVED BEFORE VAT CALCULATION -->
       <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
         <label style="color: #333; font-weight: bold; margin-bottom: 10px; display: block;">תוספות והורדות:</label>
-        <div class="levi-adjustments-section" id="leviAdjustments-estimate" style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-          <div style="font-weight: bold; margin-bottom: 8px; color: #495057; font-size: 14px;">התאמות מדו"ח לוי יצחק:</div>
-          <div class="levi-adjustments-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; font-size: 13px;">
+        <div class="unified-adjustments-section" id="unifiedAdjustments-estimate" style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+          <div style="font-weight: bold; margin-bottom: 8px; color: #495057; font-size: 14px;">התאמות מדו"ח לוי יצחק וגורמים נוספים:</div>
+          <div class="levi-adjustments-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; font-size: 13px;">
             <div style="font-weight: bold;">מהות ההתאמה</div>
             <div style="font-weight: bold;">אחוז</div>
             <div style="font-weight: bold;">ערך (₪)</div>
+            <div style="font-weight: bold;">פעולות</div>
           </div>
-          <div id="leviAdjustmentsRows-estimate"></div>
+          <div id="allAdjustmentsRows-estimate"></div>
+          <button class="btn add" type="button" onclick="addCustomAdjustmentField()" style="color: #333; background: #28a745; margin-top: 8px; font-size: 13px;">הוסף התאמה נוספת</button>
         </div>
-        <div style="margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 14px;">תוספות נוספות:</div>
-        <div class="form-grid" id="sumAdditionsGridEstimate"></div>
-        <button class="btn add" type="button" onclick="addCustomSummaryField('estimate')" style="color: #333; background: #28a745;">הוסף שדה נוסף</button>
       </div>
       
       <!-- VAT AND TOTAL CALCULATION SECTION -->
@@ -851,8 +850,8 @@
         // Load damage centers summary
         loadDamageCentersSummary(helper);
         
-        // Load Levi adjustments
-        loadLeviAdjustments(helper);
+        // Load all adjustments (Levi + custom) using unified system
+        loadAllAdjustments(helper);
         
         // Add change listeners for all editable fields
         addFieldChangeListeners();
@@ -1254,49 +1253,181 @@
     }
 
     // LOAD LEVI ADJUSTMENTS
-    function loadLeviAdjustments(helper) {
+    // UNIFIED ADJUSTMENTS SYSTEM - Combines Levi adjustments and custom additions
+    function loadAllAdjustments(helper) {
       try {
-        const adjustmentsContainer = document.getElementById('leviAdjustmentsRows-estimate');
+        const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
+        let adjustmentsHTML = '';
         
+        // 1. Load Levi adjustments (read-only from Levi report)
         if (helper.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
-          let adjustmentsHTML = '';
-          
           helper.levi_report.adjustments.forEach((adjustment, index) => {
-            adjustmentsHTML += `
-              <div class="levi-adjustment-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid #e9ecef;">
-                <div style="font-size: 13px;">${adjustment.description || 'התאמה'}</div>
-                <div style="font-size: 13px; text-align: center;">${adjustment.percentage || '0'}%</div>
-                <div style="font-size: 13px; text-align: center;">₪${adjustment.value ? adjustment.value.toLocaleString() : '0'}</div>
-              </div>
-            `;
+            adjustmentsHTML += createAdjustmentRow({
+              description: adjustment.description || 'התאמה מלוי יצחק',
+              percentage: adjustment.percentage || 0,
+              value: adjustment.value || 0,
+              source: 'levi',
+              index: index,
+              readonly: true
+            });
           });
-          
-          adjustmentsContainer.innerHTML = adjustmentsHTML;
-        } else {
-          adjustmentsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">לא נמצאו התאמות מדו"ח לוי יצחק</div>';
         }
+        
+        // 2. Load custom adjustments (editable, stored in helper.levi.custom_adjustments)
+        if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+          helper.levi.custom_adjustments.forEach((adjustment, index) => {
+            adjustmentsHTML += createAdjustmentRow({
+              description: adjustment.description || 'התאמה מותאמת אישית',
+              percentage: adjustment.percentage || 0,
+              value: adjustment.value || 0,
+              source: 'custom',
+              index: index,
+              readonly: false
+            });
+          });
+        }
+        
+        if (!adjustmentsHTML) {
+          adjustmentsHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">לא נמצאו התאמות - השתמש בכפתור "הוסף התאמה נוספת"</div>';
+        }
+        
+        adjustmentsContainer.innerHTML = adjustmentsHTML;
+        
+        // Add event listeners for custom adjustments
+        addAdjustmentEventListeners();
+        
       } catch (error) {
-        console.error('Error loading Levi adjustments:', error);
-        document.getElementById('leviAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות לוי יצחק</div>';
+        console.error('Error loading all adjustments:', error);
+        document.getElementById('allAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות</div>';
+      }
+    }
+    
+    // Create unified adjustment row HTML
+    function createAdjustmentRow(params) {
+      const { description, percentage, value, source, index, readonly } = params;
+      const rowId = `adjustment-${source}-${index}`;
+      const isAddition = percentage >= 0 && value >= 0;
+      const typeLabel = source === 'levi' ? 'לוי יצחק' : (isAddition ? 'תוספת' : 'הפחתה');
+      const typeColor = source === 'levi' ? '#007bff' : (isAddition ? '#28a745' : '#dc3545');
+      
+      if (readonly) {
+        // Read-only Levi adjustments
+        return `
+          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef; background: #f8f9fa;">
+            <div style="font-size: 13px;">
+              <span style="background: ${typeColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">${typeLabel}</span>
+              ${description}
+            </div>
+            <div style="font-size: 13px; text-align: center;">${percentage}%</div>
+            <div style="font-size: 13px; text-align: center;">₪${value.toLocaleString()}</div>
+            <div style="font-size: 11px; color: #666;">קריאה בלבד</div>
+          </div>
+        `;
+      } else {
+        // Editable custom adjustments
+        return `
+          <div class="adjustment-row" id="${rowId}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
+            <input type="text" value="${description}" data-field="description" data-source="${source}" data-index="${index}" 
+                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px;" 
+                   placeholder="תיאור ההתאמה" />
+            <input type="number" value="${percentage}" data-field="percentage" data-source="${source}" data-index="${index}"
+                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
+                   placeholder="0" step="0.1" />
+            <input type="number" value="${value}" data-field="value" data-source="${source}" data-index="${index}"
+                   style="font-size: 13px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;" 
+                   placeholder="0" step="100" />
+            <button type="button" onclick="removeCustomAdjustment('${source}', ${index})" 
+                    style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
+          </div>
+        `;
       }
     }
 
-    // ADD CUSTOM SUMMARY FIELD
+    // ADD CUSTOM ADJUSTMENT FIELD - Unified system
+    function addCustomAdjustmentField() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Initialize custom adjustments array if it doesn't exist
+      if (!helper.levi) helper.levi = {};
+      if (!helper.levi.custom_adjustments) helper.levi.custom_adjustments = [];
+      
+      // Add new empty adjustment
+      const newAdjustment = {
+        description: '',
+        percentage: 0,
+        value: 0
+      };
+      
+      helper.levi.custom_adjustments.push(newAdjustment);
+      
+      // Save to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Reload all adjustments to show the new one
+      loadAllAdjustments(helper);
+      
+      console.log('Added new custom adjustment, total custom adjustments:', helper.levi.custom_adjustments.length);
+    }
+    
+    // REMOVE CUSTOM ADJUSTMENT
+    function removeCustomAdjustment(source, index) {
+      if (source !== 'custom') return; // Only allow removing custom adjustments
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments[index]) {
+        helper.levi.custom_adjustments.splice(index, 1);
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Reload all adjustments
+        loadAllAdjustments(helper);
+        
+        console.log('Removed custom adjustment at index:', index);
+      }
+    }
+    
+    // ADD EVENT LISTENERS FOR ADJUSTMENT FIELDS
+    function addAdjustmentEventListeners() {
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"]');
+      
+      adjustmentInputs.forEach(input => {
+        input.addEventListener('input', function() {
+          const source = this.dataset.source;
+          const index = parseInt(this.dataset.index);
+          const field = this.dataset.field;
+          const value = field === 'description' ? this.value : parseFloat(this.value) || 0;
+          
+          updateCustomAdjustmentInHelper(source, index, field, value);
+        });
+        
+        input.addEventListener('change', function() {
+          // Trigger calculation update on change
+          calculateSummaryTotals();
+        });
+      });
+    }
+    
+    // UPDATE CUSTOM ADJUSTMENT IN HELPER
+    function updateCustomAdjustmentInHelper(source, index, field, value) {
+      if (source !== 'custom') return;
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments[index]) {
+        helper.levi.custom_adjustments[index][field] = value;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`Updated custom adjustment ${index}.${field} to:`, value);
+        
+        // Update the helper field for validation
+        updateHelperField(`levi.custom_adjustments.${index}.${field}`, value);
+      }
+    }
+    
+    // LEGACY FUNCTION - Keep for compatibility but redirect to unified system
     function addCustomSummaryField(summaryType) {
-      const container = document.getElementById('sumAdditionsGridEstimate');
-      const fieldIndex = container.children.length;
-      
-      const fieldRow = document.createElement('div');
-      fieldRow.className = 'custom-summary-row';
-      fieldRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px;';
-      
-      fieldRow.innerHTML = `
-        <input type="text" placeholder="שם השדה" style="font-size: 14px;" />
-        <input type="text" placeholder="ערך" style="font-size: 14px;" />
-        <button type="button" onclick="this.parentElement.remove()" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
-      `;
-      
-      container.appendChild(fieldRow);
+      // Redirect to new unified system
+      addCustomAdjustmentField();
     }
 
     // ADD FIELD CHANGE LISTENERS

@@ -1892,88 +1892,66 @@
         'levi_base_price'
       );
       
-      // 2. Dynamic validation rows for Levi adjustments from builder
-      const leviAdjustmentsContainer = document.getElementById('leviAdjustmentsRows-estimate');
-      if (leviAdjustmentsContainer && leviAdjustmentsContainer.children.length > 0) {
-        console.log('📄 Found Levi adjustments in builder DOM:', leviAdjustmentsContainer.children.length);
-        
-        // Iterate through DOM adjustment rows to get current builder state
-        Array.from(leviAdjustmentsContainer.children).forEach((row, index) => {
-          const inputs = row.querySelectorAll('input');
-          if (inputs.length >= 3) {
-            const labelInput = inputs[0];
-            const percentInput = inputs[1]; 
-            const valueInput = inputs[2];
-            
-            const label = labelInput.value || `התאמה ${index + 1}`;
-            const percentage = parseFloat(percentInput.value) || 0;
-            const value = parseFloat(valueInput.value) || 0;
-            
-            // Determine if it's addition or subtraction
-            const isAddition = percentage > 0 || value > 0;
-            const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-            const adjustmentSymbol = isAddition ? '+' : '-';
-            
-            // Format the display values
-            const percentageDisplay = percentage ? `${adjustmentSymbol}${Math.abs(percentage)}%` : '';
-            const valueDisplay = value ? `${adjustmentSymbol}₪${Math.abs(value).toLocaleString()}` : '';
-            const combinedDisplay = percentageDisplay && valueDisplay ? 
-              `${percentageDisplay} (${valueDisplay})` : 
-              (percentageDisplay || valueDisplay || 'לא מוגדר');
-            
-            console.log(`📄 Builder adjustment ${index}:`, {
-              label,
-              percentage,
-              value,
-              combinedDisplay
-            });
-            
-            // Create validation row showing addition/subtraction clearly
-            leviHTML += createEnhancedValidationItem(
-              `${label} - ${adjustmentType}`, 
-              combinedDisplay,
-              combinedDisplay, // Same for stored since it comes from builder current state
-              `levi_adj_${index}`
-            );
-          }
-        });
-      } else {
-        console.log('📄 No Levi adjustments found in builder DOM');
-        // Fallback to helper data for adjustments
-        const adjustments = helper?.levi?.adjustments || helper?.levi_report?.adjustments || {};
-        if (adjustments && Object.keys(adjustments).length > 0) {
-          Object.keys(adjustments).forEach(key => {
-            const adjustment = adjustments[key];
-            if (adjustment && (adjustment.percentage !== undefined || adjustment.value !== undefined || adjustment.amount !== undefined)) {
-              const adjValue = adjustment.amount || adjustment.value || 0;
-              const adjPercentage = adjustment.percentage || 0;
-              
-              const isAddition = adjPercentage > 0 || adjValue > 0;
-              const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-              const adjustmentSymbol = isAddition ? '+' : '-';
-              
-              const percentageDisplay = adjPercentage ? `${adjustmentSymbol}${Math.abs(adjPercentage)}%` : '';
-              const valueDisplay = adjValue ? `${adjustmentSymbol}₪${Math.abs(adjValue).toLocaleString()}` : '';
-              const combinedDisplay = percentageDisplay && valueDisplay ? 
-                `${percentageDisplay} (${valueDisplay})` : 
-                (percentageDisplay || valueDisplay);
-              
-              leviHTML += createEnhancedValidationItem(
-                `${key} - ${adjustmentType}`, 
-                combinedDisplay || 'לא מוגדר',
-                combinedDisplay || 'לא מוגדר',
-                `levi_adj_${key.replace(/\s+/g, '_')}`
-              );
-            }
-          });
-        } else {
+      // 2. Dynamic validation rows for all adjustments (unified approach)
+      let adjustmentCount = 0;
+      
+      // A. Load Levi adjustments (read-only from Levi report)
+      if (helper?.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
+        console.log('📄 Found Levi adjustments from report:', helper.levi_report.adjustments.length);
+        helper.levi_report.adjustments.forEach((adjustment, index) => {
+          const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+          const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+          const adjustmentSymbol = isAddition ? '+' : '-';
+          
+          const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
+          const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          const combinedDisplay = percentageDisplay && valueDisplay ? 
+            `${percentageDisplay} (${valueDisplay})` : 
+            (percentageDisplay || valueDisplay || 'לא מוגדר');
+          
           leviHTML += createEnhancedValidationItem(
-            'התאמות מחיר', 
-            'לא נמצאו התאמות',
-            'לא נמצאו התאמות', 
-            'levi_no_adjustments'
+            `${adjustment.description || 'התאמת לוי יצחק'} - ${adjustmentType}`, 
+            combinedDisplay,
+            combinedDisplay,
+            `levi_adj_levi_${index}`
           );
-        }
+          adjustmentCount++;
+        });
+      }
+      
+      // B. Load custom adjustments (editable, stored in helper.levi.custom_adjustments)
+      if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+        console.log('📄 Found custom adjustments:', helper.levi.custom_adjustments.length);
+        helper.levi.custom_adjustments.forEach((adjustment, index) => {
+          const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+          const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+          const adjustmentSymbol = isAddition ? '+' : '-';
+          
+          const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
+          const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          const combinedDisplay = percentageDisplay && valueDisplay ? 
+            `${percentageDisplay} (${valueDisplay})` : 
+            (percentageDisplay || valueDisplay || 'לא מוגדר');
+          
+          leviHTML += createEnhancedValidationItem(
+            `${adjustment.description || 'התאמה מותאמת אישית'} - ${adjustmentType}`, 
+            combinedDisplay,
+            combinedDisplay,
+            `levi_adj_custom_${index}`
+          );
+          adjustmentCount++;
+        });
+      }
+      
+      // C. Show placeholder if no adjustments found
+      if (adjustmentCount === 0) {
+        console.log('📄 No adjustments found in helper data');
+        leviHTML += createEnhancedValidationItem(
+          'התאמות מחיר', 
+          'לא נמצאו התאמות',
+          'לא נמצאו התאמות', 
+          'levi_no_adjustments'
+        );
       }
       
       // 3. Market Price validation (using best available source)
