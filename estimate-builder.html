@@ -997,8 +997,7 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
-        // Add change listeners for all editable fields
-        addFieldChangeListeners();
+        // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
         console.error('Error loading data from helper:', error);
@@ -2078,74 +2077,7 @@
       console.log('🧪 DATA FLOW TEST COMPLETE');
     };
 
-    // ADD FIELD CHANGE LISTENERS
-    function addFieldChangeListeners() {
-      // Car details listeners
-      ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.addEventListener('change', function(event) {
-            updateHelperFromField(event);
-            
-            // Recalculate adjustment values when base price changes
-            if (id === 'carBasePrice') {
-              console.log('📊 Base price changed, recalculating all adjustment values');
-              setTimeout(() => {
-                recalculateAllAdjustmentValues();
-              }, 100);
-            }
-          });
-        }
-      });
-      
-      // Claims data listeners (leviPriceList and grossPercent are now auto-calculated and readonly)
-      ['totalClaim', 'authorizedClaim'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.addEventListener('change', function(event) {
-            updateHelperFromField(event);
-            
-            // Update gross percentage when total claim changes
-            if (id === 'totalClaim') {
-              updateGrossPercentageFromGrossValue();
-            }
-          });
-        }
-      });
-      
-      // Basic price field event listener for gross calculation
-      const basicPriceField = document.getElementById('basicPrice');
-      if (basicPriceField) {
-        basicPriceField.addEventListener('change', function(event) {
-          updateHelperFromField(event);
-          updateGrossMarketValueCalculation();
-        });
-      }
-      
-      // Contact data listeners
-      ['ownerName', 'ownerAddress', 'ownerPhone', 'insuranceCompany', 'insuranceEmail', 'insuranceAgent', 'agentPhone', 'agentEmail'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.addEventListener('change', updateHelperFromField);
-        }
-      });
-      
-      // Summary data listeners
-      ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.addEventListener('change', updateHelperFromField);
-        }
-      });
-      
-      // Estimate type change listener
-      document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-          updateReportType();
-          loadLegalText();
-        });
-      });
-    }
+    // REMOVED DUPLICATE FUNCTION - Using the enhanced version above
 
     // UPDATE HELPER FROM FIELD
     function updateHelperFromField(event) {
@@ -2194,6 +2126,14 @@
             helper.meta = helper.meta || {};
             helper.meta.plate = value;
             console.log('🚗 Updated vehicle plate:', value);
+          } else if (fieldId === 'basicPrice') {
+            // Update levi_report structure for basic price
+            helper.levi_report = helper.levi_report || {};
+            helper.levi_report.base_price = value.replace(/[₪,]/g, '');
+            helper.expertise = helper.expertise || {};
+            helper.expertise.levi_report = helper.expertise.levi_report || {};
+            helper.expertise.levi_report.base_price = value.replace(/[₪,]/g, '');
+            console.log('🚗 Updated basic price:', value);
           }
           
           // Also update meta for plate
@@ -4303,12 +4243,146 @@
       }
     }
     
+    // ADD FIELD CHANGE LISTENERS - CRITICAL FOR HELPER UPDATES
+    function addFieldChangeListeners() {
+      try {
+        console.log('🔗 Adding field change listeners...');
+        
+        // Car details fields
+        const carFields = [
+          'carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode',
+          'carBasePrice', 'carMarketValue', 'carReportDate', 'carMileage'
+        ];
+        
+        carFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+              
+              // Recalculate adjustment values when base price changes
+              if (fieldId === 'carBasePrice') {
+                console.log('📊 Base price changed, recalculating all adjustment values');
+                setTimeout(() => {
+                  recalculateAllAdjustmentValues();
+                }, 100);
+              }
+            });
+            field.addEventListener('blur', function() {
+              updateHelperFromField({ target: this });
+            });
+          }
+        });
+        
+        // Contact/communication fields
+        const contactFields = [
+          'ownerName', 'ownerPhone', 'ownerAddress', 'ownerEmail',
+          'agentName', 'agentPhone', 'agentEmail',
+          'insuranceCompany', 'insuranceEmail'
+        ];
+        
+        contactFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+            });
+            field.addEventListener('blur', function() {
+              updateHelperFromField({ target: this });
+            });
+          }
+        });
+        
+        // Claims data fields
+        const claimsFields = ['totalClaim', 'authorizedClaim'];
+        
+        claimsFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+              
+              // Update gross percentage when total claim changes
+              if (fieldId === 'totalClaim') {
+                updateGrossPercentageFromGrossValue();
+              }
+            });
+            field.addEventListener('blur', function() {
+              updateHelperFromField({ target: this });
+            });
+          }
+        });
+        
+        // Basic price field with special handling for 3-bulk system
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField) {
+          basicPriceField.addEventListener('change', function() {
+            updateHelperFromField({ target: this });
+            updateGrossMarketValueCalculation();
+            recalculateAllAdjustmentValues();
+          });
+          basicPriceField.addEventListener('blur', function() {
+            updateHelperFromField({ target: this });
+            updateGrossMarketValueCalculation();
+          });
+        }
+        
+        // Full basic price field
+        const fullBasicPriceField = document.getElementById('fullBasicPrice');
+        if (fullBasicPriceField) {
+          fullBasicPriceField.addEventListener('change', function() {
+            updateHelperFromField({ target: this });
+            updateFullMarketValueCalculation();
+          });
+        }
+        
+        // Summary data fields
+        const summaryFields = ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'];
+        
+        summaryFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+            });
+            field.addEventListener('blur', function() {
+              updateHelperFromField({ target: this });
+            });
+          }
+        });
+        
+        // Legal text field
+        const legalTextField = document.getElementById('legal-text-content');
+        if (legalTextField) {
+          legalTextField.addEventListener('change', function() {
+            updateHelperFromField({ target: this });
+          });
+        }
+        
+        // Estimate type change listener
+        document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
+          radio.addEventListener('change', function() {
+            updateReportType();
+            loadLegalText();
+          });
+        });
+        
+        console.log('✅ Field change listeners added successfully');
+        
+      } catch (error) {
+        console.error('Error adding field change listeners:', error);
+      }
+    }
+    
     // INITIALIZE 3-BULK SYSTEM ON PAGE LOAD
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 Initializing 3-bulk system...');
       
       // Load saved helper data first
       loadHelperData();
+      
+      // Add field change listeners - CRITICAL FOR HELPER UPDATES
+      addFieldChangeListeners();
       
       // Initialize gross calculation data
       setTimeout(() => {
