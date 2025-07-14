@@ -2461,56 +2461,124 @@
       }
     }
 
+    // DEBUG HELPER DATA
+    function debugHelperData() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 === COMPLETE HELPER DATA ===');
+      console.log('Full helper:', helper);
+      console.log('Levi report:', helper.levi_report);
+      console.log('Levi summary:', helper.levisummary);
+      console.log('Calculations:', helper.calculations);
+      console.log('Expertise:', helper.expertise);
+      console.log('Car details:', helper.car_details);
+      console.log('Vehicle:', helper.vehicle);
+      
+      // Check what basic price and additions we have
+      if (helper.levi_report) {
+        console.log('🚗 Levi Report Data:');
+        console.log('- Base price:', helper.levi_report.base_price);
+        console.log('- Final price:', helper.levi_report.final_price);
+        console.log('- Features value:', helper.levi_report.features_value);
+        console.log('- Registration value:', helper.levi_report.registration_value);
+        console.log('- Adjustments:', helper.levi_report.adjustments);
+      }
+      
+      if (helper.levisummary) {
+        console.log('📋 Levi Summary Data:');
+        console.log('- Base price:', helper.levisummary.base_price);
+        console.log('- Final price:', helper.levisummary.final_price);
+        console.log('- Price adjustments:', helper.levisummary.price_adjustments);
+      }
+      
+      console.log('🔍 === END HELPER DATA ===');
+    }
+    
     // SIMPLE UPDATE BOTH GROSS FIELDS (NO RECURSION)
     function updateGrossFields() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        let vehicleValueGross = helper.calculations?.vehicle_value_gross;
         
         // Get the field elements
         const leviPriceListField = document.getElementById('leviPriceList');
         const grossPercentField = document.getElementById('grossPercent');
         const totalClaimField = document.getElementById('totalClaim');
         
-        // Try to get vehicle_value_gross from anywhere
-        if (!vehicleValueGross) {
-          const fallbackSources = [
-            helper.levi_report?.final_price,
-            helper.expertise?.calculations?.market_value,
-            helper.levisummary?.final_price
-          ];
+        console.log('🔍 Calculating gross market value...');
+        
+        // Calculate GROSS market value (basic price + only eligible additions)
+        let grossMarketValue = 0;
+        let basicPrice = 0;
+        let eligibleAdditions = 0;
+        
+        // Try to get basic price
+        if (helper.levi_report?.base_price) {
+          basicPrice = parseFloat(helper.levi_report.base_price);
+        } else if (helper.levisummary?.base_price) {
+          basicPrice = parseFloat(helper.levisummary.base_price);
+        } else if (helper.expertise?.calculations?.base_price) {
+          basicPrice = parseFloat(helper.expertise.calculations.base_price);
+        }
+        
+        // Add eligible additions for gross calculation (features + registration only)
+        if (helper.levi_report) {
+          const featuresValue = parseFloat(helper.levi_report.features_value || 0);
+          const registrationValue = parseFloat(helper.levi_report.registration_value || 0);
+          eligibleAdditions = featuresValue + registrationValue;
           
-          for (const fallback of fallbackSources) {
-            if (fallback && fallback > 0) {
-              vehicleValueGross = fallback;
-              console.log(`🔧 Using fallback for vehicle_value_gross: ${vehicleValueGross}`);
-              break;
+          console.log(`🔧 Levi Report - Basic: ${basicPrice}, Features: ${featuresValue}, Registration: ${registrationValue}`);
+        } else if (helper.levisummary?.price_adjustments) {
+          // Look for specific eligible adjustments in levisummary
+          const adjustments = helper.levisummary.price_adjustments;
+          adjustments.forEach(adj => {
+            const description = (adj.description || '').toLowerCase();
+            if (description.includes('מאפיינים') || description.includes('features') || 
+                description.includes('עליה לכביש') || description.includes('registration')) {
+              eligibleAdditions += parseFloat(adj.value || 0);
             }
+          });
+          
+          console.log(`🔧 Levi Summary - Basic: ${basicPrice}, Eligible additions: ${eligibleAdditions}`);
+        }
+        
+        grossMarketValue = basicPrice + eligibleAdditions;
+        
+        console.log(`💰 Calculated Gross Market Value: ${basicPrice} + ${eligibleAdditions} = ${grossMarketValue}`);
+        
+        // If we still don't have a value, try manual fallback
+        if (grossMarketValue <= 0) {
+          if (helper.levi_report?.final_price) {
+            grossMarketValue = parseFloat(helper.levi_report.final_price);
+            console.log(`🔧 Using final_price as fallback: ${grossMarketValue}`);
+          } else if (helper.expertise?.calculations?.market_value) {
+            grossMarketValue = parseFloat(helper.expertise.calculations.market_value);
+            console.log(`🔧 Using expertise market_value as fallback: ${grossMarketValue}`);
           }
         }
         
         // Update gross market value field
-        if (vehicleValueGross && vehicleValueGross > 0) {
-          leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
-          console.log(`💰 Updated gross market value: ₪${vehicleValueGross.toLocaleString()}`);
+        if (grossMarketValue > 0) {
+          leviPriceListField.value = `₪${grossMarketValue.toLocaleString()}`;
+          console.log(`💰 Updated gross market value field: ₪${grossMarketValue.toLocaleString()}`);
           
           // Update gross percentage field
           const totalClaim = parseFloat(totalClaimField?.value?.replace(/[₪,]/g, '') || '0');
           if (totalClaim > 0) {
-            const grossPercentage = (totalClaim / vehicleValueGross) * 100;
+            const grossPercentage = (totalClaim / grossMarketValue) * 100;
             const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
             
             grossPercentField.value = formattedPercentage;
-            console.log(`📊 Updated gross percentage: ${formattedPercentage}`);
+            console.log(`📊 Updated gross percentage: ${totalClaim} ÷ ${grossMarketValue} = ${formattedPercentage}`);
             
             // Update helper
             helper.calculations = helper.calculations || {};
-            helper.calculations.vehicle_value_gross = vehicleValueGross;
+            helper.calculations.vehicle_value_gross = grossMarketValue;
             helper.claims_data = helper.claims_data || {};
             helper.claims_data.gross_percent = formattedPercentage;
-            helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
+            helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
             sessionStorage.setItem('helper', JSON.stringify(helper));
           }
+        } else {
+          console.warn('⚠️ Could not calculate gross market value - no basic price found');
         }
       } catch (error) {
         console.error('Error updating gross fields:', error);
@@ -3215,6 +3283,7 @@
     }
     window.debugCalculations = debugCalculations;
     window.forceManualCalculation = forceManualCalculation;
+    window.debugHelperData = debugHelperData;
     
     // 🌍 GLOBAL CALCULATION INTERFACE FOR FINAL REPORT MODULES
     window.EstimateCalculations = {
