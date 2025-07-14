@@ -388,7 +388,128 @@ AI tools may generate inaccurate info that doesn't represent Google's views. The
 
 
 
-﻿
+**estimate builder page - update helper errors**
+estimate-builder.html:1611 Uncaught ReferenceError: updateHelperField is not defined
+    at updateCustomAdjustmentInHelper (estimate-builder.html:1611:9)
+    at calculateAdjustmentValue (estimate-builder.html:1537:9)
+    at estimate-builder.html:1314:17
+    at Array.forEach (<anonymous>)
+    at estimate-builder.html:1311:44
+updateCustomAdjustmentInHelper	@	estimate-builder.html:1611
+calculateAdjustmentValue	@	estimate-builder.html:1537
+(anonymous)	@	estimate-builder.html:1314
+(anonymous)	@	estimate-builder.html:1311
+setTimeout		
+loadAllAdjustments	@	estimate-builder.html:1305
+addCustomAdjustmentField	@	estimate-builder.html:1405
+onclick	@	VM2869 estimate-builder.html:1
+Explanation
+
+Understanding the problem
+The error Uncaught ReferenceError: updateHelperField is not defined means that the JavaScript function updateHelperField was called, but the browser couldn't find a function with that name in the current scope or anywhere accessible in the global scope. This typically happens when a function is called before it has been declared, or if the function is defined within a different script file that hasn't been loaded yet, or within a scope that is not accessible from where it is being called.
+
+Suggested fix
+Ensure that the updateHelperField function is defined and accessible in the scope where it is being called.
+
+Here are a few common scenarios and their solutions:
+
+Function defined later in the same file: Move the definition of updateHelperField to a point before it is called.
+Function defined in a different script file: Make sure the script containing the updateHelperField function is loaded before the script that calls it. You can control the loading order by adjusting the order of <script> tags in your HTML.
+Function defined within a different scope (e.g., inside another function or module): Ensure that updateHelperField is either defined in a global scope, or properly imported/exposed to the scope where it is being called.
+Without seeing the definition of updateHelperField, I cannot provide specific code to fix it. However, you need to locate where updateHelperField is supposed to be defined and ensure it's available at the point of the call.
+
+Summary
+The error indicates that the function updateHelperField was called but not found. The fix involves ensuring the function is defined and accessible before it is called.
+
+error 2 :
+
+estimate-builder.html:1496 Uncaught ReferenceError: calculateSummaryTotals is not defined
+    at HTMLInputElement.<anonymous> (estimate-builder.html:1496:11)
+(anonymous)	@	estimate-builder.html:1496
+Explanation
+
+Understanding the problem
+This error indicates that the function calculateSummaryTotals was called but could not be found within the current scope. This means the JavaScript engine doesn't know where to find the definition of calculateSummaryTotals when the 'change' event listener is triggered.
+
+Suggested fix
+Ensure that the calculateSummaryTotals function is defined and accessible in the scope where the event listener is being executed. This could involve:
+
+Defining the function in the same script block as the event listener.
+Ensuring the script defining calculateSummaryTotals is loaded before the script containing this event listener.
+js
+
+// Change event for final updates
+        element.addEventListener('change', function() {
+          // Trigger calculation update on change
+          // Make sure calculateSummaryTotals is defined in a scope accessible here
+          calculateSummaryTotals();
+
+          // If adjustment type changed, reload to update display
+          if (this.dataset.field === 'adjustmentType') {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            setTimeout(() => loadAllAdjustments(helper), 50);
+          }
+        });
+
+        // Define calculateSummaryTotals if not already defined and accessible
+        function calculateSummaryTotals() {
+          // Your calculation logic here
+          console.log("Calculating summary totals...");
+        }
+
+        // For percentage fields, trigger auto-calculation on focus out
+
+Use code snippets with caution
+
+Summary
+The Uncaught ReferenceError means a function was called but not found. Define the calculateSummaryTotals function or ensure its definition is loaded before the code that calls it.
+
+error 3 
+estimate-builder.html:1611 Uncaught ReferenceError: updateHelperField is not defined
+    at updateCustomAdjustmentInHelper (estimate-builder.html:1611:9)
+    at HTMLInputElement.<anonymous> (estimate-builder.html:1484:11)
+updateCustomAdjustmentInHelper	@	estimate-builder.html:1611
+(anonymous)	@	estimate-builder.html:1484
+Explanation
+
+Understanding the problem
+The error Uncaught ReferenceError: updateHelperField is not defined indicates that the JavaScript function updateHelperField was called, but the browser could not find its definition in the current scope. This usually means the function was not declared or is not accessible from where it is being called.
+
+Suggested fix
+Ensure that the updateHelperField function is defined within the same script, or included before the script where updateCustomAdjustmentInHelper is defined.
+
+js
+
+// Make sure updateHelperField is defined before it's called
+function updateHelperField(fieldName, value) {
+  // Function definition for updateHelperField goes here
+  // For example:
+  console.log(`Updating field ${fieldName} with value: ${value}`);
+  // Add actual logic to update the field
+}
+
+function updateCustomAdjustmentInHelper(index, adjustment, field) {
+    // Make sure 'index', 'adjustment', and 'field' are properly defined and passed
+    updateHelperField(`levi.custom_adjustments.${index}.${field}`, adjustment[field]);
+}
+
+// Rest of your code...
+
+Use code snippets with caution
+
+Alternatively, if updateHelperField is defined in another script file, make sure that script file is loaded before the script containing updateCustomAdjustmentInHelper in your HTML file.
+
+html
+
+<script src="path/to/script/with/updateHelperField.js"></script>
+<script src="path/to/script/with/updateCustomAdjustmentInHelper.js"></script>
+Use code snippets with caution
+
+Summary
+The error "Uncaught ReferenceError: updateHelperField is not defined" means the updateHelperField function was called but not found. Define the function or ensure the script defining it is loaded before it's used.
+
+
+
 
 
 

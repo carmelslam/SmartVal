@@ -1769,6 +1769,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
     * Add  to the validation the same footing screens of the builder and the report review page.
     * the expertise damge centers and costs validation section are not pulling the data correctly. also in the bulder the calculations for this part are not corrrect 
     * the button בדוק  טקסט משפטי doesn’t  work 
+    **the report builder**
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
     * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 

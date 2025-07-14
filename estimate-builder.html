@@ -1607,11 +1607,50 @@
         console.log(`Updated custom adjustment ${index}.${field} to:`, adjustment[field]);
         console.log('Full adjustment object:', adjustment);
         
-        // Update the helper field for validation
-        updateHelperField(`levi.custom_adjustments.${index}.${field}`, adjustment[field]);
+        // Helper is already updated above with sessionStorage.setItem
+        console.log('✅ Helper updated with adjustment data');
       }
     }
     
+    // CALCULATE SUMMARY TOTALS - Updates helper with calculated totals
+    function calculateSummaryTotals() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Calculate Levi adjustment totals
+        let leviTotal = 0;
+        if (helper.levi?.adjustments) {
+          leviTotal = helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+        }
+        if (helper.levi?.custom_adjustments) {
+          leviTotal += helper.levi.custom_adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+        }
+        
+        // Calculate damage center totals
+        let damageTotal = 0;
+        if (helper.expertise?.damage_blocks) {
+          helper.expertise.damage_blocks.forEach(block => {
+            damageTotal += (parseFloat(block.parts_cost) || 0) + (parseFloat(block.work_cost) || 0) + (parseFloat(block.repairs_cost) || 0);
+          });
+        }
+        
+        // Update helper with calculated totals
+        helper.summary_totals = {
+          levi_total: leviTotal,
+          damage_total: damageTotal,
+          total_before_vat: leviTotal + damageTotal,
+          total_with_vat: Math.round((leviTotal + damageTotal) * 1.18),
+          calculated_at: new Date().toISOString()
+        };
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Summary totals calculated and updated in helper:', helper.summary_totals);
+        
+      } catch (error) {
+        console.error('Error calculating summary totals:', error);
+      }
+    }
+
     // LEGACY FUNCTION - Keep for compatibility but redirect to unified system
     function addCustomSummaryField(summaryType) {
       // Redirect to new unified system
