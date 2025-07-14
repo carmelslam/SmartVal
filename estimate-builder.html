@@ -2689,12 +2689,54 @@
       }
     }
     
+    // Test function to manually add adjustment data for debugging
+    function addTestAdjustments() {
+      console.log('🧪 Adding test adjustments for debugging');
+      
+      // Add test features adjustment
+      addFeatureAdjustment();
+      const featuresContainer = document.getElementById('featuresAdjustmentsList');
+      const lastFeaturesRow = featuresContainer.querySelector('div:last-child');
+      if (lastFeaturesRow) {
+        const inputs = lastFeaturesRow.querySelectorAll('input[type="text"]');
+        inputs[0].value = 'מאפיין בדיקה';
+        inputs[1].value = '5%';
+        inputs[2].value = '₪1000';
+        lastFeaturesRow.querySelector('select').value = 'plus';
+      }
+      
+      // Add test registration adjustment
+      addRegistrationAdjustment();
+      const registrationContainer = document.getElementById('registrationAdjustmentsList');
+      const lastRegistrationRow = registrationContainer.querySelector('div:last-child');
+      if (lastRegistrationRow) {
+        const inputs = lastRegistrationRow.querySelectorAll('input[type="text"]');
+        inputs[0].value = 'עליה לכביש בדיקה';
+        inputs[1].value = '10%';
+        inputs[2].value = '₪2000';
+        lastRegistrationRow.querySelector('select').value = 'plus';
+      }
+      
+      // Trigger the update
+      updateHelperFromAdjustments();
+    }
+    
+    // Expose test function globally
+    window.addTestAdjustments = addTestAdjustments;
+    
     // Update helper from adjustments
     function updateHelperFromAdjustments() {
       try {
         console.log('🔄 updateHelperFromAdjustments called');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         console.log('📊 Current helper before update:', helper);
+        
+        // Debug: Check if DOM elements exist
+        console.log('🔍 DEBUG: DOM elements check:', {
+          featuresAdjustmentsList: !!document.getElementById('featuresAdjustmentsList'),
+          registrationAdjustmentsList: !!document.getElementById('registrationAdjustmentsList'),
+          allAdjustmentsRows: !!document.getElementById('allAdjustmentsRows-estimate')
+        });
         
         // Initialize structures
         helper.levi_report = helper.levi_report || {};
@@ -2713,11 +2755,13 @@
         
         // Collect features adjustments
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        featuresRows.forEach(row => {
+        console.log('🔍 DEBUG: Found features rows:', featuresRows.length);
+        featuresRows.forEach((row, index) => {
           const description = row.querySelector('input[placeholder="תיאור המאפיין"]')?.value || '';
           const type = row.querySelector('select')?.value || 'plus';
           const percent = parseFloat(row.querySelector('input[placeholder="%"]')?.value.replace('%', '')) || 0;
           const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
+          console.log(`🔍 DEBUG: Features row ${index}:`, { description, type, percent, value });
           
           if (description && value !== 0) {
             const adjustmentValue = type === 'plus' ? value : -value;
@@ -2738,11 +2782,13 @@
         
         // Collect registration adjustments
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        registrationRows.forEach(row => {
+        console.log('🔍 DEBUG: Found registration rows:', registrationRows.length);
+        registrationRows.forEach((row, index) => {
           const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]')?.value || '';
           const type = row.querySelector('select')?.value || 'plus';
           const percent = parseFloat(row.querySelector('input[placeholder="%"]')?.value.replace('%', '')) || 0;
           const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
+          console.log(`🔍 DEBUG: Registration row ${index}:`, { description, type, percent, value });
           
           if (description && value !== 0) {
             const adjustmentValue = type === 'plus' ? value : -value;
@@ -2763,13 +2809,15 @@
         
         // Collect other adjustments from allAdjustmentsRows-estimate and map to parameters
         const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
-        allAdjustmentRows.forEach(row => {
+        console.log('🔍 DEBUG: Found all adjustment rows:', allAdjustmentRows.length);
+        allAdjustmentRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
           if (inputs.length >= 3) {
             const description = inputs[0].value || '';
             const type = row.querySelector('select')?.value || 'plus';
             const percent = parseFloat(inputs[1].value) || 0;
             const value = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+            console.log(`🔍 DEBUG: All adjustment row ${index}:`, { description, type, percent, value });
             
             if (description && value !== 0) {
               const adjustmentValue = type === 'plus' ? value : -value;
@@ -2852,6 +2900,9 @@
           'מספר בעלים': helper.expertise.levi_report['מספר בעלים'],
           'מאפיינים': helper.expertise.levi_report['מאפיינים']
         });
+        
+        // Debug: Final parameter data summary
+        console.log('🔍 DEBUG: Final parameter data summary:', parameterData);
         
       } catch (error) {
         console.error('Error updating helper from adjustments:', error);
