@@ -826,14 +826,24 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
-        // Load claims data (now editable)
-        if (helper.expertise?.calculations) {
-          const calc = helper.expertise.calculations;
-          document.getElementById('totalClaim').value = calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '';
-          document.getElementById('leviPriceList').value = helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '';
-          document.getElementById('grossPercent').value = calc.damage_percent ? `${calc.damage_percent}%` : '';
-          document.getElementById('authorizedClaim').value = calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '';
-        }
+        // Load claims data (now editable) - with fallback to manual input data
+        const calc = helper.expertise?.calculations || {};
+        const claimsData = helper.claims_data || {};
+        
+        // Load with priority: manual input (claims_data) > calculated data (expertise.calculations)
+        document.getElementById('totalClaim').value = claimsData.total_claim || 
+          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+        document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
+          (helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '');
+        document.getElementById('grossPercent').value = claimsData.gross_percent || 
+          (calc.damage_percent ? `${calc.damage_percent}%` : '');
+        document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
+          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+          
+        console.log('💰 Loaded claims data:', { 
+          from_claims_data: claimsData, 
+          from_calculations: calc 
+        });
         
         // Load contact data (now editable) and sync to car_details
         if (helper.client) {
@@ -2056,6 +2066,31 @@
           } else if (fieldId === 'agentPhone') {
             helper.car_details.agentPhone = value;
           }
+        } else if (['totalClaim', 'leviPriceList', 'grossPercent', 'authorizedClaim'].includes(fieldId)) {
+          // Claims data mapping
+          helper.claims_data = helper.claims_data || {};
+          const mapping = {
+            'totalClaim': 'total_claim',
+            'leviPriceList': 'levi_price_list', 
+            'grossPercent': 'gross_percent',
+            'authorizedClaim': 'authorized_claim'
+          };
+          helper.claims_data[mapping[fieldId]] = value;
+          
+          // Also update expertise.calculations for compatibility
+          helper.expertise = helper.expertise || {};
+          helper.expertise.calculations = helper.expertise.calculations || {};
+          if (fieldId === 'totalClaim' || fieldId === 'authorizedClaim') {
+            // Remove currency formatting and parse number
+            const numericValue = parseFloat(value.replace(/[₪,]/g, '')) || 0;
+            helper.expertise.calculations.total_damage = numericValue;
+          } else if (fieldId === 'grossPercent') {
+            // Remove % and parse number
+            const percentValue = parseFloat(value.replace('%', '')) || 0;
+            helper.expertise.calculations.damage_percent = percentValue;
+          }
+          
+          console.log(`💰 Updated claims data: ${fieldId} = "${value}"`);
         } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].includes(fieldId)) {
           helper.estimate_summary = helper.estimate_summary || {};
           const mapping = {

@@ -1742,9 +1742,9 @@ We need key changes to make it useful .
     2. Damage center subtotals are pulled from the damage center section ✅
     3. Any other data that doesn’t exist in the builder or the damage center section , is pulled from the  helper directly.✅
 2. Each section has an automatic system validation that checks the integrity of data and report required sections ✅
-3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌ ✅
+3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌-  ✅
 4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report ✅
-5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder 13. Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
 
 6. The user validation section stays as is for now  ✅
 7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to.❌
@@ -1754,7 +1754,7 @@ We need key changes to make it useful .
 10. the validation page is missing the review option for the filled report builder ✅
 11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',❌
 12, the damge percentage in the text is not correct ❌
-13. 
+13.
 14. the levi validation is not pulling data - it shows 0 - ✅
 16. finish the validation page with the same logic ❌
 
@@ -1774,7 +1774,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
 
  
     * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
-    * Add  to the validation the same footing screens of the builder and the report review page.
+    * Add  to the validation the same footing screens of the builder and the report review page. ❌
     * 
     **the report builder**
     * The report builder has double html - there are 2 reports in one page . 
