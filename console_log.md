@@ -508,6 +508,58 @@ Use code snippets with caution
 Summary
 The error "Uncaught ReferenceError: updateHelperField is not defined" means the updateHelperField function was called but not found. Define the function or ensure the script defining it is loaded before it's used.
 
+**new console error for estimate builder**
+estimate-builder.html:2481 Uncaught ReferenceError: loadLeviAdjustments is not defined
+    at estimate-builder.html:2481:34
+(anonymous)	@	estimate-builder.html:2481
+Explanation
+
+Understanding the problem
+The error "Uncaught ReferenceError: loadLeviAdjustments is not defined" means that when the code at estimate-builder.html:2481:34 tried to access a function or variable named loadLeviAdjustments, it could not find it in the current scope or anywhere in the accessible global scope.
+
+In your code, you are trying to assign loadLeviAdjustments to window.loadLeviAdjustments, effectively making it a global function. However, this operation fails because loadLeviAdjustments has not been defined anywhere before this line of code is executed.
+
+How to verify
+You can confirm this by opening the DevTools Console and typing loadLeviAdjustments. You will see the same "Uncaught ReferenceError: loadLeviAdjustments is not defined".
+
+Suggested fix
+Before the line where you try to assign loadLeviAdjustments to window.loadLeviAdjustments, you need to define the loadLeviAdjustments function. This could be done by declaring it using function loadLeviAdjustments() { ... } or as a variable holding a function expression, like const loadLeviAdjustments = () => { ... };.
+
+js
+
+// Define the loadLeviAdjustments function before making it global
+function loadLeviAdjustments() {
+    // Your function logic here
+    console.log("loadLeviAdjustments is called!");
+}
+
+// Make functions global
+window.loadDataFromHelper = loadDataFromHelper;
+window.loadLegalText = loadLegalText;
+window.loadLegalTextFromVault = loadLegalTextFromVault;
+window.resetLegalText = resetLegalText;
+window.addDepField = addDepField;
+window.updateReportType = updateReportType;
+window.addCustomSummaryField = addCustomSummaryField;
+window.loadDamageCentersSummary = loadDamageCentersSummary;
+window.loadLeviAdjustments = loadLeviAdjustments;
+window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
+window.calculateDamagePercentage = calculateDamagePercentage;
+window.triggerGlobalDepreciationCalc = triggerGlobalDepreciationCalc;
+window.showPartSuggestions = showPartSuggestions;
+window.selectPartSuggestion = selectPartSuggestion;
+window.openPartsSearchModule = openPartsSearchModule;
+window.addPartRow = addPartRow;
+window.addWorkRow = addWorkRow;
+window.addRepairRow = addRepairRow;
+
+Use code snippets with caution
+
+Summary
+The error "Uncaught ReferenceError: loadLeviAdjustments is not defined" occurs because you are attempting to use loadLeviAdjustments before it has been declared or defined. The fix is to ensure that loadLeviAdjustments is defined as a function before you assign it to window.loadLeviAdjustments.
+
+
+
 
 
 
