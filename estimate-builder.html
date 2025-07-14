@@ -1426,6 +1426,8 @@
     // CRITICAL FIX: Function to clean up duplicate data in helper
     function cleanupHelperDuplicates(helper) {
       try {
+        let totalRemoved = 0;
+        
         // Clean up levi_report adjustments
         if (helper.levi_report?.adjustments) {
           const seenAdjustments = new Set();
@@ -1442,6 +1444,7 @@
           const removedCount = helper.levi_report.adjustments.length - cleanedAdjustments.length;
           if (removedCount > 0) {
             console.log(`🧹 Removed ${removedCount} duplicate levi_report adjustments`);
+            totalRemoved += removedCount;
           }
           
           helper.levi_report.adjustments = cleanedAdjustments;
@@ -1463,9 +1466,31 @@
           const removedCustomCount = helper.levi.custom_adjustments.length - cleanedCustom.length;
           if (removedCustomCount > 0) {
             console.log(`🧹 Removed ${removedCustomCount} duplicate custom adjustments`);
+            totalRemoved += removedCustomCount;
           }
           
           helper.levi.custom_adjustments = cleanedCustom;
+        }
+        
+        // AGGRESSIVE CLEANUP: Check for accumulation patterns in Hebrew keys
+        if (helper.expertise?.levi_report) {
+          const hebrewKeys = ['עליה לכביש', 'בעלות', 'מס ק״מ', 'מספר בעלים', 'מאפיינים'];
+          hebrewKeys.forEach(key => {
+            const value = helper.expertise.levi_report[key];
+            if (value) {
+              // Check if it's a repetitive pattern (like "bbbbb" or "eeee")
+              const str = value.toString();
+              if (str.length > 3 && /^(.)\1{2,}$/.test(str)) {
+                console.log(`🧹 Found repetitive pattern in ${key}: ${str}, resetting to "-"`);
+                helper.expertise.levi_report[key] = '-';
+                totalRemoved++;
+              }
+            }
+          });
+        }
+        
+        if (totalRemoved > 0) {
+          console.log(`🧹 TOTAL CLEANUP: Removed ${totalRemoved} duplicate/problematic entries`);
         }
         
         return helper;
@@ -2841,24 +2866,62 @@
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Clear all adjustment data
+      // COMPREHENSIVE CLEANUP: Clear all adjustment data from all possible locations
       if (helper.levi_report) {
         helper.levi_report.adjustments = [];
+        console.log('🧹 Cleared helper.levi_report.adjustments');
       }
       if (helper.levi) {
         helper.levi.custom_adjustments = [];
+        console.log('🧹 Cleared helper.levi.custom_adjustments');
       }
       
-      // Clear DOM
+      // Clear any Hebrew key adjustments that might be causing issues
+      const hebrewKeys = ['עליה לכביש', 'בעלות', 'מס ק״מ', 'מספר בעלים', 'מאפיינים'];
+      if (helper.expertise?.levi_report) {
+        hebrewKeys.forEach(key => {
+          // Keep the description but clear any accumulated percentage/value data
+          if (helper.expertise.levi_report[key]) {
+            console.log(`🧹 Clearing accumulated data for ${key}`);
+            // Reset to base values without duplicates
+            if (typeof helper.expertise.levi_report[key] === 'object') {
+              helper.expertise.levi_report[key] = helper.expertise.levi_report[key].description || helper.expertise.levi_report[key];
+            }
+          }
+        });
+      }
+      
+      // Clear DOM containers
       const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
       if (adjustmentsContainer) {
         adjustmentsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">נתוני התאמות נמחקו - השתמש בכפתור "הוסף התאמה נוספת"</div>';
       }
       
+      // Clear features and registration lists
+      const featuresContainer = document.getElementById('featuresAdjustmentsList');
+      if (featuresContainer) {
+        featuresContainer.innerHTML = '';
+        console.log('🧹 Cleared features adjustments DOM');
+      }
+      
+      const registrationContainer = document.getElementById('registrationAdjustmentsList');
+      if (registrationContainer) {
+        registrationContainer.innerHTML = '';
+        console.log('🧹 Cleared registration adjustments DOM');
+      }
+      
       // Save cleaned helper
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      console.log('✅ RESET: All adjustment data cleared');
+      // Force refresh of floating screens with cleaned data
+      if (typeof window.refreshLeviData === 'function') {
+        setTimeout(() => {
+          window.refreshLeviData();
+        }, 100);
+      }
+      
+      console.log('✅ RESET: All adjustment data cleared comprehensively');
+      console.log('💡 Tip: Refresh the page and re-open floating screens to see clean data');
     }
     
     // Expose reset function globally for testing
@@ -2868,6 +2931,27 @@
     function updateHelperFromAdjustments() {
       try {
         console.log('🔄 updateHelperFromAdjustments called');
+        
+        // CRITICAL FIX: Check if there are any user-created adjustments
+        // If not, don't process anything to prevent circular data creation
+        const userCreatedRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-user-created="true"]');
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        
+        const hasUserInput = userCreatedRows.length > 0 || featuresRows.length > 0 || registrationRows.length > 0;
+        
+        console.log('🔍 DEBUG: User input check:', {
+          userCreatedRows: userCreatedRows.length,
+          featuresRows: featuresRows.length,
+          registrationRows: registrationRows.length,
+          hasUserInput
+        });
+        
+        if (!hasUserInput) {
+          console.log('⚠️ No user input detected - skipping updateHelperFromAdjustments to prevent circular data creation');
+          return;
+        }
+        
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         console.log('📊 Current helper before update:', helper);
         
@@ -2880,15 +2964,15 @@
         
         // Initialize structures
         helper.levi_report = helper.levi_report || {};
-        // CRITICAL FIX: Clear adjustments array to prevent exponential duplication
+        // CRITICAL FIX: Clear adjustments since we already verified user input exists
         helper.levi_report.adjustments = [];
-        helper.expertise = helper.expertise || {};
-        helper.expertise.levi_report = helper.expertise.levi_report || {};
-        
-        // CRITICAL FIX: Also clear any existing custom adjustments to prevent duplication
         if (helper.levi) {
           helper.levi.custom_adjustments = [];
         }
+        console.log('🧹 Cleared existing adjustments - processing user input');
+        
+        helper.expertise = helper.expertise || {};
+        helper.expertise.levi_report = helper.expertise.levi_report || {};
         
         // First, preserve existing vehicle data from the main form
         const basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 
@@ -5141,6 +5225,27 @@
     // INITIALIZE 3-BULK SYSTEM ON PAGE LOAD
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 Initializing 3-bulk system...');
+      
+      // AUTOMATIC CLEANUP: Clean up accumulated duplicate data on page load
+      setTimeout(() => {
+        console.log('🧹 AUTO-CLEANUP: Checking for accumulated duplicate data...');
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Check if cleanup is needed
+        const leviAdjustmentsCount = helper.levi?.custom_adjustments?.length || 0;
+        const reportAdjustmentsCount = helper.levi_report?.adjustments?.length || 0;
+        const totalAdjustments = leviAdjustmentsCount + reportAdjustmentsCount;
+        
+        console.log(`🔍 AUTO-CLEANUP: Found ${totalAdjustments} total adjustments (levi: ${leviAdjustmentsCount}, report: ${reportAdjustmentsCount})`);
+        
+        // If we have more than 10 adjustments, likely accumulated duplicates
+        if (totalAdjustments > 10) {
+          console.log('🚨 AUTO-CLEANUP: Detected likely duplicate accumulation, cleaning up...');
+          const cleanedHelper = cleanupHelperDuplicates(helper);
+          sessionStorage.setItem('helper', JSON.stringify(cleanedHelper));
+          console.log('✅ AUTO-CLEANUP: Automatic cleanup completed');
+        }
+      }, 100);
       
       // Wait for all objects to be initialized before loading data
       setTimeout(() => {
