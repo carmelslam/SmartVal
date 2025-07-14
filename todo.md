@@ -1700,31 +1700,59 @@ Validation pages are constructed according to each report structure, sections, a
 
 
 
-Estimate Validation page : follow ups 
+**Estimate Validation page : follow ups**
 
 Current estimate validation page is widely ok .
 We need key changes to make it useful .
 1. Each section pulls the relevant data from the helper / the builder as follows 
-    1. whatever available data in the builder should be the source of the validation section 
-    2. Damage center subtotals are pulled from the damage center section
-    3. Any other data that doesn’t exist in the builder or the damage center section , is pulled from the  helper directly.
-2. Each section has an automatic system validation that checks the integrity of data and report required sections 
-3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌ 
-4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report 
-5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder .
-6. The user validation section stays as is for now 
-7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to .
-8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , 
-9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons .
+    1. whatever available data in the builder should be the source of the validation section ✅
+    2. Damage center subtotals are pulled from the damage center section ✅
+    3. Any other data that doesn’t exist in the builder or the damage center section , is pulled from the  helper directly.✅
+2. Each section has an automatic system validation that checks the integrity of data and report required sections ✅
+3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌ ✅
+4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report ✅
+5. Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder .❌
+6. The user validation section stays as is for now  ✅
+7. All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to.❌
+8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , ✅
+9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons .✅
 *addons*
-10. the validation page is missing the review option for the filled report builder 
-11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
-12, the damge percentage in the text is not correct 
-13. the text in  the validation needs to be  taken from the text in the builder not from the vault 
-14. the levi validation is not pulling data - it shows 0 
-16. finish the validation page with the same logic 
+10. the validation page is missing the review option for the filled report builder ✅
+11. the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',❌
+12, the damge percentage in the text is not correct ❌
+13. Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+14. the levi validation is not pulling data - it shows 0 - ✅
+16. finish the validation page with the same logic ❌
+
 17. *validation flow :* The optimal flow should be Helper → Builder → Validation, with updates looping back to the Helper. Validation primarily retrieves data from the Builder, which itself pulls initial data from the Helper, enabling edits that override the Helper and establish the Builder as the source of truth. In the Builder, the תוספות והורדות section must specifically draw adjustments from the Helper, clearly stating their descriptions, percentages, and values. Editing a field within either the Builder or Validation updates and overrides the Helper accordingly. While Validation should ideally never source directly from the Helper, minimal fallback cases are permitted if data is missing from the Builder—however, these cases must be minimized to zero, precisely why the Builder has been enhanced to maintain full data integrity throughout the workflow. Complete Data Flow: Initially, the Builder loads data from the Helper. The user then makes edits directly in the Builder, with changes stored temporarily in the DOM. Upon clicking "Save Estimate," these edits are committed, and the Builder selectively overrides only the changed data within the Helper. Finally, Validation retrieves data from the Helper, which now reflects all Builder updates and overrides, serving as the accurate source of truth for validation purposes.
-18. add a depreciation section in the validation page . use the same logic, the depreciation is only in the builder and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי:
+
+18. add a depreciation section in the validation page . use the same logic, the depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
+and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: ❌
+
+19. Validation and estimate errors: 14.7.25
+    * The damages and repairs validation section doesnt   update after changing the builder . 
+    * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper 
+    * the button בדוק  טקסט משפטי doesn’t  work 
+    * The report builder has double html - there are 2 reports in one page . 
+    * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
+    * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
+    * The tables in the builder are too wide attached illustration 
+    * Add the same footing screens of the builder in the validation and the report review page.
+
+20. General issues :
+    * All reports , builders, flowing screens, and main system products are updated and filled from the helper directly
+    * Validation pages are updated from builders to make edit and error mapping easier.
+    * Refresh button on all pages : builder, validation and report : the button needs to be located in 2 places : at the top and at the bottom 
+    * Automatic check button doesn’t  work 
+    * The helper is not updated by the builder just the plate field and the market value fields are updating the helper , this means the report doesn’t  get data, the floating screens, car parts, car details, invoice and Levi are not update .
+
+
+21. System wide :
+    * Automatic logout needs to happen just if the user doesn’t  use the system for 15 min, for now the session is closing while working . 
+    * The data in the system should be saved in the system until the next case is loaded/ created. Always to have the last case details . For now each time the system logs out, the data is gone and the user needs to input from the begening, the required functionality: system saves all data all the time while working : dom, session storage and helper, 
+    * On logout: system sends the last helper to make.com and gives it a name : plate_helper_timestamp
+    * On logout : data are saved in the system till the next case loaded or created . The system doesn’t Handke more than one case at a time.
+
 
 
 
