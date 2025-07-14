@@ -315,6 +315,19 @@
   }
 
   function updateCarDisplay(vehicle, carDetails, client, meta) {
+    console.log('🔄 updateCarDisplay called with:', {
+      vehicle, carDetails, client, meta
+    });
+    
+    // Debug: Check agent data specifically
+    console.log('🔍 DEBUG: Agent data:', {
+      'carDetails.agentName': carDetails.agentName,
+      'carDetails.insurance_agent_phone': carDetails.insurance_agent_phone,
+      'carDetails.agentPhone': carDetails.agentPhone,
+      'client.insurance_agent': client.insurance_agent,
+      'client.insurance_agent_phone': client.insurance_agent_phone
+    });
+    
     const formatValue = (value) => {
       return value && value.toString().trim() ? value : "-";
     };
@@ -341,8 +354,8 @@
     document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
     document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
     document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
-    document.getElementById("agent-name").textContent = formatValue(carDetails.agentName);
-    document.getElementById("agent-phone").textContent = formatValue(carDetails.agentPhone);
+    document.getElementById("agent-name").textContent = formatValue(carDetails.agentName || client.insurance_agent);
+    document.getElementById("agent-phone").textContent = formatValue(carDetails.insurance_agent_phone || carDetails.agentPhone || client.insurance_agent_phone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
