@@ -1489,6 +1489,11 @@
             calculateAdjustmentValue(source, index, value);
           }
           
+          // Debug: Check if helper is updated
+          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log(`🔍 DEBUG: Helper after adjustment update:`, currentHelper.levi?.custom_adjustments);
+          console.log(`🔍 DEBUG: Helper expertise.levi_report:`, currentHelper.expertise?.levi_report);
+          
           // Trigger floating screen refresh when adjustments change
           triggerFloatingScreenRefresh();
         });
@@ -1630,43 +1635,69 @@
         
         // Map basic vehicle info from other helper sections
         if (helper.car_details) {
-          helper.expertise.levi_report.manufacturer = helper.car_details.manufacturer;
-          helper.expertise.levi_report.year = helper.car_details.year;
+          helper.expertise.levi_report.manufacturer = helper.car_details.manufacturer || helper.vehicle?.manufacturer;
+          helper.expertise.levi_report.year = helper.car_details.year || helper.vehicle?.year;
           helper.expertise.levi_report.base_price = helper.car_details.base_price;
           helper.expertise.levi_report.final_price = helper.car_details.market_value;
+          helper.expertise.levi_report.vehicle_type = helper.vehicle?.vehicle_type || '';
+          helper.expertise.levi_report.model_code = helper.vehicle?.model_code || '';
+          helper.expertise.levi_report.category = helper.vehicle?.category || '';
+          helper.expertise.levi_report.full_model = helper.vehicle?.model || helper.car_details.model;
         }
         
         // Process custom adjustments into the structure expected by Levi floating screen
         if (helper.levi?.custom_adjustments) {
-          helper.levi.custom_adjustments.forEach(adjustment => {
+          // Initialize all adjustment fields to ensure they exist
+          helper.expertise.levi_report.registration = '';
+          helper.expertise.levi_report.registration_percent = '';
+          helper.expertise.levi_report.registration_value = '';
+          helper.expertise.levi_report.registration_total = '';
+          helper.expertise.levi_report.ownership = '';
+          helper.expertise.levi_report.ownership_percent = '';
+          helper.expertise.levi_report.ownership_value = '';
+          helper.expertise.levi_report.ownership_total = '';
+          helper.expertise.levi_report.km = '';
+          helper.expertise.levi_report.km_percent = '';
+          helper.expertise.levi_report.km_value = '';
+          helper.expertise.levi_report.km_total = '';
+          helper.expertise.levi_report.owners = '';
+          helper.expertise.levi_report.owners_percent = '';
+          helper.expertise.levi_report.owners_value = '';
+          helper.expertise.levi_report.owners_total = '';
+          helper.expertise.levi_report.features = '';
+          helper.expertise.levi_report.features_percent = '';
+          helper.expertise.levi_report.features_value = '';
+          helper.expertise.levi_report.features_total = '';
+          
+          helper.levi.custom_adjustments.forEach((adjustment, index) => {
             const desc = adjustment.description ? adjustment.description.toLowerCase() : '';
             
-            // Map based on description keywords
-            if (desc.includes('עליה לכביש') || desc.includes('registration')) {
-              helper.expertise.levi_report.registration = adjustment.description;
-              helper.expertise.levi_report.registration_percent = adjustment.percentage;
-              helper.expertise.levi_report.registration_value = adjustment.value;
-              helper.expertise.levi_report.registration_total = adjustment.value;
-            } else if (desc.includes('בעלות') || desc.includes('ownership')) {
-              helper.expertise.levi_report.ownership = adjustment.description;
-              helper.expertise.levi_report.ownership_percent = adjustment.percentage;
-              helper.expertise.levi_report.ownership_value = adjustment.value;
-              helper.expertise.levi_report.ownership_total = adjustment.value;
-            } else if (desc.includes('ק״מ') || desc.includes('km')) {
-              helper.expertise.levi_report.km = adjustment.description;
-              helper.expertise.levi_report.km_percent = adjustment.percentage;
-              helper.expertise.levi_report.km_value = adjustment.value;
-              helper.expertise.levi_report.km_total = adjustment.value;
-            } else if (desc.includes('בעלים') || desc.includes('owners')) {
-              helper.expertise.levi_report.owners = adjustment.description;
-              helper.expertise.levi_report.owners_percent = adjustment.percentage;
-              helper.expertise.levi_report.owners_value = adjustment.value;
-              helper.expertise.levi_report.owners_total = adjustment.value;
-            } else if (desc.includes('מאפיינים') || desc.includes('features')) {
-              helper.expertise.levi_report.features = adjustment.description;
-              helper.expertise.levi_report.features_percent = adjustment.percentage;
-              helper.expertise.levi_report.features_value = adjustment.value;
-              helper.expertise.levi_report.features_total = adjustment.value;
+            // Map based on description keywords OR index position (for comprehensive mapping)
+            if (desc.includes('עליה לכביש') || desc.includes('registration') || index === 0) {
+              helper.expertise.levi_report.registration = adjustment.description || 'עליה לכביש';
+              helper.expertise.levi_report.registration_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.registration_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.registration_total = Math.abs(adjustment.value || 0);
+            } else if (desc.includes('בעלות') || desc.includes('ownership') || index === 1) {
+              helper.expertise.levi_report.ownership = adjustment.description || 'בעלות';
+              helper.expertise.levi_report.ownership_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.ownership_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.ownership_total = Math.abs(adjustment.value || 0);
+            } else if (desc.includes('ק״מ') || desc.includes('km') || index === 2) {
+              helper.expertise.levi_report.km = adjustment.description || 'מס ק״מ';
+              helper.expertise.levi_report.km_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.km_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.km_total = Math.abs(adjustment.value || 0);
+            } else if (desc.includes('בעלים') || desc.includes('owners') || index === 3) {
+              helper.expertise.levi_report.owners = adjustment.description || 'מספר בעלים';
+              helper.expertise.levi_report.owners_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.owners_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.owners_total = Math.abs(adjustment.value || 0);
+            } else if (desc.includes('מאפיינים') || desc.includes('features') || index === 4) {
+              helper.expertise.levi_report.features = adjustment.description || 'מאפיינים';
+              helper.expertise.levi_report.features_percent = Math.abs(adjustment.percentage || 0);
+              helper.expertise.levi_report.features_value = Math.abs(adjustment.value || 0);
+              helper.expertise.levi_report.features_total = Math.abs(adjustment.value || 0);
             }
           });
         }
@@ -1807,6 +1838,57 @@
       // Redirect to new unified system
       addCustomAdjustmentField();
     }
+    
+    // DEBUG FUNCTION - Test the complete data flow chain
+    window.testDataFlow = function() {
+      console.log('🧪 TESTING DATA FLOW CHAIN');
+      
+      // 1. Check if helper exists
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('1️⃣ Helper exists:', !!helper);
+      console.log('   Helper keys:', Object.keys(helper));
+      
+      // 2. Test manual helper update
+      console.log('2️⃣ Testing manual helper update...');
+      helper.test_field = 'test_value_' + Date.now();
+      helper.car_details = helper.car_details || {};
+      helper.car_details.manufacturer = 'TEST_MANUFACTURER';
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('   Helper updated with test data');
+      
+      // 3. Test floating screen refresh
+      console.log('3️⃣ Testing floating screen refresh...');
+      triggerFloatingScreenRefresh();
+      
+      // 4. Check if refresh functions are available
+      console.log('4️⃣ Checking refresh function availability:');
+      console.log('   refreshLeviData:', typeof window.refreshLeviData);
+      console.log('   refreshCarData:', typeof window.refreshCarData);
+      console.log('   refreshInvoiceData:', typeof window.refreshInvoiceData);
+      console.log('   refreshPartsResults:', typeof window.refreshPartsResults);
+      
+      // 5. Test manual adjustment input
+      console.log('5️⃣ Testing manual adjustment input...');
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"]');
+      console.log('   Found adjustment inputs:', adjustmentInputs.length);
+      
+      if (adjustmentInputs.length > 0) {
+        const firstInput = adjustmentInputs[0];
+        console.log('   First input element:', firstInput);
+        console.log('   First input data attributes:', {
+          source: firstInput.dataset.source,
+          index: firstInput.dataset.index,
+          field: firstInput.dataset.field
+        });
+        
+        // Simulate input change
+        firstInput.value = 'TEST_ADJUSTMENT_' + Date.now();
+        firstInput.dispatchEvent(new Event('input', { bubbles: true }));
+        console.log('   Simulated input change');
+      }
+      
+      console.log('🧪 DATA FLOW TEST COMPLETE');
+    };
 
     // ADD FIELD CHANGE LISTENERS
     function addFieldChangeListeners() {
@@ -1871,6 +1953,8 @@
         // Update the appropriate helper section based on field
         if (['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carBasePrice', 'carMarketValue', 'carReportDate'].includes(fieldId)) {
           helper.car_details = helper.car_details || {};
+          helper.vehicle = helper.vehicle || {};
+          
           const mapping = {
             'carPlate': 'plate',
             'carManufacturer': 'manufacturer',
@@ -1880,7 +1964,22 @@
             'carMarketValue': 'market_value',
             'carReportDate': 'report_date'
           };
+          
+          // Update car_details (builder format)
           helper.car_details[mapping[fieldId]] = value;
+          
+          // Also update vehicle structure (floating screen format)
+          if (fieldId === 'carManufacturer') {
+            helper.vehicle.manufacturer = value;
+          } else if (fieldId === 'carModel') {
+            helper.vehicle.model = value;
+          } else if (fieldId === 'carYear') {
+            helper.vehicle.year = value;
+          } else if (fieldId === 'carPlate') {
+            helper.vehicle.plate_number = value;
+            helper.meta = helper.meta || {};
+            helper.meta.plate = value;
+          }
           
           // Also update meta for plate
           if (fieldId === 'carPlate') {
@@ -1889,6 +1988,8 @@
           }
         } else if (['ownerName', 'ownerAddress', 'ownerPhone', 'insuranceCompany', 'insuranceEmail', 'insuranceAgent', 'agentPhone', 'agentEmail'].includes(fieldId)) {
           helper.client = helper.client || {};
+          helper.car_details = helper.car_details || {};
+          
           const mapping = {
             'ownerName': 'name',
             'ownerAddress': 'address',
@@ -1899,7 +2000,24 @@
             'agentPhone': 'agent_phone',
             'agentEmail': 'agent_email'
           };
+          
+          // Update client structure (main format)
           helper.client[mapping[fieldId]] = value;
+          
+          // Also update car_details structure (floating screen format)
+          if (fieldId === 'ownerName') {
+            helper.car_details.owner = value;
+          } else if (fieldId === 'ownerAddress') {
+            helper.car_details.ownerAddress = value;
+          } else if (fieldId === 'ownerPhone') {
+            helper.car_details.ownerPhone = value;
+          } else if (fieldId === 'insuranceCompany') {
+            helper.car_details.insuranceCompany = value;
+          } else if (fieldId === 'insuranceAgent') {
+            helper.car_details.agentName = value;
+          } else if (fieldId === 'agentPhone') {
+            helper.car_details.agentPhone = value;
+          }
         } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].includes(fieldId)) {
           helper.estimate_summary = helper.estimate_summary || {};
           const mapping = {

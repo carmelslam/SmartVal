@@ -358,6 +358,13 @@
   // Expose refresh function to global scope for automatic updates from builder
   window.refreshLeviData = function () {
     console.log('🔄 Levi floating screen: refreshLeviData called');
+    
+    // Debug: Check what data is in sessionStorage
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    console.log('🔍 DEBUG: Helper in Levi floating screen:', helper);
+    console.log('🔍 DEBUG: Helper.levi.custom_adjustments:', helper.levi?.custom_adjustments);
+    console.log('🔍 DEBUG: Helper.expertise.levi_report:', helper.expertise?.levi_report);
+    
     loadLeviData();
   };
 

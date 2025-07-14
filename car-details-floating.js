@@ -234,6 +234,14 @@
   // Expose refresh function to global scope for automatic updates from builder
   window.refreshCarData = function () {
     console.log('🔄 Car Details floating screen: refreshCarData called');
+    
+    // Debug: Check what data is in sessionStorage
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    console.log('🔍 DEBUG: Helper in Car Details floating screen:', helper);
+    console.log('🔍 DEBUG: Helper.car_details:', helper.car_details);
+    console.log('🔍 DEBUG: Helper.vehicle:', helper.vehicle);
+    console.log('🔍 DEBUG: Helper.meta:', helper.meta);
+    
     loadCarData();
   };
 
