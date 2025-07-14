@@ -1865,11 +1865,36 @@ window.calculateFinalPrice = function() {
   runningTotal += featuresValue;
   document.getElementById('manual-features-total').value = Math.round(runningTotal);
 
-  // Final price is the last cumulative total
+  // Final price is the last cumulative total (full market value with all adjustments)
   document.getElementById('manual-final-price').value = Math.round(runningTotal);
+  
+  // Calculate GROSS MARKET VALUE for damage calculations (base + features + registration ONLY)
+  const grossMarketValue = basePrice + featuresValue + registrationValue;
+  
+  // Save both values to helper system for different calculation purposes
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  helper.calculations = helper.calculations || {};
+  
+  // Set vehicle_value_gross (for gross damage percentage calculation)
+  helper.calculations.vehicle_value_gross = Math.round(grossMarketValue);
+  
+  // Set market_value (full market value with all adjustments)  
+  helper.calculations.market_value = Math.round(runningTotal);
+  
+  // Save to sessionStorage
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  
+  console.log(`💰 Calculated market values:
+    - Gross Market Value (base+features+registration): ₪${Math.round(grossMarketValue).toLocaleString()}
+    - Full Market Value (all adjustments): ₪${Math.round(runningTotal).toLocaleString()}`);
   
   // Save manual data to helper system (same as OCR behavior)
   saveManualDataToHelper();
+  
+  // Update the gross market value field in the builder if the function exists
+  if (typeof updateGrossMarketValueField === 'function') {
+    updateGrossMarketValueField();
+  }
   
   // Immediately update floating screen when calculations change
   if (typeof refreshLeviData === 'function') {

@@ -147,8 +147,10 @@ export const MathEngine = {
   },
 
   // Main Calculation Engine
-  calculateAll({ baseDamage, depreciation, fees, marketValue, shavehPercent, vatRate }) {
-    const damage_percent = MathEngine.computeDamagePercentage(baseDamage, marketValue);
+  calculateAll({ baseDamage, depreciation, fees, marketValue, vehicleValueGross, shavehPercent, vatRate }) {
+    // Use vehicleValueGross for damage percentage if available, otherwise fallback to marketValue
+    const grossValue = vehicleValueGross || marketValue;
+    const damage_percent = MathEngine.computeDamagePercentage(baseDamage, grossValue);
     const total_compensation = MathEngine.computeTotalCompensation(baseDamage, depreciation, fees);
     const compensation_with_vat = MathEngine.applyVAT(total_compensation, vatRate);
     const net_value_post_shaveh = MathEngine.computeNetValueAfterShaveh(marketValue, shavehPercent);
@@ -169,7 +171,7 @@ export const MathEngine = {
       compensation_with_vat,
       net_value_post_shaveh,
       market_value: MathEngine.round(marketValue),
-      vehicle_value_gross: MathEngine.round(baseDamage),
+      vehicle_value_gross: MathEngine.round(vehicleValueGross || baseDamage),
       
       // Base damage and totals
       base_damage: MathEngine.round(baseDamage),

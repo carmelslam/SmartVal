@@ -472,18 +472,6 @@
       </div>
     </div>
 
-    <!-- COLLAPSIBLE PRICE DATA -->
-    <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
-      <div id="priceData" style="display:none;">
-        <div class="form-grid">
-          <div><label>סה״כ תביעה:</label><input type="text" id="totalClaim" /></div>
-          <div><label>חישוב הערך לנזק גולמי:</label><input type="text" id="leviPriceList" /></div>
-          <div><label>חישוב האחוז הגולמי:</label><input type="text" id="grossPercent" /></div>
-          <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" /></div>
-        </div>
-      </div>
-    </div>
 
     <!-- COLLAPSIBLE CONTACT DATA -->
     <div class="form-section">
@@ -510,6 +498,19 @@
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
         <button type="button" class="btn add" onclick="addNewDamageCenter()" style="margin-top: 10px;">הוסף מוקד נזק חדש</button>
+      </div>
+    </div>
+
+    <!-- COLLAPSIBLE PRICE DATA -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
+      <div id="priceData" style="display:none;">
+        <div class="form-grid">
+          <div><label>סה״כ תביעה:</label><input type="text" id="totalClaim" style="background: #f8f9fa;" readonly /></div>
+          <div><label>ערך הרכב לנזק גולמי:</label><input type="text" id="leviPriceList" style="background: #f8f9fa;" readonly /></div>
+          <div><label>חישוב האחוז הגולמי:</label><input type="text" id="grossPercent" style="background: #f8f9fa;" readonly /></div>
+          <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" /></div>
+        </div>
       </div>
     </div>
 
@@ -840,8 +841,10 @@
         document.getElementById('totalClaim').value = claimsData.total_claim || 
           (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
         document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
+          (helper.calculations?.vehicle_value_gross ? `₪${helper.calculations.vehicle_value_gross.toLocaleString()}` : '') ||
           (helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '');
         document.getElementById('grossPercent').value = claimsData.gross_percent || 
+          (helper.calculations?.damage_percent ? `${helper.calculations.damage_percent}%` : '') ||
           (calc.damage_percent ? `${calc.damage_percent}%` : '');
         document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
           (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
@@ -850,6 +853,9 @@
           from_claims_data: claimsData, 
           from_calculations: calc 
         });
+        
+        // Update gross market value field with calculated value
+        updateGrossMarketValueField();
         
         // Load contact data (now editable) and sync to car_details
         if (helper.client) {
@@ -1958,11 +1964,18 @@
         }
       });
       
-      // Claims data listeners
-      ['totalClaim', 'leviPriceList', 'grossPercent', 'authorizedClaim'].forEach(id => {
+      // Claims data listeners (leviPriceList and grossPercent are now auto-calculated and readonly)
+      ['totalClaim', 'authorizedClaim'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
-          element.addEventListener('change', updateHelperFromField);
+          element.addEventListener('change', function(event) {
+            updateHelperFromField(event);
+            
+            // Trigger gross percentage recalculation when total claim changes
+            if (id === 'totalClaim') {
+              setTimeout(updateGrossPercentageField, 100);
+            }
+          });
         }
       });
       
@@ -2076,13 +2089,11 @@
           } else if (fieldId === 'agentPhone') {
             helper.car_details.agentPhone = value;
           }
-        } else if (['totalClaim', 'leviPriceList', 'grossPercent', 'authorizedClaim'].includes(fieldId)) {
+        } else if (['totalClaim', 'authorizedClaim'].includes(fieldId)) {
           // Claims data mapping
           helper.claims_data = helper.claims_data || {};
           const mapping = {
             'totalClaim': 'total_claim',
-            'leviPriceList': 'levi_price_list', 
-            'grossPercent': 'gross_percent',
             'authorizedClaim': 'authorized_claim'
           };
           helper.claims_data[mapping[fieldId]] = value;
@@ -2094,10 +2105,6 @@
             // Remove currency formatting and parse number
             const numericValue = parseFloat(value.replace(/[₪,]/g, '')) || 0;
             helper.expertise.calculations.total_damage = numericValue;
-          } else if (fieldId === 'grossPercent') {
-            // Remove % and parse number
-            const percentValue = parseFloat(value.replace('%', '')) || 0;
-            helper.expertise.calculations.damage_percent = percentValue;
           }
           
           console.log(`💰 Updated claims data: ${fieldId} = "${value}"`);
@@ -2355,15 +2362,89 @@
     function calculateDamagePercentage() {
       try {
         const totalClaim = parseFloat(document.getElementById('sumClaim')?.value.replace(/[₪,]/g, '') || '0') || 0;
-        const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
         
-        if (marketValue > 0 && totalClaim > 0) {
-          const percentage = (totalClaim / marketValue) * 100;
+        // Try to get vehicle_value_gross from helper first (gross market value for damage calculation)
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const vehicleValueGross = helper.calculations?.vehicle_value_gross || 0;
+        
+        // Fallback to market value if vehicle_value_gross not available
+        const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
+        const calculationBase = vehicleValueGross > 0 ? vehicleValueGross : marketValue;
+        
+        if (calculationBase > 0 && totalClaim > 0) {
+          const percentage = (totalClaim / calculationBase) * 100;
+          console.log(`📊 Damage percentage calculation: ${totalClaim.toLocaleString()} ÷ ${calculationBase.toLocaleString()} = ${Math.round(percentage)}%`);
           return Math.round(percentage) + '%';
         }
         return '[אחוז נזק]';
       } catch (error) {
         return '[אחוז נזק]';
+      }
+    }
+
+    // UPDATE GROSS MARKET VALUE FIELD
+    function updateGrossMarketValueField() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        
+        if (vehicleValueGross && vehicleValueGross > 0) {
+          const leviPriceListField = document.getElementById('leviPriceList');
+          if (leviPriceListField) {
+            leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
+            
+            // Update helper claims data to maintain consistency
+            helper.claims_data = helper.claims_data || {};
+            helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            console.log(`💰 Updated gross market value field: ₪${vehicleValueGross.toLocaleString()}`);
+          }
+        }
+        
+        // Also update the gross percentage calculation
+        updateGrossPercentageField();
+      } catch (error) {
+        console.error('Error updating gross market value field:', error);
+      }
+    }
+
+    // UPDATE GROSS PERCENTAGE FIELD
+    function updateGrossPercentageField() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        
+        // Get total claim from the field or helper
+        const totalClaimField = document.getElementById('totalClaim');
+        const totalClaimValue = totalClaimField?.value || '';
+        const totalClaim = parseFloat(totalClaimValue.replace(/[₪,]/g, '')) || 0;
+        
+        if (vehicleValueGross && vehicleValueGross > 0 && totalClaim > 0) {
+          // Calculate gross percentage: (Total Claim ÷ Gross Market Value) × 100
+          const grossPercentage = (totalClaim / vehicleValueGross) * 100;
+          const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
+          
+          const grossPercentField = document.getElementById('grossPercent');
+          if (grossPercentField) {
+            grossPercentField.value = formattedPercentage;
+            
+            // Update helper claims data to maintain consistency
+            helper.claims_data = helper.claims_data || {};
+            helper.claims_data.gross_percent = formattedPercentage;
+            
+            // Also update expertise.calculations for system compatibility
+            helper.expertise = helper.expertise || {};
+            helper.expertise.calculations = helper.expertise.calculations || {};
+            helper.expertise.calculations.damage_percent = Math.round(grossPercentage * 100) / 100;
+            
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            console.log(`📊 Updated gross percentage: ${totalClaim.toLocaleString()} ÷ ${vehicleValueGross.toLocaleString()} = ${formattedPercentage}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating gross percentage field:', error);
       }
     }
 
@@ -2824,14 +2905,29 @@
       
       // Update summary fields
       const sumClaimField = document.getElementById('sumClaim');
-      if (sumClaimField && totalClaim > 0) {
-        sumClaimField.value = `₪${totalClaim.toLocaleString()}`;
+      const totalClaimField = document.getElementById('totalClaim');
+      
+      if (totalClaim > 0) {
+        const formattedAmount = `₪${totalClaim.toLocaleString()}`;
+        
+        // Update both summary claim and total claim fields
+        if (sumClaimField) {
+          sumClaimField.value = formattedAmount;
+        }
+        if (totalClaimField) {
+          totalClaimField.value = formattedAmount;
+        }
         
         // Trigger summary recalculation
         setTimeout(() => {
-          const event = new Event('input', { bubbles: true });
-          sumClaimField.dispatchEvent(event);
+          if (sumClaimField) {
+            const event = new Event('input', { bubbles: true });
+            sumClaimField.dispatchEvent(event);
+          }
         }, 100);
+        
+        // Also trigger gross percentage recalculation since total claim changed
+        setTimeout(updateGrossPercentageField, 150);
       }
     }
 
@@ -2866,6 +2962,8 @@
     window.updateCostDisplay = updateCostDisplay;
     window.updateAllCostDisplays = updateAllCostDisplays;
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
+    window.updateGrossMarketValueField = updateGrossMarketValueField;
+    window.updateGrossPercentageField = updateGrossPercentageField;
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {
