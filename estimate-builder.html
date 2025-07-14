@@ -1488,12 +1488,18 @@
             console.log(`🔢 Triggering auto-calculation for percentage: ${value}%`);
             calculateAdjustmentValue(source, index, value);
           }
+          
+          // Trigger floating screen refresh when adjustments change
+          triggerFloatingScreenRefresh();
         });
         
         // Change event for final updates
         element.addEventListener('change', function() {
           // Trigger calculation update on change
           calculateSummaryTotals();
+          
+          // Trigger floating screen refresh when adjustments change
+          triggerFloatingScreenRefresh();
           
           // If adjustment type changed, reload to update display
           if (this.dataset.field === 'adjustmentType') {
@@ -1607,8 +1613,71 @@
         console.log(`Updated custom adjustment ${index}.${field} to:`, adjustment[field]);
         console.log('Full adjustment object:', adjustment);
         
+        // Update the structured Levi data for floating screen compatibility
+        updateLeviDataStructure(helper);
+        
         // Helper is already updated above with sessionStorage.setItem
         console.log('✅ Helper updated with adjustment data');
+      }
+    }
+    
+    // UPDATE LEVI DATA STRUCTURE FOR FLOATING SCREEN COMPATIBILITY
+    function updateLeviDataStructure(helper) {
+      try {
+        // Ensure expertise.levi_report exists
+        if (!helper.expertise) helper.expertise = {};
+        if (!helper.expertise.levi_report) helper.expertise.levi_report = {};
+        
+        // Map basic vehicle info from other helper sections
+        if (helper.car_details) {
+          helper.expertise.levi_report.manufacturer = helper.car_details.manufacturer;
+          helper.expertise.levi_report.year = helper.car_details.year;
+          helper.expertise.levi_report.base_price = helper.car_details.base_price;
+          helper.expertise.levi_report.final_price = helper.car_details.market_value;
+        }
+        
+        // Process custom adjustments into the structure expected by Levi floating screen
+        if (helper.levi?.custom_adjustments) {
+          helper.levi.custom_adjustments.forEach(adjustment => {
+            const desc = adjustment.description ? adjustment.description.toLowerCase() : '';
+            
+            // Map based on description keywords
+            if (desc.includes('עליה לכביש') || desc.includes('registration')) {
+              helper.expertise.levi_report.registration = adjustment.description;
+              helper.expertise.levi_report.registration_percent = adjustment.percentage;
+              helper.expertise.levi_report.registration_value = adjustment.value;
+              helper.expertise.levi_report.registration_total = adjustment.value;
+            } else if (desc.includes('בעלות') || desc.includes('ownership')) {
+              helper.expertise.levi_report.ownership = adjustment.description;
+              helper.expertise.levi_report.ownership_percent = adjustment.percentage;
+              helper.expertise.levi_report.ownership_value = adjustment.value;
+              helper.expertise.levi_report.ownership_total = adjustment.value;
+            } else if (desc.includes('ק״מ') || desc.includes('km')) {
+              helper.expertise.levi_report.km = adjustment.description;
+              helper.expertise.levi_report.km_percent = adjustment.percentage;
+              helper.expertise.levi_report.km_value = adjustment.value;
+              helper.expertise.levi_report.km_total = adjustment.value;
+            } else if (desc.includes('בעלים') || desc.includes('owners')) {
+              helper.expertise.levi_report.owners = adjustment.description;
+              helper.expertise.levi_report.owners_percent = adjustment.percentage;
+              helper.expertise.levi_report.owners_value = adjustment.value;
+              helper.expertise.levi_report.owners_total = adjustment.value;
+            } else if (desc.includes('מאפיינים') || desc.includes('features')) {
+              helper.expertise.levi_report.features = adjustment.description;
+              helper.expertise.levi_report.features_percent = adjustment.percentage;
+              helper.expertise.levi_report.features_value = adjustment.value;
+              helper.expertise.levi_report.features_total = adjustment.value;
+            }
+          });
+        }
+        
+        // Update helper in sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('📊 Updated Levi data structure for floating screen compatibility');
+        
+      } catch (error) {
+        console.error('Error updating Levi data structure:', error);
       }
     }
     
