@@ -2400,7 +2400,7 @@
     function updateGrossMarketValueField() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        let vehicleValueGross = helper.calculations?.vehicle_value_gross;
         
         console.log('🔍 Checking vehicle_value_gross:', {
           helper_calculations: helper.calculations,
@@ -2409,6 +2409,43 @@
           expertise_calculations: helper.expertise?.calculations
         });
         
+        // If vehicle_value_gross is missing, try to calculate it from Levi data
+        if (!vehicleValueGross && helper.levi_report) {
+          const leviReport = helper.levi_report;
+          const basePrice = parseFloat(leviReport.base_price || 0);
+          const featuresValue = parseFloat(leviReport.features_value || 0);
+          const registrationValue = parseFloat(leviReport.registration_value || 0);
+          
+          if (basePrice > 0) {
+            vehicleValueGross = basePrice + featuresValue + registrationValue;
+            console.log(`🔧 Calculated vehicle_value_gross from Levi data: ${basePrice} + ${featuresValue} + ${registrationValue} = ${vehicleValueGross}`);
+            
+            // Update helper with calculated value
+            helper.calculations = helper.calculations || {};
+            helper.calculations.vehicle_value_gross = vehicleValueGross;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        }
+        
+        // If still no value, try other fallbacks
+        if (!vehicleValueGross) {
+          const fallbackSources = [
+            helper.levi_report?.final_price,
+            helper.expertise?.calculations?.market_value,
+            helper.expertise?.calculations?.vehicle_value_gross,
+            helper.levisummary?.final_price
+          ];
+          
+          for (const fallback of fallbackSources) {
+            if (fallback && fallback > 0) {
+              vehicleValueGross = fallback;
+              console.log(`🔧 Using fallback for vehicle_value_gross: ${vehicleValueGross}`);
+              break;
+            }
+          }
+        }
+        
+        // Update the field if we have a value
         if (vehicleValueGross && vehicleValueGross > 0) {
           const leviPriceListField = document.getElementById('leviPriceList');
           if (leviPriceListField) {
@@ -2422,17 +2459,7 @@
             console.log(`💰 Updated gross market value field: ₪${vehicleValueGross.toLocaleString()}`);
           }
         } else {
-          // Try fallback from levi_report.final_price
-          const fallbackPrice = helper.levi_report?.final_price || helper.expertise?.calculations?.market_value;
-          if (fallbackPrice && fallbackPrice > 0) {
-            const leviPriceListField = document.getElementById('leviPriceList');
-            if (leviPriceListField) {
-              leviPriceListField.value = `₪${fallbackPrice.toLocaleString()}`;
-              console.log(`💰 Used fallback price for gross market value: ₪${fallbackPrice.toLocaleString()}`);
-            }
-          } else {
-            console.warn('⚠️ No vehicle_value_gross found in helper.calculations');
-          }
+          console.warn('⚠️ No vehicle_value_gross found after all fallback attempts');
         }
         
         // Also update the gross percentage calculation
@@ -2446,12 +2473,21 @@
     function updateGrossPercentageField() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const vehicleValueGross = helper.calculations?.vehicle_value_gross;
+        let vehicleValueGross = helper.calculations?.vehicle_value_gross;
         
         // Get total claim from the field or helper
         const totalClaimField = document.getElementById('totalClaim');
         const totalClaimValue = totalClaimField?.value || '';
         const totalClaim = parseFloat(totalClaimValue.replace(/[₪,]/g, '')) || 0;
+        
+        // If vehicle_value_gross is missing, try to get it from the leviPriceList field
+        if (!vehicleValueGross) {
+          const leviPriceListField = document.getElementById('leviPriceList');
+          if (leviPriceListField && leviPriceListField.value) {
+            vehicleValueGross = parseFloat(leviPriceListField.value.replace(/[₪,]/g, '')) || 0;
+            console.log(`🔧 Got vehicle_value_gross from leviPriceList field: ${vehicleValueGross}`);
+          }
+        }
         
         console.log('🔍 Gross percentage calculation:', {
           vehicleValueGross: vehicleValueGross,
@@ -2485,8 +2521,15 @@
         } else {
           console.warn('⚠️ Cannot calculate gross percentage - missing values:', {
             vehicleValueGross: vehicleValueGross,
-            totalClaim: totalClaim
+            totalClaim: totalClaim,
+            leviPriceListFieldValue: document.getElementById('leviPriceList')?.value
           });
+          
+          // If we can't calculate, try to trigger the gross market value update first
+          if (!vehicleValueGross) {
+            console.log('🔧 Triggering gross market value update...');
+            updateGrossMarketValueField();
+          }
         }
       } catch (error) {
         console.error('Error updating gross percentage field:', error);
@@ -3027,6 +3070,62 @@
     window.updateGrossMarketValueField = updateGrossMarketValueField;
     window.updateGrossPercentageField = updateGrossPercentageField;
     
+    // FORCE MANUAL CALCULATION - Last resort function
+    function forceManualCalculation() {
+      console.log('🔧 === FORCE MANUAL CALCULATION ===');
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Manual gross market value calculation
+      let vehicleValueGross = 0;
+      const leviPriceListField = document.getElementById('leviPriceList');
+      const grossPercentField = document.getElementById('grossPercent');
+      const totalClaimField = document.getElementById('totalClaim');
+      
+      // Try to get a market value from anywhere
+      if (helper.levi_report?.final_price) {
+        vehicleValueGross = parseFloat(helper.levi_report.final_price);
+        console.log('🔧 Using levi_report.final_price as vehicleValueGross:', vehicleValueGross);
+      } else if (helper.expertise?.calculations?.market_value) {
+        vehicleValueGross = parseFloat(helper.expertise.calculations.market_value);
+        console.log('🔧 Using expertise.calculations.market_value as vehicleValueGross:', vehicleValueGross);
+      } else if (helper.levisummary?.final_price) {
+        vehicleValueGross = parseFloat(helper.levisummary.final_price);
+        console.log('🔧 Using levisummary.final_price as vehicleValueGross:', vehicleValueGross);
+      }
+      
+      // If we have a value, populate the field
+      if (vehicleValueGross > 0) {
+        leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
+        
+        // Update helper
+        helper.calculations = helper.calculations || {};
+        helper.calculations.vehicle_value_gross = vehicleValueGross;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('🔧 Manually set vehicleValueGross:', vehicleValueGross);
+        
+        // Now calculate percentage
+        const totalClaim = parseFloat(totalClaimField?.value?.replace(/[₪,]/g, '') || '0');
+        if (totalClaim > 0) {
+          const grossPercentage = (totalClaim / vehicleValueGross) * 100;
+          const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
+          
+          grossPercentField.value = formattedPercentage;
+          
+          // Update helper
+          helper.claims_data = helper.claims_data || {};
+          helper.claims_data.gross_percent = formattedPercentage;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log('🔧 Manually calculated gross percentage:', formattedPercentage);
+        }
+      } else {
+        console.warn('⚠️ No market value found for manual calculation');
+      }
+      
+      console.log('🔧 === FORCE MANUAL CALCULATION COMPLETE ===');
+    }
+    
     // DEBUG HELPER FUNCTION
     function debugCalculations() {
       console.log('🔍 === DEBUG CALCULATIONS ===');
@@ -3060,11 +3159,18 @@
           grossPercent: grossPercentField?.value || 'NOT FOUND',
           totalClaim: totalClaimField?.value || 'NOT FOUND'
         });
+        
+        // If still empty, try force manual calculation
+        if (!leviPriceListField?.value || !grossPercentField?.value) {
+          console.log('🔧 Fields still empty, trying force manual calculation...');
+          forceManualCalculation();
+        }
       }, 100);
       
       console.log('🔍 === DEBUG CALCULATIONS COMPLETE ===');
     }
     window.debugCalculations = debugCalculations;
+    window.forceManualCalculation = forceManualCalculation;
     
     // 🌍 GLOBAL CALCULATION INTERFACE FOR FINAL REPORT MODULES
     window.EstimateCalculations = {
