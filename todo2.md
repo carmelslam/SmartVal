@@ -1774,7 +1774,7 @@ and it should update the helper, note that the helper doesnt have depreciation d
     * The damages and repairs validation section doesnt update after changing the builder the expertise damge centers and costs validation section are not pulling the data correctly. also in the builder the calculations for this part are not corrrect ✅
     observed problems : ✅
     1. the subtotal תיקונים: in the damage bulk in the builder page, is summing up the parts and the works together , this is wrong, it need to sum up the תיקונים: in the subsection inside the damge center. the subtotatl is the sum of the 3 perametrs +vat
-    2. the work bulk has predefined costs for each work, this is wrong - if its a problem with the system then we need to fix the system in this regard, if its a problem just in this page then it needs to be fixed, the work dropdown selection DOES NOT define the price , the price changes according to the case, this error is causing the wrong calucation of teh work subtotal in the builder page since even of i manual change the predefined cost the yste still uses that predifine cost,
+    2. the work bulk has predefined costs for each work, this is wrong - if its a problem with the system then we need to fix the system in this regard, if its a problem just in this page then it needs to be fixed, the work dropdown selection DOES NOT define the price , the price changes according to the case, this error is causing the wrong calucation of teh work subtotal in the builder page since even of i manual change the predefined cost the yste still uses that predifine cost,✅
     3. if i add a new damage center , then the calculations in the damge center subtotals eiter dont work or dont calculte all.✅
 
     * the button בדוק  טקסט משפטי doesn’t  work

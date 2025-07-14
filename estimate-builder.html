@@ -852,6 +852,7 @@
       
       const selectedType = selectedTypeElement.value;
       const additionalNotes = document.getElementById('additional-notes')?.value || '';
+      const garageDays = document.getElementById('garageDays')?.value || '';
       
       // Get summary data
       const summaryData = {
@@ -888,6 +889,7 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_type = selectedType;
       helper.estimate_notes = additionalNotes;
+      helper.estimate_work_days = garageDays;
       helper.estimate_summary = summaryData;
       helper.estimate_depreciation = depreciationData;
       sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -1006,6 +1008,11 @@
         
         // Load depreciation data
         loadDepreciationData(helper);
+        
+        // Load garage days data
+        if (helper.estimate_work_days || helper.expertise?.depreciation?.work_days) {
+          document.getElementById('garageDays').value = helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '';
+        }
         
         // Load damage centers summary
         loadDamageCentersSummary(helper);
@@ -2231,17 +2238,22 @@
           }
           
           console.log(`💰 Updated claims data: ${fieldId} = "${value}"`);
-        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'].includes(fieldId)) {
-          helper.estimate_summary = helper.estimate_summary || {};
-          const mapping = {
-            'sumMarketValue': 'market_value',
-            'sumClaim': 'total_claim',
-            'sumVAT': 'vat',
-            'sumTotalClaim': 'total_with_vat',
-            'depCompensation': 'dep_compensation',
-            'salvageValue': 'salvage_value'
-          };
-          helper.estimate_summary[mapping[fieldId]] = value;
+        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue', 'garageDays'].includes(fieldId)) {
+          // Handle garage days separately
+          if (fieldId === 'garageDays') {
+            helper.estimate_work_days = value;
+          } else {
+            helper.estimate_summary = helper.estimate_summary || {};
+            const mapping = {
+              'sumMarketValue': 'market_value',
+              'sumClaim': 'total_claim',
+              'sumVAT': 'vat',
+              'sumTotalClaim': 'total_with_vat',
+              'depCompensation': 'dep_compensation',
+              'salvageValue': 'salvage_value'
+            };
+            helper.estimate_summary[mapping[fieldId]] = value;
+          }
         }
         
         // Save updated helper
@@ -4748,7 +4760,7 @@
         }
         
         // Summary data fields
-        const summaryFields = ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue'];
+        const summaryFields = ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue', 'garageDays'];
         
         summaryFields.forEach(fieldId => {
           const field = document.getElementById(fieldId);
