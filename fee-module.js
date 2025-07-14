@@ -19,8 +19,8 @@ function init() {
   $('insuranceCompany').innerText = meta.insurance_company || '';
   $('insuranceEmail').innerText = meta.insurance_email || '';
   $('agentName').innerText = meta.agent_name || '';
-  $('agentPhone').innerText = meta.agent_phone || '';
-  $('agentEmail').innerText = meta.agent_email || '';
+  $('agentPhone').innerText = meta.insurance_agent_phone || '';
+  $('agentEmail').innerText = meta.insurance_agent_email || '';
   $('issueDate').innerText = new Date().toISOString().split('T')[0];
   $('vat_rate').value = vatRate;
 
@@ -70,8 +70,8 @@ function saveFees() {
       insurance_company: $('insuranceCompany').innerText,
       insurance_email: $('insuranceEmail').innerText,
       agent_name: $('agentName').innerText,
-      agent_phone: $('agentPhone').innerText,
-      agent_email: $('agentEmail').innerText
+      insurance_agent_phone: $('agentPhone').innerText,
+      insurance_agent_email: $('agentEmail').innerText
     },
     travel_fee: parseFloat($('travel_fee').value) || 0,
     media_fee: parseFloat($('media_fee').value) || 0,
