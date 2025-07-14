@@ -359,15 +359,17 @@
   window.refreshLeviData = function () {
     console.log('🔄 Levi floating screen: refreshLeviData called');
     
-    // Debug: Check what data is in sessionStorage
+    // Debug: Check what data is in sessionStorage - SIMPLIFIED
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    console.log('🔍 DEBUG: Helper in Levi floating screen:', helper);
-    console.log('🔍 DEBUG: Helper.levi.custom_adjustments:', helper.levi?.custom_adjustments);
-    console.log('🔍 DEBUG: Helper.expertise.levi_report:', helper.expertise?.levi_report);
-    console.log('🔍 DEBUG: Helper.levi_report.adjustments:', helper.levi_report?.adjustments);
+    console.log('🔍 DEBUG: Helper structures in Levi floating screen:', {
+      'vehicle': helper.vehicle,
+      'carDetails': helper.car_details,
+      'leviReport': helper.expertise?.levi_report,
+      'meta': helper.meta
+    });
     
-    // Debug: Check specific Hebrew keys
-    console.log('🔍 DEBUG: Hebrew keys from helper.expertise.levi_report:', {
+    // Debug: Check specific Hebrew adjustment keys
+    console.log('🔍 DEBUG: Hebrew adjustment keys in leviReport:', {
       'עליה לכביש': helper.expertise?.levi_report?.['עליה לכביש'],
       'בעלות': helper.expertise?.levi_report?.['בעלות'],
       'מס ק״מ': helper.expertise?.levi_report?.['מס ק״מ'],
@@ -415,106 +417,44 @@
 
   function loadLeviData() {
     try {
-      let leviData = {};
+      let helper = {};
       
-      // Priority 1: Try to get data from sessionStorage helper
+      // SIMPLIFIED: Match car details pattern - load from sessionStorage helper
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (helper.expertise && helper.expertise.levi_report) {
-          leviData = helper.expertise.levi_report;
-          console.log('Levi data loaded from sessionStorage helper.expertise.levi_report');
-        }
-        // Priority 2: Legacy helper.levi structure
-        else if (helper.levi) {
-          leviData = helper.levi;
-          console.log('Levi data loaded from sessionStorage helper.levi');
+        const storedHelper = sessionStorage.getItem('helper');
+        if (storedHelper) {
+          helper = JSON.parse(storedHelper);
         }
       } catch (parseError) {
         console.warn('Could not parse helper from sessionStorage:', parseError);
       }
       
-      // Priority 3: Try to get data from global helper variable
-      if (Object.keys(leviData).length === 0 && typeof helper !== 'undefined' && helper.expertise && helper.expertise.levi_report) {
-        leviData = helper.expertise.levi_report;
-        console.log('Levi data loaded from global helper.expertise.levi_report');
+      // Fallback to global helper variable
+      if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
+        helper = window.helper;
       }
-      // Priority 4: Legacy global helper.levi structure
-      else if (Object.keys(leviData).length === 0 && typeof helper !== 'undefined' && helper.levi) {
-        leviData = helper.levi;
-        console.log('Levi data loaded from global helper.levi');
-      }
+
+      // Get Levi data using system structure - SIMPLIFIED
+      const vehicle = helper.vehicle || {};
+      const carDetails = helper.car_details || {};
+      const leviReport = helper.expertise?.levi_report || {};
+      const meta = helper.meta || {};
       
-      // Priority 5: Fallback to sessionStorage leviData
-      if (Object.keys(leviData).length === 0) {
-        const storedData = sessionStorage.getItem("leviData");
-        if (storedData && storedData !== "undefined" && storedData !== "null") {
-          try {
-            const parsedData = JSON.parse(storedData);
-            if (parsedData && typeof parsedData === 'object') {
-              leviData = parsedData;
-              console.log('Levi data loaded from sessionStorage leviData');
-            }
-          } catch (parseError) {
-            console.error('Failed to parse stored Levi data:', parseError);
-          }
-        }
-      }
-
-      // Validate and set defaults
-      const defaultData = {
-        base_price: 0,
-        final_price: 0,
-        model_code: "",
-        full_model: "",
-        category: "",
-        adjustments: {
-          registration: { percent: "", value: "", total: "" },
-          km: { percent: "", value: "", total: "" },
-          ownership: { type: "", percent: "", value: "", total: "" },
-          owner_count: { percent: "", value: "", total: "" },
-          features: { percent: "", value: "", total: "" }
-        }
-      };
-
-      // Deep merge with defaults to ensure all properties exist
-      leviData = deepMerge(defaultData, leviData);
-
-      // Add fallback for model_code from helper vehicle/car_details if empty in levi data
-      if (!leviData.model_code || leviData.model_code.trim() === '') {
-        try {
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          leviData.model_code = helper.vehicle?.model_code || helper.car_details?.model_code || '';
-          console.log('🚗 Added model_code fallback from helper:', leviData.model_code);
-        } catch (error) {
-          console.warn('Could not get model_code fallback from helper:', error);
-        }
-      }
-
-      // Update UI with validated data
-      updateLeviDisplay(leviData);
+      // Update UI with Levi data using proper helper structure
+      updateLeviDisplay(vehicle, carDetails, leviReport, meta);
 
     } catch (error) {
       console.error("Error loading Levi data:", error);
-      // Show user-friendly error and load defaults
-      updateLeviDisplay({});
-      updateStatus('שגיאה בטעינת נתוני לוי יצחק');
+      updateLeviDisplay({}, {}, {}, {});
     }
   }
 
-  function deepMerge(target, source) {
-    const result = { ...target };
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = deepMerge(target[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    return result;
-  }
+  // Removed deepMerge function - no longer needed with simplified data loading
 
-  function updateLeviDisplay(data) {
-    console.log('🔄 updateLeviDisplay called with data:', data);
+  function updateLeviDisplay(vehicle, carDetails, leviReport, meta) {
+    console.log('🔄 updateLeviDisplay called with:', {
+      vehicle, carDetails, leviReport, meta
+    });
     
     const formatPrice = (value) => {
       const num = parseFloat(value) || 0;
@@ -529,45 +469,45 @@
       return value && value.toString().trim() ? `${value}%` : "0%";
     };
 
-    // Basic vehicle information
-    document.getElementById("levi-vehicle-type").textContent = formatValue(data['סוג רכב'] || data.vehicle_type);
-    document.getElementById("levi-manufacturer").textContent = formatValue(data['יצרן'] || data.manufacturer);
-    document.getElementById("levi-model-code").textContent = formatValue(data['קוד דגם'] || data.model_code);
-    document.getElementById("levi-category").textContent = formatValue(data['קטגוריה'] || data.category);
-    document.getElementById("levi-year").textContent = formatValue(data['שנת יצור'] || data.year);
-    document.getElementById("levi-full-model").textContent = formatValue(data['שם דגם מלא'] || data.full_model);
-    document.getElementById("levi-base-price").textContent = formatPrice(data['מחיר בסיס'] || data.base_price);
-    document.getElementById("levi-final-price").textContent = formatPrice(data['מחיר סופי לרכב'] || data.final_price);
+    // Basic vehicle information - FIXED: Use proper helper structure
+    document.getElementById("levi-vehicle-type").textContent = formatValue(vehicle.vehicle_type || 'רכב פרטי');
+    document.getElementById("levi-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
+    document.getElementById("levi-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
+    document.getElementById("levi-category").textContent = formatValue(leviReport.category || 'רכב פרטי');
+    document.getElementById("levi-year").textContent = formatValue(vehicle.year || carDetails.year);
+    document.getElementById("levi-full-model").textContent = formatValue(leviReport.full_model || `${vehicle.manufacturer} ${vehicle.model}`);
+    document.getElementById("levi-base-price").textContent = formatPrice(leviReport.base_price || leviReport['מחיר בסיס']);
+    document.getElementById("levi-final-price").textContent = formatPrice(leviReport.final_price || leviReport['מחיר סופי לרכב']);
 
-    // Registration adjustments
-    document.getElementById("levi-registration").textContent = formatValue(data['עליה לכביש'] || data.registration);
-    document.getElementById("levi-registration-percent").textContent = formatPercent(data['עליה לכביש %'] || data.registration_percent);
-    document.getElementById("levi-registration-value").textContent = formatPrice(data['ערך ש״ח עליה לכביש'] || data.registration_value);
-    document.getElementById("levi-registration-total").textContent = formatPrice(data['שווי מצטבר עליה לכביש'] || data.registration_total);
+    // FIXED: Registration adjustments - correct mapping
+    document.getElementById("levi-registration").textContent = formatValue(leviReport['עליה לכביש'] || "-");
+    document.getElementById("levi-registration-percent").textContent = formatPercent(leviReport['עליה לכביש %'] || 0);
+    document.getElementById("levi-registration-value").textContent = formatPrice(leviReport['ערך ש״ח עליה לכביש'] || 0);
+    document.getElementById("levi-registration-total").textContent = formatPrice(leviReport['שווי מצטבר עליה לכביש'] || 0);
 
-    // Ownership adjustments
-    document.getElementById("levi-ownership").textContent = formatValue(data['בעלות'] || data.ownership);
-    document.getElementById("levi-ownership-percent").textContent = formatPercent(data['בעלות %'] || data.ownership_percent);
-    document.getElementById("levi-ownership-value").textContent = formatPrice(data['ערך ש״ח בעלות'] || data.ownership_value);
-    document.getElementById("levi-ownership-total").textContent = formatPrice(data['שווי מצטבר בעלות'] || data.ownership_total);
+    // FIXED: Ownership adjustments - correct mapping
+    document.getElementById("levi-ownership").textContent = formatValue(leviReport['בעלות'] || "-");
+    document.getElementById("levi-ownership-percent").textContent = formatPercent(leviReport['בעלות %'] || 0);
+    document.getElementById("levi-ownership-value").textContent = formatPrice(leviReport['ערך ש״ח בעלות'] || 0);
+    document.getElementById("levi-ownership-total").textContent = formatPrice(leviReport['שווי מצטבר בעלות'] || 0);
 
-    // KM adjustments
-    document.getElementById("levi-km").textContent = formatValue(data['מס ק״מ'] || data.km);
-    document.getElementById("levi-km-percent").textContent = formatPercent(data['מס ק״מ %'] || data.km_percent);
-    document.getElementById("levi-km-value").textContent = formatPrice(data['ערך ש״ח מס ק״מ'] || data.km_value);
-    document.getElementById("levi-km-total").textContent = formatPrice(data['שווי מצטבר מס ק״מ'] || data.km_total);
+    // FIXED: KM adjustments - correct mapping
+    document.getElementById("levi-km").textContent = formatValue(leviReport['מס ק״מ'] || "-");
+    document.getElementById("levi-km-percent").textContent = formatPercent(leviReport['מס ק״מ %'] || 0);
+    document.getElementById("levi-km-value").textContent = formatPrice(leviReport['ערך ש״ח מס ק״מ'] || 0);
+    document.getElementById("levi-km-total").textContent = formatPrice(leviReport['שווי מצטבר מס ק״מ'] || 0);
 
-    // Owners adjustments
-    document.getElementById("levi-owners").textContent = formatValue(data['מספר בעלים'] || data.owners);
-    document.getElementById("levi-owners-percent").textContent = formatPercent(data['מספר בעלים %'] || data.owners_percent);
-    document.getElementById("levi-owners-value").textContent = formatPrice(data['ערך ש״ח מספר בעלים'] || data.owners_value);
-    document.getElementById("levi-owners-total").textContent = formatPrice(data['שווי מצטבר מספר בעלים'] || data.owners_total);
+    // FIXED: Owners adjustments - correct mapping
+    document.getElementById("levi-owners").textContent = formatValue(leviReport['מספר בעלים'] || "-");
+    document.getElementById("levi-owners-percent").textContent = formatPercent(leviReport['מספר בעלים %'] || 0);
+    document.getElementById("levi-owners-value").textContent = formatPrice(leviReport['ערך ש״ח מספר בעלים'] || 0);
+    document.getElementById("levi-owners-total").textContent = formatPrice(leviReport['שווי מצטבר מספר בעלים'] || 0);
 
-    // Features adjustments
-    document.getElementById("levi-features").textContent = formatValue(data['מאפיינים'] || data.features);
-    document.getElementById("levi-features-percent").textContent = formatPercent(data['מאפיינים %'] || data.features_percent);
-    document.getElementById("levi-features-value").textContent = formatPrice(data['ערך ש״ח מאפיינים'] || data.features_value);
-    document.getElementById("levi-features-total").textContent = formatPrice(data['שווי מצטבר מאפיינים'] || data.features_total);
+    // FIXED: Features adjustments - correct mapping
+    document.getElementById("levi-features").textContent = formatValue(leviReport['מאפיינים'] || "-");
+    document.getElementById("levi-features-percent").textContent = formatPercent(leviReport['מאפיינים %'] || 0);
+    document.getElementById("levi-features-value").textContent = formatPrice(leviReport['ערך ש״ח מאפיינים'] || 0);
+    document.getElementById("levi-features-total").textContent = formatPrice(leviReport['שווי מצטבר מאפיינים'] || 0);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
