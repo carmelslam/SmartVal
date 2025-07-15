@@ -1645,6 +1645,25 @@
               addDepField(item);
             });
           }
+        } else {
+          // If no saved depreciation data, populate from damage centers
+          const damageCenterNames = [];
+          
+          // Extract damage center names from helper data
+          if (helper.expertise?.damage_blocks) {
+            helper.expertise.damage_blocks.forEach(block => {
+              const centerName = block.damage_center_name || block.name || `מוקד נזק`;
+              if (centerName && !damageCenterNames.includes(centerName)) {
+                damageCenterNames.push(centerName);
+              }
+            });
+          }
+          
+          // If we have damage center names, populate depreciation section
+          if (damageCenterNames.length > 0) {
+            console.log('🔄 Populating depreciation from damage centers:', damageCenterNames);
+            updateDepreciationFromDamageCenters(damageCenterNames);
+          }
         }
       } catch (error) {
         console.error('Error loading depreciation data:', error);
@@ -6338,6 +6357,10 @@
           // Load from helper data (original functionality)
           if (window[config.loadFunction]) {
             window[config.loadFunction](helper);
+            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+          } else if (sectionId === 'depreciation') {
+            // Special handling for depreciation section
+            loadDepreciationData(helper);
             showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
           }
         }
