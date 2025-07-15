@@ -1180,6 +1180,75 @@
         }
       });
       
+      // Collect adjustment data (תוספות והורדות)
+      const adjustmentsData = {
+        features: [],
+        registration: [],
+        estimate: [],
+        full_market: []
+      };
+      
+      // Collect feature adjustments (תוספות מאפיינים)
+      const featureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+      featureRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          adjustmentsData.features.push({
+            description: inputs[0].value,
+            type: inputs[1].value,
+            percentage: parseFloat(inputs[2].value) || 0,
+            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
+          });
+        }
+      });
+      
+      // Collect registration adjustments (עליה לכביש)
+      const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+      registrationRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          adjustmentsData.registration.push({
+            description: inputs[0].value,
+            type: inputs[1].value,
+            percentage: parseFloat(inputs[2].value) || 0,
+            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
+          });
+        }
+      });
+      
+      // Collect estimate adjustments (התאמות אומדן)
+      const estimateRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+      estimateRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const select = row.querySelector('select');
+        if (inputs.length >= 3) {
+          adjustmentsData.estimate.push({
+            description: inputs[0].value,
+            type: select?.value || 'plus',
+            percentage: parseFloat(inputs[1].value) || 0,
+            value: parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0
+          });
+        }
+      });
+      
+      // Collect full market adjustments (כל ההתאמות)
+      const fullMarketRows = document.querySelectorAll('#allAdjustments > div');
+      fullMarketRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const select = row.querySelector('select');
+        if (inputs.length >= 3) {
+          adjustmentsData.full_market.push({
+            description: inputs[0].value,
+            type: select?.value || 'plus',
+            percentage: parseFloat(inputs[1].value) || 0,
+            value: parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0
+          });
+        }
+      });
+      
+      // Collect legal text
+      const legalText = document.getElementById('legal-text-content')?.value || '';
+      
       // Save to helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_type = selectedType;
@@ -1187,6 +1256,8 @@
       helper.estimate_work_days = garageDays;
       helper.estimate_summary = summaryData;
       helper.estimate_depreciation = depreciationData;
+      helper.estimate_adjustments = adjustmentsData;
+      helper.estimate_legal_text = legalText;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       alert('אומדן נשמר בהצלחה');
@@ -1884,6 +1955,74 @@
       } catch (error) {
         console.error('Error loading all adjustments:', error);
         document.getElementById('allAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות</div>';
+      }
+      
+      // Load saved adjustments data (תוספות והורדות) from Helper
+      if (helper.estimate_adjustments) {
+        console.log('📋 Loading saved adjustments from Helper:', helper.estimate_adjustments);
+        
+        // Load feature adjustments (תוספות מאפיינים)
+        if (helper.estimate_adjustments.features) {
+          helper.estimate_adjustments.features.forEach(adj => {
+            addFeatureAdjustment();
+            const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+            const lastRow = rows[rows.length - 1];
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adj.description || '';
+                inputs[1].value = adj.type || 'plus';
+                inputs[2].value = adj.percentage || '';
+                inputs[3].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
+              }
+            }
+          });
+        }
+        
+        // Load registration adjustments (עליה לכביש)
+        if (helper.estimate_adjustments.registration) {
+          helper.estimate_adjustments.registration.forEach(adj => {
+            addRegistrationAdjustment();
+            const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
+            const lastRow = rows[rows.length - 1];
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adj.description || '';
+                inputs[1].value = adj.type || 'plus';
+                inputs[2].value = adj.percentage || '';
+                inputs[3].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
+              }
+            }
+          });
+        }
+        
+        // Load estimate adjustments (התאמות אומדן)
+        if (helper.estimate_adjustments.estimate) {
+          helper.estimate_adjustments.estimate.forEach(adj => {
+            addEstimateAdjustment();
+            const rows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+            const lastRow = rows[rows.length - 1];
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input');
+              const select = lastRow.querySelector('select');
+              if (inputs.length >= 3) {
+                inputs[0].value = adj.description || '';
+                if (select) select.value = adj.type || 'plus';
+                inputs[1].value = adj.percentage || '';
+                inputs[2].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
+              }
+            }
+          });
+        }
+      }
+      
+      // Load saved legal text
+      if (helper.estimate_legal_text) {
+        const legalTextElement = document.getElementById('legal-text-content');
+        if (legalTextElement) {
+          legalTextElement.value = helper.estimate_legal_text;
+        }
       }
     }
     
