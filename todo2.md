@@ -1790,29 +1790,33 @@ We need key changes to make it useful .
 
 **STILL NEEDS WORK** ❌
 
-    
+  **builder page**    
     *in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector
     *add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen 
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made 
 
   **VALIDATION PAGE** ❌
 
-    * Add  to the validation the same floating screens of the builder and the report review page. ❌
-  20. add a depreciation section in the validation page . use the same logic, the   
+  * Add  to the validation the same floating screens of the builder and the report review page. ❌
+
+  * add a depreciation section in the validation page . use the same logic, the   
     depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
     and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: add values, auto check , edits ignore and so on like the other oage standard❌
 
-  21.  Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+  * Legal text in the validation page is pulled from the selected text in the builder.  
+    Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
 
-  22.  All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to.❌
+  * All buttons in the current page are valuable and need to stay - you need to check  
+   that all buttons work as expected and are returning the test result/ product they are meant to.❌
 
-  23. valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/הסתר) not from חישוב אחוז הנזק (הצג/הסתר)
+  * valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/
+   הסתר) not from חישוב אחוז הנזק (הצג/הסתר)
 
-  24 .The button בדוק  טקסט משפטי doesn’t  work
+  * The button בדוק  טקסט משפטי doesn’t  work
 
  
 
-    * 
+    *
     **the estimate report builder** ❌
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .

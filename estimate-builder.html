@@ -993,17 +993,7 @@
       <textarea id="additional-notes" placeholder="הוסף הערות, המלצות או מידע נוסף לאומדן..." style="min-height: 80px;"></textarea>
     </div>
 
-    <!-- Navigation Buttons -->
-    <div class="form-section">
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-        <button type="button" class="nav-btn save-btn" onclick="saveEstimate()">שמור אומדן</button>
-        <button type="button" class="nav-btn preview-btn" onclick="previewEstimate()">תצוגה מקדימה</button>
-        <button type="button" class="nav-btn generate-btn" onclick="generateEstimate()">צור דו"ח אומדן</button>
-        <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
-      </div>
-    </div>
-
-    <!-- LEGAL TEXT SECTION - EDITABLE -->
+    <!-- LEGAL TEXT SECTION - EDITABLE (MOVED BEFORE NAVIGATION) -->
     <div class="form-section" id="legal-text">
       <h3>טקסט משפטי לאומדן</h3>
       <div style="margin-bottom: 10px;">
@@ -1013,6 +1003,16 @@
       <textarea id="legal-text-content" style="width: 100%; min-height: 200px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="הטקסט המשפטי יטען כאן עם הנתונים המעודכנים...">הטקסט המשפטי יטען כאן עם הנתונים המעודכנים...</textarea>
       <div style="margin-top: 8px; font-size: 14px; color: #666;">
         💡 הטקסט ניתן לעריכה לצורך התאמה לדוח הספציפי. השינויים לא ישפיעו על הכספת המקורית.
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="form-section">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+        <button type="button" class="nav-btn save-btn" onclick="saveEstimate()">שמור אומדן</button>
+        <button type="button" class="nav-btn preview-btn" onclick="previewEstimate()">תצוגה מקדימה</button>
+        <button type="button" class="nav-btn generate-btn" onclick="generateEstimate()">צור דו"ח אומדן</button>
+        <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
       </div>
     </div>
 
@@ -6566,103 +6566,114 @@
       }, 3000);
     }
     
-    // Function to add Save and Refresh buttons to ALL sections with editable fields
+    // Function to add Save and Refresh buttons to sections with editable fields
     function addSectionButtons() {
+      // Define sections that should have save/refresh buttons
       const sections = [
-        { id: 'estimate-type', selector: 'input[name="estimate-type"]', name: 'סוג אומדן' },
-        { id: 'vehicle-data', selector: '#carPlate', name: 'נתוני הרכב' },
-        { id: 'contact-data', selector: '#ownerName', name: 'פרטי קשר' },
-        { id: 'damage-centers', selector: '#damageCentersContent', name: 'מרכזי נזק' },
-        { id: 'gross-calculation', selector: '#basicPrice', name: 'חישוב אחוז נזק ברוטו' },
-        { id: 'gross-result', selector: '#grossMarketValueResult', name: 'תוצאת חישוב ברוטו' },
-        { id: 'full-market-value', selector: '#fullBasicPrice', name: 'חישוב ערך השוק המלא' },
-        { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך' },
-        { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן' },
-        { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות' },
-        { id: 'legal-text', selector: '#legal-text', name: 'טקסט משפטי' }
+        { id: 'vehicle-data', selector: '#carPlate', name: 'נתוני הרכב', collapsible: false },
+        { id: 'contact-data', selector: '#contactData', name: 'פרטי קשר', collapsible: true },
+        { id: 'damage-centers', selector: '#damageCentersContent', name: 'מרכזי נזק', collapsible: false },
+        { id: 'gross-calculation', selector: '#grossCalc', name: 'חישוב אחוז נזק ברוטו', collapsible: true },
+        { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true },
+        { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true },
+        { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן', collapsible: false },
+        { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות', collapsible: false },
+        { id: 'legal-text', selector: '#legal-text-content', name: 'טקסט משפטי', collapsible: false }
       ];
       
       sections.forEach(section => {
-        const keyElement = document.querySelector(section.selector);
-        if (keyElement) {
-          // Find the parent form section or create section boundary
-          let sectionElement = keyElement.closest('.form-section');
-          if (!sectionElement) {
-            sectionElement = keyElement.parentElement;
-            while (sectionElement && !sectionElement.classList.contains('form-section')) {
-              sectionElement = sectionElement.parentElement;
+        let sectionElement = null;
+        
+        // For collapsible sections, find by ID
+        if (section.collapsible) {
+          sectionElement = document.getElementById(section.selector.replace('#', ''));
+        } else {
+          // For non-collapsible sections, find by selector and get parent form-section
+          const keyElement = document.querySelector(section.selector);
+          if (keyElement) {
+            sectionElement = keyElement.closest('.form-section');
+            if (!sectionElement) {
+              sectionElement = keyElement.parentElement;
+              while (sectionElement && !sectionElement.classList.contains('form-section')) {
+                sectionElement = sectionElement.parentElement;
+              }
             }
+          }
+        }
+        
+        if (sectionElement) {
+          // Check if buttons already exist
+          if (sectionElement.querySelector('.section-save-refresh-buttons')) {
+            return; // Skip if buttons already exist
           }
           
-          if (sectionElement) {
-            // Check if buttons already exist
-            if (sectionElement.querySelector('.section-save-refresh-buttons')) {
-              return; // Skip if buttons already exist
-            }
-            
-            // Create button container with proper styling
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'section-save-refresh-buttons';
-            buttonContainer.style.cssText = `
-              margin-top: 12px;
-              margin-bottom: 8px;
-              display: flex;
-              gap: 8px;
-              justify-content: center;
-              flex-wrap: wrap;
-            `;
-            
-            // Create Save button matching existing style
-            const saveButton = document.createElement('button');
-            saveButton.className = 'btn';
-            saveButton.textContent = 'שמור';
-            saveButton.style.cssText = `
-              background: #28a745;
-              color: white;
-              border: none;
-              padding: 8px 18px;
-              border-radius: 8px;
-              cursor: pointer;
-              font-size: 16px;
-              display: inline-block;
-              width: auto;
-              margin: 0;
-              transition: background-color 0.3s;
-            `;
-            saveButton.onmouseover = function() { this.style.background = '#218838'; };
-            saveButton.onmouseout = function() { this.style.background = '#28a745'; };
-            saveButton.onclick = function() { saveSectionData(section.id); };
-            
-            // Create Refresh button matching existing style
-            const refreshButton = document.createElement('button');
-            refreshButton.className = 'btn';
-            refreshButton.textContent = 'רענן';
-            refreshButton.style.cssText = `
-              background: #17a2b8;
-              color: white;
-              border: none;
-              padding: 8px 18px;
-              border-radius: 8px;
-              cursor: pointer;
-              font-size: 16px;
-              display: inline-block;
-              width: auto;
-              margin: 0;
-              transition: background-color 0.3s;
-            `;
-            refreshButton.onmouseover = function() { this.style.background = '#138496'; };
-            refreshButton.onmouseout = function() { this.style.background = '#17a2b8'; };
-            refreshButton.onclick = function() { refreshSectionData(section.id); };
-            
-            // Add buttons to container
-            buttonContainer.appendChild(saveButton);
-            buttonContainer.appendChild(refreshButton);
-            
-            // Insert at the end of the section
+          // Create button container with proper styling - LEFT ALIGNED
+          const buttonContainer = document.createElement('div');
+          buttonContainer.className = 'section-save-refresh-buttons';
+          buttonContainer.style.cssText = `
+            margin-top: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+          `;
+          
+          // Create Save button matching existing style
+          const saveButton = document.createElement('button');
+          saveButton.className = 'btn';
+          saveButton.textContent = 'שמור';
+          saveButton.style.cssText = `
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-block;
+            width: auto;
+            margin: 0;
+            transition: background-color 0.3s;
+          `;
+          saveButton.onmouseover = function() { this.style.background = '#218838'; };
+          saveButton.onmouseout = function() { this.style.background = '#28a745'; };
+          saveButton.onclick = function() { saveSectionData(section.id); };
+          
+          // Create Refresh button matching existing style
+          const refreshButton = document.createElement('button');
+          refreshButton.className = 'btn';
+          refreshButton.textContent = 'רענן';
+          refreshButton.style.cssText = `
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-block;
+            width: auto;
+            margin: 0;
+            transition: background-color 0.3s;
+          `;
+          refreshButton.onmouseover = function() { this.style.background = '#138496'; };
+          refreshButton.onmouseout = function() { this.style.background = '#17a2b8'; };
+          refreshButton.onclick = function() { refreshSectionData(section.id); };
+          
+          // Add buttons to container
+          buttonContainer.appendChild(saveButton);
+          buttonContainer.appendChild(refreshButton);
+          
+          // For collapsible sections, add at the end
+          // For non-collapsible sections, add at the end of the section
+          if (section.collapsible) {
             sectionElement.appendChild(buttonContainer);
-            
-            console.log(`✅ Added Save/Refresh buttons to section: ${section.name}`);
+          } else {
+            sectionElement.appendChild(buttonContainer);
           }
+          
+          console.log(`✅ Added Save/Refresh buttons to section: ${section.name} (collapsible: ${section.collapsible})`);
         }
       });
     }
