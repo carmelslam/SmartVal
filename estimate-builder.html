@@ -3255,12 +3255,25 @@
     // Calculate adjustment value from percentage - ENHANCED
     function calculateAdjustmentValue(percentInput) {
       const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
-      if (!row) return;
+      if (!row) {
+        console.warn('⚠️ Cannot find adjustment row for calculation');
+        return;
+      }
       
       const percent = parseFloat(percentInput.value.replace('%', '')) || 0;
-      let basicPrice = parseFloat(document.getElementById('basicPrice').value.replace(/[₪,]/g, '')) || 0;
+      let basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 0;
       
-      // If basic price is not available from the field, try to get BASE PRICE from helper
+      // Try alternative price sources if basicPrice is empty
+      if (basicPrice === 0) {
+        // Try grossMarketValue first (from calculations)
+        const grossMarketValue = parseFloat(document.getElementById('grossMarketValue')?.value.replace(/[₪,]/g, '')) || 0;
+        if (grossMarketValue > 0) {
+          basicPrice = grossMarketValue;
+          console.log('📊 Using grossMarketValue for calculation:', basicPrice);
+        }
+      }
+      
+      // If still no price, try to get BASE PRICE from helper
       if (basicPrice === 0) {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (helper.levi_report?.base_price) {
@@ -3287,12 +3300,23 @@
       
       const valueInput = row.querySelector('input[placeholder="₪"]');
       
+      if (!valueInput) {
+        console.error('⚠️ Cannot find value input field in adjustment row');
+        return;
+      }
+      
       if (basicPrice > 0 && percent !== 0) {
         const calculatedValue = (basicPrice * percent) / 100;
         valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
         console.log(`💰 Calculated adjustment value: ${percent}% × ₪${basicPrice.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+        
+        // Trigger change event to update other calculations
+        valueInput.dispatchEvent(new Event('change', { bubbles: true }));
       } else {
         console.warn(`⚠️ Cannot calculate adjustment value - basicPrice: ${basicPrice}, percent: ${percent}`);
+        if (basicPrice === 0) {
+          console.warn('⚠️ No car price found. Please set the basic price first.');
+        }
       }
     }
     
@@ -4207,18 +4231,49 @@
     // Calculate estimate adjustment value from percentage
     function calculateEstimateAdjustmentValue(percentageInput) {
       const row = percentageInput.closest('div');
-      const basicPriceInput = document.getElementById('basicPrice');
-      const basicPrice = parseFloat(basicPriceInput.value.replace(/[₪,]/g, '')) || 0;
+      let basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 0;
       const percentage = parseFloat(percentageInput.value) || 0;
+      
+      // Try alternative price sources if basicPrice is empty
+      if (basicPrice === 0) {
+        // Try grossMarketValue first (from calculations)
+        const grossMarketValue = parseFloat(document.getElementById('grossMarketValue')?.value.replace(/[₪,]/g, '')) || 0;
+        if (grossMarketValue > 0) {
+          basicPrice = grossMarketValue;
+          console.log('📊 Using grossMarketValue for estimate adjustment calculation:', basicPrice);
+        }
+      }
+      
+      // If still no price, try to get from helper
+      if (basicPrice === 0) {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.levi_report?.base_price) {
+          basicPrice = parseFloat(helper.levi_report.base_price);
+        } else if (helper.expertise?.levi_report?.base_price) {
+          basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+        } else if (helper.car_details?.base_price) {
+          basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+        }
+        console.log('📊 Using helper price for estimate adjustment calculation:', basicPrice);
+      }
       
       if (percentage && basicPrice) {
         const calculatedValue = basicPrice * percentage / 100;
         const inputs = row.querySelectorAll('input');
         if (inputs.length > 2) {
           const valueInput = inputs[2]; // value field is the third input
-          valueInput.value = `₪${calculatedValue.toLocaleString()}`;
+          valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+          console.log(`💰 Calculated estimate adjustment value: ${percentage}% × ₪${basicPrice.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+          
+          // Trigger change event to update other calculations
+          valueInput.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
           console.error('Cannot find value input field for estimate adjustment calculation');
+        }
+      } else {
+        console.warn(`⚠️ Cannot calculate estimate adjustment value - basicPrice: ${basicPrice}, percentage: ${percentage}`);
+        if (basicPrice === 0) {
+          console.warn('⚠️ No car price found. Please set the basic price first.');
         }
       }
     }
