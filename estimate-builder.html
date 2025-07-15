@@ -6371,15 +6371,41 @@
       }
     }
     
-    // Generic refresh function for any section
-    function refreshSectionData(sectionId) {
+    // Update depreciation calculations for all fields
+    function updateDepreciationCalculation() {
       try {
-        const config = sectionConfig[sectionId];
-        if (!config) {
-          console.error(`Unknown section: ${sectionId}`);
-          return;
+        // Trigger calculation for global depreciation
+        const globalDepInput = document.getElementById('globalDep1');
+        if (globalDepInput && globalDepInput.value) {
+          const event = new Event('input', { bubbles: true });
+          globalDepInput.dispatchEvent(event);
         }
         
+        // Trigger calculation for all bulk depreciation rows
+        const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+        depRows.forEach(row => {
+          const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+          if (percentInput && percentInput.value) {
+            const event = new Event('input', { bubbles: true });
+            percentInput.dispatchEvent(event);
+          }
+        });
+        
+        console.log('📊 Depreciation calculations updated');
+      } catch (error) {
+        console.error('Error updating depreciation calculations:', error);
+      }
+    }
+    
+    // Generic refresh function for any section
+    function refreshSectionData(sectionId) {
+      const config = sectionConfig[sectionId];
+      if (!config) {
+        console.error(`Unknown section: ${sectionId}`);
+        return;
+      }
+      
+      try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Check if we have manual save data
