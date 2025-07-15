@@ -4256,17 +4256,18 @@
         // Add Levi adjustments first (these are the main ones)
         if (helper.levi_report?.adjustments) {
           helper.levi_report.adjustments.forEach(adj => {
-            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}`;
+            const adjustmentType = adj.value >= 0 ? 'plus' : 'minus';
+            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}-${adjustmentType}`;
             if (!seenAdjustments.has(key)) {
               allAdjustments.push({
                 description: adj.description || 'התאמה מלוי יצחק',
                 percentage: adj.percentage || adj.percent || 0,
                 value: adj.value || 0,
-                type: adj.value >= 0 ? 'plus' : 'minus',
+                type: adjustmentType,
                 source: 'levi'
               });
               seenAdjustments.add(key);
-              console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0);
+              console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
             }
           });
         }
@@ -4274,17 +4275,18 @@
         // Add custom adjustments only if they're not duplicates
         if (helper.custom_adjustments?.full_market_adjustments) {
           helper.custom_adjustments.full_market_adjustments.forEach(adj => {
-            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}`;
+            const adjustmentType = adj.type || 'plus';
+            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}-${adjustmentType}`;
             if (!seenAdjustments.has(key)) {
               allAdjustments.push({
                 description: adj.description || 'התאמה מותאמת',
                 percentage: adj.percentage || adj.percent || 0,
                 value: adj.value || 0,
-                type: adj.type || 'plus',
+                type: adjustmentType,
                 source: 'custom'
               });
               seenAdjustments.add(key);
-              console.log('✅ Added custom adjustment:', adj.description, adj.percentage || adj.percent || 0);
+              console.log('✅ Added custom adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
             }
           });
         }
