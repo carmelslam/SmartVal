@@ -793,7 +793,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">חישוב אחוז הנזק (הצג/הסתר)</button>
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
-          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
           <div></div>
         </div>
         
@@ -993,7 +993,7 @@
             <input type="text" id="sumVAT" style="background: white; color: #333;" readonly />
           </div>
           <div>
-            <label style="color: #333:">סה״כ נכלל באומדן</label>
+            <label style="color: #333;">סה״כ נכלל באומדן</label>
             <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" readonly />
           </div>
         </div>
@@ -3143,13 +3143,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3165,13 +3165,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3307,7 +3307,7 @@
         // If not, don't process anything to prevent circular data creation
         const userCreatedRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-user-created="true"]');
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         
         const hasUserInput = userCreatedRows.length > 0 || featuresRows.length > 0 || registrationRows.length > 0;
         
@@ -3398,7 +3398,7 @@
         });
         
         // Collect registration adjustments
-        registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         console.log('🔍 DEBUG: Found registration rows:', registrationRows.length);
         registrationRows.forEach((row, index) => {
           const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]')?.value || '';
@@ -3561,7 +3561,7 @@
         });
         
         // Calculate registration adjustments
-        registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         registrationRows.forEach(row => {
           const type = row.querySelector('select').value;
           const inputs = row.querySelectorAll('input[type="text"]');
