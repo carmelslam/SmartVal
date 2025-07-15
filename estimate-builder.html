@@ -4215,6 +4215,10 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        console.log('🔄 Loading full market value data...');
+        console.log('📊 Helper levi_report adjustments:', helper.levi_report?.adjustments);
+        console.log('📊 Helper custom full_market_adjustments:', helper.custom_adjustments?.full_market_adjustments);
+        
         // Load basic price (same as gross calculation)
         const fullBasicPriceField = document.getElementById('fullBasicPrice');
         const basicPriceField = document.getElementById('basicPrice');
@@ -4224,43 +4228,75 @@
           fullBasicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
         }
         
-        // Clear container to prevent duplication
+        // AGGRESSIVE FIX: Clear container completely and verify it's empty
         const container = document.getElementById('allAdjustmentsList');
-        if (container) container.innerHTML = '';
+        if (container) {
+          container.innerHTML = '';
+          // Force DOM refresh
+          container.offsetHeight;
+          console.log('🧹 Cleared allAdjustmentsList container, children count:', container.children.length);
+        }
         
-        // Load ALL adjustments from helper (this includes everything from Levi + custom)
+        // Create a unified adjustments array to prevent duplicates
+        const allAdjustments = [];
+        const seenAdjustments = new Set();
+        
+        // Add Levi adjustments first (these are the main ones)
         if (helper.levi_report?.adjustments) {
           helper.levi_report.adjustments.forEach(adj => {
-            addFullMarketAdjustment();
-            // Populate the last added row with data
-            const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input');
-              inputs[0].value = adj.description || ''; // description
-              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = adj.percentage || adj.percent || ''; // percentage
-              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`; // value
+            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}`;
+            if (!seenAdjustments.has(key)) {
+              allAdjustments.push({
+                description: adj.description || 'התאמה מלוי יצחק',
+                percentage: adj.percentage || adj.percent || 0,
+                value: adj.value || 0,
+                type: adj.value >= 0 ? 'plus' : 'minus',
+                source: 'levi'
+              });
+              seenAdjustments.add(key);
+              console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0);
             }
           });
         }
         
-        // Load custom adjustments if any
+        // Add custom adjustments only if they're not duplicates
         if (helper.custom_adjustments?.full_market_adjustments) {
           helper.custom_adjustments.full_market_adjustments.forEach(adj => {
-            addFullMarketAdjustment();
-            const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input');
-              inputs[0].value = adj.description || ''; // description
-              lastRow.querySelector('select').value = adj.type || 'plus';
-              inputs[1].value = adj.percentage || adj.percent || ''; // percentage
-              inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
+            const key = `${adj.description}-${adj.value}-${adj.percentage || adj.percent || 0}`;
+            if (!seenAdjustments.has(key)) {
+              allAdjustments.push({
+                description: adj.description || 'התאמה מותאמת',
+                percentage: adj.percentage || adj.percent || 0,
+                value: adj.value || 0,
+                type: adj.type || 'plus',
+                source: 'custom'
+              });
+              seenAdjustments.add(key);
+              console.log('✅ Added custom adjustment:', adj.description, adj.percentage || adj.percent || 0);
             }
           });
         }
+        
+        console.log(`📊 Total unique adjustments to load: ${allAdjustments.length}`);
+        
+        // Now load all unique adjustments
+        allAdjustments.forEach(adj => {
+          addFullMarketAdjustment();
+          const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input');
+            inputs[0].value = adj.description; // description
+            lastRow.querySelector('select').value = adj.type;
+            inputs[1].value = adj.percentage || ''; // percentage
+            inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
+            console.log(`📝 Loaded row: ${adj.description} - ${adj.percentage}% - ₪${adj.value}`);
+          }
+        });
         
         // Calculate initial full market value
         updateFullMarketValueCalculation();
+        
+        console.log('✅ Full market value data loading completed');
         
       } catch (error) {
         console.error('Error loading full market value data:', error);
