@@ -1824,15 +1824,15 @@ We need key changes to make it useful .
   
     
 20. **General issues :**
-    * All reports , builders, flowing screens, and main system products are updated and filled from the helper directly
-    * Validation pages are updated from builders to make edit and error mapping easier.
+    * *All reports , builders, flowing screens, and main system products are updated and filled from the helper directly*
+    * *Validation pages are updated from builders to make edit and error mapping easier.*
     * Refresh button on all pages : builder, validation and report : the button needs to be located in 2 places : at the top and at the bottom 
     * Automatic check button doesn’t  work 
-    * The helper is not updated by the builder just the plate field and the market value fields are updating the helper , this means the report doesn’t  get data, the floating screens, car parts, car details, invoice and Levi are not update .
+    * The helper is not updated by the builder just the plate field and the market value fields are updating the helper , this means the report doesn’t  get data, the floating screens, car parts, car details, invoice and Levi are not update .✅
 
 
 
-21. System wide :
+21. **System wide :**
     * Automatic logout needs to happen just if the user doesn’t  use the system for 15 min, for now the session is closing while working . 
     * The data in the system should be saved in the system until the next case is loaded/ created. Always to have the last case details . For now each time the system logs out, the data is gone and the user needs to input from the begening, the required functionality: system saves all data all the time while working : dom, session storage and helper, 
     * On logout: system sends the last helper to make.com and gives it a name : plate_helper_timestamp
