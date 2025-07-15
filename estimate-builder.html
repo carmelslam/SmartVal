@@ -4246,6 +4246,7 @@
             console.log('⚠️ Container already being loaded, skipping duplicate load');
             return;
           }
+          console.log('🔄 Setting loading flag on container');
           container.setAttribute('data-loading', 'true');
         }
         
@@ -4294,7 +4295,8 @@
         console.log(`📊 Total unique adjustments to load: ${allAdjustments.length}`);
         
         // Now load all unique adjustments
-        allAdjustments.forEach(adj => {
+        allAdjustments.forEach((adj, index) => {
+          console.log(`📝 Loading adjustment ${index + 1}/${allAdjustments.length}:`, adj);
           addFullMarketAdjustment();
           const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
           if (lastRow) {
@@ -4303,7 +4305,9 @@
             lastRow.querySelector('select').value = adj.type;
             inputs[1].value = adj.percentage || ''; // percentage
             inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
-            console.log(`📝 Loaded row: ${adj.description} - ${adj.percentage}% - ₪${adj.value}`);
+            console.log(`✅ Loaded row: ${adj.description} - ${adj.type} - ${adj.percentage}% - ₪${adj.value}`);
+          } else {
+            console.log('❌ Failed to find last row after adding adjustment');
           }
         });
         
@@ -4348,10 +4352,14 @@
     
     // FULL MARKET ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
     function calculateFullMarketAdjustmentValue(percentInput) {
+      console.log('🔄 calculateFullMarketAdjustmentValue called with:', percentInput.value);
       const percent = parseFloat(percentInput.value) || 0;
-      const row = percentInput.closest('div');
+      const row = percentInput.closest('.adjustment-row');
       
-      if (!row) return;
+      if (!row) {
+        console.log('❌ No adjustment row found for percentage input');
+        return;
+      }
       
       // Get market value from same sources as depreciation calculation
       let marketValue = 0;
@@ -4360,6 +4368,7 @@
       const basicPriceField = document.getElementById('fullBasicPrice');
       if (basicPriceField && basicPriceField.value) {
         marketValue = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        console.log('📊 Using fullBasicPrice:', marketValue);
       }
       
       // If no basic price, try summary market value (priority)
@@ -4367,6 +4376,7 @@
         const sumMarketValueField = document.getElementById('sumMarketValue');
         if (sumMarketValueField && sumMarketValueField.value) {
           marketValue = parseFloat(sumMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+          console.log('📊 Using sumMarketValue:', marketValue);
         }
       }
       
@@ -4375,17 +4385,29 @@
         const carMarketValueField = document.getElementById('carMarketValue');
         if (carMarketValueField && carMarketValueField.value) {
           marketValue = parseFloat(carMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+          console.log('📊 Using carMarketValue:', marketValue);
         }
+      }
+      
+      if (marketValue === 0) {
+        console.log('❌ No market value found for calculation');
       }
       
       // Calculate value exactly like working depreciation
       const calculatedValue = Math.round((marketValue * percent) / 100);
+      console.log('💰 Calculation:', { marketValue, percent, calculatedValue });
       
-      // Find value input (fourth input in row)
+      // Find value input (fourth column in the grid)
       const inputs = row.querySelectorAll('input');
-      if (inputs.length > 2) {
-        const valueInput = inputs[2];
+      console.log('📝 Found inputs:', inputs.length);
+      // Row structure: [description, select, percentage, value, button]
+      // Input indices: [0=description, 1=percentage, 2=value]
+      if (inputs.length >= 3) {
+        const valueInput = inputs[2]; // Third input (value field)
         valueInput.value = calculatedValue ? `₪${calculatedValue.toLocaleString()}` : '';
+        console.log('✅ Set value input to:', valueInput.value);
+      } else {
+        console.log('❌ Not enough inputs found, expected >= 3, got:', inputs.length);
       }
       
       // Trigger calculation update
