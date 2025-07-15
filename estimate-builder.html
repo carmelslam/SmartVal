@@ -6156,6 +6156,407 @@
     };
     
     console.log('🎯 3-bulk system functions loaded and ready');
+    
+    // SECTION-SPECIFIC SAVE AND REFRESH FUNCTIONALITY
+    
+    // Section configuration mapping
+    const sectionConfig = {
+      'vehicle-data': {
+        helperKey: 'manual_vehicle_data',
+        fields: ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'],
+        loadFunction: 'loadVehicleData',
+        name: 'נתוני הרכב'
+      },
+      'contact-data': {
+        helperKey: 'manual_contact_data',
+        fields: ['ownerName', 'ownerAddress', 'ownerPhone', 'insuranceCompany', 'insuranceEmail', 'insuranceAgent', 'insuranceAgentPhone', 'insuranceAgentEmail'],
+        loadFunction: 'loadContactData',
+        name: 'פרטי קשר'
+      },
+      'gross-calculation': {
+        helperKey: 'manual_gross_calculation',
+        fields: ['basicPrice'],
+        loadFunction: 'loadGrossCalculationData',
+        name: 'חישוב אחוז נזק ברוטו'
+      },
+      'full-market-value': {
+        helperKey: 'manual_full_market_value',
+        fields: ['fullBasicPrice'],
+        loadFunction: 'loadFullMarketValueData',
+        name: 'חישוב ערך השוק המלא'
+      },
+      'depreciation': {
+        helperKey: 'manual_depreciation',
+        fields: ['globalDep1', 'globalDepValue', 'garageDays'],
+        loadFunction: 'loadDepreciationData',
+        name: 'חישוב ירידת ערך'
+      },
+      'summary': {
+        helperKey: 'manual_summary',
+        fields: ['sumMarketValue', 'sumClaim', 'sumGrossPercent', 'sumAuthorizedClaim', 'sumTotalVat', 'sumSalvageValue', 'sumNetClaim'],
+        loadFunction: 'loadSummaryData',
+        name: 'סיכום האומדן'
+      },
+      'legal-text': {
+        helperKey: 'manual_legal_text',
+        fields: ['legal-text'],
+        loadFunction: 'loadLegalText',
+        name: 'טקסט משפטי'
+      }
+    };
+    
+    // Generic save function for any section
+    function saveSectionData(sectionId) {
+      try {
+        const config = sectionConfig[sectionId];
+        if (!config) {
+          console.error(`Unknown section: ${sectionId}`);
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const sectionData = {};
+        
+        // Collect data from all fields in the section
+        config.fields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            if (field.type === 'radio') {
+              const checked = document.querySelector(`input[name="${field.name}"]:checked`);
+              sectionData[fieldId] = checked ? checked.value : '';
+            } else {
+              sectionData[fieldId] = field.value;
+            }
+          }
+        });
+        
+        // Handle special cases for dynamic content
+        if (sectionId === 'gross-calculation') {
+          sectionData.featuresAdjustments = collectAdjustmentData('#featuresAdjustmentsList');
+          sectionData.registrationAdjustments = collectAdjustmentData('#registrationAdjustmentsList');
+        } else if (sectionId === 'full-market-value') {
+          sectionData.allAdjustments = collectAdjustmentData('#allAdjustmentsList');
+        } else if (sectionId === 'depreciation') {
+          sectionData.depreciationRows = collectDepreciationData('#depreciationBulkTable');
+        }
+        
+        // Save to helper with timestamp
+        helper[config.helperKey] = {
+          ...sectionData,
+          lastSaved: new Date().toISOString(),
+          isManualSave: true
+        };
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Show success message
+        showSectionMessage(sectionId, `✅ ${config.name} נשמר בהצלחה`, 'success');
+        
+        // Trigger refresh for related screens
+        triggerFloatingScreenRefresh();
+        
+        console.log(`✅ Section ${sectionId} saved successfully`);
+        
+      } catch (error) {
+        console.error(`Error saving section ${sectionId}:`, error);
+        showSectionMessage(sectionId, `❌ שגיאה בשמירת ${config.name}`, 'error');
+      }
+    }
+    
+    // Generic refresh function for any section
+    function refreshSectionData(sectionId) {
+      try {
+        const config = sectionConfig[sectionId];
+        if (!config) {
+          console.error(`Unknown section: ${sectionId}`);
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Check if we have manual save data
+        const manualData = helper[config.helperKey];
+        if (manualData && manualData.isManualSave) {
+          // Load from manual save
+          config.fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field && manualData[fieldId] !== undefined) {
+              field.value = manualData[fieldId];
+            }
+          });
+          
+          // Handle special cases for dynamic content
+          if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
+            restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
+          } else if (sectionId === 'full-market-value' && manualData.allAdjustments) {
+            restoreAdjustmentData('#allAdjustmentsList', manualData.allAdjustments);
+          } else if (sectionId === 'depreciation' && manualData.depreciationRows) {
+            restoreDepreciationData('#depreciationBulkTable', manualData.depreciationRows);
+          }
+          
+          showSectionMessage(sectionId, `↻ ${config.name} נטען מהשמירה האחרונה`, 'info');
+        } else {
+          // Load from helper data (original functionality)
+          if (window[config.loadFunction]) {
+            window[config.loadFunction](helper);
+            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+          }
+        }
+        
+        // Trigger calculations if needed
+        if (sectionId === 'gross-calculation') {
+          updateGrossMarketValueCalculation();
+        } else if (sectionId === 'full-market-value') {
+          updateFullMarketValueCalculation();
+        } else if (sectionId === 'depreciation') {
+          updateDepreciationCalculation();
+        }
+        
+        console.log(`↻ Section ${sectionId} refreshed successfully`);
+        
+      } catch (error) {
+        console.error(`Error refreshing section ${sectionId}:`, error);
+        showSectionMessage(sectionId, `❌ שגיאה בטעינת ${config.name}`, 'error');
+      }
+    }
+    
+    // Helper function to collect adjustment data from dynamic tables
+    function collectAdjustmentData(containerSelector) {
+      const container = document.querySelector(containerSelector);
+      if (!container) return [];
+      
+      const adjustments = [];
+      container.querySelectorAll('div[class*="adjustment-row"], div[id*="Adj_"]').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const select = row.querySelector('select');
+        
+        if (inputs.length >= 2) {
+          adjustments.push({
+            description: inputs[0].value,
+            percentage: inputs[1].value,
+            value: inputs[2] ? inputs[2].value : '',
+            type: select ? select.value : 'plus'
+          });
+        }
+      });
+      
+      return adjustments;
+    }
+    
+    // Helper function to collect depreciation data
+    function collectDepreciationData(containerSelector) {
+      const container = document.querySelector(containerSelector);
+      if (!container) return [];
+      
+      const depreciations = [];
+      container.querySelectorAll('div[class*="dep-row"], div[id*="depRow_"]').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        
+        if (inputs.length >= 4) {
+          depreciations.push({
+            damagedPart: inputs[0].value,
+            repairType: inputs[1].value,
+            percentage: inputs[2].value,
+            value: inputs[3].value
+          });
+        }
+      });
+      
+      return depreciations;
+    }
+    
+    // Helper function to restore adjustment data to dynamic tables
+    function restoreAdjustmentData(containerSelector, adjustments) {
+      const container = document.querySelector(containerSelector);
+      if (!container) return;
+      
+      // Clear existing rows
+      container.innerHTML = '';
+      
+      // Add each adjustment
+      adjustments.forEach(adj => {
+        // Use existing add functions
+        if (containerSelector.includes('features')) {
+          addFeatureAdjustment();
+        } else if (containerSelector.includes('registration')) {
+          addRegistrationAdjustment();
+        } else if (containerSelector.includes('allAdjustments')) {
+          addFullMarketAdjustment();
+        }
+        
+        // Fill the last added row
+        const lastRow = container.querySelector('div:last-child');
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input');
+          const select = lastRow.querySelector('select');
+          
+          if (inputs[0]) inputs[0].value = adj.description;
+          if (inputs[1]) inputs[1].value = adj.percentage;
+          if (inputs[2]) inputs[2].value = adj.value;
+          if (select) select.value = adj.type;
+        }
+      });
+    }
+    
+    // Helper function to restore depreciation data
+    function restoreDepreciationData(containerSelector, depreciations) {
+      const container = document.querySelector(containerSelector);
+      if (!container) return;
+      
+      // Clear existing rows
+      container.innerHTML = '';
+      
+      // Add each depreciation
+      depreciations.forEach(dep => {
+        addDepField(dep);
+      });
+    }
+    
+    // Helper function to show section messages
+    function showSectionMessage(sectionId, message, type) {
+      const messageId = `section-message-${sectionId}`;
+      let messageDiv = document.getElementById(messageId);
+      
+      if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = messageId;
+        messageDiv.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 10px 15px;
+          border-radius: 5px;
+          font-size: 14px;
+          font-weight: bold;
+          z-index: 9999;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+        `;
+        document.body.appendChild(messageDiv);
+      }
+      
+      // Set message style based on type
+      const colors = {
+        success: { bg: '#d4edda', text: '#155724', border: '#c3e6cb' },
+        error: { bg: '#f8d7da', text: '#721c24', border: '#f5c6cb' },
+        info: { bg: '#d1ecf1', text: '#0c5460', border: '#bee5eb' }
+      };
+      
+      const color = colors[type] || colors.info;
+      messageDiv.style.backgroundColor = color.bg;
+      messageDiv.style.color = color.text;
+      messageDiv.style.border = `1px solid ${color.border}`;
+      messageDiv.textContent = message;
+      
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        if (messageDiv.parentNode) {
+          messageDiv.parentNode.removeChild(messageDiv);
+        }
+      }, 3000);
+    }
+    
+    // Function to add Save and Refresh buttons to each section
+    function addSectionButtons() {
+      const sections = [
+        { id: 'vehicle-data', keyElement: 'carPlate', afterElement: 'carReportDate' },
+        { id: 'contact-data', keyElement: 'ownerName', afterElement: 'insuranceAgentEmail' },
+        { id: 'gross-calculation', keyElement: 'basicPrice', afterElement: 'grossMarketValueResult' },
+        { id: 'full-market-value', keyElement: 'fullBasicPrice', afterElement: 'fullMarketValueResult' },
+        { id: 'depreciation', keyElement: 'globalDep1', afterElement: 'garageDays' },
+        { id: 'summary', keyElement: 'sumMarketValue', afterElement: 'sumNetClaim' },
+        { id: 'legal-text', keyElement: 'legal-text', afterElement: 'legal-text' }
+      ];
+      
+      sections.forEach(section => {
+        const keyElement = document.getElementById(section.keyElement);
+        if (keyElement) {
+          // Find the parent form section
+          let sectionElement = keyElement.closest('.form-section');
+          if (!sectionElement) {
+            sectionElement = keyElement.parentElement;
+            while (sectionElement && !sectionElement.classList.contains('form-section')) {
+              sectionElement = sectionElement.parentElement;
+            }
+          }
+          
+          const afterElement = document.getElementById(section.afterElement);
+          if (afterElement && sectionElement) {
+            // Create button container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'section-buttons';
+            buttonContainer.style.cssText = `
+              margin-top: 15px;
+              padding: 10px;
+              border-top: 1px solid #ddd;
+              text-align: center;
+              background-color: #f8f9fa;
+              border-radius: 5px;
+            `;
+            
+            // Create Save button
+            const saveButton = document.createElement('button');
+            saveButton.className = 'btn btn-save';
+            saveButton.textContent = 'שמור';
+            saveButton.style.cssText = `
+              background-color: #28a745;
+              color: white;
+              border: none;
+              padding: 8px 16px;
+              margin: 0 5px;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: bold;
+              transition: background-color 0.3s;
+            `;
+            saveButton.onmouseover = function() { this.style.backgroundColor = '#218838'; };
+            saveButton.onmouseout = function() { this.style.backgroundColor = '#28a745'; };
+            saveButton.onclick = function() { saveSectionData(section.id); };
+            
+            // Create Refresh button
+            const refreshButton = document.createElement('button');
+            refreshButton.className = 'btn btn-refresh';
+            refreshButton.textContent = 'רענן';
+            refreshButton.style.cssText = `
+              background-color: #17a2b8;
+              color: white;
+              border: none;
+              padding: 8px 16px;
+              margin: 0 5px;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: bold;
+              transition: background-color 0.3s;
+            `;
+            refreshButton.onmouseover = function() { this.style.backgroundColor = '#138496'; };
+            refreshButton.onmouseout = function() { this.style.backgroundColor = '#17a2b8'; };
+            refreshButton.onclick = function() { refreshSectionData(section.id); };
+            
+            // Add buttons to container
+            buttonContainer.appendChild(saveButton);
+            buttonContainer.appendChild(refreshButton);
+            
+            // Insert after the specified element
+            if (afterElement.parentNode) {
+              afterElement.parentNode.insertBefore(buttonContainer, afterElement.nextSibling);
+            }
+            
+            console.log(`✅ Added Save/Refresh buttons to section: ${section.id}`);
+          }
+        }
+      });
+    }
+    
+    // Initialize section buttons when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(() => {
+        addSectionButtons();
+      }, 1000);
+    });
+    
+    console.log('📄 Section Save/Refresh functionality initialized');
   </script>
   
   <script src="internal-browser.js"></script>
