@@ -4119,7 +4119,7 @@
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="number" step="0.01" placeholder="%" onchange="calculateAdjustmentValue(this); updateFullMarketValueCalculation();" /></div>
+          <div><input type="number" step="0.01" placeholder="%" oninput="calculateFullMarketAdjustmentValue(this);" onchange="updateFullMarketValueCalculation();" /></div>
           <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation()" /></div>
           <div><button class="btn remove" onclick="removeFullMarketAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
@@ -4224,6 +4224,10 @@
           fullBasicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
         }
         
+        // Clear container to prevent duplication
+        const container = document.getElementById('allAdjustmentsList');
+        if (container) container.innerHTML = '';
+        
         // Load ALL adjustments from helper (this includes everything from Levi + custom)
         if (helper.levi_report?.adjustments) {
           helper.levi_report.adjustments.forEach(adj => {
@@ -4234,7 +4238,7 @@
               const inputs = lastRow.querySelectorAll('input');
               inputs[0].value = adj.description || ''; // description
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = adj.percentage || ''; // percentage
+              inputs[1].value = adj.percentage || adj.percent || ''; // percentage
               inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`; // value
             }
           });
@@ -4249,7 +4253,7 @@
               const inputs = lastRow.querySelectorAll('input');
               inputs[0].value = adj.description || ''; // description
               lastRow.querySelector('select').value = adj.type || 'plus';
-              inputs[1].value = adj.percentage || ''; // percentage
+              inputs[1].value = adj.percentage || adj.percent || ''; // percentage
               inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
             }
           });
@@ -4279,6 +4283,28 @@
         } else {
           console.error('Cannot find value input field for full market adjustment calculation');
         }
+      }
+    }
+    
+    // FULL MARKET ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
+    function calculateFullMarketAdjustmentValue(percentInput) {
+      const percent = parseFloat(percentInput.value) || 0;
+      const row = percentInput.closest('div');
+      
+      if (!row) return;
+      
+      // Get helper data like the working depreciation does
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+      
+      // Calculate value exactly like working depreciation
+      const calculatedValue = Math.round((marketValue * percent) / 100);
+      
+      // Find value input (fourth input in row)
+      const inputs = row.querySelectorAll('input');
+      if (inputs.length > 2) {
+        const valueInput = inputs[2];
+        valueInput.value = calculatedValue ? `₪${calculatedValue.toLocaleString()}` : '';
       }
     }
     
