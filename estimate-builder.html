@@ -1627,8 +1627,12 @@
     // LOAD DEPRECIATION DATA
     function loadDepreciationData(helper) {
       try {
+        console.log('🔄 loadDepreciationData called with helper:', helper);
+        console.log('🔄 helper.estimate_depreciation:', helper.estimate_depreciation);
+        
         // Load saved depreciation data if available
         if (helper.estimate_depreciation) {
+          console.log('✅ Found saved depreciation data, loading it');
           // Load global depreciation
           document.getElementById('globalDep1').value = helper.estimate_depreciation.global_percent || '';
           document.getElementById('globalDepValue').value = helper.estimate_depreciation.global_value || '';
@@ -1646,23 +1650,68 @@
             });
           }
         } else {
+          console.log('❌ No saved depreciation data, trying to populate from damage centers');
           // If no saved depreciation data, populate from damage centers
           const damageCenterNames = [];
           
-          // Extract damage center names from helper data
+          // Try multiple possible data structures for damage centers
+          console.log('🔍 Full helper structure:', JSON.stringify(helper, null, 2));
+          console.log('🔍 Checking helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
+          console.log('🔍 Checking helper.damage_blocks:', helper.damage_blocks);
+          console.log('🔍 Checking helper.expertise?.damage_centers:', helper.expertise?.damage_centers);
+          console.log('🔍 Checking helper.damage_centers:', helper.damage_centers);
+          
+          // Extract damage center names from helper data - try multiple structures
           if (helper.expertise?.damage_blocks) {
+            console.log('🔍 Found damage_blocks in expertise');
             helper.expertise.damage_blocks.forEach(block => {
-              const centerName = block.damage_center_name || block.name || `מוקד נזק`;
+              console.log('🔍 Processing damage block:', block);
+              const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
+              console.log('🔍 Center name:', centerName);
+              if (centerName && !damageCenterNames.includes(centerName)) {
+                damageCenterNames.push(centerName);
+              }
+            });
+          } else if (helper.damage_blocks) {
+            console.log('🔍 Found damage_blocks in root');
+            helper.damage_blocks.forEach(block => {
+              console.log('🔍 Processing damage block:', block);
+              const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
+              console.log('🔍 Center name:', centerName);
+              if (centerName && !damageCenterNames.includes(centerName)) {
+                damageCenterNames.push(centerName);
+              }
+            });
+          } else if (helper.expertise?.damage_centers) {
+            console.log('🔍 Found damage_centers in expertise');
+            helper.expertise.damage_centers.forEach(center => {
+              console.log('🔍 Processing damage center:', center);
+              const centerName = center.name || center.center_name || center.damage_center_name || `מוקד נזק`;
+              console.log('🔍 Center name:', centerName);
+              if (centerName && !damageCenterNames.includes(centerName)) {
+                damageCenterNames.push(centerName);
+              }
+            });
+          } else if (helper.damage_centers) {
+            console.log('🔍 Found damage_centers in root');
+            helper.damage_centers.forEach(center => {
+              console.log('🔍 Processing damage center:', center);
+              const centerName = center.name || center.center_name || center.damage_center_name || `מוקד נזק`;
+              console.log('🔍 Center name:', centerName);
               if (centerName && !damageCenterNames.includes(centerName)) {
                 damageCenterNames.push(centerName);
               }
             });
           }
           
+          console.log('🔍 Extracted damage center names:', damageCenterNames);
+          
           // If we have damage center names, populate depreciation section
           if (damageCenterNames.length > 0) {
             console.log('🔄 Populating depreciation from damage centers:', damageCenterNames);
             updateDepreciationFromDamageCenters(damageCenterNames);
+          } else {
+            console.log('❌ No damage center names found to populate depreciation');
           }
         }
       } catch (error) {
@@ -5072,14 +5121,21 @@
     // UPDATE DEPRECIATION SECTION FROM DAMAGE CENTERS
     function updateDepreciationFromDamageCenters(damageCenterNames) {
       try {
+        console.log('🔄 updateDepreciationFromDamageCenters called with:', damageCenterNames);
+        
         const depreciationTable = document.getElementById('depreciationBulkTable');
-        if (!depreciationTable) return;
+        if (!depreciationTable) {
+          console.log('❌ depreciationBulkTable not found');
+          return;
+        }
         
         // Clear existing depreciation rows
         depreciationTable.innerHTML = '';
+        console.log('🧹 Cleared depreciation table');
         
         // Add a row for each damage center
         damageCenterNames.forEach(centerName => {
+          console.log('🔄 Adding depreciation row for:', centerName);
           const row = document.createElement('div');
           row.className = 'dep-row';
           row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
