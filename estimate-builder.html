@@ -4231,10 +4231,22 @@
         // AGGRESSIVE FIX: Clear container completely and verify it's empty
         const container = document.getElementById('allAdjustmentsList');
         if (container) {
+          // Remove all child elements one by one to ensure proper cleanup
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
+          // Double-check with innerHTML as backup
           container.innerHTML = '';
           // Force DOM refresh
           container.offsetHeight;
           console.log('🧹 Cleared allAdjustmentsList container, children count:', container.children.length);
+          
+          // Add a flag to prevent duplicate loading
+          if (container.hasAttribute('data-loading')) {
+            console.log('⚠️ Container already being loaded, skipping duplicate load');
+            return;
+          }
+          container.setAttribute('data-loading', 'true');
         }
         
         // Create a unified adjustments array to prevent duplicates
@@ -4296,10 +4308,20 @@
         // Calculate initial full market value
         updateFullMarketValueCalculation();
         
+        // Remove loading flag
+        if (container) {
+          container.removeAttribute('data-loading');
+        }
+        
         console.log('✅ Full market value data loading completed');
         
       } catch (error) {
         console.error('Error loading full market value data:', error);
+        // Remove loading flag on error too
+        const container = document.getElementById('allAdjustmentsList');
+        if (container) {
+          container.removeAttribute('data-loading');
+        }
       }
     }
     
@@ -4329,9 +4351,30 @@
       
       if (!row) return;
       
-      // Get helper data like the working depreciation does
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+      // Get market value from same sources as depreciation calculation
+      let marketValue = 0;
+      
+      // First try the basic price field from the same section
+      const basicPriceField = document.getElementById('fullBasicPrice');
+      if (basicPriceField && basicPriceField.value) {
+        marketValue = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      // If no basic price, try summary market value (priority)
+      if (marketValue === 0) {
+        const sumMarketValueField = document.getElementById('sumMarketValue');
+        if (sumMarketValueField && sumMarketValueField.value) {
+          marketValue = parseFloat(sumMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+        }
+      }
+      
+      // If still no value, try car market value
+      if (marketValue === 0) {
+        const carMarketValueField = document.getElementById('carMarketValue');
+        if (carMarketValueField && carMarketValueField.value) {
+          marketValue = parseFloat(carMarketValueField.value.replace(/[₪,]/g, '')) || 0;
+        }
+      }
       
       // Calculate value exactly like working depreciation
       const calculatedValue = Math.round((marketValue * percent) / 100);
@@ -4342,6 +4385,9 @@
         const valueInput = inputs[2];
         valueInput.value = calculatedValue ? `₪${calculatedValue.toLocaleString()}` : '';
       }
+      
+      // Trigger calculation update
+      updateFullMarketValueCalculation();
     }
     
     // ESTIMATE ADJUSTMENTS FUNCTIONS

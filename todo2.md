@@ -1811,15 +1811,23 @@ and it should update the helper, note that the helper doesnt have depreciation d
 
 26. fix errors in the *case staus displays*  in the admin hub- these functions were opertaional and working good, somehow they got broken-  errors are in teh console_log.dm **high priority**
 
+**the final report finalization flow**
+*based on the estimate finalization pages structure and logic but designated for the final report structure and componenets*
+
 27. **depreciation module:** match logic and structure to the estimate builder page but keep teh current content **important** add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
  match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page . the current depreciation page has more options and fields than the estimate those need to stay untouched.
  
  28. **final report valdition** match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several components that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
 
+ 28.B final report htm generation for a PDF 
+
+
+ -------------------
+
  29. update the expertise - calling the metadat and creating version 2 - the version is just for documentaion  **low priority** 
 
 
- 30 . floating screens - proper mapping , full match to helper mapping , pulls data from helepr 
+ 30 . *floating screens -:* proper mapping , full match to helper mapping , pulls data from helepr 
 
 
 
