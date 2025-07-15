@@ -3370,52 +3370,23 @@
 
     // SIMPLE ESTIMATE ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
     function calculateEstimateAdjustmentValueSimple(percentInput) {
-      let percent = parseFloat(percentInput.value) || 0;
-      
-      // Find the value field in the same row
+      const percent = parseFloat(percentInput.value) || 0;
       const row = percentInput.closest('div');
+      
       if (!row) return;
       
+      // Get helper data like the working depreciation does
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const marketValue = parseFloat(helper.expertise?.levi_report?.final_price) || 0;
+      
+      // Calculate value exactly like working depreciation
+      const calculatedValue = Math.round((marketValue * percent) / 100);
+      
+      // Find value input (third input in row)
       const inputs = row.querySelectorAll('input');
-      if (inputs.length < 3) return;
-      
-      const valueInput = inputs[2]; // Third input is the value field
-      if (!valueInput) return;
-      
-      // Get market value - try multiple sources like depreciation does
-      let marketValue = 0;
-      
-      // First try summary market value (priority)
-      const sumMarketValueField = document.getElementById('sumMarketValue');
-      if (sumMarketValueField && sumMarketValueField.value) {
-        const sumMarketStr = sumMarketValueField.value.replace(/[₪,]/g, '') || '0';
-        marketValue = parseFloat(sumMarketStr) || 0;
-      }
-      
-      // If no summary value, try car details market value
-      if (marketValue === 0) {
-        const carMarketValueField = document.getElementById('carMarketValue');
-        if (carMarketValueField && carMarketValueField.value) {
-          const carMarketStr = carMarketValueField.value.replace(/[₪,]/g, '') || '0';
-          marketValue = parseFloat(carMarketStr) || 0;
-        }
-      }
-      
-      // If still no value, try basicPrice
-      if (marketValue === 0) {
-        const basicPriceField = document.getElementById('basicPrice');
-        if (basicPriceField && basicPriceField.value) {
-          const basicPriceStr = basicPriceField.value.replace(/[₪,]/g, '') || '0';
-          marketValue = parseFloat(basicPriceStr) || 0;
-        }
-      }
-      
-      // Calculate and display value
-      if (marketValue > 0 && percent > 0) {
-        const calculatedValue = (marketValue * percent) / 100;
-        valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-      } else {
-        valueInput.value = '';
+      if (inputs.length > 2) {
+        const valueInput = inputs[2];
+        valueInput.value = calculatedValue || '';
       }
     }
 
@@ -3813,6 +3784,12 @@
           }
         }
         
+        // Clear containers first to prevent duplication
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+        if (featuresContainer) featuresContainer.innerHTML = '';
+        if (registrationContainer) registrationContainer.innerHTML = '';
+        
         // Load features adjustments from helper (from Levi data)
         if (helper.levi_report?.adjustments) {
           const featuresAdjustments = helper.levi_report.adjustments.filter(adj => {
@@ -3834,7 +3811,7 @@
               const inputs = lastRow.querySelectorAll('input[type="text"]');
               inputs[0].value = adj.description || '';
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = adj.percent ? `${adj.percent}%` : '';
+              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
               inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
               
               // Trigger calculation for the percentage field
@@ -3869,7 +3846,7 @@
               const inputs = lastRow.querySelectorAll('input[type="text"]');
               inputs[0].value = adj.description || '';
               lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = adj.percent ? `${adj.percent}%` : '';
+              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
               inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
               
               // Trigger calculation for the percentage field
