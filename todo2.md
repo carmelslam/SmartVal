@@ -1790,7 +1790,7 @@ We need key changes to make it useful .
 
 **STILL NEEDS WORK** ❌
 
-    * the button בדוק  טקסט משפטי doesn’t  work
+    
     *in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and editd are posssible woth a date selector
     *add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen 
     * add a **save and refresh** button in the end of each section in teh page.
@@ -1805,6 +1805,10 @@ We need key changes to make it useful .
   21.  Legal text in the validation page is pulled from the selected text in the builder. Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
 
   22.  All buttons in the current page are valuable and need to stay - you need to check that all buttons work as expected and are returning the test result/ product they are meant to.❌
+
+  23. valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/הסתר) not from חישוב אחוז הנזק (הצג/הסתר)
+
+  24 .The button בדוק  טקסט משפטי doesn’t  work
 
  
 
