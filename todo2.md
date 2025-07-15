@@ -1791,7 +1791,9 @@ We need key changes to make it useful .
 **STILL NEEDS WORK** ❌
 
     * the button בדוק  טקסט משפטי doesn’t  work
-     *in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and editd are posssible woth a date selector
+    *in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and editd are posssible woth a date selector
+    *add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen 
+    * add a **save and refresh** button in the end of each section in teh page.
 
   **VALIDATION PAGE** ❌
 

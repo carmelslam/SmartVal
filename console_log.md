@@ -430,3 +430,222 @@ This second approach separates HTML structure from JavaScript behavior and is ge
 Summary
 The Uncaught ReferenceError: toggleSection is not defined error means the toggleSection JavaScript function could not be found when the button's onclick event fired. To fix this, ensure the toggleSection function is defined and accessible within the scope where it's being called.
 
+**duplicated field error**
+full console L
+estimate-builder.html:6172 🎯 3-bulk system functions loaded and ready
+internal-browser.js:215 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+(anonymous) @ internal-browser.js:215
+(anonymous) @ internal-browser.js:824
+estimate-builder.html:4734 🚀 Initializing EstimateCalculations object first
+estimate-builder.html:5947 🚀 Initializing 3-bulk system...
+estimate-builder.html:1360 💰 Loaded claims data: {from_claims_data: {…}, from_calculations: {…}}
+estimate-builder.html:4608 🔍 Updating gross market value field: {vehicleValueGross: 20400, helperCalculations: {…}}
+estimate-builder.html:4635 📊 Updated leviPriceList field with gross market value: 20400
+estimate-builder.html:4643 ✅ Updated helper with vehicle_value_gross: 20400
+estimate-builder.html:1888 🔄 loadAllAdjustments called (will be debounced) from: at loadDataFromHelper (https://yaron-cayouf-portal.netlify.app/estimate-builder.html:1421:9)
+estimate-builder.html:5681 📥 Loading helper data: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
+estimate-builder.html:5700 📄 Found BASE PRICE in helper.car_details.base_price: 20000
+estimate-builder.html:5708 ✅ Auto-filled basic price field: 20000
+estimate-builder.html:5807 ✅ Damage centers loaded from helper: 1
+estimate-builder.html:5779 ✅ Helper data loaded successfully
+estimate-builder.html:5817 🔗 Adding field change listeners...
+estimate-builder.html:5938 ✅ Field change listeners added successfully
+estimate-builder.html:5144 📝 Added event listeners to: damage-center-name
+estimate-builder.html:5144 📝 Added event listeners to: part-name
+estimate-builder.html:5144 📝 Added event listeners to: part-desc
+estimate-builder.html:5144 📝 Added event listeners to: part-price
+estimate-builder.html:5144 📝 Added event listeners to: work-type
+estimate-builder.html:5144 📝 Added event listeners to: work-note
+estimate-builder.html:5144 📝 Added event listeners to: work-cost
+estimate-builder.html:5144 📝 Added event listeners to: repair-text
+estimate-builder.html:5144 📝 Added event listeners to: repair-cost
+estimate-builder.html:1908 🔄 Loading all adjustments (immediate)
+estimate-builder.html:1913 DOM element allAdjustmentsRows-estimate not found, skipping adjustments load
+loadAllAdjustmentsImmediate @ estimate-builder.html:1913
+(anonymous) @ estimate-builder.html:1898
+setTimeout
+loadAllAdjustments @ estimate-builder.html:1897
+loadDataFromHelper @ estimate-builder.html:1421
+(anonymous) @ estimate-builder.html:4738
+setTimeout
+(anonymous) @ estimate-builder.html:4737
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 0, totalClaim: 2950}
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
+estimate-builder.html:5204 💼 Work costs updated: ₪400
+estimate-builder.html:5208 🔧 Parts costs updated: ₪1,300
+estimate-builder.html:5212 🔨 Repairs costs updated (ONLY repairs): ₪800
+estimate-builder.html:5216 💰 Total with VAT updated: ₪2,950
+estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
+estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
+estimate-builder.html:3799 🔧 Loading basic price from helper: 20000
+estimate-builder.html:3820 🔧 Loading features adjustments from Levi: [{…}]
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
+estimate-builder.html:3855 🔧 Loading registration adjustments from Levi: [{…}]
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 800 = 20800
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
+estimate-builder.html:5204 💼 Work costs updated: ₪400
+estimate-builder.html:5208 🔧 Parts costs updated: ₪1,300
+estimate-builder.html:5212 🔨 Repairs costs updated (ONLY repairs): ₪800
+estimate-builder.html:5216 💰 Total with VAT updated: ₪2,950
+estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4745 🚀 Initializing adjustment system on page load
+estimate-builder.html:2216 🔗 Adding event listeners to 0 adjustment inputs
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:3799 🔧 Loading basic price from helper: 20000
+estimate-builder.html:3820 🔧 Loading features adjustments from Levi: [{…}]
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
+estimate-builder.html:3855 🔧 Loading registration adjustments from Levi: [{…}]
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 800 = 20800
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
+estimate-builder.html:5961 ✅ Bulk 1 & 2 initialized
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
+estimate-builder.html:4218 🔄 Loading full market value data...
+estimate-builder.html:4219 📊 Helper levi_report adjustments: (2) [{…}, {…}]
+estimate-builder.html:4220 📊 Helper custom full_market_adjustments: (3) [{…}, {…}, {…}]
+estimate-builder.html:4242 🧹 Cleared allAdjustmentsList container, children count: 0
+estimate-builder.html:4249 🔄 Setting loading flag on container
+estimate-builder.html:4271 ✅ Added Levi adjustment: sunroof 4 plus
+estimate-builder.html:4271 ✅ Added Levi adjustment: 04/2020 2 minus
+estimate-builder.html:4290 ✅ Added custom adjustment: 04/2020 2 minus
+estimate-builder.html:4295 📊 Total unique adjustments to load: 3
+estimate-builder.html:4299 📝 Loading adjustment 1/3: {description: 'sunroof', percentage: 4, value: 800, type: 'plus', source: 'levi'}
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
+estimate-builder.html:4308 ✅ Loaded row: sunroof - plus - 4% - ₪800
+estimate-builder.html:4299 📝 Loading adjustment 2/3: {description: '04/2020', percentage: 2, value: -400, type: 'minus', source: 'levi'}
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 800 = 20800
+estimate-builder.html:4308 ✅ Loaded row: 04/2020 - minus - 2% - ₪-400
+estimate-builder.html:4299 📝 Loading adjustment 3/3: {description: '04/2020', percentage: 2, value: 400, type: 'minus', source: 'custom'}
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 400 = 20400
+estimate-builder.html:4308 ✅ Loaded row: 04/2020 - minus - 2% - ₪400
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
+estimate-builder.html:4322 ✅ Full market value data loading completed
+estimate-builder.html:5974 ✅ Bulk 3 initialized
+estimate-builder.html:5975 ✅ Complete 3-bulk system initialized
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:4348 Cannot find value input field for full market adjustment calculation
+calculateAdjustmentValue @ estimate-builder.html:4348
+(anonymous) @ estimate-builder.html:3951
+(anonymous) @ estimate-builder.html:3949
+setTimeout
+loadGrossCalculationData @ estimate-builder.html:3947
+(anonymous) @ estimate-builder.html:5960
+setTimeout
+(anonymous) @ estimate-builder.html:5959
+estimate-builder.html:4348 Cannot find value input field for full market adjustment calculation
+calculateAdjustmentValue @ estimate-builder.html:4348
+(anonymous) @ estimate-builder.html:3951
+(anonymous) @ estimate-builder.html:3949
+setTimeout
+loadGrossCalculationData @ estimate-builder.html:3947
+(anonymous) @ estimate-builder.html:5960
+setTimeout
+(anonymous) @ estimate-builder.html:5959
+estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
+estimate-builder.html:4087 💰 Total claim from damage centers: 2950
+estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
+estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
+estimate-builder.html:1060 🔄 toggleSection called with: fullMarketValue
+estimate-builder.html:1066 Section fullMarketValue is now visible
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
+estimate-builder.html:4355 🔄 calculateFullMarketAdjustmentValue called with: 1
+estimate-builder.html:4371 📊 Using fullBasicPrice: 20000
+estimate-builder.html:4398 💰 Calculation: {marketValue: 20000, percent: 1, calculatedValue: 200}
+estimate-builder.html:4402 📝 Found inputs: 3
+estimate-builder.html:4408 ✅ Set value input to: ₪200
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 200 = 20200
+estimate-builder.html:4200 💰 Full Market Value: 20000 + 200 = 20200
+estimate-builder.html:3093 Global depreciation calculation: {percent: 1, marketValue: 20200, calculation: 202}
+estimate-builder.html:2742 📝 Field change detected: garageDays = "5"
+estimate-builder.html:2550 🔄 Triggering floating screen refresh after helper update
+estimate-builder.html:2602 Debug: Available refresh functions: {refreshLeviData: 'function', refreshCarData: 'function', refreshInvoiceData: 'undefined', refreshPartsResults: 'undefined'}
+estimate-builder.html:2611 🔄 Refreshing Levi floating screen
+levi-floating.js:360 🔄 Levi floating screen: refreshLeviData called
+levi-floating.js:364 🔍 DEBUG: Helper structures in Levi floating screen: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
+levi-floating.js:372 🔍 DEBUG: Hebrew adjustment keys in leviReport: {עליה לכביש: '', בעלות: '', מס ק״מ: '', מספר בעלים: '', מאפיינים: '4%'}
+levi-floating.js:455 🔄 updateLeviDisplay called with: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
+estimate-builder.html:2617 🔄 Refreshing Car Details floating screen
+car-details-floating.js:236 🔄 Car Details floating screen: refreshCarData called
+car-details-floating.js:240 🔍 DEBUG: Helper in Car Details floating screen: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
+car-details-floating.js:241 🔍 DEBUG: Helper.car_details: {plate: '5785269', manufacturer: 'Buick', year: '2009', base_price: '20000', model: 'CXL', …}
+car-details-floating.js:242 🔍 DEBUG: Helper.vehicle: {plate: '', manufacturer: 'Buick', model: 'CXL', model_code: '7456', model_type: '', …}
+car-details-floating.js:243 🔍 DEBUG: Helper.meta: {plate: '5785269'}
+car-details-floating.js:318 🔄 updateCarDisplay called with: {vehicle: {…}, carDetails: {…}, client: {…}, meta: {…}}
+car-details-floating.js:323 🔍 DEBUG: Agent data (helper.client is source of truth): {PRIMARY - client.insurance_agent: 'משה כהן', PRIMARY - client.insurance_agent_phone: '0999999', SECONDARY - carDetails.agentName: 'משה כהן', SECONDARY - carDetails.insurance_agent_phone: '0999999'}
+estimate-builder.html:2664 ✅ Helper updated with 3-bulk calculations: {grossMarketValue: 20400, fullMarketValue: 20200, totalClaim: 2950, grossPercentage: 14.46}
+estimate-builder.html:2742 📝 Field change detected: garageDays = "5"
+estimate-builder.html:2550 🔄 Triggering floating screen refresh after helper update
+estimate-builder.html:2602 Debug: Available refresh functions: {refreshLeviData: 'function', refreshCarData: 'function', refreshInvoiceData: 'undefined', refreshPartsResults: 'undefined'}
+estimate-builder.html:2611 🔄 Refreshing Levi floating screen
+levi-floating.js:360 🔄 Levi floating screen: refreshLeviData called
+levi-floating.js:364 🔍 DEBUG: Helper structures in Levi floating screen: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
+levi-floating.js:372 🔍 DEBUG: Hebrew adjustment keys in leviReport: {עליה לכביש: '', בעלות: '', מס ק״מ: '', מספר בעלים: '', מאפיינים: '4%'}
+levi-floating.js:455 🔄 updateLeviDisplay called with: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
+estimate-builder.html:2617 🔄 Refreshing Car Details floating screen
+car-details-floating.js:236 🔄 Car Details floating screen: refreshCarData called
+car-details-floating.js:240 🔍 DEBUG: Helper in Car Details floating screen: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
+car-details-floating.js:241 🔍 DEBUG: Helper.car_details: {plate: '5785269', manufacturer: 'Buick', year: '2009', base_price: '20000', model: 'CXL', …}
+car-details-floating.js:242 🔍 DEBUG: Helper.vehicle: {plate: '', manufacturer: 'Buick', model: 'CXL', model_code: '7456', model_type: '', …}
+car-details-floating.js:243 🔍 DEBUG: Helper.meta: {plate: '5785269'}
+car-details-floating.js:318 🔄 updateCarDisplay called with: {vehicle: {…}, carDetails: {…}, client: {…}, meta: {…}}
+car-details-floating.js:323 🔍 DEBUG: Agent data (helper.client is source of truth): {PRIMARY - client.insurance_agent: 'משה כהן', PRIMARY - client.insurance_agent_phone: '0999999', SECONDARY - carDetails.agentName: 'משה כהן', SECONDARY - carDetails.insurance_agent_phone: '0999999'}
+estimate-builder.html:2664 ✅ Helper updated with 3-bulk calculations: {grossMarketValue: 20400, fullMarketValue: 20200, totalClaim: 2950, grossPercentage: 14.46}
