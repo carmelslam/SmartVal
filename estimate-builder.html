@@ -1952,11 +1952,11 @@
             console.log(`📄 Processing Levi adjustment ${index}:`, adjustment);
             adjustmentsHTML += createAdjustmentRow({
               description: adjustment.description || 'התאמה מלוי יצחק',
-              percentage: adjustment.percentage || 0,
+              percentage: adjustment.percentage || adjustment.percent || 0,
               value: adjustment.value || 0,
               source: 'levi',
               index: index,
-              readonly: true
+              readonly: false
             });
           });
         } else {
@@ -2216,15 +2216,15 @@
     // ADD EVENT LISTENERS FOR ADJUSTMENT FIELDS
     function addAdjustmentEventListeners() {
       // Remove existing event listeners to prevent duplicates
-      const existingInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"], #allAdjustmentsRows-estimate select[data-source="custom"]');
+      const existingInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source], #allAdjustmentsRows-estimate select[data-source]');
       existingInputs.forEach(element => {
         // Clone element to remove all event listeners
         const newElement = element.cloneNode(true);
         element.parentNode.replaceChild(newElement, element);
       });
       
-      // Add fresh event listeners to all adjustment inputs
-      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"], #allAdjustmentsRows-estimate select[data-source="custom"]');
+      // Add fresh event listeners to all adjustment inputs (both custom and levi)
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source], #allAdjustmentsRows-estimate select[data-source]');
       
       console.log(`🔗 Adding event listeners to ${adjustmentInputs.length} adjustment inputs`);
       
@@ -2246,7 +2246,12 @@
             value = parseFloat(this.value) || 0;
           }
           
-          updateCustomAdjustmentInHelper(source, index, field, value);
+          // Update helper based on source type
+          if (source === 'custom') {
+            updateCustomAdjustmentInHelper(source, index, field, value);
+          } else if (source === 'levi') {
+            updateLeviAdjustmentInHelper(source, index, field, value);
+          }
           
           // Auto-calculate value when percentage changes
           if (field === 'percentage') {
@@ -2293,8 +2298,6 @@
     
     // AUTO-CALCULATE ADJUSTMENT VALUE FROM PERCENTAGE
     function calculateAdjustmentValue(source, index, percentage) {
-      if (source !== 'custom') return;
-      
       // Get base price from car details
       const basePrice = getBasePriceForCalculation();
       
@@ -2309,8 +2312,34 @@
           valueInput.value = calculatedValue;
         }
         
-        // Update helper with calculated value
-        updateCustomAdjustmentInHelper(source, index, 'value', calculatedValue);
+        // Update helper with calculated value (works for both custom and levi)
+        if (source === 'custom') {
+          updateCustomAdjustmentInHelper(source, index, 'value', calculatedValue);
+        } else if (source === 'levi') {
+          updateLeviAdjustmentInHelper(source, index, 'value', calculatedValue);
+        }
+      }
+    }
+    
+    // UPDATE LEVI ADJUSTMENT IN HELPER
+    function updateLeviAdjustmentInHelper(source, index, field, value) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure Levi report structure exists
+        if (!helper.levi_report) helper.levi_report = {};
+        if (!helper.levi_report.adjustments) helper.levi_report.adjustments = [];
+        
+        // Update the specific adjustment
+        if (helper.levi_report.adjustments[index]) {
+          helper.levi_report.adjustments[index][field] = value;
+          
+          // Save back to helper
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Updated Levi adjustment ${index}.${field} = ${value}`);
+        }
+      } catch (error) {
+        console.error('Error updating Levi adjustment in helper:', error);
       }
     }
     
