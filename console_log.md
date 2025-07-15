@@ -236,3 +236,115 @@ Summary
 The error occurs because document.getElementById() returned null. The fix is to check if the element was found before trying to access its properties.
 
 
+**auto calcultion in the תוספות מאפיינים and עליה לכביש and התאמות אומדן (הצג/הסתר):**
+
+error 1:
+estimate-builder.html:3402 Error updating helper from adjustments: TypeError: Assignment to constant variable.
+    at updateHelperFromAdjustments (estimate-builder.html:3235:22)
+    at HTMLSelectElement.onchange (estimate-builder.html:1:38)
+updateHelperFromAdjustments	@	estimate-builder.html:3402
+onchange	@	estimate-builder.html:1
+Explanation
+
+Understanding the problem
+This error message, TypeError: Assignment to constant variable., indicates that you are attempting to reassign a value to a variable that was declared using const. Variables declared with const are read-only and cannot be reassigned after their initial declaration.
+
+Suggested fix
+Identify the variable within the updateHelperFromAdjustments function that is causing this error. If the variable needs to be reassigned, change its declaration from const to let.
+
+js
+
+// Change const to let for variables that need to be reassigned.
+let myVariable = 'initial value';
+myVariable = 'new value'; // This is now allowed
+Use code snippets with caution
+
+Summary
+You cannot reassign a value to a variable declared with const. Use let instead if the variable's value will change.
+
+error 2: estimate-builder.html:4013 Uncaught TypeError: Cannot set properties of undefined (setting 'value')
+    at calculateEstimateAdjustmentValue (estimate-builder.html:4013:26)
+    at HTMLInputElement.onchange (estimate-builder.html:1:1)
+calculateEstimateAdjustmentValue	@	estimate-builder.html:4013
+onchange	@	estimate-builder.html:1
+Explanation
+
+Understanding the problem
+The error "Uncaught TypeError: Cannot set properties of undefined (setting 'value')" indicates that you are trying to access or set the value property of a variable that is currently undefined.
+
+In this specific case, the line valueInput.value = ... is causing the error. This means that the variable valueInput is undefined when this line of code is executed.
+
+Looking at the code, valueInput is assigned the value inputs[2]. This suggests that the array inputs, which is populated by row.querySelectorAll('input'), does not have an element at index 2 (the third element). This typically happens if the row element does not contain at least three <input> elements.
+
+How to verify
+You can verify this by inspecting the inputs variable within the if block using the DevTools debugger. Set a breakpoint on the line valueInput.value = .... When the code execution pauses, hover over or inspect the inputs variable in the Scope panel to see its contents and length. If the length is less than 3, this confirms the issue. You can also inspect the row element to understand its structure and the inputs it contains.
+
+Suggested fix
+Ensure that the row element always contains at least three <input> elements when this function is called and the if condition is met. If the structure of your HTML is dynamic, you might need to add checks to ensure inputs[2] exists before attempting to access its value property.
+
+js
+
+const basicPrice = parseFloat(basicPriceInput.value.replace(/[₪,]/g, '')) || 0;
+      const percentage = parseFloat(percentageInput.value) || 0;
+
+      if (percentage && basicPrice) {
+        const calculatedValue = basicPrice * percentage / 100;
+        const inputs = row.querySelectorAll('input');
+        // Check if inputs[2] exists before accessing its value property
+        if (inputs.length > 2) {
+          const valueInput = inputs[2]; // value field is the third input
+          valueInput.value = `₪${calculatedValue.toLocaleString()}`;
+        } else {
+          console.error("Could not find the third input element in the row.");
+          // Handle the case where the third input is missing,
+          // perhaps by logging an error or updating a different element.
+        }
+      }
+
+Use code snippets with caution
+
+Summary
+The error "Cannot set properties of undefined (setting 'value')" occurred because you attempted to set the value property on an undefined variable valueInput. This was caused by row.querySelectorAll('input') returning an array with fewer than three elements, meaning inputs[2] was undefined. The suggested fix adds a check to ensure the third input element exists before trying to access its value property.
+
+error 3:
+
+estimate-builder.html:3402 Error updating helper from adjustments: TypeError: Assignment to constant variable.
+    at updateHelperFromAdjustments (estimate-builder.html:3235:22)
+    at updateEstimateAdjustments (estimate-builder.html:4043:7)
+    at HTMLInputElement.onchange (estimate-builder.html:1:41)
+updateHelperFromAdjustments	@	estimate-builder.html:3402
+updateEstimateAdjustments	@	estimate-builder.html:4043
+onchange	@	estimate-builder.html:1
+Explanation
+
+Understanding the problem
+This error message, TypeError: Assignment to constant variable., indicates that you are attempting to reassign a value to a variable that was declared using const. Variables declared with const are read-only and cannot be reassigned after their initial declaration.
+
+The console message shows the error occurring within the updateHelperFromAdjustments function, specifically at line 3235. The traceback also shows that this function was called by updateEstimateAdjustments, which was triggered by an onchange event on an HTMLInputElement.
+
+How to verify
+To verify this, examine the code within the updateHelperFromAdjustments function (around line 3235 of estimate-builder.html). Look for any variable declared with const that is later being assigned a new value.
+
+Suggested fix
+Identify the variable declared with const that is causing the issue. If you intend to modify the variable's value, change its declaration from const to let.
+
+For example, if your code looks like this:
+
+js
+
+const myValue = 10;
+// ... some code ...
+myValue = newValue; // This will cause the error
+Use code snippets with caution
+
+Change it to:
+
+js
+
+let myValue = 10;
+// ... some code ...
+myValue = newValue; // This is allowed
+Use code snippets with caution
+
+Summary
+The error "Assignment to constant variable" occurs when you try to reassign a value to a variable declared with const. To fix this, change the variable declaration from const to let if you need to modify its value.
