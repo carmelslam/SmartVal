@@ -348,3 +348,85 @@ Use code snippets with caution
 
 Summary
 The error "Assignment to constant variable" occurs when you try to reassign a value to a variable declared with const. To fix this, change the variable declaration from const to let if you need to modify its value.
+
+new errors : estimate-builder.html:3401 Uncaught SyntaxError: Identifier 'registrationRows' has already been declared (at estimate-builder.html:3401:15)
+xplanation
+
+Understanding the problem
+This error indicates that you are trying to declare a variable named registrationRows using let or const within a scope where registrationRows has already been declared. This is not allowed in JavaScript.
+
+Suggested fix
+Review the code around line 3401 in estimate-builder.html and the surrounding scope (e.g., the current function or the global scope) to identify where registrationRows is being declared multiple times.
+
+If you intended to reassign a value to the existing variable, use registrationRows = ... instead of let registrationRows = ... or const registrationRows = ....
+If you intended to declare a new variable with a similar name but in a different scope, consider using a different variable name or ensuring the variable is declared within a block scope (e.g., inside an if statement or loop) to avoid conflicts.
+Summary
+The error "Identifier 'registrationRows' has already been declared" occurs when you attempt to declare a variable with the same name using let or const in the same scope more than once. To fix this, either reassign the variable's value instead of redeclaring it or use a different variable name if a new variable is intended.
+
+error 2 : 
+estimate-builder.html:793 Uncaught ReferenceError: toggleSection is not defined
+    at HTMLButtonElement.onclick (estimate-builder.html:793:90)
+onclick	@	estimate-builder.html:793
+Explanation
+
+Understanding the problem
+This error indicates that the JavaScript function toggleSection was called, but it could not be found in the current scope. This usually happens because the function is not defined within a <script> tag or linked script file that is accessible to the HTML element that is trying to call it.
+
+Suggested fix
+Define the toggleSection function in a script that is loaded before or within the HTML page. Ensure the function is globally accessible or defined within a scope that the onclick handler can reach.
+
+Here's an example of how you might define the toggleSection function:
+
+html
+
+<script>
+  function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    } else {
+      console.error(`Section with ID '${sectionId}' not found.`);
+    }
+  }
+</script>
+
+<button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">חישוב אחוז הנזק (הצג/הסתר)</button>
+
+Use code snippets with caution
+
+Alternatively, instead of using inline onclick, you can add an event listener using JavaScript:
+
+html
+
+<button class="collapsible-btn" type="button" data-section-id="grossCalc">חישוב אחוז הנזק (הצג/הסתר)</button>
+
+<script>
+  function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    } else {
+      console.error(`Section with ID '${sectionId}' not found.`);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const button = document.querySelector('.collapsible-btn');
+    if (button) {
+      button.addEventListener('click', () => {
+        const sectionId = button.getAttribute('data-section-id');
+        if (sectionId) {
+          toggleSection(sectionId);
+        }
+      });
+    }
+  });
+</script>
+
+Use code snippets with caution
+
+This second approach separates HTML structure from JavaScript behavior and is generally considered a better practice.
+
+Summary
+The Uncaught ReferenceError: toggleSection is not defined error means the toggleSection JavaScript function could not be found when the button's onclick event fired. To fix this, ensure the toggleSection function is defined and accessible within the scope where it's being called.
+

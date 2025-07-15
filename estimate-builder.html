@@ -1136,6 +1136,53 @@
     }
 
     // COLLAPSIBLE SECTION TOGGLE
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        
+        // Save state to sessionStorage
+        const isVisible = section.style.display !== 'none';
+        sessionStorage.setItem(`section-${sectionId}`, isVisible ? 'expanded' : 'collapsed');
+      } else {
+        console.error(`Section with ID '${sectionId}' not found.`);
+      }
+    }
+    
+    // ADD DEPRECIATION FIELD FUNCTION
+    function addDepField(data = {}) {
+      const container = document.getElementById('depreciationBulkTable');
+      if (!container) {
+        console.error('Depreciation bulk table container not found');
+        return;
+      }
+      
+      const rowId = 'depRow_' + Date.now();
+      const newRow = `
+        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:2fr 2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="updateHelperFromField(event);" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="updateHelperFromField(event);" /></div>
+          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="updateHelperFromField(event);" /></div>
+          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="updateHelperFromField(event);" /></div>
+          <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+    }
+    
+    // REMOVE DEPRECIATION FIELD FUNCTION
+    function removeDepField(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+      }
+    }
+
+    // MAKE FUNCTIONS GLOBALLY ACCESSIBLE
+    window.toggleSection = toggleSection;
+    window.addDepField = addDepField;
+    window.removeDepField = removeDepField;
 
     // BUTTON FUNCTIONS - NO DEBUG ALERTS
     window.saveEstimate = function() {
@@ -3143,13 +3190,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Feature adjustment saved');" /></div>
+          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3165,13 +3212,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); sessionStorage.setItem('helper', JSON.stringify(JSON.parse(sessionStorage.getItem('helper') || '{}'))); console.log('💾 Registration adjustment saved');" /></div>
+          <div><input type="text" placeholder="%" onchange="calculateAdjustmentValue(this); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3398,7 +3445,7 @@
         });
         
         // Collect registration adjustments
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        // registrationRows already declared above
         console.log('🔍 DEBUG: Found registration rows:', registrationRows.length);
         registrationRows.forEach((row, index) => {
           const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]')?.value || '';
