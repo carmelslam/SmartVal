@@ -6159,8 +6159,14 @@
     
     // SECTION-SPECIFIC SAVE AND REFRESH FUNCTIONALITY
     
-    // Section configuration mapping
+    // Section configuration mapping - Updated to include ALL sections with editable fields
     const sectionConfig = {
+      'estimate-type': {
+        helperKey: 'manual_estimate_type',
+        fields: ['estimate-type'],
+        loadFunction: null,
+        name: 'סוג אומדן'
+      },
       'vehicle-data': {
         helperKey: 'manual_vehicle_data',
         fields: ['carPlate', 'carManufacturer', 'carModel', 'carYear', 'carModelCode', 'carBasePrice', 'carMarketValue', 'carReportDate'],
@@ -6173,29 +6179,51 @@
         loadFunction: 'loadContactData',
         name: 'פרטי קשר'
       },
+      'damage-centers': {
+        helperKey: 'manual_damage_centers',
+        fields: [],
+        loadFunction: 'loadDamageCentersFromHelper',
+        name: 'מרכזי נזק',
+        dynamicContent: true
+      },
       'gross-calculation': {
         helperKey: 'manual_gross_calculation',
         fields: ['basicPrice'],
         loadFunction: 'loadGrossCalculationData',
-        name: 'חישוב אחוז נזק ברוטו'
+        name: 'חישוב אחוז נזק ברוטו',
+        dynamicContent: true
+      },
+      'gross-result': {
+        helperKey: 'manual_gross_result',
+        fields: ['grossMarketValueResult', 'totalClaim', 'grossPercent', 'authorizedClaim'],
+        loadFunction: null,
+        name: 'תוצאת חישוב ברוטו'
       },
       'full-market-value': {
         helperKey: 'manual_full_market_value',
-        fields: ['fullBasicPrice'],
+        fields: ['fullBasicPrice', 'fullMarketValueResult'],
         loadFunction: 'loadFullMarketValueData',
-        name: 'חישוב ערך השוק המלא'
+        name: 'חישוב ערך השוק המלא',
+        dynamicContent: true
       },
       'depreciation': {
         helperKey: 'manual_depreciation',
         fields: ['globalDep1', 'globalDepValue', 'garageDays'],
         loadFunction: 'loadDepreciationData',
-        name: 'חישוב ירידת ערך'
+        name: 'חישוב ירידת ערך',
+        dynamicContent: true
       },
       'summary': {
         helperKey: 'manual_summary',
         fields: ['sumMarketValue', 'sumClaim', 'sumGrossPercent', 'sumAuthorizedClaim', 'sumTotalVat', 'sumSalvageValue', 'sumNetClaim'],
         loadFunction: 'loadSummaryData',
         name: 'סיכום האומדן'
+      },
+      'notes': {
+        helperKey: 'manual_notes',
+        fields: ['additional-notes'],
+        loadFunction: null,
+        name: 'הערות נוספות'
       },
       'legal-text': {
         helperKey: 'manual_legal_text',
@@ -6231,7 +6259,12 @@
         });
         
         // Handle special cases for dynamic content
-        if (sectionId === 'gross-calculation') {
+        if (sectionId === 'estimate-type') {
+          const checkedRadio = document.querySelector('input[name="estimate-type"]:checked');
+          sectionData.estimateType = checkedRadio ? checkedRadio.value : '';
+        } else if (sectionId === 'damage-centers') {
+          sectionData.damageCenters = collectDamageCentersData();
+        } else if (sectionId === 'gross-calculation') {
           sectionData.featuresAdjustments = collectAdjustmentData('#featuresAdjustmentsList');
           sectionData.registrationAdjustments = collectAdjustmentData('#registrationAdjustmentsList');
         } else if (sectionId === 'full-market-value') {
@@ -6286,8 +6319,14 @@
           });
           
           // Handle special cases for dynamic content
-          if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
+          if (sectionId === 'estimate-type' && manualData.estimateType) {
+            const radioButton = document.querySelector(`input[name="estimate-type"][value="${manualData.estimateType}"]`);
+            if (radioButton) radioButton.checked = true;
+          } else if (sectionId === 'damage-centers' && manualData.damageCenters) {
+            restoreDamageCentersData(manualData.damageCenters);
+          } else if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
             restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
+            restoreAdjustmentData('#registrationAdjustmentsList', manualData.registrationAdjustments);
           } else if (sectionId === 'full-market-value' && manualData.allAdjustments) {
             restoreAdjustmentData('#allAdjustmentsList', manualData.allAdjustments);
           } else if (sectionId === 'depreciation' && manualData.depreciationRows) {
@@ -6365,6 +6404,60 @@
       return depreciations;
     }
     
+    // Helper function to collect damage centers data
+    function collectDamageCentersData() {
+      const container = document.getElementById('damageCentersContent');
+      if (!container) return [];
+      
+      const damageCenters = [];
+      container.querySelectorAll('div[class*="damage-center-card"], div[id*="damage-center-"]').forEach(card => {
+        const nameInput = card.querySelector('input[id*="damage-center-name"]');
+        const center = {
+          name: nameInput ? nameInput.value : '',
+          parts: [],
+          works: [],
+          repairs: []
+        };
+        
+        // Collect parts
+        card.querySelectorAll('div[id*="parts-"] input').forEach((input, index) => {
+          if (index % 2 === 0) { // Name inputs
+            const priceInput = card.querySelector(`div[id*="parts-"] input:nth-child(${index + 2})`);
+            center.parts.push({
+              name: input.value,
+              price: priceInput ? priceInput.value : ''
+            });
+          }
+        });
+        
+        // Collect works
+        card.querySelectorAll('div[id*="works-"] input').forEach((input, index) => {
+          if (index % 2 === 0) { // Name inputs
+            const priceInput = card.querySelector(`div[id*="works-"] input:nth-child(${index + 2})`);
+            center.works.push({
+              name: input.value,
+              price: priceInput ? priceInput.value : ''
+            });
+          }
+        });
+        
+        // Collect repairs
+        card.querySelectorAll('div[id*="repairs-"] input').forEach((input, index) => {
+          if (index % 2 === 0) { // Name inputs
+            const priceInput = card.querySelector(`div[id*="repairs-"] input:nth-child(${index + 2})`);
+            center.repairs.push({
+              name: input.value,
+              price: priceInput ? priceInput.value : ''
+            });
+          }
+        });
+        
+        damageCenters.push(center);
+      });
+      
+      return damageCenters;
+    }
+    
     // Helper function to restore adjustment data to dynamic tables
     function restoreAdjustmentData(containerSelector, adjustments) {
       const container = document.querySelector(containerSelector);
@@ -6412,6 +6505,23 @@
       });
     }
     
+    // Helper function to restore damage centers data
+    function restoreDamageCentersData(damageCenters) {
+      const container = document.getElementById('damageCentersContent');
+      if (!container) return;
+      
+      // Clear existing centers
+      container.innerHTML = '';
+      
+      // Restore each damage center
+      damageCenters.forEach(center => {
+        // This would need to call the existing damage center creation functions
+        // For now, just log the restoration attempt
+        console.log('Restoring damage center:', center.name);
+        // TODO: Implement proper damage center restoration
+      });
+    }
+    
     // Helper function to show section messages
     function showSectionMessage(sectionId, message, type) {
       const messageId = `section-message-${sectionId}`;
@@ -6456,22 +6566,26 @@
       }, 3000);
     }
     
-    // Function to add Save and Refresh buttons to each section
+    // Function to add Save and Refresh buttons to ALL sections with editable fields
     function addSectionButtons() {
       const sections = [
-        { id: 'vehicle-data', keyElement: 'carPlate', afterElement: 'carReportDate' },
-        { id: 'contact-data', keyElement: 'ownerName', afterElement: 'insuranceAgentEmail' },
-        { id: 'gross-calculation', keyElement: 'basicPrice', afterElement: 'grossMarketValueResult' },
-        { id: 'full-market-value', keyElement: 'fullBasicPrice', afterElement: 'fullMarketValueResult' },
-        { id: 'depreciation', keyElement: 'globalDep1', afterElement: 'garageDays' },
-        { id: 'summary', keyElement: 'sumMarketValue', afterElement: 'sumNetClaim' },
-        { id: 'legal-text', keyElement: 'legal-text', afterElement: 'legal-text' }
+        { id: 'estimate-type', selector: 'input[name="estimate-type"]', name: 'סוג אומדן' },
+        { id: 'vehicle-data', selector: '#carPlate', name: 'נתוני הרכב' },
+        { id: 'contact-data', selector: '#ownerName', name: 'פרטי קשר' },
+        { id: 'damage-centers', selector: '#damageCentersContent', name: 'מרכזי נזק' },
+        { id: 'gross-calculation', selector: '#basicPrice', name: 'חישוב אחוז נזק ברוטו' },
+        { id: 'gross-result', selector: '#grossMarketValueResult', name: 'תוצאת חישוב ברוטו' },
+        { id: 'full-market-value', selector: '#fullBasicPrice', name: 'חישוב ערך השוק המלא' },
+        { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך' },
+        { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן' },
+        { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות' },
+        { id: 'legal-text', selector: '#legal-text', name: 'טקסט משפטי' }
       ];
       
       sections.forEach(section => {
-        const keyElement = document.getElementById(section.keyElement);
+        const keyElement = document.querySelector(section.selector);
         if (keyElement) {
-          // Find the parent form section
+          // Find the parent form section or create section boundary
           let sectionElement = keyElement.closest('.form-section');
           if (!sectionElement) {
             sectionElement = keyElement.parentElement;
@@ -6480,70 +6594,74 @@
             }
           }
           
-          const afterElement = document.getElementById(section.afterElement);
-          if (afterElement && sectionElement) {
-            // Create button container
+          if (sectionElement) {
+            // Check if buttons already exist
+            if (sectionElement.querySelector('.section-save-refresh-buttons')) {
+              return; // Skip if buttons already exist
+            }
+            
+            // Create button container with proper styling
             const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'section-buttons';
+            buttonContainer.className = 'section-save-refresh-buttons';
             buttonContainer.style.cssText = `
-              margin-top: 15px;
-              padding: 10px;
-              border-top: 1px solid #ddd;
-              text-align: center;
-              background-color: #f8f9fa;
-              border-radius: 5px;
+              margin-top: 12px;
+              margin-bottom: 8px;
+              display: flex;
+              gap: 8px;
+              justify-content: center;
+              flex-wrap: wrap;
             `;
             
-            // Create Save button
+            // Create Save button matching existing style
             const saveButton = document.createElement('button');
-            saveButton.className = 'btn btn-save';
+            saveButton.className = 'btn';
             saveButton.textContent = 'שמור';
             saveButton.style.cssText = `
-              background-color: #28a745;
+              background: #28a745;
               color: white;
               border: none;
-              padding: 8px 16px;
-              margin: 0 5px;
-              border-radius: 4px;
+              padding: 8px 18px;
+              border-radius: 8px;
               cursor: pointer;
-              font-size: 14px;
-              font-weight: bold;
+              font-size: 16px;
+              display: inline-block;
+              width: auto;
+              margin: 0;
               transition: background-color 0.3s;
             `;
-            saveButton.onmouseover = function() { this.style.backgroundColor = '#218838'; };
-            saveButton.onmouseout = function() { this.style.backgroundColor = '#28a745'; };
+            saveButton.onmouseover = function() { this.style.background = '#218838'; };
+            saveButton.onmouseout = function() { this.style.background = '#28a745'; };
             saveButton.onclick = function() { saveSectionData(section.id); };
             
-            // Create Refresh button
+            // Create Refresh button matching existing style
             const refreshButton = document.createElement('button');
-            refreshButton.className = 'btn btn-refresh';
+            refreshButton.className = 'btn';
             refreshButton.textContent = 'רענן';
             refreshButton.style.cssText = `
-              background-color: #17a2b8;
+              background: #17a2b8;
               color: white;
               border: none;
-              padding: 8px 16px;
-              margin: 0 5px;
-              border-radius: 4px;
+              padding: 8px 18px;
+              border-radius: 8px;
               cursor: pointer;
-              font-size: 14px;
-              font-weight: bold;
+              font-size: 16px;
+              display: inline-block;
+              width: auto;
+              margin: 0;
               transition: background-color 0.3s;
             `;
-            refreshButton.onmouseover = function() { this.style.backgroundColor = '#138496'; };
-            refreshButton.onmouseout = function() { this.style.backgroundColor = '#17a2b8'; };
+            refreshButton.onmouseover = function() { this.style.background = '#138496'; };
+            refreshButton.onmouseout = function() { this.style.background = '#17a2b8'; };
             refreshButton.onclick = function() { refreshSectionData(section.id); };
             
             // Add buttons to container
             buttonContainer.appendChild(saveButton);
             buttonContainer.appendChild(refreshButton);
             
-            // Insert after the specified element
-            if (afterElement.parentNode) {
-              afterElement.parentNode.insertBefore(buttonContainer, afterElement.nextSibling);
-            }
+            // Insert at the end of the section
+            sectionElement.appendChild(buttonContainer);
             
-            console.log(`✅ Added Save/Refresh buttons to section: ${section.id}`);
+            console.log(`✅ Added Save/Refresh buttons to section: ${section.name}`);
           }
         }
       });
