@@ -679,6 +679,150 @@
       color: #aaa;
       text-align: center;
     }
+    
+    /* Floating PDF Display Styles */
+    .floating-pdf-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .floating-pdf-container {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 900px;
+      height: 90%;
+      max-height: 700px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+    
+    .floating-pdf-header {
+      background: #1e3a8a;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 12px 12px 0 0;
+    }
+    
+    .floating-pdf-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .floating-pdf-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .toggle-btn, .close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+    
+    .toggle-btn:hover, .close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .floating-pdf-content {
+      flex: 1;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .floating-pdf-content.minimized {
+      display: none;
+    }
+    
+    .floating-pdf-container.minimized {
+      height: auto;
+      max-height: none;
+    }
+    
+    /* Plate and document actions section styles */
+    .plate-actions-section {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .plate-actions-section label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+      text-align: right;
+    }
+    
+    .plate-actions-section input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    
+    .load-case-btn {
+      padding: 10px 20px;
+      background: #1e3a8a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .load-case-btn:hover {
+      background: #3b82f6;
+    }
+    
+    .document-actions-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .document-actions-section .nav-btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -702,6 +846,54 @@
     <div class="logo"><img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo"></div>
     <div class="title">ירון כיוף שמאות - פורטל</div>
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
+    
+    <!-- Plate Input and Document Actions Section -->
+    <div class="plate-actions-section">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+        <div>
+          <label>מספר רכב:</label>
+          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב">
+        </div>
+        <div>
+          <label>סיסמה (אופציונלי):</label>
+          <input type="text" id="builderPasswordInput" placeholder="סיסמה לאימות נתונים" autocomplete="off">
+        </div>
+      </div>
+      
+      <div style="text-align:center; margin-bottom:15px;">
+        <button id="builderLoadCaseBtn" class="load-case-btn" onclick="loadExistingCaseForBuilder()">
+          טען תיק קיים
+        </button>
+      </div>
+      
+      <div id="builderPlateStatus" style="margin-top:10px; font-size:14px; color:#059669; display:none; text-align:right;">
+        ✓ נתוני הרכב נטענו בהצלחה
+      </div>
+      
+      <!-- Document Actions Section -->
+      <div class="document-actions-section">
+        <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
+          פעולות מסמכים
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <button class="nav-btn" id="builderFetchExpertiseBtn" onclick="fetchExpertisePDFForBuilder()" style="background: #8b5cf6; color: white;">
+            הצג אקספירטיזה PDF
+          </button>
+          <button class="nav-btn" id="builderFetchEstimateBtn" onclick="fetchEstimatePDFForBuilder()" style="background: #06b6d4; color: white;">
+            הצג אומדן PDF
+          </button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button class="nav-btn" id="builderRequestExpertiseBtn" onclick="requestExpertiseForBuilder()" style="background: #059669; color: white;">
+            בקש אקספירטיזה
+          </button>
+          <button class="nav-btn" id="builderRequestEstimateBtn" onclick="requestEstimateForBuilder()" style="background: #f59e0b; color: white;">
+            בקש אומדן
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <h1>בניית אומדן נזקי רכב</h1>
     <h2 id="pageTitle">רכב מס. ...</h2>
 
@@ -6847,7 +7039,406 @@
     });
     
     console.log('📄 Section Save/Refresh functionality initialized');
+    
+    // =========================
+    // PLATE INPUT AND DOCUMENT ACTIONS FUNCTIONALITY
+    // =========================
+    
+    // Load existing case for builder
+    window.loadExistingCaseForBuilder = async function() {
+      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+      const password = document.getElementById('builderPasswordInput').value.trim();
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      const loadBtn = document.getElementById('builderLoadCaseBtn');
+      const originalText = loadBtn.textContent;
+      
+      try {
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'טוען תיק...';
+        
+        // Check if main selection page has loaded a case
+        const existingHelper = sessionStorage.getItem('helper');
+        const existingPlate = sessionStorage.getItem('plate');
+        
+        if (existingHelper && existingPlate === plateNumber) {
+          // Use existing data
+          const caseData = JSON.parse(existingHelper);
+          
+          document.getElementById('builderPlateStatus').style.display = 'block';
+          document.getElementById('builderPlateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
+          document.getElementById('builderPlateStatus').style.color = '#059669';
+          
+          // Update car details from helper
+          if (caseData.car_details) {
+            document.getElementById('carPlate').value = caseData.car_details.plate || caseData.meta?.plate || '';
+            document.getElementById('carManufacturer').value = caseData.car_details.manufacturer || '';
+            document.getElementById('carModel').value = caseData.car_details.model || '';
+            document.getElementById('carYear').value = caseData.car_details.year || '';
+            document.getElementById('carModelCode').value = caseData.car_details.model_code || '';
+            document.getElementById('carReportDate').value = convertToDateInputFormat(caseData.car_details.report_date || '');
+          }
+          
+          // Update page title
+          document.getElementById('pageTitle').textContent = `רכב מס. ${plateNumber}`;
+          
+          return;
+        }
+        
+        // Make webhook call to load case
+        const payload = { plate: plateNumber };
+        if (password) {
+          payload.password = password;
+        }
+        
+        // Import webhook function
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('ADMIN_FETCH_CASE', payload);
+        
+        if (response?.success && response?.data) {
+          const caseData = response.data;
+          
+          // Store the data
+          sessionStorage.setItem('helper', JSON.stringify(caseData));
+          sessionStorage.setItem('plate', plateNumber);
+          sessionStorage.setItem('caseLoaded', 'true');
+          
+          document.getElementById('builderPlateStatus').style.display = 'block';
+          document.getElementById('builderPlateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
+          document.getElementById('builderPlateStatus').style.color = '#059669';
+          
+          // Update car details from helper
+          if (caseData.car_details) {
+            document.getElementById('carPlate').value = caseData.car_details.plate || caseData.meta?.plate || '';
+            document.getElementById('carManufacturer').value = caseData.car_details.manufacturer || '';
+            document.getElementById('carModel').value = caseData.car_details.model || '';
+            document.getElementById('carYear').value = caseData.car_details.year || '';
+            document.getElementById('carModelCode').value = caseData.car_details.model_code || '';
+            document.getElementById('carReportDate').value = convertToDateInputFormat(caseData.car_details.report_date || '');
+          }
+          
+          // Update page title
+          document.getElementById('pageTitle').textContent = `רכב מס. ${plateNumber}`;
+          
+          // Reload data from helper
+          loadDataFromHelper();
+          
+        } else {
+          document.getElementById('builderPlateStatus').style.display = 'block';
+          document.getElementById('builderPlateStatus').textContent = '❌ תיק לא נמצא במערכת';
+          document.getElementById('builderPlateStatus').style.color = '#dc2626';
+        }
+        
+      } catch (error) {
+        console.error('Error loading case:', error);
+        document.getElementById('builderPlateStatus').style.display = 'block';
+        document.getElementById('builderPlateStatus').textContent = '❌ שגיאה בטעינת התיק';
+        document.getElementById('builderPlateStatus').style.color = '#dc2626';
+      } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = originalText;
+      }
+    };
+    
+    // Request expertise for builder
+    window.requestExpertiseForBuilder = async function() {
+      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      if (!helper) {
+        alert('נתוני התיק לא נמצאו במערכת');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('builderRequestExpertiseBtn');
+      const originalText = requestBtn.textContent;
+      
+      try {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'מבקש אקספירטיזה...';
+        
+        const caseData = JSON.parse(helper);
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData.meta?.case_id,
+          helper: caseData
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_EXPERTISE', payload);
+        
+        if (response?.success) {
+          const successMessage = response.message || 'האקספירטיזה נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
+          alert(successMessage);
+          
+          if (response.pdf_url) {
+            showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+          }
+        } else {
+          alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
+        }
+        
+      } catch (error) {
+        console.error('Error requesting expertise:', error);
+        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
+      }
+    };
+    
+    // Request estimate for builder
+    window.requestEstimateForBuilder = async function() {
+      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      if (!helper) {
+        alert('נתוני התיק לא נמצאו במערכת');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('builderRequestEstimateBtn');
+      const originalText = requestBtn.textContent;
+      
+      try {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'מבקש אומדן...';
+        
+        const caseData = JSON.parse(helper);
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData.meta?.case_id,
+          helper: caseData
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_ESTIMATE', payload);
+        
+        if (response?.success) {
+          const successMessage = response.message || 'האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
+          alert(successMessage);
+          
+          if (response.pdf_url) {
+            showFloatingPDF(response.pdf_url, 'אומדן PDF');
+          }
+        } else {
+          alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
+        }
+        
+      } catch (error) {
+        console.error('Error requesting estimate:', error);
+        alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
+      }
+    };
+    
+    // Fetch expertise PDF for builder
+    window.fetchExpertisePDFForBuilder = async function() {
+      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      const fetchBtn = document.getElementById('builderFetchExpertiseBtn');
+      const originalText = fetchBtn.textContent;
+      
+      try {
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = 'טוען PDF...';
+        
+        const caseData = helper ? JSON.parse(helper) : null;
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData?.meta?.case_id,
+          document_type: 'expertise'
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('FETCH_EXPERTISE_PDF', payload);
+        
+        if (response?.success && response?.pdf_url) {
+          showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+        } else {
+          alert('אקספירטיזה לא נמצאה במערכת או לא הופקה עדיין');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching expertise PDF:', error);
+        alert('שגיאה בטעינת אקספירטיזה PDF');
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = originalText;
+      }
+    };
+    
+    // Fetch estimate PDF for builder
+    window.fetchEstimatePDFForBuilder = async function() {
+      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+      const helper = sessionStorage.getItem('helper');
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+      
+      const fetchBtn = document.getElementById('builderFetchEstimateBtn');
+      const originalText = fetchBtn.textContent;
+      
+      try {
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = 'טוען PDF...';
+        
+        const caseData = helper ? JSON.parse(helper) : null;
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData?.meta?.case_id,
+          document_type: 'estimate'
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('FETCH_ESTIMATE_PDF', payload);
+        
+        if (response?.success && response?.pdf_url) {
+          showFloatingPDF(response.pdf_url, 'אומדן PDF');
+        } else {
+          alert('אומדן לא נמצא במערכת או לא הופק עדיין');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching estimate PDF:', error);
+        alert('שגיאה בטעינת אומדן PDF');
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = originalText;
+      }
+    };
+    
+    // Show floating PDF display
+    function showFloatingPDF(pdfUrl, title) {
+      const overlay = document.getElementById('floatingPdfOverlay');
+      const titleElement = document.getElementById('floatingPdfTitle');
+      const iframe = document.getElementById('pdfViewer');
+      
+      titleElement.textContent = title;
+      
+      console.log(`🔍 Attempting to display PDF: ${pdfUrl}`);
+      
+      // Try to load PDF in iframe
+      iframe.src = pdfUrl;
+      
+      // Add error handling for iframe loading
+      iframe.onload = function() {
+        console.log('✅ PDF loaded successfully in iframe');
+      };
+      
+      iframe.onerror = function() {
+        console.error('❌ Failed to load PDF in iframe');
+        // Fallback: show link to open in new tab
+        iframe.style.display = 'none';
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.style.cssText = 'padding: 20px; text-align: center; direction: rtl;';
+        fallbackDiv.innerHTML = `
+          <h3 style="color: #1e3a8a; margin-bottom: 15px;">לא ניתן להציג את הPDF בחלון זה</h3>
+          <p style="margin-bottom: 15px;">אנא לחץ על הקישור להצגת הקובץ:</p>
+          <a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 10px 20px; background: #1e3a8a; color: white; text-decoration: none; border-radius: 6px;">
+            פתח PDF בחלון חדש
+          </a>
+        `;
+        iframe.parentNode.appendChild(fallbackDiv);
+      };
+      
+      overlay.style.display = 'flex';
+      
+      // Setup event listeners for controls
+      setupFloatingPDFControls();
+    }
+    
+    // Setup floating PDF controls
+    function setupFloatingPDFControls() {
+      const toggleBtn = document.getElementById('togglePdfBtn');
+      const closeBtn = document.getElementById('closePdfBtn');
+      const content = document.getElementById('floatingPdfContent');
+      const container = document.querySelector('.floating-pdf-container');
+      
+      // Toggle minimize/maximize
+      toggleBtn.onclick = function() {
+        content.classList.toggle('minimized');
+        container.classList.toggle('minimized');
+        toggleBtn.textContent = content.classList.contains('minimized') ? '□' : '_';
+      };
+      
+      // Close PDF display
+      closeBtn.onclick = function() {
+        const overlay = document.getElementById('floatingPdfOverlay');
+        const iframe = document.getElementById('pdfViewer');
+        overlay.style.display = 'none';
+        iframe.src = '';
+        
+        // Reset minimize state
+        content.classList.remove('minimized');
+        container.classList.remove('minimized');
+        toggleBtn.textContent = '_';
+      };
+      
+      // Close on overlay click
+      document.getElementById('floatingPdfOverlay').onclick = function(e) {
+        if (e.target === this) {
+          closeBtn.click();
+        }
+      };
+    }
+    
+    // Initialize plate input and password prefill
+    document.addEventListener('DOMContentLoaded', function() {
+      // Prefill plate from session storage
+      const existingPlate = sessionStorage.getItem('plate');
+      if (existingPlate) {
+        document.getElementById('builderPlateInput').value = existingPlate;
+      }
+      
+      // Prefill password from session storage
+      const prefillPassword = sessionStorage.getItem('prefillPassword') || sessionStorage.getItem('mainGatePassword');
+      if (prefillPassword) {
+        document.getElementById('builderPasswordInput').value = prefillPassword;
+      }
+    });
+    
   </script>
+  
+  <!-- Floating PDF Display Component -->
+  <div id="floatingPdfOverlay" class="floating-pdf-overlay" style="display: none;">
+    <div class="floating-pdf-container">
+      <div class="floating-pdf-header">
+        <h3 id="floatingPdfTitle">מציג PDF</h3>
+        <div class="floating-pdf-controls">
+          <button id="togglePdfBtn" class="toggle-btn">_</button>
+          <button id="closePdfBtn" class="close-btn">×</button>
+        </div>
+      </div>
+      <div id="floatingPdfContent" class="floating-pdf-content">
+        <iframe id="pdfViewer" src="" width="100%" height="100%" frameborder="0"></iframe>
+      </div>
+    </div>
+  </div>
   
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
