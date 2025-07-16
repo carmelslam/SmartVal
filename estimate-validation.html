@@ -2282,9 +2282,17 @@
           percentage: adj.percentage,
           value: adj.value,
           adjustmentType: adj.adjustmentType,
+          type: adj.type,
           allKeys: Object.keys(adj)
         })));
       }
+      
+      // Debug ALL possible adjustment sources
+      console.log('📄 ALL ADJUSTMENT SOURCES:', {
+        manual_full_market_value: helper?.manual_full_market_value,
+        levi_report_adjustments: helper?.levi_report?.adjustments,
+        levi_custom_adjustments: helper?.levi?.custom_adjustments
+      });
       
       let leviHTML = '';
       
@@ -2319,7 +2327,15 @@
             valueAmount = parseFloat(adjustment.amount);
           }
           
-          const isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
+          // Check if adjustment has a type field (plus/minus like in builder)
+          let isAddition = false;
+          if (adjustment.type) {
+            isAddition = adjustment.type === 'plus';
+          } else {
+            // Fallback to value/percentage analysis
+            isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
+          }
+          
           const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
           const adjustmentSymbol = isAddition ? '+' : '-';
           
@@ -2352,18 +2368,6 @@
       if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
         console.log('📄 Found custom adjustments:', helper.levi.custom_adjustments.length);
         helper.levi.custom_adjustments.forEach((adjustment, index) => {
-          // Use explicit adjustmentType if available, otherwise infer from values
-          let adjustmentTypeText;
-          if (adjustment.adjustmentType === 'subtraction') {
-            adjustmentTypeText = 'הפחתה מהמחיר';
-          } else if (adjustment.adjustmentType === 'addition') {
-            adjustmentTypeText = 'תוספת למחיר';
-          } else {
-            // Fallback to value-based detection
-            const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
-            adjustmentTypeText = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-          }
-          
           // Handle percentage - try multiple sources and formats
           let percentageValue = null;
           if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
@@ -2379,6 +2383,23 @@
           } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
             valueAmount = parseFloat(adjustment.amount);
           }
+          
+          // Use explicit type if available (plus/minus from builder), otherwise infer from values
+          let adjustmentTypeText;
+          let isAddition = false;
+          
+          if (adjustment.type) {
+            isAddition = adjustment.type === 'plus';
+          } else if (adjustment.adjustmentType === 'subtraction') {
+            isAddition = false;
+          } else if (adjustment.adjustmentType === 'addition') {
+            isAddition = true;
+          } else {
+            // Fallback to value-based detection
+            isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
+          }
+          
+          adjustmentTypeText = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
           
           const adjustmentSymbol = adjustmentTypeText === 'תוספת למחיר' ? '+' : '-';
           
@@ -2411,8 +2432,11 @@
       if (helper?.manual_full_market_value?.allAdjustments && helper.manual_full_market_value.allAdjustments.length > 0) {
         console.log('📄 Found market value adjustments:', helper.manual_full_market_value.allAdjustments.length);
         helper.manual_full_market_value.allAdjustments.forEach((adjustment, index) => {
-          const isAddition = adjustment.adjustmentType === 'addition' || adjustment.value > 0;
+          // Read type directly from builder data structure (plus/minus)
+          const isAddition = adjustment.type === 'plus';
           const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+          const adjustmentSymbol = isAddition ? '+' : '-';
+          
           // Handle percentage - try multiple sources and formats
           let percentageValue = null;
           if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
@@ -2428,8 +2452,6 @@
           } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
             valueAmount = parseFloat(adjustment.amount);
           }
-          
-          const adjustmentSymbol = isAddition ? '+' : '-';
           
           const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
           const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';

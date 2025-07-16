@@ -1794,7 +1794,7 @@ We need key changes to make it useful .
     * in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector ✅
     * add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen ✅
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
-    * fix teh works dropdown add all works
+    * fix the works dropdown- when selecting other this needs to open a text input option
 
   **VALIDATION PAGE** ❌
 
@@ -1815,7 +1815,7 @@ We need key changes to make it useful .
 
   * The button בדוק  טקסט משפטי doesn’t  work
   * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. 
-  * the advanment scale in the topis not measuring good, , make sure it is accurate according to advanacement 
+  * the advanment scale in the top is  not measuring good, , make sure it is accurate according to advanacement 
   * make sure the legal text in teh builder is also saved to the helper of the specific plate number.
 
  
