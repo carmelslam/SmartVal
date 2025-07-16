@@ -915,6 +915,7 @@
     let validationProgress = {
       vehicle: false,
       levi: false,
+      depreciation: false,
       damage: false,
       estimate: false
     };
@@ -2212,7 +2213,7 @@
       validationProgress[sectionName] = true;
       
       // Enable and move to next section
-      const sections = ['vehicle', 'levi', 'damage', 'estimate'];
+      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex < sections.length - 1) {
@@ -2522,75 +2523,58 @@
       let globalDepreciation = 0;
       let centerDepreciation = 0;
       
-      // 1. Global depreciation validation
+      // 1. Global depreciation validation - simplified like other sections
       if (helper.estimate_depreciation?.global_percent) {
         const globalPercent = helper.estimate_depreciation.global_percent;
         const globalValue = helper.estimate_depreciation.global_value || '';
         
         depreciationHTML += createEnhancedValidationItem(
           'ירידת ערך גלובלי (%)', 
-          globalPercent, 
-          globalPercent, 
+          `${globalPercent}%`,
+          `${globalPercent}%`,
           'depreciation_global_percent'
         );
         
         depreciationHTML += createEnhancedValidationItem(
           'ירידת ערך גלובלי (₪)', 
-          globalValue, 
-          globalValue, 
+          globalValue ? `₪${parseFloat(globalValue).toLocaleString()}` : 'לא מוגדר',
+          globalValue ? `₪${parseFloat(globalValue).toLocaleString()}` : 'לא מוגדר',
           'depreciation_global_value'
         );
         
-        globalDepreciation = parseFloat(globalValue.replace(/[₪,]/g, '')) || 0;
+        globalDepreciation = parseFloat(globalValue) || 0;
       }
       
-      // 2. Bulk depreciation items validation
+      // 2. Bulk depreciation items validation - simplified
       if (helper.estimate_depreciation?.bulk_items && helper.estimate_depreciation.bulk_items.length > 0) {
         helper.estimate_depreciation.bulk_items.forEach((item, index) => {
           const itemKey = `depreciation_bulk_${index}`;
+          const percentValue = item.percent || 'לא מוגדר';
+          const valueAmount = item.value ? `₪${parseFloat(item.value).toLocaleString()}` : 'לא מוגדר';
+          const description = `${item.damaged_part || 'מוקד נזק'} - ${item.repair_type || 'מהות התיקון'}`;
+          const combinedValue = `${percentValue}%, ${valueAmount}`;
           
           depreciationHTML += createEnhancedValidationItem(
-            `${item.damaged_part || 'מוקד נזק'} - חלק ניזוק`, 
-            item.damaged_part || 'לא מוגדר', 
-            item.damaged_part || 'לא מוגדר', 
-            `${itemKey}_part`
-          );
-          
-          depreciationHTML += createEnhancedValidationItem(
-            `${item.damaged_part || 'מוקד נזק'} - מהות התיקון`, 
-            item.repair_type || 'לא מוגדר', 
-            item.repair_type || 'לא מוגדר', 
-            `${itemKey}_repair`
-          );
-          
-          depreciationHTML += createEnhancedValidationItem(
-            `${item.damaged_part || 'מוקד נזק'} - אחוז ירידת ערך`, 
-            item.percent || 'לא מוגדר', 
-            item.percent || 'לא מוגדר', 
-            `${itemKey}_percent`
-          );
-          
-          depreciationHTML += createEnhancedValidationItem(
-            `${item.damaged_part || 'מוקד נזק'} - ערך ירידת ערך`, 
-            item.value || 'לא מוגדר', 
-            item.value || 'לא מוגדר', 
-            `${itemKey}_value`
+            description, 
+            combinedValue,
+            combinedValue,
+            itemKey
           );
           
           // Add to center depreciation total
           if (item.value) {
-            centerDepreciation += parseFloat(item.value.replace(/[₪,]/g, '')) || 0;
+            centerDepreciation += parseFloat(item.value) || 0;
           }
         });
       }
       
-      // 3. Work days validation
+      // 3. Work days validation - simplified
       if (helper.estimate_work_days || helper.estimate_depreciation?.work_days) {
         const workDays = helper.estimate_work_days || helper.estimate_depreciation.work_days;
         depreciationHTML += createEnhancedValidationItem(
           'ימי מוסך משוערים', 
-          workDays, 
-          workDays, 
+          `${workDays} ימים`,
+          `${workDays} ימים`,
           'depreciation_work_days'
         );
       }
