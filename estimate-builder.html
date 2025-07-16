@@ -1110,7 +1110,7 @@
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <input type="text" id="globalDep1" placeholder="% ירידת ערך" />
+          <input type="text" id="globalDep1" placeholder="% ירידת ערך" onchange="saveDepreciationData();" />
           <input type="text" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
         </div>
       </div>
@@ -1331,10 +1331,10 @@
       const rowId = 'depRow_' + Date.now();
       const newRow = `
         <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:2fr 2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="updateHelperFromField(event);" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="updateHelperFromField(event);" /></div>
-          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="updateHelperFromField(event);" /></div>
-          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="updateHelperFromField(event);" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1347,6 +1347,48 @@
       const row = document.getElementById(rowId);
       if (row) {
         row.remove();
+        // Save after removal
+        saveDepreciationData();
+      }
+    }
+
+    // SAVE DEPRECIATION DATA TO HELPER
+    function saveDepreciationData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get global depreciation values
+        const globalPercent = document.getElementById('globalDep1')?.value || '';
+        const globalValue = document.getElementById('globalDepValue')?.value || '';
+        
+        // Collect depreciation data
+        const depreciationData = {
+          global_percent: globalPercent,
+          global_value: globalValue,
+          bulk_items: []
+        };
+        
+        // Collect data from all depreciation rows
+        const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+        depRows.forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs.length >= 4) {
+            depreciationData.bulk_items.push({
+              damaged_part: inputs[0].value,
+              repair_type: inputs[1].value,
+              percent: inputs[2].value,
+              value: inputs[3].value
+            });
+          }
+        });
+        
+        // Save to helper
+        helper.estimate_depreciation = depreciationData;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('💾 Depreciation data saved to helper:', depreciationData);
+      } catch (error) {
+        console.error('Error saving depreciation data:', error);
       }
     }
 
@@ -1354,6 +1396,7 @@
     window.toggleSection = toggleSection;
     window.addDepField = addDepField;
     window.removeDepField = removeDepField;
+    window.saveDepreciationData = saveDepreciationData;
 
     // BUTTON FUNCTIONS - NO DEBUG ALERTS
     window.saveEstimate = function() {
@@ -5389,9 +5432,9 @@
           row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
-            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="updateHelperFromField(event)" /></div>
-            <div><input type="text" placeholder="מהות התיקון" onchange="updateHelperFromField(event)" /></div>
-            <div><input type="text" placeholder="% ירידת ערך" onchange="updateHelperFromField(event)" /></div>
+            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="מהות התיקון" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
             <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
           `;
