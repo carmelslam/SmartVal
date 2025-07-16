@@ -685,20 +685,20 @@
 
           <!-- Section 6 - Legal Text and Disclaimers -->
           <div class="section">
-            <div style="font-size: 16px; line-height: 1.8; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-              <p style="margin: 0 0 15px 0; font-weight: bold; color: #003366;">הערות חשובות לגבי האומדן:</p>
-              <div style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
-                ${generateLegalText(helper)}
+            <div style="font-size: 16px; line-height: 1.8; padding: 25px;">
+              <p style="margin: 0 0 20px 0; font-weight: bold; color: #003366; font-size: 18px;">הערות חשובות לגבי האומדן:</p>
+              <div style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; text-align: justify;">
+                ${generateLegalText(helper).replace(/\n/g, '<br>')}
               </div>
 
-              <p style="margin: 0 0 15px 0; font-weight: bold; color: #003366;">הצהרת שמאי:</p>
-              <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+              <p style="margin: 0 0 20px 0; font-weight: bold; color: #003366; font-size: 18px;">הצהרת שמאי:</p>
+              <p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; text-align: justify;">
                 אני החתום מטה: <strong>ירון כיוף, תעודת שמאי מס' 1097</strong>. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.
               </p>
 
-              <div class="estimate-disclaimer" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                <p style="margin: 0; font-weight: bold; color: #856404;">אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</p>
-                <p style="margin: 5px 0 0 0; color: #856404;">העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.</p>
+              <div class="estimate-disclaimer" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #856404; font-size: 16px;">אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</p>
+                <p style="margin: 0; color: #856404; font-size: 16px; line-height: 1.6;">העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.</p>
               </div>
             </div>
           </div>
@@ -825,12 +825,18 @@
     }
     
     function generateLegalText(helper) {
-      const estimateType = helper.estimate_type || 'אובדן_להלכה';
+      // Get legal text from builder first, then fallback to vault
+      const builderLegalText = helper.estimate_legal_text || '';
       
-      // Try to get vault texts from global or helper
+      // If builder has legal text, use it
+      if (builderLegalText) {
+        return builderLegalText;
+      }
+      
+      // Fallback to vault system
+      const estimateType = helper.estimate_type || 'אובדן_להלכה';
       const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
       
-      // Get legal text from vault based on estimate type
       const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
                        helper.legal_texts?.estimate_default ||
                        vaultTexts[`estimate_${estimateType}`]?.text ||
