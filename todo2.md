@@ -1788,10 +1788,10 @@ We need key changes to make it useful .
     * in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector ✅
     * add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen ✅
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
-    * fix the  dropdown in the work bulk in the סיכום מוקדי נזק (ניתן לעריכה)/ מוקד נזק/ עבודות נדרשות: - when selecting "other"  this needs to open a text input option
-    * in the section חישוב ירידת ערך לפי מוקדי נזק 
-    מהות התיקון: is not saved to the helper . its deleting on refresh 
-  * make sure the legal text in the builder is also saved to the helper of the specific plate number.
+    * fix the  dropdown in the work bulk in the סיכום מוקדי נזק (ניתן לעריכה)/ מוקד נזק/ עבודות נדרשות: - when selecting "other"  this needs to open a text input option   ✅
+    * in the section חישוב ירידת ערך לפי מוקדי נזק make sure 
+    מהות התיקון: is  saved to the helper because  its deleting on refresh 
+  * make sure the legal text in the builder is also saved to the helper of the specific plate number. ✅
 
   **VALIDATION PAGE**  ✅
 
