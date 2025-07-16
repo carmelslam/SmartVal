@@ -1780,14 +1780,24 @@
       const issues = [];
       const validItems = [];
       
-      // Validate estimate type (warning only)
+      // Validate estimate type and show the actual report type name
       const estimateType = currentValidationData.raw_helper?.estimate_type || currentValidationData.estimate_data?.type;
-      if (estimateType && ['אובדן_להלכה', 'טוטלוס', 'פרטי', 'גלובלי'].includes(estimateType)) {
+      
+      // Map estimate type codes to display names
+      const estimateTypeNames = {
+        'אובדן_להלכה': 'אומדן ראשוני - אובדן להלכה',
+        'טוטלוס': 'אומדן ראשוני - טוטלוס',
+        'פרטי': 'אומדן פרטי',
+        'גלובלי': 'אומדן גלובלי'
+      };
+      
+      if (estimateType && estimateTypeNames[estimateType]) {
         validItems.push('estimate-type-status');
-        updateElementIfExists('estimate-type-status', '✓');
+        // Show the actual report type name instead of just a checkmark
+        updateElementIfExists('estimate-type-status', estimateTypeNames[estimateType]);
       } else {
         issues.push('סוג אומדן לא מוגדר (אזהרה)');
-        updateElementIfExists('estimate-type-status', '⚠️');
+        updateElementIfExists('estimate-type-status', 'לא מוגדר');
       }
       
       // Validate legal text

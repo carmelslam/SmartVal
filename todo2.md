@@ -1802,18 +1802,19 @@ We need key changes to make it useful .
 
   * add a depreciation section in the validation page . use the same logic, the   
     depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
-    and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: add values, auto check , edits ignore and so on like the other oage standard❌
+    and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: add values, auto check , edits ignore and so on like the other oage standard ✅
 
   * Legal text in the validation page is pulled from the selected text in the builder.  
-    Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ❌
+    Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ✅
 
   * All buttons in the current page are valuable and need to stay - you need to check  
-   that all buttons work as expected and are returning the test result/ product they are meant to.❌
+   that all buttons work as expected and are returning the test result/ product they are meant to. ❌
 
   * valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/
-   הסתר) not from חישוב אחוז הנזק (הצג/הסתר)
+   הסתר) not from חישוב אחוז הנזק (הצג/הסתר) ✅
 
   * The button בדוק  טקסט משפטי doesn’t  work
+  
   * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. 
   * the advanment scale in the top is  not measuring good, , make sure it is accurate according to advanacement 
   * make sure the legal text in teh builder is also saved to the helper of the specific plate number.
