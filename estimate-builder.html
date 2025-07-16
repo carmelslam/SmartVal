@@ -1340,6 +1340,31 @@
       `;
       
       container.insertAdjacentHTML('beforeend', newRow);
+      
+      // Add auto-calculation functionality to the percentage field
+      const row = document.getElementById(rowId);
+      const percentInput = row.querySelector('input[placeholder="%"]');
+      const valueInput = row.querySelector('input[placeholder="₪"]');
+      
+      percentInput.addEventListener('input', function() {
+        let percent = parseFloat(this.value) || 0;
+        
+        // Auto-add % symbol if not present and user enters a number
+        if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+          this.value = percent + '%';
+        }
+        
+        // Calculate value from market price automatically
+        const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+        const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+        const marketValue = parseFloat(marketValueStr) || 0;
+        
+        const calculatedValue = (marketValue * percent) / 100;
+        valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+        
+        // Save data after calculation
+        saveDepreciationData();
+      });
     }
     
     // REMOVE DEPRECIATION FIELD FUNCTION
