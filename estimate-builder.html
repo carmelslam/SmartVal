@@ -1417,6 +1417,52 @@
       }
     }
 
+    // ADD AUTO-CALCULATION TO EXISTING ROWS
+    function addAutoCalculationToExistingRows() {
+      const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+      depRows.forEach(row => {
+        const percentInput = row.querySelector('input[placeholder="%"]');
+        const valueInput = row.querySelector('input[placeholder="₪"]');
+        
+        if (percentInput && valueInput) {
+          // Remove any existing event listeners first
+          percentInput.removeEventListener('input', percentInput.autoCalcHandler);
+          
+          // Create the auto-calculation handler
+          const autoCalcHandler = function() {
+            let percent = parseFloat(this.value) || 0;
+            
+            // Auto-add % symbol if not present and user enters a number
+            if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+              this.value = percent + '%';
+            }
+            
+            // Calculate value from market price automatically
+            const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+            const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+            const marketValue = parseFloat(marketValueStr) || 0;
+            
+            const calculatedValue = (marketValue * percent) / 100;
+            valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+            
+            // Save data after calculation
+            saveDepreciationData();
+          };
+          
+          // Store the handler reference for potential removal
+          percentInput.autoCalcHandler = autoCalcHandler;
+          
+          // Add the event listener
+          percentInput.addEventListener('input', autoCalcHandler);
+          
+          // Trigger calculation for existing values
+          if (percentInput.value) {
+            autoCalcHandler.call(percentInput);
+          }
+        }
+      });
+    }
+
     // MAKE FUNCTIONS GLOBALLY ACCESSIBLE
     window.toggleSection = toggleSection;
     window.addDepField = addDepField;
@@ -1955,6 +2001,11 @@
             helper.estimate_depreciation.bulk_items.forEach(item => {
               addDepField(item);
             });
+            
+            // Add auto-calculation to all existing rows after loading
+            setTimeout(() => {
+              addAutoCalculationToExistingRows();
+            }, 100);
           }
         } else {
           console.log('❌ No saved depreciation data, trying to populate from damage centers');
