@@ -1794,6 +1794,7 @@ We need key changes to make it useful .
     * in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector ✅
     * add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen ✅
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
+    * fix teh works dropdown add all works
 
   **VALIDATION PAGE** ❌
 
