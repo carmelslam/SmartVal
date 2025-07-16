@@ -374,11 +374,17 @@ export const sessionEngine = {
 
   // Enhanced reset with recovery option
   reset(force = false) {
+    // Preserve helper data before reset
+    const helperData = sessionStorage.getItem('helper');
+    
     if (!force && this.helper && Object.keys(this.helper).length > 0) {
-      // Ask user if they want to save data before reset
-      const saveData = confirm('האם תרצה לשמור את הנתונים הנוכחיים לפני איפוס הסשן?');
-      if (saveData) {
-        this.saveSessionData();
+      // Automatically save data - don't ask user
+      this.saveSessionData();
+      
+      // Save to localStorage for persistence
+      if (helperData) {
+        localStorage.setItem('lastCaseData', helperData);
+        localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
       }
     }
     
@@ -386,17 +392,24 @@ export const sessionEngine = {
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
     
-    // Clear session data
-    sessionStorage.clear();
+    // Clear only auth-related session data, preserve helper
+    sessionStorage.removeItem('auth');
+    sessionStorage.removeItem('loginTime');
+    sessionStorage.removeItem('lastActivityTime');
+    sessionStorage.removeItem('lastActivity');
+    
+    // Don't clear helper data - it should persist
+    // sessionStorage.clear(); // REMOVED - this was clearing everything
     
     // Log reset event
     securityManager.logSecurityEvent('session_reset', {
       sessionId: this.sessionId,
       forced: force,
-      timestamp: new Date()
+      timestamp: new Date(),
+      data_preserved: !!helperData
     });
     
-    console.log('🔄 Session reset');
+    console.log('🔄 Session reset - helper data preserved');
     
     // Redirect to login
     setTimeout(() => {

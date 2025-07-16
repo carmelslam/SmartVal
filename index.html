@@ -340,8 +340,17 @@
           const now = Date.now();
           sessionStorage.setItem("sessionStart", now.toString());
           sessionStorage.setItem("loginTime", now.toString());
+          sessionStorage.setItem("lastActivityTime", now.toString());
           sessionStorage.setItem("loginSuccess", "true");
           sessionStorage.setItem("originalPassword", pass); // For debugging
+          
+          // Restore last case data if available
+          if (window.securityManager && typeof window.securityManager.restoreLastCaseData === 'function') {
+            const restored = window.securityManager.restoreLastCaseData();
+            if (restored) {
+              console.log('✅ Restored previous case data after login');
+            }
+          }
           
           console.log("💾 Session data saved to sessionStorage");
           console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");

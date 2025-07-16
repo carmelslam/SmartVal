@@ -4,7 +4,8 @@ import { helper, updateHelper } from './helper.js';
 class SecurityManager {
   constructor() {
     this.securityConfig = {
-      sessionTimeout: 30 * 60 * 1000, // 30 minutes
+      sessionTimeout: 15 * 60 * 1000, // 15 minutes of inactivity
+      autoLogoutEnabled: true, // Set to false to disable auto-logout completely
       maxLoginAttempts: 5,
       lockoutDuration: 15 * 60 * 1000, // 15 minutes
       allowedFileTypes: {
@@ -376,11 +377,17 @@ class SecurityManager {
 
   // Session Management
   setupSessionManagement() {
+    // Skip session management if auto-logout is disabled
+    if (!this.securityConfig.autoLogoutEnabled) {
+      console.log('🔒 Auto-logout disabled - session management skipped');
+      return;
+    }
+    
     this.sessionTimeout = null;
     this.resetSessionTimeout();
     
-    // Monitor user activity
-    ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+    // Monitor user activity (including form inputs)
+    ['click', 'keypress', 'scroll', 'mousemove', 'input', 'change', 'focus', 'blur'].forEach(event => {
       document.addEventListener(event, () => {
         this.resetSessionTimeout();
       });
@@ -394,6 +401,9 @@ class SecurityManager {
     if (this.sessionTimeout) {
       clearTimeout(this.sessionTimeout);
     }
+    
+    // Update last activity time
+    sessionStorage.setItem('lastActivityTime', Date.now().toString());
     
     this.sessionTimeout = setTimeout(() => {
       this.handleSessionExpiry();
@@ -411,17 +421,24 @@ class SecurityManager {
 
   validateSession() {
     const auth = sessionStorage.getItem('auth');
-    const loginTime = sessionStorage.getItem('loginTime');
+    const lastActivityTime = sessionStorage.getItem('lastActivityTime');
     
-    if (!auth || !loginTime) {
+    if (!auth) {
       this.logout();
       return false;
     }
     
-    const now = Date.now();
-    const sessionAge = now - parseInt(loginTime);
+    // If no lastActivityTime, set it to now (for backward compatibility)
+    if (!lastActivityTime) {
+      sessionStorage.setItem('lastActivityTime', Date.now().toString());
+      return true;
+    }
     
-    if (sessionAge > this.securityConfig.sessionTimeout) {
+    const now = Date.now();
+    const inactivityTime = now - parseInt(lastActivityTime);
+    
+    // Only logout if user has been inactive for more than timeout period
+    if (inactivityTime > this.securityConfig.sessionTimeout) {
       this.handleSessionExpiry();
       return false;
     }
@@ -429,18 +446,103 @@ class SecurityManager {
     return true;
   }
 
-  logout() {
-    // Clear all session data
-    sessionStorage.clear();
-    localStorage.removeItem('helper');
+  // Restore data after login
+  restoreLastCaseData() {
+    const lastCaseData = localStorage.getItem('lastCaseData');
+    const lastCaseTimestamp = localStorage.getItem('lastCaseTimestamp');
+    
+    if (lastCaseData) {
+      // Only restore if no current helper data exists
+      const currentHelper = sessionStorage.getItem('helper');
+      if (!currentHelper || currentHelper === '{}') {
+        sessionStorage.setItem('helper', lastCaseData);
+        console.log('✅ Restored last case data from', lastCaseTimestamp);
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Clear old case data when starting new case
+  startNewCase() {
+    localStorage.removeItem('lastCaseData');
+    localStorage.removeItem('lastCaseTimestamp');
+    sessionStorage.removeItem('helper');
     
     // Clear sensitive data from memory
     if (window.helper) {
       window.helper = {};
     }
     
-    this.logSecurityEvent('user_logout', {
+    this.logSecurityEvent('new_case_started', {
       timestamp: new Date()
+    });
+    
+    console.log('✅ Started new case - previous data cleared');
+  }
+  
+  // Convenience function to disable auto-logout
+  disableAutoLogout() {
+    this.securityConfig.autoLogoutEnabled = false;
+    if (this.sessionTimeout) {
+      clearTimeout(this.sessionTimeout);
+      this.sessionTimeout = null;
+    }
+    console.log('🔒 Auto-logout disabled');
+  }
+  
+  // Convenience function to enable auto-logout
+  enableAutoLogout() {
+    this.securityConfig.autoLogoutEnabled = true;
+    this.setupSessionManagement();
+    console.log('🔒 Auto-logout enabled');
+  }
+
+  async logout() {
+    // Preserve helper data before logout
+    const helperData = sessionStorage.getItem('helper');
+    const plate = JSON.parse(helperData || '{}')?.meta?.plate || 'unknown';
+    
+    // Send helper data to Make.com if it exists
+    if (helperData) {
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const payload = {
+          type: 'logout_backup',
+          plate_helper_timestamp: `${plate}_helper_${timestamp}`,
+          helper_data: JSON.parse(helperData),
+          logout_time: timestamp,
+          reason: 'auto_logout'
+        };
+        
+        // Send to Make.com webhook
+        const webhookUrl = 'https://hook.eu2.make.com/your-logout-webhook-url'; // TODO: Update with actual webhook
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(err => console.warn('Failed to send logout backup:', err));
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('lastCaseData', helperData);
+        localStorage.setItem('lastCaseTimestamp', timestamp);
+        
+      } catch (error) {
+        console.error('Error saving helper data on logout:', error);
+      }
+    }
+    
+    // Clear only auth-related session data, keep helper data
+    sessionStorage.removeItem('auth');
+    sessionStorage.removeItem('loginTime');
+    sessionStorage.removeItem('lastActivityTime');
+    
+    // Don't clear helper data - it will persist
+    // sessionStorage.removeItem('helper'); // REMOVED - data should persist
+    
+    this.logSecurityEvent('user_logout', {
+      timestamp: new Date(),
+      data_preserved: !!helperData
     });
     
     // Redirect to login page
