@@ -7242,6 +7242,16 @@
           
           if (response.pdf_url) {
             showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+            
+            // Update helper with expertise data
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (!helper.expertise) helper.expertise = {};
+            helper.expertise.document_url = response.pdf_url;
+            helper.expertise.requested_at = new Date().toISOString();
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            // Update button states
+            initializeExpertiseButtonState();
           }
         } else {
           alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
@@ -7386,7 +7396,57 @@
       if (prefillPassword) {
         document.getElementById('builderPasswordInput').value = prefillPassword;
       }
+      
+      // Initialize expertise button state
+      initializeExpertiseButtonState();
     });
+
+    // Initialize expertise button state based on existing data
+    function initializeExpertiseButtonState() {
+      const fetchBtn = document.getElementById('builderFetchExpertiseBtn');
+      const requestBtn = document.getElementById('builderRequestExpertiseBtn');
+      
+      if (!fetchBtn || !requestBtn) return;
+      
+      // Check if expertise exists in helper data
+      const helper = sessionStorage.getItem('helper');
+      let expertiseExists = false;
+      
+      if (helper) {
+        try {
+          const helperData = JSON.parse(helper);
+          expertiseExists = helperData.expertise_data?.completed || 
+                           helperData.documents?.expertise_pdf || 
+                           helperData.expertise?.document_url ||
+                           helperData.expertise_pdf;
+        } catch (error) {
+          console.error('Error parsing helper data:', error);
+        }
+      }
+      
+      // Set button states based on expertise existence
+      if (expertiseExists) {
+        // Enable fetch button
+        fetchBtn.disabled = false;
+        fetchBtn.style.opacity = '1';
+        fetchBtn.style.cursor = 'pointer';
+        
+        // Change request button to "re-request" style
+        requestBtn.textContent = 'בקש אקספירטיזה מחדש';
+        requestBtn.style.background = '#f59e0b'; // Orange for re-request
+      } else {
+        // Disable fetch button
+        fetchBtn.disabled = true;
+        fetchBtn.style.opacity = '0.5';
+        fetchBtn.style.cursor = 'not-allowed';
+        
+        // Set request button to normal style
+        requestBtn.textContent = 'בקש אקספירטיזה';
+        requestBtn.style.background = '#059669'; // Green for new request
+      }
+      
+      console.log('🔘 Expertise button state initialized:', { expertiseExists });
+    }
     
   </script>
   
