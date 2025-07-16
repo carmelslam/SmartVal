@@ -1032,27 +1032,32 @@
     // Create enhanced validation item with 3-column display
     function createEnhancedValidationItem(label, currentValue, storedValue, fieldKey, editType = 'inline') {
       // Clean and normalize values
-      const cleanCurrent = currentValue && currentValue !== 'undefined' ? String(currentValue).trim() : '';
-      const cleanStored = storedValue && storedValue !== 'undefined' && storedValue !== 'לא מוגדר' ? String(storedValue).trim() : '';
+      const cleanCurrent = currentValue && currentValue !== 'undefined' && currentValue !== 'לא זמין' ? String(currentValue).trim() : '';
+      const cleanStored = storedValue && storedValue !== 'undefined' && storedValue !== 'לא מוגדר' && storedValue !== 'לא זמין' ? String(storedValue).trim() : '';
       
-      const isMatch = cleanCurrent === cleanStored && cleanCurrent !== '';
-      const hasStoredData = cleanStored !== '' && cleanStored !== 'לא מוגדר';
+      // More precise matching logic
+      const hasCurrentData = cleanCurrent !== '' && cleanCurrent !== 'לא זמין';
+      const hasStoredData = cleanStored !== '' && cleanStored !== 'לא מוגדר' && cleanStored !== 'לא זמין';
+      const isMatch = hasCurrentData && hasStoredData && cleanCurrent === cleanStored;
       
       // Debug logging for button issues
       console.log(`🔍 ${fieldKey}:`, {
         current: cleanCurrent,
         stored: cleanStored,
-        isMatch,
+        hasCurrentData,
         hasStoredData,
-        showIgnore: !isMatch && (cleanCurrent || hasStoredData)
+        isMatch,
+        showIgnore: !isMatch && (hasCurrentData || hasStoredData)
       });
       
       let statusClass;
       if (isMatch) {
         statusClass = 'data-match';
-      } else if (hasStoredData) {
+      } else if (hasCurrentData && hasStoredData) {
+        // Both have data but don't match
         statusClass = 'data-warning';
       } else {
+        // Missing data in either field
         statusClass = 'data-error';
       }
       
@@ -1061,7 +1066,7 @@
           <div class="validation-label">${label}</div>
           <div class="validation-columns">
             <div class="current-value ${statusClass}" id="current-${fieldKey}">
-              ${cleanCurrent || 'לא זמין'}
+              ${hasCurrentData ? cleanCurrent : 'לא זמין'}
             </div>
             <div class="stored-value">
               ${hasStoredData ? cleanStored : 'לא קיים בעזר'}
@@ -1071,7 +1076,7 @@
                 `<button class="edit-inline" onclick="startInlineEdit('${fieldKey}')">✏️</button>` : 
                 `<button class="edit-builder" onclick="editInBuilder('${fieldKey}')">📝</button>`
               }
-              ${!isMatch ? `<button class="ignore" onclick="ignoreDiscrepancy('${fieldKey}')">🚫</button>` : ''}
+              ${!isMatch && (hasCurrentData || hasStoredData) ? `<button class="ignore" onclick="ignoreDiscrepancy('${fieldKey}')">🚫</button>` : ''}
             </div>
           </div>
         </div>
@@ -1469,13 +1474,20 @@
         setFieldValidationStatus('insurance', '⚠️');
       }
       
-      // Only count critical errors (not warnings)
+      // Check if all required fields have data - any missing data is an error
+      const allFieldsHaveData = plateValue && plateValue !== 'לא זמין' && 
+                               manufacturerValue && manufacturerValue !== 'לא זמין' && 
+                               modelValue && modelValue !== 'לא זמין' && 
+                               yearValue && yearValue !== 'לא זמין';
+      
+      // Count both critical errors and missing data as errors
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
+      const totalErrors = allFieldsHaveData ? criticalErrors : criticalErrors + (allFieldsHaveData ? 0 : 1);
       
       return {
-        success: criticalErrors === 0,
+        success: totalErrors === 0 && allFieldsHaveData,
         warnings: issues.filter(i => i.includes('אזהרה')).length,
-        errors: criticalErrors,
+        errors: totalErrors,
         issues: issues,
         validItems: validItems.length
       };

@@ -1637,19 +1637,13 @@ change the page title from  ניקול – עוזרת דיגיטלית to   ני
 
 21. automatic logout **high priority** should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
 
-22 dark mode option **low priority**
-
-23. check for orphan pages **medium priority**
-
-24. dev module : **low priority** total fix and integration 
 
 25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the expertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state. ✅
 
-26. **High Priority:** Validation Pages: Validation pages are created for each report separately in two locations:
-
-
 
 **VALIDATION LOGIC, STRUCTURE AND PAGE**
+
+26. **High Priority:** Validation Pages: Validation pages are created for each report separately in two locations:
 
 The Validation Page is a template utilized in both locations. Validation is required for:
 
@@ -1855,6 +1849,9 @@ We need key changes to make it useful .
     * On logout: system sends the last helper to make.com and gives it a name : plate_helper_timestamp
     * On logout : data are saved in the system till the next case loaded or created . The system doesn’t Handke more than one case at a time.
     * the levi floating 
+   * dark mode option **low priority**
+   * check for orphan pages **medium priority**
+   * dev module : **low priority** total fix and integration  
 
 
 
