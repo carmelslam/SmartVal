@@ -1850,6 +1850,7 @@ We need key changes to make it useful .
    * dark mode option **low priority**
    * check for orphan pages **medium priority**
    * dev module : **low priority** total fix and integration  
+   * notification errors in the console 
 
 
 

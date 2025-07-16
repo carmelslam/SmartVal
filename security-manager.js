@@ -1,6 +1,6 @@
 // 🔒 Security Manager - Comprehensive Security Layer
 import { helper, updateHelper } from './helper.js';
-import { WEBHOOK_URLS } from './webhook.js';
+import { WEBHOOKS } from './webhook.js';
 
 class SecurityManager {
   constructor() {
@@ -517,7 +517,7 @@ class SecurityManager {
         };
         
         // Send to Make.com webhook
-        const webhookUrl = WEBHOOK_URLS.HELPER_EXPORT;
+        const webhookUrl = WEBHOOKS.HELPER_EXPORT;
         fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
