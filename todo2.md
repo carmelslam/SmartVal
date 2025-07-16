@@ -1788,9 +1788,9 @@ We need key changes to make it useful .
     * in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector ✅
     * add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen ✅
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
-    * fix the works dropdown- when selecting other this needs to open a text input option
+    * fix the  dropdown in the work bulk in the סיכום מוקדי נזק (ניתן לעריכה)/ מוקד נזק/ עבודות נדרשות: - when selecting "other"  this needs to open a text input option
     * in the section חישוב ירידת ערך לפי מוקדי נזק 
-מהות התיקון: is not saved to the helper . its deleting on refresh 
+    מהות התיקון: is not saved to the helper . its deleting on refresh 
   * make sure the legal text in the builder is also saved to the helper of the specific plate number.
 
   **VALIDATION PAGE**  ✅
@@ -1825,7 +1825,7 @@ We need key changes to make it useful .
 
     *
     **the estimate report builder** ❌
-    * examin, check, and understand the estimate report buider.
+    * examin, check, and understand the estimate report buider its structure , data , and purpose 
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
     * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
