@@ -1798,6 +1798,7 @@ We need key changes to make it useful .
     * in the section חישוב ירידת ערך לפי מוקדי נזק 
 מהות התיקון: is not saved to the helper . its deleting on refresh 
   * the חישוב ערך השוק של הרכב (הצג/הסתר) went back to duplicate parametrs 
+  * make sure the legal text in the builder is also saved to the helper of the specific plate number.
 
   **VALIDATION PAGE** ❌
 
@@ -1820,8 +1821,10 @@ We need key changes to make it useful .
 
   * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. 
 
-  * the advanment scale in the top is  not measuring good, , make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red 
-  * make sure the legal text in teh builder is also saved to the helper of the specific plate number.
+  * the advanment scale in the top התקדמות האימות
+ is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red 
+
+ 
 
   * user cant move to the next validation section if teh previous is not validated , 
 

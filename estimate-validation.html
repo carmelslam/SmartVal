@@ -917,7 +917,8 @@
       levi: false,
       depreciation: false,
       damage: false,
-      estimate: false
+      estimate: false,
+      legal_text: false
     };
     
     let currentValidationData = {};
@@ -957,11 +958,17 @@
       loadLegalTextValidation();
       populateEnhancedValidationItems();
       
+      // Load previously saved validation progress
+      loadSavedValidationProgress();
+      
       // Initialize damage validation items  
       setTimeout(() => {
         console.log('🔧 Initializing damage validation items...');
         populateDamageValidationItems();
       }, 200);
+      
+      // Initialize progress bar to 0%
+      updateValidationProgress();
       
       startInitialValidation();
     }
@@ -2160,6 +2167,8 @@
         // Enable approve button with warning
         buttons[2].disabled = false;
         
+        validationProgress[sectionName] = false;
+        
       } else {
         section.classList.remove('current', 'completed', 'warning');
         section.classList.add('error');
@@ -2168,12 +2177,17 @@
         
         // Keep approve button disabled
         buttons[2].disabled = true;
+        
+        validationProgress[sectionName] = false;
       }
       
       // Always enable edit button after validation
       buttons[1].disabled = false;
       
       console.log(`Section ${sectionName} validation result:`, result);
+      
+      // Update progress bar
+      updateValidationProgress();
     }
 
     function setSectionError(sectionName, errorMessage) {
@@ -2188,6 +2202,45 @@
       showAlert(`שגיאה באימות ${sectionName}: ${errorMessage}`, 'error');
     }
 
+    function loadSavedValidationProgress() {
+      try {
+        const saved = sessionStorage.getItem('validationProgress');
+        if (saved) {
+          const savedProgress = JSON.parse(saved);
+          console.log('📁 Loading saved validation progress:', savedProgress);
+          
+          // Merge saved progress with current progress
+          Object.keys(savedProgress).forEach(key => {
+            if (validationProgress.hasOwnProperty(key)) {
+              validationProgress[key] = savedProgress[key];
+            }
+          });
+          
+          // Update UI for completed sections
+          Object.keys(validationProgress).forEach(sectionName => {
+            if (validationProgress[sectionName]) {
+              const section = document.getElementById(`section-${sectionName}`);
+              const status = section?.querySelector('.section-status');
+              const button = section?.querySelector('.btn-success');
+              
+              if (section && status && button) {
+                section.classList.remove('current', 'warning', 'error');
+                section.classList.add('completed');
+                status.textContent = 'אושר ✓';
+                status.className = 'section-status status-completed';
+                button.disabled = true;
+                button.textContent = '✓ אושר';
+              }
+            }
+          });
+          
+          console.log('✅ Validation progress restored from saved state');
+        }
+      } catch (error) {
+        console.error('❌ Error loading saved validation progress:', error);
+      }
+    }
+
     function updateValidationProgress() {
       const completedSections = Object.values(validationProgress).filter(v => v).length;
       const totalSections = Object.keys(validationProgress).length;
@@ -2195,6 +2248,9 @@
       
       document.getElementById('progress-fill').style.width = progressPercent + '%';
       document.getElementById('progress-text').textContent = progressPercent + '% הושלם';
+      
+      // Save validation progress to sessionStorage
+      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
       
       // Enable final approval if all sections are validated
       const finalBtn = document.getElementById('final-approve-btn');
@@ -2205,9 +2261,44 @@
       }
     }
 
+    // Function to clear validation progress when needed
+    function clearValidationProgress() {
+      validationProgress = {
+        vehicle: false,
+        levi: false,
+        depreciation: false,
+        damage: false,
+        estimate: false,
+        legal_text: false
+      };
+      sessionStorage.removeItem('validationProgress');
+      updateValidationProgress();
+    }
+
     // Section Actions
     window.editSection = function(sectionName) {
       console.log('📝 Editing section:', sectionName);
+      
+      // Reset validation status for the section being edited
+      validationProgress[sectionName] = false;
+      
+      // Update UI to show section as pending validation
+      const section = document.getElementById(`section-${sectionName}`);
+      const status = section?.querySelector('.section-status');
+      const button = section?.querySelector('.btn-success');
+      
+      if (section && status && button) {
+        section.classList.remove('completed');
+        section.classList.add('current');
+        status.textContent = 'בעריכה';
+        status.className = 'section-status status-current';
+        button.disabled = true;
+        button.textContent = 'אימות נדרש';
+      }
+      
+      // Save updated validation progress
+      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      updateValidationProgress();
       switch(sectionName) {
         case 'vehicle':
           window.location.href = 'estimate-builder.html#vehicle-details';
@@ -2244,6 +2335,9 @@
       button.textContent = '✓ אושר';
       
       validationProgress[sectionName] = true;
+      
+      // Save validation progress to sessionStorage
+      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
       
       // Enable and move to next section
       const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
@@ -2832,6 +2926,10 @@
           // Update the validation status in the estimate section
           updateElementIfExists('estimate-legal-text', '✓');
           
+          // Update validation progress
+          validationProgress.legal_text = true;
+          updateValidationProgress();
+          
           return true;
         } else {
           console.log('⚠️ Legal text validation failed');
@@ -2845,6 +2943,10 @@
           
           // Update the validation status in the estimate section
           updateElementIfExists('estimate-legal-text', '⚠️');
+          
+          // Update validation progress
+          validationProgress.legal_text = false;
+          updateValidationProgress();
           
           return false;
         }
