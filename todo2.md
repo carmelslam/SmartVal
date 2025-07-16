@@ -1822,12 +1822,14 @@ We need key changes to make it useful .
     *
     **the estimate report builder** ❌
     * examin, check, and understand the estimate report buider its structure , data , and purpose 
+    * the rport builder , is based on the actual legal report used by the user , the structre, order, content and logic, refect the actual report template.
+    * the report builder fills out all the fields placeholders from the helper , after tha validation stage. 
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
     * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
     * The tables in the builder are too wide attached illustration 
     * the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https:// hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
-    * In depreciation bulk add another field that calculate the value of the percentage from the car market price . The percentage field that we have is important beside it needs to be added the field of depreciation value in ₪ .
+    
    
   
     

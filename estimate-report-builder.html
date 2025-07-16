@@ -150,6 +150,163 @@
     .btn-secondary:hover {
       background: #545b62;
     }
+    
+    /* Print Styles for A4 Format */
+    @media print {
+      @page {
+        size: A4;
+        margin: 25mm 20mm 25mm 20mm;
+      }
+      
+      body {
+        font-family: sans-serif;
+        font-size: 12pt;
+        line-height: 1.4;
+        color: #000;
+        background: white;
+        margin: 0;
+        padding: 0;
+      }
+      
+      /* Hide control elements */
+      .no-print,
+      .control-buttons,
+      .estimate-header,
+      .estimate-disclaimer {
+        display: none !important;
+      }
+      
+      /* Optimize tables for print */
+      table {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: avoid;
+        font-size: 10pt;
+      }
+      
+      th, td {
+        padding: 4px 6px !important;
+        border: 1px solid #000 !important;
+        font-size: 10pt;
+        word-wrap: break-word;
+      }
+      
+      th {
+        background: #f0f0f0 !important;
+        font-weight: bold;
+        text-align: center !important;
+      }
+      
+      /* Section formatting */
+      .section {
+        page-break-inside: avoid;
+        margin-bottom: 15mm;
+      }
+      
+      .car-details {
+        border: 1px solid #000;
+        border-radius: 0;
+        padding: 8mm;
+        margin-bottom: 10mm;
+        page-break-inside: avoid;
+      }
+      
+      .car-details-title {
+        font-size: 14pt;
+        font-weight: bold;
+        margin-bottom: 6mm;
+        text-align: center;
+      }
+      
+      /* Signature section */
+      .signature-stamp {
+        page-break-inside: avoid;
+        margin-top: 20mm;
+      }
+      
+      .signature-stamp img {
+        max-height: 40mm;
+        max-width: 60mm;
+      }
+      
+      /* Ensure no orphaned content */
+      h1, h2, h3 {
+        page-break-after: avoid;
+        font-size: 14pt;
+        margin: 8mm 0 4mm 0;
+      }
+      
+      p {
+        orphans: 2;
+        widows: 2;
+        font-size: 11pt;
+      }
+      
+      /* Hide print button and navigation */
+      button {
+        display: none !important;
+      }
+      
+      /* Ensure content fits within margins */
+      .report-content {
+        max-width: 100%;
+        overflow: hidden;
+      }
+      
+      .estimate-totals {
+        background: #f5f5f5 !important;
+        border: 1px solid #000 !important;
+        padding: 6mm;
+        margin: 8mm 0;
+      }
+      
+      .intellectual-box {
+        border: 1px solid #000;
+        padding: 6mm;
+        margin: 8mm 0;
+      }
+      
+      /* Professional header spacing */
+      .report-header {
+        margin-bottom: 8mm;
+        padding: 4mm;
+      }
+      
+      /* Ensure consistent spacing between sections */
+      .car-details + .car-details {
+        margin-top: 6mm;
+      }
+      
+      /* Professional table spacing */
+      .car-details-table {
+        margin-bottom: 4mm;
+      }
+      
+      /* Signature area proper spacing */
+      .signature-stamp {
+        margin-top: 15mm;
+        margin-bottom: 10mm;
+      }
+      
+      /* Fix text alignment for professional appearance */
+      .center-text {
+        text-align: center;
+        font-size: 12pt;
+        margin: 6mm 0;
+      }
+      
+      /* Ensure proper page breaks */
+      .estimate-totals {
+        page-break-inside: avoid;
+      }
+      
+      /* Better spacing for legal text */
+      .legal-text {
+        margin: 8mm 0;
+        line-height: 1.6;
+      }
+    }
   </style>
   <script src="./math-preview.js"></script>
 </head>
@@ -167,20 +324,20 @@
     <p>הערכים הסופיים עשויים להשתנות בהתאם לתוצאות הביצוע בפועל ולחשבוניות הסופיות.</p>
   </div>
 
-  <div class="control-buttons">
+  <div class="control-buttons no-print">
     <button class="btn-secondary" onclick="editEstimate()">✏️ ערוך אומדן</button>
     <button class="btn-primary" onclick="previewEstimate()">👁️ תצוגה מקדימה</button>
     <button class="btn-success" onclick="generateEstimateReport()">📄 הפק דו"ח אומדן</button>
     <button class="btn-secondary" onclick="goHome()">🏠 חזור לדף הבית</button>
   </div>
 
-  <div id="estimate-output"></div>
+  <div id="estimate-output" class="report-content"></div>
 
   <div id="template-html">
    
   <!-- Section 1 - Header -->
   <div class="report-header">
-    <div class="car-details-title">אומדן נזקי רכב</div>
+    <div class="car-details-title">{{helper.report_title}}</div>
     <table style="width: 100%; margin-top: 10px;">
       <tr>
         <td style="width: 40%; text-align: right;">
@@ -189,15 +346,15 @@
         <td style="width: 20%;"></td>
         <td style="width: 40%; text-align: right;">
           <p>תאריך: {{meta.today}}</p>
-          <p>תיק מספר: YC/{{meta.plate}}/2025</p>
-          <p>עוסק מורשה: 02921217</p>
+          <p>תיק מספר: {{helper.file_number}}</p>
+          <p>עוסק מורשה: {{helper.business_license}}</p>
         </td>
       </tr>
     </table>
   </div>
 
   <div class="car-details">
-    <div class="car-details-title">פרטי האומדן</div> 
+    <div class="car-details-title">{{helper.estimate_details_title}}</div> 
     <table class="car-details-table">
     <tbody>
       <tr>
@@ -340,12 +497,13 @@
     <div class="car-details">
       <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
       <table class="car-details-table">
-        <tr><th>החלק הניזוק</th><th>מהות התיקון</th><th>% ירידת ערך</th><th>מוקד</th></tr>
+        <tr><th>החלק הניזוק</th><th>מהות התיקון</th><th>% ירידת ערך</th><th>ערך בש"ח</th><th>מוקד</th></tr>
         {{#each helper.expertise.depreciation.centers}}
           <tr>
             <td>{{this.part}}</td>
             <td>{{this.repair}}</td>
             <td>{{percent this.percent}}</td>
+            <td>{{money this.depreciation_value}}</td>
             <td>{{this.center}}</td>
           </tr>
         {{/each}}
@@ -467,13 +625,46 @@
     function loadEstimateData() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
+      // Ensure basic structure exists
+      helper.meta = helper.meta || {};
+      helper.vehicle = helper.vehicle || helper.car_details || {};
+      helper.calculations = helper.calculations || {};
+      helper.damage_sections = helper.damage_sections || [];
+      helper.expertise = helper.expertise || {};
+      helper.depreciation = helper.depreciation || {};
+      
+      // Ensure meta fields have defaults
+      helper.meta.client_name = helper.meta.client_name || helper.meta.owner || '';
+      helper.meta.plate = helper.meta.plate || '';
+      helper.meta.inspection_date = helper.meta.inspection_date || new Date().toLocaleDateString('he-IL');
+      helper.meta.location = helper.meta.location || '';
+      helper.meta.damage = helper.meta.damage || '';
+      helper.meta.address = helper.meta.address || '';
+      helper.meta.phone_number = helper.meta.phone_number || '';
+      
+      // Ensure vehicle fields have defaults
+      helper.vehicle.manufacturer = helper.vehicle.manufacturer || '';
+      helper.vehicle.model = helper.vehicle.model || '';
+      helper.vehicle.year = helper.vehicle.year || '';
+      helper.vehicle.chassis = helper.vehicle.chassis || helper.vehicle.vin || '';
+      helper.vehicle.km = helper.vehicle.km || '';
+      helper.vehicle.ownership_type = helper.vehicle.ownership_type || '';
+      
+      // Ensure helper template fields have defaults
+      helper.report_title = helper.report_title || 'אומדן נזקי רכב';
+      helper.file_number = helper.file_number || `YC/${helper.meta.plate || 'XXXXX'}/2025`;
+      helper.business_license = helper.business_license || '02921217';
+      helper.estimate_details_title = helper.estimate_details_title || 'פרטי הרכב הנבדק';
+      
       // Ensure estimate calculations are up to date
       if (!helper.calculations || !helper.calculations.total_estimate) {
         calculateEstimateTotals(helper);
       }
       
-      // Update session storage with calculated data
+      // Update session storage with processed data
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('✅ Estimate data loaded and processed:', helper);
     }
 
     function calculateEstimateTotals(helper) {
@@ -483,7 +674,8 @@
                           return total + (section.works_total || 0) + (section.parts_total || 0) + (section.repairs_total || 0);
                         }, 0) || 0;
 
-      const vatRate = MathEngine.getVatRate();
+      // Get VAT rate from helper, not from external source
+      const vatRate = helper.calculations?.vat_rate || helper.fees?.vat_rate || helper.vat_rate || 18;
       const vatAmount = Math.round(baseDamage * vatRate / 100);
       const totalEstimate = baseDamage + vatAmount;
 
@@ -493,6 +685,30 @@
       helper.calculations.vat_rate = vatRate;
       helper.calculations.vat_amount = vatAmount;
       helper.calculations.total_estimate = totalEstimate;
+      
+      // Calculate depreciation values
+      calculateDepreciationValues(helper);
+    }
+
+    function calculateDepreciationValues(helper) {
+      // Get market value from helper
+      const marketValue = helper.calculations?.market_value || 
+                         helper.vehicle_value_base || 
+                         helper.levi?.market_value || 0;
+
+      // Calculate depreciation values for each center
+      if (helper.expertise?.depreciation?.centers) {
+        helper.expertise.depreciation.centers.forEach(center => {
+          const percent = parseFloat(center.percent) || 0;
+          center.depreciation_value = Math.round(marketValue * percent / 100);
+        });
+      }
+
+      // Calculate global depreciation
+      if (helper.depreciation) {
+        const globalPercent = parseFloat(helper.depreciation.global_percent) || 0;
+        helper.depreciation.global_amount = Math.round(marketValue * globalPercent / 100);
+      }
     }
 
     function injectEstimateHTML() {
@@ -529,6 +745,12 @@
         html = html.replace(/\{\{meta\.location\}\}/g, helper.meta.location || '');
         html = html.replace(/\{\{meta\.damage\}\}/g, helper.meta.damage || '');
         
+        // Replace helper template placeholders
+        html = html.replace(/\{\{helper\.report_title\}\}/g, helper.report_title || 'אומדן נזקי רכב');
+        html = html.replace(/\{\{helper\.file_number\}\}/g, helper.file_number || `YC/${helper.meta.plate || 'XXXXX'}/2025`);
+        html = html.replace(/\{\{helper\.business_license\}\}/g, helper.business_license || '02921217');
+        html = html.replace(/\{\{helper\.estimate_details_title\}\}/g, helper.estimate_details_title || 'פרטי הרכב הנבדק');
+        
         // Replace vehicle data
         const vehicle = helper.vehicle || helper.car_details || {};
         html = html.replace(/\{\{helper\.vehicle\.model\}\}/g, vehicle.model || '');
@@ -548,6 +770,11 @@
         html = html.replace(/\{\{helper\.calculations\.vat_rate\}\}/g, calc.vat_rate || 18);
         html = html.replace(/\{\{money helper\.calculations\.vat_amount\}\}/g, formatCurrency(calc.vat_amount || 0));
         html = html.replace(/\{\{money helper\.calculations\.total_estimate\}\}/g, formatCurrency(calc.total_estimate || 0));
+        html = html.replace(/\{\{money helper\.calculations\.market_value\}\}/g, formatCurrency(calc.market_value || 0));
+        html = html.replace(/\{\{money helper\.calculations\.total_damage\}\}/g, formatCurrency(calc.total_damage || calc.base_damage || 0));
+        html = html.replace(/\{\{money helper\.calculations\.vehicle_value_gross\}\}/g, formatCurrency(calc.vehicle_value_gross || calc.market_value || 0));
+        html = html.replace(/\{\{percent helper\.calculations\.damage_percent\}\}/g, (calc.damage_percent || '0') + '%');
+        html = html.replace(/\{\{money helper\.calculations\.total_compensation\}\}/g, formatCurrency(calc.total_compensation || calc.total_estimate || 0));
         
         // Replace damage blocks (simplified for estimate)
         if (helper.damage_sections && helper.damage_sections.length > 0) {
@@ -567,11 +794,35 @@
           html = html.replace(/\{\{#each helper\.damage_blocks\}\}[\s\S]*?\{\{\/each\}\}/g, damageBlocksHTML);
         }
         
-        // Load legal text from vault (estimate type specific)
-        loadEstimateLegalText(helper.estimate_type || 'אובדן_להלכה').then(legalText => {
+        // Replace depreciation data with calculated values
+        if (helper.expertise?.depreciation?.centers) {
+          const depreciationHTML = helper.expertise.depreciation.centers.map(center => `
+            <tr>
+              <td>${center.part || ''}</td>
+              <td>${center.repair || ''}</td>
+              <td>${center.percent || '0'}%</td>
+              <td>${formatCurrency(center.depreciation_value || 0)}</td>
+              <td>${center.center || ''}</td>
+            </tr>
+          `).join('');
+          
+          html = html.replace(/\{\{#each helper\.expertise\.depreciation\.centers\}\}[\s\S]*?\{\{\/each\}\}/g, depreciationHTML);
+        }
+        
+        // Replace global depreciation values
+        html = html.replace(/\{\{money helper\.depreciation\.global_amount\}\}/g, formatCurrency(helper.depreciation?.global_amount || 0));
+        html = html.replace(/\{\{percent helper\.depreciation\.global_percent\}\}/g, (helper.depreciation?.global_percent || '0') + '%');
+        
+        // Load legal text from helper (estimate type specific)
+        loadEstimateLegalText(helper.estimate_type || 'אובדן_להלכה', helper).then(legalText => {
           html = html.replace(/\{\{lookup vault\.estimate_legal_text helper\.estimate_type\}\}/g, legalText);
-          html = html.replace(/\{\{lookup vault\.assessor_declaration 'estimate'\}\}/g, 
-            'אני החתום מטה, ירון כיוף, שמאי מוגשר מס\' 1097, מצהיר כי אומדן זה נערך על פי בדיקתי ובהתאם לידיעותיי המקצועיות.');
+          
+          // Get assessor declaration from helper too
+          const assessorDeclaration = helper.legal_texts?.assessor_declaration || 
+                                     helper.vault?.legal_texts?.assessor_declaration ||
+                                     'אני החתום מטה, ירון כיוף, שמאי מוגשר מס\' 1097, מצהיר כי אומדן זה נערך על פי בדיקתי ובהתאם לידיעותיי המקצועיות.';
+          
+          html = html.replace(/\{\{lookup vault\.assessor_declaration 'estimate'\}\}/g, assessorDeclaration);
           
           container.innerHTML = html;
         });
@@ -588,15 +839,16 @@
       }
     }
 
-    async function loadEstimateLegalText(estimateType) {
+    async function loadEstimateLegalText(estimateType, helper) {
       try {
-        // Load from vault using existing system
-        const vault = window.vaultTexts || {};
-        const legalText = vault[`estimate_${estimateType}`]?.text || 
-          'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
+        // Load legal text from helper, not from external vault
+        const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
+                         helper.legal_texts?.estimate_default ||
+                         helper.vault?.legal_texts?.[`estimate_${estimateType}`] ||
+                         'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
         return legalText;
       } catch (error) {
-        console.error('Error loading legal text:', error);
+        console.error('Error loading legal text from helper:', error);
         return 'טקסט משפטי לא זמין';
       }
     }
@@ -622,18 +874,37 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       try {
+        console.log('🔄 Submitting estimate to webhook...');
+        
+        // Get the current HTML content for the estimate
+        const estimateContent = document.getElementById('estimate-output').innerHTML;
+        
         const payload = {
           type: 'estimate',
-          plate: helper.meta?.plate,
+          plate: helper.meta?.plate || '',
+          owner: helper.meta?.client_name || '',
           helper: helper,
           estimate_type: helper.estimate_type || 'אובדן_להלכה',
-          timestamp: new Date().toISOString()
+          html_content: estimateContent,
+          timestamp: new Date().toISOString(),
+          calculations: helper.calculations || {}
         };
 
-        const response = await sendToWebhook('GENERATE_ESTIMATE_REPORT', payload);
+        // Use the SUBMIT_ESTIMATE webhook URL from todo requirements
+        const webhookUrl = 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l';
         
-        if (response?.success) {
-          alert('דו"ח האומדן נוצר בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.');
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Estimate submitted successfully:', result);
+          alert('דו"ח האומדן נשלח לעיבוד בהצלחה! תקבל התראה כאשר הדו"ח יהיה מוכן.');
           
           // Return to appropriate page based on entry mode
           const workflowMode = sessionStorage.getItem('workflowMode');
@@ -643,11 +914,11 @@
             window.location.href = 'selection.html';
           }
         } else {
-          alert('שגיאה ביצירת דו"ח האומדן: ' + (response?.error || 'שגיאה לא ידועה'));
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('Error generating estimate report:', error);
-        alert('שגיאה ביצירת דו"ח האומדן. אנא נסה שוב.');
+        console.error('❌ Error submitting estimate:', error);
+        alert('שגיאה בשליחת האומדן לעיבוד. אנא נסה שוב.\n\nפרטי שגיאה: ' + error.message);
       }
     };
 
@@ -660,9 +931,124 @@
       }
     };
 
+    // Validation function for testing
+    function validateEstimateData() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const validation = {
+        valid: true,
+        errors: [],
+        warnings: []
+      };
+      
+      // Validate required fields
+      if (!helper.meta?.plate) {
+        validation.errors.push('מספר רישוי חסר');
+        validation.valid = false;
+      }
+      
+      if (!helper.meta?.client_name) {
+        validation.errors.push('שם בעל הרכב חסר');
+        validation.valid = false;
+      }
+      
+      if (!helper.vehicle?.manufacturer) {
+        validation.warnings.push('יצרן רכב חסר');
+      }
+      
+      if (!helper.vehicle?.model) {
+        validation.warnings.push('דגם רכב חסר');
+      }
+      
+      if (!helper.calculations?.base_damage || helper.calculations.base_damage <= 0) {
+        validation.errors.push('חישוב נזק בסיסי חסר או שגוי');
+        validation.valid = false;
+      }
+      
+      if (!helper.depreciation?.global_percent) {
+        validation.warnings.push('אחוז ירידת ערך גלובלי חסר');
+      }
+      
+      console.log('🔍 Validation results:', validation);
+      return validation;
+    }
+    
+    // Test print functionality
+    function testPrintPreview() {
+      console.log('🖨️ Testing print preview...');
+      
+      // Validate data first
+      const validation = validateEstimateData();
+      if (!validation.valid) {
+        console.error('❌ Validation failed:', validation.errors);
+        alert('לא ניתן להדפיס - יש שגיאות בנתונים:\n' + validation.errors.join('\n'));
+        return false;
+      }
+      
+      // Test print functionality
+      try {
+        window.print();
+        console.log('✅ Print preview opened successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Print preview failed:', error);
+        alert('שגיאה בפתיחת תצוגה מקדימה להדפסה');
+        return false;
+      }
+    }
+    
+    // Test webhook connectivity
+    async function testWebhookConnection() {
+      console.log('🔗 Testing webhook connection...');
+      
+      const webhookUrl = 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l';
+      
+      try {
+        const testPayload = {
+          type: 'test',
+          timestamp: new Date().toISOString(),
+          message: 'Connection test from estimate builder'
+        };
+        
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(testPayload)
+        });
+        
+        if (response.ok) {
+          console.log('✅ Webhook connection successful');
+          return true;
+        } else {
+          console.error('❌ Webhook connection failed:', response.status, response.statusText);
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Webhook connection error:', error);
+        return false;
+      }
+    }
+    
+    // Update previewEstimate to use validation
+    window.previewEstimate = function() {
+      testPrintPreview();
+    };
+    
     // Initialize on page load
     window.addEventListener('DOMContentLoaded', () => {
       console.log('🔄 Estimate Report Builder loaded and ready');
+      
+      // Run validation on load
+      setTimeout(() => {
+        const validation = validateEstimateData();
+        if (validation.errors.length > 0) {
+          console.warn('⚠️ Data validation errors found:', validation.errors);
+        }
+        if (validation.warnings.length > 0) {
+          console.warn('⚠️ Data validation warnings:', validation.warnings);
+        }
+      }, 1000);
     });
   </script>
 </body>
