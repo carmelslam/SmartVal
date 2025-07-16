@@ -138,3 +138,110 @@ After implementation:
 **Analysis completed by:** Claude Code Analysis System  
 **Date:** July 15, 2025  
 **Status:** Ready for implementation
+
+---
+
+# Depreciation Section Analysis Report
+
+## Overview
+I've analyzed the depreciation section in the estimate-builder.html file to understand how it handles form elements and saves data to the helper object.
+
+## Key Findings
+
+### 1. Form Structure
+The depreciation section is located at line 1099-1121 in estimate-builder.html:
+- Container ID: `depreciationSection`
+- Dynamic table ID: `depreciationBulkTable`
+- Global depreciation field ID: `globalDep1`
+- Global value field ID: `globalDepValue`
+- Garage days field ID: `garageDays`
+
+### 2. Form Fields
+The depreciation form contains the following fields:
+- **Damaged Part** (החלק הניזוק): Text input for the damaged part name
+- **Repair Type** (מהות התיקון): Text input for the type of repair
+- **Percentage** (% ירידת ערך): Text input for depreciation percentage
+- **Value** (ערך ב-₪): Readonly calculated field showing monetary value
+- **Global Depreciation**: Percentage field for overall depreciation
+
+### 3. Data Storage Structure
+The depreciation data is saved to `helper.estimate_depreciation` with the following structure:
+```javascript
+helper.estimate_depreciation = {
+  global_percent: '', // From globalDep1 field
+  global_value: '',   // From globalDepValue field
+  bulk_items: [       // Array of individual depreciation items
+    {
+      damaged_part: '',
+      repair_type: '',
+      percent: '',
+      value: ''
+    }
+  ]
+}
+```
+
+### 4. JavaScript Functions
+Key functions handling depreciation data:
+
+#### `saveDepreciationData()` (Line 1356)
+- Collects data from all depreciation rows
+- Saves to `helper.estimate_depreciation`
+- Stores in sessionStorage
+- Called on every field change
+
+#### `loadDepreciationData(helper)` (Line 1910)
+- Loads saved depreciation data from helper
+- Populates form fields
+- If no saved data exists, tries to populate from damage centers
+
+#### `addDepField(data)` (Line 1328)
+- Adds new depreciation row to the table
+- Accepts optional data parameter to pre-fill values
+- Each row has onchange="saveDepreciationData()" listeners
+
+#### `updateDepreciationFromDamageCenters(damageCenterNames)` (Line 5413)
+- Auto-populates depreciation table based on damage center names
+- Clears existing rows and creates new ones
+- Called when damage centers are saved
+
+### 5. Data Flow
+1. **Initial Load**: `loadDepreciationData()` checks for saved data in `helper.estimate_depreciation`
+2. **Auto-Population**: If no saved data, tries to populate from damage centers
+3. **User Input**: Form fields trigger `saveDepreciationData()` on change
+4. **Save Process**: Data is collected and saved to `helper.estimate_depreciation`
+5. **Persistence**: Helper object is stored in sessionStorage
+
+### 6. Potential Issues Identified
+
+#### Issue 1: Data Structure Mismatch
+The code references `helper.expertise.depreciation.centers` in some places but actually uses `helper.estimate_depreciation`. This could cause confusion.
+
+#### Issue 2: Auto-Population Logic
+The auto-population from damage centers only happens if no saved depreciation data exists. This might not update when damage centers change.
+
+#### Issue 3: Calculation Logic
+The value calculation (₪) field is readonly but the calculation logic appears to be implemented in event listeners that may not always be properly attached.
+
+#### Issue 4: Remove Button Inconsistency
+The remove button in `updateDepreciationFromDamageCenters` uses inline onclick while `addDepField` uses a proper function reference.
+
+## Review Section
+
+### Summary of Findings
+The depreciation section has a well-structured form with proper data saving functionality. The main data storage is in `helper.estimate_depreciation` with a clear structure for both global and individual depreciation items. The system includes auto-population from damage centers and proper event handling for real-time saving.
+
+### Recommendations
+1. Standardize data structure references (use `helper.estimate_depreciation` consistently)
+2. Improve auto-population logic to update when damage centers change
+3. Ensure calculation event listeners are properly attached
+4. Standardize remove button implementation
+5. Add error handling for edge cases
+
+The system appears to be functional but could benefit from some cleanup and standardization of the data handling patterns.
+
+---
+
+**Depreciation Analysis completed by:** Claude Code Analysis System  
+**Date:** July 16, 2025  
+**Status:** Analysis complete

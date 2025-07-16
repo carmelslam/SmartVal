@@ -348,6 +348,7 @@
     import { MathEngine } from './math.js';
     import { sendToWebhook } from './webhook.js';
     import { getVehicleData, getDamageData } from './helper.js';
+    import { vaultLoader } from './vault-loader.js';
 
     // Authentication and data validation
     document.addEventListener('DOMContentLoaded', () => {
@@ -380,7 +381,12 @@
       }
 
       console.log('✅ Estimate Report Builder: All validations passed');
-      initializeEstimateBuilder();
+      
+      // Initialize vault loader
+      vaultLoader.init().then(() => {
+        console.log('✅ Vault loader initialized');
+        initializeEstimateBuilder();
+      });
     });
 
     function initializeEstimateBuilder() {
@@ -470,10 +476,24 @@
         });
       }
 
+      // Calculate values for estimate depreciation bulk items
+      if (helper.estimate_depreciation?.bulk_items) {
+        helper.estimate_depreciation.bulk_items.forEach(item => {
+          const percent = parseFloat(item.percent) || 0;
+          item.value = Math.round(marketValue * percent / 100);
+        });
+      }
+
       // Calculate global depreciation
       if (helper.depreciation) {
         const globalPercent = parseFloat(helper.depreciation.global_percent) || 0;
         helper.depreciation.global_amount = Math.round(marketValue * globalPercent / 100);
+      }
+      
+      // Calculate global estimate depreciation
+      if (helper.estimate_depreciation) {
+        const globalPercent = parseFloat(helper.estimate_depreciation.global_percent) || 0;
+        helper.estimate_depreciation.global_value = Math.round(marketValue * globalPercent / 100);
       }
     }
 
@@ -609,10 +629,23 @@
             </div>
           </div>
 
-          <!-- Section 4.6 - Levi Market Value Calculation -->
+          <!-- Section 4.6 - Damage Percentage Calculation -->
+          <div class="section">
+            <div class="car-details">
+              <div class="car-details-title">חישוב אחוז הנזק</div>
+              <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr><th style="width: 70%;">תיאור</th><th style="width: 30%;">ערך</th></tr>
+                <tr><td style="padding: 8px;">סה"כ הנזק כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(baseDamage)}</td></tr>
+                <tr><td style="padding: 8px;">ערך הרכב לנזק גולמי כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(marketValue)}</td></tr>
+                <tr><td style="padding: 8px;"><strong>אחוז הנזק הגולמי</strong></td><td style="padding: 8px; text-align: center;"><strong>${damagePercent}%</strong></td></tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 4.7 - Levi Market Value Calculation -->
           ${generateLeviAdjustments(helper)}
 
-          <!-- Section 4.7 - Depreciation Opening Block -->
+          <!-- Section 4.8 - Depreciation Opening Block -->
           ${generateDepreciationAnalysis(helper)}
 
           <!-- Section 5 - Estimate Totals Summary -->
@@ -784,11 +817,22 @@
     
     function generateLegalText(helper) {
       const estimateType = helper.estimate_type || 'אובדן_להלכה';
+      
+      // Try to get vault texts from global or helper
+      const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+      
+      // Get legal text from vault based on estimate type
       const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
                        helper.legal_texts?.estimate_default ||
-                       helper.vault?.legal_texts?.[`estimate_${estimateType}`] ||
+                       vaultTexts[`estimate_${estimateType}`]?.text ||
+                       vaultTexts.estimate_default?.text ||
                        'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
-      return legalText;
+      
+      // Add assessor credentials from vault
+      const assessorCredentials = vaultTexts.assessor_introduction || 
+                                 'ירון כיוף, שמאי מוסמך מספר רישיון 1097, בעל ותק של מעל 15 שנה בתחום הערכת נזקי רכב ורכוש.';
+      
+      return legalText + '\n\n' + assessorCredentials;
     }
     
     function generateLeviAdjustments(helper) {
@@ -898,10 +942,22 @@
     }
     
     function generateDepreciationAnalysis(helper) {
+      // Check both depreciation data sources
       const depreciation = helper.expertise?.depreciation || helper.depreciation || {};
-      const centers = depreciation.centers || [];
-      const globalPercent = depreciation.global_percent || 0;
-      const globalAmount = depreciation.global_amount || 0;
+      const estimateDepreciation = helper.estimate_depreciation || {};
+      
+      // Get centers from multiple sources
+      const centers = depreciation.centers || 
+                     (estimateDepreciation.bulk_items || []).map(item => ({
+                       part: item.damaged_part,
+                       repair: item.repair_type,
+                       percent: item.percent,
+                       value: item.value,
+                       center: item.center || item.location
+                     })) || [];
+      
+      const globalPercent = depreciation.global_percent || estimateDepreciation.global_percent || 0;
+      const globalAmount = depreciation.global_amount || estimateDepreciation.global_value || 0;
       const marketValue = helper.calculations?.market_value || helper.expertise?.levi_report?.final_price || 0;
       
       if (!centers.length && !globalPercent) {
@@ -917,9 +973,9 @@
       
       // Depreciation introduction
       const damageBlocks = helper.expertise?.damage_blocks || [];
-      const damageWorkRows = damageBlocks.map(block => `
+      const damageWorkRows = damageBlocks.map((block, index) => `
         <tr>
-          <td style="padding: 8px;">${block.location || block.center || 'מוקד לא מוגדר'}</td>
+          <td style="padding: 8px;">${block.location || block.center || block.name || `מוקד ${index + 1}`}</td>
           <td style="padding: 8px;">
             ${(block.repairs || []).map(r => r.name || r.description).join(', ')}
             ${(block.works || []).map(w => w.type || w.description).join(', ')}
@@ -928,13 +984,13 @@
       `).join('');
       
       // Individual depreciation centers
-      const depreciationRows = centers.map(center => `
+      const depreciationRows = centers.map((center, index) => `
         <tr>
-          <td style="padding: 8px;">${center.part || ''}</td>
-          <td style="padding: 8px;">${center.repair || ''}</td>
+          <td style="padding: 8px;">${center.part || center.description || ''}</td>
+          <td style="padding: 8px;">${center.repair || center.work || ''}</td>
           <td style="padding: 8px; text-align: center;">${center.percent || '0'}%</td>
           <td style="padding: 8px; text-align: center;">${formatCurrency(center.value || center.depreciation_value || 0)}</td>
-          <td style="padding: 8px;">${center.center || ''}</td>
+          <td style="padding: 8px;">${center.center || center.name || center.location || `מוקד ${index + 1}`}</td>
         </tr>
       `).join('');
       
