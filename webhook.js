@@ -26,7 +26,9 @@ export const WEBHOOKS = {
 
   // Estimate and Case Management Webhooks
   SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
-  ESTIMATE_EXPORT: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p',
+  
+  // Helper export on logout - sends complete helper data with plate_helper_timestamp format
+  HELPER_EXPORT: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p',
 
   // ✅ ADMIN + DEV HUB ADDITIONS — Confirmed by User
   ADMIN_FETCH_CASE: 'https://hook.eu2.make.com/diap4e9rewewyfjbwn6dypse9t16l8r9',
@@ -37,6 +39,7 @@ export const WEBHOOKS = {
   ADMIN_FETCH_FIELDS: 'https://hook.eu2.make.com/urzpd316748hb4m6c5qx4uf8trqlbyf9',
   // Used by Make automations to push notifications to user system
   PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
+  
   
   // Call expertise report webhook
   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
