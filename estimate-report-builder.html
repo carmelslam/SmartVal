@@ -548,8 +548,68 @@
         const marketValue = calc.market_value || helper.expertise?.levi_report?.final_price || helper.levisummary?.final_price || 0;
         const damagePercent = calc.damage_percent || (marketValue > 0 ? Math.round((baseDamage / marketValue) * 100) : 0);
         
-        // Damage description
-        const damageDescription = helper.expertise?.description || helper.damage?.description || 'תיאור נזק לא זמין';
+        // Damage description - check multiple sources
+        let damageDescription = '';
+        
+        // Check various sources for damage description
+        if (helper.expertise?.description) {
+          damageDescription = helper.expertise.description;
+        } else if (helper.damage?.description) {
+          damageDescription = helper.damage.description;
+        } else if (helper.estimate_notes) {
+          damageDescription = helper.estimate_notes;
+        } else if (helper.expertise?.damage_blocks?.length > 0) {
+          // Collect descriptions from damage blocks
+          const blockDescriptions = [];
+          helper.expertise.damage_blocks.forEach((block, index) => {
+            const blockDesc = [];
+            
+            // Add damage center name
+            if (block.damage_center_name) {
+              blockDesc.push(`מוקד ${index + 1}: ${block.damage_center_name}`);
+            }
+            
+            // Add repair descriptions
+            if (block.repairs?.length > 0) {
+              block.repairs.forEach(repair => {
+                if (repair.description) {
+                  blockDesc.push(repair.description);
+                }
+              });
+            }
+            
+            // Add part descriptions
+            if (block.parts?.length > 0) {
+              block.parts.forEach(part => {
+                if (part.desc) {
+                  blockDesc.push(part.desc);
+                }
+              });
+            }
+            
+            // Add work notes
+            if (block.works?.length > 0) {
+              block.works.forEach(work => {
+                if (work.note) {
+                  blockDesc.push(work.note);
+                }
+              });
+            }
+            
+            if (blockDesc.length > 0) {
+              blockDescriptions.push(blockDesc.join(', '));
+            }
+          });
+          
+          if (blockDescriptions.length > 0) {
+            damageDescription = blockDescriptions.join('. ');
+          }
+        }
+        
+        // Fallback if no description found
+        if (!damageDescription) {
+          damageDescription = 'תיאור נזק לא זמין';
+        }
         
         // Build HTML structure
         const html = `
