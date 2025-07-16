@@ -435,16 +435,61 @@
     }
     .progress-bar {
       background: #e2e8f0;
-      height: 8px;
-      border-radius: 4px;
+      height: 12px;
+      border-radius: 6px;
       overflow: hidden;
       margin: 10px 0;
+      border: 2px solid #cbd5e1;
     }
     .progress-fill {
-      background: linear-gradient(90deg, #3b82f6, #1e3a8a);
       height: 100%;
       border-radius: 4px;
-      transition: width 0.3s ease;
+      transition: all 0.5s ease;
+      position: relative;
+      background: linear-gradient(90deg, #dc2626, #ea580c, #d97706, #ca8a04, #65a30d, #16a34a);
+      background-size: 600% 100%;
+      animation: progressShine 2s ease-in-out infinite;
+    }
+    
+    /* Progress colors based on percentage */
+    .progress-fill.progress-0 {
+      background: #6b7280;
+    }
+    .progress-fill.progress-17 {
+      background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+    .progress-fill.progress-33 {
+      background: linear-gradient(90deg, #ea580c, #f97316);
+    }
+    .progress-fill.progress-50 {
+      background: linear-gradient(90deg, #d97706, #f59e0b);
+    }
+    .progress-fill.progress-67 {
+      background: linear-gradient(90deg, #ca8a04, #eab308);
+    }
+    .progress-fill.progress-83 {
+      background: linear-gradient(90deg, #65a30d, #84cc16);
+    }
+    .progress-fill.progress-100 {
+      background: linear-gradient(90deg, #16a34a, #22c55e);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+    
+    @keyframes progressShine {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+    
+    .progress-indicator.completed {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border: 2px solid #16a34a;
     }
     .footer {
       text-align: center;
@@ -2270,8 +2315,33 @@
       const totalSections = Object.keys(validationProgress).length;
       const progressPercent = Math.round((completedSections / totalSections) * 100);
       
-      document.getElementById('progress-fill').style.width = progressPercent + '%';
+      const progressFill = document.getElementById('progress-fill');
+      const progressIndicator = document.querySelector('.progress-indicator');
+      
+      // Update progress bar width
+      progressFill.style.width = progressPercent + '%';
       document.getElementById('progress-text').textContent = progressPercent + '% הושלם';
+      
+      // Remove all progress classes
+      progressFill.classList.remove('progress-0', 'progress-17', 'progress-33', 'progress-50', 'progress-67', 'progress-83', 'progress-100');
+      
+      // Add appropriate progress class based on percentage
+      if (progressPercent === 0) {
+        progressFill.classList.add('progress-0');
+      } else if (progressPercent <= 17) {
+        progressFill.classList.add('progress-17');
+      } else if (progressPercent <= 33) {
+        progressFill.classList.add('progress-33');
+      } else if (progressPercent <= 50) {
+        progressFill.classList.add('progress-50');
+      } else if (progressPercent <= 67) {
+        progressFill.classList.add('progress-67');
+      } else if (progressPercent <= 83) {
+        progressFill.classList.add('progress-83');
+      } else if (progressPercent === 100) {
+        progressFill.classList.add('progress-100');
+        progressIndicator.classList.add('completed');
+      }
       
       // Save validation progress to sessionStorage
       sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
