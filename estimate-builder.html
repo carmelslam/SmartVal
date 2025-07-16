@@ -2094,9 +2094,10 @@
         <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סוג עבודה:</label>
-            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateWorkCostFromType(this, ${centerIndex}, ${workIndex})">
+            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="handleWorkTypeChange(this, ${centerIndex}, ${workIndex})">
               ${workTypes.map(type => `<option value="${type}" ${type === workType ? 'selected' : ''}>${type}</option>`).join('')}
             </select>
+            <input type="text" class="work-type-other" placeholder="הכנס סוג עבודה אחר" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-top: 4px; display: ${workType === 'אחר' ? 'block' : 'none'};" />
           </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">הערות:</label>
@@ -5465,6 +5466,22 @@
       updateAllCostDisplays();
       
       console.log(`🔧 Work type changed: ${selectElement.value} (cost remains manual)`);
+    }
+
+    function handleWorkTypeChange(selectElement, centerIndex, workIndex) {
+      const workRow = selectElement.closest('.work-row');
+      const otherInput = workRow.querySelector('.work-type-other');
+      
+      if (selectElement.value === 'אחר') {
+        otherInput.style.display = 'block';
+        otherInput.focus();
+      } else {
+        otherInput.style.display = 'none';
+        otherInput.value = '';
+      }
+      
+      // Call the original function
+      updateWorkCostFromType(selectElement, centerIndex, workIndex);
     }
 
     // COST CALCULATION FUNCTIONS
