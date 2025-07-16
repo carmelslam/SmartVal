@@ -1813,11 +1813,15 @@ We need key changes to make it useful .
    הסתר) not from חישוב אחוז הנזק (הצג/הסתר)
 
   * The button בדוק  טקסט משפטי doesn’t  work
+  * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. 
+  * the advanment scale in the topis not measuring good, , make sure it is accurate according to advanacement 
+  * make sure the legal text in teh builder is also saved to the helper of the specific plate number.
 
  
 
     *
     **the estimate report builder** ❌
+    * examin, check, and understand the estimate report buider.
     * The report builder has double html - there are 2 reports in one page . 
     * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
     * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
