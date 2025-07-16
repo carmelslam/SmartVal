@@ -1801,7 +1801,7 @@ We need key changes to make it useful .
 
   **VALIDATION PAGE**  ✅
 
-  * Add  to the validation the same floating screens of the builder and the report review page. ❌
+  * Add  to the validation the same floating screens with their fulll functionality - from the builder and the report review page. ❌
 
   * add a depreciation section in the validation page . use the same logic, the   
     depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
@@ -1844,8 +1844,7 @@ We need key changes to make it useful .
 20. **General issues :**
     * *All reports , builders, flowing screens, and main system products are updated and filled from the helper directly*
     * *Validation pages are updated from builders to make edit and error mapping easier.*
-    * Refresh button on all pages : builder, validation and report : the button needs to be located in 2 places : at the top and at the bottom 
-    * Automatic check button doesn’t  work 
+    * Refresh button on all pages : builder, validation and report : the button needs to be located in 2 places : at the top and at the bottom ✅
     * The helper is not updated by the builder just the plate field and the market value fields are updating the helper , this means the report doesn’t  get data, the floating screens, car parts, car details, invoice and Levi are not update .✅
 
 

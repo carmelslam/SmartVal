@@ -3170,7 +3170,7 @@
       }
     }
 
-    // Define showBrowserMenuUnderToggle function (same as builder)
+    // Define showBrowserMenuUnderToggle function (exact copy from builder)
     function showBrowserMenuUnderToggle() {
       const menu = document.createElement('div');
       menu.style.cssText = `
@@ -3191,21 +3191,28 @@
       
       menu.innerHTML = `
         <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50; font-size: 16px;">בחר אתר לפתיחה:</div>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <button onclick="window.open('https://www.carpart.co.il', '_blank')" style="background: #27ae60; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; direction: rtl;">🔧 חלקי רכב - Car Part</button>
-          <button onclick="window.open('https://www.kolzchut.org.il', '_blank')" style="background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; direction: rtl;">🏛️ פורטל לזכויות</button>
-          <button onclick="this.parentElement.parentElement.remove()" style="background: #95a5a6; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; direction: rtl;">ביטול</button>
-        </div>
+        <button onclick="window.openInternalBrowser('car-part.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+          🔧 Car Part - חלקי רכב
+        </button>
+        <button onclick="window.openInternalBrowser('portal.levi-itzhak.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+          📊 פורטל לוי יצחק
+        </button>
+        <button onclick="this.parentElement.remove();" style="width: 100%; padding: 10px; border: 1px solid #ccc; background: white; color: #666; border-radius: 6px; cursor: pointer; font-size: 14px;">
+          ביטול
+        </button>
       `;
       
       document.body.appendChild(menu);
       
-      // Auto-remove after 10 seconds
+      // Remove menu when clicking outside
       setTimeout(() => {
-        if (menu.parentElement) {
-          menu.remove();
-        }
-      }, 10000);
+        document.addEventListener('click', function removeMenu(e) {
+          if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', removeMenu);
+          }
+        });
+      }, 100);
     }
 
     // Define toggleFloatingScreen function first
