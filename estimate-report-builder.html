@@ -596,6 +596,25 @@
           <!-- Section 4 - Damage Analysis -->
           ${generateDamageAnalysis(helper)}
 
+          <!-- Section 4.5 - Levi Adjustments (Gross Damage Percentage) -->
+          <div class="section">
+            <div class="car-details">
+              <div class="car-details-title">אחוז הנזק הגולמי</div>
+              <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr><th style="width: 70%;">תיאור</th><th style="width: 30%;">ערך</th></tr>
+                <tr><td style="padding: 8px;">סה"כ הנזק כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(calc.total_damage || baseDamage)}</td></tr>
+                <tr><td style="padding: 8px;">ערך הרכב לנזק גולמי כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(calc.vehicle_value_gross || marketValue)}</td></tr>
+                <tr><td style="padding: 8px;"><strong>אחוז הנזק הגולמי</strong></td><td style="padding: 8px; text-align: center;"><strong>${damagePercent}%</strong></td></tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 4.6 - Levi Market Value Calculation -->
+          ${generateLeviAdjustments(helper)}
+
+          <!-- Section 4.7 - Depreciation Opening Block -->
+          ${generateDepreciationAnalysis(helper)}
+
           <!-- Section 5 - Estimate Totals Summary -->
           <div class="section">
             <div class="estimate-totals">
@@ -610,12 +629,16 @@
                   <td style="padding: 8px; text-align: center;">${formatCurrency(baseDamage)}</td>
                 </tr>
                 <tr>
+                  <td style="padding: 8px;">פיצוי בגין ירידת ערך</td>
+                  <td style="padding: 8px; text-align: center;">${formatCurrency(helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || 0)}</td>
+                </tr>
+                <tr>
                   <td style="padding: 8px;">מע"מ (${vatRate}%)</td>
                   <td style="padding: 8px; text-align: center;">${formatCurrency(vatAmount)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px;"><strong>סה"כ נכלל באומדן</strong></td>
-                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalEstimate)}</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalEstimate + (helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || 0))}</strong></td>
                 </tr>
               </table>
             </div>
@@ -691,30 +714,61 @@
         const repairsTotal = block.repairs_total || repairs.reduce((sum, item) => sum + (item.cost || 0), 0);
         const sectionTotal = worksTotal + partsTotal + repairsTotal;
         
+        // Generate detailed rows for each category
+        const workRows = works.map(work => `
+          <tr>
+            <td style="padding: 8px;">עבודות</td>
+            <td style="padding: 8px;">${work.type || work.description || work.name || 'עבודה לא מוגדרת'}</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(work.cost || 0)}</td>
+          </tr>
+        `).join('');
+        
+        const partRows = parts.map(part => `
+          <tr>
+            <td style="padding: 8px;">חלקים</td>
+            <td style="padding: 8px;">${part.name || part.description || 'חלק לא מוגדר'}</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(part.price || 0)}</td>
+          </tr>
+        `).join('');
+        
+        const repairRows = repairs.map(repair => `
+          <tr>
+            <td style="padding: 8px;">תיקונים</td>
+            <td style="padding: 8px;">${repair.name || repair.description || 'תיקון לא מוגדר'}</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(repair.cost || 0)}</td>
+          </tr>
+        `).join('');
+        
+        // If no detailed items, show summary
+        const detailedRows = workRows + partRows + repairRows;
+        const summaryRows = detailedRows || `
+          <tr>
+            <td style="padding: 8px;">עבודות</td>
+            <td style="padding: 8px;">${works.length} פריטים</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(worksTotal)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">חלקים</td>
+            <td style="padding: 8px;">${parts.length} פריטים</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(partsTotal)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">תיקונים</td>
+            <td style="padding: 8px;">${repairs.length} פריטים</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(repairsTotal)}</td>
+          </tr>
+        `;
+        
         return `
           <div class="car-details">
-            <div class="car-details-title">אומדן מוקד ${index + 1}: ${block.label || block.center || 'לא מוגדר'}</div>
+            <div class="car-details-title">אומדן מוקד ${index + 1}: ${block.label || block.location || block.center || 'לא מוגדר'}</div>
             <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
               <tr>
-                <th style="width: 30%;">סוג</th>
-                <th style="width: 50%;">תיאור</th>
+                <th style="width: 20%;">סוג</th>
+                <th style="width: 60%;">תיאור</th>
                 <th style="width: 20%;">אומדן עלות</th>
               </tr>
-              <tr>
-                <td style="padding: 8px;">עבודות</td>
-                <td style="padding: 8px;">${works.length} פריטים</td>
-                <td style="padding: 8px; text-align: center;">${formatCurrency(worksTotal)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px;">חלקים</td>
-                <td style="padding: 8px;">${parts.length} פריטים</td>
-                <td style="padding: 8px; text-align: center;">${formatCurrency(partsTotal)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px;">תיקונים</td>
-                <td style="padding: 8px;">${repairs.length} פריטים</td>
-                <td style="padding: 8px; text-align: center;">${formatCurrency(repairsTotal)}</td>
-              </tr>
+              ${summaryRows}
               <tr>
                 <td style="padding: 8px;"><strong>סה"כ מוקד</strong></td>
                 <td style="padding: 8px;"></td>
@@ -732,8 +786,188 @@
       const estimateType = helper.estimate_type || 'אובדן_להלכה';
       const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
                        helper.legal_texts?.estimate_default ||
+                       helper.vault?.legal_texts?.[`estimate_${estimateType}`] ||
                        'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
       return legalText;
+    }
+    
+    function generateLeviAdjustments(helper) {
+      const leviData = helper.expertise?.levi_report || helper.levisummary || {};
+      const basePrice = leviData.base_price || leviData['מחיר בסיס'] || 0;
+      const finalPrice = leviData.final_price || leviData['מחיר סופי'] || 0;
+      
+      if (!basePrice && !finalPrice) {
+        return `
+          <div class="section">
+            <div class="car-details">
+              <div class="car-details-title">חישוב ערך השוק של הרכב</div>
+              <p style="text-align: center; padding: 20px;">לא נמצאו נתוני הערכת לוי</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      const adjustments = [];
+      
+      // Registration adjustment
+      if (leviData['עליה לכביש %'] || leviData['ערך ש״ח עליה לכביש']) {
+        adjustments.push({
+          label: 'עליה לכביש',
+          percent: leviData['עליה לכביש %'] || '',
+          amount: leviData['ערך ש״ח עליה לכביש'] || 0
+        });
+      }
+      
+      // Ownership adjustment
+      if (leviData['בעלות %'] || leviData['ערך ש״ח בעלות']) {
+        adjustments.push({
+          label: 'בעלות',
+          percent: leviData['בעלות %'] || '',
+          amount: leviData['ערך ש״ח בעלות'] || 0
+        });
+      }
+      
+      // Mileage adjustment
+      if (leviData['מס ק״מ %'] || leviData['ערך ש״ח מס ק״מ']) {
+        adjustments.push({
+          label: 'מס ק״מ',
+          percent: leviData['מס ק״מ %'] || '',
+          amount: leviData['ערך ש״ח מס ק״מ'] || 0
+        });
+      }
+      
+      // Owner count adjustment
+      if (leviData['מספר בעלים %'] || leviData['ערך ש״ח מספר בעלים']) {
+        adjustments.push({
+          label: 'מספר בעלים',
+          percent: leviData['מספר בעלים %'] || '',
+          amount: leviData['ערך ש״ח מספר בעלים'] || 0
+        });
+      }
+      
+      // Features adjustment
+      if (leviData['מאפיינים %'] || leviData['ערך ש״ח מאפיינים']) {
+        adjustments.push({
+          label: 'מאפיינים',
+          percent: leviData['מאפיינים %'] || '',
+          amount: leviData['ערך ש״ח מאפיינים'] || 0
+        });
+      }
+      
+      // Alternative English structure
+      if (leviData.adjustments) {
+        Object.entries(leviData.adjustments).forEach(([key, adj]) => {
+          if (adj.percent || adj.value) {
+            const labelMap = {
+              'registration': 'עליה לכביש',
+              'ownership': 'בעלות',
+              'km': 'מס ק״מ',
+              'owner_count': 'מספר בעלים',
+              'features': 'מאפיינים'
+            };
+            adjustments.push({
+              label: labelMap[key] || key,
+              percent: adj.percent || '',
+              amount: adj.value || 0
+            });
+          }
+        });
+      }
+      
+      const adjustmentRows = adjustments.map(adj => `
+        <tr>
+          <td style="padding: 8px;">${adj.label}</td>
+          <td style="padding: 8px; text-align: center;">${adj.percent}%</td>
+          <td style="padding: 8px; text-align: center;">${formatCurrency(adj.amount)}</td>
+        </tr>
+      `).join('');
+      
+      return `
+        <div class="section">
+          <div class="car-details">
+            <div class="car-details-title">חישוב ערך השוק של הרכב</div>
+            <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+              <tr><th style="width: 50%;">תיאור</th><th style="width: 20%;">אחוז</th><th style="width: 30%;">ערך</th></tr>
+              <tr><td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td></tr>
+              ${adjustmentRows}
+              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(finalPrice)}</strong></td></tr>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+    
+    function generateDepreciationAnalysis(helper) {
+      const depreciation = helper.expertise?.depreciation || helper.depreciation || {};
+      const centers = depreciation.centers || [];
+      const globalPercent = depreciation.global_percent || 0;
+      const globalAmount = depreciation.global_amount || 0;
+      const marketValue = helper.calculations?.market_value || helper.expertise?.levi_report?.final_price || 0;
+      
+      if (!centers.length && !globalPercent) {
+        return `
+          <div class="section">
+            <div class="car-details">
+              <div class="car-details-title">ירידת ערך</div>
+              <p style="text-align: center; padding: 20px;">לא נמצאו נתוני ירידת ערך</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Depreciation introduction
+      const damageBlocks = helper.expertise?.damage_blocks || [];
+      const damageWorkRows = damageBlocks.map(block => `
+        <tr>
+          <td style="padding: 8px;">${block.location || block.center || 'מוקד לא מוגדר'}</td>
+          <td style="padding: 8px;">
+            ${(block.repairs || []).map(r => r.name || r.description).join(', ')}
+            ${(block.works || []).map(w => w.type || w.description).join(', ')}
+          </td>
+        </tr>
+      `).join('');
+      
+      // Individual depreciation centers
+      const depreciationRows = centers.map(center => `
+        <tr>
+          <td style="padding: 8px;">${center.part || ''}</td>
+          <td style="padding: 8px;">${center.repair || ''}</td>
+          <td style="padding: 8px; text-align: center;">${center.percent || '0'}%</td>
+          <td style="padding: 8px; text-align: center;">${formatCurrency(center.value || center.depreciation_value || 0)}</td>
+          <td style="padding: 8px;">${center.center || ''}</td>
+        </tr>
+      `).join('');
+      
+      return `
+        <div class="section">
+          <div class="car-details">
+            <div class="car-details-title">ירידת ערך</div>
+            <p style="font-size: 18px; font-weight: bold;">
+              מממצאי בדיקתנו עולה כי הרכב נפגע והיה צורך בעבודות ותיקונים הבאים:
+            </p>
+            <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+              <tr><th style="width: 30%;">מוקד נזק</th><th style="width: 70%;">עבודות / תיקונים</th></tr>
+              ${damageWorkRows}
+            </table>
+            <p style="font-size: 18px; font-weight: bold;">
+              אנו בדעה כי ממצאים אלה ייגרמו להפחתות ערכו המסחרי של הרכב לעומת רכב זהה מאותו תוצרת, דגם ושנת ייצור שלא עבר תאונות דרכים.
+            </p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="car-details">
+            <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
+            <table class="car-details-table" style="width: 100%; max-width: 800px; margin: 0 auto;">
+              <tr><th style="width: 25%;">החלק הניזוק</th><th style="width: 30%;">מהות התיקון</th><th style="width: 15%;">% ירידת ערך</th><th style="width: 20%;">ערך בש"ח</th><th style="width: 10%;">מוקד</th></tr>
+              ${depreciationRows}
+            </table>
+            <p style="font-size: 18px; font-weight: bold;">
+              ערך השוק של הרכב הינו ${formatCurrency(marketValue)} ש"ח כולל מע"מ, לפיכך הפיצוי לירידת הערך יהיה ${globalPercent}% = ${formatCurrency(globalAmount)} ש"ח
+            </p>
+          </div>
+        </div>
+      `;
     }
 
 
