@@ -1739,32 +1739,32 @@
         grossDamagePercentBoolean: !!grossDamagePercent
       });
       
-      if (grossMarketValue) {
+      if (grossMarketValue && grossMarketValue !== 'לא זמין') {
         validItems.push('gross_market_value');
       } else {
-        issues.push('ערך הרכב לנזק גולמי חסר (אזהרה)');
+        issues.push('ערך הרכב לנזק גולמי חסר');
       }
       
-      if (grossDamagePercent) {
+      if (grossDamagePercent && grossDamagePercent !== 'לא זמין') {
         validItems.push('gross_damage_percent');
       } else {
-        issues.push('אחוז הנזק הגולמי חסר (אזהרה)');
+        issues.push('אחוז הנזק הגולמי חסר');
       }
       
       // Validate global depreciation
       const globalPercent = helper.estimate_depreciation?.global_percent || helper.global_percent || '';
       const globalValue = helper.estimate_depreciation?.global_value || helper.global_value || '';
       
-      if (globalPercent) {
+      if (globalPercent && globalPercent !== 'לא זמין') {
         validItems.push('depreciation_global_percent');
         
-        if (globalValue) {
+        if (globalValue && globalValue !== 'לא זמין') {
           validItems.push('depreciation_global_value');
         } else {
-          issues.push('ירידת ערך גלובלי חסר ערך בשקלים (אזהרה)');
+          issues.push('ירידת ערך גלובלי חסר ערך בשקלים');
         }
       } else {
-        issues.push('ירידת ערך גלובלי חסר אחוז (אזהרה)');
+        issues.push('ירידת ערך גלובלי חסר אחוז');
       }
       
       // Validate bulk depreciation items
@@ -1792,21 +1792,28 @@
         
         console.log(`📊 Depreciation validation: ${hasCompleteItems} complete items, ${hasIncompleteItems} incomplete items`);
       } else {
-        issues.push('פריטי ירידת ערך לפי מוקדים חסרים (אזהרה)');
+        issues.push('פריטי ירידת ערך לפי מוקדים חסרים');
       }
       
       // Validate work days
       const workDays = helper.estimate_work_days || helper.work_days || '';
-      if (workDays) {
+      if (workDays && workDays !== 'לא זמין') {
         validItems.push('depreciation_work_days');
       } else {
-        issues.push('ימי מוסך חסרים (אזהרה)');
+        issues.push('ימי מוסך חסרים');
       }
       
+      // Check if all required data is available
+      const hasRequiredData = (grossMarketValue && grossMarketValue !== 'לא זמין') && 
+                             (grossDamagePercent && grossDamagePercent !== 'לא זמין') &&
+                             (globalPercent && globalPercent !== 'לא זמין');
+      
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
+      
       return {
-        success: issues.length === 0,
-        warnings: issues.length,
-        errors: 0,
+        success: criticalErrors === 0 && hasRequiredData,
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
+        errors: criticalErrors,
         issues: issues,
         validItems: validItems.length
       };
@@ -1823,8 +1830,8 @@
         validItems.push('damage-centers-count');
         updateElementIfExists('damage-centers-count', `✓ (${damageBlocks.length})`);
       } else {
-        issues.push('לא נמצאו מוקדי נזק (אזהרה)');
-        updateElementIfExists('damage-centers-count', '⚠️');
+        issues.push('לא נמצאו מוקדי נזק');
+        updateElementIfExists('damage-centers-count', '❌');
       }
       
       let hasWorks = false, hasParts = false, hasRepairs = false;
@@ -1864,13 +1871,13 @@
         updateElementIfExists('damage-parts', '⚠️');
       }
       
-      // Validate costs using extracted totals (warning only if no costs)
+      // Validate costs using extracted totals (critical error if no costs)
       if (totals && totals.total_before_vat > 0) {
         validItems.push('damage-costs');
         updateElementIfExists('damage-costs', '✓');
       } else {
-        issues.push('לא נמצאו עלויות חישוב (אזהרה)');
-        updateElementIfExists('damage-costs', '⚠️');
+        issues.push('לא נמצאו עלויות חישוב');
+        updateElementIfExists('damage-costs', '❌');
       }
       
       // Update cost display using extracted totals with safe fallbacks
@@ -1881,12 +1888,15 @@
       updateElementIfExists('damage-total-before-vat', MathEngine.formatCurrency(safeTotals.total_before_vat));
       updateElementIfExists('damage-total-with-vat', MathEngine.formatCurrency(safeTotals.total_with_vat));
       
-      // Damage section validation always passes (only warnings)
-      const criticalErrors = 0;
+      // Check if we have the basic requirements for damage section
+      const hasBasicDamageData = (damageBlocks && damageBlocks.length > 0) && 
+                                (totals && totals.total_before_vat > 0);
+      
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
       return {
-        success: criticalErrors === 0,
-        warnings: issues.length,
+        success: criticalErrors === 0 && hasBasicDamageData,
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
@@ -1914,7 +1924,7 @@
         // Show the actual report type name instead of just a checkmark
         updateElementIfExists('estimate-type-status', estimateTypeNames[estimateType]);
       } else {
-        issues.push('סוג אומדן לא מוגדר (אזהרה)');
+        issues.push('סוג אומדן לא מוגדר');
         updateElementIfExists('estimate-type-status', 'לא מוגדר');
       }
       
@@ -1970,12 +1980,16 @@
       updateElementIfExists('estimate-vat-amount', MathEngine ? MathEngine.formatCurrency(vatAmount) : `₪${vatAmount.toLocaleString()}`);
       updateElementIfExists('estimate-total-claim', MathEngine ? MathEngine.formatCurrency(totalClaim) : `₪${totalClaim.toLocaleString()}`);
       
-      // Estimate validation always passes (only warnings)
-      const criticalErrors = 0;
+      // Check if we have the basic requirements for estimate section
+      const hasBasicEstimateData = (estimateType && estimateTypeNames[estimateType]) && 
+                                  (totalDamage >= 0) && 
+                                  (hasPlate);
+      
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
       return {
-        success: criticalErrors === 0,
-        warnings: issues.length,
+        success: criticalErrors === 0 && hasBasicEstimateData,
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
         errors: criticalErrors,
         issues: issues,
         validItems: validItems.length,
