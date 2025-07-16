@@ -1812,12 +1812,12 @@ We need key changes to make it useful .
     Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ✅
 
   * All buttons in the current page are valuable and need to stay - you need to check  
-   that all buttons work as expected and are returning the test result/ product they are meant to. ❌
+   that all buttons work as expected and are returning the test result/ product they are meant to. ✅
 
   * valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/
    הסתר) not from חישוב אחוז הנזק (הצג/הסתר) ✅
 
-  * The button בדוק  טקסט משפטי doesn’t  work
+  * The button בדוק  טקסט משפטי doesn’t  work ✅ 
 
   * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. ✅
 
