@@ -875,20 +875,12 @@
         <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
           פעולות מסמכים
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <button class="nav-btn" id="builderFetchExpertiseBtn" onclick="fetchExpertisePDFForBuilder()" style="background: #8b5cf6; color: white;">
             הצג אקספירטיזה PDF
           </button>
-          <button class="nav-btn" id="builderFetchEstimateBtn" onclick="fetchEstimatePDFForBuilder()" style="background: #06b6d4; color: white;">
-            הצג אומדן PDF
-          </button>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <button class="nav-btn" id="builderRequestExpertiseBtn" onclick="requestExpertiseForBuilder()" style="background: #059669; color: white;">
             בקש אקספירטיזה
-          </button>
-          <button class="nav-btn" id="builderRequestEstimateBtn" onclick="requestEstimateForBuilder()" style="background: #f59e0b; color: white;">
-            בקש אומדן
           </button>
         </div>
       </div>
@@ -7196,58 +7188,6 @@
       }
     };
     
-    // Request estimate for builder
-    window.requestEstimateForBuilder = async function() {
-      const plateNumber = document.getElementById('builderPlateInput').value.trim();
-      const helper = sessionStorage.getItem('helper');
-      
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
-        return;
-      }
-      
-      if (!helper) {
-        alert('נתוני התיק לא נמצאו במערכת');
-        return;
-      }
-      
-      const requestBtn = document.getElementById('builderRequestEstimateBtn');
-      const originalText = requestBtn.textContent;
-      
-      try {
-        requestBtn.disabled = true;
-        requestBtn.textContent = 'מבקש אומדן...';
-        
-        const caseData = JSON.parse(helper);
-        const payload = {
-          plate: plateNumber,
-          case_id: caseData.meta?.case_id,
-          helper: caseData
-        };
-        
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('CALL_ESTIMATE', payload);
-        
-        if (response?.success) {
-          const successMessage = response.message || 'האומדן נשלח בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
-          alert(successMessage);
-          
-          if (response.pdf_url) {
-            showFloatingPDF(response.pdf_url, 'אומדן PDF');
-          }
-        } else {
-          alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
-        }
-        
-      } catch (error) {
-        console.error('Error requesting estimate:', error);
-        alert('שגיאה בשליחת בקשה לאומדן. אנא נסה שוב.');
-      } finally {
-        requestBtn.disabled = false;
-        requestBtn.textContent = originalText;
-      }
-    };
-    
     // Fetch expertise PDF for builder
     window.fetchExpertisePDFForBuilder = async function() {
       const plateNumber = document.getElementById('builderPlateInput').value.trim();
@@ -7284,48 +7224,6 @@
       } catch (error) {
         console.error('Error fetching expertise PDF:', error);
         alert('שגיאה בטעינת אקספירטיזה PDF');
-      } finally {
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = originalText;
-      }
-    };
-    
-    // Fetch estimate PDF for builder
-    window.fetchEstimatePDFForBuilder = async function() {
-      const plateNumber = document.getElementById('builderPlateInput').value.trim();
-      const helper = sessionStorage.getItem('helper');
-      
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
-        return;
-      }
-      
-      const fetchBtn = document.getElementById('builderFetchEstimateBtn');
-      const originalText = fetchBtn.textContent;
-      
-      try {
-        fetchBtn.disabled = true;
-        fetchBtn.textContent = 'טוען PDF...';
-        
-        const caseData = helper ? JSON.parse(helper) : null;
-        const payload = {
-          plate: plateNumber,
-          case_id: caseData?.meta?.case_id,
-          document_type: 'estimate'
-        };
-        
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('FETCH_ESTIMATE_PDF', payload);
-        
-        if (response?.success && response?.pdf_url) {
-          showFloatingPDF(response.pdf_url, 'אומדן PDF');
-        } else {
-          alert('אומדן לא נמצא במערכת או לא הופק עדיין');
-        }
-        
-      } catch (error) {
-        console.error('Error fetching estimate PDF:', error);
-        alert('שגיאה בטעינת אומדן PDF');
       } finally {
         fetchBtn.disabled = false;
         fetchBtn.textContent = originalText;
