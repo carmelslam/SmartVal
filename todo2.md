@@ -1797,6 +1797,7 @@ We need key changes to make it useful .
     * fix the works dropdown- when selecting other this needs to open a text input option
     * in the section חישוב ירידת ערך לפי מוקדי נזק 
 מהות התיקון: is not saved to the helper . its deleting on refresh 
+  * the חישוב ערך השוק של הרכב (הצג/הסתר) went back to duplicate parametrs 
 
   **VALIDATION PAGE** ❌
 
