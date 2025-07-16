@@ -852,6 +852,7 @@
       <div class="validation-buttons" style="margin-top: 15px;">
         <button class="btn btn-validate" onclick="validateLegalText(); return false;">בדוק טקסט משפטי</button>
         <button class="btn btn-edit" onclick="editLegalText()">עריכה מתקדמת</button>
+        <button class="btn btn-success" onclick="approveLegalText()" disabled>אימות טקסט משפטי</button>
       </div>
     </div>
 
@@ -958,8 +959,15 @@
       loadLegalTextValidation();
       populateEnhancedValidationItems();
       
-      // Load previously saved validation progress
-      loadSavedValidationProgress();
+      // Check if this is a fresh start (no saved progress from current session)
+      const hasUserApprovedSections = sessionStorage.getItem('hasUserApprovedSections');
+      if (!hasUserApprovedSections) {
+        console.log('🔄 Fresh start - clearing validation progress');
+        clearValidationProgress();
+      } else {
+        // Load previously saved validation progress
+        loadSavedValidationProgress();
+      }
       
       // Initialize damage validation items  
       setTimeout(() => {
@@ -2231,6 +2239,15 @@
                 button.disabled = true;
                 button.textContent = '✓ אושר';
               }
+              
+              // Handle legal text section separately
+              if (sectionName === 'legal_text') {
+                const legalApproveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
+                if (legalApproveBtn) {
+                  legalApproveBtn.disabled = true;
+                  legalApproveBtn.textContent = '✓ אושר';
+                }
+              }
             }
           });
           
@@ -2338,6 +2355,7 @@
       
       // Save validation progress to sessionStorage
       sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      sessionStorage.setItem('hasUserApprovedSections', 'true');
       
       // Enable and move to next section
       const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
@@ -2926,9 +2944,11 @@
           // Update the validation status in the estimate section
           updateElementIfExists('estimate-legal-text', '✓');
           
-          // Update validation progress
-          validationProgress.legal_text = true;
-          updateValidationProgress();
+          // Enable the approve button
+          const approveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
+          if (approveBtn) {
+            approveBtn.disabled = false;
+          }
           
           return true;
         } else {
@@ -2959,6 +2979,27 @@
 
     window.editLegalText = function() {
       window.location.href = 'estimate-builder.html#legal-text';
+    };
+
+    window.approveLegalText = function() {
+      console.log('✅ Legal text approved');
+      showAlert('הטקסט המשפטי אושר בהצלחה', 'success');
+      
+      // Update validation progress
+      validationProgress.legal_text = true;
+      
+      // Save validation progress to sessionStorage
+      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      sessionStorage.setItem('hasUserApprovedSections', 'true');
+      
+      // Disable the approve button
+      const approveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
+      if (approveBtn) {
+        approveBtn.disabled = true;
+        approveBtn.textContent = '✓ אושר';
+      }
+      
+      updateValidationProgress();
     };
 
     window.requestManualReview = function() {
@@ -3147,6 +3188,7 @@
     window.requestManualReview = requestManualReview;
     window.saveValidationData = saveValidationData;
     window.reviewEstimateReport = reviewEstimateReport;
+    window.approveLegalText = approveLegalText;
     
     // FLOATING SCREENS FUNCTIONALITY
     window.toggleFloatingScreen = function(screenType) {
