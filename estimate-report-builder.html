@@ -861,22 +861,104 @@
           </tr>
         `;
         
+        // Generate separate sections for each category
+        let categorySections = '';
+        
+        // Works section
+        if (works.length > 0) {
+          const workRowsDetailed = works.map(work => `
+            <tr>
+              <td style="padding: 8px;">${work.type || work.description || work.name || 'עבודה לא מוגדרת'}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(work.cost || 0)}</td>
+            </tr>
+          `).join('');
+          
+          categorySections += `
+            <div style="margin-bottom: 15px;">
+              <h4 style="margin: 10px 0; color: #003366; font-size: 16px; font-weight: bold;">עבודות:</h4>
+              <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+                <tr>
+                  <th style="width: 70%;">תיאור</th>
+                  <th style="width: 30%;">אומדן עלות</th>
+                </tr>
+                ${workRowsDetailed}
+                <tr>
+                  <td style="padding: 8px;"><strong>סה"כ עבודות</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(worksTotal)}</strong></td>
+                </tr>
+              </table>
+            </div>
+          `;
+        }
+        
+        // Parts section
+        if (parts.length > 0) {
+          const partRowsDetailed = parts.map(part => `
+            <tr>
+              <td style="padding: 8px;">${part.name || part.description || 'חלק לא מוגדר'}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(part.price || 0)}</td>
+            </tr>
+          `).join('');
+          
+          categorySections += `
+            <div style="margin-bottom: 15px;">
+              <h4 style="margin: 10px 0; color: #003366; font-size: 16px; font-weight: bold;">חלקים:</h4>
+              <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+                <tr>
+                  <th style="width: 70%;">תיאור</th>
+                  <th style="width: 30%;">אומדן עלות</th>
+                </tr>
+                ${partRowsDetailed}
+                <tr>
+                  <td style="padding: 8px;"><strong>סה"כ חלקים</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(partsTotal)}</strong></td>
+                </tr>
+              </table>
+            </div>
+          `;
+        }
+        
+        // Repairs section
+        if (repairs.length > 0) {
+          const repairRowsDetailed = repairs.map(repair => `
+            <tr>
+              <td style="padding: 8px;">${repair.name || repair.description || 'תיקון לא מוגדר'}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(repair.cost || 0)}</td>
+            </tr>
+          `).join('');
+          
+          categorySections += `
+            <div style="margin-bottom: 15px;">
+              <h4 style="margin: 10px 0; color: #003366; font-size: 16px; font-weight: bold;">תיקונים:</h4>
+              <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+                <tr>
+                  <th style="width: 70%;">תיאור</th>
+                  <th style="width: 30%;">אומדן עלות</th>
+                </tr>
+                ${repairRowsDetailed}
+                <tr>
+                  <td style="padding: 8px;"><strong>סה"כ תיקונים</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(repairsTotal)}</strong></td>
+                </tr>
+              </table>
+            </div>
+          `;
+        }
+        
         return `
-          <div class="car-details" style="margin-bottom: 10px;">
+          <div class="car-details" style="margin-bottom: 20px;">
             <div class="car-details-title">אומדן מוקד ${index + 1}: ${block.label || block.location || block.center || block.name || block.area || block.section || `מוקד ${index + 1}`}</div>
-            <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 5px auto;">
-              <tr>
-                <th style="width: 20%;">סוג</th>
-                <th style="width: 60%;">תיאור</th>
-                <th style="width: 20%;">אומדן עלות</th>
-              </tr>
-              ${summaryRows}
-              <tr>
-                <td style="padding: 8px;"><strong>סה"כ מוקד</strong></td>
-                <td style="padding: 8px;"></td>
-                <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(sectionTotal)}</strong></td>
-              </tr>
-            </table>
+            <div style="padding: 10px;">
+              ${categorySections}
+              <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 8px;">
+                <table style="width: 100%; border: none;">
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; font-size: 16px;">סה"כ מוקד:</td>
+                    <td style="padding: 8px; text-align: left; font-weight: bold; font-size: 16px;">${formatCurrency(sectionTotal)}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
           </div>
         `;
       }).join('');
