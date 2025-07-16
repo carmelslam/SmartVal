@@ -754,7 +754,7 @@
         </div>
         <div>
           <label>תאריך הפקה:</label>
-          <input type="text" id="carReportDate" />
+          <input type="date" id="carReportDate" />
         </div>
       </div>
     </div>
@@ -1315,6 +1315,59 @@
       window.location.href = 'estimate-report-builder.html';
     };
 
+    // Convert various date formats to YYYY-MM-DD for date input
+    function convertToDateInputFormat(dateString) {
+      if (!dateString) return '';
+      
+      try {
+        // Handle various date formats
+        let date;
+        
+        // If already in YYYY-MM-DD format, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          return dateString;
+        }
+        
+        // Handle DD/MM/YYYY format
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+          const parts = dateString.split('/');
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          const year = parts[2];
+          return `${year}-${month}-${day}`;
+        }
+        
+        // Handle DD-MM-YYYY format
+        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateString)) {
+          const parts = dateString.split('-');
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          const year = parts[2];
+          return `${year}-${month}-${day}`;
+        }
+        
+        // Handle DD.MM.YYYY format
+        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateString)) {
+          const parts = dateString.split('.');
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          const year = parts[2];
+          return `${year}-${month}-${day}`;
+        }
+        
+        // Try to parse as a general date
+        date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+        
+        return '';
+      } catch (error) {
+        console.warn('Error converting date:', dateString, error);
+        return '';
+      }
+    }
+
     // LOAD DATA FROM HELPER
     function loadDataFromHelper() {
       try {
@@ -1329,7 +1382,9 @@
           document.getElementById('carModelCode').value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
           document.getElementById('carBasePrice').value = helper.car_details?.base_price ? `₪${helper.car_details.base_price}` : '';
           document.getElementById('carMarketValue').value = helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '';
-          document.getElementById('carReportDate').value = helper.car_details?.report_date || '';
+          // Convert date to YYYY-MM-DD format for date input
+          const reportDate = helper.car_details?.report_date || helper.levi_report?.report_date || '';
+          document.getElementById('carReportDate').value = convertToDateInputFormat(reportDate);
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};
@@ -5822,7 +5877,7 @@
           carModelCode: helper.car_details?.model_code || helper.vehicle?.model_code || '',
           carBasePrice: helper.levi_report?.base_price || helper.expertise?.levi_report?.base_price || '',
           carMarketValue: helper.car_details?.market_value || helper.vehicle?.market_value || helper.levi_report?.final_price || '',
-          carReportDate: helper.car_details?.report_date || helper.levi_report?.report_date || ''
+          carReportDate: convertToDateInputFormat(helper.car_details?.report_date || helper.levi_report?.report_date || '')
         };
         
         Object.entries(carFields).forEach(([fieldId, value]) => {
