@@ -15,9 +15,12 @@
       width: 100%;
       max-width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       border: 3px solid #003366 !important;
       table-layout: fixed; /* Fixed layout to prevent overflow */
+    }
+    table + table {
+      margin-top: 10px;
     }
     th, td {
       padding: 8px;
@@ -33,8 +36,11 @@
       text-align: center !important;
     }
     .section {
-      margin-bottom: 30px;
-      page-break-after: always;
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+    .section:not(:first-child) {
+      margin-top: 15px;
     }
     .signature-stamp {
       display: flex;
@@ -54,8 +60,8 @@
     .car-details {
       border: 2px solid #000;
       border-radius: 25px;
-      padding: 20px;
-      margin-bottom: 40px;
+      padding: 15px;
+      margin-bottom: 20px;
     }
     .car-details-title {
       color: #003366;
@@ -74,10 +80,10 @@
     }
     .intellectual-box {
       border: 2px solid #000;
-      padding: 15px;
+      padding: 10px;
       font-size: 16px;
       font-weight: bold;
-      margin-top: 15px;
+      margin: 10px 0;
     }
     .buttons {
       text-align: center;
@@ -114,8 +120,8 @@
       background: #e8f5e8;
       border: 2px solid #28a745;
       border-radius: 10px;
-      padding: 20px;
-      margin: 20px 0;
+      padding: 15px;
+      margin: 15px 0;
     }
     .control-buttons {
       background: #f8f9fa;
@@ -521,17 +527,17 @@
         const clientPhone = helper.client?.phone_number || helper.car_details?.ownerPhone || helper.meta?.phone_number || '';
         const plate = helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '';
         const inspectionDate = helper.meta?.inspection_date || new Date().toLocaleDateString('he-IL');
-        const location = helper.meta?.location || '';
-        const damageType = helper.meta?.damage || helper.car_details?.damageType || '';
+        const location = helper.meta?.location || helper.meta?.inspection_location || helper.car_details?.location || '';
+        const damageType = helper.meta?.damage || helper.car_details?.damageType || helper.meta?.damage_type || '';
         
-        // Vehicle data
+        // Vehicle data - try multiple sources
         const vehicle = helper.vehicle || helper.car_details || {};
-        const manufacturer = vehicle.manufacturer || '';
-        const model = vehicle.model || '';
-        const year = vehicle.year || '';
-        const chassis = vehicle.chassis || '';
-        const km = vehicle.km || vehicle.odo || '';
-        const ownershipType = vehicle.ownership_type || '';
+        const manufacturer = vehicle.manufacturer || vehicle.make || helper.meta?.manufacturer || '';
+        const model = vehicle.model || helper.meta?.model || '';
+        const year = vehicle.year || vehicle.manufacture_year || helper.meta?.year || '';
+        const chassis = vehicle.chassis || vehicle.vin || vehicle.frame_number || helper.meta?.chassis || '';
+        const km = vehicle.km || vehicle.odo || vehicle.odometer || vehicle.mileage || helper.meta?.km || '';
+        const ownershipType = vehicle.ownership_type || vehicle.type || vehicle.category || helper.meta?.ownership_type || '';
         
         // Calculations
         const calc = helper.calculations || helper.expertise?.calculations || {};
@@ -557,9 +563,9 @@
                 </td>
                 <td style="width: 20%;"></td>
                 <td style="width: 40%; text-align: right; padding: 10px;">
-                  <p style="margin: 0;">תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
-                  <p style="margin: 0;">תיק מספר: YC/${plate}/2025</p>
-                  <p style="margin: 0;">עוסק מורשה: 02921217</p>
+                  <p style="margin: 0;"><strong>תאריך:</strong> ${new Date().toLocaleDateString('he-IL')}</p>
+                  <p style="margin: 0;"><strong>תיק מספר:</strong> YC/${plate}/2025</p>
+                  <p style="margin: 0;"><strong>עוסק מורשה:</strong> 02921217</p>
                 </td>
               </tr>
             </table>
@@ -599,16 +605,16 @@
           </div>
 
           <!-- Section 3 - Estimate Introduction -->
-          <div class="section" style="page-break-before: always;">
-            <p style="font-size: 16px; line-height: 1.6;">
+          <div class="section">
+            <p style="font-size: 16px; line-height: 1.6; margin: 15px 0;">
               בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
             </p>
-            <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">תיאור הנזק:</p>
-            <p style="font-size: 16px; line-height: 1.6;">
+            <p style="font-size: 16px; font-weight: bold; text-decoration: underline; margin: 10px 0;">תיאור הנזק:</p>
+            <p style="font-size: 16px; line-height: 1.6; margin: 10px 0;">
               ${damageDescription}
             </p>
-            <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">אומדן עלויות:</p>
-            <p style="font-size: 16px; line-height: 1.6;">
+            <p style="font-size: 16px; font-weight: bold; text-decoration: underline; margin: 10px 0;">אומדן עלויות:</p>
+            <p style="font-size: 16px; line-height: 1.6; margin: 10px 0;">
               האומדן מבוסס על מחירי שוק נוכחיים ועל בדיקה ראשונית של הנזקים. עלויות סופיות עשויות להשתנות.
             </p>
           </div>
@@ -679,33 +685,36 @@
 
           <!-- Section 6 - Legal Text and Disclaimers -->
           <div class="section">
-            <div style="font-size: 16px; line-height: 1.8;">
-              <strong>הערות חשובות לגבי האומדן:</strong><br>
-              ${generateLegalText(helper)}<br><br>
+            <div style="font-size: 16px; line-height: 1.8; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+              <p style="margin: 0 0 15px 0; font-weight: bold; color: #003366;">הערות חשובות לגבי האומדן:</p>
+              <div style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                ${generateLegalText(helper)}
+              </div>
 
-              <strong>הצהרת שמאי:</strong><br>
-              אני החתום מטה: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.<br><br>
+              <p style="margin: 0 0 15px 0; font-weight: bold; color: #003366;">הצהרת שמאי:</p>
+              <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                אני החתום מטה: <strong>ירון כיוף, תעודת שמאי מס' 1097</strong>. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.
+              </p>
 
-              <div class="estimate-disclaimer">
-                <strong>אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</strong><br>
-                העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.
+              <div class="estimate-disclaimer" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                <p style="margin: 0; font-weight: bold; color: #856404;">אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</p>
+                <p style="margin: 5px 0 0 0; color: #856404;">העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.</p>
               </div>
             </div>
           </div>
 
           <!-- Section 7 - Signature -->
-          <div class="signature-stamp" style="margin-top: 40px;">
+          <div class="signature-stamp" style="margin-top: 30px;">
             <div class="center-text" style="font-size: 18px; font-weight: bold;">בכבוד רב,</div>
           </div>
 
-          <div style="margin-top: 40px; text-align: left;">
-            <br><br>
-            <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
+          <div style="margin-top: 20px; text-align: left;">
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 120px;">
           </div>
           
-          <div style="margin-top: 20px; text-align: center;">
-            <p><strong>ירון כיוף - שמאי מורשה מס' 1097</strong></p>
-            <p>ירון כיוף - שמאות והערכת נזקי רכב ורכוש</p>
+          <div style="margin-top: 15px; text-align: center;">
+            <p style="margin: 5px 0;"><strong>ירון כיוף - שמאי מורשה מס' 1097</strong></p>
+            <p style="margin: 5px 0;">ירון כיוף - שמאות והערכת נזקי רכב ורכוש</p>
           </div>
         `;
         
