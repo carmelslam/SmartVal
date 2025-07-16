@@ -1790,7 +1790,7 @@ We need key changes to make it useful .
     * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
     * fix the  dropdown in the work bulk in the סיכום מוקדי נזק (ניתן לעריכה)/ מוקד נזק/ עבודות נדרשות: - when selecting "other"  this needs to open a text input option   ✅
     * in the section חישוב ירידת ערך לפי מוקדי נזק make sure 
-    מהות התיקון: is  saved to the helper because  its deleting on refresh 
+    מהות התיקון: is  saved to the helper because  its deleting on refresh  ✅
   * make sure the legal text in the builder is also saved to the helper of the specific plate number. ✅
 
   **VALIDATION PAGE**  ✅
@@ -1815,13 +1815,9 @@ We need key changes to make it useful .
   * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. ✅
 
   * the advanment scale in the top התקדמות האימות
- is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red  ✅
-
- 
-
+  is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red  ✅
   * user cant move to the next validation section if teh previous is not validated , ✅
 
- 
 
     *
     **the estimate report builder** ❌
