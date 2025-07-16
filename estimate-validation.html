@@ -3170,6 +3170,44 @@
       }
     }
 
+    // Define showBrowserMenuUnderToggle function (same as builder)
+    function showBrowserMenuUnderToggle() {
+      const menu = document.createElement('div');
+      menu.style.cssText = `
+        position: fixed;
+        top: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 20px;
+        z-index: 99999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-family: sans-serif;
+        direction: rtl;
+        min-width: 280px;
+      `;
+      
+      menu.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50; font-size: 16px;">בחר אתר לפתיחה:</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button onclick="window.open('https://www.carpart.co.il', '_blank')" style="background: #27ae60; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; direction: rtl;">🔧 חלקי רכב - Car Part</button>
+          <button onclick="window.open('https://www.kolzchut.org.il', '_blank')" style="background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; direction: rtl;">🏛️ פורטל לזכויות</button>
+          <button onclick="this.parentElement.parentElement.remove()" style="background: #95a5a6; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; direction: rtl;">ביטול</button>
+        </div>
+      `;
+      
+      document.body.appendChild(menu);
+      
+      // Auto-remove after 10 seconds
+      setTimeout(() => {
+        if (menu.parentElement) {
+          menu.remove();
+        }
+      }, 10000);
+    }
+
     // Define toggleFloatingScreen function first
     window.toggleFloatingScreen = function(screenType) {
       console.log('🖥️ Toggle floating screen:', screenType);
@@ -3193,13 +3231,9 @@
           console.warn('⚠️ Car details floating screen not available');
         }
       } else if (screenType === 'internalBrowser') {
-        // Internal browser uses showBrowserMenu function
-        if (typeof window.showBrowserMenu === 'function') {
-          window.showBrowserMenu();
-          toggleButton?.classList.toggle('active');
-        } else {
-          console.warn('⚠️ Internal browser menu not available');
-        }
+        // Internal browser - show menu under the button like in builder
+        showBrowserMenuUnderToggle();
+        toggleButton?.classList.toggle('active');
       }
     };
 
