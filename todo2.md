@@ -1800,7 +1800,7 @@ We need key changes to make it useful .
   * the חישוב ערך השוק של הרכב (הצג/הסתר) went back to duplicate parametrs 
   * make sure the legal text in the builder is also saved to the helper of the specific plate number.
 
-  **VALIDATION PAGE** ❌
+  **VALIDATION PAGE**  ✅
 
   * Add  to the validation the same floating screens of the builder and the report review page. ❌
 
