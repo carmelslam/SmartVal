@@ -846,8 +846,18 @@
     
     function generateLeviAdjustments(helper) {
       const leviData = helper.expertise?.levi_report || helper.levisummary || {};
-      const basePrice = leviData.base_price || leviData['מחיר בסיס'] || 0;
-      const finalPrice = leviData.final_price || leviData['מחיר סופי'] || 0;
+      
+      // Try to get values from custom adjustments first, then fallback to legacy
+      const customAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
+      const hasCustomData = customAdjustments.length > 0;
+      
+      const basePrice = hasCustomData ? 
+        (helper.calculations?.base_market_value || helper.custom_adjustments?.base_market_value || 0) : 
+        (leviData.base_price || leviData['מחיר בסיס'] || 0);
+        
+      const finalPrice = hasCustomData ? 
+        (helper.calculations?.full_market_value || helper.custom_adjustments?.full_market_value || 0) : 
+        (leviData.final_price || leviData['מחיר סופי'] || 0);
       
       if (!basePrice && !finalPrice) {
         return `
@@ -862,69 +872,87 @@
       
       const adjustments = [];
       
-      // Registration adjustment
-      if (leviData['עליה לכביש %'] || leviData['ערך ש״ח עליה לכביש']) {
-        adjustments.push({
-          label: 'עליה לכביש',
-          percent: leviData['עליה לכביש %'] || '',
-          amount: leviData['ערך ש״ח עליה לכביש'] || 0
-        });
-      }
+      // Get custom market value adjustments from helper
+      const customAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
       
-      // Ownership adjustment
-      if (leviData['בעלות %'] || leviData['ערך ש״ח בעלות']) {
-        adjustments.push({
-          label: 'בעלות',
-          percent: leviData['בעלות %'] || '',
-          amount: leviData['ערך ש״ח בעלות'] || 0
-        });
-      }
+      // Process custom adjustments
+      customAdjustments.forEach(adj => {
+        if (adj.description && (adj.percentage || adj.value)) {
+          const percentSign = adj.type === 'plus' ? '+' : '-';
+          adjustments.push({
+            label: adj.description,
+            percent: adj.percentage ? `${percentSign}${adj.percentage}` : '',
+            amount: adj.type === 'minus' ? -Math.abs(adj.value) : Math.abs(adj.value)
+          });
+        }
+      });
       
-      // Mileage adjustment
-      if (leviData['מס ק״מ %'] || leviData['ערך ש״ח מס ק״מ']) {
-        adjustments.push({
-          label: 'מס ק״מ',
-          percent: leviData['מס ק״מ %'] || '',
-          amount: leviData['ערך ש״ח מס ק״מ'] || 0
-        });
-      }
-      
-      // Owner count adjustment
-      if (leviData['מספר בעלים %'] || leviData['ערך ש״ח מספר בעלים']) {
-        adjustments.push({
-          label: 'מספר בעלים',
-          percent: leviData['מספר בעלים %'] || '',
-          amount: leviData['ערך ש״ח מספר בעלים'] || 0
-        });
-      }
-      
-      // Features adjustment
-      if (leviData['מאפיינים %'] || leviData['ערך ש״ח מאפיינים']) {
-        adjustments.push({
-          label: 'מאפיינים',
-          percent: leviData['מאפיינים %'] || '',
-          amount: leviData['ערך ש״ח מאפיינים'] || 0
-        });
-      }
-      
-      // Alternative English structure
-      if (leviData.adjustments) {
-        Object.entries(leviData.adjustments).forEach(([key, adj]) => {
-          if (adj.percent || adj.value) {
-            const labelMap = {
-              'registration': 'עליה לכביש',
-              'ownership': 'בעלות',
-              'km': 'מס ק״מ',
-              'owner_count': 'מספר בעלים',
-              'features': 'מאפיינים'
-            };
-            adjustments.push({
-              label: labelMap[key] || key,
-              percent: adj.percent || '',
-              amount: adj.value || 0
-            });
-          }
-        });
+      // Fallback to legacy Levi data structure if no custom adjustments
+      if (adjustments.length === 0) {
+        // Registration adjustment
+        if (leviData['עליה לכביש %'] || leviData['ערך ש״ח עליה לכביש']) {
+          adjustments.push({
+            label: 'עליה לכביש',
+            percent: leviData['עליה לכביש %'] || '',
+            amount: leviData['ערך ש״ח עליה לכביש'] || 0
+          });
+        }
+        
+        // Ownership adjustment
+        if (leviData['בעלות %'] || leviData['ערך ש״ח בעלות']) {
+          adjustments.push({
+            label: 'בעלות',
+            percent: leviData['בעלות %'] || '',
+            amount: leviData['ערך ש״ח בעלות'] || 0
+          });
+        }
+        
+        // Mileage adjustment
+        if (leviData['מס ק״מ %'] || leviData['ערך ש״ח מס ק״מ']) {
+          adjustments.push({
+            label: 'מס ק״מ',
+            percent: leviData['מס ק״מ %'] || '',
+            amount: leviData['ערך ש״ח מס ק״מ'] || 0
+          });
+        }
+        
+        // Owner count adjustment
+        if (leviData['מספר בעלים %'] || leviData['ערך ש״ח מספר בעלים']) {
+          adjustments.push({
+            label: 'מספר בעלים',
+            percent: leviData['מספר בעלים %'] || '',
+            amount: leviData['ערך ש״ח מספר בעלים'] || 0
+          });
+        }
+        
+        // Features adjustment
+        if (leviData['מאפיינים %'] || leviData['ערך ש״ח מאפיינים']) {
+          adjustments.push({
+            label: 'מאפיינים',
+            percent: leviData['מאפיינים %'] || '',
+            amount: leviData['ערך ש״ח מאפיינים'] || 0
+          });
+        }
+        
+        // Alternative English structure
+        if (leviData.adjustments) {
+          Object.entries(leviData.adjustments).forEach(([key, adj]) => {
+            if (adj.percent || adj.value) {
+              const labelMap = {
+                'registration': 'עליה לכביש',
+                'ownership': 'בעלות',
+                'km': 'מס ק״מ',
+                'owner_count': 'מספר בעלים',
+                'features': 'מאפיינים'
+              };
+              adjustments.push({
+                label: labelMap[key] || key,
+                percent: adj.percent || '',
+                amount: adj.value || 0
+              });
+            }
+          });
+        }
       }
       
       const adjustmentRows = adjustments.map(adj => `
