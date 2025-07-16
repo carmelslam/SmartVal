@@ -1819,14 +1819,14 @@ We need key changes to make it useful .
 
   * The button בדוק  טקסט משפטי doesn’t  work
 
-  * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. 
+  * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. ✅
 
   * the advanment scale in the top התקדמות האימות
- is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red 
+ is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red  ✅
 
  
 
-  * user cant move to the next validation section if teh previous is not validated , 
+  * user cant move to the next validation section if teh previous is not validated , ✅
 
  
 
