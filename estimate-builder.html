@@ -5297,9 +5297,17 @@
           // Collect works
           const works = [];
           card.querySelectorAll('.work-row').forEach(row => {
-            const type = row.querySelector('.work-type').value;
+            let type = row.querySelector('.work-type').value;
             const note = row.querySelector('.work-note').value;
             const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+            
+            // If "אחר" is selected, get the custom text from the input
+            if (type === 'אחר') {
+              const otherInput = row.querySelector('.work-type-other');
+              if (otherInput && otherInput.value.trim()) {
+                type = otherInput.value.trim();
+              }
+            }
             
             if (type) {
               works.push({ type, note, cost });
@@ -5425,7 +5433,7 @@
     // ADD EVENT LISTENERS
     function addDamageCenterEventListeners() {
       // Remove existing listeners by cloning elements (prevents duplicates)
-      document.querySelectorAll('.damage-center-name, .part-name, .part-desc, .part-price, .work-type, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
+      document.querySelectorAll('.damage-center-name, .part-name, .part-desc, .part-price, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
         // Check if already has listeners
         if (!input.hasAttribute('data-listeners-added')) {
           input.addEventListener('change', () => {
