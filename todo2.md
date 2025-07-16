@@ -1854,6 +1854,7 @@ We need key changes to make it useful .
     * The data in the system should be saved in the system until the next case is loaded/ created. Always to have the last case details . For now each time the system logs out, the data is gone and the user needs to input from the begening, the required functionality: system saves all data all the time while working : dom, session storage and helper, 
     * On logout: system sends the last helper to make.com and gives it a name : plate_helper_timestamp
     * On logout : data are saved in the system till the next case loaded or created . The system doesn’t Handke more than one case at a time.
+    * the levi floating 
 
 
 
@@ -1878,6 +1879,7 @@ We need key changes to make it useful .
 
 
  30 . *floating screens -:* proper mapping , full match to helper mapping , pulls data from helepr 
+ * the levi floating somehow shoing רכב פרטי in סוג רכב and קטגוריה even if the helper is empty . 
 
 
 
