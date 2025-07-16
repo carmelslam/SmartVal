@@ -1801,7 +1801,7 @@ We need key changes to make it useful .
 
   **VALIDATION PAGE**  ✅
 
-  * Add  to the validation the same floating screens with their fulll functionality - from the builder and the report review page. ❌
+  * Add  to the validation the same floating screens with their fulll functionality - from the builder and the report review page. ✅
 
   * add a depreciation section in the validation page . use the same logic, the   
     depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
