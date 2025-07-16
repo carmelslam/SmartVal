@@ -1645,22 +1645,29 @@
       populateDepreciationValidationItems();
       
       // Validate global depreciation
-      if (helper.estimate_depreciation?.global_percent) {
+      const globalPercent = helper.estimate_depreciation?.global_percent || helper.global_percent || '';
+      const globalValue = helper.estimate_depreciation?.global_value || helper.global_value || '';
+      
+      if (globalPercent) {
         validItems.push('depreciation_global_percent');
         
-        if (helper.estimate_depreciation?.global_value) {
+        if (globalValue) {
           validItems.push('depreciation_global_value');
         } else {
           issues.push('ירידת ערך גלובלי חסר ערך בשקלים (אזהרה)');
         }
+      } else {
+        issues.push('ירידת ערך גלובלי חסר אחוז (אזהרה)');
       }
       
       // Validate bulk depreciation items
-      if (helper.estimate_depreciation?.bulk_items && helper.estimate_depreciation.bulk_items.length > 0) {
+      const bulkItems = helper.estimate_depreciation?.bulk_items || helper.bulk_items || [];
+      
+      if (bulkItems && bulkItems.length > 0) {
         let hasCompleteItems = 0;
         let hasIncompleteItems = 0;
         
-        helper.estimate_depreciation.bulk_items.forEach((item, index) => {
+        bulkItems.forEach((item, index) => {
           const isComplete = item.damaged_part && item.repair_type && item.percent && item.value;
           
           if (isComplete) {
@@ -1678,18 +1685,21 @@
         
         console.log(`📊 Depreciation validation: ${hasCompleteItems} complete items, ${hasIncompleteItems} incomplete items`);
       } else {
-        issues.push('לא נמצאו פריטי ירידת ערך לפי מוקדי נזק (אזהרה)');
+        issues.push('פריטי ירידת ערך לפי מוקדים חסרים (אזהרה)');
       }
       
       // Validate work days
-      if (helper.estimate_work_days || helper.estimate_depreciation?.work_days) {
+      const workDays = helper.estimate_work_days || helper.work_days || '';
+      if (workDays) {
         validItems.push('depreciation_work_days');
       } else {
-        issues.push('חסר הערכת ימי מוסך (אזהרה)');
+        issues.push('ימי מוסך חסרים (אזהרה)');
       }
       
       return {
         success: issues.length === 0,
+        warnings: issues.length,
+        errors: 0,
         issues: issues,
         validItems: validItems.length
       };
@@ -2523,61 +2533,84 @@
       let globalDepreciation = 0;
       let centerDepreciation = 0;
       
-      // 1. Global depreciation validation - simplified like other sections
-      if (helper.estimate_depreciation?.global_percent) {
-        const globalPercent = helper.estimate_depreciation.global_percent;
-        const globalValue = helper.estimate_depreciation.global_value || '';
-        
-        depreciationHTML += createEnhancedValidationItem(
-          'ירידת ערך גלובלי (%)', 
-          `${globalPercent}%`,
-          `${globalPercent}%`,
-          'depreciation_global_percent'
-        );
-        
-        depreciationHTML += createEnhancedValidationItem(
-          'ירידת ערך גלובלי (₪)', 
-          globalValue ? `₪${parseFloat(globalValue).toLocaleString()}` : 'לא מוגדר',
-          globalValue ? `₪${parseFloat(globalValue).toLocaleString()}` : 'לא מוגדר',
-          'depreciation_global_value'
-        );
-        
-        globalDepreciation = parseFloat(globalValue) || 0;
+      // 1. Global depreciation validation - read from correct builder structure
+      const globalPercent = helper.estimate_depreciation?.global_percent || '';
+      const globalValue = helper.estimate_depreciation?.global_value || '';
+      
+      // Try to also get from helper root level as backup
+      const globalPercentBackup = helper.global_percent || '';
+      const globalValueBackup = helper.global_value || '';
+      
+      const finalGlobalPercent = globalPercent || globalPercentBackup;
+      const finalGlobalValue = globalValue || globalValueBackup;
+      
+      // Always show depreciation items regardless of whether they have values
+      depreciationHTML += createEnhancedValidationItem(
+        'ירידת ערך גלובלי (%)', 
+        finalGlobalPercent || 'לא מוגדר',
+        finalGlobalPercent ? finalGlobalPercent : 'נדרש אחוז',
+        'depreciation_global_percent'
+      );
+      
+      depreciationHTML += createEnhancedValidationItem(
+        'ירידת ערך גלובלי (₪)', 
+        finalGlobalValue || 'לא מוגדר',
+        finalGlobalValue ? finalGlobalValue : 'נדרש ערך',
+        'depreciation_global_value'
+      );
+      
+      if (finalGlobalValue) {
+        globalDepreciation = parseFloat((finalGlobalValue || '').replace(/[₪,]/g, '')) || 0;
       }
       
-      // 2. Bulk depreciation items validation - simplified
-      if (helper.estimate_depreciation?.bulk_items && helper.estimate_depreciation.bulk_items.length > 0) {
-        helper.estimate_depreciation.bulk_items.forEach((item, index) => {
+      // 2. Bulk depreciation items validation - read from correct builder structure
+      const bulkItems = helper.estimate_depreciation?.bulk_items || helper.bulk_items || [];
+      
+      if (bulkItems && bulkItems.length > 0) {
+        bulkItems.forEach((item, index) => {
           const itemKey = `depreciation_bulk_${index}`;
           const percentValue = item.percent || 'לא מוגדר';
-          const valueAmount = item.value ? `₪${parseFloat(item.value).toLocaleString()}` : 'לא מוגדר';
+          const valueAmount = item.value || 'לא מוגדר';
           const description = `${item.damaged_part || 'מוקד נזק'} - ${item.repair_type || 'מהות התיקון'}`;
-          const combinedValue = `${percentValue}%, ${valueAmount}`;
+          const combinedValue = `${percentValue}, ${valueAmount}`;
+          
+          // Check if item has validation issues (missing data)
+          const hasValidationIssues = !item.percent || !item.value || !item.damaged_part || !item.repair_type;
+          const storedValue = hasValidationIssues ? 'נתונים חסרים' : combinedValue;
           
           depreciationHTML += createEnhancedValidationItem(
             description, 
             combinedValue,
-            combinedValue,
+            storedValue,
             itemKey
           );
           
           // Add to center depreciation total
           if (item.value) {
-            centerDepreciation += parseFloat(item.value) || 0;
+            centerDepreciation += parseFloat(item.value.replace(/[₪,]/g, '')) || 0;
           }
         });
-      }
-      
-      // 3. Work days validation - simplified
-      if (helper.estimate_work_days || helper.estimate_depreciation?.work_days) {
-        const workDays = helper.estimate_work_days || helper.estimate_depreciation.work_days;
+      } else {
+        // Show missing bulk items as validation issue
         depreciationHTML += createEnhancedValidationItem(
-          'ימי מוסך משוערים', 
-          `${workDays} ימים`,
-          `${workDays} ימים`,
-          'depreciation_work_days'
+          'פריטי ירידת ערך לפי מוקדים', 
+          'לא מוגדרים',
+          'נדרשים נתונים',
+          'depreciation_bulk_missing'
         );
       }
+      
+      // 3. Work days validation - read from correct builder structure
+      const workDays = helper.estimate_work_days || helper.work_days || '';
+      const workDaysDisplay = workDays ? `${workDays} ימים` : 'לא מוגדר';
+      const workDaysStored = workDays ? `${workDays} ימים` : 'נדרש מספר ימים';
+      
+      depreciationHTML += createEnhancedValidationItem(
+        'ימי מוסך משוערים', 
+        workDaysDisplay,
+        workDaysStored,
+        'depreciation_work_days'
+      );
       
       container.innerHTML = depreciationHTML;
       
