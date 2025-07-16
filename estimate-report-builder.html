@@ -987,12 +987,13 @@
         `;
       }).join('');
       
-      // Calculate total damage for all centers
+      // Calculate total damage for all centers including VAT
       const totalDamageAllCenters = damageBlocks.reduce((sum, block) => {
         const worksTotal = block.works_total || (block.works || []).reduce((sum, item) => sum + (item.cost || 0), 0);
         const partsTotal = block.parts_total || (block.parts || []).reduce((sum, item) => sum + (item.price || 0), 0);
         const repairsTotal = block.repairs_total || (block.repairs || []).reduce((sum, item) => sum + (item.cost || 0), 0);
-        return sum + (worksTotal + partsTotal + repairsTotal);
+        const centerTotalWithVat = (worksTotal + partsTotal + repairsTotal) * 1.18;
+        return sum + centerTotalWithVat;
       }, 0);
       
       // Generate centers summary table
@@ -1000,12 +1001,12 @@
         const worksTotal = block.works_total || (block.works || []).reduce((sum, item) => sum + (item.cost || 0), 0);
         const partsTotal = block.parts_total || (block.parts || []).reduce((sum, item) => sum + (item.price || 0), 0);
         const repairsTotal = block.repairs_total || (block.repairs || []).reduce((sum, item) => sum + (item.cost || 0), 0);
-        const centerTotal = worksTotal + partsTotal + repairsTotal;
+        const centerTotalWithVat = (worksTotal + partsTotal + repairsTotal) * 1.18;
         const centerName = block.label || block.location || block.center || block.name || block.area || block.section || `מוקד ${index + 1}`;
         
         return `
           <tr>
-            <td style="padding: 8px; text-align: center;">₪${Math.round(centerTotal).toLocaleString()}</td>
+            <td style="padding: 8px; text-align: center;">₪${Math.round(centerTotalWithVat).toLocaleString()}</td>
             <td style="padding: 8px; text-align: center;">-</td>
             <td style="padding: 8px; text-align: right;">סה"כ נזק למוקד ${index + 1} ${centerName}</td>
           </tr>
@@ -1044,7 +1045,7 @@
       // Get legal text from builder first, then fallback to vault
       const builderLegalText = helper.estimate_legal_text || '';
       
-      // If builder has legal text, use it
+      // If builder has text, use it
       if (builderLegalText) {
         return builderLegalText;
       }
