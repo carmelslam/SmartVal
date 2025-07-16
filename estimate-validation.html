@@ -2304,131 +2304,10 @@
         'levi_base_price'
       );
       
-      // 2. Dynamic validation rows for all adjustments (unified approach)
+      // 2. Load adjustments ONLY from market value section (חישוב ערך השוק של הרכב)
       let adjustmentCount = 0;
       
-      // A. Load Levi adjustments (read-only from Levi report)
-      if (helper?.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
-        console.log('📄 Found Levi adjustments from report:', helper.levi_report.adjustments.length);
-        helper.levi_report.adjustments.forEach((adjustment, index) => {
-          // Handle percentage - try multiple sources and formats
-          let percentageValue = null;
-          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
-            percentageValue = parseFloat(adjustment.percentage);
-          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
-            percentageValue = parseFloat(adjustment.percent);
-          }
-          
-          // Handle value - try multiple sources and formats  
-          let valueAmount = null;
-          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
-            valueAmount = parseFloat(adjustment.value);
-          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
-            valueAmount = parseFloat(adjustment.amount);
-          }
-          
-          // Check if adjustment has a type field (plus/minus like in builder)
-          let isAddition = false;
-          if (adjustment.type) {
-            isAddition = adjustment.type === 'plus';
-          } else {
-            // Fallback to value/percentage analysis
-            isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
-          }
-          
-          const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-          const adjustmentSymbol = isAddition ? '+' : '-';
-          
-          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
-          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
-          
-          // Always show both percentage and value when available, otherwise show what we have
-          let combinedDisplay = '';
-          if (percentageDisplay && valueDisplay) {
-            combinedDisplay = `${percentageDisplay}, ${valueDisplay}`;
-          } else if (percentageDisplay) {
-            combinedDisplay = `${percentageDisplay}, ערך לא מוגדר`;
-          } else if (valueDisplay) {
-            combinedDisplay = `אחוז לא מוגדר, ${valueDisplay}`;
-          } else {
-            combinedDisplay = 'לא מוגדר';
-          }
-          
-          leviHTML += createEnhancedValidationItem(
-            `${adjustment.description || 'התאמת לוי יצחק'} - ${adjustmentType}`, 
-            combinedDisplay,
-            combinedDisplay,
-            `levi_adj_levi_${index}`
-          );
-          adjustmentCount++;
-        });
-      }
-      
-      // B. Load custom adjustments (editable, stored in helper.levi.custom_adjustments)
-      if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
-        console.log('📄 Found custom adjustments:', helper.levi.custom_adjustments.length);
-        helper.levi.custom_adjustments.forEach((adjustment, index) => {
-          // Handle percentage - try multiple sources and formats
-          let percentageValue = null;
-          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
-            percentageValue = parseFloat(adjustment.percentage);
-          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
-            percentageValue = parseFloat(adjustment.percent);
-          }
-          
-          // Handle value - try multiple sources and formats  
-          let valueAmount = null;
-          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
-            valueAmount = parseFloat(adjustment.value);
-          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
-            valueAmount = parseFloat(adjustment.amount);
-          }
-          
-          // Use explicit type if available (plus/minus from builder), otherwise infer from values
-          let adjustmentTypeText;
-          let isAddition = false;
-          
-          if (adjustment.type) {
-            isAddition = adjustment.type === 'plus';
-          } else if (adjustment.adjustmentType === 'subtraction') {
-            isAddition = false;
-          } else if (adjustment.adjustmentType === 'addition') {
-            isAddition = true;
-          } else {
-            // Fallback to value-based detection
-            isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
-          }
-          
-          adjustmentTypeText = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-          
-          const adjustmentSymbol = adjustmentTypeText === 'תוספת למחיר' ? '+' : '-';
-          
-          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
-          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
-          
-          // Always show both percentage and value when available, otherwise show what we have
-          let combinedDisplay = '';
-          if (percentageDisplay && valueDisplay) {
-            combinedDisplay = `${percentageDisplay}, ${valueDisplay}`;
-          } else if (percentageDisplay) {
-            combinedDisplay = `${percentageDisplay}, ערך לא מוגדר`;
-          } else if (valueDisplay) {
-            combinedDisplay = `אחוז לא מוגדר, ${valueDisplay}`;
-          } else {
-            combinedDisplay = 'לא מוגדר';
-          }
-          
-          leviHTML += createEnhancedValidationItem(
-            `${adjustment.description || 'התאמה מותאמת אישית'} - ${adjustmentTypeText}`, 
-            combinedDisplay,
-            combinedDisplay,
-            `levi_adj_custom_${index}`
-          );
-          adjustmentCount++;
-        });
-      }
-      
-      // C. Load market value adjustments (from חישוב ערך השוק של הרכב section)
+      // ONLY load from market value section - this is what shows in the builder
       if (helper?.manual_full_market_value?.allAdjustments && helper.manual_full_market_value.allAdjustments.length > 0) {
         console.log('📄 Found market value adjustments:', helper.manual_full_market_value.allAdjustments.length);
         helper.manual_full_market_value.allAdjustments.forEach((adjustment, index) => {
@@ -2478,9 +2357,9 @@
         });
       }
       
-      // D. Show placeholder if no adjustments found
+      // Show placeholder if no adjustments found
       if (adjustmentCount === 0) {
-        console.log('📄 No adjustments found in helper data');
+        console.log('📄 No adjustments found in market value section');
         leviHTML += createEnhancedValidationItem(
           'התאמות מחיר', 
           'לא נמצאו התאמות',
