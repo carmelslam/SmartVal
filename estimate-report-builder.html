@@ -13,14 +13,18 @@
     }
     table {
       width: 100%;
+      max-width: 100%;
       border-collapse: collapse;
       margin-bottom: 20px;
       border: 3px solid #003366 !important;
+      table-layout: fixed; /* Fixed layout to prevent overflow */
     }
     th, td {
       padding: 8px;
       text-align: right;
       border: 1px solid #aaa;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     th {
       color: #003366 !important;
@@ -179,10 +183,12 @@
       /* Optimize tables for print */
       table {
         width: 100% !important;
-        max-width: 100% !important;
+        max-width: 180mm !important; /* A4 width minus margins */
         border-collapse: collapse !important;
         page-break-inside: avoid;
         font-size: 10pt;
+        table-layout: fixed !important;
+        margin: 0 auto !important;
       }
       
       th, td {
@@ -190,6 +196,8 @@
         border: 1px solid #000 !important;
         font-size: 10pt;
         word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 0; /* Forces text wrapping */
       }
       
       th {
@@ -331,250 +339,8 @@
     <button class="btn-secondary" onclick="goHome()">🏠 חזור לדף הבית</button>
   </div>
 
-  <div id="estimate-output" class="report-content"></div>
-
-  <div id="template-html">
-   
-  <!-- Section 1 - Header -->
-  <div class="report-header">
-    <div class="car-details-title">{{helper.report_title}}</div>
-    <table style="width: 100%; margin-top: 10px;">
-      <tr>
-        <td style="width: 40%; text-align: right;">
-          <p>לכבוד:<br>{{meta.client_name}}<br>{{meta.address}}</p>
-        </td>
-        <td style="width: 20%;"></td>
-        <td style="width: 40%; text-align: right;">
-          <p>תאריך: {{meta.today}}</p>
-          <p>תיק מספר: {{helper.file_number}}</p>
-          <p>עוסק מורשה: {{helper.business_license}}</p>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <div class="car-details">
-    <div class="car-details-title">{{helper.estimate_details_title}}</div> 
-    <table class="car-details-table">
-    <tbody>
-      <tr>
-        <td><strong>בעל הרכב:</strong> {{meta.client_name}}</td>
-        <td><strong>דגם:</strong> {{helper.vehicle.model}}</td>
-      </tr>
-      <tr>
-        <td><strong>מספר טלפון:</strong> {{meta.phone_number}}</td>
-        <td><strong>מספר שלדה:</strong> {{helper.vehicle.chassis}}</td>
-      </tr>
-      <tr>
-        <td><strong>תאריך הבדיקה:</strong> {{meta.inspection_date}}</td>
-        <td><strong>שנת יצור:</strong> {{helper.vehicle.year}}</td>
-      </tr>
-      <tr>
-        <td><strong>מקום הבדיקה:</strong> {{meta.location}}</td>
-        <td><strong>מד ק"מ:</strong> {{helper.vehicle.km}}</td>
-      </tr>
-      <tr>
-        <td><strong>מספר רישוי:</strong> {{meta.plate}}</td>
-        <td><strong>סוג הרכב:</strong> {{helper.vehicle.ownership_type}}</td>
-      </tr>
-      <tr>
-        <td><strong>יצרן:</strong> {{helper.vehicle.manufacturer}}</td>
-        <td><strong>סוג הנזק:</strong> {{meta.damage}}</td>
-      </tr>
-    </tbody>
-    </table>
-  </div>
-
-  <!-- Section 2 - Estimate Introduction -->
-  <div class="section" style="page-break-before: always;">
-    <p style="font-size: 16px;">
-      בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
-    </p>
-    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">תיאור הנזק:</p>
-    <p style="font-size: 16px;">
-      {{helper.damage.description}}
-    </p>
-    <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">אומדן עלויות:</p>
-    <p style="font-size: 16px;">
-      האומדן מבוסס על מחירי שוק נוכחיים ועל בדיקה ראשונית של הנזקים. עלויות סופיות עשויות להשתנות.
-    </p>
-  </div>
-
-  <!-- Section 3 - Damage Breakdown -->
-  <div class="section">
-    {{#each helper.damage_blocks}}
-      <div class="car-details">
-        <div class="car-details-title">אומדן מוקד {{this.label}}</div>
-        {{{this.table}}}
-      </div>
-    {{/each}}
-  </div>
-
-  <!-- Section 4 - Summary Table -->
-  {{#if (gt (length helper.damage_blocks) 1)}}
-  <div class="section">
-    <div class="car-details">
-      <div class="car-details-title">סיכום אומדן לפי מוקדים</div>
-      <table class="car-details-table">
-        <thead>
-          <tr>
-            <th>מוקד</th>
-            <th>אומדן עלות</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each helper.damage_summary}}
-          <tr>
-            <td>{{this.label}}</td>
-            <td>{{money this.total}}</td>
-          </tr>
-          {{/each}}
-          <tr>
-            <td><strong>סה"כ אומדן כלל המוקדים כולל מע"מ</strong></td>
-            <td><strong>{{money helper.damage_total}}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {{/if}}
-
-  <!-- Section 4.5 - Levi Adjustments (bulk two) - EXACT COPY FROM FINAL REPORT BUILDER -->
-  <div class="section">
-    <div class="car-details">
-      <div class="car-details-title">אחוז הנזק הגולמי</div>
-      <table class="car-details-table">
-        <tr><th>תיאור</th><th>ערך</th></tr>
-        <tr><td>סה"כ הנזק כולל מע"מ</td><td>{{money helper.calculations.total_damage}}</td></tr>
-        <tr><td>ערך הרכב לנזק גולמי כולל מע"מ</td><td>{{money helper.calculations.vehicle_value_gross}}</td></tr>
-        <tr><td><strong>אחוז הנזק הגולמי</strong></td><td><strong>{{percent helper.calculations.damage_percent}}</strong></td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- Section 4.6 - Levi Adjustments (bulk three) - EXACT COPY FROM FINAL REPORT BUILDER -->
-  <div class="section">
-    <div class="car-details">
-      <div class="car-details-title">חישוב ערך השוק של הרכב</div>
-      <table class="car-details-table">
-        <tr><th>תיאור</th><th>ערך</th></tr>
-        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>{{money helper.vehicle_value_base}}</td></tr>
-        {{#each helper.levi.adjustments}}
-          <tr><td>{{this.label}}</td><td>{{money this.amount}}</td></tr>
-        {{/each}}
-        <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- Section 4.7 - Depreciation Opening Block - EXACT COPY FROM FINAL REPORT BUILDER -->
-  <div class="section">
-    <div class="car-details">
-      <div class="car-details-title">ירידת ערך</div>
-      <p style="font-size: 18px; font-weight: bold;">
-        מממצאי בדיקתנו עולה כי הרכב נפגע והיה צורך בעבודות ותיקונים הבאים:
-      </p>
-      <table class="car-details-table">
-        <tr><th>מוקד נזק</th><th>עבודות / תיקונים</th></tr>
-        {{#each helper.damage_blocks}}
-          <tr>
-            <td>{{this.center}}</td>
-            <td>
-              {{#each this.repairs}}{{this}}, {{/each}}
-              {{#each this.works}}{{this}}, {{/each}}
-            </td>
-          </tr>
-        {{/each}}
-      </table>
-      <p style="font-size: 18px; font-weight: bold;">
-        אנו בדעה כי ממצאים אלה ייגרמו להפחתות ערכו המסחרי של הרכב לעומת רכב זהה מאותו תוצרת, דגם ושנת ייצור שלא עבר תאונות דרכים.
-      </p>
-    </div>
-  </div>
-
-  <!-- Section 4.6 - Depreciation Bulk 2 - EXACT COPY FROM FINAL REPORT BUILDER -->
-  <div class="section">
-    <div class="car-details">
-      <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
-      <table class="car-details-table">
-        <tr><th>החלק הניזוק</th><th>מהות התיקון</th><th>% ירידת ערך</th><th>ערך בש"ח</th><th>מוקד</th></tr>
-        {{#each helper.expertise.depreciation.centers}}
-          <tr>
-            <td>{{this.part}}</td>
-            <td>{{this.repair}}</td>
-            <td>{{percent this.percent}}</td>
-            <td>{{money this.depreciation_value}}</td>
-            <td>{{this.center}}</td>
-          </tr>
-        {{/each}}
-      </table>
-      <p style="font-size: 18px; font-weight: bold;">
-        ערך השוק של הרכב הינו {{money helper.calculations.market_value}} ש"ח כולל מע"מ, לפיכך הפיצוי לירידת הערך יהיה {{percent helper.depreciation.global_percent}} = {{money helper.depreciation.global_amount}} ש"ח
-      </p>
-    </div>
-  </div>
-
-  <!-- Section 5 - Estimate Totals Summary (Combined with Green Styling) -->
-  <div class="section">
-    <div class="estimate-totals">
-      <div class="car-details-title">סיכום האומדן</div>
-      <table class="car-details-table">
-        <tr>
-          <th>סעיף</th>
-          <th>שווי</th>
-        </tr>
-        <tr>
-          <td>סה"כ אומדן נזקים</td>
-          <td>{{money helper.calculations.base_damage}}</td>
-        </tr>
-        <tr>
-          <td>פיצוי בגין ירידת ערך</td>
-          <td>{{money helper.depreciation.global_amount}}</td>
-        </tr>
-        <tr>
-          <td>מע"מ ({{helper.calculations.vat_rate}}%)</td>
-          <td>{{money helper.calculations.vat_amount}}</td>
-        </tr>
-        <tr>
-          <td><strong>סה"כ נכלל באומדן</strong></td>
-          <td><strong>{{money helper.calculations.total_compensation}}</strong></td>
-        </tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- Section 6 - Legal Text and Disclaimers - ESTIMATE SPECIFIC -->
-  <div class="section">
-    <div style="font-size: 16px; line-height: 1.8;">
-      <strong>הערות חשובות לגבי האומדן:</strong><br>
-      {{lookup vault.estimate_אובדן_להלכה helper.estimate_type}}<br><br>
-
-      <strong>הצהרת שמאי:</strong><br>
-      אני החת"מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.<br><br>
-
-      <div class="estimate-disclaimer">
-        <strong>אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</strong><br>
-        העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 7 - Signature -->
-  <div class="signature-stamp" style="margin-top: 40px;">
-    <div class="center-text" style="font-size: 18px; font-weight: bold;">בכבוד רב,</div>
-  </div>
-
-  <div style="margin-top: 40px; text-align: left;">
-    <br><br>
-    <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
-  </div>
-  
-  <div style="margin-top: 20px; text-align: center;">
-    <p><strong>ירון כיוף - שמאי מורשה מס' 1097</strong></p>
-    <p>ירון כיוף - שמאות והערכת נזקי רכב ורכוש</p>
-  </div>
-
-  <div id="math-preview" style="margin-top: 20px;"></div>
+  <div id="estimate-output" class="report-content">
+    <!-- Report will be populated here by JavaScript -->
   </div>
 
   <script type="module">
@@ -729,103 +495,165 @@
       }
 
       try {
-        // Get template and inject data
-        const template = document.getElementById('template-html').innerHTML;
+        // Get data from helper with proper mapping
+        const clientName = helper.client?.name || helper.car_details?.owner || helper.meta?.client_name || '';
+        const clientAddress = helper.client?.address || helper.car_details?.ownerAddress || helper.meta?.address || '';
+        const clientPhone = helper.client?.phone_number || helper.car_details?.ownerPhone || helper.meta?.phone_number || '';
+        const plate = helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '';
+        const inspectionDate = helper.meta?.inspection_date || new Date().toLocaleDateString('he-IL');
+        const location = helper.meta?.location || '';
+        const damageType = helper.meta?.damage || helper.car_details?.damageType || '';
         
-        // Simple template replacement for estimate data
-        let html = template;
-        
-        // Replace meta data
-        html = html.replace(/\{\{meta\.client_name\}\}/g, helper.meta.client_name || '');
-        html = html.replace(/\{\{meta\.address\}\}/g, helper.meta.address || '');
-        html = html.replace(/\{\{meta\.today\}\}/g, new Date().toLocaleDateString('he-IL'));
-        html = html.replace(/\{\{meta\.plate\}\}/g, helper.meta.plate || '');
-        html = html.replace(/\{\{meta\.phone_number\}\}/g, helper.meta.phone_number || '');
-        html = html.replace(/\{\{meta\.inspection_date\}\}/g, helper.meta.inspection_date || '');
-        html = html.replace(/\{\{meta\.location\}\}/g, helper.meta.location || '');
-        html = html.replace(/\{\{meta\.damage\}\}/g, helper.meta.damage || '');
-        
-        // Replace helper template placeholders
-        html = html.replace(/\{\{helper\.report_title\}\}/g, helper.report_title || 'אומדן נזקי רכב');
-        html = html.replace(/\{\{helper\.file_number\}\}/g, helper.file_number || `YC/${helper.meta.plate || 'XXXXX'}/2025`);
-        html = html.replace(/\{\{helper\.business_license\}\}/g, helper.business_license || '02921217');
-        html = html.replace(/\{\{helper\.estimate_details_title\}\}/g, helper.estimate_details_title || 'פרטי הרכב הנבדק');
-        
-        // Replace vehicle data
+        // Vehicle data
         const vehicle = helper.vehicle || helper.car_details || {};
-        html = html.replace(/\{\{helper\.vehicle\.model\}\}/g, vehicle.model || '');
-        html = html.replace(/\{\{helper\.vehicle\.chassis\}\}/g, vehicle.chassis || '');
-        html = html.replace(/\{\{helper\.vehicle\.year\}\}/g, vehicle.year || '');
-        html = html.replace(/\{\{helper\.vehicle\.km\}\}/g, vehicle.km || '');
-        html = html.replace(/\{\{helper\.vehicle\.ownership_type\}\}/g, vehicle.ownership_type || '');
-        html = html.replace(/\{\{helper\.vehicle\.manufacturer\}\}/g, vehicle.manufacturer || '');
+        const manufacturer = vehicle.manufacturer || '';
+        const model = vehicle.model || '';
+        const year = vehicle.year || '';
+        const chassis = vehicle.chassis || '';
+        const km = vehicle.km || vehicle.odo || '';
+        const ownershipType = vehicle.ownership_type || '';
         
-        // Replace damage description
-        const damage = helper.damage || helper.expertise?.damage || {};
-        html = html.replace(/\{\{helper\.damage\.description\}\}/g, damage.description || 'תיאור נזק לא זמין');
+        // Calculations
+        const calc = helper.calculations || helper.expertise?.calculations || {};
+        const baseDamage = calc.base_damage || calc.total_damage || 0;
+        const vatRate = calc.vat_rate || 18;
+        const vatAmount = calc.vat_amount || Math.round(baseDamage * vatRate / 100);
+        const totalEstimate = calc.total_estimate || calc.total_compensation || (baseDamage + vatAmount);
+        const marketValue = calc.market_value || helper.expertise?.levi_report?.final_price || helper.levisummary?.final_price || 0;
+        const damagePercent = calc.damage_percent || (marketValue > 0 ? Math.round((baseDamage / marketValue) * 100) : 0);
         
-        // Replace calculations
-        const calc = helper.calculations || {};
-        html = html.replace(/\{\{money helper\.calculations\.base_damage\}\}/g, formatCurrency(calc.base_damage || 0));
-        html = html.replace(/\{\{helper\.calculations\.vat_rate\}\}/g, calc.vat_rate || 18);
-        html = html.replace(/\{\{money helper\.calculations\.vat_amount\}\}/g, formatCurrency(calc.vat_amount || 0));
-        html = html.replace(/\{\{money helper\.calculations\.total_estimate\}\}/g, formatCurrency(calc.total_estimate || 0));
-        html = html.replace(/\{\{money helper\.calculations\.market_value\}\}/g, formatCurrency(calc.market_value || 0));
-        html = html.replace(/\{\{money helper\.calculations\.total_damage\}\}/g, formatCurrency(calc.total_damage || calc.base_damage || 0));
-        html = html.replace(/\{\{money helper\.calculations\.vehicle_value_gross\}\}/g, formatCurrency(calc.vehicle_value_gross || calc.market_value || 0));
-        html = html.replace(/\{\{percent helper\.calculations\.damage_percent\}\}/g, (calc.damage_percent || '0') + '%');
-        html = html.replace(/\{\{money helper\.calculations\.total_compensation\}\}/g, formatCurrency(calc.total_compensation || calc.total_estimate || 0));
+        // Damage description
+        const damageDescription = helper.expertise?.description || helper.damage?.description || 'תיאור נזק לא זמין';
         
-        // Replace damage blocks (simplified for estimate)
-        if (helper.damage_sections && helper.damage_sections.length > 0) {
-          const damageBlocksHTML = helper.damage_sections.map((section, index) => `
-            <div class="car-details">
-              <div class="car-details-title">אומדן מוקד ${index + 1}: ${section.zone || 'לא מוגדר'}</div>
-              <table class="car-details-table">
-                <tr><th>סוג</th><th>תיאור</th><th>אומדן עלות</th></tr>
-                <tr><td>עבודות</td><td>${section.works?.length || 0} פריטים</td><td>${formatCurrency(section.works_total || 0)}</td></tr>
-                <tr><td>חלקים</td><td>${section.parts?.length || 0} פריטים</td><td>${formatCurrency(section.parts_total || 0)}</td></tr>
-                <tr><td>תיקונים</td><td>${section.repairs?.length || 0} פריטים</td><td>${formatCurrency(section.repairs_total || 0)}</td></tr>
-                <tr><td><strong>סה"כ מוקד</strong></td><td></td><td><strong>${formatCurrency((section.works_total || 0) + (section.parts_total || 0) + (section.repairs_total || 0))}</strong></td></tr>
+        // Build HTML structure
+        const html = `
+          <!-- Section 1 - Header -->
+          <div class="report-header">
+            <div class="car-details-title">אומדן נזקי רכב</div>
+            <table style="width: 100%; margin-top: 10px; table-layout: fixed;">
+              <tr>
+                <td style="width: 40%; text-align: right; padding: 10px;">
+                  <p style="margin: 0;">לכבוד:<br>${clientName}<br>${clientAddress}</p>
+                </td>
+                <td style="width: 20%;"></td>
+                <td style="width: 40%; text-align: right; padding: 10px;">
+                  <p style="margin: 0;">תאריך: ${new Date().toLocaleDateString('he-IL')}</p>
+                  <p style="margin: 0;">תיק מספר: YC/${plate}/2025</p>
+                  <p style="margin: 0;">עוסק מורשה: 02921217</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Section 2 - Vehicle Details -->
+          <div class="car-details">
+            <div class="car-details-title">פרטי הרכב הנבדק</div> 
+            <table class="car-details-table" style="width: 100%; table-layout: fixed;">
+              <tbody>
+                <tr>
+                  <td style="width: 50%; padding: 8px;"><strong>בעל הרכב:</strong> ${clientName}</td>
+                  <td style="width: 50%; padding: 8px;"><strong>דגם:</strong> ${model}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>מספר טלפון:</strong> ${clientPhone}</td>
+                  <td style="padding: 8px;"><strong>מספר שלדה:</strong> ${chassis}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>תאריך הבדיקה:</strong> ${inspectionDate}</td>
+                  <td style="padding: 8px;"><strong>שנת יצור:</strong> ${year}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>מקום הבדיקה:</strong> ${location}</td>
+                  <td style="padding: 8px;"><strong>מד ק"מ:</strong> ${km}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>מספר רישוי:</strong> ${plate}</td>
+                  <td style="padding: 8px;"><strong>סוג הרכב:</strong> ${ownershipType}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>יצרן:</strong> ${manufacturer}</td>
+                  <td style="padding: 8px;"><strong>סוג הנזק:</strong> ${damageType}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 3 - Estimate Introduction -->
+          <div class="section" style="page-break-before: always;">
+            <p style="font-size: 16px; line-height: 1.6;">
+              בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
+            </p>
+            <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">תיאור הנזק:</p>
+            <p style="font-size: 16px; line-height: 1.6;">
+              ${damageDescription}
+            </p>
+            <p style="font-size: 16px; font-weight: bold; text-decoration: underline;">אומדן עלויות:</p>
+            <p style="font-size: 16px; line-height: 1.6;">
+              האומדן מבוסס על מחירי שוק נוכחיים ועל בדיקה ראשונית של הנזקים. עלויות סופיות עשויות להשתנות.
+            </p>
+          </div>
+
+          <!-- Section 4 - Damage Analysis -->
+          ${generateDamageAnalysis(helper)}
+
+          <!-- Section 5 - Estimate Totals Summary -->
+          <div class="section">
+            <div class="estimate-totals">
+              <div class="car-details-title">סיכום האומדן</div>
+              <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr>
+                  <th style="width: 70%; text-align: right;">סעיף</th>
+                  <th style="width: 30%; text-align: center;">שווי</th>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;">סה"כ אומדן נזקים</td>
+                  <td style="padding: 8px; text-align: center;">${formatCurrency(baseDamage)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;">מע"מ (${vatRate}%)</td>
+                  <td style="padding: 8px; text-align: center;">${formatCurrency(vatAmount)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><strong>סה"כ נכלל באומדן</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalEstimate)}</strong></td>
+                </tr>
               </table>
             </div>
-          `).join('');
+          </div>
+
+          <!-- Section 6 - Legal Text and Disclaimers -->
+          <div class="section">
+            <div style="font-size: 16px; line-height: 1.8;">
+              <strong>הערות חשובות לגבי האומדן:</strong><br>
+              ${generateLegalText(helper)}<br><br>
+
+              <strong>הצהרת שמאי:</strong><br>
+              אני החתום מטה: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.<br><br>
+
+              <div class="estimate-disclaimer">
+                <strong>אומדן זה הינו הערכה ראשונית בלבד ואינו מהווה התחייבות כספית.</strong><br>
+                העלויות הסופיות עשויות להשתנות בהתאם לתוצאות הביצוע בפועל, זמינות חלקים ותנאי השוק.
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 7 - Signature -->
+          <div class="signature-stamp" style="margin-top: 40px;">
+            <div class="center-text" style="font-size: 18px; font-weight: bold;">בכבוד רב,</div>
+          </div>
+
+          <div style="margin-top: 40px; text-align: left;">
+            <br><br>
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" alt="חתימה" style="height: 160px;">
+          </div>
           
-          html = html.replace(/\{\{#each helper\.damage_blocks\}\}[\s\S]*?\{\{\/each\}\}/g, damageBlocksHTML);
-        }
+          <div style="margin-top: 20px; text-align: center;">
+            <p><strong>ירון כיוף - שמאי מורשה מס' 1097</strong></p>
+            <p>ירון כיוף - שמאות והערכת נזקי רכב ורכוש</p>
+          </div>
+        `;
         
-        // Replace depreciation data with calculated values
-        if (helper.expertise?.depreciation?.centers) {
-          const depreciationHTML = helper.expertise.depreciation.centers.map(center => `
-            <tr>
-              <td>${center.part || ''}</td>
-              <td>${center.repair || ''}</td>
-              <td>${center.percent || '0'}%</td>
-              <td>${formatCurrency(center.depreciation_value || 0)}</td>
-              <td>${center.center || ''}</td>
-            </tr>
-          `).join('');
-          
-          html = html.replace(/\{\{#each helper\.expertise\.depreciation\.centers\}\}[\s\S]*?\{\{\/each\}\}/g, depreciationHTML);
-        }
-        
-        // Replace global depreciation values
-        html = html.replace(/\{\{money helper\.depreciation\.global_amount\}\}/g, formatCurrency(helper.depreciation?.global_amount || 0));
-        html = html.replace(/\{\{percent helper\.depreciation\.global_percent\}\}/g, (helper.depreciation?.global_percent || '0') + '%');
-        
-        // Load legal text from helper (estimate type specific)
-        loadEstimateLegalText(helper.estimate_type || 'אובדן_להלכה', helper).then(legalText => {
-          html = html.replace(/\{\{lookup vault\.estimate_legal_text helper\.estimate_type\}\}/g, legalText);
-          
-          // Get assessor declaration from helper too
-          const assessorDeclaration = helper.legal_texts?.assessor_declaration || 
-                                     helper.vault?.legal_texts?.assessor_declaration ||
-                                     'אני החתום מטה, ירון כיוף, שמאי מוגשר מס\' 1097, מצהיר כי אומדן זה נערך על פי בדיקתי ובהתאם לידיעותיי המקצועיות.';
-          
-          html = html.replace(/\{\{lookup vault\.assessor_declaration 'estimate'\}\}/g, assessorDeclaration);
-          
-          container.innerHTML = html;
-        });
+        container.innerHTML = html;
         
       } catch (error) {
         console.error('Error generating estimate report:', error);
@@ -838,20 +666,76 @@
         `;
       }
     }
-
-    async function loadEstimateLegalText(estimateType, helper) {
-      try {
-        // Load legal text from helper, not from external vault
-        const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
-                         helper.legal_texts?.estimate_default ||
-                         helper.vault?.legal_texts?.[`estimate_${estimateType}`] ||
-                         'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
-        return legalText;
-      } catch (error) {
-        console.error('Error loading legal text from helper:', error);
-        return 'טקסט משפטי לא זמין';
+    
+    function generateDamageAnalysis(helper) {
+      const damageBlocks = helper.expertise?.damage_blocks || helper.damage_sections || [];
+      
+      if (!damageBlocks || damageBlocks.length === 0) {
+        return `
+          <div class="section">
+            <div class="car-details">
+              <div class="car-details-title">ניתוח נזקים</div>
+              <p style="text-align: center; padding: 20px;">לא נמצאו נתוני נזקים מפורטים</p>
+            </div>
+          </div>
+        `;
       }
+      
+      const damageHTML = damageBlocks.map((block, index) => {
+        const works = block.works || [];
+        const parts = block.parts || [];
+        const repairs = block.repairs || [];
+        
+        const worksTotal = block.works_total || works.reduce((sum, item) => sum + (item.cost || 0), 0);
+        const partsTotal = block.parts_total || parts.reduce((sum, item) => sum + (item.price || 0), 0);
+        const repairsTotal = block.repairs_total || repairs.reduce((sum, item) => sum + (item.cost || 0), 0);
+        const sectionTotal = worksTotal + partsTotal + repairsTotal;
+        
+        return `
+          <div class="car-details">
+            <div class="car-details-title">אומדן מוקד ${index + 1}: ${block.label || block.center || 'לא מוגדר'}</div>
+            <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
+              <tr>
+                <th style="width: 30%;">סוג</th>
+                <th style="width: 50%;">תיאור</th>
+                <th style="width: 20%;">אומדן עלות</th>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">עבודות</td>
+                <td style="padding: 8px;">${works.length} פריטים</td>
+                <td style="padding: 8px; text-align: center;">${formatCurrency(worksTotal)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">חלקים</td>
+                <td style="padding: 8px;">${parts.length} פריטים</td>
+                <td style="padding: 8px; text-align: center;">${formatCurrency(partsTotal)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;">תיקונים</td>
+                <td style="padding: 8px;">${repairs.length} פריטים</td>
+                <td style="padding: 8px; text-align: center;">${formatCurrency(repairsTotal)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;"><strong>סה"כ מוקד</strong></td>
+                <td style="padding: 8px;"></td>
+                <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(sectionTotal)}</strong></td>
+              </tr>
+            </table>
+          </div>
+        `;
+      }).join('');
+      
+      return `<div class="section">${damageHTML}</div>`;
     }
+    
+    function generateLegalText(helper) {
+      const estimateType = helper.estimate_type || 'אובדן_להלכה';
+      const legalText = helper.legal_texts?.[`estimate_${estimateType}`] || 
+                       helper.legal_texts?.estimate_default ||
+                       'אומדן זה מבוסס על בדיקה ראשונית ועל מחירי שוק נוכחיים. העלויות הסופיות עשויות להשתנות בהתאם לתנאי הביצוע בפועל.';
+      return legalText;
+    }
+
 
     function formatCurrency(amount) {
       return new Intl.NumberFormat('he-IL', {
