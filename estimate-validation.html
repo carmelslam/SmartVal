@@ -2271,8 +2271,20 @@
       console.log('📄 DEBUGGING: Full helper structure for adjustments:', {
         helper_levi_report_adjustments: helper?.levi_report?.adjustments,
         helper_levi_custom_adjustments: helper?.levi?.custom_adjustments,
+        helper_manual_full_market_value: helper?.manual_full_market_value,
         helper_keys: Object.keys(helper || {})
       });
+      
+      // Debug market value adjustments specifically
+      if (helper?.manual_full_market_value?.allAdjustments) {
+        console.log('📄 Market value adjustments detailed:', helper.manual_full_market_value.allAdjustments.map(adj => ({
+          description: adj.description,
+          percentage: adj.percentage,
+          value: adj.value,
+          adjustmentType: adj.adjustmentType,
+          allKeys: Object.keys(adj)
+        })));
+      }
       
       let leviHTML = '';
       
@@ -2291,12 +2303,28 @@
       if (helper?.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
         console.log('📄 Found Levi adjustments from report:', helper.levi_report.adjustments.length);
         helper.levi_report.adjustments.forEach((adjustment, index) => {
-          const isAddition = adjustment.percentage > 0 || adjustment.value > 0;
+          // Handle percentage - try multiple sources and formats
+          let percentageValue = null;
+          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
+            percentageValue = parseFloat(adjustment.percentage);
+          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
+            percentageValue = parseFloat(adjustment.percent);
+          }
+          
+          // Handle value - try multiple sources and formats  
+          let valueAmount = null;
+          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
+            valueAmount = parseFloat(adjustment.value);
+          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
+            valueAmount = parseFloat(adjustment.amount);
+          }
+          
+          const isAddition = (percentageValue && percentageValue > 0) || (valueAmount && valueAmount > 0);
           const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
           const adjustmentSymbol = isAddition ? '+' : '-';
           
-          const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
-          const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
+          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
           
           // Always show both percentage and value when available, otherwise show what we have
           let combinedDisplay = '';
@@ -2336,10 +2364,26 @@
             adjustmentTypeText = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
           }
           
+          // Handle percentage - try multiple sources and formats
+          let percentageValue = null;
+          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
+            percentageValue = parseFloat(adjustment.percentage);
+          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
+            percentageValue = parseFloat(adjustment.percent);
+          }
+          
+          // Handle value - try multiple sources and formats  
+          let valueAmount = null;
+          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
+            valueAmount = parseFloat(adjustment.value);
+          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
+            valueAmount = parseFloat(adjustment.amount);
+          }
+          
           const adjustmentSymbol = adjustmentTypeText === 'תוספת למחיר' ? '+' : '-';
           
-          const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
-          const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
+          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
           
           // Always show both percentage and value when available, otherwise show what we have
           let combinedDisplay = '';
@@ -2369,10 +2413,26 @@
         helper.manual_full_market_value.allAdjustments.forEach((adjustment, index) => {
           const isAddition = adjustment.adjustmentType === 'addition' || adjustment.value > 0;
           const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
+          // Handle percentage - try multiple sources and formats
+          let percentageValue = null;
+          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
+            percentageValue = parseFloat(adjustment.percentage);
+          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
+            percentageValue = parseFloat(adjustment.percent);
+          }
+          
+          // Handle value - try multiple sources and formats  
+          let valueAmount = null;
+          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
+            valueAmount = parseFloat(adjustment.value);
+          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
+            valueAmount = parseFloat(adjustment.amount);
+          }
+          
           const adjustmentSymbol = isAddition ? '+' : '-';
           
-          const percentageDisplay = adjustment.percentage ? `${adjustmentSymbol}${Math.abs(adjustment.percentage)}%` : '';
-          const valueDisplay = adjustment.value ? `${adjustmentSymbol}₪${Math.abs(adjustment.value).toLocaleString()}` : '';
+          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
+          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
           
           // Always show both percentage and value when available, otherwise show what we have
           let combinedDisplay = '';
