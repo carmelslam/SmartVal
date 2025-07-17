@@ -1785,7 +1785,7 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       try {
-        console.log('🔄 Submitting estimate to webhook...');
+        console.log('🔄 Starting estimate submission to Make.com...');
         
         // Get the current HTML content for the estimate
         const estimateContent = document.getElementById('estimate-output').innerHTML;
@@ -1801,40 +1801,53 @@
           calculations: helper.calculations || {}
         };
 
-        // Use the SUBMIT_ESTIMATE webhook URL from todo requirements
+        console.log('📋 Payload being sent:', {
+          type: payload.type,
+          plate: payload.plate,
+          owner: payload.owner,
+          estimate_type: payload.estimate_type,
+          timestamp: payload.timestamp,
+          html_content_length: payload.html_content.length
+        });
+
+        // Use the SUBMIT_ESTIMATE webhook URL
         const webhookUrl = 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l';
+        console.log('🌐 Webhook URL:', webhookUrl);
         
+        // Show loading message
+        const originalAlert = window.alert;
+        window.alert = () => {}; // Temporarily disable alerts
+        
+        console.log('📡 Sending request to Make.com...');
         const response = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': '*/*'
           },
           body: JSON.stringify(payload)
         });
         
-        if (response.ok) {
-          // Handle both JSON and plain text responses
-          let result;
+        console.log('📨 Response received:');
+        console.log('- Status:', response.status);
+        console.log('- Status Text:', response.statusText);
+        console.log('- Headers:', Object.fromEntries(response.headers.entries()));
+        
+        // Restore alert function
+        window.alert = originalAlert;
+        
+        if (response.status >= 200 && response.status < 300) {
+          // Handle successful response
+          let responseText = '';
           try {
-            const responseText = await response.text();
-            console.log('📄 Raw response:', responseText);
-            
-            // Try to parse as JSON first
-            if (responseText.startsWith('{') || responseText.startsWith('[')) {
-              result = JSON.parse(responseText);
-              console.log('✅ Parsed JSON response:', result);
-            } else {
-              // Handle plain text responses like "Accepted"
-              result = { status: responseText.trim() };
-              console.log('✅ Plain text response:', responseText);
-            }
-          } catch (parseError) {
-            console.log('⚠️ Could not parse response, treating as success');
-            result = { status: 'success' };
+            responseText = await response.text();
+            console.log('📄 Response body:', responseText || '(empty)');
+          } catch (textError) {
+            console.log('⚠️ Could not read response text:', textError.message);
           }
           
-          console.log('✅ Estimate submitted successfully:', result);
-          alert('דו"ח האומדן נשלח לעיבוד בהצלחה! תקבל התראה כאשר הדו"ח יהיה מוכן.');
+          console.log('✅ Estimate submitted successfully to Make.com');
+          alert('דו"ח האומדן נשלח לעיבוד בהצלחה!\n\nMake.com יעבד את הדו"ח ויצור PDF.\nתקבל התראה כאשר הדו"ח יהיה מוכן.');
           
           // Return to appropriate page based on entry mode
           const workflowMode = sessionStorage.getItem('workflowMode');
@@ -1844,11 +1857,35 @@
             window.location.href = 'selection.html';
           }
         } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          // Handle HTTP error responses
+          let errorText = '';
+          try {
+            errorText = await response.text();
+          } catch (e) {
+            errorText = 'Could not read error response';
+          }
+          
+          console.error('❌ HTTP Error Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+          });
+          
+          throw new Error(`Make.com webhook failed: ${response.status} ${response.statusText}\nResponse: ${errorText}`);
         }
       } catch (error) {
-        console.error('❌ Error submitting estimate:', error);
-        alert('שגיאה בשליחת האומדן לעיבוד. אנא נסה שוב.\n\nפרטי שגיאה: ' + error.message);
+        console.error('❌ Error submitting estimate to Make.com:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          alert('שגיאת רשת: לא ניתן להתחבר ל-Make.com\n\nאנא בדוק:\n- חיבור האינטרנט\n- כתובת ה-webhook ב-Make.com\n\nפרטי שגיאה: ' + error.message);
+        } else {
+          alert('שגיאה בשליחת האומדן ל-Make.com לעיבוד\n\nאנא נסה שוב או פנה לתמיכה טכנית.\n\nפרטי שגיאה: ' + error.message);
+        }
       }
     };
 
