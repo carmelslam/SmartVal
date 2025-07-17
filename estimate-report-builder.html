@@ -317,6 +317,44 @@
         margin-bottom: 2mm !important;
       }
       
+      /* Dynamic Page Layout System */
+      
+      /* Page 1: Car details + Credentials */
+      .page-car-details {
+        page-break-after: always !important;
+      }
+      
+      /* Page 2+: Damage analysis with dynamic breaks */
+      .page-damage-intro {
+        page-break-before: always !important;
+        page-break-after: avoid !important;
+      }
+      
+      .damage-center-container {
+        page-break-inside: avoid !important;
+        margin-bottom: 4mm !important;
+      }
+      
+      .damage-center-container:nth-child(n+3) {
+        page-break-before: auto !important;
+      }
+      
+      /* Dedicated pages for specific sections */
+      .page-price-adjustments {
+        page-break-before: always !important;
+        page-break-after: always !important;
+      }
+      
+      .page-depreciation {
+        page-break-before: always !important;
+        page-break-after: always !important;
+      }
+      
+      /* Final page: Legal + Signature */
+      .page-legal-final {
+        page-break-before: always !important;
+      }
+      
       /* Optimize damage centers spacing for A4 */
       .car-details {
         margin-bottom: 4mm !important;
@@ -786,7 +824,7 @@
           </div>
 
           <!-- Section 3 - Assessor Credentials -->
-          <div class="section">
+          <div class="section page-car-details">
             <div class="car-details">
               <div class="car-details-title">שמאי בודק ירון כיוף מס' רשיון 1097</div>
               <div class="intellectual-box" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #003366; border-radius: 8px; padding: 8px; margin: 5px 0; text-align: right; page-break-inside: avoid;">
@@ -812,7 +850,7 @@
           </div>
 
 <!-- Section 3.5 - Estimate Introduction -->
-          <div class="section">
+          <div class="section page-damage-intro">
             <p style="font-size: 16px; line-height: 1.6; margin: 15px 0;">
               בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
             </p>
@@ -832,7 +870,7 @@
           ${generateDamageAnalysis(helper)}
 
           <!-- Section 4.5 - Vehicle Value for Gross Damage -->
-          <div class="section">
+          <div class="section page-price-adjustments">
             <div class="car-details">
               <div class="car-details-title">ערך הרכב לנזק גולמי</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
@@ -891,7 +929,7 @@
           </div>
 
           <!-- Section 6 - Legal Text and Disclaimers -->
-          <div class="section">
+          <div class="section page-legal-final">
             <div style="font-size: 14px; line-height: 1.1; padding: 15px;">
               <p style="margin: 0 0 12px 0; font-weight: bold; color: #003366; font-size: 16px;">הערות חשובות לגבי האומדן:</p>
               <div style="font-size: 14px; line-height: 1.1; margin-bottom: 15px; text-align: justify;">
@@ -931,6 +969,9 @@
         
         container.innerHTML = html;
         
+        // Apply dynamic page layout management
+        adjustContentForPrint();
+        
       } catch (error) {
         console.error('Error generating estimate report:', error);
         container.innerHTML = `
@@ -941,6 +982,62 @@
           </div>
         `;
       }
+    }
+
+    // Dynamic Page Layout Management
+    function optimizePageBreaks() {
+      const A4_HEIGHT_MM = 297;
+      const A4_HEIGHT_PX = A4_HEIGHT_MM * 3.78; // 1mm ≈ 3.78px at 96dpi
+      const CONTENT_HEIGHT_PX = A4_HEIGHT_PX - 120; // Account for margins and headers
+      
+      // Get all damage center containers
+      const damageContainers = document.querySelectorAll('.damage-center-container');
+      let currentPageHeight = 0;
+      let pageNumber = 2; // Start from page 2 (after car details)
+      
+      damageContainers.forEach((container, index) => {
+        const containerHeight = container.offsetHeight;
+        
+        // If adding this container would exceed page height, force page break
+        if (currentPageHeight + containerHeight > CONTENT_HEIGHT_PX && index > 0) {
+          container.style.pageBreakBefore = 'always';
+          currentPageHeight = containerHeight;
+          pageNumber++;
+        } else {
+          currentPageHeight += containerHeight;
+        }
+        
+        // Mark containers for potential page breaks after every 2-3 containers
+        if (index > 0 && index % 2 === 0) {
+          container.style.pageBreakBefore = 'auto';
+        }
+      });
+      
+      console.log(`📄 Dynamic layout: ${pageNumber} pages optimized for damage centers`);
+    }
+    
+    // Content-aware positioning
+    function adjustContentForPrint() {
+      // Ensure first page always contains car details + credentials
+      const carDetailsSection = document.querySelector('.page-car-details');
+      if (carDetailsSection) {
+        carDetailsSection.style.pageBreakAfter = 'always';
+      }
+      
+      // Ensure damage intro starts on new page
+      const damageIntroSection = document.querySelector('.page-damage-intro');
+      if (damageIntroSection) {
+        damageIntroSection.style.pageBreakBefore = 'always';
+      }
+      
+      // Ensure final legal section is on its own page
+      const legalSection = document.querySelector('.page-legal-final');
+      if (legalSection) {
+        legalSection.style.pageBreakBefore = 'always';
+      }
+      
+      // Run dynamic page break optimization after DOM is ready
+      setTimeout(optimizePageBreaks, 100);
     }
     
     function generateDamageAnalysis(helper) {
@@ -1097,7 +1194,7 @@
         }
         
         return `
-          <div class="car-details" style="margin-bottom: 20px;">
+          <div class="car-details damage-center-container" style="margin-bottom: 20px;">
             <div class="car-details-title">אומדן מוקד ${index + 1}: ${block.area_name || block.label || block.location || block.center || block.name || block.area || block.section || `מוקד ${index + 1}`}</div>
             <div style="padding: 10px;">
               ${categorySections}
@@ -1483,7 +1580,7 @@
       `).join('');
       
       return `
-        <div class="section">
+        <div class="section page-depreciation">
           <div class="car-details">
             <div class="car-details-title">ירידת ערך</div>
             <p style="font-size: 14px; font-weight: bold;">
@@ -1497,9 +1594,7 @@
               אנו בדעה כי ממצאים אלה ייגרמו להפחתות ערכו המסחרי של הרכב לעומת רכב זהה מאותו תוצרת, דגם ושנת ייצור שלא עבר תאונות דרכים.
             </p>
           </div>
-        </div>
 
-        <div class="section">
           <div class="car-details">
             <div class="car-details-title">חישוב ירידת הערך של הרכב</div>
             <table class="car-details-table" style="width: 100%; max-width: 800px; margin: 0 auto;">
