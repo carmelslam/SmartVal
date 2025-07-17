@@ -107,6 +107,13 @@
     <!-- Direct Make.com data test -->
     <button onclick="populateFloatingWithMakeData()" style="background: #dc3545; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🚗 בדיקת נתוני Make.com</button>
     
+    <!-- SessionStorage debugging buttons -->
+    <button onclick="debugSessionStorage()" style="background: #6f42c1; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🔍 בדיקת SessionStorage</button>
+    
+    <button onclick="populateSessionStorageWithScreenshotData()" style="background: #fd7e14; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">📸 מילוי נתוני צילום מסך</button>
+    
+    <button onclick="validateSessionStorageData()" style="background: #20c997; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">✅ אימות שלמות נתונים</button>
+    
     <!-- Success message and continue button (hidden initially) -->
     <div id="successSection" style="display: none; margin-top: 20px;">
       <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin-bottom: 15px; color: #155724;">
@@ -210,7 +217,7 @@
         // Store ANY webhook response for debugging
         sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
         
-        // Store the original payload data immediately with office code
+        // ENHANCED: Store the original payload data immediately with office code
         const initialCaseData = {
           plate: payload.plate,
           owner: payload.owner,
@@ -220,10 +227,13 @@
           data_source: 'make_com_webhook',
           webhook_response: webhookResponse,
           // Add office code if available in webhook response
-          office_code: webhookResponse?.office_code || webhookResponse?.['קוד משרד התחבורה'] || ''
+          office_code: webhookResponse?.office_code || webhookResponse?.['קוד משרד התחבורה'] || '',
+          processing_timestamp: new Date().toISOString()
         };
         
+        // Store with comprehensive logging
         sessionStorage.setItem('makeCarData', JSON.stringify(initialCaseData));
+        console.log('💾 Initial case data stored in makeCarData:', initialCaseData);
         
         // Also update helper immediately with basic data
         if (typeof window.updateHelper === 'function') {
@@ -282,7 +292,18 @@
                    webhookResponse.Body.includes('פרטי רכב')) {
             console.log('🚗 Hebrew MOT data found in webhook Body, parsing...');
             const parsedCarData = parseHebrewMOTResponse(webhookResponse.Body, payload);
+            
+            // ENHANCED: Store with comprehensive logging and validation
             sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+            console.log('💾 Hebrew MOT data stored in makeCarData:', parsedCarData);
+            
+            // Also store in helper immediately
+            if (typeof window.updateHelper === 'function') {
+              window.updateHelper('vehicle', parsedCarData);
+              window.updateHelper('car_details', parsedCarData);
+              console.log('✅ Helper updated with Hebrew MOT data');
+            }
+            
             setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
           }
           
@@ -654,5 +675,6 @@
   </script>
   <script src="assistant-floating.js"></script>
   <script src="car-details-floating.js"></script>
+  <script src="sessionStorage-debug.js"></script>
 </body>
 </html>
