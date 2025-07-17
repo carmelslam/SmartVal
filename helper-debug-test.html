@@ -109,6 +109,8 @@
       <button onclick="testOpenCaseFlow()">Test Open Case Flow</button>
       <button onclick="testSelectionPageFlow()">Test Selection Page</button>
       <button onclick="simulateMakeWebhookResponse()" class="success">Simulate Rich Car Data</button>
+      <button onclick="testDirectFloatingScreen()" class="success">Test Direct Floating Screen</button>
+      <button onclick="simulateRealMakeData()" style="background: #007bff; color: white;">Simulate Real Make.com Data</button>
     </div>
     
     <div class="test-section">
@@ -498,6 +500,117 @@
       checkSystemStatus();
     };
     
+    // Test direct floating screen
+    window.testDirectFloatingScreen = function() {
+      console.log('🔍 Testing direct floating screen...');
+      
+      const testData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק', 
+        model: 'LUCERNE',
+        year: '2009',
+        owner: 'כרמל כיוף',
+        chassis: '1G4HD57258U196450',
+        engine_volume: '3791',
+        fuel_type: 'בנזין'
+      };
+      
+      // Store in sessionStorage
+      sessionStorage.setItem('makeCarData', JSON.stringify(testData));
+      console.log('Test data stored in makeCarData');
+      
+      // Try to show floating screen directly
+      if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+        console.log('Floating screen opened via toggleCarDetails');
+      } else if (typeof window.showCarDetails === 'function') {
+        window.showCarDetails();
+        console.log('Floating screen opened via showCarDetails');
+      } else {
+        console.log('❌ No floating screen function found');
+      }
+      
+      // Also try to refresh
+      if (typeof window.refreshCarData === 'function') {
+        setTimeout(() => {
+          window.refreshCarData();
+          console.log('Floating screen refreshed');
+        }, 500);
+      }
+    };
+    
+    // Simulate the exact Make.com data we saw in the screenshot
+    window.simulateRealMakeData = function() {
+      console.log('🌐 Simulating real Make.com Hebrew data...');
+      
+      const realMakeData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק',
+        model: 'LUCERNE', 
+        model_type: 'סדאן',
+        year: '2009',
+        production_date: '05/2009',
+        chassis: '1G4HD57258U196450',
+        engine_volume: '3791',
+        fuel_type: 'בנזין',
+        model_code: 'HD572',
+        engine_model: '428',
+        drive_type: '4X2',
+        office_code: '156-11',
+        owner: 'כרמל כיוף',
+        location: 'UMI חיפה',
+        case_id: 'YC-5785269-2025',
+        data_source: 'mot_database_real',
+        make_com_processed: true
+      };
+      
+      console.log('Real Make.com data:', realMakeData);
+      
+      // Store in multiple locations
+      sessionStorage.setItem('makeCarData', JSON.stringify(realMakeData));
+      sessionStorage.setItem('lastWebhookResponse', JSON.stringify(realMakeData));
+      
+      // Update helper if available
+      try {
+        if (typeof updateHelper === 'function') {
+          updateHelper('car_details', realMakeData);
+          updateHelper('vehicle', realMakeData);
+          updateHelper('meta', {
+            plate: realMakeData.plate,
+            case_id: realMakeData.case_id,
+            owner_name: realMakeData.owner
+          });
+          console.log('Helper updated with real Make.com data');
+        }
+      } catch (error) {
+        console.log('Helper update failed:', error);
+      }
+      
+      // Show floating screen
+      testDirectFloatingScreen();
+      
+      console.log('Real Make.com data simulation complete');
+    };
+    
+    // Fixed testDataReception function
+    window.testDataReception = function() {
+      console.log('📡 Testing data reception...');
+      
+      try {
+        if (typeof checkForIncomingData === 'function') {
+          checkForIncomingData();
+          console.log('checkForIncomingData executed successfully');
+        } else {
+          console.log('❌ checkForIncomingData function not available');
+        }
+      } catch (error) {
+        console.error('checkForIncomingData failed:', error);
+      }
+      
+      // Check current helper state
+      console.log('Current helper state:', typeof helper !== 'undefined' ? helper : 'undefined');
+    };
+
     // Initialize page
     window.addEventListener('load', function() {
       console.log('🚀 Helper Debug Test Page Loaded');
