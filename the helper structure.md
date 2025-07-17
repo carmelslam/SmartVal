@@ -621,3 +621,33 @@ results system wide :
  since non of the mosdules hoy fillled i dont know if the helper was actually updted 
  the session storage didnt catch nothing 
 
+ repeating error :
+
+ GET https://yaron-cayouf-portal.netlify.app/credentials%20vault.js net::ERR_ABORTED 404 (Not Found)Understand this error
+ Understanding the problem
+The console message GET https://yaron-cayouf-portal.netlify.app/credentials%20vault.js net::ERR_ABORTED 404 (Not Found) indicates that the browser attempted to fetch a JavaScript file named credentials vault.js from the specified URL, but the server responded with a 404 Not Found status code. This means the server could not find the requested resource at that location.
+
+The %20 in the URL credentials%20vault.js represents a space character. While URLs can technically contain spaces (encoded as %20), it's generally best practice to avoid spaces and other special characters in file names for web resources. The server might be configured in a way that doesn't correctly handle file paths with encoded spaces, or the file itself might not exist with that exact name (including the space).
+
+Suggested fix
+Rename the file credentials vault.js to remove the space. A common convention is to use hyphens or underscores instead of spaces. For example, you could rename it to credentials-vault.js or credentials_vault.js.
+
+After renaming the file, update any references to this file in your HTML, CSS, or other JavaScript files to use the new name. For example, if you were including the script in your HTML like this:
+
+html
+
+<script src="credentials%20vault.js"></script>
+Use code snippets with caution
+
+Change it to:
+
+html
+
+<script src="credentials-vault.js"></script>
+Use code snippets with caution
+
+Finally, re-deploy your site to Netlify with the updated file name and references.
+
+Summary
+The 404 error indicates that the requested JavaScript file was not found on the server. This is likely due to the space in the filename and how the server or the link referencing the file is handling it. Renaming the file to remove the space and updating all references is the recommended fix
+
