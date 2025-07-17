@@ -106,6 +106,8 @@
       <button onclick="simulateLeviData()">Simulate Levi Data</button>
       <button onclick="simulateURLParams()">Simulate URL Parameters</button>
       <button onclick="simulateMakeWebhook()">Simulate Make.com Response</button>
+      <button onclick="testOpenCaseFlow()">Test Open Case Flow</button>
+      <button onclick="testSelectionPageFlow()">Test Selection Page</button>
     </div>
     
     <div class="test-section">
@@ -413,6 +415,60 @@
       URL.revokeObjectURL(url);
     };
     
+    // Test open case flow
+    window.testOpenCaseFlow = function() {
+      console.log('🧪 Testing open case flow...');
+      
+      // Simulate the data that would come back from Make.com after opening a case
+      const testCaseData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק',
+        model: 'LUCERNE',
+        owner: 'כרמל כיוף',
+        date: new Date().toISOString(),
+        location: 'UMI חיפה'
+      };
+      
+      // Store in sessionStorage as Make.com would
+      sessionStorage.setItem('carData', JSON.stringify(testCaseData));
+      console.log('Car data stored as if from Make.com:', testCaseData);
+      
+      // Trigger data reception
+      checkForIncomingData();
+      
+      // Simulate navigation to selection page (you can uncomment this to test)
+      // window.location.href = 'selection.html';
+      
+      console.log('Open case flow test completed. Check helper state and sessionStorage.');
+    };
+    
+    // Test selection page data reception
+    window.testSelectionPageFlow = function() {
+      console.log('🧪 Testing selection page data flow...');
+      
+      // Simulate arriving at selection page with car data
+      const testCaseData = {
+        plate: 'SEL789',
+        manufacturer: 'Toyota',
+        model: 'Camry',
+        owner: 'Selection Test User',
+        date: new Date().toISOString(),
+        location: 'Test Garage'
+      };
+      
+      // Store data as it would exist when arriving at selection page
+      sessionStorage.setItem('carData', JSON.stringify(testCaseData));
+      updateHelper('car_details', testCaseData);
+      
+      console.log('Selection page test data set. The page should detect and show this data.');
+      console.log('Test data:', testCaseData);
+      
+      // Test URL parameter scenario
+      const testURL = window.location.origin + window.location.pathname + 
+                    '?plate=URL456&manufacturer=URLTest&model=URLCar&owner=URL+Test+User';
+      console.log('To test URL parameters, navigate to:', testURL);
+    };
+
     // Clear all data
     window.clearAllData = function() {
       console.log('🧽 Clearing all helper and storage data...');
