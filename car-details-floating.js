@@ -438,6 +438,7 @@
     document.getElementById("vehicle-universal-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code ||
       vehicle['קוד דגם רכב'] || carDetails['קוד דגם רכב'] ||
+      vehicle['מספר דגם הרכב'] || carDetails['מספר דגם הרכב'] || // From Make.com
       vehicle.universal_code || carDetails.universal_code
     );
     

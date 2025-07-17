@@ -411,9 +411,10 @@
       }
     }
 
-    // Parse Hebrew MOT response from Make.com
+    // ENHANCED: Parse Hebrew MOT response from Make.com with comprehensive field mapping
     function parseHebrewMOTResponse(responseText, originalPayload) {
       console.log('🔍 Parsing Hebrew MOT response:', responseText);
+      console.log('📝 Response length:', responseText.length);
       
       const carData = {
         // Basic data from original payload
@@ -423,7 +424,7 @@
         location: originalPayload.location,
         case_id: `YC-${originalPayload.plate}-${new Date().getFullYear()}`,
         
-        // Default values to be extracted
+        // Default values to be extracted (English keys)
         manufacturer: '',
         model: '',
         year: '',
@@ -434,11 +435,31 @@
         engine_model: '',
         drive_type: '',
         office_code: '',
+        model_type: '',
+        vehicle_type: '',
+        ownership_type: '',
+        production_date: '',
+        
+        // Hebrew field equivalents for compatibility
+        יצרן: '',
+        דגם: '',
+        'שנת ייצור': '',
+        'מספר שלדה': '',
+        'נפח מנוע': '',
+        'סוג דלק': '',
+        'קוד דגם רכב': '',
+        'דגם מנוע': '',
+        הנעה: '',
+        'קוד משרד התחבורה': '',
+        'סוג דגם': '',
+        'סוג רכב': '',
+        'סוג בעלות': '',
         
         // Meta
         data_source: 'mot_database',
         make_com_processed: true,
-        processing_timestamp: new Date().toISOString()
+        processing_timestamp: new Date().toISOString(),
+        raw_response: responseText // Store original for debugging
       };
       
       try {
@@ -446,71 +467,52 @@
         const plateMatch = responseText.match(/פרטי רכב[:\s]*(\d+)/);
         if (plateMatch) carData.plate = plateMatch[1];
         
-        // Extract manufacturer (שם היצרן)
-        const manufacturerMatch = responseText.match(/שם היצרן[:\s]*([^\n\r]+)/);
-        if (manufacturerMatch) carData.manufacturer = manufacturerMatch[1].trim();
+        // Enhanced field extraction with dual assignment (English + Hebrew keys)
+        const fieldMappings = [
+          // [Hebrew pattern, English key, Hebrew key]
+          [/שם היצרן[:\s]*([^\n\r]+)/, 'manufacturer', 'יצרן'],
+          [/דגם[:\s]*([^\n\r]+)/, 'model', 'דגם'],
+          [/סוג דגם[:\s]*([^\n\r]+)/, 'model_type', 'סוג דגם'],
+          [/סוג רכב[:\s]*([^\n\r]+)/, 'vehicle_type', 'סוג רכב'],
+          [/שנת ייצור[:\s]*([^\n\r]+)/, 'production_date', 'שנת ייצור'],
+          [/מספר שלדה[:\s]*([A-Z0-9]+)/, 'chassis', 'מספר שלדה'],
+          [/שם בעל הרכב[:\s]*([^\n\r]+)/, 'owner', null],
+          [/סוג בעלות[:\s]*([^\n\r]+)/, 'ownership_type', 'סוג בעלות'],
+          [/נפח מנוע[:\s]*(\d+)/, 'engine_volume', 'נפח מנוע'],
+          [/סוג דלק[:\s]*([^\n\r]+)/, 'fuel_type', 'סוג דלק'],
+          [/דגם מנוע[:\s]*([^\n\r]+)/, 'engine_model', 'דגם מנוע'],
+          [/הנעה[:\s]*([^\n\r]+)/, 'drive_type', 'הנעה'],
+          [/מיקום[:\s]*([^\n\r]+)/, 'location', null],
+          [/קוד משרד התחבורה[:\s]*([^\n\r]+)/, 'office_code', 'קוד משרד התחבורה'],
+          // Handle both possible model code patterns
+          [/(?:קוד דגם רכב|מספר דגם הרכב)[:\s]*([^\n\r]+)/, 'model_code', 'מספר דגם הרכב']
+        ];
         
-        // Extract model (דגם)
-        const modelMatch = responseText.match(/דגם[:\s]*([^\n\r]+)/);
-        if (modelMatch) carData.model = modelMatch[1].trim();
+        // Apply all field mappings
+        fieldMappings.forEach(([pattern, englishKey, hebrewKey]) => {
+          const match = responseText.match(pattern);
+          if (match && match[1]) {
+            const value = match[1].trim();
+            carData[englishKey] = value;
+            if (hebrewKey) {
+              carData[hebrewKey] = value;
+            }
+            
+            // Special handling for model code - also set as universal_code
+            if (englishKey === 'model_code') {
+              carData.universal_code = value;
+              carData['קוד דגם רכב'] = value; // Also set alternative Hebrew key
+            }
+          }
+        });
         
-        // Extract model type (סוג דגם)
-        const modelTypeMatch = responseText.match(/סוג דגם[:\s]*([^\n\r]+)/);
-        if (modelTypeMatch) carData.model_type = modelTypeMatch[1].trim();
-        
-        // Extract vehicle type (סוג רכב)
-        const vehicleTypeMatch = responseText.match(/סוג רכב[:\s]*([^\n\r]+)/);
-        if (vehicleTypeMatch) carData.vehicle_type = vehicleTypeMatch[1].trim();
-        
-        // Extract year (שנת ייצור)
-        const yearMatch = responseText.match(/שנת ייצור[:\s]*(\d{2}\/\d{4})/);
-        if (yearMatch) {
-          const yearFull = yearMatch[1];
-          carData.production_date = yearFull;
-          carData.year = yearFull.split('/')[1]; // Extract year from MM/YYYY
+        // Extract year from production_date if needed
+        if (carData.production_date && carData.production_date.includes('/')) {
+          carData.year = carData.production_date.split('/')[1];
         }
         
-        // Extract chassis (מספר שלדה)
-        const chassisMatch = responseText.match(/מספר שלדה[:\s]*([A-Z0-9]+)/);
-        if (chassisMatch) carData.chassis = chassisMatch[1];
-        
-        // Extract owner name (שם בעל הרכב)
-        const ownerMatch = responseText.match(/שם בעל הרכב[:\s]*([^\n\r]+)/);
-        if (ownerMatch) carData.owner = ownerMatch[1].trim();
-        
-        // Extract ownership type (סוג בעלות)
-        const ownershipMatch = responseText.match(/סוג בעלות[:\s]*([^\n\r]+)/);
-        if (ownershipMatch) carData.ownership_type = ownershipMatch[1].trim();
-        
-        // Extract engine volume (נפח מנוע)
-        const engineVolumeMatch = responseText.match(/נפח מנוע[:\s]*(\d+)/);
-        if (engineVolumeMatch) carData.engine_volume = engineVolumeMatch[1];
-        
-        // Extract fuel type (סוג דלק)
-        const fuelTypeMatch = responseText.match(/סוג דלק[:\s]*([^\n\r]+)/);
-        if (fuelTypeMatch) carData.fuel_type = fuelTypeMatch[1].trim();
-        
-        // Extract model code (קוד דגם רכב)
-        const modelCodeMatch = responseText.match(/קוד דגם רכב[:\s]*([^\n\r]+)/);
-        if (modelCodeMatch) carData.model_code = modelCodeMatch[1].trim();
-        
-        // Extract engine model (דגם מנוע)
-        const engineModelMatch = responseText.match(/דגם מנוע[:\s]*([^\n\r]+)/);
-        if (engineModelMatch) carData.engine_model = engineModelMatch[1].trim();
-        
-        // Extract drive type (הנעה)
-        const driveTypeMatch = responseText.match(/הנעה[:\s]*([^\n\r]+)/);
-        if (driveTypeMatch) carData.drive_type = driveTypeMatch[1].trim();
-        
-        // Extract location (מיקום)
-        const locationMatch = responseText.match(/מיקום[:\s]*([^\n\r]+)/);
-        if (locationMatch) carData.location = locationMatch[1].trim();
-        
-        // Extract office code (קוד משרד התחבורה)
-        const officeCodeMatch = responseText.match(/קוד משרד התחבורה[:\s]*([^\n\r]+)/);
-        if (officeCodeMatch) carData.office_code = officeCodeMatch[1].trim();
-        
-        console.log('✅ Parsed Hebrew MOT data:', carData);
+        console.log('✅ Parsed Hebrew MOT data with enhanced field mapping:', carData);
+        console.log('📊 Extracted fields count:', Object.keys(carData).filter(key => carData[key] && carData[key] !== '').length);
         return carData;
         
       } catch (error) {
@@ -625,6 +627,8 @@
         engine_volume: '3791',
         fuel_type: 'בנזין',
         model_code: 'HD572',
+        'מספר דגם הרכב': 'HD572', // From Make.com - universal code field
+        universal_code: 'HD572', // This is universal, not Levi-specific
         engine_model: '428',
         drive_type: '4X2',
         office_code: '156-11',

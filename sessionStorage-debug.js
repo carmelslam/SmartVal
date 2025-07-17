@@ -136,6 +136,7 @@ window.populateSessionStorageWithScreenshotData = function() {
         'סוג דלק': 'בנזין',
         model_code: 'HD572',
         'קוד דגם רכב': 'HD572',
+        'מספר דגם הרכב': 'HD572', // From Make.com - universal code field
         universal_code: 'HD572', // This is universal, not Levi-specific
         engine_model: '428',
         'דגם מנוע': '428',
