@@ -3490,29 +3490,21 @@
       // Get selected type from page selection (same logic as legal text)
       const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
       
-      // Map estimate types to vault keys
-      const typeToVaultKey = {
-        'אובדן_להלכה': 'estimate_אובדן_להלכה',
-        'טוטלוס': 'estimate_טוטלוס'
+      // Attachments vault (inline, like legal text)
+      const attachmentsVault = {
+        'אובדן_להלכה': '**לוטה**\nתצלומי הרכב הניזוק\nערך רכב ממוחשב\nצילום רישיון הרכב',
+        'טוטלוס': '**לוטה**\nתצלומי הרכב הניזוק\nערך רכב ממוחשב\nצילום רישיון הרכב'
       };
-      const vaultKey = typeToVaultKey[selectedType];
       
-      // Load attachments from vault
-      const vaultLoader = new VaultLoader();
-      const vaultTexts = vaultLoader.getTextBlock(vaultKey);
-      
-      // Convert HTML to plain text for textarea
-      const attachmentsText = vaultTexts.attachments ? 
-        vaultTexts.attachments.replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<br>/g, '\n') :
-        '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+      // Get attachments for selected type
+      const attachmentsText = attachmentsVault[selectedType] || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
       
       document.getElementById('attachments-content').value = attachmentsText;
       
       // Save to helper
-      if (window.helper) {
-        helper.estimate_attachments = attachmentsText;
-        saveToSessionStorage('helper', helper);
-      }
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.estimate_attachments = attachmentsText;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Attachments loaded from vault for type:', selectedType);
     }
