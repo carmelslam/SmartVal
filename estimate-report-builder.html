@@ -333,10 +333,18 @@
       .damage-center-container {
         page-break-inside: avoid !important;
         margin-bottom: 4mm !important;
+        page-break-before: avoid !important;
       }
       
       .damage-center-container:nth-child(n+3) {
-        page-break-before: auto !important;
+        page-break-before: avoid !important;
+      }
+      
+      /* Group all damage centers together */
+      .damage-centers-group {
+        page-break-inside: auto !important;
+        page-break-before: always !important;
+        page-break-after: avoid !important;
       }
       
       /* Dedicated pages for specific sections */
@@ -1127,6 +1135,22 @@
           group.style.pageBreakBefore = 'avoid';
         }
       });
+
+      // Optimize damage centers to flow together without page breaks
+      const damageCentersGroup = document.querySelector('.damage-centers-group');
+      if (damageCentersGroup) {
+        damageCentersGroup.style.pageBreakInside = 'auto';
+        damageCentersGroup.style.pageBreakBefore = 'always';
+        damageCentersGroup.style.pageBreakAfter = 'avoid';
+        
+        // Ensure individual damage centers don't break
+        const damageContainers = damageCentersGroup.querySelectorAll('.car-details');
+        damageContainers.forEach((container, index) => {
+          container.style.pageBreakBefore = 'avoid';
+          container.style.pageBreakInside = 'avoid';
+          container.style.pageBreakAfter = 'avoid';
+        });
+      }
       
       // Ensure final legal section is on its own page
       const legalSection = document.querySelector('.page-legal-final');
@@ -1388,31 +1412,29 @@
       }).join('');
       
       const centersSummaryTable = `
-        <div class="section" style="margin-top: 30px;">
-          <div class="car-details">
-            <div class="car-details-title">חלוקה למוקדים</div>
-            <table class="car-details-table" style="width: 100%; max-width: 800px; margin: 0 auto;">
-              <thead>
-                <tr>
-                  <th style="width: 20%; text-align: center; background: #fff8e1; color: #003366; font-weight: bold;">סכום</th>
-                  <th style="width: 10%; text-align: center; background: #fff8e1; color: #003366; font-weight: bold;">סוג</th>
-                  <th style="width: 70%; text-align: right; background: #fff8e1; color: #003366; font-weight: bold;">תיאור</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${centersSummaryRows}
-                <tr style="background: #e8f4f8; font-weight: bold;">
-                  <td style="padding: 8px; text-align: center; font-weight: bold;">₪${Math.round(totalDamageAllCenters).toLocaleString()}</td>
-                  <td style="padding: 8px; text-align: center; font-weight: bold;">-</td>
-                  <td style="padding: 8px; text-align: right; font-weight: bold;">סה"כ לשני המוקדים כולל מע"מ</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="car-details" style="margin-top: 30px;">
+          <div class="car-details-title">חלוקה למוקדים</div>
+          <table class="car-details-table" style="width: 100%; max-width: 800px; margin: 0 auto;">
+            <thead>
+              <tr>
+                <th style="width: 20%; text-align: center; background: #fff8e1; color: #003366; font-weight: bold;">סכום</th>
+                <th style="width: 10%; text-align: center; background: #fff8e1; color: #003366; font-weight: bold;">סוג</th>
+                <th style="width: 70%; text-align: right; background: #fff8e1; color: #003366; font-weight: bold;">תיאור</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${centersSummaryRows}
+              <tr style="background: #e8f4f8; font-weight: bold;">
+                <td style="padding: 8px; text-align: center; font-weight: bold;">₪${Math.round(totalDamageAllCenters).toLocaleString()}</td>
+                <td style="padding: 8px; text-align: center; font-weight: bold;">-</td>
+                <td style="padding: 8px; text-align: right; font-weight: bold;">סה"כ לשני המוקדים כולל מע"מ</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       `;
       
-      return `<div class="section">${damageHTML}</div>${centersSummaryTable}`;
+      return `<div class="section damage-centers-group">${damageHTML}${centersSummaryTable}</div>`;
     }
     
     function generateLegalText(helper) {
