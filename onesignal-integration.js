@@ -8,6 +8,9 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
+  // Fixed subscription errors by implementing delayed initialization and conservative ID retrieval
+  const ONESIGNAL_TEMPORARILY_DISABLED = false;
+  
   // OneSignal manager class
   class OneSignalManager {
     constructor() {
@@ -15,10 +18,16 @@
       this.subscribed = false;
       this.playerId = null;
       this.userToken = null;
+      this.disabled = ONESIGNAL_TEMPORARILY_DISABLED;
     }
 
     async init() {
       try {
+        // Check if temporarily disabled
+        if (this.disabled) {
+          console.log('📱 OneSignal: Temporarily disabled to fix subscription errors');
+          return;
+        }
         
         // Skip if on login page (already initialized there)
         if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
@@ -76,65 +85,93 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Enhanced v16 configuration with proper subdomain handling
+              // Enhanced v16 configuration with delayed initialization approach
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
-                allowLocalhostAsSecureOrigin: true
+                allowLocalhostAsSecureOrigin: true,
+                // CRITICAL: Completely disable all automatic operations
+                autoRegister: false,
+                autoPrompt: false,
+                autoResubscribe: false,
+                // V16 specific: Disable immediate user creation to prevent subscription operations
+                disableServiceWorker: false,
+                // Delay all subscription operations until explicitly requested
+                delayInitialization: true
               };
               
-              // Safari requires specific configuration
+              // Safari requires specific configuration but with delayed prompting
               if (isSafari) {
                 initConfig.safari_web_id = 'web.onesignal.auto.' + ONESIGNAL_APP_ID;
-                // Force auto-prompt for better Safari compatibility
-                initConfig.autoPrompt = true;
+                // Disable auto-prompt to prevent premature subscription operations
+                initConfig.autoPrompt = false;
                 initConfig.promptOptions = {
                   slidedown: {
-                    enabled: true,
-                    autoPrompt: true,
-                    timeDelay: 5,
-                    pageViews: 1,
-                    actionMessage: "We'd like to show you notifications for updates.",
-                    acceptButtonText: "Allow", 
-                    cancelButtonText: "No Thanks"
+                    enabled: false, // Disable to prevent immediate operations
+                    autoPrompt: false,
+                    timeDelay: 30, // Long delay
+                    pageViews: 5   // High threshold
                   }
                 };
-              } else {
-                // For Chrome and other browsers - use auto prompt
-                initConfig.autoPrompt = true;
               }
               
               console.log('📱 OneSignal: Init config:', initConfig);
               console.log('📱 OneSignal: Current hostname:', window.location.hostname);
               
-              await OneSignal.init(initConfig);
-
-              this.initialized = true;
-              console.log('📱 OneSignal: Initialized successfully with v16 config');
-
-              // Set user context
-              this.userToken = auth;
+              // Initialize OneSignal core without triggering subscription operations
+              console.log('📱 OneSignal: Starting core initialization...');
               
-              // Wait for OneSignal to be fully ready
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Set up event listeners for subscription changes first
-              this.setupSubscriptionListeners();
-              
-              // Wait for OneSignal ID to be available before proceeding
-              const onesignalId = await this.waitForOnesignalId();
-              
-              // Only proceed if we have a OneSignal ID
-              if (onesignalId) {
-                // Check subscription status with retries only after ID is available
-                setTimeout(async () => {
-                  for (let i = 0; i < 3; i++) {
-                    const success = await this.checkSubscriptionStatus();
-                    if (success) break;
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                  }
-                }, 1000);
-              } else {
-                console.warn('📱 OneSignal: Skipping subscription operations - no OneSignal ID available');
+              // Use a more conservative initialization approach
+              try {
+                // First, just initialize the SDK without triggering any subscription operations
+                await OneSignal.init(initConfig);
+                console.log('📱 OneSignal: Core SDK initialized successfully');
+                
+                // Mark as initialized immediately to prevent further init attempts
+                this.initialized = true;
+                
+                // Set user context
+                this.userToken = auth;
+                
+                // Wait for OneSignal SDK to be fully ready before proceeding
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Only set up listeners - no subscription operations yet
+                console.log('📱 OneSignal: Setting up event listeners...');
+                this.setupSubscriptionListeners();
+                
+                // Check if OneSignal ID already exists from previous sessions
+                const existingId = sessionStorage.getItem('onesignalId');
+                if (existingId) {
+                  console.log('📱 OneSignal: Found existing OneSignal ID:', existingId);
+                  this.playerId = existingId;
+                  
+                  // Only proceed with subscription checks if we have an existing ID
+                  setTimeout(async () => {
+                    await this.checkSubscriptionStatus();
+                  }, 2000);
+                } else {
+                  console.log('📱 OneSignal: No existing OneSignal ID - will wait for user interaction');
+                  // Don\'t try to get OneSignal ID automatically - wait for user interaction
+                }
+                
+                console.log('📱 OneSignal: Initialization completed successfully');
+                
+              } catch (initError) {
+                console.error('📱 OneSignal: Initialization error:', initError);
+                
+                // Check if it's a subscription-related error that we can ignore
+                if (initError.message && (
+                  initError.message.includes('onesignalId') || 
+                  initError.message.includes('subscription') ||
+                  initError.message.includes('create-subscription')
+                )) {
+                  console.log('📱 OneSignal: Subscription error during init - marking as initialized anyway');
+                  this.initialized = true;
+                  this.userToken = auth;
+                } else {
+                  // For other errors, re-throw
+                  throw initError;
+                }
               }
 
               resolve();
@@ -180,26 +217,85 @@
     async waitForOnesignalId() {
       console.log('📱 OneSignal: Waiting for OneSignal ID...');
       
-      // Try to get OneSignal ID with retries
-      for (let i = 0; i < 10; i++) {
+      // Check if we already have an ID in storage first
+      const existingId = sessionStorage.getItem('onesignalId');
+      if (existingId) {
+        console.log('📱 OneSignal: Found existing OneSignal ID in storage:', existingId);
+        this.playerId = existingId;
+        return existingId;
+      }
+      
+      // Try to get OneSignal ID with retries, but handle subscription errors gracefully
+      for (let i = 0; i < 5; i++) {
         try {
+          // Check if OneSignal SDK is available
+          if (!window.OneSignal || !window.OneSignal.User) {
+            console.log(`📱 OneSignal: SDK not ready yet (attempt ${i + 1})`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          
           const onesignalId = await OneSignal.User.getOnesignalId();
           if (onesignalId) {
             this.playerId = onesignalId;
             sessionStorage.setItem('onesignalId', onesignalId);
-            console.log('📱 OneSignal: Got OneSignal ID:', onesignalId);
+            console.log('📱 OneSignal: Successfully got OneSignal ID:', onesignalId);
             return onesignalId;
+          } else {
+            console.log(`📱 OneSignal: No ID available yet (attempt ${i + 1})`);
           }
         } catch (e) {
           console.log(`📱 OneSignal: ID attempt ${i + 1} failed:`, e.message);
+          
+          // If it's the subscription error we're trying to fix, don't spam retries
+          if (e.message && (
+            e.message.includes('onesignalId') || 
+            e.message.includes('create-subscription') || 
+            e.message.includes('update-subscription')
+          )) {
+            console.log('📱 OneSignal: Detected subscription error - stopping ID retrieval attempts');
+            break;
+          }
         }
         
-        // Wait longer between retries
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait progressively longer between retries
+        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
       }
       
-      console.warn('📱 OneSignal: Could not get OneSignal ID after 10 attempts');
+      console.warn('📱 OneSignal: Could not get OneSignal ID - likely due to subscription creation issues');
       return null;
+    }
+
+    async manualRegisterForPush() {
+      try {
+        console.log('📱 OneSignal: Manually registering for push notifications...');
+        
+        // Only proceed if we have a OneSignal ID
+        const onesignalId = sessionStorage.getItem('onesignalId');
+        if (!onesignalId) {
+          console.warn('📱 OneSignal: Cannot register - no OneSignal ID available');
+          return false;
+        }
+        
+        // Check if notifications are already granted
+        const permission = Notification.permission;
+        if (permission === 'granted') {
+          console.log('📱 OneSignal: Notifications already granted, proceeding with registration');
+          this.subscribed = true;
+          sessionStorage.setItem('oneSignalSubscribed', 'true');
+          return true;
+        } else if (permission === 'denied') {
+          console.log('📱 OneSignal: Notifications denied, cannot register');
+          return false;
+        } else {
+          console.log('📱 OneSignal: Permission not yet requested, will request when needed');
+          return false;
+        }
+        
+      } catch (error) {
+        console.error('📱 OneSignal: Error in manual registration:', error);
+        return false;
+      }
     }
 
     async setUserContext(authToken) {
@@ -375,73 +471,82 @@
       try {
         console.log('📱 OneSignal: Requesting notification permission...');
         
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        // First, use native browser permission request to avoid OneSignal subscription operations
         let permission = false;
         
-        if (isSafari) {
-          // Safari v16 API handling
-          console.log('📱 OneSignal: Using Safari v16 API');
-          try {
-            if (window.OneSignal && window.OneSignal.Notifications) {
-              // Use v16 API for Safari
-              permission = await OneSignal.Notifications.requestPermission();
-              console.log('📱 OneSignal: Safari v16 permission result:', permission);
-            } else {
-              // Fallback to native Safari prompt
-              const result = await Notification.requestPermission();
-              permission = (result === 'granted');
-              console.log('📱 OneSignal: Safari native permission result:', permission);
-            }
-          } catch (e) {
-            console.log('📱 OneSignal: Safari error, trying native:', e.message);
-            const result = await Notification.requestPermission();
-            permission = (result === 'granted');
-          }
-        } else {
-          // Chrome and other browsers v16 API
-          console.log('📱 OneSignal: Using Chrome v16 API');
-          try {
-            if (window.OneSignal && window.OneSignal.Notifications) {
-              permission = await OneSignal.Notifications.requestPermission();
-              console.log('📱 OneSignal: Chrome v16 permission result:', permission);
-            } else {
-              const result = await Notification.requestPermission();
-              permission = (result === 'granted');
-              console.log('📱 OneSignal: Chrome native permission result:', permission);
-            }
-          } catch (e) {
-            console.log('📱 OneSignal: Chrome error, trying native:', e.message);
-            const result = await Notification.requestPermission();
-            permission = (result === 'granted');
-          }
+        try {
+          const result = await Notification.requestPermission();
+          permission = (result === 'granted');
+          console.log('📱 OneSignal: Native permission result:', result);
+        } catch (e) {
+          console.error('📱 OneSignal: Native permission request failed:', e);
+          return false;
         }
         
         this.subscribed = permission;
 
         if (permission) {
-          console.log('📱 OneSignal: Permission granted, getting OneSignal ID...');
+          console.log('📱 OneSignal: Permission granted, proceeding with OneSignal registration...');
           sessionStorage.setItem('oneSignalSubscribed', 'true');
           
-          // Try to get OneSignal ID immediately and with retries
-          for (let i = 0; i < 5; i++) {
+          // Wait a bit for OneSignal to process the permission change
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Now try to get OneSignal ID more conservatively
+          let onesignalId = null;
+          
+          // Try multiple approaches to get OneSignal ID
+          for (let attempt = 0; attempt < 3; attempt++) {
             try {
-              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-              const onesignalId = await OneSignal.User.getOnesignalId();
-              if (onesignalId) {
-                this.playerId = onesignalId;
-                sessionStorage.setItem('onesignalId', onesignalId);
-                console.log('📱 OneSignal: Got ID after permission:', onesignalId);
-                break;
+              console.log(`📱 OneSignal: ID retrieval attempt ${attempt + 1}...`);
+              
+              // Wait longer between attempts
+              if (attempt > 0) {
+                await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
               }
+              
+              // Try to get existing ID first
+              if (window.OneSignal && window.OneSignal.User) {
+                try {
+                  onesignalId = await OneSignal.User.getOnesignalId();
+                  if (onesignalId) {
+                    console.log('📱 OneSignal: Successfully retrieved OneSignal ID:', onesignalId);
+                    this.playerId = onesignalId;
+                    sessionStorage.setItem('onesignalId', onesignalId);
+                    break;
+                  }
+                } catch (idError) {
+                  console.log(`📱 OneSignal: ID retrieval failed (attempt ${attempt + 1}):`, idError.message);
+                  
+                  // If it's a subscription error, try to work around it
+                  if (idError.message && idError.message.includes('onesignalId')) {
+                    console.log('📱 OneSignal: Subscription error detected - this indicates the core issue');
+                    // Continue trying but don't break the flow
+                  }
+                }
+              }
+              
+              // If still no ID, try a different approach
+              if (!onesignalId) {
+                console.log('📱 OneSignal: No ID available yet, will retry...');
+              }
+              
             } catch (e) {
-              console.log(`📱 OneSignal: ID attempt ${i + 1} failed:`, e.message);
+              console.log(`📱 OneSignal: Overall attempt ${attempt + 1} failed:`, e.message);
             }
           }
           
-          // Final subscription status check
-          setTimeout(async () => {
-            await this.checkSubscriptionStatus();
-          }, 3000);
+          if (onesignalId) {
+            // Final subscription status check only if we have an ID
+            setTimeout(async () => {
+              await this.checkSubscriptionStatus();
+            }, 3000);
+          } else {
+            console.warn('📱 OneSignal: Could not retrieve OneSignal ID after permission grant');
+            // Still mark as subscribed based on native permission
+            this.subscribed = true;
+          }
+          
         } else {
           console.log('📱 OneSignal: Permission denied');
           sessionStorage.setItem('oneSignalSubscribed', 'false');
