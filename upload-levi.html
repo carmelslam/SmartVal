@@ -633,7 +633,9 @@
   <form id="levi-form" method="POST" onsubmit="return false;">
     <!-- Case Information Section -->
     <div class="section">
-      <h3>פרטי התיק</h3>
+      <h3>פרטי התיק 
+        <button type="button" onclick="leviProcessor.loadCaseData()" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-right: 10px; cursor: pointer;">🔄 רענן נתונים</button>
+      </h3>
       <div class="form-row">
         <div class="form-group">
           <label for="plate">מספר רישוי:</label>
@@ -1040,24 +1042,55 @@ class LeviProcessor {
 
   loadCaseData() {
     try {
-      // Priority 1: Load from helper if available (most up-to-date)
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 LEVI UPLOAD: Loading case data...');
       
-      // Load car details from helper
-      if (helper.car_details) {
-        if (helper.car_details.plate) {
-          document.getElementById('plate').value = helper.car_details.plate;
-        }
+      // Check all available data sources
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const makeCarData = JSON.parse(sessionStorage.getItem('makeCarData') || '{}');
+      const carData = JSON.parse(sessionStorage.getItem('carData') || '{}');
+      
+      console.log('📊 LEVI UPLOAD: Available data sources:', {
+        helper: Object.keys(helper),
+        makeCarData: Object.keys(makeCarData),
+        carData: Object.keys(carData)
+      });
+      
+      // Load plate number from multiple sources
+      let plate = '';
+      if (makeCarData.plate) plate = makeCarData.plate;
+      else if (helper.car_details?.plate) plate = helper.car_details.plate;
+      else if (helper.vehicle?.plate) plate = helper.vehicle.plate;
+      else if (helper.meta?.plate) plate = helper.meta.plate;
+      else if (carData.plate) plate = carData.plate;
+      
+      if (plate) {
+        document.getElementById('plate').value = plate;
+        console.log('✅ LEVI UPLOAD: Plate loaded:', plate);
       }
       
-      // Load general info from helper
-      if (helper.general_info) {
-        if (helper.general_info.owner_name) {
-          document.getElementById('owner').value = helper.general_info.owner_name;
-        }
-        if (helper.general_info.office_code) {
-          document.getElementById('office_code').value = helper.general_info.office_code;
-        }
+      // Load owner name from multiple sources
+      let owner = '';
+      if (makeCarData.owner) owner = makeCarData.owner;
+      else if (helper.car_details?.owner) owner = helper.car_details.owner;
+      else if (helper.general_info?.owner_name) owner = helper.general_info.owner_name;
+      else if (helper.meta?.owner_name) owner = helper.meta.owner_name;
+      else if (carData.owner) owner = carData.owner;
+      
+      if (owner) {
+        document.getElementById('owner').value = owner;
+        console.log('✅ LEVI UPLOAD: Owner loaded:', owner);
+      }
+      
+      // Load office code from multiple sources
+      let officeCode = '';
+      if (makeCarData.office_code) officeCode = makeCarData.office_code;
+      else if (helper.vehicle?.office_code) officeCode = helper.vehicle.office_code;
+      else if (helper.car_details?.office_code) officeCode = helper.car_details.office_code;
+      else if (helper.general_info?.office_code) officeCode = helper.general_info.office_code;
+      
+      if (officeCode) {
+        document.getElementById('office_code').value = officeCode;
+        console.log('✅ LEVI UPLOAD: Office code loaded:', officeCode);
       }
       
       // Load password from helper (multiple possible locations)
