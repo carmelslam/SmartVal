@@ -650,18 +650,45 @@ export function saveHelperToStorage() {
 
 export function loadHelperFromStorage() {
   try {
+    console.log('🚀 loadHelperFromStorage: Starting helper initialization...');
+    
+    // Check for incoming data from external sources FIRST
+    checkForIncomingData();
+    
     // Try sessionStorage first (primary), then localStorage (backup)
     let data = sessionStorage.getItem('helper');
     let dataSource = 'sessionStorage';
     
+    console.log('🔍 sessionStorage helper data:', data ? 'Found' : 'Not found');
+    
     if (!data) {
       data = localStorage.getItem('helper_data');
       dataSource = 'localStorage';
+      console.log('🔍 localStorage helper data:', data ? 'Found' : 'Not found');
     }
     
     if (!data) {
-      console.log('No helper data found in storage');
-      return false;
+      console.log('⚠️ No helper data found in storage - initializing empty helper');
+      
+      // Initialize empty helper structure
+      Object.assign(helper, {
+        meta: { plate: '', case_id: '', report_type: 'final' },
+        vehicle: {},
+        car_details: { ...CAR_DETAILS_TEMPLATE },
+        client: {},
+        expertise: { damage_blocks: [], levi_report: {}, calculations: {} },
+        parts_search: { results: [] },
+        fees: {},
+        estimate_data: {},
+        invoice: {},
+        image_upload: { total_uploaded: 0 },
+        assistant_history: []
+      });
+      
+      // Save initialized helper
+      saveHelperToStorage();
+      console.log('✅ Empty helper initialized and saved');
+      return true;
     }
     
     const parsedData = JSON.parse(data);
@@ -763,6 +790,163 @@ export function getHelperDataIntegrityReport() {
       completeness: {},
       recommendations: ['Fix data integrity issues before proceeding']
     };
+  }
+}
+
+// Check for incoming data from external sources (Make.com, URL params, etc.)
+export function checkForIncomingData() {
+  console.log('🔍 Checking for incoming data from external sources...');
+  
+  try {
+    // 1. Check URL parameters for car data
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    // Combine all URL parameters
+    const allParams = { ...Object.fromEntries(urlParams), ...Object.fromEntries(hashParams) };
+    
+    if (Object.keys(allParams).length > 0) {
+      console.log('📋 URL parameters found:', allParams);
+      
+      // Check for car data patterns
+      const carDataFields = ['plate', 'manufacturer', 'model', 'year', 'chassis', 'owner', 'location'];
+      const foundCarData = {};
+      
+      Object.keys(allParams).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (carDataFields.includes(lowerKey) || lowerKey.includes('car_') || lowerKey.includes('vehicle_')) {
+          foundCarData[lowerKey] = decodeURIComponent(allParams[key]);
+        }
+      });
+      
+      if (Object.keys(foundCarData).length > 0) {
+        console.log('🚗 Car data detected in URL:', foundCarData);
+        
+        // Update helper with URL data
+        updateHelper('car_details', foundCarData);
+        updateHelper('vehicle', foundCarData);
+        
+        if (foundCarData.plate) {
+          updateHelper('meta', { plate: foundCarData.plate });
+        }
+        
+        console.log('✅ Helper updated with URL car data');
+        
+        // Show notification
+        showDataReceivedNotification('Car data loaded from URL parameters');
+        
+        // Clear URL parameters to prevent re-processing
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }
+    }
+    
+    // 2. Check sessionStorage for external car data
+    const externalCarData = sessionStorage.getItem('carData');
+    if (externalCarData) {
+      try {
+        const parsedCarData = JSON.parse(externalCarData);
+        console.log('🚗 External car data found in sessionStorage:', parsedCarData);
+        
+        // Process external car data
+        const carDetails = {
+          plate: parsedCarData.plate,
+          owner: parsedCarData.owner,
+          location: parsedCarData.location
+        };
+        
+        updateHelper('car_details', carDetails);
+        updateHelper('meta', { 
+          plate: parsedCarData.plate,
+          owner_name: parsedCarData.owner,
+          inspection_location: parsedCarData.location,
+          inspection_date: parsedCarData.date
+        });
+        
+        console.log('✅ Helper updated with external car data');
+        showDataReceivedNotification('Car data loaded from Make.com');
+        
+        // Don't clear this data - it might be needed by other modules
+        
+      } catch (error) {
+        console.error('❌ Error parsing external car data:', error);
+      }
+    }
+    
+    // 3. Check for other external data sources
+    ['leviData', 'partsData', 'damageData', 'invoiceData'].forEach(dataKey => {
+      const externalData = sessionStorage.getItem(dataKey);
+      if (externalData) {
+        try {
+          const parsedData = JSON.parse(externalData);
+          console.log(`📊 External ${dataKey} found:`, parsedData);
+          
+          switch (dataKey) {
+            case 'leviData':
+              updateHelper('levisummary', parsedData);
+              updateHelper('expertise', { levi_report: parsedData });
+              showDataReceivedNotification('Levi report data loaded');
+              break;
+            case 'partsData':
+              updateHelper('parts_search', { results: parsedData });
+              showDataReceivedNotification('Parts search data loaded');
+              break;
+            case 'damageData':
+              updateHelper('expertise', { damage_blocks: parsedData });
+              updateHelper('damage_centers', parsedData);
+              showDataReceivedNotification('Damage assessment data loaded');
+              break;
+            case 'invoiceData':
+              updateHelper('invoice', parsedData);
+              showDataReceivedNotification('Invoice data loaded');
+              break;
+          }
+          
+        } catch (error) {
+          console.error(`❌ Error parsing ${dataKey}:`, error);
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error checking for incoming data:', error);
+  }
+}
+
+// Show notification when data is received
+function showDataReceivedNotification(message) {
+  console.log(`📥 ${message}`);
+  
+  // Create visual notification if in browser
+  if (typeof document !== 'undefined') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-width: 300px;
+      font-family: 'Assistant', sans-serif;
+      text-align: center;
+    `;
+    
+    notification.innerHTML = `📥 ${message}`;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
   }
 }
 
@@ -1253,3 +1437,23 @@ window.addEventListener('DOMContentLoaded', loadHelperFromStorage);
 
 // Make updateCalculations globally available for VAT updates
 window.updateCalculations = updateCalculations;
+
+// Make data checking function globally available for testing
+window.checkForIncomingData = checkForIncomingData;
+
+// Load debugging tools in development
+try {
+  import('./data-reception-debugger.js').then(() => {
+    console.log('🔍 Data reception debugger loaded');
+  }).catch(e => {
+    console.log('ℹ️ Data reception debugger not loaded (optional)');
+  });
+  
+  import('./helper-test-suite.js').then(() => {
+    console.log('🧪 Helper test suite loaded');
+  }).catch(e => {
+    console.log('ℹ️ Helper test suite not loaded (optional)');
+  });
+} catch (e) {
+  // Debug tools are optional
+}
