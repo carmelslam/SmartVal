@@ -342,6 +342,15 @@
       /* Dedicated pages for specific sections */
       .page-price-adjustments {
         page-break-before: always !important;
+        page-break-after: avoid !important;
+      }
+      
+      .adjustment-group {
+        page-break-inside: avoid !important;
+        margin-bottom: 8mm !important;
+      }
+      
+      .adjustment-group:last-child {
         page-break-after: always !important;
       }
       
@@ -870,7 +879,7 @@
           ${generateDamageAnalysis(helper)}
 
           <!-- Section 4.5 - Vehicle Value for Gross Damage -->
-          <div class="section page-price-adjustments">
+          <div class="section page-price-adjustments adjustment-group">
             <div class="car-details">
               <div class="car-details-title">ערך הרכב לנזק גולמי</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
@@ -881,7 +890,7 @@
           </div>
 
           <!-- Section 4.6 - Damage Percentage Calculation -->
-          <div class="section">
+          <div class="section adjustment-group">
             <div class="car-details">
               <div class="car-details-title">חישוב אחוז הנזק</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
@@ -1029,6 +1038,26 @@
       if (damageIntroSection) {
         damageIntroSection.style.pageBreakBefore = 'always';
       }
+      
+      // Optimize adjustment groups to stay together
+      const adjustmentGroups = document.querySelectorAll('.adjustment-group');
+      adjustmentGroups.forEach((group, index) => {
+        if (index === 0) {
+          // First adjustment group starts the price adjustments page
+          group.style.pageBreakBefore = 'always';
+        } else {
+          // Subsequent groups try to stay on same page
+          group.style.pageBreakBefore = 'avoid';
+        }
+        
+        // Prevent breaking within adjustment groups
+        group.style.pageBreakInside = 'avoid';
+        
+        // Last adjustment group should break after
+        if (index === adjustmentGroups.length - 1) {
+          group.style.pageBreakAfter = 'always';
+        }
+      });
       
       // Ensure final legal section is on its own page
       const legalSection = document.querySelector('.page-legal-final');
@@ -1510,7 +1539,7 @@
       `).join('');
       
       return `
-        <div class="section">
+        <div class="section adjustment-group">
           <div class="car-details">
             <div class="car-details-title">חישוב ערך השוק של הרכב</div>
             <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
