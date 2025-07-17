@@ -283,33 +283,75 @@
   function loadCarData() {
     try {
       let helper = {};
+      let makeCarData = {};
+      let carData = {};
       
-      // Try to get data from sessionStorage helper
+      // Debug: Check all data sources
+      console.log('🔍 FLOATING SCREEN DEBUG - Checking all data sources...');
+      
+      // 1. Check sessionStorage helper
       try {
         const storedHelper = sessionStorage.getItem('helper');
         if (storedHelper) {
           helper = JSON.parse(storedHelper);
+          console.log('✅ Found helper in sessionStorage:', helper);
+        } else {
+          console.log('❌ No helper found in sessionStorage');
         }
       } catch (parseError) {
-        console.warn('Could not parse helper from sessionStorage:', parseError);
+        console.warn('❌ Could not parse helper from sessionStorage:', parseError);
       }
       
-      // Fallback to global helper variable
+      // 2. Check global helper variable
       if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
         helper = window.helper;
+        console.log('✅ Using global helper variable:', helper);
       }
-
-      // Get vehicle data using system structure
-      const vehicle = helper.vehicle || {};
-      const carDetails = helper.car_details || {};
-      const client = helper.client || {};
-      const meta = helper.meta || {};
       
-      // Update UI with car data using proper helper structure
+      // 3. Check Make.com data directly
+      try {
+        const makeDataRaw = sessionStorage.getItem('makeCarData');
+        if (makeDataRaw) {
+          makeCarData = JSON.parse(makeDataRaw);
+          console.log('✅ Found Make.com car data:', makeCarData);
+        } else {
+          console.log('❌ No makeCarData found in sessionStorage');
+        }
+      } catch (parseError) {
+        console.warn('❌ Could not parse makeCarData:', parseError);
+      }
+      
+      // 4. Check basic car data
+      try {
+        const carDataRaw = sessionStorage.getItem('carData');
+        if (carDataRaw) {
+          carData = JSON.parse(carDataRaw);
+          console.log('✅ Found basic car data:', carData);
+        } else {
+          console.log('❌ No carData found in sessionStorage');
+        }
+      } catch (parseError) {
+        console.warn('❌ Could not parse carData:', parseError);
+      }
+      
+      // 5. List all sessionStorage keys for debugging
+      console.log('🔍 All sessionStorage keys:', Object.keys(sessionStorage));
+      
+      // Merge all data sources with priority: makeCarData > helper > carData
+      const vehicle = makeCarData || helper.vehicle || carData || {};
+      const carDetails = makeCarData || helper.car_details || carData || {};
+      const client = helper.client || {};
+      const meta = helper.meta || { plate: makeCarData?.plate || carData?.plate } || {};
+      
+      console.log('🔍 Final data being sent to display:', {
+        vehicle, carDetails, client, meta
+      });
+      
+      // Update UI with merged data
       updateCarDisplay(vehicle, carDetails, client, meta);
 
     } catch (error) {
-      console.error("Error loading car data:", error);
+      console.error("❌ Error loading car data:", error);
       updateCarDisplay({}, {}, {}, {});
     }
   }
