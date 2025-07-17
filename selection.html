@@ -151,6 +151,31 @@
         return;
       }
 
+      // Clear old case data when loading a different case
+      const existingHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const existingPlate = existingHelper.meta?.plate;
+      
+      if (plateNumber && plateNumber !== existingPlate) {
+        console.log('🔄 Loading existing case for plate:', plateNumber);
+        
+        // Clear old case data using security manager if available
+        if (window.securityManager && typeof window.securityManager.startNewCase === 'function') {
+          window.securityManager.startNewCase();
+        } else {
+          // Fallback - clear old data manually
+          localStorage.removeItem('lastCaseData');
+          localStorage.removeItem('lastCaseTimestamp');
+          sessionStorage.removeItem('helper');
+          
+          // Clear sensitive data from memory
+          if (window.helper) {
+            window.helper = {};
+          }
+          
+          console.log('✅ Cleared old case data before loading new case');
+        }
+      }
+
       // Get the button to show loading state
       const loadButton = document.querySelector('button[onclick="loadExistingCase()"]');
       const originalText = loadButton?.textContent || 'טען תיק קיים';

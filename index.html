@@ -332,8 +332,16 @@
           const encryptedPass = await encryptPassword(pass);
           console.log("🔒 Password encrypted successfully");
           
-          // Clear any existing session data first
-          sessionStorage.clear();
+          // Preserve helper data before clearing session
+          const helperData = sessionStorage.getItem('helper');
+          
+          // Clear only auth-related session data, preserve helper
+          sessionStorage.removeItem("auth");
+          sessionStorage.removeItem("sessionStart");
+          sessionStorage.removeItem("loginTime");
+          sessionStorage.removeItem("lastActivityTime");
+          sessionStorage.removeItem("loginSuccess");
+          sessionStorage.removeItem("originalPassword");
           
           // Set new session data
           sessionStorage.setItem("auth", encryptedPass);
@@ -344,8 +352,14 @@
           sessionStorage.setItem("loginSuccess", "true");
           sessionStorage.setItem("originalPassword", pass); // For debugging
           
-          // Restore last case data if available
-          if (window.securityManager && typeof window.securityManager.restoreLastCaseData === 'function') {
+          // Restore helper data if it existed
+          if (helperData) {
+            sessionStorage.setItem('helper', helperData);
+            console.log('✅ Preserved existing helper data during login');
+          }
+          
+          // Restore last case data if available (and no current helper data)
+          if (!helperData && window.securityManager && typeof window.securityManager.restoreLastCaseData === 'function') {
             const restored = window.securityManager.restoreLastCaseData();
             if (restored) {
               console.log('✅ Restored previous case data after login');
@@ -433,7 +447,28 @@
   function resetTimer() {
     clearTimeout(logoutTimer);
     logoutTimer = setTimeout(() => {
-      sessionStorage.clear();
+      // Use proper logout logic that preserves helper data
+      if (window.securityManager && window.securityManager.logout) {
+        window.securityManager.logout();
+      } else {
+        // Fallback - preserve helper data manually
+        const helperData = sessionStorage.getItem('helper');
+        
+        // Clear only auth-related session data, preserve helper
+        sessionStorage.removeItem('auth');
+        sessionStorage.removeItem('loginTime');
+        sessionStorage.removeItem('lastActivityTime');
+        sessionStorage.removeItem('sessionStart');
+        sessionStorage.removeItem('loginSuccess');
+        sessionStorage.removeItem('originalPassword');
+        
+        // Save helper data to localStorage for persistence
+        if (helperData) {
+          localStorage.setItem('lastCaseData', helperData);
+          localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
+        }
+      }
+      
       alert("הפגישה הסתיימה עקב חוסר פעילות.");
       window.location.href = "index.html";
     }, 10 * 60 * 1000);

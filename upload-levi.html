@@ -1245,6 +1245,32 @@ class LeviProcessor {
       return;
     }
 
+    // Clear old case data when starting a new case
+    const plateNumber = document.getElementById('plate').value.trim();
+    const existingHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const existingPlate = existingHelper.meta?.plate;
+    
+    if (plateNumber && plateNumber !== existingPlate) {
+      console.log('🔄 Starting new case for plate:', plateNumber);
+      
+      // Clear old case data using security manager if available
+      if (window.securityManager && typeof window.securityManager.startNewCase === 'function') {
+        window.securityManager.startNewCase();
+      } else {
+        // Fallback - clear old data manually
+        localStorage.removeItem('lastCaseData');
+        localStorage.removeItem('lastCaseTimestamp');
+        sessionStorage.removeItem('helper');
+        
+        // Clear sensitive data from memory
+        if (window.helper) {
+          window.helper = {};
+        }
+        
+        console.log('✅ Started new case - previous data cleared');
+      }
+    }
+
     this.processingInProgress = true;
     this.showProcessingStatus(true);
     

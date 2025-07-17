@@ -33,17 +33,38 @@
       );
     }
     
-    // Clear session data
-    sessionStorage.clear();
-    localStorage.clear();
-    
-    // Show logout message briefly on current page
-    showLogoutMessage();
-    
-    // Redirect after sound duration (approximately 2.5 seconds)
-    setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 2500);
+    // Use proper logout logic that preserves helper data
+    if (window.securityManager && window.securityManager.logout) {
+      // Show logout message briefly on current page
+      showLogoutMessage();
+      
+      // Call proper logout after sound duration (approximately 2.5 seconds)
+      setTimeout(() => {
+        window.securityManager.logout();
+      }, 2500);
+    } else {
+      // Fallback - preserve helper data manually
+      const helperData = sessionStorage.getItem('helper');
+      
+      // Clear only auth-related session data, preserve helper
+      sessionStorage.removeItem('auth');
+      sessionStorage.removeItem('loginTime');
+      sessionStorage.removeItem('lastActivityTime');
+      
+      // Save helper data to localStorage for persistence
+      if (helperData) {
+        localStorage.setItem('lastCaseData', helperData);
+        localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
+      }
+      
+      // Show logout message briefly on current page
+      showLogoutMessage();
+      
+      // Redirect after sound duration (approximately 2.5 seconds)
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2500);
+    }
   };
 
   function showLogoutMessage() {
