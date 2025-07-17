@@ -559,41 +559,45 @@
         } else if (helper.estimate_notes) {
           damageDescription = helper.estimate_notes;
         } else if (helper.expertise?.damage_blocks?.length > 0) {
-          // Collect descriptions from damage blocks
+          // Collect descriptions from damage blocks - each center on separate row
           const blockDescriptions = [];
           helper.expertise.damage_blocks.forEach((block, index) => {
             const blockDesc = [];
             
-            // Add damage center name
-            if (block.damage_center_name) {
-              blockDesc.push(`מוקד ${index + 1}: ${block.damage_center_name}`);
+            // Add damage center identifier (number + name if available)
+            const centerNum = index + 1;
+            const centerName = block.area_name || block.center || block.location || '';
+            const centerIdentifier = centerName ? `מוקד ${centerNum}: ${centerName}` : `מוקד ${centerNum}`;
+            
+            // Add damage center description if available
+            if (block.description) {
+              blockDesc.push(`${centerIdentifier} - ${block.description}`);
+            } else {
+              blockDesc.push(centerIdentifier);
             }
             
-            // Add repair descriptions
+            // Add repair descriptions as additional details
             if (block.repairs?.length > 0) {
-              block.repairs.forEach(repair => {
-                if (repair.description) {
-                  blockDesc.push(repair.description);
-                }
-              });
+              const repairDescs = block.repairs.map(repair => repair.description).filter(desc => desc);
+              if (repairDescs.length > 0) {
+                blockDesc.push(`תיקונים: ${repairDescs.join(', ')}`);
+              }
             }
             
-            // Add part descriptions
+            // Add part descriptions as additional details  
             if (block.parts?.length > 0) {
-              block.parts.forEach(part => {
-                if (part.desc) {
-                  blockDesc.push(part.desc);
-                }
-              });
+              const partDescs = block.parts.map(part => part.desc).filter(desc => desc);
+              if (partDescs.length > 0) {
+                blockDesc.push(`חלקים: ${partDescs.join(', ')}`);
+              }
             }
             
-            // Add work notes
+            // Add work notes as additional details
             if (block.works?.length > 0) {
-              block.works.forEach(work => {
-                if (work.note) {
-                  blockDesc.push(work.note);
-                }
-              });
+              const workNotes = block.works.map(work => work.note).filter(note => note);
+              if (workNotes.length > 0) {
+                blockDesc.push(`עבודות: ${workNotes.join(', ')}`);
+              }
             }
             
             if (blockDesc.length > 0) {
@@ -602,7 +606,8 @@
           });
           
           if (blockDescriptions.length > 0) {
-            damageDescription = blockDescriptions.join('. ');
+            // Join each center description with a line break for separate rows
+            damageDescription = blockDescriptions.join('<br><br>');
           }
         }
         
@@ -710,9 +715,9 @@
               בהתאם לבקשתכם, ערכנו אומדן ראשוני לעלויות תיקון נזקי הרכב הנדון כפי שהוצגו לפנינו.
             </p>
             <p style="font-size: 16px; font-weight: bold; text-decoration: underline; margin: 10px 0;">תיאור הנזק:</p>
-            <p style="font-size: 16px; line-height: 1.6; margin: 10px 0;">
+            <div style="font-size: 16px; line-height: 1.6; margin: 10px 0;">
               ${damageDescription}
-            </p>
+            </div>
             <p style="font-size: 16px; font-weight: bold; text-decoration: underline; margin: 10px 0;">אומדן עלויות:</p>
             <p style="font-size: 16px; line-height: 1.6; margin: 10px 0;">
               האומדן מבוסס על מחירי שוק נוכחיים ועל בדיקה ראשונית של הנזקים. עלויות סופיות עשויות להשתנות.
