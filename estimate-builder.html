@@ -2534,13 +2534,7 @@
         }
       }
       
-      // Load saved attachments
-      if (helper.estimate_attachments) {
-        const attachmentsElement = document.getElementById('attachments-content');
-        if (attachmentsElement) {
-          attachmentsElement.value = helper.estimate_attachments;
-        }
-      }
+      // Attachments are now loaded by dedicated loadAttachmentsData() function
     }
     
     // Create unified adjustment row HTML
@@ -3501,12 +3495,13 @@
       
       document.getElementById('attachments-content').value = attachmentsText;
       
-      // Save to helper
+      // Save to helper and LOCK the selection
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       helper.estimate_attachments = attachmentsText;
+      helper.estimate_attachments_locked = true; // Lock the selection
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      console.log('Attachments loaded from vault for type:', selectedType);
+      console.log('📎 Attachments loaded from vault for type:', selectedType, 'and LOCKED');
     }
 
     // RESET ATTACHMENTS
@@ -3521,6 +3516,28 @@
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Attachments reset');
+    }
+
+    // LOAD ATTACHMENTS DATA FROM HELPER
+    function loadAttachmentsData() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Load saved attachments if they exist and are locked
+      if (helper.estimate_attachments && helper.estimate_attachments_locked) {
+        const attachmentsElement = document.getElementById('attachments-content');
+        if (attachmentsElement) {
+          attachmentsElement.value = helper.estimate_attachments;
+          console.log('📎 Loaded LOCKED attachments from helper - will not revert to default');
+        }
+      } else if (helper.estimate_attachments) {
+        const attachmentsElement = document.getElementById('attachments-content');
+        if (attachmentsElement) {
+          attachmentsElement.value = helper.estimate_attachments;
+          console.log('📎 Loaded saved attachments from helper (not locked)');
+        }
+      } else {
+        console.log('📎 No saved attachments found, keeping default');
+      }
     }
 
     // ADD GLOBAL DEPRECIATION CALCULATION
@@ -5188,6 +5205,7 @@
       // Then load data from helper after EstimateCalculations is available
       setTimeout(() => {
         loadDataFromHelper();
+        loadAttachmentsData();
         loadLegalText();
         updateGlobalDepreciationCalculation();
       }, 100);
