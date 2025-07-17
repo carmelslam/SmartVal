@@ -8,8 +8,8 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
-  // Clean stored operations to prevent subscription validation errors
-  const ONESIGNAL_TEMPORARILY_DISABLED = false;
+  // Disable OneSignal until we can completely resolve persistent operation storage issues
+  const ONESIGNAL_TEMPORARILY_DISABLED = true;
   
   // OneSignal manager class
   class OneSignalManager {
@@ -220,31 +220,32 @@
 
     cleanStoredOperations() {
       try {
-        console.log('📱 OneSignal: Cleaning stored operations to prevent validation errors...');
+        console.log('📱 OneSignal: Performing comprehensive storage cleanup to resolve operation errors...');
         
-        // OneSignal v16 stores operations in IndexedDB and localStorage
-        // Clear relevant OneSignal storage keys that might contain invalid operations
+        // OneSignal v16 stores operations in multiple locations - we need to clear ALL of them
         
-        // Clear localStorage keys
-        const localStorageKeysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (
-            key.startsWith('OneSignal') || 
-            key.startsWith('onesignal') ||
-            key.includes('operations') ||
-            key.includes('subscription')
-          )) {
-            localStorageKeysToRemove.push(key);
+        // 1. Clear ALL localStorage (most aggressive approach)
+        console.log('📱 OneSignal: Clearing ALL localStorage to remove any OneSignal data...');
+        const preservedKeys = ['lastCaseData', 'lastCaseTimestamp', 'auth', 'helper'];
+        const preservedData = {};
+        
+        // Preserve critical application data
+        preservedKeys.forEach(key => {
+          const value = localStorage.getItem(key);
+          if (value) {
+            preservedData[key] = value;
           }
-        }
-        
-        localStorageKeysToRemove.forEach(key => {
-          console.log('📱 OneSignal: Removing localStorage key:', key);
-          localStorage.removeItem(key);
         });
         
-        // Clear sessionStorage keys
+        // Clear everything
+        localStorage.clear();
+        
+        // Restore preserved data
+        Object.keys(preservedData).forEach(key => {
+          localStorage.setItem(key, preservedData[key]);
+        });
+        
+        // 2. Clear OneSignal-specific sessionStorage but preserve our app data
         const sessionStorageKeysToRemove = [];
         for (let i = 0; i < sessionStorage.length; i++) {
           const key = sessionStorage.key(i);
@@ -252,9 +253,12 @@
             key.startsWith('OneSignal') || 
             key.startsWith('onesignal') ||
             key.includes('operations') ||
-            key.includes('subscription')
+            key.includes('subscription') ||
+            key.includes('push') ||
+            key.includes('worker') ||
+            key.includes('notification')
           )) {
-            // Don't remove our own onesignalId storage
+            // Don't remove our own tracking data
             if (key !== 'onesignalId' && key !== 'oneSignalSubscribed') {
               sessionStorageKeysToRemove.push(key);
             }
@@ -266,15 +270,18 @@
           sessionStorage.removeItem(key);
         });
         
-        // Clear IndexedDB - OneSignal v16 uses IndexedDB for operations
+        // 3. Aggressively clear ALL IndexedDB databases (this is the key fix)
         if ('indexedDB' in window) {
-          this.clearOneSignalIndexedDB();
+          this.clearAllIndexedDB();
         }
         
-        // Clear service worker cache that might contain old operations
-        this.clearServiceWorkerCache();
+        // 4. Clear ALL service workers and caches
+        this.clearAllServiceWorkers();
         
-        console.log('📱 OneSignal: Storage cleanup completed');
+        // 5. Clear any remaining browser storage mechanisms
+        this.clearAdditionalStorage();
+        
+        console.log('📱 OneSignal: Comprehensive storage cleanup completed');
         
       } catch (error) {
         console.error('📱 OneSignal: Error cleaning stored operations:', error);
@@ -351,41 +358,136 @@
       }
     }
 
-    async clearOneSignalIndexedDB() {
+    async clearAllIndexedDB() {
       try {
-        // OneSignal v16 typically uses databases named with the app ID
-        const dbNames = [
-          'OneSignalSDK',
-          'onesignal-db',
-          `OneSignal-${ONESIGNAL_APP_ID}`,
-          'OneSignalDatabase'
-        ];
+        console.log('📱 OneSignal: Clearing ALL IndexedDB databases...');
         
-        for (const dbName of dbNames) {
-          try {
-            await new Promise((resolve, reject) => {
-              const deleteRequest = indexedDB.deleteDatabase(dbName);
-              deleteRequest.onsuccess = () => {
-                console.log(`📱 OneSignal: Cleared IndexedDB: ${dbName}`);
-                resolve();
-              };
-              deleteRequest.onerror = () => {
-                console.log(`📱 OneSignal: No IndexedDB found: ${dbName}`);
-                resolve(); // Don't fail if database doesn't exist
-              };
-              deleteRequest.onblocked = () => {
-                console.log(`📱 OneSignal: IndexedDB deletion blocked: ${dbName}`);
-                resolve(); // Continue anyway
-              };
-              // Timeout after 2 seconds
-              setTimeout(() => resolve(), 2000);
-            });
-          } catch (e) {
-            console.log(`📱 OneSignal: IndexedDB cleanup error for ${dbName}:`, e.message);
+        // Get all existing databases
+        if (indexedDB.databases) {
+          const databases = await indexedDB.databases();
+          console.log('📱 OneSignal: Found IndexedDB databases:', databases.map(db => db.name));
+          
+          for (const db of databases) {
+            if (db.name) {
+              try {
+                await new Promise((resolve) => {
+                  const deleteRequest = indexedDB.deleteDatabase(db.name);
+                  deleteRequest.onsuccess = () => {
+                    console.log(`📱 OneSignal: Deleted IndexedDB: ${db.name}`);
+                    resolve();
+                  };
+                  deleteRequest.onerror = () => resolve(); // Continue anyway
+                  deleteRequest.onblocked = () => resolve(); // Continue anyway
+                  setTimeout(() => resolve(), 3000); // Timeout
+                });
+              } catch (e) {
+                console.log(`📱 OneSignal: Error deleting ${db.name}:`, e.message);
+              }
+            }
+          }
+        } else {
+          // Fallback: try common OneSignal database names
+          const commonDbNames = [
+            'OneSignalSDK',
+            'onesignal-db',
+            `OneSignal-${ONESIGNAL_APP_ID}`,
+            'OneSignalDatabase',
+            'operations',
+            'subscriptions',
+            'push-notifications'
+          ];
+          
+          for (const dbName of commonDbNames) {
+            try {
+              await new Promise((resolve) => {
+                const deleteRequest = indexedDB.deleteDatabase(dbName);
+                deleteRequest.onsuccess = () => {
+                  console.log(`📱 OneSignal: Deleted IndexedDB: ${dbName}`);
+                  resolve();
+                };
+                deleteRequest.onerror = () => resolve();
+                deleteRequest.onblocked = () => resolve();
+                setTimeout(() => resolve(), 2000);
+              });
+            } catch (e) {
+              console.log(`📱 OneSignal: Error deleting ${dbName}:`, e.message);
+            }
           }
         }
+        
+        console.log('📱 OneSignal: IndexedDB cleanup completed');
       } catch (error) {
-        console.error('📱 OneSignal: Error clearing IndexedDB:', error);
+        console.error('📱 OneSignal: Error clearing all IndexedDB:', error);
+      }
+    }
+
+    async clearAllServiceWorkers() {
+      try {
+        if ('serviceWorker' in navigator) {
+          console.log('📱 OneSignal: Clearing ALL service workers and caches...');
+          
+          // Clear ALL caches (not just OneSignal)
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            console.log('📱 OneSignal: Found caches:', cacheNames);
+            
+            for (const cacheName of cacheNames) {
+              await caches.delete(cacheName);
+              console.log(`📱 OneSignal: Deleted cache: ${cacheName}`);
+            }
+          }
+          
+          // Unregister ALL service workers
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          console.log('📱 OneSignal: Found service workers:', registrations.length);
+          
+          for (const registration of registrations) {
+            await registration.unregister();
+            console.log('📱 OneSignal: Unregistered service worker:', registration.scope);
+          }
+          
+          console.log('📱 OneSignal: Service worker cleanup completed');
+        }
+      } catch (error) {
+        console.log('📱 OneSignal: Service worker cleanup error:', error.message);
+      }
+    }
+
+    clearAdditionalStorage() {
+      try {
+        // Clear any other storage mechanisms that might contain OneSignal data
+        
+        // Clear cookies that might contain OneSignal data
+        document.cookie.split(";").forEach(cookie => {
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+          if (name.trim().toLowerCase().includes('onesignal') || 
+              name.trim().toLowerCase().includes('notification') ||
+              name.trim().toLowerCase().includes('push')) {
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+            console.log(`📱 OneSignal: Cleared cookie: ${name.trim()}`);
+          }
+        });
+        
+        // Clear any window storage properties
+        Object.keys(window).forEach(key => {
+          if (typeof key === 'string' && (
+            key.toLowerCase().includes('onesignal') ||
+            key.toLowerCase().includes('notification') ||
+            key.toLowerCase().includes('push')
+          )) {
+            try {
+              delete window[key];
+              console.log(`📱 OneSignal: Cleared window property: ${key}`);
+            } catch (e) {
+              console.log(`📱 OneSignal: Could not clear window property: ${key}`);
+            }
+          }
+        });
+        
+        console.log('📱 OneSignal: Additional storage cleanup completed');
+      } catch (error) {
+        console.error('📱 OneSignal: Error in additional storage cleanup:', error);
       }
     }
 
@@ -1031,6 +1133,41 @@
     async reinitialize() {
       window.oneSignalManager.initialized = false;
       return await window.oneSignalManager.init();
+    },
+    
+    async forceCleanAndReinitialize() {
+      console.log('🧹 OneSignal: Force clean and reinitialize...');
+      
+      // Perform comprehensive cleanup
+      await window.oneSignalManager.cleanStoredOperations();
+      
+      // Wait for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Temporarily enable OneSignal for testing
+      const originalDisabled = window.oneSignalManager.disabled;
+      window.oneSignalManager.disabled = false;
+      
+      // Reset initialization state
+      window.oneSignalManager.initialized = false;
+      
+      try {
+        // Attempt initialization
+        await window.oneSignalManager.init();
+        console.log('✅ OneSignal: Force reinitialize successful');
+        return true;
+      } catch (error) {
+        console.error('❌ OneSignal: Force reinitialize failed:', error);
+        // Restore disabled state if it fails
+        window.oneSignalManager.disabled = originalDisabled;
+        return false;
+      }
+    },
+    
+    async testCleanStorage() {
+      console.log('🧪 OneSignal: Testing storage cleanup...');
+      await window.oneSignalManager.cleanStoredOperations();
+      console.log('✅ OneSignal: Storage cleanup test completed');
     }
   };
 
