@@ -64,6 +64,37 @@ export const CalculationInterface = {
     return this.getCalculations().market_value || this.getCalculations().final_price || 0;
   },
   
+  // Calculate gross price (car properties only: base + features + registration)
+  calculateGrossPrice: function(basePrice, featuresAdjustments = [], registrationAdjustments = []) {
+    let total = parseFloat(basePrice) || 0;
+    
+    // Add car property adjustments only
+    featuresAdjustments.forEach(adj => {
+      const value = parseFloat(adj.value) || 0;
+      total += (adj.type === 'plus') ? value : -value;
+    });
+    
+    registrationAdjustments.forEach(adj => {
+      const value = parseFloat(adj.value) || 0;
+      total += (adj.type === 'plus') ? value : -value;
+    });
+    
+    return Math.round(total);
+  },
+  
+  // Calculate market price (gross + usage factors: km, ownership, owner count)
+  calculateMarketPrice: function(grossPrice, usageAdjustments = []) {
+    let total = parseFloat(grossPrice) || 0;
+    
+    // Add usage-based adjustments
+    usageAdjustments.forEach(adj => {
+      const value = parseFloat(adj.value) || 0;
+      total += (adj.type === 'plus') ? value : -value;
+    });
+    
+    return Math.round(total);
+  },
+  
   getDamagePercentage: function() {
     return this.getCalculations().damage_percent || 0;
   },
@@ -99,6 +130,78 @@ export const CalculationInterface = {
       console.log('✅ Calculations updated in helper:', newCalculations);
     } catch (error) {
       console.error('Error updating calculations:', error);
+    }
+  },
+  
+  // Update gross price calculations (car properties only)
+  updateGrossCalculations: function(basePrice, featuresAdjustments, registrationAdjustments) {
+    try {
+      const grossPrice = this.calculateGrossPrice(basePrice, featuresAdjustments, registrationAdjustments);
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.calculations) helper.calculations = {};
+      if (!helper.expertise) helper.expertise = {};
+      if (!helper.expertise.calculations) helper.expertise.calculations = {};
+      
+      // Update gross calculations
+      helper.calculations.vehicle_value_gross = grossPrice;
+      helper.expertise.calculations.vehicle_value_gross = grossPrice;
+      helper.calculations.gross_adjustments = {
+        features: featuresAdjustments || [],
+        registration: registrationAdjustments || []
+      };
+      
+      // Calculate gross damage percentage if damage data exists
+      const totalDamage = helper.calculations.total_damage || 0;
+      if (totalDamage && grossPrice) {
+        const grossDamagePercent = Math.round((totalDamage / grossPrice) * 100);
+        helper.calculations.damage_percent_gross = grossDamagePercent;
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Gross calculations updated:', { grossPrice, totalDamage: helper.calculations.total_damage });
+      
+      return grossPrice;
+    } catch (error) {
+      console.error('Error updating gross calculations:', error);
+      return 0;
+    }
+  },
+  
+  // Update market price calculations (gross + usage factors)
+  updateMarketCalculations: function(grossPrice, usageAdjustments) {
+    try {
+      const marketPrice = this.calculateMarketPrice(grossPrice, usageAdjustments);
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.calculations) helper.calculations = {};
+      if (!helper.expertise) helper.expertise = {};
+      if (!helper.expertise.calculations) helper.expertise.calculations = {};
+      
+      // Update market calculations
+      helper.calculations.vehicle_value_market = marketPrice;
+      helper.calculations.market_value = marketPrice;
+      helper.expertise.calculations.market_value = marketPrice;
+      helper.calculations.market_adjustments = {
+        mileage: usageAdjustments.filter(adj => adj.category === 'mileage'),
+        ownership: usageAdjustments.filter(adj => adj.category === 'ownership'),
+        owner_count: usageAdjustments.filter(adj => adj.category === 'owner_count')
+      };
+      
+      // Calculate market damage percentage if damage data exists
+      const totalDamage = helper.calculations.total_damage || 0;
+      if (totalDamage && marketPrice) {
+        const marketDamagePercent = Math.round((totalDamage / marketPrice) * 100);
+        helper.calculations.damage_percent = marketDamagePercent;
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Market calculations updated:', { marketPrice, grossPrice });
+      
+      return marketPrice;
+    } catch (error) {
+      console.error('Error updating market calculations:', error);
+      return 0;
     }
   }
 };
@@ -190,6 +293,7 @@ export const helper = {
       km: '',
       base_price: '',
       final_price: '',
+      // RAW ADJUSTMENTS (as received from Levi OCR)
       adjustments: {
         registration: { percent: '', value: '', total: '' },
         km: { percent: '', value: '', total: '' },
@@ -207,10 +311,22 @@ export const helper = {
     calculations: {
       total_damage: '',
       vehicle_value_gross: '',
+      vehicle_value_market: '',
       damage_percent: '',
+      damage_percent_gross: '',
       vehicle_value_base: '',
       market_value: '',
-      total_compensation: ''
+      total_compensation: '',
+      // CATEGORIZED ADJUSTMENTS (processed for builders)
+      gross_adjustments: {
+        features: [],
+        registration: []
+      },
+      market_adjustments: {
+        mileage: [],
+        ownership: [],
+        owner_count: []
+      }
     }
   },
 
@@ -853,6 +969,41 @@ export function getFinancialData() {
   return standardized ? standardized.financials : helper.invoice || {};
 }
 
+// CATEGORIZED DATA ACCESS FUNCTIONS FOR BUILDERS
+export function getGrossAdjustments() {
+  // Get CAR PROPERTIES adjustments (features + registration)
+  const calculations = helper.expertise?.calculations || {};
+  return {
+    features: calculations.gross_adjustments?.features || [],
+    registration: calculations.gross_adjustments?.registration || []
+  };
+}
+
+export function getMarketAdjustments() {
+  // Get USAGE FACTORS adjustments (mileage + ownership + owner_count)
+  const calculations = helper.expertise?.calculations || {};
+  return {
+    mileage: calculations.market_adjustments?.mileage || [],
+    ownership: calculations.market_adjustments?.ownership || [],
+    owner_count: calculations.market_adjustments?.owner_count || []
+  };
+}
+
+export function getBasePrice() {
+  // Get the base price from Levi data
+  return parseFloat(helper.expertise?.levi_report?.base_price || helper.levisummary?.base_price || 0);
+}
+
+export function getGrossPrice() {
+  // Get calculated gross price (base + car properties)
+  return parseFloat(helper.expertise?.calculations?.vehicle_value_gross || 0);
+}
+
+export function getMarketPrice() {
+  // Get calculated market price (gross + usage factors)
+  return parseFloat(helper.expertise?.calculations?.vehicle_value_market || helper.expertise?.levi_report?.final_price || 0);
+}
+
 // Estimate data access and management functions
 export function getEstimateData() {
   return helper.estimate_data || {
@@ -983,11 +1134,94 @@ export function validateEstimateCompletion() {
   }
 }
 
-// Data synchronization helpers
+// Data synchronization helpers with automatic categorization
 export function syncLeviData(leviData) {
-  // Update both old and new structures
+  // Update both old and new structures (RAW data preservation)
   updateHelper('levisummary', leviData);
   updateHelper('expertise', { levi_report: leviData });
+  
+  // CATEGORIZATION LAYER: Process Levi adjustments into gross vs market
+  if (leviData.adjustments) {
+    const grossAdjustments = {
+      features: [],
+      registration: []
+    };
+    
+    const marketAdjustments = {
+      mileage: [],
+      ownership: [],
+      owner_count: []
+    };
+    
+    // CAR PROPERTIES → Gross adjustments
+    if (leviData.adjustments.features) {
+      grossAdjustments.features.push({
+        description: 'מאפיינים',
+        type: leviData.adjustments.features.value > 0 ? 'plus' : 'minus',
+        percent: leviData.adjustments.features.percent || '',
+        value: Math.abs(parseFloat(leviData.adjustments.features.value) || 0),
+        category: 'features',
+        source: 'levi_ocr'
+      });
+    }
+    
+    if (leviData.adjustments.registration) {
+      grossAdjustments.registration.push({
+        description: 'עליה לכביש',
+        type: leviData.adjustments.registration.value > 0 ? 'plus' : 'minus',
+        percent: leviData.adjustments.registration.percent || '',
+        value: Math.abs(parseFloat(leviData.adjustments.registration.value) || 0),
+        category: 'registration',
+        source: 'levi_ocr'
+      });
+    }
+    
+    // USAGE FACTORS → Market adjustments
+    if (leviData.adjustments.km) {
+      marketAdjustments.mileage.push({
+        description: 'מס\' ק"מ',
+        type: leviData.adjustments.km.value > 0 ? 'plus' : 'minus',
+        percent: leviData.adjustments.km.percent || '',
+        value: Math.abs(parseFloat(leviData.adjustments.km.value) || 0),
+        category: 'mileage',
+        source: 'levi_ocr'
+      });
+    }
+    
+    if (leviData.adjustments.ownership) {
+      marketAdjustments.ownership.push({
+        description: 'סוג בעלות',
+        type: leviData.adjustments.ownership.value > 0 ? 'plus' : 'minus',
+        percent: leviData.adjustments.ownership.percent || '',
+        value: Math.abs(parseFloat(leviData.adjustments.ownership.value) || 0),
+        category: 'ownership',
+        source: 'levi_ocr'
+      });
+    }
+    
+    if (leviData.adjustments.owner_count) {
+      marketAdjustments.owner_count.push({
+        description: 'מספר בעלים',
+        type: leviData.adjustments.owner_count.value > 0 ? 'plus' : 'minus',
+        percent: leviData.adjustments.owner_count.percent || '',
+        value: Math.abs(parseFloat(leviData.adjustments.owner_count.value) || 0),
+        category: 'owner_count',
+        source: 'levi_ocr'
+      });
+    }
+    
+    // Update categorized adjustments in helper
+    updateHelper('expertise', {
+      calculations: {
+        gross_adjustments: grossAdjustments,
+        market_adjustments: marketAdjustments
+      }
+    });
+    
+    console.log('✅ Levi data categorized into gross vs market adjustments');
+    console.log('🏠 Gross adjustments:', grossAdjustments);
+    console.log('🏪 Market adjustments:', marketAdjustments);
+  }
   
   // Ensure vehicle valuation is updated
   if (leviData.final_price) {
