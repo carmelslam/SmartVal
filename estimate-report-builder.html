@@ -723,15 +723,13 @@
           <!-- Section 4 - Damage Analysis -->
           ${generateDamageAnalysis(helper)}
 
-          <!-- Section 4.5 - Gross Damage Percentage -->
+          <!-- Section 4.5 - Vehicle Value for Gross Damage -->
           <div class="section">
             <div class="car-details">
-              <div class="car-details-title">אחוז הנזק הגולמי</div>
+              <div class="car-details-title">ערך הרכב לנזק גולמי</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
-                <tr><th style="width: 70%;">תיאור</th><th style="width: 30%;">ערך</th></tr>
-                <tr><td style="padding: 8px;">סה"כ הנזק כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(baseDamage)}</td></tr>
-                <tr><td style="padding: 8px;">ערך הרכב לנזק גולמי כולל מע"מ</td><td style="padding: 8px; text-align: center;">${formatCurrency(marketValue)}</td></tr>
-                <tr><td style="padding: 8px;"><strong>אחוז הנזק הגולמי</strong></td><td style="padding: 8px; text-align: center;"><strong>${damagePercent}%</strong></td></tr>
+                <tr><th style="width: 50%;">מרכיב</th><th style="width: 25%;">תוספת \ פחתה</th><th style="width: 25%;">ערך</th></tr>
+                ${generateMarketValueTable()}
               </table>
             </div>
           </div>
@@ -1106,6 +1104,60 @@
                                  'ירון כיוף, שמאי מוסמך מספר רישיון 1097, בעל ותק של מעל 15 שנה בתחום הערכת נזקי רכב ורכוש.';
       
       return legalText + '\n\n' + assessorCredentials;
+    }
+    
+    function generateMarketValueTable() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Get market value adjustments from helper
+      const marketAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
+      
+      // Get base market value
+      const basePrice = helper.calculations?.base_market_value || 
+                       helper.custom_adjustments?.base_market_value || 0;
+      
+      // Get final market value
+      const finalPrice = helper.calculations?.full_market_value || 
+                        helper.custom_adjustments?.full_market_value || 0;
+      
+      let rows = [];
+      
+      // Add base price row
+      rows.push(`
+        <tr>
+          <td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td>
+          <td style="padding: 8px; text-align: center;">-</td>
+          <td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td>
+        </tr>
+      `);
+      
+      // Add adjustment rows
+      marketAdjustments.forEach(adj => {
+        if (adj.description && (adj.percentage || adj.value)) {
+          const percentSign = adj.type === 'plus' ? '+' : '-';
+          const percentText = adj.percentage ? `${percentSign}${adj.percentage}%` : '-';
+          const value = adj.type === 'minus' ? -Math.abs(adj.value || 0) : Math.abs(adj.value || 0);
+          
+          rows.push(`
+            <tr>
+              <td style="padding: 8px;">${adj.description}</td>
+              <td style="padding: 8px; text-align: center;">${percentText}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(value)}</td>
+            </tr>
+          `);
+        }
+      });
+      
+      // Add final sum row
+      rows.push(`
+        <tr>
+          <td style="padding: 8px;"><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
+          <td style="padding: 8px; text-align: center;"><strong>-</strong></td>
+          <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(finalPrice)}</strong></td>
+        </tr>
+      `);
+      
+      return rows.join('');
     }
     
     function generateLeviAdjustments(helper) {
