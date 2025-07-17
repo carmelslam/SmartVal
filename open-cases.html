@@ -104,6 +104,9 @@
     <!-- Test floating screen button -->
     <button onclick="testFloatingScreen()" style="background: #17a2b8; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">📱 בדיקת מסך צף</button>
     
+    <!-- Direct Make.com data test -->
+    <button onclick="populateFloatingWithMakeData()" style="background: #dc3545; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🚗 בדיקת נתוני Make.com</button>
+    
     <!-- Success message and continue button (hidden initially) -->
     <div id="successSection" style="display: none; margin-top: 20px;">
       <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin-bottom: 15px; color: #155724;">
@@ -519,6 +522,68 @@
       }, 1000);
       
       console.log('✅ Floating screen test complete');
+    };
+
+    // Function to manually populate floating screen with Make.com data
+    window.populateFloatingWithMakeData = function() {
+      console.log('🔍 Manually populating floating screen with Make.com data...');
+      
+      // Create exact Make.com data structure from the screenshot
+      const makeComData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק', 
+        model: 'LUCERNE',
+        model_type: 'סדאן',
+        year: '2009',
+        production_date: '05/2009',
+        chassis: '1G4HD57258U196450',
+        engine_volume: '3791',
+        fuel_type: 'בנזין',
+        model_code: 'HD572',
+        engine_model: '428',
+        drive_type: '4X2',
+        office_code: '156-11',
+        owner: 'כרמל כיוף',
+        location: 'UMI חיפה',
+        data_source: 'make_com_manual_test'
+      };
+      
+      console.log('📋 Make.com data structure:', makeComData);
+      
+      // Store in sessionStorage with multiple keys
+      sessionStorage.setItem('makeCarData', JSON.stringify(makeComData));
+      sessionStorage.setItem('carData', JSON.stringify(makeComData));
+      
+      // Update helper directly if available
+      if (typeof window.updateHelper === 'function') {
+        try {
+          window.updateHelper('car_details', makeComData);
+          window.updateHelper('vehicle', makeComData);
+          window.updateHelper('meta', {
+            plate: makeComData.plate,
+            owner_name: makeComData.owner,
+            case_id: `YC-${makeComData.plate}-2025`
+          });
+          console.log('✅ Helper updated with Make.com data');
+        } catch (error) {
+          console.log('❌ Helper update failed:', error);
+        }
+      }
+      
+      // Force refresh floating screen if available
+      if (typeof window.refreshCarData === 'function') {
+        setTimeout(() => {
+          window.refreshCarData();
+          console.log('🔄 Floating screen refreshed');
+        }, 500);
+      }
+      
+      // Show floating screen
+      if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+      }
+      
+      console.log('✅ Make.com data population complete');
     };
   </script>
   <script src="assistant-floating.js"></script>

@@ -373,31 +373,112 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // helper.vehicle fields (with fallback to car_details)
-    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
-    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
-    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model || carDetails.model);
-    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year || carDetails.year);
-    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km || carDetails.km);
-    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
-    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
-    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type || carDetails.fuel_type);
+    // Enhanced field mapping with Make.com Hebrew support
+    // Plate number (multiple sources)
+    document.getElementById("vehicle-plate").textContent = formatValue(
+      meta.plate || vehicle.plate_number || vehicle.plate || carDetails.plate
+    );
+    
+    // Manufacturer (יצרן) - supports both English and Hebrew field names
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(
+      vehicle.manufacturer || carDetails.manufacturer || 
+      vehicle.יצרן || carDetails.יצרן ||
+      vehicle['יצרן'] || carDetails['יצרן']
+    );
+    
+    // Model (דגם) - supports both English and Hebrew field names  
+    document.getElementById("vehicle-model").textContent = formatValue(
+      vehicle.model || carDetails.model ||
+      vehicle.דגם || carDetails.דגם ||
+      vehicle['דגם'] || carDetails['דגם']
+    );
+    
+    // Year (שנת ייצור) - extract from production_date if needed
+    let year = vehicle.year || carDetails.year || 
+               vehicle['שנת ייצור'] || carDetails['שנת ייצור'] ||
+               vehicle.production_date || carDetails.production_date;
+    if (year && year.includes('/')) {
+      year = year.split('/')[1]; // Extract year from MM/YYYY format
+    }
+    document.getElementById("vehicle-year").textContent = formatValue(year);
+    
+    // Kilometers (קילומטראז)
+    document.getElementById("vehicle-km").textContent = formatValue(
+      vehicle.km || carDetails.km ||
+      vehicle['קילומטראז'] || carDetails['קילומטראז'] ||
+      vehicle.mileage || carDetails.mileage
+    );
+    
+    // Chassis (מספר שלדה)
+    document.getElementById("vehicle-chassis").textContent = formatValue(
+      vehicle.chassis || carDetails.chassis ||
+      vehicle['מספר שלדה'] || carDetails['מספר שלדה'] ||
+      vehicle.chassis_number || carDetails.chassis_number
+    );
+    
+    // Model code (קוד דגם)
+    document.getElementById("vehicle-model-code").textContent = formatValue(
+      vehicle.model_code || carDetails.model_code ||
+      vehicle['קוד דגם רכב'] || carDetails['קוד דגם רכב'] ||
+      vehicle.model_type || carDetails.model_type
+    );
+    
+    // Fuel type (סוג דלק)
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(
+      vehicle.fuel_type || carDetails.fuel_type ||
+      vehicle['סוג דלק'] || carDetails['סוג דלק']
+    );
 
-    // helper.car_details fields  
-    document.getElementById("car-owner").textContent = formatValue(carDetails.owner);
-    document.getElementById("car-ownership-type").textContent = formatValue(carDetails.ownership_type);
-    document.getElementById("car-market-value").textContent = formatValue(carDetails.market_value);
-    document.getElementById("car-damage-date").textContent = formatValue(carDetails.damageDate);
-    document.getElementById("car-owner-address").textContent = formatValue(carDetails.ownerAddress);
-    document.getElementById("car-owner-phone").textContent = formatValue(carDetails.ownerPhone);
+    // Enhanced car details with multiple data source support
+    document.getElementById("car-owner").textContent = formatValue(
+      carDetails.owner || vehicle.owner || meta.owner_name
+    );
+    
+    document.getElementById("car-ownership-type").textContent = formatValue(
+      carDetails.ownership_type || vehicle.ownership_type ||
+      carDetails['סוג בעלות'] || vehicle['סוג בעלות']
+    );
+    
+    document.getElementById("car-market-value").textContent = formatValue(
+      carDetails.market_value || vehicle.market_value ||
+      carDetails.base_price || vehicle.base_price
+    );
+    
+    document.getElementById("car-damage-date").textContent = formatValue(
+      carDetails.damageDate || carDetails.damage_date || vehicle.damage_date
+    );
+    
+    document.getElementById("car-owner-address").textContent = formatValue(
+      carDetails.ownerAddress || carDetails.owner_address || vehicle.owner_address
+    );
+    
+    document.getElementById("car-owner-phone").textContent = formatValue(
+      carDetails.ownerPhone || carDetails.owner_phone || vehicle.owner_phone
+    );
 
-    // Garage and insurance from helper.car_details
-    document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
-    document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
-    document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
-    // CORRECTED: Helper is source of truth - read from helper.client first
-    document.getElementById("agent-name").textContent = formatValue(client.insurance_agent || carDetails.agentName);
-    document.getElementById("agent-phone").textContent = formatValue(client.insurance_agent_phone || carDetails.insurance_agent_phone);
+    // Garage and insurance with enhanced mapping
+    document.getElementById("garage-name").textContent = formatValue(
+      carDetails.garageName || carDetails.garage_name || vehicle.garage_name ||
+      carDetails.location || vehicle.location
+    );
+    
+    document.getElementById("garage-phone").textContent = formatValue(
+      carDetails.garagePhone || carDetails.garage_phone || vehicle.garage_phone
+    );
+    
+    document.getElementById("insurance-company").textContent = formatValue(
+      carDetails.insuranceCompany || carDetails.insurance_company || vehicle.insurance_company
+    );
+    
+    // Agent information with multiple source priority
+    document.getElementById("agent-name").textContent = formatValue(
+      client.insurance_agent || carDetails.agentName || carDetails.agent_name || vehicle.agent_name
+    );
+    
+    document.getElementById("agent-phone").textContent = formatValue(
+      client.insurance_agent_phone || carDetails.insurance_agent_phone || 
+      carDetails.agent_phone || vehicle.agent_phone
+    );
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
