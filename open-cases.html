@@ -277,11 +277,34 @@
             setTimeout(() => showCarDetailsFloating(carDetailsFromWebhook), 500);
           }
           
+          // Check if response contains Hebrew text body (like from your screenshot)
+          else if (webhookResponse.Body && typeof webhookResponse.Body === 'string' && 
+                   webhookResponse.Body.includes('פרטי רכב')) {
+            console.log('🚗 Hebrew MOT data found in webhook Body, parsing...');
+            const parsedCarData = parseHebrewMOTResponse(webhookResponse.Body, payload);
+            sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+            setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
+          }
+          
           // Check for direct car data in response
           else if (webhookResponse.plate || webhookResponse.manufacturer) {
             console.log('🚗 Car data found directly in webhook response:', webhookResponse);
             sessionStorage.setItem('makeCarData', JSON.stringify(webhookResponse));
             setTimeout(() => showCarDetailsFloating(webhookResponse), 500);
+          }
+          
+          // Check any string fields in the response for Hebrew data
+          else {
+            console.log('🔍 Searching for Hebrew data in webhook response fields...');
+            for (const [key, value] of Object.entries(webhookResponse)) {
+              if (typeof value === 'string' && value.includes('פרטי רכב')) {
+                console.log(`🚗 Hebrew MOT data found in ${key}, parsing...`);
+                const parsedCarData = parseHebrewMOTResponse(value, payload);
+                sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+                setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
+                break;
+              }
+            }
           }
         } 
         
@@ -398,20 +421,28 @@
       };
       
       try {
-        // Extract plate number
-        const plateMatch = responseText.match(/פרטי רכב:\s*(\d+)/);
+        // Extract plate number (פרטי רכב)
+        const plateMatch = responseText.match(/פרטי רכב[:\s]*(\d+)/);
         if (plateMatch) carData.plate = plateMatch[1];
         
-        // Extract manufacturer (יצרן)
-        const manufacturerMatch = responseText.match(/יצרן:\s*([^\n\r]+)/);
+        // Extract manufacturer (שם היצרן)
+        const manufacturerMatch = responseText.match(/שם היצרן[:\s]*([^\n\r]+)/);
         if (manufacturerMatch) carData.manufacturer = manufacturerMatch[1].trim();
         
         // Extract model (דגם)
-        const modelMatch = responseText.match(/דגם:\s*([^\n\r]+)/);
+        const modelMatch = responseText.match(/דגם[:\s]*([^\n\r]+)/);
         if (modelMatch) carData.model = modelMatch[1].trim();
         
+        // Extract model type (סוג דגם)
+        const modelTypeMatch = responseText.match(/סוג דגם[:\s]*([^\n\r]+)/);
+        if (modelTypeMatch) carData.model_type = modelTypeMatch[1].trim();
+        
+        // Extract vehicle type (סוג רכב)
+        const vehicleTypeMatch = responseText.match(/סוג רכב[:\s]*([^\n\r]+)/);
+        if (vehicleTypeMatch) carData.vehicle_type = vehicleTypeMatch[1].trim();
+        
         // Extract year (שנת ייצור)
-        const yearMatch = responseText.match(/שנת ייצור:\s*(\d{2}\/\d{4})/);
+        const yearMatch = responseText.match(/שנת ייצור[:\s]*(\d{2}\/\d{4})/);
         if (yearMatch) {
           const yearFull = yearMatch[1];
           carData.production_date = yearFull;
@@ -419,36 +450,44 @@
         }
         
         // Extract chassis (מספר שלדה)
-        const chassisMatch = responseText.match(/מספר שלדה:\s*([A-Z0-9]+)/);
+        const chassisMatch = responseText.match(/מספר שלדה[:\s]*([A-Z0-9]+)/);
         if (chassisMatch) carData.chassis = chassisMatch[1];
         
+        // Extract owner name (שם בעל הרכב)
+        const ownerMatch = responseText.match(/שם בעל הרכב[:\s]*([^\n\r]+)/);
+        if (ownerMatch) carData.owner = ownerMatch[1].trim();
+        
+        // Extract ownership type (סוג בעלות)
+        const ownershipMatch = responseText.match(/סוג בעלות[:\s]*([^\n\r]+)/);
+        if (ownershipMatch) carData.ownership_type = ownershipMatch[1].trim();
+        
         // Extract engine volume (נפח מנוע)
-        const engineVolumeMatch = responseText.match(/נפח מנוע:\s*(\d+)/);
+        const engineVolumeMatch = responseText.match(/נפח מנוע[:\s]*(\d+)/);
         if (engineVolumeMatch) carData.engine_volume = engineVolumeMatch[1];
         
         // Extract fuel type (סוג דלק)
-        const fuelTypeMatch = responseText.match(/סוג דלק:\s*([^\n\r]+)/);
+        const fuelTypeMatch = responseText.match(/סוג דלק[:\s]*([^\n\r]+)/);
         if (fuelTypeMatch) carData.fuel_type = fuelTypeMatch[1].trim();
         
         // Extract model code (קוד דגם רכב)
-        const modelCodeMatch = responseText.match(/קוד דגם רכב:\s*([^\n\r]+)/);
+        const modelCodeMatch = responseText.match(/קוד דגם רכב[:\s]*([^\n\r]+)/);
         if (modelCodeMatch) carData.model_code = modelCodeMatch[1].trim();
         
         // Extract engine model (דגם מנוע)
-        const engineModelMatch = responseText.match(/דגם מנוע:\s*([^\n\r]+)/);
+        const engineModelMatch = responseText.match(/דגם מנוע[:\s]*([^\n\r]+)/);
         if (engineModelMatch) carData.engine_model = engineModelMatch[1].trim();
         
         // Extract drive type (הנעה)
-        const driveTypeMatch = responseText.match(/הנעה:\s*([^\n\r]+)/);
+        const driveTypeMatch = responseText.match(/הנעה[:\s]*([^\n\r]+)/);
         if (driveTypeMatch) carData.drive_type = driveTypeMatch[1].trim();
         
-        // Extract office code (קוד משרד התחבורה)
-        const officeCodeMatch = responseText.match(/קוד משרד התחבורה:\s*([^\n\r]+)/);
-        if (officeCodeMatch) carData.office_code = officeCodeMatch[1].trim();
+        // Extract location (מיקום)
+        const locationMatch = responseText.match(/מיקום[:\s]*([^\n\r]+)/);
+        if (locationMatch) carData.location = locationMatch[1].trim();
         
-        // Extract vehicle type (סוג רכב)
-        const vehicleTypeMatch = responseText.match(/סוג רכב:\s*([^\n\r]+)/);
-        if (vehicleTypeMatch) carData.model_type = vehicleTypeMatch[1].trim();
+        // Extract office code (קוד משרד התחבורה)
+        const officeCodeMatch = responseText.match(/קוד משרד התחבורה[:\s]*([^\n\r]+)/);
+        if (officeCodeMatch) carData.office_code = officeCodeMatch[1].trim();
         
         console.log('✅ Parsed Hebrew MOT data:', carData);
         return carData;
