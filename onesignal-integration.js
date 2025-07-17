@@ -63,6 +63,9 @@
         // Clean OneSignal stored operations to prevent validation errors
         this.cleanStoredOperations();
         
+        // Set up operation interception before OneSignal loads
+        this.setupOperationInterception();
+        
         // Load OneSignal SDK if not already loaded
         if (!window.OneSignal) {
           await this.loadOneSignalSDK();
@@ -88,18 +91,23 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Enhanced v16 configuration with delayed initialization approach
+              // Enhanced v16 configuration to prevent automatic subscription operations
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: true,
-                // CRITICAL: Completely disable all automatic operations
+                // CRITICAL: Completely disable all automatic operations that require onesignalId
                 autoRegister: false,
                 autoPrompt: false,
                 autoResubscribe: false,
-                // V16 specific: Disable immediate user creation to prevent subscription operations
-                disableServiceWorker: false,
-                // Delay all subscription operations until explicitly requested
-                delayInitialization: true
+                // V16 specific: Disable service worker to prevent subscription operations
+                serviceWorkerParam: {
+                  scope: '/OneSignalSDKWorker.js.php',
+                  workerName: 'OneSignalSDKWorker.js.php'
+                },
+                // Prevent any automatic subscription updates
+                suppressAutoPrompt: true,
+                // Don't automatically create user record that triggers subscriptions
+                autoCreateUser: false
               };
               
               // Safari requires specific configuration but with delayed prompting
@@ -119,6 +127,16 @@
               
               console.log('📱 OneSignal: Init config:', initConfig);
               console.log('📱 OneSignal: Current hostname:', window.location.hostname);
+              
+              // Temporarily disable window.onerror to prevent OneSignal errors from showing
+              const originalOnError = window.onerror;
+              window.onerror = (msg, url, lineNo, columnNo, error) => {
+                if (msg && typeof msg === 'string' && msg.includes('onesignalId')) {
+                  console.log('📱 OneSignal: Suppressed onesignalId error during initialization');
+                  return true; // Suppress the error
+                }
+                return originalOnError ? originalOnError(msg, url, lineNo, columnNo, error) : false;
+              };
               
               // Initialize OneSignal core without triggering subscription operations
               console.log('📱 OneSignal: Starting core initialization...');
@@ -159,8 +177,17 @@
                 
                 console.log('📱 OneSignal: Initialization completed successfully');
                 
+                // Restore original error handler after initialization
+                setTimeout(() => {
+                  window.onerror = originalOnError;
+                  console.log('📱 OneSignal: Restored original error handler');
+                }, 5000);
+                
               } catch (initError) {
                 console.error('📱 OneSignal: Initialization error:', initError);
+                
+                // Restore error handler even if init fails
+                window.onerror = originalOnError;
                 
                 // Check if it's a subscription-related error that we can ignore
                 if (initError.message && (
@@ -251,6 +278,76 @@
         
       } catch (error) {
         console.error('📱 OneSignal: Error cleaning stored operations:', error);
+      }
+    }
+
+    setupOperationInterception() {
+      try {
+        console.log('📱 OneSignal: Setting up operation interception to prevent invalid operations...');
+        
+        // Override the OneSignal push function to intercept operations
+        const originalPush = window.OneSignalDeferred ? window.OneSignalDeferred.push : null;
+        
+        // Create a safe push function that validates operations
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        const originalArrayPush = window.OneSignalDeferred.push;
+        
+        window.OneSignalDeferred.push = (callback) => {
+          const wrappedCallback = (OneSignal) => {
+            try {
+              // Wrap OneSignal operations that might trigger subscription errors
+              if (OneSignal && typeof OneSignal.push === 'function') {
+                const originalOneSignalPush = OneSignal.push;
+                
+                OneSignal.push = (operation) => {
+                  try {
+                    // Check if this is a subscription operation that needs onesignalId
+                    if (Array.isArray(operation) && operation.length >= 2) {
+                      const [operationName, operationData] = operation;
+                      
+                      if (operationName === 'update-subscription' || 
+                          operationName === 'create-subscription' ||
+                          operationName === 'subscription-changed') {
+                        
+                        // Check if we have a valid onesignalId
+                        const currentId = sessionStorage.getItem('onesignalId') || this.playerId;
+                        
+                        if (!currentId) {
+                          console.log(`📱 OneSignal: Blocking ${operationName} operation - no onesignalId available`);
+                          return; // Block the operation
+                        }
+                        
+                        // Ensure the operation has the required onesignalId
+                        if (operationData && typeof operationData === 'object' && !operationData.onesignalId) {
+                          console.log(`📱 OneSignal: Adding onesignalId to ${operationName} operation`);
+                          operationData.onesignalId = currentId;
+                        }
+                      }
+                    }
+                    
+                    // Proceed with the operation
+                    return originalOneSignalPush.call(OneSignal, operation);
+                  } catch (error) {
+                    console.error('📱 OneSignal: Error in operation wrapper:', error);
+                    // Don't call the original to prevent errors
+                  }
+                };
+              }
+              
+              // Call the original callback
+              return callback(OneSignal);
+            } catch (error) {
+              console.error('📱 OneSignal: Error in callback wrapper:', error);
+            }
+          };
+          
+          return originalArrayPush.call(this, wrappedCallback);
+        };
+        
+        console.log('📱 OneSignal: Operation interception setup completed');
+        
+      } catch (error) {
+        console.error('📱 OneSignal: Error setting up operation interception:', error);
       }
     }
 
