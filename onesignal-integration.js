@@ -115,31 +115,27 @@
               this.userToken = auth;
               
               // Wait for OneSignal to be fully ready
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              await new Promise(resolve => setTimeout(resolve, 2000));
               
               // Set up event listeners for subscription changes first
               this.setupSubscriptionListeners();
               
-              // Get initial OneSignal ID immediately after init
-              try {
-                const initialId = await OneSignal.User.getOnesignalId();
-                if (initialId) {
-                  this.playerId = initialId;
-                  sessionStorage.setItem('onesignalId', initialId);
-                  console.log('📱 OneSignal: Got initial ID:', initialId);
-                }
-              } catch (e) {
-                console.log('📱 OneSignal: Initial ID not available yet:', e.message);
-              }
+              // Wait for OneSignal ID to be available before proceeding
+              const onesignalId = await this.waitForOnesignalId();
               
-              // Check subscription status with retries
-              setTimeout(async () => {
-                for (let i = 0; i < 3; i++) {
-                  const success = await this.checkSubscriptionStatus();
-                  if (success) break;
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-              }, 1000);
+              // Only proceed if we have a OneSignal ID
+              if (onesignalId) {
+                // Check subscription status with retries only after ID is available
+                setTimeout(async () => {
+                  for (let i = 0; i < 3; i++) {
+                    const success = await this.checkSubscriptionStatus();
+                    if (success) break;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                }, 1000);
+              } else {
+                console.warn('📱 OneSignal: Skipping subscription operations - no OneSignal ID available');
+              }
 
               resolve();
             } catch (error) {
@@ -181,6 +177,31 @@
       });
     }
 
+    async waitForOnesignalId() {
+      console.log('📱 OneSignal: Waiting for OneSignal ID...');
+      
+      // Try to get OneSignal ID with retries
+      for (let i = 0; i < 10; i++) {
+        try {
+          const onesignalId = await OneSignal.User.getOnesignalId();
+          if (onesignalId) {
+            this.playerId = onesignalId;
+            sessionStorage.setItem('onesignalId', onesignalId);
+            console.log('📱 OneSignal: Got OneSignal ID:', onesignalId);
+            return onesignalId;
+          }
+        } catch (e) {
+          console.log(`📱 OneSignal: ID attempt ${i + 1} failed:`, e.message);
+        }
+        
+        // Wait longer between retries
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      console.warn('📱 OneSignal: Could not get OneSignal ID after 10 attempts');
+      return null;
+    }
+
     async setUserContext(authToken) {
       try {
         if (!window.OneSignal) return;
@@ -214,35 +235,47 @@
       try {
         if (!window.OneSignal) return;
         
-        // Listen for subscription changes (v16 API)
-        OneSignal.User.PushSubscription.addEventListener('change', (event) => {
-          console.log('📱 OneSignal: Subscription changed:', event);
-          if (event.current && event.current.id) {
-            console.log('📱 OneSignal: New subscription ID:', event.current.id);
-            this.playerId = event.current.id;
-            sessionStorage.setItem('onesignalId', event.current.id);
-            sessionStorage.setItem('oneSignalSubscribed', 'true');
-            this.subscribed = true;
-          }
-        });
+        // Listen for subscription changes (v16 API) - with error handling
+        try {
+          OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+            console.log('📱 OneSignal: Subscription changed:', event);
+            if (event.current && event.current.id) {
+              console.log('📱 OneSignal: New subscription ID:', event.current.id);
+              this.playerId = event.current.id;
+              sessionStorage.setItem('onesignalId', event.current.id);
+              sessionStorage.setItem('oneSignalSubscribed', 'true');
+              this.subscribed = true;
+            }
+          });
+        } catch (e) {
+          console.log('📱 OneSignal: Could not set up subscription listener:', e.message);
+        }
         
-        // Listen for OneSignal user ID changes
-        OneSignal.User.addEventListener('change', (event) => {
-          console.log('📱 OneSignal: User changed:', event);
-          if (event.current && event.current.onesignalId) {
-            console.log('📱 OneSignal: User ID updated:', event.current.onesignalId);
-            this.playerId = event.current.onesignalId;
-            sessionStorage.setItem('onesignalId', event.current.onesignalId);
-          }
-        });
+        // Listen for OneSignal user ID changes - with error handling
+        try {
+          OneSignal.User.addEventListener('change', (event) => {
+            console.log('📱 OneSignal: User changed:', event);
+            if (event.current && event.current.onesignalId) {
+              console.log('📱 OneSignal: User ID updated:', event.current.onesignalId);
+              this.playerId = event.current.onesignalId;
+              sessionStorage.setItem('onesignalId', event.current.onesignalId);
+            }
+          });
+        } catch (e) {
+          console.log('📱 OneSignal: Could not set up user listener:', e.message);
+        }
         
-        // Listen for notification permission changes
-        OneSignal.Notifications.addEventListener('permissionChange', (event) => {
-          console.log('📱 OneSignal: Permission changed:', event);
-          const granted = event === 'granted';
-          this.subscribed = granted;
-          sessionStorage.setItem('oneSignalSubscribed', granted.toString());
-        });
+        // Listen for notification permission changes - with error handling
+        try {
+          OneSignal.Notifications.addEventListener('permissionChange', (event) => {
+            console.log('📱 OneSignal: Permission changed:', event);
+            const granted = event === 'granted';
+            this.subscribed = granted;
+            sessionStorage.setItem('oneSignalSubscribed', granted.toString());
+          });
+        } catch (e) {
+          console.log('📱 OneSignal: Could not set up permission listener:', e.message);
+        }
         
         console.log('📱 OneSignal: All subscription listeners set up');
       } catch (error) {
@@ -252,7 +285,7 @@
 
     async checkSubscriptionStatus() {
       try {
-        if (!window.OneSignal) return;
+        if (!window.OneSignal) return false;
 
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         let permission;
@@ -260,16 +293,20 @@
         let onesignalId = null;
         
         try {
-          // Try to get OneSignal ID first
+          // Try to get OneSignal ID first - CRITICAL for v16
           if (window.OneSignal.User) {
             try {
               onesignalId = await window.OneSignal.User.getOnesignalId();
               if (onesignalId) {
                 sessionStorage.setItem('onesignalId', onesignalId);
                 this.playerId = onesignalId;
+              } else {
+                console.log('📱 OneSignal: No OneSignal ID available yet, skipping subscription check');
+                return false;
               }
             } catch (e) {
               console.log('📱 OneSignal: Could not get ID in check:', e.message);
+              return false;
             }
           }
           
