@@ -791,6 +791,7 @@ window.verifyAdminAccess = verifyAdminAccess;
   <script type="module">
     // Import helper system for data reception
     import { helper, checkForIncomingData } from './helper.js';
+    import './make-webhook-simulator.js';
     
     console.log('🚀 Selection page loaded - checking for car data...');
     
@@ -800,11 +801,20 @@ window.verifyAdminAccess = verifyAdminAccess;
         // Check for incoming data from all sources
         checkForIncomingData();
         
-        // Check sessionStorage for car data
+        // First priority: Check for rich car data from Make.com
+        const makeCarData = sessionStorage.getItem('makeCarData');
+        if (makeCarData) {
+          const parsedMakeCarData = JSON.parse(makeCarData);
+          console.log('🚗 Rich car data found from Make.com:', parsedMakeCarData);
+          showCarDataNotification(parsedMakeCarData);
+          return; // Exit early since we found rich data
+        }
+        
+        // Second priority: Check basic car data
         const carData = sessionStorage.getItem('carData');
         if (carData) {
           const parsedCarData = JSON.parse(carData);
-          console.log('📋 Car data found on selection page:', parsedCarData);
+          console.log('📋 Basic car data found on selection page:', parsedCarData);
           showCarDataNotification(parsedCarData);
         }
         
