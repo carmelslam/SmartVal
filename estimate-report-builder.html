@@ -372,6 +372,55 @@
       /* Optimize damage centers spacing for A4 */
       .car-details {
         margin-bottom: 4mm !important;
+        box-decoration-break: clone !important;
+        -webkit-box-decoration-break: clone !important;
+        border-image-slice: 1 !important;
+      }
+      
+      /* Auto-restore borders when containers stretch across pages */
+      .car-details {
+        border: 2px solid #000 !important;
+        border-radius: 25px !important;
+        padding: 15px !important;
+        page-break-inside: auto !important;
+        orphans: 2 !important;
+        widows: 2 !important;
+      }
+      
+      /* Enhanced border restoration for page breaks */
+      @page {
+        margin: 20mm;
+      }
+      
+      /* Ensure borders are maintained when content spans pages */
+      .car-details-page-break {
+        border-top: 2px solid #000 !important;
+        border-left: 2px solid #000 !important;
+        border-right: 2px solid #000 !important;
+        border-bottom: none !important;
+        border-radius: 25px 25px 0 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 10px !important;
+      }
+      
+      .car-details-page-continue {
+        border-top: none !important;
+        border-left: 2px solid #000 !important;
+        border-right: 2px solid #000 !important;
+        border-bottom: 2px solid #000 !important;
+        border-radius: 0 0 25px 25px !important;
+        margin-top: 0 !important;
+        padding-top: 10px !important;
+      }
+      
+      /* Enhanced border restoration for spanning containers */
+      .car-details-spanning {
+        box-decoration-break: clone !important;
+        -webkit-box-decoration-break: clone !important;
+        border: 2px solid #000 !important;
+        border-radius: 25px !important;
+        padding: 15px !important;
+        margin-bottom: 4mm !important;
       }
       
       .car-details-title {
@@ -1087,6 +1136,34 @@
       
       // Run dynamic page break optimization after DOM is ready
       setTimeout(optimizePageBreaks, 100);
+      
+      // Handle border restoration for containers that span across pages
+      setTimeout(handleContainerBorderRestoration, 200);
+    }
+    
+    function handleContainerBorderRestoration() {
+      const carDetailsElements = document.querySelectorAll('.car-details');
+      
+      carDetailsElements.forEach((element, index) => {
+        // Check if element might span pages by looking at its height
+        const elementHeight = element.offsetHeight;
+        const pageHeight = window.innerHeight || 800; // Approximate A4 height
+        
+        // If element is taller than half a page, it might span pages
+        if (elementHeight > pageHeight * 0.4) {
+          // Add class to maintain borders across page breaks
+          element.classList.add('car-details-spanning');
+          
+          // Use box-decoration-break to maintain borders
+          element.style.boxDecorationBreak = 'clone';
+          element.style.webkitBoxDecorationBreak = 'clone';
+          
+          // Ensure borders are maintained
+          element.style.border = '2px solid #000';
+          element.style.borderRadius = '25px';
+          element.style.padding = '15px';
+        }
+      });
     }
     
     function generateDamageAnalysis(helper) {
