@@ -149,8 +149,12 @@
         <div class="value" id="vehicle-chassis">-</div>
       </div>
       <div class="car-field">
-        <div class="label">קוד דגם:</div>
+        <div class="label">קוד דגם לוי:</div>
         <div class="value" id="vehicle-model-code">-</div>
+      </div>
+      <div class="car-field">
+        <div class="label">קוד יוניברסלי:</div>
+        <div class="value" id="vehicle-universal-code">-</div>
       </div>
       <div class="car-field">
         <div class="label">סוג דלק:</div>
@@ -418,11 +422,23 @@
       vehicle.chassis_number || carDetails.chassis_number
     );
     
-    // Model code (קוד דגם)
+    // Model code (קוד דגם לוי) - This should be LEVI model code, NOT Make.com universal code
+    // Only populate if we have actual Levi data, not Make.com universal codes
     document.getElementById("vehicle-model-code").textContent = formatValue(
+      // Only check for actual Levi model codes, not Make.com data
+      vehicle.levi_model_code || carDetails.levi_model_code ||
+      generalInfo.levi_model_code ||
+      // If helper has expertise.levi_report data
+      (window.helper?.expertise?.levi_report?.model_code) ||
+      // Leave empty if only Make.com universal codes available
+      ''
+    );
+    
+    // Universal code (קוד יוניברסלי) - This shows Make.com universal module code like HD572
+    document.getElementById("vehicle-universal-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code ||
       vehicle['קוד דגם רכב'] || carDetails['קוד דגם רכב'] ||
-      vehicle.model_type || carDetails.model_type
+      vehicle.universal_code || carDetails.universal_code
     );
     
     // Fuel type (סוג דלק)

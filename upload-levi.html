@@ -670,7 +670,9 @@
 
     <!-- Authentication Section -->
     <div class="section">
-      <h3>פרטי זיהוי</h3>
+      <h3>פרטי זיהוי 
+        <button type="button" onclick="testPasswordPrefill()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-right: 10px; cursor: pointer;">🔑 בדיקת סיסמא</button>
+      </h3>
       <div class="form-row">
         <div class="form-group">
           <label for="pass">סיסמא:</label>
@@ -1124,12 +1126,35 @@ class LeviProcessor {
         }
       }
       
+      // Debug password storage
+      console.log('🔍 LEVI UPLOAD: Debugging password storage...');
+      console.log('🔍 sessionStorage.prefillPassword:', sessionStorage.getItem('prefillPassword'));
+      console.log('🔍 sessionStorage.auth:', sessionStorage.getItem('auth'));
+      console.log('🔍 All sessionStorage keys:', Object.keys(sessionStorage));
+      
       // Also trigger the global password prefill function
       if (typeof window.prefillUserPassword === 'function') {
         setTimeout(() => {
           window.prefillUserPassword();
           console.log('🔑 LEVI UPLOAD: Global password prefill triggered');
         }, 500);
+      }
+      
+      // Additional fallback: Try to get password from auth and store for prefill
+      const authData = sessionStorage.getItem('auth');
+      if (authData && !sessionStorage.getItem('prefillPassword')) {
+        // Try to decrypt auth data to get password
+        import('./auth.js').then(({ decryptPassword }) => {
+          decryptPassword(authData).then(decryptedPassword => {
+            sessionStorage.setItem('prefillPassword', decryptedPassword);
+            document.getElementById('pass').value = decryptedPassword;
+            console.log('🔑 LEVI UPLOAD: Password decrypted and filled from auth');
+          }).catch(error => {
+            console.log('❌ LEVI UPLOAD: Failed to decrypt auth password:', error);
+          });
+        }).catch(error => {
+          console.log('❌ LEVI UPLOAD: Failed to import auth module:', error);
+        });
       }
       
       console.log('Case data loaded from helper:', {
@@ -2195,7 +2220,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Levi processor
   window.leviProcessor = new LeviProcessor();
+  
+  // Trigger password prefill immediately when page loads
+  setTimeout(() => {
+    console.log('🔑 LEVI UPLOAD: Page loaded, triggering password prefill...');
+    
+    // Debug what's available
+    console.log('🔍 Available for password prefill:');
+    console.log('- prefillPassword:', sessionStorage.getItem('prefillPassword'));
+    console.log('- auth:', !!sessionStorage.getItem('auth'));
+    
+    // Try the global prefill function
+    if (typeof window.prefillUserPassword === 'function') {
+      window.prefillUserPassword();
+    }
+    
+    // Manual fallback
+    const prefillPassword = sessionStorage.getItem('prefillPassword');
+    if (prefillPassword && document.getElementById('pass')) {
+      document.getElementById('pass').value = prefillPassword;
+      console.log('🔑 LEVI UPLOAD: Password manually filled on page load');
+    }
+  }, 1000);
 });
+
+// Test password prefill function
+window.testPasswordPrefill = function() {
+  console.log('🔍 TESTING PASSWORD PREFILL...');
+  
+  // Debug all password sources
+  console.log('📊 Password Sources Debug:');
+  console.log('1. sessionStorage.prefillPassword:', sessionStorage.getItem('prefillPassword'));
+  console.log('2. sessionStorage.auth:', !!sessionStorage.getItem('auth'));
+  console.log('3. Current pass field value:', document.getElementById('pass').value);
+  console.log('4. All sessionStorage keys:', Object.keys(sessionStorage));
+  
+  // Test prefill function
+  if (typeof window.prefillUserPassword === 'function') {
+    window.prefillUserPassword();
+    console.log('✅ Global prefill function called');
+  } else {
+    console.log('❌ Global prefill function not available');
+  }
+  
+  // Manual prefill test
+  const prefillPassword = sessionStorage.getItem('prefillPassword');
+  if (prefillPassword) {
+    document.getElementById('pass').value = prefillPassword;
+    console.log('✅ Manual prefill successful:', prefillPassword);
+  } else {
+    console.log('❌ No prefillPassword found');
+    
+    // Try to decrypt auth
+    const authData = sessionStorage.getItem('auth');
+    if (authData) {
+      import('./auth.js').then(({ decryptPassword }) => {
+        decryptPassword(authData).then(decryptedPassword => {
+          document.getElementById('pass').value = decryptedPassword;
+          sessionStorage.setItem('prefillPassword', decryptedPassword);
+          console.log('✅ Password decrypted and filled manually');
+        }).catch(error => {
+          console.log('❌ Failed to decrypt auth:', error);
+        });
+      });
+    }
+  }
+};
 
 </script>
 
