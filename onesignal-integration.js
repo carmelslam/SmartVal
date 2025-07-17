@@ -8,7 +8,7 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
-  // Fixed subscription errors by implementing delayed initialization and conservative ID retrieval
+  // Clean stored operations to prevent subscription validation errors
   const ONESIGNAL_TEMPORARILY_DISABLED = false;
   
   // OneSignal manager class
@@ -60,6 +60,9 @@
           return;
         }
 
+        // Clean OneSignal stored operations to prevent validation errors
+        this.cleanStoredOperations();
+        
         // Load OneSignal SDK if not already loaded
         if (!window.OneSignal) {
           await this.loadOneSignalSDK();
@@ -185,6 +188,137 @@
       } catch (error) {
         console.error('📱 OneSignal: Init error:', error);
         throw error;
+      }
+    }
+
+    cleanStoredOperations() {
+      try {
+        console.log('📱 OneSignal: Cleaning stored operations to prevent validation errors...');
+        
+        // OneSignal v16 stores operations in IndexedDB and localStorage
+        // Clear relevant OneSignal storage keys that might contain invalid operations
+        
+        // Clear localStorage keys
+        const localStorageKeysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('OneSignal') || 
+            key.startsWith('onesignal') ||
+            key.includes('operations') ||
+            key.includes('subscription')
+          )) {
+            localStorageKeysToRemove.push(key);
+          }
+        }
+        
+        localStorageKeysToRemove.forEach(key => {
+          console.log('📱 OneSignal: Removing localStorage key:', key);
+          localStorage.removeItem(key);
+        });
+        
+        // Clear sessionStorage keys
+        const sessionStorageKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (
+            key.startsWith('OneSignal') || 
+            key.startsWith('onesignal') ||
+            key.includes('operations') ||
+            key.includes('subscription')
+          )) {
+            // Don't remove our own onesignalId storage
+            if (key !== 'onesignalId' && key !== 'oneSignalSubscribed') {
+              sessionStorageKeysToRemove.push(key);
+            }
+          }
+        }
+        
+        sessionStorageKeysToRemove.forEach(key => {
+          console.log('📱 OneSignal: Removing sessionStorage key:', key);
+          sessionStorage.removeItem(key);
+        });
+        
+        // Clear IndexedDB - OneSignal v16 uses IndexedDB for operations
+        if ('indexedDB' in window) {
+          this.clearOneSignalIndexedDB();
+        }
+        
+        // Clear service worker cache that might contain old operations
+        this.clearServiceWorkerCache();
+        
+        console.log('📱 OneSignal: Storage cleanup completed');
+        
+      } catch (error) {
+        console.error('📱 OneSignal: Error cleaning stored operations:', error);
+      }
+    }
+
+    async clearOneSignalIndexedDB() {
+      try {
+        // OneSignal v16 typically uses databases named with the app ID
+        const dbNames = [
+          'OneSignalSDK',
+          'onesignal-db',
+          `OneSignal-${ONESIGNAL_APP_ID}`,
+          'OneSignalDatabase'
+        ];
+        
+        for (const dbName of dbNames) {
+          try {
+            await new Promise((resolve, reject) => {
+              const deleteRequest = indexedDB.deleteDatabase(dbName);
+              deleteRequest.onsuccess = () => {
+                console.log(`📱 OneSignal: Cleared IndexedDB: ${dbName}`);
+                resolve();
+              };
+              deleteRequest.onerror = () => {
+                console.log(`📱 OneSignal: No IndexedDB found: ${dbName}`);
+                resolve(); // Don't fail if database doesn't exist
+              };
+              deleteRequest.onblocked = () => {
+                console.log(`📱 OneSignal: IndexedDB deletion blocked: ${dbName}`);
+                resolve(); // Continue anyway
+              };
+              // Timeout after 2 seconds
+              setTimeout(() => resolve(), 2000);
+            });
+          } catch (e) {
+            console.log(`📱 OneSignal: IndexedDB cleanup error for ${dbName}:`, e.message);
+          }
+        }
+      } catch (error) {
+        console.error('📱 OneSignal: Error clearing IndexedDB:', error);
+      }
+    }
+
+    async clearServiceWorkerCache() {
+      try {
+        if ('serviceWorker' in navigator) {
+          // Clear any cached data that might contain old operations
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+              if (cacheName.includes('onesignal') || cacheName.includes('OneSignal')) {
+                console.log(`📱 OneSignal: Clearing cache: ${cacheName}`);
+                await caches.delete(cacheName);
+              }
+            }
+          }
+          
+          // Unregister OneSignal service workers to clear any stored state
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            if (registration.scope.includes('onesignal') || 
+                registration.scope.includes('OneSignal') ||
+                (registration.active && registration.active.scriptURL.includes('onesignal'))) {
+              console.log('📱 OneSignal: Unregistering service worker:', registration.scope);
+              await registration.unregister();
+            }
+          }
+        }
+      } catch (error) {
+        console.log('📱 OneSignal: Service worker cleanup error (non-critical):', error.message);
       }
     }
 
