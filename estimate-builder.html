@@ -1190,6 +1190,24 @@
       </div>
     </div>
 
+    <!-- ATTACHMENTS SECTION - EDITABLE -->
+    <div class="form-section" id="attachments-section">
+      <h3>רשימת נספחים</h3>
+      <div style="margin-bottom: 10px;">
+        <button type="button" onclick="loadAttachmentsFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
+        <button type="button" onclick="resetAttachments()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס רשימה</button>
+      </div>
+      <textarea id="attachments-content" style="width: 100%; min-height: 120px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="רשימת הנספחים תטען כאן..."><strong>לוטה</strong>
+תצלומי הרכב הניזוק
+חשבוניות תיקון
+ערך רכב ממוחשב
+צילום רישיון הרכב
+חשכ"ט</textarea>
+      <div style="margin-top: 8px; font-size: 14px; color: #666;">
+        💡 הרשימה ניתנת לעריכה לצורך התאמה לדוח הספציפי. השינויים לא ישפיעו על הכספת המקורית.
+      </div>
+    </div>
+
     <!-- Navigation Buttons -->
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
@@ -2515,6 +2533,14 @@
           legalTextElement.value = helper.estimate_legal_text;
         }
       }
+      
+      // Load saved attachments
+      if (helper.estimate_attachments) {
+        const attachmentsElement = document.getElementById('attachments-content');
+        if (attachmentsElement) {
+          attachmentsElement.value = helper.estimate_attachments;
+        }
+      }
     }
     
     // Create unified adjustment row HTML
@@ -3457,6 +3483,43 @@
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Legal text reset');
+    }
+
+    // LOAD ATTACHMENTS FROM VAULT
+    function loadAttachmentsFromVault() {
+      // Load attachments from vault based on report type
+      const reportType = helper.report_type || 'estimate';
+      const vaultLoader = new VaultLoader();
+      const vaultTexts = vaultLoader.getTexts(reportType);
+      
+      // Convert HTML to plain text for textarea
+      const attachmentsText = vaultTexts.attachments ? 
+        vaultTexts.attachments.replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<br>/g, '\n') :
+        '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+      
+      document.getElementById('attachments-content').value = attachmentsText;
+      
+      // Save to helper
+      if (window.helper) {
+        helper.estimate_attachments = attachmentsText;
+        saveToSessionStorage('helper', helper);
+      }
+      
+      console.log('Attachments loaded from vault');
+    }
+
+    // RESET ATTACHMENTS
+    function resetAttachments() {
+      // Reset to default attachments
+      const defaultAttachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+      document.getElementById('attachments-content').value = defaultAttachments;
+      
+      // Clear from helper
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      delete helper.estimate_attachments;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('Attachments reset');
     }
 
     // ADD GLOBAL DEPRECIATION CALCULATION
@@ -5171,6 +5234,16 @@
         });
       }
       
+      // AUTO-SAVE ATTACHMENTS ON INPUT
+      const attachmentsArea = document.getElementById('attachments-content');
+      if (attachmentsArea) {
+        attachmentsArea.addEventListener('input', function() {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.estimate_attachments = this.value;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        });
+      }
+      
       // Update legal text when estimate type changes
       document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -5731,6 +5804,8 @@
     window.loadLegalText = loadLegalText;
     window.loadLegalTextFromVault = loadLegalTextFromVault;
     window.resetLegalText = resetLegalText;
+    window.loadAttachmentsFromVault = loadAttachmentsFromVault;
+    window.resetAttachments = resetAttachments;
     window.addDepField = addDepField;
     window.updateReportType = updateReportType;
     window.addCustomSummaryField = addCustomSummaryField;

@@ -1112,13 +1112,16 @@
     
     function getAttachmentsList() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const reportType = helper.report_type || 'estimate';
       
-      // Get the appropriate attachments from vault based on report type
-      const vaultLoader = new VaultLoader();
-      const vaultTexts = vaultLoader.getTexts(reportType);
+      // Get attachments from helper (saved from builder)
+      let attachmentsText = helper.estimate_attachments || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
       
-      return vaultTexts.attachments || '<strong>לוטה</strong><br>תצלומי הרכב הניזוק<br>חשבוניות תיקון<br>ערך רכב ממוחשב<br>צילום רישיון הרכב<br>חשכ"ט';
+      // Convert plain text to HTML for display
+      attachmentsText = attachmentsText
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      
+      return attachmentsText;
     }
     
     function generateMarketValueTable() {
