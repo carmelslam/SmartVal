@@ -988,7 +988,16 @@
     `;
 
     function updateIndicator() {
-      const status = window.oneSignalManager.getStatus();
+      // Check if OneSignal manager is available
+      let status = null;
+      try {
+        if (window.oneSignalManager && typeof window.oneSignalManager.getStatus === 'function') {
+          status = window.oneSignalManager.getStatus();
+        }
+      } catch (error) {
+        console.log('📱 OneSignal: Cannot get status, manager not ready:', error.message);
+      }
+      
       const subscribed = sessionStorage.getItem('oneSignalSubscribed') === 'true';
       const permission = Notification.permission;
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -1049,7 +1058,27 @@
       const permission = Notification.permission;
       
       if (permission !== 'granted') {
-        const granted = await window.oneSignalManager.requestPermission();
+        // Check if OneSignal manager is available
+        let granted = false;
+        try {
+          if (window.oneSignalManager && typeof window.oneSignalManager.requestPermission === 'function') {
+            granted = await window.oneSignalManager.requestPermission();
+          } else {
+            // Fallback to native permission request
+            const result = await Notification.requestPermission();
+            granted = (result === 'granted');
+          }
+        } catch (error) {
+          console.log('📱 OneSignal: Permission request failed, trying native:', error.message);
+          try {
+            const result = await Notification.requestPermission();
+            granted = (result === 'granted');
+          } catch (nativeError) {
+            console.error('📱 OneSignal: Native permission request failed:', nativeError);
+            granted = false;
+          }
+        }
+        
         if (granted) {
           // Force update the session storage and indicator
           sessionStorage.setItem('oneSignalSubscribed', 'true');
@@ -1068,13 +1097,13 @@
     setInterval(updateIndicator, 5000);
   }
 
-  // Add status indicator after DOM is ready and with a delay
+  // Add status indicator after DOM is ready and with a longer delay to ensure OneSignal manager is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(addNotificationStatusIndicator, 3000);
+      setTimeout(addNotificationStatusIndicator, 5000);
     });
   } else {
-    setTimeout(addNotificationStatusIndicator, 3000);
+    setTimeout(addNotificationStatusIndicator, 5000);
   }
 
   // Expose utility functions globally
