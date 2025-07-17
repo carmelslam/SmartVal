@@ -1813,7 +1813,26 @@
         });
         
         if (response.ok) {
-          const result = await response.json();
+          // Handle both JSON and plain text responses
+          let result;
+          try {
+            const responseText = await response.text();
+            console.log('📄 Raw response:', responseText);
+            
+            // Try to parse as JSON first
+            if (responseText.startsWith('{') || responseText.startsWith('[')) {
+              result = JSON.parse(responseText);
+              console.log('✅ Parsed JSON response:', result);
+            } else {
+              // Handle plain text responses like "Accepted"
+              result = { status: responseText.trim() };
+              console.log('✅ Plain text response:', responseText);
+            }
+          } catch (parseError) {
+            console.log('⚠️ Could not parse response, treating as success');
+            result = { status: 'success' };
+          }
+          
           console.log('✅ Estimate submitted successfully:', result);
           alert('דו"ח האומדן נשלח לעיבוד בהצלחה! תקבל התראה כאשר הדו"ח יהיה מוכן.');
           
