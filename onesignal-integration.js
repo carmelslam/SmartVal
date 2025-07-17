@@ -8,8 +8,8 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
-  // Disable OneSignal until we can completely resolve persistent operation storage issues
-  const ONESIGNAL_TEMPORARILY_DISABLED = true;
+  // Try re-enabling OneSignal with safer initialization approach
+  const ONESIGNAL_TEMPORARILY_DISABLED = false;
   
   // OneSignal manager class
   class OneSignalManager {
@@ -63,8 +63,8 @@
         // Clean OneSignal stored operations to prevent validation errors
         this.cleanStoredOperations();
         
-        // Set up operation interception before OneSignal loads
-        this.setupOperationInterception();
+        // Wait for cleanup to complete before proceeding
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Load OneSignal SDK if not already loaded
         if (!window.OneSignal) {
@@ -91,23 +91,14 @@
         return new Promise((resolve, reject) => {
           OneSignalDeferred.push(async (OneSignal) => {
             try {
-              // Enhanced v16 configuration to prevent automatic subscription operations
+              // Minimal OneSignal configuration to prevent subscription errors
               const initConfig = {
                 appId: ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: true,
-                // CRITICAL: Completely disable all automatic operations that require onesignalId
+                // Disable ALL automatic operations
                 autoRegister: false,
                 autoPrompt: false,
-                autoResubscribe: false,
-                // V16 specific: Disable service worker to prevent subscription operations
-                serviceWorkerParam: {
-                  scope: '/OneSignalSDKWorker.js.php',
-                  workerName: 'OneSignalSDKWorker.js.php'
-                },
-                // Prevent any automatic subscription updates
-                suppressAutoPrompt: true,
-                // Don't automatically create user record that triggers subscriptions
-                autoCreateUser: false
+                autoResubscribe: false
               };
               
               // Safari requires specific configuration but with delayed prompting
@@ -141,9 +132,9 @@
               // Initialize OneSignal core without triggering subscription operations
               console.log('📱 OneSignal: Starting core initialization...');
               
-              // Use a more conservative initialization approach
+              // Use minimal initialization to prevent subscription errors
               try {
-                // First, just initialize the SDK without triggering any subscription operations
+                console.log('📱 OneSignal: Starting minimal initialization...');
                 await OneSignal.init(initConfig);
                 console.log('📱 OneSignal: Core SDK initialized successfully');
                 
@@ -153,29 +144,7 @@
                 // Set user context
                 this.userToken = auth;
                 
-                // Wait for OneSignal SDK to be fully ready before proceeding
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                // Only set up listeners - no subscription operations yet
-                console.log('📱 OneSignal: Setting up event listeners...');
-                this.setupSubscriptionListeners();
-                
-                // Check if OneSignal ID already exists from previous sessions
-                const existingId = sessionStorage.getItem('onesignalId');
-                if (existingId) {
-                  console.log('📱 OneSignal: Found existing OneSignal ID:', existingId);
-                  this.playerId = existingId;
-                  
-                  // Only proceed with subscription checks if we have an existing ID
-                  setTimeout(async () => {
-                    await this.checkSubscriptionStatus();
-                  }, 2000);
-                } else {
-                  console.log('📱 OneSignal: No existing OneSignal ID - will wait for user interaction');
-                  // Don\'t try to get OneSignal ID automatically - wait for user interaction
-                }
-                
-                console.log('📱 OneSignal: Initialization completed successfully');
+                console.log('📱 OneSignal: Basic initialization completed successfully');
                 
                 // Restore original error handler after initialization
                 setTimeout(() => {
@@ -184,24 +153,16 @@
                 }, 5000);
                 
               } catch (initError) {
-                console.error('📱 OneSignal: Initialization error:', initError);
+                console.error('📱 OneSignal: Initialization failed:', initError);
                 
-                // Restore error handler even if init fails
+                // Restore error handler
                 window.onerror = originalOnError;
                 
-                // Check if it's a subscription-related error that we can ignore
-                if (initError.message && (
-                  initError.message.includes('onesignalId') || 
-                  initError.message.includes('subscription') ||
-                  initError.message.includes('create-subscription')
-                )) {
-                  console.log('📱 OneSignal: Subscription error during init - marking as initialized anyway');
-                  this.initialized = true;
-                  this.userToken = auth;
-                } else {
-                  // For other errors, re-throw
-                  throw initError;
-                }
+                // Don't block the app - just disable OneSignal
+                this.disabled = true;
+                this.initialized = false;
+                
+                console.log('📱 OneSignal: Disabled due to initialization error');
               }
 
               resolve();
