@@ -342,13 +342,14 @@
       const carDetails = makeCarData || helper.car_details || carData || {};
       const client = helper.client || {};
       const meta = helper.meta || { plate: makeCarData?.plate || carData?.plate } || {};
+      const generalInfo = helper.general_info || {};
       
       console.log('🔍 Final data being sent to display:', {
-        vehicle, carDetails, client, meta
+        vehicle, carDetails, client, meta, generalInfo
       });
       
-      // Update UI with merged data
-      updateCarDisplay(vehicle, carDetails, client, meta);
+      // Update UI with merged data including general info
+      updateCarDisplay(vehicle, carDetails, client, meta, generalInfo);
 
     } catch (error) {
       console.error("❌ Error loading car data:", error);
@@ -356,9 +357,9 @@
     }
   }
 
-  function updateCarDisplay(vehicle, carDetails, client, meta) {
+  function updateCarDisplay(vehicle, carDetails, client, meta, generalInfo = {}) {
     console.log('🔄 updateCarDisplay called with:', {
-      vehicle, carDetails, client, meta
+      vehicle, carDetails, client, meta, generalInfo
     });
     
     // Debug: Check agent data specifically (CORRECTED: helper.client is source of truth)
@@ -402,11 +403,12 @@
     }
     document.getElementById("vehicle-year").textContent = formatValue(year);
     
-    // Kilometers (קילומטראז)
+    // Kilometers (קילומטראז) - includes general_info odo field
     document.getElementById("vehicle-km").textContent = formatValue(
       vehicle.km || carDetails.km ||
       vehicle['קילומטראז'] || carDetails['קילומטראז'] ||
-      vehicle.mileage || carDetails.mileage
+      vehicle.mileage || carDetails.mileage ||
+      generalInfo.odo || generalInfo.odometer
     );
     
     // Chassis (מספר שלדה)
@@ -445,39 +447,47 @@
     );
     
     document.getElementById("car-damage-date").textContent = formatValue(
-      carDetails.damageDate || carDetails.damage_date || vehicle.damage_date
+      carDetails.damageDate || carDetails.damage_date || vehicle.damage_date ||
+      generalInfo.damageDate || generalInfo.damage_date
     );
     
     document.getElementById("car-owner-address").textContent = formatValue(
-      carDetails.ownerAddress || carDetails.owner_address || vehicle.owner_address
+      carDetails.ownerAddress || carDetails.owner_address || vehicle.owner_address ||
+      generalInfo.ownerAddress || generalInfo.owner_address
     );
     
     document.getElementById("car-owner-phone").textContent = formatValue(
-      carDetails.ownerPhone || carDetails.owner_phone || vehicle.owner_phone
+      carDetails.ownerPhone || carDetails.owner_phone || vehicle.owner_phone ||
+      generalInfo.ownerPhone || generalInfo.owner_phone
     );
 
-    // Garage and insurance with enhanced mapping
+    // Garage and insurance with enhanced mapping including general_info
     document.getElementById("garage-name").textContent = formatValue(
       carDetails.garageName || carDetails.garage_name || vehicle.garage_name ||
-      carDetails.location || vehicle.location
+      carDetails.location || vehicle.location ||
+      generalInfo.garageName || generalInfo.garage_name
     );
     
     document.getElementById("garage-phone").textContent = formatValue(
-      carDetails.garagePhone || carDetails.garage_phone || vehicle.garage_phone
+      carDetails.garagePhone || carDetails.garage_phone || vehicle.garage_phone ||
+      generalInfo.garagePhone || generalInfo.garage_phone
     );
     
     document.getElementById("insurance-company").textContent = formatValue(
-      carDetails.insuranceCompany || carDetails.insurance_company || vehicle.insurance_company
+      carDetails.insuranceCompany || carDetails.insurance_company || vehicle.insurance_company ||
+      generalInfo.insuranceCompany || generalInfo.insurance_company
     );
     
-    // Agent information with multiple source priority
+    // Agent information with multiple source priority including general_info
     document.getElementById("agent-name").textContent = formatValue(
-      client.insurance_agent || carDetails.agentName || carDetails.agent_name || vehicle.agent_name
+      client.insurance_agent || carDetails.agentName || carDetails.agent_name || vehicle.agent_name ||
+      generalInfo.agentName || generalInfo.agent_name
     );
     
     document.getElementById("agent-phone").textContent = formatValue(
       client.insurance_agent_phone || carDetails.insurance_agent_phone || 
-      carDetails.agent_phone || vehicle.agent_phone
+      carDetails.agent_phone || vehicle.agent_phone ||
+      generalInfo.agentPhone || generalInfo.agent_phone
     );
 
     // Update value styling

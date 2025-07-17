@@ -1055,6 +1055,11 @@ class LeviProcessor {
         carData: Object.keys(carData)
       });
       
+      console.log('🔍 LEVI UPLOAD: Detailed data content:');
+      console.log('📋 makeCarData content:', makeCarData);
+      console.log('📋 helper content:', helper);
+      console.log('📋 carData content:', carData);
+      
       // Load plate number from multiple sources
       let plate = '';
       if (makeCarData.plate) plate = makeCarData.plate;
@@ -1105,6 +1110,26 @@ class LeviProcessor {
       
       if (password) {
         document.getElementById('pass').value = password;
+        console.log('✅ LEVI UPLOAD: Password loaded from helper');
+      } else {
+        console.log('⚠️ LEVI UPLOAD: No password found in helper, checking prefill system...');
+        
+        // Try password prefill system
+        const prefillPassword = sessionStorage.getItem('prefillPassword');
+        if (prefillPassword) {
+          document.getElementById('pass').value = prefillPassword;
+          console.log('✅ LEVI UPLOAD: Password loaded from prefill system');
+        } else {
+          console.log('❌ LEVI UPLOAD: No password found anywhere');
+        }
+      }
+      
+      // Also trigger the global password prefill function
+      if (typeof window.prefillUserPassword === 'function') {
+        setTimeout(() => {
+          window.prefillUserPassword();
+          console.log('🔑 LEVI UPLOAD: Global password prefill triggered');
+        }, 500);
       }
       
       console.log('Case data loaded from helper:', {

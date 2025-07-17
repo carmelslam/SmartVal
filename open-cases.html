@@ -138,6 +138,11 @@
       try {
         password = await decryptPassword(encryptedPassword);
         console.log('✅ Password decrypted successfully');
+        
+        // Store password for prefill system
+        sessionStorage.setItem('prefillPassword', password);
+        console.log('🔑 Password stored for prefill system');
+        
       } catch (error) {
         console.error('❌ Password decryption failed:', error);
         alert("שגיאה בפענוח הסיסמה");
@@ -205,16 +210,36 @@
         // Store ANY webhook response for debugging
         sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
         
-        // Store the original payload data immediately
-        sessionStorage.setItem('makeCarData', JSON.stringify({
+        // Store the original payload data immediately with office code
+        const initialCaseData = {
           plate: payload.plate,
           owner: payload.owner,
           date: payload.date,
           location: payload.location,
           case_id: `YC-${payload.plate}-${new Date().getFullYear()}`,
           data_source: 'make_com_webhook',
-          webhook_response: webhookResponse
-        }));
+          webhook_response: webhookResponse,
+          // Add office code if available in webhook response
+          office_code: webhookResponse?.office_code || webhookResponse?.['קוד משרד התחבורה'] || ''
+        };
+        
+        sessionStorage.setItem('makeCarData', JSON.stringify(initialCaseData));
+        
+        // Also update helper immediately with basic data
+        if (typeof window.updateHelper === 'function') {
+          try {
+            window.updateHelper('car_details', initialCaseData);
+            window.updateHelper('vehicle', initialCaseData);
+            window.updateHelper('meta', {
+              plate: initialCaseData.plate,
+              case_id: initialCaseData.case_id,
+              owner_name: initialCaseData.owner
+            });
+            console.log('✅ Helper updated with initial case data');
+          } catch (error) {
+            console.log('❌ Helper update failed:', error);
+          }
+        }
         
         // Always show floating screen with at least the basic data
         console.log('🚗 Showing floating screen with received data...');
@@ -545,6 +570,8 @@
         office_code: '156-11',
         owner: 'כרמל כיוף',
         location: 'UMI חיפה',
+        date: new Date().toISOString().split('T')[0],
+        case_id: 'YC-5785269-2025',
         data_source: 'make_com_manual_test'
       };
       
