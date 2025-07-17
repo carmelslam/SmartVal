@@ -3487,10 +3487,19 @@
 
     // LOAD ATTACHMENTS FROM VAULT
     function loadAttachmentsFromVault() {
-      // Load attachments from vault based on report type
-      const reportType = helper.report_type || 'estimate';
+      // Get selected type from page selection (same logic as legal text)
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      
+      // Map estimate types to vault keys
+      const typeToVaultKey = {
+        'אובדן_להלכה': 'estimate_אובדן_להלכה',
+        'טוטלוס': 'estimate_טוטלוס'
+      };
+      const vaultKey = typeToVaultKey[selectedType];
+      
+      // Load attachments from vault
       const vaultLoader = new VaultLoader();
-      const vaultTexts = vaultLoader.getTexts(reportType);
+      const vaultTexts = vaultLoader.getTextBlock(vaultKey);
       
       // Convert HTML to plain text for textarea
       const attachmentsText = vaultTexts.attachments ? 
@@ -3505,7 +3514,7 @@
         saveToSessionStorage('helper', helper);
       }
       
-      console.log('Attachments loaded from vault');
+      console.log('Attachments loaded from vault for type:', selectedType);
     }
 
     // RESET ATTACHMENTS
