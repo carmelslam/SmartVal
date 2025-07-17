@@ -354,9 +354,14 @@
         page-break-after: always !important;
       }
       
+      .depreciation-group {
+        page-break-inside: avoid !important;
+        margin-bottom: 8mm !important;
+      }
+      
       .page-depreciation {
         page-break-before: always !important;
-        page-break-after: always !important;
+        page-break-after: avoid !important;
       }
       
       /* Final page: Legal + Signature */
@@ -909,7 +914,7 @@
           ${generateDepreciationAnalysis(helper)}
 
           <!-- Section 5 - Estimate Totals Summary -->
-          <div class="section">
+          <div class="section depreciation-group">
             <div class="estimate-totals">
               <div class="car-details-title">סיכום האומדן</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
@@ -1056,6 +1061,21 @@
         // Last adjustment group should break after
         if (index === adjustmentGroups.length - 1) {
           group.style.pageBreakAfter = 'always';
+        }
+      });
+
+      // Optimize depreciation groups to stay together
+      const depreciationGroups = document.querySelectorAll('.depreciation-group');
+      depreciationGroups.forEach((group, index) => {
+        // Prevent breaking within depreciation groups
+        group.style.pageBreakInside = 'avoid';
+        
+        // First depreciation group (main depreciation section) should start on new page
+        if (index === 0) {
+          group.style.pageBreakBefore = 'always';
+        } else {
+          // Subsequent groups (like summary) try to stay on same page
+          group.style.pageBreakBefore = 'avoid';
         }
       });
       
@@ -1609,7 +1629,7 @@
       `).join('');
       
       return `
-        <div class="section page-depreciation">
+        <div class="section page-depreciation depreciation-group">
           <div class="car-details">
             <div class="car-details-title">ירידת ערך</div>
             <p style="font-size: 14px; font-weight: bold;">
