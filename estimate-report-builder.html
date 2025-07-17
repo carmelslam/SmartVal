@@ -1901,41 +1901,84 @@
     // Validation function for testing
     function validateEstimateData() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Debug: Log the actual helper structure
+      console.log('🔍 Debug - Current helper structure:', helper);
+      console.log('🔍 Debug - Available top-level keys:', Object.keys(helper));
+      if (helper.meta) console.log('🔍 Debug - meta keys:', Object.keys(helper.meta));
+      if (helper.car_details) console.log('🔍 Debug - car_details keys:', Object.keys(helper.car_details));
+      if (helper.general_info) console.log('🔍 Debug - general_info keys:', Object.keys(helper.general_info));
+      if (helper.calculations) console.log('🔍 Debug - calculations keys:', Object.keys(helper.calculations));
+      
       const validation = {
         valid: true,
         errors: [],
         warnings: []
       };
       
-      // Validate required fields
-      if (!helper.meta?.plate) {
+      // Check for plate number in multiple possible locations
+      const plateNumber = helper.meta?.plate || helper.car_details?.plate || helper.general_info?.plate;
+      if (!plateNumber) {
         validation.errors.push('מספר רישוי חסר');
         validation.valid = false;
       }
       
-      if (!helper.meta?.client_name) {
+      // Check for client/owner name in multiple possible locations
+      const clientName = helper.meta?.client_name || 
+                        helper.general_info?.client_name || 
+                        helper.general_info?.owner_name ||
+                        helper.car_details?.owner ||
+                        helper.owner_details?.name;
+      if (!clientName) {
         validation.errors.push('שם בעל הרכב חסר');
         validation.valid = false;
       }
       
-      if (!helper.vehicle?.manufacturer) {
+      // Check for vehicle manufacturer in multiple locations
+      const manufacturer = helper.vehicle?.manufacturer || 
+                          helper.car_details?.manufacturer ||
+                          helper.car_details?.make;
+      if (!manufacturer) {
         validation.warnings.push('יצרן רכב חסר');
       }
       
-      if (!helper.vehicle?.model) {
+      // Check for vehicle model in multiple locations
+      const model = helper.vehicle?.model || 
+                   helper.car_details?.model;
+      if (!model) {
         validation.warnings.push('דגם רכב חסר');
       }
       
-      if (!helper.calculations?.base_damage || helper.calculations.base_damage <= 0) {
+      // Check for damage calculations in multiple possible structures
+      const baseDamage = helper.calculations?.base_damage || 
+                        helper.calculations?.total_damage ||
+                        helper.calculations?.total_before_depreciation ||
+                        helper.levi_report?.total_damage ||
+                        helper.damage_calculation?.total;
+      
+      if (!baseDamage || baseDamage <= 0) {
         validation.errors.push('חישוב נזק בסיסי חסר או שגוי');
         validation.valid = false;
       }
       
-      if (!helper.depreciation?.global_percent) {
+      // Check for depreciation data
+      const depreciationPercent = helper.depreciation?.global_percent || 
+                                 helper.depreciation?.percentage ||
+                                 helper.calculations?.depreciation_percent;
+      if (!depreciationPercent) {
         validation.warnings.push('אחוז ירידת ערך גלובלי חסר');
       }
       
       console.log('🔍 Validation results:', validation);
+      console.log('🔍 Found values:', {
+        plateNumber,
+        clientName,
+        manufacturer,
+        model,
+        baseDamage,
+        depreciationPercent
+      });
+      
       return validation;
     }
     
