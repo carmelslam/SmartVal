@@ -9,7 +9,7 @@ import {
   convertToLegacyFormat, 
   updateHelperWithStandardizedData,
   UNIFIED_SCHEMAS,
-  HelperStandardizer
+  DataFlowStandardizer
 } from './data-flow-standardizer.js';
 
 
@@ -613,7 +613,7 @@ export function updateHelper(section, data, sourceModule = null) {
     
     // Auto-standardize after any update
     try {
-      const standardizer = new HelperStandardizer();
+      const standardizer = new DataFlowStandardizer();
       const standardizedHelper = standardizer.standardizeHelper(helper);
       Object.assign(helper, standardizedHelper);
     } catch (e) {
