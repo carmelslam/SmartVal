@@ -283,43 +283,52 @@
   function loadCarData() {
     try {
       console.log('🔄 loadCarData: Starting to load car data...');
-      let helper = {};
       
-      // Try to get data from sessionStorage helper
-      try {
-        const storedHelper = sessionStorage.getItem('helper');
-        console.log('🔍 loadCarData: sessionStorage helper raw:', storedHelper ? storedHelper.substring(0, 200) + '...' : 'null');
-        
-        if (storedHelper) {
-          helper = JSON.parse(storedHelper);
-          console.log('🔍 loadCarData: parsed helper:', helper);
+      // Try simple data store first
+      let data = {};
+      if (window.currentCaseData) {
+        data = window.currentCaseData;
+        console.log('🔥 Using simple data store:', data);
+      } else {
+        // Fallback to sessionStorage
+        const storedData = sessionStorage.getItem('currentCaseData') || sessionStorage.getItem('helper');
+        if (storedData) {
+          data = JSON.parse(storedData);
+          console.log('🔍 Using stored data:', data);
         }
-      } catch (parseError) {
-        console.warn('Could not parse helper from sessionStorage:', parseError);
       }
       
-      // Fallback to global helper variable
-      if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
-        helper = window.helper;
-        console.log('🔍 loadCarData: using global helper:', helper);
+      // Also check legacy carData
+      const carData = sessionStorage.getItem('carData');
+      if (carData) {
+        try {
+          const legacyData = JSON.parse(carData);
+          console.log('🔍 Legacy carData found:', legacyData);
+          
+          // If no modern data, use legacy
+          if (!data.meta && !data.vehicle) {
+            data = {
+              meta: { plate: legacyData.plate, location: legacyData.location, damage_date: legacyData.date },
+              vehicle: { manufacturer: legacyData.manufacturer, model: legacyData.model, year: legacyData.year },
+              car_details: legacyData,
+              stakeholders: { owner_name: legacyData.owner }
+            };
+          }
+        } catch (e) {
+          console.warn('Could not parse legacy carData:', e);
+        }
       }
       
-      // Debug: Check all storage
-      console.log('🔍 loadCarData: sessionStorage carData:', sessionStorage.getItem('carData'));
-      console.log('🔍 loadCarData: all sessionStorage keys:', Object.keys(sessionStorage));
-
-      // Get vehicle data using system structure
-      const vehicle = helper.vehicle || {};
-      const carDetails = helper.car_details || {};
-      const client = helper.client || {};
-      const meta = helper.meta || {};
+      // Extract display data
+      const vehicle = data.vehicle || {};
+      const carDetails = data.car_details || {};
+      const stakeholders = data.stakeholders || {};
+      const meta = data.meta || {};
       
-      console.log('🔍 loadCarData: extracted data:', {
-        vehicle, carDetails, client, meta
-      });
+      console.log('🔍 Final extracted data:', { vehicle, carDetails, stakeholders, meta });
       
-      // Update UI with car data using proper helper structure
-      updateCarDisplay(vehicle, carDetails, client, meta);
+      // Update UI
+      updateCarDisplay(vehicle, carDetails, stakeholders, meta);
 
     } catch (error) {
       console.error("Error loading car data:", error);
@@ -327,17 +336,9 @@
     }
   }
 
-  function updateCarDisplay(vehicle, carDetails, client, meta) {
+  function updateCarDisplay(vehicle, carDetails, stakeholders, meta) {
     console.log('🔄 updateCarDisplay called with:', {
-      vehicle, carDetails, client, meta
-    });
-    
-    // Debug: Check agent data specifically (CORRECTED: helper.client is source of truth)
-    console.log('🔍 DEBUG: Agent data (helper.client is source of truth):', {
-      'PRIMARY - client.insurance_agent': client.insurance_agent,
-      'PRIMARY - client.insurance_agent_phone': client.insurance_agent_phone,
-      'SECONDARY - carDetails.agentName': carDetails.agentName,
-      'SECONDARY - carDetails.insurance_agent_phone': carDetails.insurance_agent_phone
+      vehicle, carDetails, stakeholders, meta
     });
     
     const formatValue = (value) => {
@@ -355,10 +356,10 @@
     document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type || carDetails.fuel_type);
 
     // helper.car_details fields  
-    document.getElementById("car-owner").textContent = formatValue(carDetails.owner);
+    document.getElementById("car-owner").textContent = formatValue(stakeholders.owner_name || carDetails.owner);
     document.getElementById("car-ownership-type").textContent = formatValue(carDetails.ownership_type);
     document.getElementById("car-market-value").textContent = formatValue(carDetails.market_value);
-    document.getElementById("car-damage-date").textContent = formatValue(carDetails.damageDate);
+    document.getElementById("car-damage-date").textContent = formatValue(meta.damage_date || carDetails.damageDate);
     document.getElementById("car-owner-address").textContent = formatValue(carDetails.ownerAddress);
     document.getElementById("car-owner-phone").textContent = formatValue(carDetails.ownerPhone);
 

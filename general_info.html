@@ -127,7 +127,7 @@
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
     import { decryptPassword } from './auth.js';
-    import './data-reception-debugger.js'; // Data reception system
+    import './simple-data-flow.js'; // Simple data flow system
     
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
@@ -220,36 +220,19 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שומר נתונים...";
         
-        // Update helper using unified system
-        const { updateHelper } = await import('./helper.js');
+        // Update data using simple system
+        if (typeof window.updateCaseData === 'function') {
+          window.updateCaseData('stakeholders', data, 'general_info');
+        }
+        // Also update vehicle data
+        if (typeof window.updateCaseData === 'function') {
+          window.updateCaseData('vehicle', {
+            plate: data.plate,
+            km: data.odo
+          }, 'general_info');
+        }
         
-        // Update car details and vehicle info
-        updateHelper('car_details', data, 'general_info');
-        updateHelper('vehicle', {
-          plate: data.plate,
-          km: data.odo
-        }, 'general_info');
-        
-        // Update stakeholders information
-        updateHelper('stakeholders', {
-          garageName: data.garageName,
-          garagePhone: data.garagePhone,
-          garageEmail: data.garageEmail,
-          agentName: data.agentName,
-          insurance_agent_phone: data.insurance_agent_phone,
-          insurance_agent_email: data.insurance_agent_email,
-          insuranceCompany: data.insuranceCompany,
-          insuranceEmail: data.insuranceEmail,
-          ownerPhone: data.ownerPhone,
-          ownerAddress: data.ownerAddress,
-          damageDate: data.damageDate
-        }, 'general_info');
-        
-        // Update case info
-        updateHelper('case_info', {
-          damage_date: data.damageDate,
-          damage_type: data.damageType
-        }, 'general_info');
+        // Legacy support - functions will be called by simple data flow
         
         await sendToWebhook('FILL_FINAL_REPORT', data);
         showSuccessAndContinue();
@@ -277,30 +260,36 @@
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
   <script type="module">
-    // Import helper system for data reception and auto-fill
-    import { helper, updateHelper, checkForIncomingData } from './helper.js';
+    // Import simple data flow system for auto-fill
+    import './simple-data-flow.js';
     
     console.log('🚀 General info page loaded - checking for car data and auto-filling...');
     
     // Check for incoming car data and auto-fill form
     function checkAndAutoFillForm() {
       try {
-        // Check for incoming data from all sources
-        checkForIncomingData();
-        
         let carData = null;
         
-        // Check sessionStorage for car data
-        const sessionCarData = sessionStorage.getItem('carData');
-        if (sessionCarData) {
-          carData = JSON.parse(sessionCarData);
-          console.log('📋 Car data found in sessionStorage:', carData);
+        // Check simple data store first
+        if (window.currentCaseData && (window.currentCaseData.meta?.plate || window.currentCaseData.car_details?.plate)) {
+          carData = {
+            ...window.currentCaseData.car_details,
+            ...window.currentCaseData.meta,
+            owner: window.currentCaseData.stakeholders?.owner_name,
+            manufacturer: window.currentCaseData.vehicle?.manufacturer,
+            model: window.currentCaseData.vehicle?.model,
+            year: window.currentCaseData.vehicle?.year
+          };
+          console.log('🔥 Car data found in simple store:', carData);
         }
         
-        // Check helper for car data
-        if (!carData && helper.car_details && helper.car_details.plate) {
-          carData = helper.car_details;
-          console.log('📋 Car data found in helper:', carData);
+        // Fallback: Check sessionStorage for car data
+        if (!carData) {
+          const sessionCarData = sessionStorage.getItem('carData');
+          if (sessionCarData) {
+            carData = JSON.parse(sessionCarData);
+            console.log('📋 Car data found in sessionStorage:', carData);
+          }
         }
         
         // Check URL parameters
