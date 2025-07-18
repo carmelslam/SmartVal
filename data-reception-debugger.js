@@ -8,6 +8,7 @@ class DataReceptionDebugger {
   constructor() {
     this.log = [];
     this.isActive = true;
+    this._internalUpdate = false; // Flag for internal helper updates
     this.initializeDebugger();
   }
 
@@ -112,18 +113,32 @@ class DataReceptionDebugger {
     const originalSetItem = Storage.prototype.setItem;
     const originalGetItem = Storage.prototype.getItem;
     
+    // Flag to prevent recursion when helper system updates storage
+    let isInternalUpdate = false;
+    
     Storage.prototype.setItem = function(key, value) {
+      // Skip processing if this is an internal helper update to prevent recursion
+      if (isInternalUpdate || dataDebugger._internalUpdate) {
+        return originalSetItem.call(this, key, value);
+      }
+      
       dataDebugger.logEvent('SESSION_STORAGE', 'SET_ITEM', { key, value: value.substring(0, 200) + '...' });
       
-      // Check if this is car data or helper data
-      if (key === 'carData' || key === 'helper' || key.includes('car_') || key.includes('vehicle_')) {
+      // Check if this is car data from EXTERNAL sources ONLY
+      if (key === 'carData' && !isInternalUpdate && !dataDebugger._internalUpdate) {
         try {
           const parsedValue = JSON.parse(value);
           dataDebugger.logEvent('SESSION_STORAGE', 'PARSED_DATA', { key, data: parsedValue });
           
-          // If this is external car data, try to update helper
-          if (key === 'carData' && parsedValue.plate) {
+          // Only process external car data that has actual new data
+          if (parsedValue.plate && typeof parsedValue.password !== 'undefined') {
+            // This looks like external data from form submission - process it
+            console.log('🔍 Processing external car data from form submission');
+            isInternalUpdate = true;
             dataDebugger.processExternalData(parsedValue, 'car_details', 'Car Data');
+            isInternalUpdate = false;
+          } else {
+            console.log('🔍 Skipping internal legacy car data update');
           }
         } catch (e) {
           dataDebugger.logEvent('SESSION_STORAGE', 'PARSE_FAILED', { key, error: e.message });

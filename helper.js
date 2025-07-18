@@ -545,11 +545,23 @@ export function createDataIntegrityReport(data) {
   return report;
 }
 
+// Global flag to prevent recursion
+let isUpdatingHelper = false;
+
 export function updateHelper(section, data, sourceModule = null) {
   try {
+    // Prevent recursion
+    if (isUpdatingHelper) {
+      console.warn('🔄 updateHelper: Recursion detected, skipping update to prevent infinite loop');
+      return false;
+    }
+    
+    isUpdatingHelper = true;
+    
     // Security validation
     if (!securityManager.validateSession()) {
       errorHandler.createError('authentication', 'high', 'Session expired during data update');
+      isUpdatingHelper = false;
       return false;
     }
 
@@ -629,10 +641,12 @@ export function updateHelper(section, data, sourceModule = null) {
       updateLegacyCarData();
     }
     
+    isUpdatingHelper = false;
     return true;
     
   } catch (error) {
     errorHandler.createError('data', 'high', 'Helper update failed', { section, error: error.message });
+    isUpdatingHelper = false;
     return false;
   }
 }
@@ -1644,17 +1658,48 @@ function processFinancialData(section, data, sourceModule) {
   updateCalculations();
 }
 
+// Flag to prevent legacy update recursion
+let isUpdatingLegacyData = false;
+
 function updateLegacyCarData() {
-  // Update legacy carData in sessionStorage for backward compatibility
-  const carData = {
-    plate: helper.vehicle?.plate || helper.car_details?.plate || '',
-    owner: helper.stakeholders?.owner?.name || helper.car_details?.owner || '',
-    manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
-    model: helper.vehicle?.model || helper.car_details?.model || '',
-    year: helper.vehicle?.year || helper.car_details?.year || '',
-    location: helper.stakeholders?.garage?.name || helper.car_details?.garageName || '',
-    date: helper.case_info?.inspection_date || helper.car_details?.damageDate || ''
-  };
+  // Prevent recursion
+  if (isUpdatingLegacyData) {
+    console.warn('🔄 updateLegacyCarData: Recursion detected, skipping legacy update');
+    return;
+  }
   
-  sessionStorage.setItem('carData', JSON.stringify(carData));
+  isUpdatingLegacyData = true;
+  
+  try {
+    // Update legacy carData in sessionStorage for backward compatibility
+    const carData = {
+      plate: helper.vehicle?.plate_number || helper.vehicle?.plate || helper.car_details?.plate || '',
+      owner: helper.stakeholders?.owner?.name || helper.car_details?.owner || '',
+      manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
+      model: helper.vehicle?.model || helper.car_details?.model || '',
+      year: helper.vehicle?.year || helper.car_details?.year || '',
+      location: helper.stakeholders?.garage?.name || helper.car_details?.garageName || '',
+      date: helper.case_info?.inspection_date || helper.car_details?.damageDate || ''
+    };
+    
+    // Add internal flag to prevent monitor from processing this
+    const dataString = JSON.stringify(carData);
+    
+    // Temporarily mark as internal update
+    if (window.dataDebugger) {
+      window.dataDebugger._internalUpdate = true;
+    }
+    
+    sessionStorage.setItem('carData', dataString);
+    
+    // Reset internal flag after brief delay
+    setTimeout(() => {
+      if (window.dataDebugger) {
+        window.dataDebugger._internalUpdate = false;
+      }
+    }, 100);
+    
+  } finally {
+    isUpdatingLegacyData = false;
+  }
 }
