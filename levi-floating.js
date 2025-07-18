@@ -469,11 +469,23 @@
       return value && value.toString().trim() ? `${value}%` : "0%";
     };
 
-    // Basic vehicle information - FIXED: Use proper helper structure
-    document.getElementById("levi-vehicle-type").textContent = formatValue(vehicle.vehicle_type || 'רכב פרטי');
+    // Basic vehicle information - Use dynamic data from helper
+    document.getElementById("levi-vehicle-type").textContent = formatValue(
+      carDetails['סוג הרכב'] || 
+      vehicle.vehicle_type || 
+      leviReport['סוג הרכב'] || 
+      carDetails.vehicle_type || 
+      '-'
+    );
     document.getElementById("levi-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
     document.getElementById("levi-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
-    document.getElementById("levi-category").textContent = formatValue(leviReport.category || 'רכב פרטי');
+    document.getElementById("levi-category").textContent = formatValue(
+      leviReport['קטגוריה'] || 
+      leviReport.category || 
+      vehicle.category || 
+      carDetails.category || 
+      '-'
+    );
     document.getElementById("levi-year").textContent = formatValue(vehicle.year || carDetails.year);
     document.getElementById("levi-full-model").textContent = formatValue(leviReport.full_model || `${vehicle.manufacturer} ${vehicle.model}`);
     document.getElementById("levi-base-price").textContent = formatPrice(leviReport.base_price || leviReport['מחיר בסיס']);
@@ -485,8 +497,14 @@
     document.getElementById("levi-registration-value").textContent = formatPrice(leviReport['ערך ש״ח עליה לכביש'] || 0);
     document.getElementById("levi-registration-total").textContent = formatPrice(leviReport['שווי מצטבר עליה לכביש'] || 0);
 
-    // FIXED: Ownership adjustments - correct mapping
-    document.getElementById("levi-ownership").textContent = formatValue(leviReport['בעלות'] || "-");
+    // FIXED: Ownership adjustments - use actual ownership type from Levi or car data
+    document.getElementById("levi-ownership").textContent = formatValue(
+      leviReport['ערך בעלות'] || 
+      carDetails['סוג בעלות'] || 
+      vehicle.ownership_type || 
+      carDetails.ownership_type || 
+      "-"
+    );
     document.getElementById("levi-ownership-percent").textContent = formatPercent(leviReport['בעלות %'] || 0);
     document.getElementById("levi-ownership-value").textContent = formatPrice(leviReport['ערך ש״ח בעלות'] || 0);
     document.getElementById("levi-ownership-total").textContent = formatPrice(leviReport['שווי מצטבר בעלות'] || 0);
