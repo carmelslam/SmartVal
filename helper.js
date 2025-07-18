@@ -636,26 +636,6 @@ export function updateHelper(section, data, sourceModule = null) {
     return false;
   }
 }
-    
-    // Security audit log
-    securityManager.logSecurityEvent('data_update', {
-      section,
-      dataKeys: Object.keys(sanitizedData),
-      timestamp: new Date()
-    });
-    
-    
-    saveHelperToStorage();
-    return true;
-  } catch (error) {
-    errorHandler.createError('system', 'high', 'Helper update failed', { 
-      section, 
-      error: error.message,
-      stack: error.stack 
-    });
-    return false;
-  }
-}
 
 export function saveHelperToStorage() {
   try {
