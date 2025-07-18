@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helper System Debug Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+    .debug-info { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 15px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Helper System Debug Test</h1>
+  
+  <div class="test-section">
+    <h3>Test Data Reception</h3>
+    <button onclick="testCarDataReception()">Test Car Data Reception</button>
+    <button onclick="checkHelperState()">Check Helper State</button>
+    <button onclick="openFloatingScreen()">Open Car Details Floating Screen</button>
+  </div>
+  
+  <div class="test-section">
+    <h3>Debug Information</h3>
+    <div id="debug-output" class="debug-info">
+      Click buttons above to see debug information...
+    </div>
+  </div>
+
+  <script type="module">
+    import { updateHelper } from './helper.js';
+    import './data-reception-debugger.js';
+    import './car-details-floating.js';
+    
+    // Test car data reception
+    window.testCarDataReception = function() {
+      const testData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק',
+        model: 'LUCERNE',
+        owner: 'כרמל כיוף',
+        date: new Date().toISOString().split('T')[0],
+        location: 'UMI חיפה'
+      };
+      
+      console.log('🧪 Testing car data reception with:', testData);
+      
+      // Call the global receiveCarData function
+      if (typeof window.receiveCarData === 'function') {
+        window.receiveCarData(testData);
+        document.getElementById('debug-output').innerHTML = 
+          '✅ Called window.receiveCarData()<br>' + 
+          'Data: ' + JSON.stringify(testData, null, 2);
+      } else {
+        document.getElementById('debug-output').innerHTML = 
+          '❌ window.receiveCarData function not found!';
+      }
+    };
+    
+    // Check helper state
+    window.checkHelperState = function() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const carData = sessionStorage.getItem('carData');
+      
+      const debugInfo = `
+        <h4>SessionStorage Helper:</h4>
+        <pre>${JSON.stringify(helper, null, 2)}</pre>
+        <h4>SessionStorage CarData:</h4>
+        <pre>${carData || 'null'}</pre>
+        <h4>Global Functions Available:</h4>
+        <ul>
+          <li>window.receiveCarData: ${typeof window.receiveCarData}</li>
+          <li>window.updateHelper: ${typeof window.updateHelper}</li>
+          <li>window.refreshCarData: ${typeof window.refreshCarData}</li>
+          <li>window.dataDebugger: ${typeof window.dataDebugger}</li>
+        </ul>
+      `;
+      
+      document.getElementById('debug-output').innerHTML = debugInfo;
+    };
+    
+    // Open floating screen
+    window.openFloatingScreen = function() {
+      if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+        document.getElementById('debug-output').innerHTML = 
+          '✅ Opened car details floating screen';
+      } else {
+        document.getElementById('debug-output').innerHTML = 
+          '❌ window.toggleCarDetails function not found!';
+      }
+    };
+    
+    // Auto-check state on load
+    setTimeout(() => {
+      window.checkHelperState();
+    }, 1000);
+  </script>
+</body>
+</html>

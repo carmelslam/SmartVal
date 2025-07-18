@@ -1,7 +1,7 @@
 // 🔍 Data Reception Debugger - Track all incoming data sources
 // This module helps identify where data flow is breaking
 
-import { updateHelper, helper, saveHelperToStorage } from './helper.js';
+import { updateHelper, helper, saveHelperToStorage, loadHelperFromStorage } from './helper.js';
 
 // Global data reception logger
 class DataReceptionDebugger {
@@ -14,6 +14,10 @@ class DataReceptionDebugger {
   // Initialize all possible data reception points
   initializeDebugger() {
     console.log('🔍 DataReceptionDebugger: Initializing...');
+    
+    // Initialize helper system first
+    loadHelperFromStorage();
+    console.log('🧠 Helper system initialized:', helper);
     
     // 1. URL Parameters Monitoring
     this.checkURLParameters();
@@ -119,7 +123,7 @@ class DataReceptionDebugger {
           
           // If this is external car data, try to update helper
           if (key === 'carData' && parsedValue.plate) {
-            dataDebugger.processExternalCarData(parsedValue);
+            dataDebugger.processExternalData(parsedValue, 'car_details', 'Car Data');
           }
         } catch (e) {
           dataDebugger.logEvent('SESSION_STORAGE', 'PARSE_FAILED', { key, error: e.message });
@@ -293,7 +297,7 @@ class DataReceptionDebugger {
             const responseData = JSON.parse(responseText);
             if (responseData.car_details || responseData.vehicle_data || responseData.plate) {
               this.logEvent('WEBHOOK_RESPONSE', 'CAR_DATA_IN_RESPONSE', responseData);
-              this.processExternalCarData(responseData);
+              this.processExternalData(responseData, 'car_details', 'Car Data');
             }
           } catch (e) {
             // Response is not JSON, that's okay

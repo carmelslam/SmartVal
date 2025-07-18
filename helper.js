@@ -1471,10 +1471,17 @@ try {
 function processCarDetailsData(data, sourceModule) {
   // Handle car data from Make.com, manual input, or internal browsers
   if (!helper.vehicle) helper.vehicle = {};
+  if (!helper.meta) helper.meta = {};
   if (!helper.stakeholders) helper.stakeholders = { owner: {} };
+  if (!helper.car_details) helper.car_details = {};
   
-  // Map fields according to unified schema
-  if (data.plate) helper.vehicle.plate = data.plate;
+  // Meta information (essential for floating screens)
+  if (data.plate) helper.meta.plate = data.plate;
+  if (data.location) helper.meta.location = data.location;
+  if (data.date) helper.meta.damage_date = data.date;
+  
+  // Vehicle details according to unified schema
+  if (data.plate) helper.vehicle.plate_number = data.plate;
   if (data.manufacturer) helper.vehicle.manufacturer = data.manufacturer;
   if (data.model) helper.vehicle.model = data.model;
   if (data.year) helper.vehicle.year = data.year;
@@ -1488,8 +1495,13 @@ function processCarDetailsData(data, sourceModule) {
   if (data.owner) helper.stakeholders.owner.name = data.owner;
   
   // Preserve legacy structure for backward compatibility
-  mergeDeep(helper.car_details || {}, data);
-  if (!helper.car_details) helper.car_details = data;
+  mergeDeep(helper.car_details, data);
+  
+  console.log('🚗 processCarDetailsData: Updated helper with:', {
+    meta: helper.meta,
+    vehicle: helper.vehicle,
+    owner: helper.stakeholders.owner.name
+  });
 }
 
 function processStakeholderData(section, data, sourceModule) {
