@@ -69,7 +69,7 @@
     <input id="ownerAddress" placeholder="כתובת בעל הרכב" type="text" />
     <input id="garageName" placeholder="שם מוסך" type="text" />
     <input id="garagePhone" placeholder="טלפון מוסך" type="text" />
-    <input id="garageEmail" placeholder="אימייל מוסך" type="email" />
+    <input id="garageEmail" placeholder="אימייל מוסך" type="email" autocomplete="off" />
 
     <input id="agentName" placeholder="שם סוכן ביטוח" type="text" />
     <input id="agentPhone" placeholder="טלפון סוכן ביטוח" type="text" />
@@ -127,6 +127,7 @@
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
     import { decryptPassword } from './auth.js';
+    import './data-reception-debugger.js'; // Data reception system
     
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
@@ -171,6 +172,16 @@
 
     if (carData.plate) document.getElementById("pageTitle").innerText = `רכב מס. ${carData.plate}: פרטים כלליים`;
 
+    // Fix: Ensure garage email field is always editable
+    const garageEmailField = document.getElementById("garageEmail");
+    if (garageEmailField) {
+      garageEmailField.removeAttribute('readonly');
+      garageEmailField.removeAttribute('disabled');
+      garageEmailField.style.pointerEvents = 'auto';
+      garageEmailField.style.backgroundColor = 'white';
+      console.log('✅ Garage email field made editable');
+    }
+
     // When saving, keep field names consistent with helper/contact structure
     document.getElementById("submitBtn").addEventListener("click", async () => {
       // Ensure password is decrypted before use
@@ -209,17 +220,35 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שומר נתונים...";
         
-        // Update helper with event-driven system
-        updateHelperWithEvents('car_details', data, 'general_info');
-        updateHelperWithEvents('client', {
-          name: data.owner,
-          phone_number: data.ownerPhone,
-          address: data.ownerAddress,
-          insurance_company: data.insuranceCompany,
-          insurance_email: data.insuranceEmail,
-          insurance_agent: data.agentName,
+        // Update helper using unified system
+        const { updateHelper } = await import('./helper.js');
+        
+        // Update car details and vehicle info
+        updateHelper('car_details', data, 'general_info');
+        updateHelper('vehicle', {
+          plate: data.plate,
+          km: data.odo
+        }, 'general_info');
+        
+        // Update stakeholders information
+        updateHelper('stakeholders', {
+          garageName: data.garageName,
+          garagePhone: data.garagePhone,
+          garageEmail: data.garageEmail,
+          agentName: data.agentName,
           insurance_agent_phone: data.insurance_agent_phone,
-          insurance_agent_email: data.insurance_agent_email
+          insurance_agent_email: data.insurance_agent_email,
+          insuranceCompany: data.insuranceCompany,
+          insuranceEmail: data.insuranceEmail,
+          ownerPhone: data.ownerPhone,
+          ownerAddress: data.ownerAddress,
+          damageDate: data.damageDate
+        }, 'general_info');
+        
+        // Update case info
+        updateHelper('case_info', {
+          damage_date: data.damageDate,
+          damage_type: data.damageType
         }, 'general_info');
         
         await sendToWebhook('FILL_FINAL_REPORT', data);

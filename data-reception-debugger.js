@@ -138,37 +138,52 @@ class DataReceptionDebugger {
     };
   }
 
-  // Process external car data
-  processExternalCarData(carData) {
-    this.logEvent('EXTERNAL_DATA', 'CAR_DATA_RECEIVED', carData);
+  // Process external data for any module type
+  processExternalData(data, section, dataType) {
+    this.logEvent('EXTERNAL_DATA', `${dataType.toUpperCase()}_RECEIVED`, data);
     
     try {
-      // Extract car details from the data
-      const carDetails = {
-        plate: carData.plate,
-        owner: carData.owner,
-        date: carData.date,
-        location: carData.location
-      };
+      // Use the enhanced updateHelper function with source module tracking
+      updateHelper(section, data, 'external_data_reception');
       
-      // Update helper with car data
-      updateHelper('car_details', carDetails);
-      updateHelper('meta', { 
-        plate: carData.plate,
-        owner_name: carData.owner,
-        inspection_location: carData.location,
-        inspection_date: carData.date
-      });
+      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATED_SUCCESS', { section, dataType });
       
-      saveHelperToStorage();
+      // Show notification
+      this.showDataReceivedNotification(data, dataType);
       
-      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATED_SUCCESS', carDetails);
-      
-      // Show floating screen notification
-      this.showDataReceivedNotification(carData);
+      // Refresh relevant floating screens
+      this.refreshFloatingScreens(section, dataType);
       
     } catch (error) {
-      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATE_ERROR', { error: error.message, data: carData });
+      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATE_ERROR', { error: error.message, section, data });
+    }
+  }
+  
+  // Refresh appropriate floating screens based on data type
+  refreshFloatingScreens(section, dataType) {
+    try {
+      // Car details floating screen
+      if (['car_details', 'vehicle', 'stakeholders'].includes(section) && typeof window.refreshCarData === 'function') {
+        setTimeout(() => window.refreshCarData(), 300);
+      }
+      
+      // Levi floating screen
+      if (['levisummary', 'levi_report', 'valuation'].includes(section) && typeof window.refreshLeviData === 'function') {
+        setTimeout(() => window.refreshLeviData(), 300);
+      }
+      
+      // Parts floating screen
+      if (['parts_search', 'parts_results'].includes(section) && typeof window.refreshPartsData === 'function') {
+        setTimeout(() => window.refreshPartsData(), 300);
+      }
+      
+      // Invoice floating screen
+      if (['invoice', 'invoices'].includes(section) && typeof window.refreshInvoiceData === 'function') {
+        setTimeout(() => window.refreshInvoiceData(), 300);
+      }
+      
+    } catch (error) {
+      this.logEvent('FLOATING_SCREEN', 'REFRESH_ERROR', { error: error.message, section, dataType });
     }
   }
 
@@ -181,10 +196,16 @@ class DataReceptionDebugger {
         source: event.source ? 'iframe/window' : 'unknown'
       });
       
-      // Try to process as car data
+      // Try to process different data types
       if (event.data && typeof event.data === 'object') {
         if (event.data.plate || event.data.car_details || event.data.vehicle_data) {
-          this.processExternalCarData(event.data);
+          this.processExternalData(event.data, 'car_details', 'Car Data');
+        } else if (event.data.levi_report || event.data.base_price || event.data.final_price) {
+          this.processExternalData(event.data, 'levisummary', 'Levi Report');
+        } else if (event.data.parts_results || Array.isArray(event.data.results)) {
+          this.processExternalData(event.data, 'parts_search', 'Parts Search');
+        } else if (event.data.damage_centers || event.data.damage_blocks) {
+          this.processExternalData(event.data, 'damage_assessment', 'Damage Assessment');
         }
       }
     });
@@ -195,61 +216,37 @@ class DataReceptionDebugger {
     // Global function for receiving car data from Make.com
     window.receiveCarData = (data) => {
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_CAR_DATA', data);
-      this.processExternalCarData(data);
+      this.processExternalData(data, 'car_details', 'Car Data');
     };
     
     // Global function for receiving Levi data
     window.receiveLeviData = (data) => {
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_LEVI_DATA', data);
-      try {
-        updateHelper('levisummary', data);
-        updateHelper('expertise', { levi_report: data });
-        saveHelperToStorage();
-        this.logEvent('GLOBAL_FUNCTION', 'LEVI_DATA_PROCESSED', data);
-        this.showDataReceivedNotification(data, 'Levi Report');
-      } catch (error) {
-        this.logEvent('GLOBAL_FUNCTION', 'LEVI_DATA_ERROR', { error: error.message, data });
-      }
+      this.processExternalData(data, 'levisummary', 'Levi Report');
     };
     
     // Global function for receiving parts data
     window.receivePartsData = (data) => {
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_PARTS_DATA', data);
-      try {
-        updateHelper('parts_search', { results: data });
-        saveHelperToStorage();
-        this.logEvent('GLOBAL_FUNCTION', 'PARTS_DATA_PROCESSED', data);
-        this.showDataReceivedNotification(data, 'Parts Search');
-      } catch (error) {
-        this.logEvent('GLOBAL_FUNCTION', 'PARTS_DATA_ERROR', { error: error.message, data });
-      }
+      this.processExternalData(data, 'parts_search', 'Parts Search');
     };
     
     // Global function for receiving damage data
     window.receiveDamageData = (data) => {
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_DAMAGE_DATA', data);
-      try {
-        updateHelper('expertise', { damage_blocks: data });
-        updateHelper('damage_centers', data);
-        saveHelperToStorage();
-        this.logEvent('GLOBAL_FUNCTION', 'DAMAGE_DATA_PROCESSED', data);
-        this.showDataReceivedNotification(data, 'Damage Assessment');
-      } catch (error) {
-        this.logEvent('GLOBAL_FUNCTION', 'DAMAGE_DATA_ERROR', { error: error.message, data });
-      }
+      this.processExternalData(data, 'damage_assessment', 'Damage Assessment');
     };
     
     // Global function for receiving invoice data
     window.receiveInvoiceData = (data) => {
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_INVOICE_DATA', data);
-      try {
-        updateHelper('invoice', data);
-        saveHelperToStorage();
-        this.logEvent('GLOBAL_FUNCTION', 'INVOICE_DATA_PROCESSED', data);
-        this.showDataReceivedNotification(data, 'Invoice');
-      } catch (error) {
-        this.logEvent('GLOBAL_FUNCTION', 'INVOICE_DATA_ERROR', { error: error.message, data });
-      }
+      this.processExternalData(data, 'invoice', 'Invoice');
+    };
+    
+    // Global function for receiving general info data
+    window.receiveGeneralInfo = (data) => {
+      this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_GENERAL_INFO', data);
+      this.processExternalData(data, 'stakeholders', 'General Info');
     };
     
     console.log('✅ Global data reception functions registered');
@@ -310,8 +307,9 @@ class DataReceptionDebugger {
     };
   }
 
-  // Show notification when data is received
+  // Show notification when data is received and refresh floating screens
   showDataReceivedNotification(data, type = 'Data') {
+    // Create notification
     const notification = document.createElement('div');
     notification.style.cssText = `
       position: fixed;
@@ -324,7 +322,8 @@ class DataReceptionDebugger {
       font-weight: bold;
       z-index: 10000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 300px;
+      max-width: 350px;
+      cursor: pointer;
     `;
     
     notification.innerHTML = `
@@ -332,16 +331,43 @@ class DataReceptionDebugger {
       <div style="font-size: 12px; margin-top: 5px;">
         ${Object.keys(data).slice(0, 3).join(', ')}...
       </div>
+      <div style="font-size: 11px; margin-top: 5px; opacity: 0.9;">
+        לחץ לצפייה במידע מפורט
+      </div>
     `;
+    
+    // Make notification clickable to show car details
+    notification.addEventListener('click', () => {
+      if (type === 'Car Data' && typeof window.refreshCarData === 'function') {
+        // Show car details floating screen
+        const carModal = document.getElementById('carDetailsModal');
+        if (carModal) {
+          carModal.style.display = 'block';
+          window.refreshCarData();
+        }
+      }
+      // Remove notification when clicked
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    });
     
     document.body.appendChild(notification);
     
-    // Remove after 5 seconds
+    // Auto-remove after 8 seconds
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
       }
-    }, 5000);
+    }, 8000);
+    
+    // Refresh floating screen data if available
+    if (type.includes('Car') && typeof window.refreshCarData === 'function') {
+      setTimeout(() => {
+        window.refreshCarData();
+        console.log('🔄 Refreshed car details floating screen with new data');
+      }, 500);
+    }
   }
 
   // Get full debug report

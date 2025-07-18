@@ -1,5 +1,5 @@
-// 🧠 Centralized Helper Metadata Store
-// Stores all dynamic session data for reports, Make.com exports, and resume-after-reload
+// 🧠 Centralized Helper System - Single Source of Truth
+// Handles ALL data flow: Make.com, manual inputs, internal browsers, damage centers, parts search, invoices
 
 import { calculate, MathEngine } from './math.js';
 import { securityManager } from './security-manager.js';
@@ -8,7 +8,8 @@ import {
   standardizeHelperData, 
   convertToLegacyFormat, 
   updateHelperWithStandardizedData,
-  UNIFIED_SCHEMAS
+  UNIFIED_SCHEMAS,
+  HelperStandardizer
 } from './data-flow-standardizer.js';
 
 
@@ -544,7 +545,7 @@ export function createDataIntegrityReport(data) {
   return report;
 }
 
-export function updateHelper(section, data) {
+export function updateHelper(section, data, sourceModule = null) {
   try {
     // Security validation
     if (!securityManager.validateSession()) {
@@ -555,19 +556,86 @@ export function updateHelper(section, data) {
     // Input sanitization
     const sanitizedData = sanitizeHelperData(data);
     
+    // Initialize section if needed
     if (!helper[section]) helper[section] = {};
-    mergeDeep(helper[section], sanitizedData);
     
-    // Auto-standardize critical data updates
-    if (['vehicle', 'car_details', 'meta', 'expertise', 'levisummary'].includes(section)) {
-      try {
-        const standardizedData = standardizeHelperData(helper);
-        updateHelperWithStandardizedData(helper, standardizedData);
-      } catch (e) {
-        errorHandler.createError('data', 'medium', 'Data standardization failed', { error: e.message });
-        console.warn('Data standardization skipped:', e.message);
-      }
+    // Handle different data source types according to specifications
+    switch (section) {
+      case 'vehicle':
+      case 'car_details':
+        processCarDetailsData(sanitizedData, sourceModule);
+        break;
+        
+      case 'stakeholders':
+      case 'garage':
+      case 'insurance':
+      case 'client':
+        processStakeholderData(section, sanitizedData, sourceModule);
+        break;
+        
+      case 'damage_assessment':
+      case 'damage_centers':
+      case 'expertise':
+        processDamageData(section, sanitizedData, sourceModule);
+        break;
+        
+      case 'valuation':
+      case 'levisummary':
+      case 'levi_report':
+        processValuationData(section, sanitizedData, sourceModule);
+        break;
+        
+      case 'parts_search':
+      case 'parts_results':
+        processPartsData(section, sanitizedData, sourceModule);
+        break;
+        
+      case 'invoice':
+      case 'invoices':
+        processInvoiceData(sanitizedData, sourceModule);
+        break;
+        
+      case 'documents':
+      case 'images':
+        processDocumentData(section, sanitizedData, sourceModule);
+        break;
+        
+      case 'financials':
+      case 'fees':
+      case 'costs':
+        processFinancialData(section, sanitizedData, sourceModule);
+        break;
+        
+      default:
+        // Fallback for any other sections
+        mergeDeep(helper[section], sanitizedData);
     }
+    
+    // Auto-standardize after any update
+    try {
+      const standardizer = new HelperStandardizer();
+      const standardizedHelper = standardizer.standardizeHelper(helper);
+      Object.assign(helper, standardizedHelper);
+    } catch (e) {
+      errorHandler.createError('data', 'medium', 'Helper standardization failed', { error: e.message });
+      console.warn('Data standardization skipped:', e.message);
+    }
+    
+    // Always save to sessionStorage after updates
+    saveHelperToStorage();
+    
+    // Update legacy carData for backward compatibility
+    if (['vehicle', 'car_details', 'stakeholders'].includes(section)) {
+      updateLegacyCarData();
+    }
+    
+    return true;
+    
+  } catch (error) {
+    errorHandler.createError('data', 'high', 'Helper update failed', { section, error: error.message });
+    return false;
+  }
+}
     
     // Security audit log
     securityManager.logSecurityEvent('data_update', {
@@ -1455,4 +1523,187 @@ try {
   });
 } catch (e) {
   // Debug tools are optional
+}
+
+// ============================================================================
+// DATA PROCESSING FUNCTIONS FOR DIFFERENT MODULE TYPES
+// ============================================================================
+
+function processCarDetailsData(data, sourceModule) {
+  // Handle car data from Make.com, manual input, or internal browsers
+  if (!helper.vehicle) helper.vehicle = {};
+  if (!helper.stakeholders) helper.stakeholders = { owner: {} };
+  
+  // Map fields according to unified schema
+  if (data.plate) helper.vehicle.plate = data.plate;
+  if (data.manufacturer) helper.vehicle.manufacturer = data.manufacturer;
+  if (data.model) helper.vehicle.model = data.model;
+  if (data.year) helper.vehicle.year = data.year;
+  if (data.chassis) helper.vehicle.chassis = data.chassis;
+  if (data.km) helper.vehicle.km = data.km;
+  if (data.engine_volume) helper.vehicle.engine_volume = data.engine_volume;
+  if (data.fuel_type) helper.vehicle.fuel_type = data.fuel_type;
+  if (data.ownership_type) helper.vehicle.ownership_type = data.ownership_type;
+  
+  // Owner information
+  if (data.owner) helper.stakeholders.owner.name = data.owner;
+  
+  // Preserve legacy structure for backward compatibility
+  mergeDeep(helper.car_details || {}, data);
+  if (!helper.car_details) helper.car_details = data;
+}
+
+function processStakeholderData(section, data, sourceModule) {
+  if (!helper.stakeholders) helper.stakeholders = { owner: {}, garage: {}, insurance: { agent: {} } };
+  
+  if (section === 'garage' || data.garageName || data.garagePhone) {
+    helper.stakeholders.garage.name = data.garageName || data.name || helper.stakeholders.garage.name;
+    helper.stakeholders.garage.phone = data.garagePhone || data.phone || helper.stakeholders.garage.phone;
+    helper.stakeholders.garage.email = data.garageEmail || data.email || helper.stakeholders.garage.email;
+  }
+  
+  if (section === 'insurance' || data.insuranceCompany || data.agentName) {
+    helper.stakeholders.insurance.company = data.insuranceCompany || data.company || helper.stakeholders.insurance.company;
+    helper.stakeholders.insurance.email = data.insuranceEmail || data.email || helper.stakeholders.insurance.email;
+    helper.stakeholders.insurance.agent.name = data.agentName || data.agent_name || helper.stakeholders.insurance.agent.name;
+    helper.stakeholders.insurance.agent.phone = data.insurance_agent_phone || data.agent_phone || helper.stakeholders.insurance.agent.phone;
+    helper.stakeholders.insurance.agent.email = data.insurance_agent_email || data.agent_email || helper.stakeholders.insurance.agent.email;
+  }
+  
+  if (section === 'client' || data.ownerPhone || data.ownerAddress) {
+    helper.stakeholders.owner.phone = data.ownerPhone || data.phone || helper.stakeholders.owner.phone;
+    helper.stakeholders.owner.address = data.ownerAddress || data.address || helper.stakeholders.owner.address;
+    if (data.damageDate) helper.case_info.damage_date = data.damageDate;
+  }
+}
+
+function processDamageData(section, data, sourceModule) {
+  if (!helper.damage_assessment) helper.damage_assessment = { summary: {}, centers: [] };
+  
+  if (section === 'damage_centers' || section === 'expertise') {
+    if (Array.isArray(data)) {
+      helper.damage_assessment.centers = data;
+    } else if (data.centers) {
+      helper.damage_assessment.centers = data.centers;
+    } else if (data.damage_blocks) {
+      helper.damage_assessment.centers = data.damage_blocks;
+    }
+  }
+  
+  // Preserve legacy expertise structure
+  if (!helper.expertise) helper.expertise = {};
+  mergeDeep(helper.expertise, data);
+}
+
+function processValuationData(section, data, sourceModule) {
+  if (!helper.valuation) helper.valuation = { adjustments: {}, calculations: {} };
+  
+  if (section === 'levisummary' || section === 'levi_report') {
+    // Handle Levi OCR data according to specifications
+    if (data.base_price) helper.valuation.base_price = parseFloat(data.base_price) || 0;
+    if (data.final_price) helper.valuation.final_price = parseFloat(data.final_price) || 0;
+    
+    // Process adjustments according to unified schema
+    if (data.adjustments) {
+      Object.keys(data.adjustments).forEach(key => {
+        if (!helper.valuation.adjustments[key]) helper.valuation.adjustments[key] = {};
+        Object.assign(helper.valuation.adjustments[key], data.adjustments[key]);
+      });
+    }
+  }
+  
+  // Preserve legacy structure
+  if (!helper[section]) helper[section] = {};
+  mergeDeep(helper[section], data);
+}
+
+function processPartsData(section, data, sourceModule) {
+  if (!helper.parts_search) helper.parts_search = { search_history: [], all_results: [], results: [], summary: {} };
+  
+  if (Array.isArray(data)) {
+    // Add to all_results and mark as selected/unselected
+    data.forEach(part => {
+      const partEntry = {
+        ...part,
+        search_timestamp: new Date().toISOString(),
+        source_module: sourceModule,
+        selected: part.selected !== false // Default to selected unless explicitly false
+      };
+      helper.parts_search.all_results.push(partEntry);
+      
+      if (partEntry.selected) {
+        helper.parts_search.results.push(partEntry);
+      }
+    });
+  } else if (data.results) {
+    processPartsData('parts_search', data.results, sourceModule);
+  }
+  
+  // Update summary
+  helper.parts_search.summary.total_results = helper.parts_search.all_results.length;
+  helper.parts_search.summary.selected_count = helper.parts_search.results.length;
+  helper.parts_search.summary.last_search = new Date().toISOString();
+}
+
+function processInvoiceData(data, sourceModule) {
+  if (!helper.documents) helper.documents = { invoices: [] };
+  if (!helper.financials) helper.financials = { costs: {} };
+  
+  // Store invoice document
+  helper.documents.invoices.push({
+    ...data,
+    processed_date: new Date().toISOString(),
+    source_module: sourceModule
+  });
+  
+  // Extract financial data from invoice
+  if (data.parts_total) helper.financials.costs.parts_total = parseFloat(data.parts_total) || 0;
+  if (data.works_total) helper.financials.costs.works_total = parseFloat(data.works_total) || 0;
+  if (data.repairs_total) helper.financials.costs.repairs_total = parseFloat(data.repairs_total) || 0;
+  if (data.vat_amount) helper.financials.taxes.vat_amount = parseFloat(data.vat_amount) || 0;
+}
+
+function processDocumentData(section, data, sourceModule) {
+  if (!helper.documents) helper.documents = { images: [], invoices: [], reports: [], pdfs: [], other_files: [] };
+  
+  if (section === 'images' && Array.isArray(data)) {
+    helper.documents.images.push(...data.map(img => ({
+      ...img,
+      upload_date: new Date().toISOString(),
+      source_module: sourceModule
+    })));
+  } else if (data.photo_count) {
+    // Accumulative photo count
+    helper.documents.photo_count = (helper.documents.photo_count || 0) + parseInt(data.photo_count);
+  }
+}
+
+function processFinancialData(section, data, sourceModule) {
+  if (!helper.financials) helper.financials = { costs: {}, fees: {}, taxes: {}, totals: {} };
+  
+  if (section === 'fees') {
+    Object.assign(helper.financials.fees, data);
+  } else if (section === 'costs') {
+    Object.assign(helper.financials.costs, data);
+  } else {
+    mergeDeep(helper.financials, data);
+  }
+  
+  // Recalculate totals
+  updateCalculations();
+}
+
+function updateLegacyCarData() {
+  // Update legacy carData in sessionStorage for backward compatibility
+  const carData = {
+    plate: helper.vehicle?.plate || helper.car_details?.plate || '',
+    owner: helper.stakeholders?.owner?.name || helper.car_details?.owner || '',
+    manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
+    model: helper.vehicle?.model || helper.car_details?.model || '',
+    year: helper.vehicle?.year || helper.car_details?.year || '',
+    location: helper.stakeholders?.garage?.name || helper.car_details?.garageName || '',
+    date: helper.case_info?.inspection_date || helper.car_details?.damageDate || ''
+  };
+  
+  sessionStorage.setItem('carData', JSON.stringify(carData));
 }

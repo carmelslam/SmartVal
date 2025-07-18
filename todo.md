@@ -301,6 +301,7 @@ After understanding all the issues and running a comprehensive audit combined wi
 **Issues:** 
 - the helper as the core system "brain" and the session storage as tetheh system memory , are not capturing any dat input, and tehy are not sending/ integratimg with any of the modules/ floating screeans and builders in the system.
 
+
 ## ❌ Push Notifications System - HIGH PRIORITY
 **Status:** Critical functionality not working
 **Issues:** 
@@ -323,8 +324,16 @@ After understanding all the issues and running a comprehensive audit combined wi
 - the general info page is a manual fileed page with general information , input information also not captured by the sytem and helepr and session storage are not filled.
 - in general info page the garage email fiield is blocked from typing.
 
-
-## ❌ Damage Wizard Module - HIGH PRIORITY  
+## ❌ Expertise workflow - HIGH PRIORITY  
+- the expertise report workflow needs to be deeply modified .
+- expertise workflow steos :
+  - open case - needs modifications 
+  - general info - needs modifications 
+  - damage centers - needs a full overall rebuilding
+  - expertise summary - exists
+  - expertise validation process(like the one in the estimate validation) - doesnt exist 
+  - report generation based on the expertise builder html - matched to teh estimate report builder logic and  data flow. = exists but needs work 
+### ❌ Damage Wizard Module - HIGH PRIORITY  
 **Status:** Most critical system component requiring complete rebuild
 **Issues:**
 - Missing input fields across all sections
@@ -332,6 +341,15 @@ After understanding all the issues and running a comprehensive audit combined wi
 - No repairs section in wizard
 - Missing summary and status functionality
 - Requires comprehensive logic redesign
+- doesnt follow the architecture and flow logic as described in documentaion . mainy teh parts section is critically broken.
+  #### the parts section in the wizard:
+   - the section needs to open the parts- required - > if the user wants to search => parts search module => filling a form -> send to inner browser site car-part.co.il , or =>> send individual quries to make -->> incoimng results create a list of suggestions ->>back to the parts required UI , entering 2 letters open suggestions , suggestions are getting focused with more letters typed in teh field.-> selcted parts are saved to the case helper as selected , all the unselcted parts are seved to teh helper as unselected or parts bank or whatever .
+   - the parts search moduel is independent , teh parts required direct to it when search os selected.
+   - the parts search module in teh "freetext" field meeds to suggest parts from the parts bank.js 
+   - there is a second parts search inside teh wizard that is not needed since the wizard needs to direct to teh parts search html, however, there are some enhancemnts on this page tha tneeds to be enhaced in the parts search page - such as the parts uggestion on typing 
+
+ - all steps nned to ahev an input and need to integrate with the actual UI " works, repairs required and parts search.
+ *the advanced damge center module in the admin hub sub files, offer smush better experience but it needs a lot of modification to match style, UX UI and flow - when working on thi s- more details will be provided 
 
 ## ❌ Case Status Displays - HIGH PRIORITY
 **Status:** Broken admin functionality

@@ -101,6 +101,41 @@ export async function sendToWebhook(id, payload) {
     try {
       data = JSON.parse(responseText);
       console.log(`📥 Parsed JSON data:`, data);
+      
+      // CRITICAL FIX: Process car data in webhook responses
+      if (data && typeof data === 'object') {
+        // Check if this response contains car data
+        if (data.plate || data.car_details || data.vehicle_data || 
+            (data.manufacturer && data.model) || data.owner) {
+          console.log('🚗 Car data detected in webhook response:', data);
+          
+          // Call global data reception function if available
+          if (typeof window.receiveCarData === 'function') {
+            console.log('📞 Calling receiveCarData with webhook response data');
+            window.receiveCarData(data);
+          } else {
+            console.log('⚠️ receiveCarData function not available, storing in sessionStorage');
+            // Fallback: store directly in sessionStorage
+            sessionStorage.setItem('carData', JSON.stringify(data));
+          }
+        }
+        
+        // Check for Levi data
+        if (data.levi_report || data.levi_data || data.base_price || data.final_price) {
+          console.log('📊 Levi data detected in webhook response:', data);
+          if (typeof window.receiveLeviData === 'function') {
+            window.receiveLeviData(data);
+          }
+        }
+        
+        // Check for parts data
+        if (data.parts_results || data.search_results || Array.isArray(data.results)) {
+          console.log('🔧 Parts data detected in webhook response:', data);
+          if (typeof window.receivePartsData === 'function') {
+            window.receivePartsData(data);
+          }
+        }
+      }
     } catch (jsonError) {
       // Handle plain text responses
       const trimmedResponse = responseText.trim();
