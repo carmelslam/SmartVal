@@ -633,7 +633,9 @@
   <form id="levi-form" method="POST" onsubmit="return false;">
     <!-- Case Information Section -->
     <div class="section">
-      <h3>פרטי התיק</h3>
+      <h3>פרטי התיק 
+        <button type="button" onclick="leviProcessor.loadCaseData()" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-right: 10px; cursor: pointer;">🔄 רענן נתונים</button>
+      </h3>
       <div class="form-row">
         <div class="form-group">
           <label for="plate">מספר רישוי:</label>
@@ -668,7 +670,9 @@
 
     <!-- Authentication Section -->
     <div class="section">
-      <h3>פרטי זיהוי</h3>
+      <h3>פרטי זיהוי 
+        <button type="button" onclick="testPasswordPrefill()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-right: 10px; cursor: pointer;">🔑 בדיקת סיסמא</button>
+      </h3>
       <div class="form-row">
         <div class="form-group">
           <label for="pass">סיסמא:</label>
@@ -1040,24 +1044,60 @@ class LeviProcessor {
 
   loadCaseData() {
     try {
-      // Priority 1: Load from helper if available (most up-to-date)
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 LEVI UPLOAD: Loading case data...');
       
-      // Load car details from helper
-      if (helper.car_details) {
-        if (helper.car_details.plate) {
-          document.getElementById('plate').value = helper.car_details.plate;
-        }
+      // Check all available data sources
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const makeCarData = JSON.parse(sessionStorage.getItem('makeCarData') || '{}');
+      const carData = JSON.parse(sessionStorage.getItem('carData') || '{}');
+      
+      console.log('📊 LEVI UPLOAD: Available data sources:', {
+        helper: Object.keys(helper),
+        makeCarData: Object.keys(makeCarData),
+        carData: Object.keys(carData)
+      });
+      
+      console.log('🔍 LEVI UPLOAD: Detailed data content:');
+      console.log('📋 makeCarData content:', makeCarData);
+      console.log('📋 helper content:', helper);
+      console.log('📋 carData content:', carData);
+      
+      // Load plate number from multiple sources
+      let plate = '';
+      if (makeCarData.plate) plate = makeCarData.plate;
+      else if (helper.car_details?.plate) plate = helper.car_details.plate;
+      else if (helper.vehicle?.plate) plate = helper.vehicle.plate;
+      else if (helper.meta?.plate) plate = helper.meta.plate;
+      else if (carData.plate) plate = carData.plate;
+      
+      if (plate) {
+        document.getElementById('plate').value = plate;
+        console.log('✅ LEVI UPLOAD: Plate loaded:', plate);
       }
       
-      // Load general info from helper
-      if (helper.general_info) {
-        if (helper.general_info.owner_name) {
-          document.getElementById('owner').value = helper.general_info.owner_name;
-        }
-        if (helper.general_info.office_code) {
-          document.getElementById('office_code').value = helper.general_info.office_code;
-        }
+      // Load owner name from multiple sources
+      let owner = '';
+      if (makeCarData.owner) owner = makeCarData.owner;
+      else if (helper.car_details?.owner) owner = helper.car_details.owner;
+      else if (helper.general_info?.owner_name) owner = helper.general_info.owner_name;
+      else if (helper.meta?.owner_name) owner = helper.meta.owner_name;
+      else if (carData.owner) owner = carData.owner;
+      
+      if (owner) {
+        document.getElementById('owner').value = owner;
+        console.log('✅ LEVI UPLOAD: Owner loaded:', owner);
+      }
+      
+      // Load office code from multiple sources
+      let officeCode = '';
+      if (makeCarData.office_code) officeCode = makeCarData.office_code;
+      else if (helper.vehicle?.office_code) officeCode = helper.vehicle.office_code;
+      else if (helper.car_details?.office_code) officeCode = helper.car_details.office_code;
+      else if (helper.general_info?.office_code) officeCode = helper.general_info.office_code;
+      
+      if (officeCode) {
+        document.getElementById('office_code').value = officeCode;
+        console.log('✅ LEVI UPLOAD: Office code loaded:', officeCode);
       }
       
       // Load password from helper (multiple possible locations)
@@ -1072,6 +1112,49 @@ class LeviProcessor {
       
       if (password) {
         document.getElementById('pass').value = password;
+        console.log('✅ LEVI UPLOAD: Password loaded from helper');
+      } else {
+        console.log('⚠️ LEVI UPLOAD: No password found in helper, checking prefill system...');
+        
+        // Try password prefill system
+        const prefillPassword = sessionStorage.getItem('prefillPassword');
+        if (prefillPassword) {
+          document.getElementById('pass').value = prefillPassword;
+          console.log('✅ LEVI UPLOAD: Password loaded from prefill system');
+        } else {
+          console.log('❌ LEVI UPLOAD: No password found anywhere');
+        }
+      }
+      
+      // Debug password storage
+      console.log('🔍 LEVI UPLOAD: Debugging password storage...');
+      console.log('🔍 sessionStorage.prefillPassword:', sessionStorage.getItem('prefillPassword'));
+      console.log('🔍 sessionStorage.auth:', sessionStorage.getItem('auth'));
+      console.log('🔍 All sessionStorage keys:', Object.keys(sessionStorage));
+      
+      // Also trigger the global password prefill function
+      if (typeof window.prefillUserPassword === 'function') {
+        setTimeout(() => {
+          window.prefillUserPassword();
+          console.log('🔑 LEVI UPLOAD: Global password prefill triggered');
+        }, 500);
+      }
+      
+      // Additional fallback: Try to get password from auth and store for prefill
+      const authData = sessionStorage.getItem('auth');
+      if (authData && !sessionStorage.getItem('prefillPassword')) {
+        // Try to decrypt auth data to get password
+        import('./auth.js').then(({ decryptPassword }) => {
+          decryptPassword(authData).then(decryptedPassword => {
+            sessionStorage.setItem('prefillPassword', decryptedPassword);
+            document.getElementById('pass').value = decryptedPassword;
+            console.log('🔑 LEVI UPLOAD: Password decrypted and filled from auth');
+          }).catch(error => {
+            console.log('❌ LEVI UPLOAD: Failed to decrypt auth password:', error);
+          });
+        }).catch(error => {
+          console.log('❌ LEVI UPLOAD: Failed to import auth module:', error);
+        });
       }
       
       console.log('Case data loaded from helper:', {
@@ -1109,7 +1192,7 @@ class LeviProcessor {
   async loadCredentials() {
     try {
       // Import credentials and display them when portal button is clicked
-      const { dev_credentials } = await import('./credentials vault.js');
+      const { dev_credentials } = await import('./credentials-vault.js');
       this.credentials = dev_credentials?.leviItzhak;
     } catch (e) {
       console.warn('Could not load credentials:', e);
@@ -2137,7 +2220,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Levi processor
   window.leviProcessor = new LeviProcessor();
+  
+  // Trigger password prefill immediately when page loads
+  setTimeout(() => {
+    console.log('🔑 LEVI UPLOAD: Page loaded, triggering password prefill...');
+    
+    // Debug what's available
+    console.log('🔍 Available for password prefill:');
+    console.log('- prefillPassword:', sessionStorage.getItem('prefillPassword'));
+    console.log('- auth:', !!sessionStorage.getItem('auth'));
+    
+    // Try the global prefill function
+    if (typeof window.prefillUserPassword === 'function') {
+      window.prefillUserPassword();
+    }
+    
+    // Manual fallback
+    const prefillPassword = sessionStorage.getItem('prefillPassword');
+    if (prefillPassword && document.getElementById('pass')) {
+      document.getElementById('pass').value = prefillPassword;
+      console.log('🔑 LEVI UPLOAD: Password manually filled on page load');
+    }
+  }, 1000);
 });
+
+// Test password prefill function
+window.testPasswordPrefill = function() {
+  console.log('🔍 TESTING PASSWORD PREFILL...');
+  
+  // Debug all password sources
+  console.log('📊 Password Sources Debug:');
+  console.log('1. sessionStorage.prefillPassword:', sessionStorage.getItem('prefillPassword'));
+  console.log('2. sessionStorage.auth:', !!sessionStorage.getItem('auth'));
+  console.log('3. Current pass field value:', document.getElementById('pass').value);
+  console.log('4. All sessionStorage keys:', Object.keys(sessionStorage));
+  
+  // Test prefill function
+  if (typeof window.prefillUserPassword === 'function') {
+    window.prefillUserPassword();
+    console.log('✅ Global prefill function called');
+  } else {
+    console.log('❌ Global prefill function not available');
+  }
+  
+  // Manual prefill test
+  const prefillPassword = sessionStorage.getItem('prefillPassword');
+  if (prefillPassword) {
+    document.getElementById('pass').value = prefillPassword;
+    console.log('✅ Manual prefill successful:', prefillPassword);
+  } else {
+    console.log('❌ No prefillPassword found');
+    
+    // Try to decrypt auth
+    const authData = sessionStorage.getItem('auth');
+    if (authData) {
+      import('./auth.js').then(({ decryptPassword }) => {
+        decryptPassword(authData).then(decryptedPassword => {
+          document.getElementById('pass').value = decryptedPassword;
+          sessionStorage.setItem('prefillPassword', decryptedPassword);
+          console.log('✅ Password decrypted and filled manually');
+        }).catch(error => {
+          console.log('❌ Failed to decrypt auth:', error);
+        });
+      });
+    }
+  }
+};
 
 </script>
 

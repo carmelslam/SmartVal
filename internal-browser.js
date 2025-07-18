@@ -198,7 +198,7 @@
         <div style="font-size: 20px; margin-bottom: 10px;">🔄</div>
         <div>טוען אתר...</div>
       </div>
-      <iframe class="browser-iframe" id="browserIframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+      <iframe class="browser-iframe" id="browserIframe" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation" data-security-fixed="true"></iframe>
     </div>
     
     <div class="browser-status" id="browserStatus">
