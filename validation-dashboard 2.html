@@ -1,0 +1,3089 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח בקרת אימות - ירון כיוף שמאות</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 25%, #475569 50%, #64748b 75%, #94a3b8 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      direction: rtl;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 20%, rgba(120, 113, 208, 0.3) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(255, 117, 117, 0.2) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 60%, rgba(34, 197, 94, 0.2) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-bottom: 100px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1), 
+                  0 8px 32px rgba(0,0,0,0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      transition: left 0.8s;
+    }
+    
+    .header:hover::before {
+      left: 100%;
+    }
+    
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 18px;
+    }
+
+    .session-info {
+      background: #f0f9ff;
+      border: 2px solid #3b82f6;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 25px;
+      text-align: right;
+    }
+
+    .session-info h3 {
+      color: #1e40af;
+      font-size: 18px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #3b82f6;
+      padding-bottom: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .info-item {
+      background: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border-left: 4px solid #3b82f6;
+      font-size: 14px;
+    }
+
+    .current-session {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+    }
+
+    .current-session h4 {
+      color: #1f2937;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .session-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .session-details span {
+      background: #f3f4f6;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08), 
+                  0 4px 16px rgba(0,0,0,0.04),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #059669, #3b82f6, #8b5cf6, #ef4444);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.12), 
+                  0 8px 24px rgba(0,0,0,0.08),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.95);
+    }
+    
+    .card:hover::before {
+      transform: scaleX(1);
+    }
+    
+    .card h3 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #667eea;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-left: 10px;
+      position: relative;
+      box-shadow: 0 0 0 0 currentColor;
+    }
+    
+    .status-valid { 
+      background: #059669;
+      animation: pulse-green 2s infinite;
+    }
+    .status-invalid { 
+      background: #dc2626;
+      animation: pulse-red 2s infinite;
+    }
+    .status-warning { 
+      background: #d97706;
+      animation: pulse-yellow 2s infinite;
+    }
+    .status-pending { 
+      background: #64748b;
+      animation: pulse-gray 2s infinite;
+    }
+    
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    }
+    
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+    
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(217, 119, 6, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+    }
+    
+    @keyframes pulse-gray {
+      0% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(100, 116, 139, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0); }
+    }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .metric:last-child {
+      border-bottom: none;
+    }
+    
+    .metric-label {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .metric-value.large {
+      font-size: 28px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .metric-value.error { 
+      color: #dc2626; 
+      text-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+    }
+    .metric-value.warning { 
+      color: #d97706; 
+      text-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+    }
+    .metric-value.success { 
+      color: #059669; 
+      text-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
+    }
+    
+    .metric-value:hover {
+      transform: scale(1.1);
+    }
+    
+    .metric-counter {
+      display: inline-block;
+      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    
+    .validation-list {
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(248, 250, 252, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .validation-item {
+      padding: 12px 16px;
+      margin: 6px 0;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .validation-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    
+    .validation-item:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .validation-item.error {
+      background: linear-gradient(135deg, rgba(254, 226, 226, 0.8), rgba(252, 165, 165, 0.6));
+      color: #7f1d1d;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .validation-item.error::before {
+      background: #dc2626;
+    }
+    
+    .validation-item.error:hover::before {
+      width: 100%;
+      opacity: 0.1;
+    }
+    
+    .validation-item.warning {
+      background: linear-gradient(135deg, rgba(254, 243, 199, 0.8), rgba(253, 230, 138, 0.6));
+      color: #78350f;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .validation-item.warning::before {
+      background: #d97706;
+    }
+    
+    .validation-item.warning:hover::before {
+      width: 100%;
+      opacity: 0.1;
+    }
+    
+    .validation-item.success {
+      background: linear-gradient(135deg, rgba(220, 252, 231, 0.8), rgba(167, 243, 208, 0.6));
+      color: #064e3b;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .validation-item.success::before {
+      background: #059669;
+    }
+    
+    .validation-item.success:hover::before {
+      width: 100%;
+      opacity: 0.1;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      padding: 16px 32px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn:hover::before {
+      left: 100%;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(100, 116, 139, 0.3);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-info {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+    }
+    
+    .btn:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    }
+    
+    .btn:active {
+      transform: translateY(-2px) scale(1.02);
+      transition: all 0.1s;
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .floating-access {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin: 25px 0;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+
+    .floating-access h3 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #17a2b8;
+      text-align: center;
+    }
+
+    .floating-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .clickable-metric {
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: -8px -12px;
+    }
+
+    .clickable-metric:hover {
+      background-color: #f0f9ff;
+      transform: translateX(-5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .drill-down-icon {
+      font-size: 14px;
+      opacity: 0.6;
+      margin-right: 10px;
+      transition: opacity 0.3s;
+    }
+
+    .clickable-metric:hover .drill-down-icon {
+      opacity: 1;
+    }
+
+    .drill-down-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      z-index: 10000;
+      direction: rtl;
+    }
+
+    .drill-down-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    }
+
+    .drill-down-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .drill-down-close {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background: rgba(226, 232, 240, 0.8);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 12px 0;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #059669 0%, #34d399 50%, #10b981 100%);
+      transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+    }
+    
+    .progress-fill::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+      animation: progress-shine 2s infinite;
+    }
+    
+    @keyframes progress-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .progress-fill.warning {
+      background: linear-gradient(135deg, #d97706 0%, #fbbf24 50%, #f59e0b 100%);
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+    }
+    
+    .progress-fill.error {
+      background: linear-gradient(135deg, #dc2626 0%, #f87171 50%, #ef4444 100%);
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+    
+    .navigation {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 15px 25px;
+      border-radius: 25px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 15px;
+      z-index: 1000;
+    }
+    
+    .nav-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .nav-btn.primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .nav-btn.secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+      position: relative;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .auto-refresh input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 28px;
+      }
+      
+      .actions {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .navigation {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="ירון כיוף שמאות" class="logo">
+      <h1>🛡️ לוח בקרת אימות</h1>
+      <p>מערכת אימות נתונים ובקרת איכות</p>
+      
+      <!-- Session Info -->
+      <div class="session-info">
+        <h3>ℹ️ מידע על המודול</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <strong>סוג אימות:</strong> נתוני ההפעלה הנוכחית בלבד
+          </div>
+          <div class="info-item">
+            <strong>מקור נתונים:</strong> התיק הפעיל כרגע במערכת
+          </div>
+          <div class="info-item">
+            <strong>מטרה:</strong> בקרת איכות לפני הפקת דוחות
+          </div>
+          <div class="info-item">
+            <strong>גישה:</strong> מנהלי מערכת בלבד
+          </div>
+        </div>
+        
+        <!-- Current Session Status -->
+        <div class="current-session">
+          <h4>📋 תיק פעיל כרגע:</h4>
+          <div class="session-details">
+            <span><strong>מספר רכב:</strong> <span id="current-plate">טוען...</span></span>
+            <span><strong>סטטוס הפעלה:</strong> <span id="session-status">בודק...</span></span>
+            <span><strong>זמן טעינה:</strong> <span id="session-time">טוען...</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Overall Status Card -->
+      <div class="card">
+        <h3>🎯 סטטוס כללי <span class="status-indicator" id="overall-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="validation-status">בדיקה...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">אחוז השלמה:</span>
+          <span class="metric-value" id="completion-percentage">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="completion-progress" style="width: 0%"></div>
+        </div>
+        <div class="metric">
+          <span class="metric-label">בדיקה אחרונה:</span>
+          <span class="metric-value" id="last-check">טרם בוצעה</span>
+        </div>
+      </div>
+
+      <!-- Errors Card -->
+      <div class="card">
+        <h3>❌ שגיאות <span class="status-indicator status-invalid" id="errors-indicator"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סה"כ שגיאות:</span>
+          <span class="metric-value error" id="total-errors">0</span>
+        </div>
+        <div class="validation-list" id="errors-list">
+          <div class="validation-item">טוען שגיאות...</div>
+        </div>
+      </div>
+
+      <!-- Warnings Card -->
+      <div class="card">
+        <h3>⚠️ אזהרות <span class="status-indicator status-warning" id="warnings-indicator"></span></h3>
+        <div class="metric">
+          <span class="metric-label">סה"כ אזהרות:</span>
+          <span class="metric-value warning" id="total-warnings">0</span>
+        </div>
+        <div class="validation-list" id="warnings-list">
+          <div class="validation-item">טוען אזהרות...</div>
+        </div>
+      </div>
+
+      <!-- Vehicle Data Card -->
+      <div class="card">
+        <h3>🚗 פרטי רכב <span class="status-indicator" id="vehicle-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">מספר רישוי:</span>
+          <span class="metric-value" id="vehicle-plate">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">יצרן ודגם:</span>
+          <span class="metric-value" id="vehicle-model">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">שנת ייצור:</span>
+          <span class="metric-value" id="vehicle-year">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="vehicle-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Damage Data Card -->
+      <div class="card">
+        <h3>🧱 נתוני נזק <span class="status-indicator" id="damage-status"></span></h3>
+        <div class="metric clickable-metric" onclick="drillDownDamage('centers')">
+          <span class="metric-label">מספר מוקדי נזק:</span>
+          <span class="metric-value" id="damage-centers-count">0</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownDamage('parts')">
+          <span class="metric-label">סה"כ חלקים:</span>
+          <span class="metric-value" id="total-parts">0</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownDamage('repairs')">
+          <span class="metric-label">סה"כ תיקונים:</span>
+          <span class="metric-value" id="total-repairs">0</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="damage-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Invoice Status Card -->
+      <div class="card">
+        <h3>🧾 סטטוס חשבוניות <span class="status-indicator" id="invoice-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">דרוש חשבונית:</span>
+          <span class="metric-value" id="invoice-required">בודק...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">חשבונית התקבלה:</span>
+          <span class="metric-value" id="invoice-received">לא</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סה"כ מחשבונית:</span>
+          <span class="metric-value" id="invoice-total">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="invoice-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Levi Adjustments Card -->
+      <div class="card">
+        <h3>📈 התאמות לוי יצחק <span class="status-indicator" id="levi-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">דוח לוי קיים:</span>
+          <span class="metric-value" id="levi-exists">לא</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">מחיר בסיסי רכב:</span>
+          <span class="metric-value" id="car-basic-price">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">שווי שוק:</span>
+          <span class="metric-value" id="market-value">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">התאמות מחיר:</span>
+          <span class="metric-value" id="price-adjustments">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="levi-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Depreciation Card -->
+      <div class="card">
+        <h3>📉 ירידת ערך <span class="status-indicator" id="depreciation-status"></span></h3>
+        <div class="metric">
+          <span class="metric-label">ירידת ערך הוגדרה:</span>
+          <span class="metric-value" id="depreciation-defined">לא</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סכום ירידת ערך:</span>
+          <span class="metric-value" id="depreciation-amount">₪0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">אחוז ירידת ערך:</span>
+          <span class="metric-value" id="depreciation-percentage">0%</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס אימות:</span>
+          <span class="metric-value" id="depreciation-validation">בדיקה...</span>
+        </div>
+      </div>
+
+      <!-- Professional Standards Card -->
+      <div class="card">
+        <h3>⚖️ תקנים מקצועיים <span class="status-indicator" id="professional-status"></span></h3>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('timeline')">
+          <span class="metric-label">ימים מיצירת אקספרטיזה:</span>
+          <span class="metric-value" id="case-age">0</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('completeness')">
+          <span class="metric-label">אחוז השלמת תיעוד:</span>
+          <span class="metric-value" id="documentation-completeness">0%</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric clickable-metric" onclick="drillDownProfessional('readiness')">
+          <span class="metric-label">מוכנות לדוח סופי:</span>
+          <span class="metric-value" id="report-readiness">לא מוכן</span>
+          <span class="drill-down-icon">🔍</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">סטטוס מקצועי:</span>
+          <span class="metric-value" id="professional-validation">בדיקה...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="refreshValidation()">🔄 רענן אימות</button>
+      <button class="btn btn-secondary" onclick="exportValidationReport()">📊 ייצא דוח</button>
+      <button class="btn btn-success" onclick="fixAllErrors()" id="fix-errors-btn" disabled>🔧 תקן שגיאות</button>
+      <button class="btn btn-danger" onclick="clearValidationData()">🗑️ נקה נתונים</button>
+    </div>
+
+    <!-- Floating Screen Access -->
+    <div class="floating-access">
+      <h3>🪟 מסכי מידע מרחפים</h3>
+      <div class="floating-buttons">
+        <button class="btn btn-info" onclick="openCarDetailsFloating()">🚗 פרטי רכב</button>
+        <button class="btn btn-info" onclick="openLeviFloating()">📊 דוח לוי יצחק</button>
+        <button class="btn btn-info" onclick="openPartsResultsFloating()">📦 תוצאות חיפוש חלקים</button>
+        <button class="btn btn-info" onclick="openInvoiceFloating()">🧾 פרטי חשבונית</button>
+      </div>
+    </div>
+
+    <!-- Auto-refresh control -->
+    <div class="card">
+      <div class="auto-refresh">
+        <input type="checkbox" id="auto-refresh-checkbox" onchange="toggleAutoRefresh()">
+        <label for="auto-refresh-checkbox">רענון אוטומטי כל 30 שניות</label>
+        <span id="refresh-countdown"></span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <a href="selection.html" class="nav-btn secondary">🏠 עמוד הבית</a>
+      <a href="admin.html" class="nav-btn secondary">⚙️ חזרה למרכז ניהול</a>
+      <a href="enhanced-damage-centers.html" class="nav-btn primary">🧱 מוקדי נזק</a>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    // Import validation system with fallback
+    let validationSystem = null;
+    let helper = null;
+    
+    try {
+      const validationModule = await import('./validation-system.js');
+      validationSystem = validationModule.validationSystem;
+      console.log('✅ Validation system imported successfully');
+    } catch (error) {
+      console.warn('⚠️ Could not import validation-system.js:', error);
+    }
+    
+    try {
+      const helperModule = await import('./helper.js');
+      helper = helperModule.helper;
+      console.log('✅ Helper imported successfully');
+    } catch (error) {
+      console.warn('⚠️ Could not import helper.js:', error);
+      // Fallback to sessionStorage data
+      try {
+        const sessionHelper = sessionStorage.getItem('helper');
+        if (sessionHelper) {
+          helper = JSON.parse(sessionHelper);
+          console.log('✅ Helper loaded from sessionStorage as fallback');
+        } else {
+          console.warn('⚠️ No helper data in sessionStorage either');
+          helper = {}; // Initialize empty helper
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing sessionStorage helper:', parseError);
+        helper = {}; // Initialize empty helper
+      }
+    }
+
+    let autoRefreshInterval = null;
+    let refreshCountdown = 30;
+    let countdownInterval = null;
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check authentication
+      const auth = sessionStorage.getItem("auth");
+      if (!auth) {
+        alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+        window.location.href = "index.html";
+        return;
+      }
+
+      // Load initial session info
+      updateSessionInfo();
+
+      // Load initial validation data
+      setTimeout(() => {
+        refreshValidation();
+      }, 500); // Add small delay to ensure modules are loaded
+      
+      // Setup keyboard shortcuts
+      setupKeyboardShortcuts();
+      
+      console.log('🛡️ Validation Dashboard initialized');
+    });
+
+    // Update session information display
+    function updateSessionInfo() {
+      try {
+        // Get current plate from various sources
+        const currentPlate = helper?.vehicle?.plate || 
+                           helper?.vehicle?.plate_number || 
+                           helper?.car_details?.plate ||
+                           sessionStorage.getItem('plate') ||
+                           'אין תיק פעיל';
+
+        // Get session status
+        const caseLoaded = sessionStorage.getItem('caseLoaded');
+        const sessionStatus = caseLoaded ? 'תיק פעיל' : 'אין תיק פעיל';
+
+        // Get session time
+        const loginTime = sessionStorage.getItem('loginTime');
+        const sessionTime = loginTime ? 
+          new Date(loginTime).toLocaleString('he-IL') : 
+          'לא זמין';
+
+        // Update UI elements
+        document.getElementById('current-plate').textContent = currentPlate;
+        document.getElementById('session-status').textContent = sessionStatus;
+        document.getElementById('session-time').textContent = sessionTime;
+
+        // Update status styling
+        const statusElement = document.getElementById('session-status');
+        if (caseLoaded && currentPlate !== 'אין תיק פעיל') {
+          statusElement.style.color = '#059669';
+          statusElement.style.fontWeight = 'bold';
+        } else {
+          statusElement.style.color = '#dc2626';
+          statusElement.style.fontWeight = 'bold';
+        }
+
+        console.log('📋 Session info updated:', { currentPlate, sessionStatus, sessionTime });
+
+      } catch (error) {
+        console.error('❌ Error updating session info:', error);
+        document.getElementById('current-plate').textContent = 'שגיאה בטעינה';
+        document.getElementById('session-status').textContent = 'לא זמין';
+        document.getElementById('session-time').textContent = 'לא זמין';
+      }
+    }
+
+    // Function to refresh helper data from all available sources
+    function refreshHelperData() {
+      try {
+        // Priority 1: Check sessionStorage
+        const sessionHelper = sessionStorage.getItem('helper');
+        if (sessionHelper) {
+          const parsedHelper = JSON.parse(sessionHelper);
+          if (parsedHelper && Object.keys(parsedHelper).length > 0) {
+            helper = parsedHelper;
+            console.log('🔄 Helper data refreshed from sessionStorage');
+            return;
+          }
+        }
+
+        // Priority 2: Use existing helper if it has data
+        if (helper && Object.keys(helper).length > 0) {
+          console.log('🔄 Using existing helper data');
+          return;
+        }
+
+        // Priority 3: Initialize with basic structure
+        helper = {
+          vehicle: {},
+          damage: { centers: [] },
+          car_details: {},
+          meta: {},
+          levi_report: {},
+          expertise: {},
+          depreciation: {}
+        };
+        console.log('🔄 Initialized empty helper structure');
+
+      } catch (error) {
+        console.error('❌ Error refreshing helper data:', error);
+        helper = {};
+      }
+    }
+
+    function refreshValidation() {
+      console.log('🔄 Refreshing validation data...');
+      
+      try {
+        // Ensure we have the most up-to-date helper data
+        refreshHelperData();
+        
+        // Get validation summary with fallback logic
+        let summary = null;
+        
+        if (validationSystem && typeof validationSystem.getValidationSummary === 'function') {
+          summary = validationSystem.getValidationSummary();
+          console.log('📊 Using validation system data:', summary);
+        } else {
+          // Fallback: create summary from helper data directly
+          summary = createValidationSummaryFromHelper();
+          console.log('📊 Using fallback validation data:', summary);
+        }
+        
+        // Update all dashboard sections
+        updateOverallStatus(summary);
+        updateErrors(summary);
+        updateWarnings(summary);
+        updateVehicleData(summary);
+        updateDamageData(summary);
+        updateInvoiceStatus(summary);
+        updateLeviData(summary);
+        updateDepreciationData(summary);
+        updateProfessionalStandards(summary);
+        
+        // Update visual indicators and charts
+        updateValidationCharts(summary);
+        updateProgressIndicators(summary);
+        updateStatusDots(summary);
+        
+        // Update last check time
+        document.getElementById('last-check').textContent = new Date().toLocaleTimeString('he-IL');
+        
+        // Update session info
+        updateSessionInfo();
+        
+        console.log('✅ Validation data refreshed successfully');
+        
+        // Show success notification
+        showInfo('נתוני האימות עודכנו בהצלחה - בדיקת עקביות לוגית שופרה');
+        
+      } catch (error) {
+        console.error('❌ Error refreshing validation data:', error);
+        showError('שגיאה בטעינת נתוני האימות: ' + error.message);
+        
+        // Show fallback data even on error
+        try {
+          // Enhanced error notification with actionable feedback
+          const errorNotification = {
+            type: 'validation_error',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+            action: 'refresh_attempted'
+          };
+          
+          // Store error for debugging
+          sessionStorage.setItem('last_validation_error', JSON.stringify(errorNotification));
+          
+          // Show user-friendly error with retry option
+          showEnhancedError('שגיאה בטעינת נתוני האימות', {
+            details: error.message,
+            retryFunction: () => setTimeout(refreshValidation, 2000),
+            showRetry: true
+          });
+          
+          // Create and show fallback data
+          const fallbackSummary = createEmptyValidationSummary();
+          updateOverallStatus(fallbackSummary);
+          updateErrors(fallbackSummary);
+          updateWarnings(fallbackSummary);
+          updateVehicleData(fallbackSummary);
+          updateDamageData(fallbackSummary);
+          updateInvoiceStatus(fallbackSummary);
+          updateLeviData(fallbackSummary);
+          updateDepreciationData(fallbackSummary);
+          updateProfessionalStandards(fallbackSummary);
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError);
+        }
+      }
+    }
+
+    // Create validation summary from helper data
+    function createValidationSummaryFromHelper() {
+      const helperData = helper || {};
+      const errors = [];
+      const warnings = [];
+      
+      // Check vehicle data
+      const vehicleErrors = [];
+      const vehicleWarnings = [];
+      const vehicle = helperData.vehicle || helperData.car_details || {};
+      
+      if (!vehicle.plate && !vehicle.plate_number) vehicleErrors.push('מספר רכב חסר');
+      if (!vehicle.manufacturer) vehicleErrors.push('יצרן חסר');
+      if (!vehicle.model) vehicleErrors.push('דגם חסר');
+      if (!vehicle.year) vehicleErrors.push('שנת ייצור חסרה');
+      
+      // Check damage data - FIXED LOGIC
+      const damageErrors = [];
+      const damageWarnings = [];
+      const damage = helperData.damage || {};
+      const centers = damage.centers || helperData.damage_sections || [];
+      
+      let totalParts = 0;
+      let totalRepairs = 0;
+      centers.forEach(center => {
+        if (center.parts) totalParts += center.parts.length;
+        if (center.repairs) totalRepairs += center.repairs.length;
+      });
+      
+      if (centers.length === 0) {
+        damageErrors.push('לא הוגדרו מוקדי נזק');
+      } else if (totalParts === 0 && totalRepairs === 0) {
+        damageWarnings.push('מוקדי נזק קיימים אך חסרים חלקים ותיקונים');
+      }
+      
+      // Check invoice requirements (conditional based on report type)
+      const invoiceErrors = [];
+      const invoiceWarnings = [];
+      const reportType = helperData.meta?.report_type || '';
+      const finalReportTypes = ['final', 'Final_Private', 'Final_Global', 'Final_Total', 'Final_Sale'];
+      const invoiceRequired = finalReportTypes.some(type => reportType.includes(type));
+      
+      if (invoiceRequired && !helperData.invoice_uploaded && !helperData.invoice_summary) {
+        invoiceErrors.push('דוח סופי דורש חשבונית');
+      }
+
+      // Check Levi report
+      const leviErrors = [];
+      const leviWarnings = [];
+      
+      if (!helperData.levi_report && !helperData.car_details?.market_value) {
+        leviWarnings.push('חסר דוח לוי יצחק או שווי שוק');
+      }
+
+      // Check depreciation - FIXED LOGIC
+      const depreciationErrors = [];
+      const depreciationWarnings = [];
+      
+      const depreciationData = helperData.depreciation || helperData.expertise?.depreciation || {};
+      const depAmount = depreciationData.amount || depreciationData.depreciation_amount || 0;
+      const depPercent = depreciationData.percentage || depreciationData.depreciation_percentage || 0;
+      
+      if (!depreciationData || Object.keys(depreciationData).length === 0) {
+        depreciationErrors.push('לא הוגדרה ירידת ערך');
+      } else if (depAmount === 0 && depPercent === 0) {
+        depreciationWarnings.push('ירידת ערך הוגדרה אך ללא ערכים');
+      }
+
+      // Check professional standards
+      const professionalErrors = [];
+      const professionalWarnings = [];
+      
+      // Calculate case age
+      const expertiseDate = helperData.meta?.submission_date || helperData.meta?.inspection_date;
+      if (expertiseDate) {
+        const daysSinceExpertise = Math.floor((new Date() - new Date(expertiseDate)) / (1000 * 60 * 60 * 24));
+        if (daysSinceExpertise > 30) {
+          professionalWarnings.push('התיק פתוח יותר מ-30 ימים');
+        }
+      }
+      
+      const totalErrors = vehicleErrors.length + damageErrors.length + invoiceErrors.length + 
+                         leviErrors.length + depreciationErrors.length + professionalErrors.length;
+      const totalWarnings = vehicleWarnings.length + damageWarnings.length + invoiceWarnings.length + 
+                           leviWarnings.length + depreciationWarnings.length + professionalWarnings.length;
+      
+      return {
+        isValid: totalErrors === 0,
+        totalErrors,
+        totalWarnings,
+        lastValidation: new Date(),
+        details: {
+          vehicle: {
+            isValid: vehicleErrors.length === 0,
+            errors: vehicleErrors,
+            warnings: vehicleWarnings
+          },
+          damage: {
+            isValid: damageErrors.length === 0,
+            errors: damageErrors,
+            warnings: damageWarnings
+          },
+          invoice: {
+            isValid: invoiceErrors.length === 0,
+            errors: invoiceErrors,
+            warnings: invoiceWarnings,
+            required: invoiceRequired
+          },
+          levi: {
+            isValid: leviErrors.length === 0,
+            errors: leviErrors,
+            warnings: leviWarnings
+          },
+          depreciation: {
+            isValid: depreciationErrors.length === 0,
+            errors: depreciationErrors,
+            warnings: depreciationWarnings
+          },
+          professional: {
+            isValid: professionalErrors.length === 0,
+            errors: professionalErrors,
+            warnings: professionalWarnings
+          }
+        }
+      };
+    }
+
+    // Create empty validation summary for fallback
+    function createEmptyValidationSummary() {
+      return {
+        isValid: false,
+        totalErrors: 0,
+        totalWarnings: 0,
+        lastValidation: new Date(),
+        details: {
+          vehicle: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          damage: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          invoice: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          levi: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          depreciation: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] },
+          professional: { isValid: false, errors: ['נתונים לא זמינים'], warnings: [] }
+        }
+      };
+    }
+
+    function updateOverallStatus(summary) {
+      const statusIndicator = document.getElementById('overall-status');
+      const statusText = document.getElementById('validation-status');
+      const completionPercentage = document.getElementById('completion-percentage');
+      const completionProgress = document.getElementById('completion-progress');
+      
+      if (summary.isValid) {
+        statusIndicator.className = 'status-indicator status-valid';
+        statusText.textContent = 'תקין';
+        statusText.className = 'metric-value success';
+        completionPercentage.textContent = '100%';
+        completionProgress.style.width = '100%';
+        completionProgress.className = 'progress-fill';
+      } else {
+        statusIndicator.className = 'status-indicator status-invalid';
+        statusText.textContent = 'דורש תיקון';
+        statusText.className = 'metric-value error';
+        
+        // Calculate completion percentage based on errors
+        const totalItems = 10; // Assume 10 validation items
+        const errorItems = Math.min(summary.totalErrors, totalItems);
+        const percentage = Math.max(0, Math.round((totalItems - errorItems) / totalItems * 100));
+        
+        completionPercentage.textContent = `${percentage}%`;
+        completionProgress.style.width = `${percentage}%`;
+        completionProgress.className = percentage > 50 ? 'progress-fill warning' : 'progress-fill error';
+      }
+    }
+
+    function updateErrors(summary) {
+      const errorsIndicator = document.getElementById('errors-indicator');
+      const totalErrors = document.getElementById('total-errors');
+      const errorsList = document.getElementById('errors-list');
+      
+      totalErrors.textContent = summary.totalErrors;
+      
+      if (summary.totalErrors > 0) {
+        errorsIndicator.className = 'status-indicator status-invalid';
+        
+        const errorItems = [];
+        if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+          errorItems.push(...summary.details.vehicle.errors.map(e => `פרטי רכב: ${e}`));
+        }
+        if (summary.details.damage && !summary.details.damage.isValid) {
+          errorItems.push(...summary.details.damage.errors.map(e => `נתוני נזק: ${e}`));
+        }
+        if (summary.details.invoice && !summary.details.invoice.isValid) {
+          errorItems.push(...summary.details.invoice.errors.map(e => `חשבוניות: ${e}`));
+        }
+        if (summary.details.levi && !summary.details.levi.isValid) {
+          errorItems.push(...summary.details.levi.errors.map(e => `לוי יצחק: ${e}`));
+        }
+        if (summary.details.depreciation && !summary.details.depreciation.isValid) {
+          errorItems.push(...summary.details.depreciation.errors.map(e => `ירידת ערך: ${e}`));
+        }
+        if (summary.details.professional && !summary.details.professional.isValid) {
+          errorItems.push(...summary.details.professional.errors.map(e => `תקנים מקצועיים: ${e}`));
+        }
+        
+        errorsList.innerHTML = errorItems.length > 0 
+          ? errorItems.map(error => `<div class="validation-item error">${error}</div>`).join('')
+          : '<div class="validation-item">לא נמצאו שגיאות ספציפיות</div>';
+          
+        document.getElementById('fix-errors-btn').disabled = false;
+      } else {
+        errorsIndicator.className = 'status-indicator status-valid';
+        errorsList.innerHTML = '<div class="validation-item success">✅ אין שגיאות</div>';
+        document.getElementById('fix-errors-btn').disabled = true;
+      }
+    }
+
+    function updateWarnings(summary) {
+      const warningsIndicator = document.getElementById('warnings-indicator');
+      const totalWarnings = document.getElementById('total-warnings');
+      const warningsList = document.getElementById('warnings-list');
+      
+      totalWarnings.textContent = summary.totalWarnings;
+      
+      if (summary.totalWarnings > 0) {
+        warningsIndicator.className = 'status-indicator status-warning';
+        
+        const warningItems = [];
+        if (summary.details.vehicle && summary.details.vehicle.warnings.length > 0) {
+          warningItems.push(...summary.details.vehicle.warnings.map(w => `פרטי רכב: ${w}`));
+        }
+        if (summary.details.damage && summary.details.damage.warnings.length > 0) {
+          warningItems.push(...summary.details.damage.warnings.map(w => `נתוני נזק: ${w}`));
+        }
+        if (summary.details.invoice && summary.details.invoice.warnings.length > 0) {
+          warningItems.push(...summary.details.invoice.warnings.map(w => `חשבוניות: ${w}`));
+        }
+        if (summary.details.levi && summary.details.levi.warnings.length > 0) {
+          warningItems.push(...summary.details.levi.warnings.map(w => `לוי יצחק: ${w}`));
+        }
+        if (summary.details.depreciation && summary.details.depreciation.warnings.length > 0) {
+          warningItems.push(...summary.details.depreciation.warnings.map(w => `ירידת ערך: ${w}`));
+        }
+        if (summary.details.professional && summary.details.professional.warnings.length > 0) {
+          warningItems.push(...summary.details.professional.warnings.map(w => `תקנים מקצועיים: ${w}`));
+        }
+        
+        warningsList.innerHTML = warningItems.length > 0 
+          ? warningItems.map(warning => `<div class="validation-item warning">${warning}</div>`).join('')
+          : '<div class="validation-item">לא נמצאו אזהרות ספציפיות</div>';
+      } else {
+        warningsIndicator.className = 'status-indicator status-valid';
+        warningsList.innerHTML = '<div class="validation-item success">✅ אין אזהרות</div>';
+      }
+    }
+
+    function updateVehicleData(summary) {
+      const vehicleStatus = document.getElementById('vehicle-status');
+      const vehiclePlate = document.getElementById('vehicle-plate');
+      const vehicleModel = document.getElementById('vehicle-model');
+      const vehicleYear = document.getElementById('vehicle-year');
+      const vehicleValidation = document.getElementById('vehicle-validation');
+      
+      // Ensure we have consistent helper data
+      const helperData = helper || {};
+      const vehicleData = helperData.vehicle || {};
+      const carDetailsData = helperData.car_details || {};
+      
+      // Use multiple sources for vehicle data with fallback
+      const plateNumber = vehicleData.plate || vehicleData.plate_number || carDetailsData.plate || sessionStorage.getItem('plate');
+      const manufacturer = vehicleData.manufacturer || carDetailsData.manufacturer;
+      const model = vehicleData.model || carDetailsData.model;
+      const year = vehicleData.year || carDetailsData.year;
+      
+      vehiclePlate.textContent = plateNumber || 'לא הוזן';
+      vehicleModel.textContent = `${manufacturer || ''} ${model || ''}`.trim() || 'לא הוזן';
+      vehicleYear.textContent = year || 'לא הוזן';
+      
+      if (summary.details.vehicle) {
+        if (summary.details.vehicle.isValid) {
+          vehicleStatus.className = 'status-indicator status-valid';
+          vehicleValidation.textContent = 'תקין';
+          vehicleValidation.className = 'metric-value success';
+        } else {
+          vehicleStatus.className = 'status-indicator status-invalid';
+          vehicleValidation.textContent = 'דורש תיקון';
+          vehicleValidation.className = 'metric-value error';
+        }
+      } else {
+        vehicleStatus.className = 'status-indicator status-pending';
+        vehicleValidation.textContent = 'לא נבדק';
+        vehicleValidation.className = 'metric-value';
+      }
+    }
+
+    function updateDamageData(summary) {
+      const damageStatus = document.getElementById('damage-status');
+      const centersCount = document.getElementById('damage-centers-count');
+      const totalParts = document.getElementById('total-parts');
+      const totalRepairs = document.getElementById('total-repairs');
+      const damageValidation = document.getElementById('damage-validation');
+      
+      // Check if all required elements exist
+      if (!damageStatus || !centersCount || !totalParts || !totalRepairs || !damageValidation) {
+        console.warn('⚠️ Missing damage data DOM elements');
+        return;
+      }
+      
+      // Ensure we have consistent helper data
+      const helperData = helper || {};
+      const damageData = helperData.damage || {};
+      const centers = damageData.centers || helperData.damage_sections || [];
+      
+      centersCount.textContent = centers.length;
+      
+      let partsCount = 0;
+      let repairsCount = 0;
+      
+      centers.forEach(center => {
+        if (center.parts) partsCount += center.parts.length;
+        if (center.repairs) repairsCount += center.repairs.length;
+      });
+      
+      totalParts.textContent = partsCount;
+      totalRepairs.textContent = repairsCount;
+      
+      // FIXED LOGIC: Base validation on actual data instead of summary
+      const hasDamageCenters = centers.length > 0;
+      const hasPartsOrRepairs = partsCount > 0 || repairsCount > 0;
+      
+      if (hasDamageCenters && hasPartsOrRepairs) {
+        // Complete damage data
+        damageStatus.className = 'status-indicator status-valid';
+        damageValidation.textContent = 'תקין';
+        damageValidation.className = 'metric-value success';
+      } else if (hasDamageCenters && !hasPartsOrRepairs) {
+        // Has centers but no parts/repairs
+        damageStatus.className = 'status-indicator status-warning';
+        damageValidation.textContent = 'חסרים חלקים ותיקונים';
+        damageValidation.className = 'metric-value warning';
+      } else {
+        // No damage centers at all - critical error
+        damageStatus.className = 'status-indicator status-invalid';
+        damageValidation.textContent = 'לא הוגדרו מוקדי נזק';
+        damageValidation.className = 'metric-value error';
+      }
+    }
+
+    function updateInvoiceStatus(summary) {
+      const invoiceStatus = document.getElementById('invoice-status');
+      const invoiceRequired = document.getElementById('invoice-required');
+      const invoiceReceived = document.getElementById('invoice-received');
+      const invoiceTotal = document.getElementById('invoice-total');
+      const invoiceValidation = document.getElementById('invoice-validation');
+      
+      // Check if all required elements exist
+      if (!invoiceStatus || !invoiceRequired || !invoiceReceived || !invoiceTotal || !invoiceValidation) {
+        console.warn('⚠️ Missing invoice status DOM elements');
+        return;
+      }
+      
+      // Ensure we have consistent helper data  
+      const helperData = helper || {};
+      const meta = helperData.meta || {};
+      const reportType = meta.report_type || sessionStorage.getItem('reportType') || '';
+      const finalReportTypes = ['final', 'Final_Private', 'Final_Global', 'Final_Total', 'Final_Sale'];
+      const isInvoiceRequired = finalReportTypes.some(type => reportType.toLowerCase().includes(type.toLowerCase()));
+      
+      // Update invoice requirement
+      invoiceRequired.textContent = isInvoiceRequired ? 'כן' : 'לא';
+      invoiceRequired.className = isInvoiceRequired ? 'metric-value warning' : 'metric-value success';
+      
+      // Check if invoice was received - comprehensive check
+      const invoiceExists = !!(
+        helperData.invoice_uploaded ||
+        helperData.invoice_summary ||
+        helperData.invoice_data ||
+        helperData.invoices?.length > 0 ||
+        sessionStorage.getItem('invoiceUploaded') === 'true'
+      );
+      
+      invoiceReceived.textContent = invoiceExists ? 'כן' : 'לא';
+      // Show error only if invoice is required but not received
+      if (isInvoiceRequired && !invoiceExists) {
+        invoiceReceived.className = 'metric-value error';
+      } else if (invoiceExists) {
+        invoiceReceived.className = 'metric-value success';
+      } else {
+        invoiceReceived.className = 'metric-value';
+      }
+      
+      // Calculate invoice total with comprehensive fallbacks
+      const invoiceAmount = helperData.invoice_summary?.total || 
+                           helperData.invoice_data?.total || 
+                           helperData.invoice_total ||
+                           (helperData.invoices && helperData.invoices[0]?.total) ||
+                           parseFloat(sessionStorage.getItem('invoiceTotal')) || 0;
+      invoiceTotal.textContent = `₪${parseFloat(invoiceAmount).toLocaleString('he-IL')}`;
+      
+      // Update validation status based on actual requirements
+      let validationValid = true;
+      let validationMessage = 'תקין';
+      let validationClass = 'metric-value success';
+      let statusClass = 'status-indicator status-valid';
+
+      // If invoice is required but not received, it's invalid
+      if (isInvoiceRequired && !invoiceExists) {
+        validationValid = false;
+        validationMessage = 'חשבונית נדרשת';
+        validationClass = 'metric-value error';
+        statusClass = 'status-indicator status-invalid';
+      }
+      // If invoice exists but wasn't required, show as valid
+      else if (invoiceExists) {
+        validationMessage = 'קיימת';
+        validationClass = 'metric-value success';
+        statusClass = 'status-indicator status-valid';
+      }
+      // If invoice not required and not exists, show as valid
+      else if (!isInvoiceRequired) {
+        validationMessage = 'לא נדרש';
+        validationClass = 'metric-value success';
+        statusClass = 'status-indicator status-valid';
+      }
+
+      invoiceStatus.className = statusClass;
+      invoiceValidation.textContent = validationMessage;
+      invoiceValidation.className = validationClass;
+    }
+
+    function updateLeviData(summary) {
+      const leviStatus = document.getElementById('levi-status');
+      const leviExists = document.getElementById('levi-exists');
+      const carBasicPrice = document.getElementById('car-basic-price');
+      const marketValue = document.getElementById('market-value');
+      const priceAdjustments = document.getElementById('price-adjustments');
+      const leviValidation = document.getElementById('levi-validation');
+      
+      // Check if all required elements exist (carBasicPrice is optional for backward compatibility)
+      if (!leviStatus || !leviExists || !marketValue || !priceAdjustments || !leviValidation) {
+        console.warn('⚠️ Missing Levi data DOM elements');
+        return;
+      }
+      
+      // Ensure we have consistent helper data
+      const helperData = helper || {};
+      const leviData = helperData.levi_report || helperData.levi_data || helperData.levi || {};
+      const carDetails = helperData.car_details || {};
+      const vehicle = helperData.vehicle || {};
+      
+      // Check if Levi report exists - comprehensive check
+      const hasLeviReport = !!(
+        (leviData && Object.keys(leviData).length > 0) ||
+        carDetails.market_value ||
+        vehicle.market_value ||
+        sessionStorage.getItem('leviReportUploaded') === 'true'
+      );
+      
+      leviExists.textContent = hasLeviReport ? 'כן' : 'לא';
+      leviExists.className = hasLeviReport ? 'metric-value success' : 'metric-value warning';
+      
+      // Update car basic price with comprehensive fallbacks
+      const basicPrice = leviData.basic_price || 
+                         leviData.car_basic_price ||
+                         leviData.מחיר_בסיסי ||
+                         carDetails.basic_price ||
+                         vehicle.basic_price ||
+                         parseFloat(sessionStorage.getItem('carBasicPrice')) || 0;
+      if (carBasicPrice) {
+        carBasicPrice.textContent = `₪${parseFloat(basicPrice).toLocaleString('he-IL')}`;
+      }
+      
+      // Update market value with comprehensive fallbacks
+      const marketVal = leviData.market_value || 
+                       carDetails.market_value || 
+                       vehicle.market_value ||
+                       leviData.שווי_שוק || 
+                       parseFloat(sessionStorage.getItem('marketValue')) || 0;
+      marketValue.textContent = `₪${parseFloat(marketVal).toLocaleString('he-IL')}`;
+      
+      // Calculate price adjustments
+      const adjustments = leviData.adjustments || 
+                         leviData.price_adjustments || 
+                         leviData.התאמות_מחיר || 
+                         carDetails.price_adjustments ||
+                         [];
+      const adjustmentsCount = Array.isArray(adjustments) ? adjustments.length : 
+                              (adjustments && typeof adjustments === 'object' ? Object.keys(adjustments).length : 0);
+      priceAdjustments.textContent = adjustmentsCount;
+      
+      // Update validation status - realistic logic
+      let statusClass, validationMessage, validationClass;
+      
+      if (hasLeviReport && marketVal > 0) {
+        statusClass = 'status-indicator status-valid';
+        validationMessage = 'תקין';
+        validationClass = 'metric-value success';
+      } else if (hasLeviReport && marketVal === 0) {
+        statusClass = 'status-indicator status-warning';
+        validationMessage = 'חסר שווי שוק';
+        validationClass = 'metric-value warning';
+      } else {
+        statusClass = 'status-indicator status-warning';
+        validationMessage = 'מומלץ דוח לוי';
+        validationClass = 'metric-value warning';
+      }
+      
+      leviStatus.className = statusClass;
+      leviValidation.textContent = validationMessage;
+      leviValidation.className = validationClass;
+    }
+
+    function updateDepreciationData(summary) {
+      const depreciationStatus = document.getElementById('depreciation-status');
+      const depreciationDefined = document.getElementById('depreciation-defined');
+      const depreciationAmount = document.getElementById('depreciation-amount');
+      const depreciationPercentage = document.getElementById('depreciation-percentage');
+      const depreciationValidation = document.getElementById('depreciation-validation');
+      
+      const helperData = helper || {};
+      const depreciationData = helperData.depreciation || helperData.expertise?.depreciation || {};
+      
+      // Update depreciation amount
+      const depAmount = depreciationData.amount || depreciationData.depreciation_amount || 0;
+      depreciationAmount.textContent = `₪${parseFloat(depAmount).toLocaleString('he-IL')}`;
+      
+      // Update depreciation percentage
+      const depPercent = depreciationData.percentage || depreciationData.depreciation_percentage || 0;
+      depreciationPercentage.textContent = `${depPercent}%`;
+      
+      // FIXED LOGIC: Check if depreciation is ACTUALLY defined with meaningful values
+      const hasActualDepreciation = (
+        depreciationData && 
+        Object.keys(depreciationData).length > 0 && 
+        (depAmount > 0 || depPercent > 0)
+      );
+      
+      depreciationDefined.textContent = hasActualDepreciation ? 'כן' : 'לא';
+      depreciationDefined.className = hasActualDepreciation ? 'metric-value success' : 'metric-value warning';
+      
+      // FIXED VALIDATION: Use actual data logic instead of relying on summary
+      if (hasActualDepreciation) {
+        depreciationStatus.className = 'status-indicator status-valid';
+        depreciationValidation.textContent = 'תקין';
+        depreciationValidation.className = 'metric-value success';
+      } else if (depreciationData && Object.keys(depreciationData).length > 0 && depAmount === 0 && depPercent === 0) {
+        // Data exists but values are zero - warning
+        depreciationStatus.className = 'status-indicator status-warning';
+        depreciationValidation.textContent = 'נתונים חסרים';
+        depreciationValidation.className = 'metric-value warning';
+      } else {
+        // No depreciation data at all - error
+        depreciationStatus.className = 'status-indicator status-invalid';
+        depreciationValidation.textContent = 'לא הוגדר';
+        depreciationValidation.className = 'metric-value error';
+      }
+    }
+
+    function updateProfessionalStandards(summary) {
+      const professionalStatus = document.getElementById('professional-status');
+      const caseAge = document.getElementById('case-age');
+      const documentationCompleteness = document.getElementById('documentation-completeness');
+      const reportReadiness = document.getElementById('report-readiness');
+      const professionalValidation = document.getElementById('professional-validation');
+      
+      const helperData = helper || {};
+      const meta = helperData.meta || {};
+      
+      // Calculate case age
+      const expertiseDate = meta.submission_date || meta.inspection_date || meta.date_created;
+      let daysSinceExpertise = 0;
+      if (expertiseDate) {
+        daysSinceExpertise = Math.floor((new Date() - new Date(expertiseDate)) / (1000 * 60 * 60 * 24));
+      }
+      caseAge.textContent = daysSinceExpertise;
+      
+      // Calculate documentation completeness
+      const requiredFields = ['vehicle', 'damage', 'car_details'];
+      const completedFields = requiredFields.filter(field => 
+        helperData[field] && Object.keys(helperData[field]).length > 0
+      );
+      const completeness = Math.round((completedFields.length / requiredFields.length) * 100);
+      documentationCompleteness.textContent = `${completeness}%`;
+      
+      // Check report readiness
+      const hasVehicleData = helperData.vehicle && Object.keys(helperData.vehicle).length > 0;
+      const hasDamageData = helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0;
+      const hasCarDetails = helperData.car_details && Object.keys(helperData.car_details).length > 0;
+      
+      const isReady = hasVehicleData && hasDamageData && hasCarDetails;
+      reportReadiness.textContent = isReady ? 'מוכן' : 'לא מוכן';
+      reportReadiness.className = isReady ? 'metric-value success' : 'metric-value warning';
+      
+      // Update validation status
+      const hasValidationData = summary.details && summary.details.professional;
+      if (hasValidationData) {
+        if (summary.details.professional.isValid) {
+          professionalStatus.className = 'status-indicator status-valid';
+          professionalValidation.textContent = 'תקין';
+          professionalValidation.className = 'metric-value success';
+        } else {
+          professionalStatus.className = 'status-indicator status-invalid';
+          professionalValidation.textContent = 'דורש שיפור';
+          professionalValidation.className = 'metric-value error';
+        }
+      } else {
+        professionalStatus.className = 'status-indicator status-pending';
+        professionalValidation.textContent = 'לא נבדק';
+        professionalValidation.className = 'metric-value';
+      }
+    }
+
+    function updateBusinessRules(summary) {
+      const businessStatus = document.getElementById('business-status');
+      const costRatio = document.getElementById('cost-ratio');
+      const totalEstimate = document.getElementById('total-estimate');
+      const businessValidation = document.getElementById('business-validation');
+      
+      // Calculate cost ratio and total estimate
+      const damageData = helper.damage || {};
+      const centers = damageData.centers || [];
+      
+      let totalPartsCost = 0;
+      let totalRepairsCost = 0;
+      
+      centers.forEach(center => {
+        if (center.parts) {
+          center.parts.forEach(part => {
+            totalPartsCost += parseFloat(part.price || 0);
+          });
+        }
+        if (center.repairs) {
+          center.repairs.forEach(repair => {
+            totalRepairsCost += parseFloat(repair.cost || 0);
+          });
+        }
+      });
+      
+      const ratio = totalRepairsCost > 0 ? (totalPartsCost / totalRepairsCost).toFixed(2) : 'N/A';
+      costRatio.textContent = ratio;
+      
+      const total = totalPartsCost + totalRepairsCost;
+      totalEstimate.textContent = `₪${total.toLocaleString('he-IL')}`;
+      
+      if (summary.details.business) {
+        if (summary.details.business.isValid) {
+          businessStatus.className = 'status-indicator status-valid';
+          businessValidation.textContent = 'תקין';
+          businessValidation.className = 'metric-value success';
+        } else {
+          businessStatus.className = 'status-indicator status-invalid';
+          businessValidation.textContent = 'דורש בדיקה';
+          businessValidation.className = 'metric-value error';
+        }
+      } else {
+        businessStatus.className = 'status-indicator status-pending';
+        businessValidation.textContent = 'לא נבדק';
+        businessValidation.className = 'metric-value';
+      }
+    }
+
+    function toggleAutoRefresh() {
+      const checkbox = document.getElementById('auto-refresh-checkbox');
+      const countdown = document.getElementById('refresh-countdown');
+      
+      if (checkbox.checked) {
+        autoRefreshInterval = setInterval(() => {
+          refreshValidation();
+          refreshCountdown = 30;
+        }, 30000);
+        
+        refreshCountdown = 30;
+        countdownInterval = setInterval(() => {
+          refreshCountdown--;
+          countdown.textContent = `(${refreshCountdown}s)`;
+          
+          if (refreshCountdown <= 0) {
+            refreshCountdown = 30;
+          }
+        }, 1000);
+        
+        console.log('🔄 Auto-refresh enabled');
+      } else {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        countdown.textContent = '';
+        console.log('⏸️ Auto-refresh disabled');
+      }
+    }
+
+    function exportValidationReport() {
+      console.log('📊 Exporting validation report...');
+      
+      try {
+        let report = null;
+        
+        // Try to get report from validation system
+        if (validationSystem && typeof validationSystem.generateValidationReport === 'function') {
+          report = validationSystem.generateValidationReport();
+        } else {
+          // Generate report from current validation summary
+          const summary = createValidationSummaryFromHelper();
+          report = {
+            timestamp: new Date().toISOString(),
+            summary: summary,
+            helperData: helper || {},
+            recommendations: generateRecommendations(summary)
+          };
+        }
+        
+        // Create comprehensive report
+        const exportReport = {
+          reportInfo: {
+            title: 'דוח אימות נתונים - מערכת ירון כיוף שמאות',
+            generated: new Date().toISOString(),
+            generatedBy: 'לוח בקרת אימות',
+            plateNumber: helper?.vehicle?.plate || helper?.vehicle?.plate_number || helper?.car_details?.plate || 'לא זמין'
+          },
+          validationSummary: report.summary || summary,
+          systemData: {
+            helper: helper || {},
+            validationSystemAvailable: !!validationSystem
+          },
+          recommendations: report.recommendations || []
+        };
+        
+        const reportJson = JSON.stringify(exportReport, null, 2);
+        
+        // Create downloadable file
+        const blob = new Blob([reportJson], { type: 'application/json', charset: 'utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const plateNumber = exportReport.reportInfo.plateNumber !== 'לא זמין' ? 
+          `_${exportReport.reportInfo.plateNumber}` : '';
+        const filename = `validation-report${plateNumber}_${new Date().toISOString().split('T')[0]}.json`;
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log('✅ Validation report exported successfully');
+        showSuccess(`דוח האימות יוצא בהצלחה: ${filename}`);
+        
+      } catch (error) {
+        console.error('❌ Error exporting validation report:', error);
+        showError('שגיאה בייצוא דוח האימות: ' + error.message);
+      }
+    }
+
+    function generateRecommendations(summary) {
+      const recommendations = [];
+
+      if (!summary.isValid) {
+        recommendations.push('יש לתקן את השגיאות הבאות לפני המשך');
+      }
+
+      if (summary.totalWarnings > 0) {
+        recommendations.push('יש לבדוק את האזהרות ולוודא שהנתונים נכונים');
+      }
+
+      if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+        recommendations.push('יש לבדוק ולתקן את פרטי הרכב');
+      }
+
+      if (summary.details.damage && !summary.details.damage.isValid) {
+        recommendations.push('יש לבדוק ולתקן את נתוני הנזק');
+      }
+
+      if (summary.details.invoice && !summary.details.invoice.isValid) {
+        recommendations.push('יש לבדוק את נושא החשבוניות הנדרשות');
+      }
+
+      if (summary.details.levi && !summary.details.levi.isValid) {
+        recommendations.push('יש לבדוק את נתוני דוח לוי יצחק ושווי השוק');
+      }
+
+      if (summary.details.depreciation && !summary.details.depreciation.isValid) {
+        recommendations.push('יש להגדיר ולבדוק את נתוני ירידת הערך');
+      }
+
+      if (summary.details.professional && !summary.details.professional.isValid) {
+        recommendations.push('יש לשפר את התקנים המקצועיים והשלמת התיעוד');
+      }
+
+      return recommendations;
+    }
+
+    function fixAllErrors() {
+      console.log('🔧 Attempting to fix validation errors...');
+      
+      if (confirm('האם אתה בטוח שברצונך לתקן באופן אוטומטי את השגיאות שנמצאו?')) {
+        try {
+          let fixesApplied = 0;
+          const summary = createValidationSummaryFromHelper();
+          
+          // Auto-fix vehicle data errors
+          if (summary.details.vehicle && !summary.details.vehicle.isValid) {
+            if (helper && helper.vehicle) {
+              // Fix empty plate number
+              if (!helper.vehicle.plate && !helper.vehicle.plate_number) {
+                helper.vehicle.plate_number = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty manufacturer
+              if (!helper.vehicle.manufacturer) {
+                helper.vehicle.manufacturer = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty model
+              if (!helper.vehicle.model) {
+                helper.vehicle.model = 'לא הוזן';
+                fixesApplied++;
+              }
+              // Fix empty year
+              if (!helper.vehicle.year) {
+                helper.vehicle.year = new Date().getFullYear();
+                fixesApplied++;
+              }
+            }
+          }
+          
+          // Auto-fix damage data errors
+          if (summary.details.damage && !summary.details.damage.isValid) {
+            if (helper && (!helper.damage || !helper.damage.centers)) {
+              // Initialize empty damage structure
+              if (!helper.damage) helper.damage = {};
+              if (!helper.damage.centers) helper.damage.centers = [];
+              fixesApplied++;
+            }
+          }
+          
+          // Save changes if any fixes were applied
+          if (fixesApplied > 0) {
+            console.log(`🔧 Applied ${fixesApplied} automatic fixes`);
+            showSuccess(`תיקון אוטומטי הושלם - ${fixesApplied} שגיאות תוקנו`);
+          } else {
+            console.log('🔧 No automatic fixes available');
+            showSuccess('לא נמצאו שגיאות שניתן לתקן באופן אוטומטי');
+          }
+          
+          // Refresh validation to show updated data
+          setTimeout(() => {
+            refreshValidation();
+          }, 1000);
+          
+        } catch (error) {
+          console.error('❌ Error during auto-fix:', error);
+          showError('שגיאה בתיקון אוטומטי: ' + error.message);
+        }
+      }
+    }
+
+    function clearValidationData() {
+      if (confirm('האם אתה בטוח שברצונך לנקות את כל נתוני האימות?\n\nפעולה זו תמחק את היסטוריית האימות ותאפס את המטמון.')) {
+        try {
+          // Clear validation system data if available
+          if (validationSystem) {
+            if (validationSystem.validationHistory) {
+              validationSystem.validationHistory = [];
+            }
+            if (validationSystem.errors && typeof validationSystem.errors.clear === 'function') {
+              validationSystem.errors.clear();
+            }
+            if (validationSystem.warnings && typeof validationSystem.warnings.clear === 'function') {
+              validationSystem.warnings.clear();
+            }
+          }
+          
+          // Clear any cached validation data from sessionStorage
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.includes('validation') || key.includes('cache')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+          
+          // Reset UI elements to show clean state
+          document.getElementById('validation-status').textContent = 'נוקה';
+          document.getElementById('completion-percentage').textContent = '0%';
+          document.getElementById('completion-progress').style.width = '0%';
+          document.getElementById('total-errors').textContent = '0';
+          document.getElementById('total-warnings').textContent = '0';
+          document.getElementById('last-check').textContent = 'נוקה';
+          
+          console.log('🗑️ Validation data cleared successfully');
+          showSuccess('נתוני האימות נוקו בהצלחה');
+          
+          // Refresh validation after clearing
+          setTimeout(() => {
+            refreshValidation();
+          }, 2000);
+          
+        } catch (error) {
+          console.error('❌ Error clearing validation data:', error);
+          showError('שגיאה בניקוי נתוני האימות: ' + error.message);
+        }
+      }
+    }
+
+    function setupKeyboardShortcuts() {
+      document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          switch (event.key) {
+            case 'r':
+              event.preventDefault();
+              refreshValidation();
+              break;
+            case 'e':
+              event.preventDefault();
+              exportValidationReport();
+              break;
+            case 'f':
+              event.preventDefault();
+              if (!document.getElementById('fix-errors-btn').disabled) {
+                fixAllErrors();
+              }
+              break;
+          }
+        }
+      });
+    }
+
+    function showSuccess(message) {
+      // Simple success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-weight: bold;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 3000);
+    }
+
+    function showError(message) {
+      // Simple error notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc3545;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-weight: bold;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 4000);
+    }
+
+    function showEnhancedError(message, options = {}) {
+      // Enhanced error notification with more features
+      const { details, retryFunction, showRetry = false, duration = 6000 } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        z-index: 10000;
+        font-weight: bold;
+        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-width: 400px;
+        backdrop-filter: blur(10px);
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      let content = `
+        <div style="margin-bottom: 10px; font-size: 16px;">❌ ${message}</div>
+      `;
+      
+      if (details) {
+        content += `
+          <div style="font-size: 12px; opacity: 0.8; margin-bottom: 10px;">
+            פרטים: ${details}
+          </div>
+        `;
+      }
+      
+      if (showRetry && retryFunction) {
+        content += `
+          <button onclick="this.parentElement.retry()" 
+                  style="background: rgba(255,255,255,0.2); 
+                         border: 1px solid rgba(255,255,255,0.3); 
+                         color: white; 
+                         padding: 6px 12px; 
+                         border-radius: 6px; 
+                         cursor: pointer; 
+                         font-size: 12px; 
+                         margin-top: 8px;">
+            🔄 נסה שוב
+          </button>
+        `;
+        notification.retry = retryFunction;
+      }
+      
+      notification.innerHTML = content;
+      document.body.appendChild(notification);
+      
+      // Add CSS animation
+      if (!document.getElementById('error-animations')) {
+        const style = document.createElement('style');
+        style.id = 'error-animations';
+        style.textContent = `
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+          setTimeout(() => {
+            if (document.body.contains(notification)) {
+              document.body.removeChild(notification);
+            }
+          }, 300);
+        }
+      }, duration);
+    }
+
+    function showWarning(message, options = {}) {
+      // Warning notification
+      const { duration = 4000, action } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        z-index: 9999;
+        font-weight: bold;
+        box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+        max-width: 350px;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      let content = `⚠️ ${message}`;
+      if (action) {
+        content += `
+          <button onclick="${action}" 
+                  style="background: rgba(255,255,255,0.2); 
+                         border: 1px solid rgba(255,255,255,0.3); 
+                         color: white; 
+                         padding: 4px 8px; 
+                         border-radius: 4px; 
+                         cursor: pointer; 
+                         font-size: 11px; 
+                         margin-left: 8px;">
+            פעולה
+          </button>
+        `;
+      }
+      
+      notification.innerHTML = content;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, duration);
+    }
+
+    function showInfo(message, options = {}) {
+      // Info notification
+      const { duration = 3000 } = options;
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 140px;
+        right: 20px;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        z-index: 9998;
+        font-weight: 500;
+        box-shadow: 0 4px 16px rgba(52, 152, 219, 0.3);
+        max-width: 300px;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      notification.innerHTML = `ℹ️ ${message}`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, duration);
+    }
+
+    // Floating screen functions
+    function openCarDetailsFloating() {
+      try {
+        if (typeof window.toggleCarDetails === 'function') {
+          window.toggleCarDetails();
+        } else {
+          console.log('🚗 Car details floating screen not available, loading...');
+          loadFloatingScreen('car-details-floating.js', () => {
+            if (typeof window.toggleCarDetails === 'function') {
+              window.toggleCarDetails();
+            } else {
+              showError('לא ניתן לטעון את מסך פרטי הרכב');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening car details floating:', error);
+        showError('שגיאה בפתיחת מסך פרטי רכב');
+      }
+    }
+
+    function openLeviFloating() {
+      try {
+        if (typeof window.toggleLeviReport === 'function') {
+          window.toggleLeviReport();
+        } else {
+          console.log('📊 Levi floating screen not available, loading...');
+          loadFloatingScreen('levi-floating.js', () => {
+            if (typeof window.toggleLeviReport === 'function') {
+              window.toggleLeviReport();
+            } else {
+              showError('לא ניתן לטעון את מסך דוח לוי יצחק');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening Levi floating:', error);
+        showError('שגיאה בפתיחת מסך דוח לוי יצחק');
+      }
+    }
+
+    function openPartsResultsFloating() {
+      try {
+        if (typeof window.togglePartsSearchResults === 'function') {
+          window.togglePartsSearchResults();
+        } else {
+          console.log('📦 Parts search results floating screen not available, loading...');
+          loadFloatingScreen('parts-search-results-floating.js', () => {
+            if (typeof window.togglePartsSearchResults === 'function') {
+              window.togglePartsSearchResults();
+            } else {
+              showError('לא ניתן לטעון את מסך תוצאות חיפוש חלקים');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening parts results floating:', error);
+        showError('שגיאה בפתיחת מסך תוצאות חיפוש חלקים');
+      }
+    }
+
+    function openInvoiceFloating() {
+      try {
+        if (typeof window.toggleInvoiceDetails === 'function') {
+          window.toggleInvoiceDetails();
+        } else {
+          console.log('🧾 Invoice floating screen not available, loading...');
+          loadFloatingScreen('invoice-details-floating.js', () => {
+            if (typeof window.toggleInvoiceDetails === 'function') {
+              window.toggleInvoiceDetails();
+            } else {
+              showError('לא ניתן לטעון את מסך פרטי חשבונית');
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error opening invoice floating:', error);
+        showError('שגיאה בפתיחת מסך פרטי חשבונית');
+      }
+    }
+
+    function loadFloatingScreen(scriptName, callback) {
+      const script = document.createElement('script');
+      script.src = scriptName;
+      script.onload = callback;
+      script.onerror = () => {
+        console.error(`Failed to load ${scriptName}`);
+        showError(`לא ניתן לטעון את הסקריפט ${scriptName}`);
+      };
+      document.head.appendChild(script);
+    }
+
+    // Drill-down analysis functions
+    function drillDownDamage(type) {
+      console.log(`🔍 Drilling down into damage data: ${type}`);
+      
+      try {
+        const damageData = helper?.damage || {};
+        const centers = damageData.centers || helper?.damage_sections || [];
+        
+        let content = '';
+        let title = '';
+        
+        switch (type) {
+          case 'centers':
+            title = 'פירוט מוקדי נזק';
+            if (centers.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו מוקדי נזק</p>';
+            } else {
+              content = centers.map((center, index) => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h4 style="color: #667eea; margin-bottom: 10px;">מוקד נזק ${index + 1}</h4>
+                  <p><strong>מיקום:</strong> ${center.location || center.area || 'לא הוזן'}</p>
+                  <p><strong>תיאור:</strong> ${center.description || center.damage_description || 'לא הוזן'}</p>
+                  <p><strong>חלקים:</strong> ${center.parts?.length || 0}</p>
+                  <p><strong>תיקונים:</strong> ${center.repairs?.length || center.works?.length || 0}</p>
+                </div>
+              `).join('');
+            }
+            break;
+            
+          case 'parts':
+            title = 'פירוט חלקים';
+            let allParts = [];
+            centers.forEach((center, centerIndex) => {
+              if (center.parts) {
+                center.parts.forEach(part => {
+                  allParts.push({...part, centerIndex: centerIndex + 1});
+                });
+              }
+            });
+            
+            if (allParts.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו חלקים</p>';
+            } else {
+              content = allParts.map(part => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h5 style="color: #28a745; margin-bottom: 8px;">${part.name || part.description || 'חלק ללא שם'}</h5>
+                  <p><strong>מוקד:</strong> ${part.centerIndex}</p>
+                  <p><strong>מחיר:</strong> ₪${parseFloat(part.price || part.cost || 0).toLocaleString('he-IL')}</p>
+                  <p><strong>כמות:</strong> ${part.quantity || 1}</p>
+                  ${part.partNumber ? `<p><strong>מק"ט:</strong> ${part.partNumber}</p>` : ''}
+                </div>
+              `).join('');
+            }
+            break;
+            
+          case 'repairs':
+            title = 'פירוט תיקונים';
+            let allRepairs = [];
+            centers.forEach((center, centerIndex) => {
+              const repairs = center.repairs || center.works || [];
+              repairs.forEach(repair => {
+                allRepairs.push({...repair, centerIndex: centerIndex + 1});
+              });
+            });
+            
+            if (allRepairs.length === 0) {
+              content = '<p style="text-align: center; color: #666;">לא נמצאו תיקונים</p>';
+            } else {
+              content = allRepairs.map(repair => `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                  <h5 style="color: #dc3545; margin-bottom: 8px;">${repair.description || repair.work_description || 'תיקון ללא תיאור'}</h5>
+                  <p><strong>מוקד:</strong> ${repair.centerIndex}</p>
+                  <p><strong>עלות:</strong> ₪${parseFloat(repair.cost || repair.price || 0).toLocaleString('he-IL')}</p>
+                  <p><strong>שעות עבודה:</strong> ${repair.hours || repair.work_hours || 'לא הוזן'}</p>
+                  ${repair.type ? `<p><strong>סוג:</strong> ${repair.type}</p>` : ''}
+                </div>
+              `).join('');
+            }
+            break;
+        }
+        
+        showDrillDownModal(title, content);
+        
+      } catch (error) {
+        console.error('Error in drill-down analysis:', error);
+        showError('שגיאה בניתוח נתונים מפורט');
+      }
+    }
+
+    function drillDownProfessional(type) {
+      console.log(`🔍 Drilling down into professional standards: ${type}`);
+      
+      try {
+        const helperData = helper || {};
+        const meta = helperData.meta || {};
+        
+        let content = '';
+        let title = '';
+        
+        switch (type) {
+          case 'timeline':
+            title = 'פירוט זמן התיק';
+            const expertiseDate = meta.submission_date || meta.inspection_date || meta.date_created;
+            const currentDate = new Date();
+            
+            if (expertiseDate) {
+              const creationDate = new Date(expertiseDate);
+              const daysSinceCreation = Math.floor((currentDate - creationDate) / (1000 * 60 * 60 * 24));
+              
+              content = `
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                  <h4 style="color: #667eea; margin-bottom: 15px;">זמני התיק</h4>
+                  <p><strong>תאריך יצירת אקספרטיזה:</strong> ${creationDate.toLocaleDateString('he-IL')}</p>
+                  <p><strong>תאריך נוכחי:</strong> ${currentDate.toLocaleDateString('he-IL')}</p>
+                  <p><strong>ימים שעברו:</strong> ${daysSinceCreation}</p>
+                  <p><strong>מצב זמן:</strong> ${daysSinceCreation > 30 ? 
+                    '<span style="color: #dc3545;">חריגה מ-30 ימים</span>' : 
+                    '<span style="color: #28a745;">בזמן תקין</span>'}</p>
+                  <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                    <strong>המלצות:</strong><br>
+                    ${daysSinceCreation > 30 ? 
+                      '• מומלץ לזרז את התיק<br>• בדוק אם נדרשים נתונים נוספים<br>• שקול יצירת קשר עם הלקוח' :
+                      '• התיק בזמן תקין<br>• המשך בתהליך הרגיל'}
+                  </div>
+                </div>
+              `;
+            } else {
+              content = '<p style="text-align: center; color: #666;">תאריך יצירת התיק לא זמין</p>';
+            }
+            break;
+            
+          case 'completeness':
+            title = 'פירוט השלמת תיעוד';
+            const requiredSections = {
+              'פרטי רכב': helperData.vehicle && Object.keys(helperData.vehicle).length > 0,
+              'נתוני נזק': helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0,
+              'פרטי לקוח': helperData.car_details && Object.keys(helperData.car_details).length > 0,
+              'תמונות': helperData.images && helperData.images.length > 0,
+              'חלקים': helperData.damage?.centers?.some(center => center.parts && center.parts.length > 0) || false,
+              'עבודות': helperData.damage?.centers?.some(center => center.repairs && center.repairs.length > 0) || false
+            };
+            
+            const completedSections = Object.values(requiredSections).filter(Boolean).length;
+            const totalSections = Object.keys(requiredSections).length;
+            const completionPercentage = Math.round((completedSections / totalSections) * 100);
+            
+            content = `
+              <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">מצב השלמת התיעוד</h4>
+                <div style="margin-bottom: 15px;">
+                  <strong>אחוז השלמה כולל: ${completionPercentage}%</strong>
+                  <div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; margin: 10px 0;">
+                    <div style="width: ${completionPercentage}%; height: 100%; background: ${completionPercentage > 70 ? '#28a745' : completionPercentage > 40 ? '#ffc107' : '#dc3545'}; border-radius: 10px;"></div>
+                  </div>
+                </div>
+                ${Object.entries(requiredSections).map(([section, completed]) => `
+                  <p>
+                    <span style="color: ${completed ? '#28a745' : '#dc3545'};">
+                      ${completed ? '✅' : '❌'}
+                    </span>
+                    <strong>${section}:</strong> ${completed ? 'הושלם' : 'חסר'}
+                  </p>
+                `).join('')}
+                <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                  <strong>המלצות לשיפור:</strong><br>
+                  ${completionPercentage < 100 ? 
+                    Object.entries(requiredSections)
+                      .filter(([_, completed]) => !completed)
+                      .map(([section, _]) => `• השלם ${section}`)
+                      .join('<br>') :
+                    '• כל הסעיפים הושלמו - מצוין!'}
+                </div>
+              </div>
+            `;
+            break;
+            
+          case 'readiness':
+            title = 'מוכנות לדוח סופי';
+            const readinessChecks = {
+              'פרטי רכב מלאים': helperData.vehicle && helperData.vehicle.manufacturer && helperData.vehicle.model,
+              'מוקדי נזק הוגדרו': helperData.damage && helperData.damage.centers && helperData.damage.centers.length > 0,
+              'חלקים נוספו': helperData.damage?.centers?.some(center => center.parts && center.parts.length > 0),
+              'עבודות הוגדרו': helperData.damage?.centers?.some(center => center.repairs && center.repairs.length > 0),
+              'תמונות הועלו': helperData.images && helperData.images.length > 0,
+              'פרטי לקוח': helperData.car_details && helperData.car_details.owner
+            };
+            
+            const passedChecks = Object.values(readinessChecks).filter(Boolean).length;
+            const totalChecks = Object.keys(readinessChecks).length;
+            const readinessScore = Math.round((passedChecks / totalChecks) * 100);
+            
+            content = `
+              <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px 0;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">בדיקת מוכנות לדוח סופי</h4>
+                <div style="margin-bottom: 15px;">
+                  <strong>ציון מוכנות: ${readinessScore}%</strong>
+                  <div style="width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; margin: 10px 0;">
+                    <div style="width: ${readinessScore}%; height: 100%; background: ${readinessScore > 80 ? '#28a745' : readinessScore > 60 ? '#ffc107' : '#dc3545'}; border-radius: 10px;"></div>
+                  </div>
+                  <p style="color: ${readinessScore > 80 ? '#28a745' : readinessScore > 60 ? '#ffc107' : '#dc3545'};">
+                    ${readinessScore > 80 ? '🟢 מוכן להפקת דוח סופי' : 
+                      readinessScore > 60 ? '🟡 כמעט מוכן - יש פערים קטנים' : 
+                      '🔴 לא מוכן - נדרשים שיפורים'}
+                  </p>
+                </div>
+                ${Object.entries(readinessChecks).map(([check, passed]) => `
+                  <p>
+                    <span style="color: ${passed ? '#28a745' : '#dc3545'};">
+                      ${passed ? '✅' : '❌'}
+                    </span>
+                    <strong>${check}</strong>
+                  </p>
+                `).join('')}
+                <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                  <strong>השלבים הבאים:</strong><br>
+                  ${readinessScore > 80 ? 
+                    '• ניתן להמשיך להפקת דוח סופי<br>• בחר את סוג הדוח המתאים<br>• ודא פעם נוספת את כל הנתונים' :
+                    Object.entries(readinessChecks)
+                      .filter(([_, passed]) => !passed)
+                      .map(([check, _]) => `• השלם: ${check}`)
+                      .join('<br>')}
+                </div>
+              </div>
+            `;
+            break;
+        }
+        
+        showDrillDownModal(title, content);
+        
+      } catch (error) {
+        console.error('Error in professional drill-down analysis:', error);
+        showError('שגיאה בניתוח תקנים מקצועיים');
+      }
+    }
+
+    function showDrillDownModal(title, content) {
+      // Remove existing modal if any
+      const existingModal = document.querySelector('.drill-down-overlay');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'drill-down-overlay';
+      overlay.onclick = closeDrillDownModal;
+      
+      // Create modal
+      const modal = document.createElement('div');
+      modal.className = 'drill-down-modal';
+      modal.innerHTML = `
+        <div class="drill-down-header">
+          <h3 style="margin: 0; color: #667eea;">${title}</h3>
+          <button class="drill-down-close" onclick="closeDrillDownModal()">×</button>
+        </div>
+        <div class="drill-down-content">
+          ${content}
+        </div>
+      `;
+      
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      // Prevent modal from closing when clicking inside it
+      modal.onclick = (e) => e.stopPropagation();
+    }
+
+    function closeDrillDownModal() {
+      const overlay = document.querySelector('.drill-down-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    // Export functions to global scope
+    window.refreshValidation = refreshValidation;
+    window.exportValidationReport = exportValidationReport;
+    window.fixAllErrors = fixAllErrors;
+    window.clearValidationData = clearValidationData;
+    window.toggleAutoRefresh = toggleAutoRefresh;
+    window.openCarDetailsFloating = openCarDetailsFloating;
+    window.openLeviFloating = openLeviFloating;
+    window.openPartsResultsFloating = openPartsResultsFloating;
+    window.openInvoiceFloating = openInvoiceFloating;
+    window.drillDownDamage = drillDownDamage;
+    window.drillDownProfessional = drillDownProfessional;
+    window.closeDrillDownModal = closeDrillDownModal;
+    
+    // Initialize keyboard shortcuts info
+    setTimeout(() => {
+      console.log('🔧 Validation Dashboard - Keyboard shortcuts:');
+      console.log('Ctrl+R: Refresh validation');
+      console.log('Ctrl+E: Export report');
+      console.log('Ctrl+F: Fix errors');
+    }, 1000);
+  </script>
+
+  <!-- Analytics and monitoring -->
+  <script>
+    // Basic usage analytics
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'page_view', {
+        page_title: 'Validation Dashboard',
+        page_location: window.location.href
+      });
+    }
+    
+    // Enhanced visual indicator functions
+    function updateValidationCharts(summary) {
+      try {
+        // Only proceed if summary has valid data
+        if (!summary || !summary.details) {
+          console.warn('⚠️ No summary data for charts');
+          return;
+        }
+        
+        // Create mini charts for validation status overview
+        const chartData = {
+          vehicle: summary.details?.vehicle?.isValid ? 100 : 0,
+          damage: summary.details?.damage?.isValid ? 100 : 0,
+          invoice: summary.details?.invoice?.isValid ? 100 : 0,
+          levi: summary.details?.levi?.isValid ? 100 : 0,
+          depreciation: summary.details?.depreciation?.isValid ? 100 : 0,
+          professional: summary.details?.professional?.isValid ? 100 : 0
+        };
+        
+        // Add visual progress indicators to cards if they don't exist
+        Object.keys(chartData).forEach((type, index) => {
+          try {
+            const cardElement = document.querySelector(`#${type}-status`)?.closest('.card');
+            if (cardElement && !cardElement.querySelector('.mini-chart')) {
+              const miniChart = document.createElement('div');
+              miniChart.className = 'mini-chart';
+              miniChart.innerHTML = `
+                <div class="chart-bar" style="height: ${chartData[type]}%; left: ${10 + index * 15}%;"></div>
+              `;
+              cardElement.appendChild(miniChart);
+            }
+          } catch (elementError) {
+            console.warn(`⚠️ Error adding chart for ${type}:`, elementError);
+          }
+        });
+        
+        console.log('📊 Validation charts updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating validation charts:', error);
+      }
+    }
+    
+    function updateProgressIndicators(summary) {
+      try {
+        // Check if summary is valid
+        if (!summary) {
+          console.warn('⚠️ No summary data for progress indicators');
+          return;
+        }
+        
+        // Enhanced progress animation with better feedback
+        const progressElement = document.getElementById('completion-progress');
+        if (progressElement) {
+          const currentWidth = parseInt(progressElement.style.width) || 0;
+          const targetWidth = summary.isValid ? 100 : 
+                             Math.max(0, Math.round((10 - (summary.totalErrors || 0)) / 10 * 100));
+          
+          // Smooth animation from current to target
+          let currentStep = currentWidth;
+          const step = (targetWidth - currentWidth) / 20;
+          
+          const animateProgress = () => {
+            if (Math.abs(currentStep - targetWidth) > 1) {
+              currentStep += step;
+              progressElement.style.width = `${Math.round(currentStep)}%`;
+              requestAnimationFrame(animateProgress);
+            } else {
+              progressElement.style.width = `${targetWidth}%`;
+            }
+          };
+          
+          animateProgress();
+        } else {
+          console.warn('⚠️ Progress element not found');
+        }
+        
+        console.log('📈 Progress indicators updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating progress indicators:', error);
+      }
+    }
+    
+    function updateStatusDots(summary) {
+      try {
+        // Check if summary is valid
+        if (!summary || !summary.details) {
+          console.warn('⚠️ No summary data for status dots');
+          return;
+        }
+        
+        // Add status dots to show validation state overview
+        const mainCard = document.querySelector('.card');
+        if (mainCard && !mainCard.querySelector('.status-dots')) {
+          const statusDots = document.createElement('div');
+          statusDots.className = 'status-dots';
+          statusDots.innerHTML = `
+            <div class="status-dot" id="dot-vehicle"></div>
+            <div class="status-dot" id="dot-damage"></div>
+            <div class="status-dot" id="dot-invoice"></div>
+            <div class="status-dot" id="dot-levi"></div>
+            <div class="status-dot" id="dot-depreciation"></div>
+            <div class="status-dot" id="dot-professional"></div>
+          `;
+          mainCard.appendChild(statusDots);
+        }
+        
+        // Update status dots based on validation results
+        const statusTypes = ['vehicle', 'damage', 'invoice', 'levi', 'depreciation', 'professional'];
+        statusTypes.forEach(type => {
+          try {
+            const dot = document.getElementById(`dot-${type}`);
+            if (dot && summary.details && summary.details[type]) {
+              const detail = summary.details[type];
+              dot.className = 'status-dot';
+              
+              if (detail.isValid) {
+                dot.classList.add('active');
+              } else if (detail.warnings && detail.warnings.length > 0) {
+                dot.classList.add('warning');
+              } else {
+                dot.classList.add('error');
+              }
+            }
+          } catch (dotError) {
+            console.warn(`⚠️ Error updating status dot for ${type}:`, dotError);
+          }
+        });
+        
+        console.log('🔸 Status dots updated');
+      } catch (error) {
+        console.warn('⚠️ Error updating status dots:', error);
+      }
+    }
+    
+    // Add CSS for new visual elements
+    function addEnhancedVisualsCSS() {
+      const style = document.createElement('style');
+      style.id = 'enhanced-visuals-css';
+      style.textContent = `
+        /* Mini charts for validation metrics */
+        .mini-chart {
+          width: 100%;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          margin: 8px 0;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .chart-bar {
+          position: absolute;
+          bottom: 0;
+          background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+          border-radius: 2px 2px 0 0;
+          transition: height 0.8s ease;
+          width: 8px;
+        }
+        
+        /* Validation status dots */
+        .status-dots {
+          display: flex;
+          gap: 6px;
+          margin: 8px 0;
+          justify-content: center;
+        }
+        
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #e2e8f0;
+          transition: all 0.3s ease;
+        }
+        
+        .status-dot.active {
+          background: #22c55e;
+          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+          transform: scale(1.2);
+        }
+        
+        .status-dot.warning {
+          background: #f59e0b;
+          box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+        
+        .status-dot.error {
+          background: #ef4444;
+          box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+      `;
+      
+      if (!document.getElementById('enhanced-visuals-css')) {
+        document.head.appendChild(style);
+      }
+    }
+    
+    // Initialize enhanced visuals on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      addEnhancedVisualsCSS();
+    });
+
+    // Integration test function for debugging
+    window.testValidationIntegration = function() {
+      console.log('🧪 Testing validation dashboard integration...');
+      
+      try {
+        // Test 1: Check if all key functions exist
+        const requiredFunctions = [
+          'refreshValidation', 'refreshHelperData', 'createValidationSummaryFromHelper',
+          'updateOverallStatus', 'updateInvoiceStatus', 'updateLeviData', 
+          'updateDepreciationData', 'updateProfessionalStandards',
+          'updateValidationCharts', 'updateProgressIndicators', 'updateStatusDots'
+        ];
+        
+        // Test floating screen connections
+        const floatingFunctions = [
+          'openCarDetailsFloating', 'openLeviFloating', 'openPartsResultsFloating', 'openInvoiceFloating'
+        ];
+        
+        const missingFunctions = requiredFunctions.filter(funcName => 
+          typeof window[funcName] === 'undefined' && typeof eval(funcName) === 'undefined'
+        );
+        
+        const missingFloatingFunctions = floatingFunctions.filter(funcName => 
+          typeof window[funcName] === 'undefined'
+        );
+        
+        if (missingFunctions.length > 0) {
+          console.error('❌ Missing functions:', missingFunctions);
+          return false;
+        }
+        
+        if (missingFloatingFunctions.length > 0) {
+          console.error('❌ Missing floating functions:', missingFloatingFunctions);
+          return false;
+        }
+        
+        console.log('✅ All required functions exist');
+        console.log('✅ All floating screen functions exist');
+        
+        // Test 2: Check if key DOM elements exist
+        const requiredElements = [
+          'validation-status', 'completion-progress', 'invoice-status', 
+          'levi-status', 'car-basic-price', 'market-value', 'depreciation-status', 'professional-status'
+        ];
+        
+        const missingElements = requiredElements.filter(id => !document.getElementById(id));
+        
+        if (missingElements.length > 0) {
+          console.error('❌ Missing DOM elements:', missingElements);
+          return false;
+        }
+        console.log('✅ All required DOM elements exist');
+        
+        // Test 3: Try creating a validation summary
+        const testSummary = createValidationSummaryFromHelper();
+        if (!testSummary || typeof testSummary !== 'object') {
+          console.error('❌ Failed to create validation summary');
+          return false;
+        }
+        console.log('✅ Validation summary creation works');
+        
+        // Test 4: Try updating visual elements
+        try {
+          updateValidationCharts(testSummary);
+          updateProgressIndicators(testSummary);
+          updateStatusDots(testSummary);
+          console.log('✅ Visual update functions work');
+        } catch (visualError) {
+          console.error('❌ Visual update error:', visualError);
+          return false;
+        }
+        
+        // Test 5: Test floating screen connections
+        try {
+          console.log('🧪 Testing floating screen connections...');
+          
+          // Check if floating scripts loaded their functions
+          const floatingConnections = {
+            'Car Details': typeof window.toggleCarDetails === 'function',
+            'Levi Report': typeof window.toggleLeviReport === 'function', 
+            'Parts Search Results': typeof window.togglePartsSearchResults === 'function',
+            'Invoice Details': typeof window.toggleInvoiceDetails === 'function'
+          };
+          
+          let allConnected = true;
+          Object.entries(floatingConnections).forEach(([name, connected]) => {
+            if (connected) {
+              console.log(`✅ ${name} floating screen connected`);
+            } else {
+              console.error(`❌ ${name} floating screen NOT connected`);
+              allConnected = false;
+            }
+          });
+          
+          if (!allConnected) {
+            console.error('❌ Some floating screens are not properly connected');
+            return false;
+          }
+          
+          console.log('✅ All floating screens properly connected');
+        } catch (floatingError) {
+          console.error('❌ Floating screen connection error:', floatingError);
+          return false;
+        }
+        
+        console.log('✅ All integration tests passed!');
+        showInfo('בדיקת אינטגרציה הושלמה בהצלחה - כולל מסכים מרחפים');
+        return true;
+        
+      } catch (error) {
+        console.error('❌ Integration test failed:', error);
+        showError('בדיקת אינטגרציה נכשלה: ' + error.message);
+        return false;
+      }
+    };
+
+    // Performance monitoring
+    window.addEventListener('load', () => {
+      const loadTime = performance.now();
+      console.log(`📊 Validation Dashboard loaded in ${loadTime.toFixed(2)}ms`);
+    });
+  </script>
+
+  <!-- Floating Screen Scripts -->
+  <script src="car-details-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="parts-search-results-floating.js"></script>
+  <script src="invoice-details-floating.js"></script>
+  <script src="assistant-floating.js"></script>
+</body>
+</html>

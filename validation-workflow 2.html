@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>אימות דו"ח סופי - ירון כיוף שמאות</title>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f6fb;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 800px;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+    }
+    .logo img {
+      width: 120px;
+      margin-bottom: 20px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 5px;
+      color: #1e3a8a;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 22px;
+      color: #1e3a8a;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .validation-section {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    .validation-section.completed {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .validation-section.current {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+    .section-status {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-current {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .status-completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .section-content {
+      color: #475569;
+      line-height: 1.6;
+    }
+    .validation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .validation-item:last-child {
+      border-bottom: none;
+    }
+    .validation-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1e40af;
+    }
+    .btn-secondary {
+      background: #64748b;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+    .btn-success {
+      background: #16a34a;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #15803d;
+    }
+    .final-confirmation {
+      background: #fef2f2;
+      border: 2px solid #fca5a5;
+      border-radius: 12px;
+      padding: 25px;
+      text-align: center;
+      margin-top: 30px;
+      display: none;
+    }
+    .final-confirmation.show {
+      display: block;
+    }
+    .confirmation-text {
+      font-size: 18px;
+      font-weight: bold;
+      color: #dc2626;
+      margin-bottom: 20px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
+    </div>
+    <div class="title">ירון כיוף שמאות - פורטל</div>
+    <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
+    
+    <h1>אימות דו"ח סופי - חוות דעת</h1>
+    
+    <div class="validation-section current" id="section-vehicle">
+      <div class="section-header">
+        <div class="section-title">פרטי רכב ומקרה</div>
+        <div class="section-status status-current">בבדיקה</div>
+      </div>
+      <div class="section-content">
+        <div class="validation-item">
+          <span>מספר רכב מאומת</span>
+          <span id="vehicle-plate">✓</span>
+        </div>
+        <div class="validation-item">
+          <span>פרטי בעלים מלאים</span>
+          <span id="vehicle-owner">✓</span>
+        </div>
+        <div class="validation-item">
+          <span>פרטי ביטוח</span>
+          <span id="vehicle-insurance">✓</span>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-primary" onclick="approveSection('vehicle')">אימות פרטי רכב</button>
+      </div>
+    </div>
+    
+    <div class="validation-section" id="section-levi">
+      <div class="section-header">
+        <div class="section-title">דו"ח לוי יצחק</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div class="validation-item">
+          <span>שווי רכב מאומת</span>
+          <span id="levi-value">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>התאמות מחיר</span>
+          <span id="levi-adjustments">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>מחיר סופי</span>
+          <span id="levi-final">⏳</span>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-primary" onclick="approveSection('levi')" disabled>אימות דו"ח לוי</button>
+      </div>
+    </div>
+    
+    <div class="validation-section" id="section-damage">
+      <div class="section-header">
+        <div class="section-title">מוקדי נזק ואקספרטיזה</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div class="validation-item">
+          <span>מוקדי נזק מוגדרים</span>
+          <span id="damage-centers">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>חלקים ותיקונים</span>
+          <span id="damage-parts">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>סטטוס אקספרטיזה</span>
+          <span id="damage-expertise">⏳</span>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-primary" onclick="approveSection('damage')" disabled>אימות מוקדי נזק</button>
+      </div>
+    </div>
+    
+    <div class="validation-section" id="section-depreciation">
+      <div class="section-header">
+        <div class="section-title">ירידת ערך ועלויות</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div class="validation-item">
+          <span>חישוב ירידת ערך</span>
+          <span id="depreciation-calc">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>סוג חוות דעת</span>
+          <span id="depreciation-type">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span>שכר טרחה</span>
+          <span id="depreciation-fees">⏳</span>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-primary" onclick="approveSection('depreciation')" disabled>אימות ירידת ערך</button>
+      </div>
+    </div>
+    
+    <div class="final-confirmation" id="finalConfirmation">
+      <div class="confirmation-text">
+        האם אתה בטוח שברצונך לסיים ולהפיק את הדו"ח הסופי?
+      </div>
+      <div style="color: #7c2d12; margin-bottom: 20px;">
+        לאחר האישור הסופי לא ניתן יהיה לערוך את הדו"ח
+      </div>
+      <div class="validation-buttons" style="justify-content: center;">
+        <button class="btn btn-success" onclick="finalSubmit()">אישור סופי ויצירת דו"ח</button>
+        <button class="btn btn-secondary" onclick="cancelFinal()">ביטול</button>
+      </div>
+    </div>
+    
+    <div class="validation-buttons" style="justify-content: center; margin-top: 30px;">
+      <button class="btn btn-secondary" onclick="window.location.href='selection.html'">
+        חזור לדף הבחירה
+      </button>
+      <button class="btn btn-secondary" onclick="logout()">
+        יציאה מהמערכת
+      </button>
+    </div>
+    
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+  </div>
+
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
+    
+    // Authentication check
+    const auth = sessionStorage.getItem("auth");
+    if (!auth) {
+      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+      window.location.href = "index.html";
+    }
+
+    let approvedSections = [];
+    
+    window.approveSection = function(sectionName) {
+      // Mark section as completed
+      const section = document.getElementById(`section-${sectionName}`);
+      const status = section.querySelector('.section-status');
+      const button = section.querySelector('button');
+      
+      section.classList.remove('current');
+      section.classList.add('completed');
+      status.textContent = 'אומת';
+      status.className = 'section-status status-completed';
+      button.disabled = true;
+      button.textContent = '✓ אומת';
+      
+      // Update validation items in this section
+      const items = section.querySelectorAll('.validation-item span:last-child');
+      items.forEach(item => {
+        if (item.textContent === '⏳') {
+          item.textContent = '✓';
+        }
+      });
+      
+      approvedSections.push(sectionName);
+      
+      // Enable next section
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation'];
+      const currentIndex = sections.indexOf(sectionName);
+      if (currentIndex < sections.length - 1) {
+        const nextSection = document.getElementById(`section-${sections[currentIndex + 1]}`);
+        const nextStatus = nextSection.querySelector('.section-status');
+        const nextButton = nextSection.querySelector('button');
+        
+        nextSection.classList.add('current');
+        nextStatus.textContent = 'בבדיקה';
+        nextStatus.className = 'section-status status-current';
+        nextButton.disabled = false;
+      } else {
+        // All sections approved, show final confirmation
+        document.getElementById('finalConfirmation').classList.add('show');
+      }
+      
+      console.log(`Section ${sectionName} approved`);
+    };
+    
+    window.cancelFinal = function() {
+      document.getElementById('finalConfirmation').classList.remove('show');
+    };
+    
+    window.finalSubmit = async function() {
+      const submitBtn = document.querySelector('.btn-success');
+      const originalText = submitBtn.textContent;
+      
+      try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'מעבד דו"ח סופי...';
+        
+        // Prepare final report data
+        const finalReportData = {
+          validated_sections: approvedSections,
+          validation_timestamp: new Date().toISOString(),
+          report_status: 'final_approved',
+          validator: 'user'
+        };
+        
+        // Send to webhook for final processing
+        await sendToWebhook('SUBMIT_FINAL_REPORT', finalReportData);
+        
+        submitBtn.textContent = '✅ הושלם בהצלחה';
+        alert('✅ הדו"ח הסופי נוצר בהצלחה ונשלח לעיבוד');
+        
+        // Redirect to success page or selection
+        setTimeout(() => {
+          window.location.href = 'selection.html';
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Final submission error:', error);
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        alert('❌ שגיאה ביצירת הדו"ח הסופי: ' + error.message);
+      }
+    };
+    
+    window.logout = function() {
+      // Use the enhanced logout with sound if available
+      if (typeof window.logoutWithSound === 'function') {
+        window.logoutWithSound();
+      } else {
+        // Fallback to regular logout
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    };
+  </script>
+  <script type="module" src="helper-events.js"></script>
+  <script src="internal-browser.js"></script>
+  <script src="logout-sound.js"></script>
+  <script src="assistant-floating.js"></script>
+  <script src="onesignal-integration.js"></script>
+</body>
+</html>

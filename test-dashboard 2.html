@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח בקרת בדיקות אינטגרציה - ירון כיוף שמאות</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      min-height: 100vh;
+      direction: rtl;
+      padding: 20px;
+    }
+    
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 30px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 18px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+    
+    .btn-success {
+      background: #27ae60;
+      color: white;
+    }
+    
+    .btn-warning {
+      background: #f39c12;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .test-progress {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 25px;
+      background: #e9ecef;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+      transition: width 0.5s ease;
+      border-radius: 12px;
+      position: relative;
+    }
+    
+    .progress-fill.warning {
+      background: linear-gradient(90deg, #f39c12 0%, #f1c40f 100%);
+    }
+    
+    .progress-fill.error {
+      background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+    }
+    
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .card h3 {
+      color: #2c3e50;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #3498db;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .metric:last-child {
+      border-bottom: none;
+    }
+    
+    .metric-label {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .metric-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .metric-value.success { color: #27ae60; }
+    .metric-value.warning { color: #f39c12; }
+    .metric-value.error { color: #e74c3c; }
+    
+    .test-results {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      background: #f8f9fa;
+    }
+    
+    .test-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.2s;
+    }
+    
+    .test-item:hover {
+      background: #e9ecef;
+    }
+    
+    .test-item:last-child {
+      border-bottom: none;
+    }
+    
+    .test-status {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .test-status.passed { background: #27ae60; }
+    .test-status.failed { background: #e74c3c; }
+    .test-status.running { background: #3498db; animation: pulse 1.5s infinite; }
+    .test-status.pending { background: #95a5a6; }
+    
+    .test-details {
+      flex: 1;
+    }
+    
+    .test-name {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 2px;
+    }
+    
+    .test-message {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .test-duration {
+      font-size: 11px;
+      color: #95a5a6;
+      margin-right: 10px;
+    }
+    
+    .test-category {
+      background: #ecf0f1;
+      color: #2c3e50;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .severity-badge {
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    .severity-critical {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    .severity-high {
+      background: #f39c12;
+      color: white;
+    }
+    
+    .severity-medium {
+      background: #3498db;
+      color: white;
+    }
+    
+    .severity-low {
+      background: #95a5a6;
+      color: white;
+    }
+    
+    .recommendations {
+      background: #e8f5e8;
+      border: 1px solid #27ae60;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .recommendations h4 {
+      color: #27ae60;
+      margin-bottom: 10px;
+    }
+    
+    .recommendations ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .recommendations li {
+      padding: 5px 0;
+      border-bottom: 1px solid #c8e6c9;
+    }
+    
+    .recommendations li:last-child {
+      border-bottom: none;
+    }
+    
+    .log-output {
+      background: #2c3e50;
+      color: #ecf0f1;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    
+    .navigation {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 15px 25px;
+      border-radius: 25px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 15px;
+      z-index: 1000;
+    }
+    
+    .nav-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .nav-btn.primary {
+      background: #3498db;
+      color: white;
+    }
+    
+    .nav-btn.secondary {
+      background: #95a5a6;
+      color: white;
+    }
+    
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      padding: 15px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+      max-width: 300px;
+    }
+    
+    .toast.success {
+      border-left: 4px solid #27ae60;
+    }
+    
+    .toast.error {
+      border-left: 4px solid #e74c3c;
+    }
+    
+    .toast.warning {
+      border-left: 4px solid #f39c12;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .header h1 {
+        font-size: 28px;
+      }
+      
+      .navigation {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" alt="ירון כיוף שמאות" class="logo">
+      <h1>🧪 לוח בקרת בדיקות אינטגרציה</h1>
+      <p>בדיקות אוטומטיות ואימות איכות המערכת</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <button class="btn btn-success" onclick="runAllTests()" id="run-tests-btn">
+          🚀 הרץ כל הבדיקות
+        </button>
+        <button class="btn btn-primary" onclick="runQuickTests()" id="quick-tests-btn">
+          ⚡ בדיקות מהירות
+        </button>
+        <button class="btn btn-warning" onclick="runSecurityTests()" id="security-tests-btn">
+          🔒 בדיקות אבטחה
+        </button>
+      </div>
+      <div class="control-group">
+        <button class="btn btn-secondary" onclick="exportResults()" id="export-btn" disabled>
+          📊 ייצא תוצאות
+        </button>
+        <button class="btn btn-danger" onclick="clearResults()" id="clear-btn">
+          🗑️ נקה תוצאות
+        </button>
+        <button class="btn btn-secondary" onclick="showTestLogs()" id="logs-btn">
+          📋 יומני בדיקות
+        </button>
+      </div>
+    </div>
+
+    <!-- Test Progress -->
+    <div class="test-progress">
+      <div class="progress-header">
+        <h3>🎯 התקדמות בדיקות</h3>
+        <span id="test-status">מוכן לבדיקה</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%">
+          <div class="progress-text" id="progress-text">0%</div>
+        </div>
+      </div>
+      <div class="metric">
+        <span class="metric-label">זמן בדיקה:</span>
+        <span class="metric-value" id="test-duration">0s</span>
+      </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Test Summary Card -->
+      <div class="card">
+        <h3>📈 סיכום בדיקות</h3>
+        <div class="metric">
+          <span class="metric-label">סה"כ בדיקות:</span>
+          <span class="metric-value" id="total-tests">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">עברו בהצלחה:</span>
+          <span class="metric-value success" id="passed-tests">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">נכשלו:</span>
+          <span class="metric-value error" id="failed-tests">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">אחוז הצלחה:</span>
+          <span class="metric-value" id="pass-rate">0%</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">זמן ממוצע:</span>
+          <span class="metric-value" id="avg-duration">0ms</span>
+        </div>
+      </div>
+
+      <!-- Test Categories Card -->
+      <div class="card">
+        <h3>📂 בדיקות לפי קטגוריה</h3>
+        <div id="category-breakdown">
+          <div class="metric">
+            <span class="metric-label">טוען קטגוריות...</span>
+            <span class="metric-value">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Severity Breakdown Card -->
+      <div class="card">
+        <h3>⚠️ בדיקות לפי חומרה</h3>
+        <div id="severity-breakdown">
+          <div class="metric">
+            <span class="metric-label">קריטי:</span>
+            <span class="metric-value error" id="critical-tests">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">גבוה:</span>
+            <span class="metric-value warning" id="high-tests">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">בינוני:</span>
+            <span class="metric-value" id="medium-tests">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">נמוך:</span>
+            <span class="metric-value" id="low-tests">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Environment Info Card -->
+      <div class="card">
+        <h3>🌍 פרטי סביבה</h3>
+        <div class="metric">
+          <span class="metric-label">סביבה:</span>
+          <span class="metric-value" id="environment">לא ידוע</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">דפדפן:</span>
+          <span class="metric-value" id="browser">לא ידוע</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">זמן הפעלה:</span>
+          <span class="metric-value" id="uptime">0s</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">זיכרון:</span>
+          <span class="metric-value" id="memory-usage">לא זמין</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="card">
+      <h3>🧪 תוצאות בדיקות</h3>
+      <div class="test-results" id="test-results">
+        <div class="test-item">
+          <div class="test-status pending">⏳</div>
+          <div class="test-details">
+            <div class="test-name">בדיקות טרם החלו</div>
+            <div class="test-message">לחץ על "הרץ כל הבדיקות" כדי להתחיל</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="recommendations" id="recommendations" style="display: none;">
+        <h4>💡 המלצות</h4>
+        <ul id="recommendations-list">
+        </ul>
+      </div>
+    </div>
+
+    <!-- Test Logs (Hidden by default) -->
+    <div class="card" id="test-logs-card" style="display: none;">
+      <h3>📋 יומני בדיקות</h3>
+      <div class="log-output" id="log-output">
+        אין יומנים זמינים
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <a href="selection.html" class="nav-btn secondary">🏠 עמוד הבית</a>
+      <a href="validation-dashboard.html" class="nav-btn secondary">🛡️ אימות</a>
+      <a href="enhanced-damage-centers.html" class="nav-btn primary">🧱 מוקדי נזק</a>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { IntegrationTestSuite } from './integration-test-suite.js';
+    import { environmentConfig } from './environment-config.js';
+
+    let testSuite = null;
+    let testResults = null;
+    let isRunning = false;
+    let startTime = Date.now();
+    let logBuffer = [];
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check authentication
+      const auth = sessionStorage.getItem("auth");
+      if (!auth) {
+        alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+        window.location.href = "index.html";
+        return;
+      }
+
+      // Initialize test suite
+      testSuite = new IntegrationTestSuite();
+      
+      // Setup environment info
+      updateEnvironmentInfo();
+      
+      // Setup real-time updates
+      setupRealTimeUpdates();
+      
+      // Override console to capture logs
+      captureConsoleLogs();
+      
+      console.log('🧪 Test Dashboard initialized');
+    });
+
+    function updateEnvironmentInfo() {
+      document.getElementById('environment').textContent = environmentConfig.getEnvironment();
+      document.getElementById('browser').textContent = getBrowserInfo();
+      
+      if (performance.memory) {
+        const memoryMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+        document.getElementById('memory-usage').textContent = `${memoryMB} MB`;
+      }
+    }
+
+    function getBrowserInfo() {
+      const ua = navigator.userAgent;
+      if (ua.includes('Chrome')) return 'Chrome';
+      if (ua.includes('Firefox')) return 'Firefox';
+      if (ua.includes('Safari')) return 'Safari';
+      if (ua.includes('Edge')) return 'Edge';
+      return 'Unknown';
+    }
+
+    function setupRealTimeUpdates() {
+      setInterval(() => {
+        const uptime = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById('uptime').textContent = `${uptime}s`;
+        
+        if (performance.memory) {
+          const memoryMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+          document.getElementById('memory-usage').textContent = `${memoryMB} MB`;
+        }
+      }, 1000);
+    }
+
+    function captureConsoleLogs() {
+      const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
+
+      console.log = (...args) => {
+        logBuffer.push(`[LOG] ${new Date().toLocaleTimeString()}: ${args.join(' ')}`);
+        originalLog.apply(console, args);
+      };
+
+      console.error = (...args) => {
+        logBuffer.push(`[ERROR] ${new Date().toLocaleTimeString()}: ${args.join(' ')}`);
+        originalError.apply(console, args);
+      };
+
+      console.warn = (...args) => {
+        logBuffer.push(`[WARN] ${new Date().toLocaleTimeString()}: ${args.join(' ')}`);
+        originalWarn.apply(console, args);
+      };
+    }
+
+    async function runAllTests() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      updateUI();
+      showToast('מתחיל בדיקות אינטגרציה...', 'success');
+      
+      try {
+        const startTime = Date.now();
+        testResults = await testSuite.runAllTests();
+        const duration = Date.now() - startTime;
+        
+        updateTestResults();
+        updateRecommendations();
+        
+        showToast(`בדיקות הושלמו בזמן ${(duration/1000).toFixed(1)} שניות`, 'success');
+        
+      } catch (error) {
+        console.error('Test suite failed:', error);
+        showToast('בדיקות נכשלו: ' + error.message, 'error');
+      } finally {
+        isRunning = false;
+        updateUI();
+      }
+    }
+
+    async function runQuickTests() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      updateUI();
+      showToast('מתחיל בדיקות מהירות...', 'success');
+      
+      try {
+        // Run only critical and high priority tests
+        await testSuite.runAuthenticationTests();
+        await testSuite.runDataFlowTests();
+        await testSuite.runValidationTests();
+        
+        testResults = testSuite.generateTestSummary();
+        updateTestResults();
+        updateRecommendations();
+        
+        showToast('בדיקות מהירות הושלמו', 'success');
+        
+      } catch (error) {
+        console.error('Quick tests failed:', error);
+        showToast('בדיקות מהירות נכשלו: ' + error.message, 'error');
+      } finally {
+        isRunning = false;
+        updateUI();
+      }
+    }
+
+    async function runSecurityTests() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      updateUI();
+      showToast('מתחיל בדיקות אבטחה...', 'success');
+      
+      try {
+        await testSuite.runSecurityTests();
+        
+        testResults = testSuite.generateTestSummary();
+        updateTestResults();
+        updateRecommendations();
+        
+        showToast('בדיקות אבטחה הושלמו', 'success');
+        
+      } catch (error) {
+        console.error('Security tests failed:', error);
+        showToast('בדיקות אבטחה נכשלו: ' + error.message, 'error');
+      } finally {
+        isRunning = false;
+        updateUI();
+      }
+    }
+
+    function updateUI() {
+      const runBtn = document.getElementById('run-tests-btn');
+      const quickBtn = document.getElementById('quick-tests-btn');
+      const securityBtn = document.getElementById('security-tests-btn');
+      const exportBtn = document.getElementById('export-btn');
+      
+      runBtn.disabled = isRunning;
+      quickBtn.disabled = isRunning;
+      securityBtn.disabled = isRunning;
+      exportBtn.disabled = !testResults;
+      
+      if (isRunning) {
+        document.getElementById('test-status').textContent = 'בודק...';
+        runBtn.textContent = '🔄 בודק...';
+      } else {
+        document.getElementById('test-status').textContent = testResults ? 'הושלם' : 'מוכן לבדיקה';
+        runBtn.textContent = '🚀 הרץ כל הבדיקות';
+      }
+    }
+
+    function updateTestResults() {
+      if (!testResults) return;
+      
+      const summary = testResults.summary;
+      
+      // Update summary
+      document.getElementById('total-tests').textContent = summary.total;
+      document.getElementById('passed-tests').textContent = summary.passed;
+      document.getElementById('failed-tests').textContent = summary.failed;
+      document.getElementById('pass-rate').textContent = `${summary.passRate}%`;
+      document.getElementById('avg-duration').textContent = `${summary.averageDuration}ms`;
+      document.getElementById('test-duration').textContent = `${(testResults.testDuration/1000).toFixed(1)}s`;
+      
+      // Update progress bar
+      const progressFill = document.getElementById('progress-fill');
+      const progressText = document.getElementById('progress-text');
+      
+      progressFill.style.width = `${summary.passRate}%`;
+      progressText.textContent = `${summary.passRate}%`;
+      
+      if (summary.passRate === 100) {
+        progressFill.className = 'progress-fill';
+      } else if (summary.passRate >= 80) {
+        progressFill.className = 'progress-fill warning';
+      } else {
+        progressFill.className = 'progress-fill error';
+      }
+      
+      // Update severity breakdown
+      document.getElementById('critical-tests').textContent = testResults.bySeverity.critical;
+      document.getElementById('high-tests').textContent = testResults.bySeverity.high;
+      document.getElementById('medium-tests').textContent = testResults.bySeverity.medium;
+      document.getElementById('low-tests').textContent = testResults.bySeverity.low;
+      
+      // Update category breakdown
+      updateCategoryBreakdown();
+      
+      // Update test results list
+      updateTestResultsList();
+    }
+
+    function updateCategoryBreakdown() {
+      const container = document.getElementById('category-breakdown');
+      container.innerHTML = '';
+      
+      Object.entries(testResults.byCategory).forEach(([category, data]) => {
+        const metric = document.createElement('div');
+        metric.className = 'metric';
+        
+        const passRate = data.total > 0 ? Math.round((data.passed / data.total) * 100) : 0;
+        const statusClass = passRate === 100 ? 'success' : passRate >= 80 ? 'warning' : 'error';
+        
+        metric.innerHTML = `
+          <span class="metric-label">${category}:</span>
+          <span class="metric-value ${statusClass}">${data.passed}/${data.total}</span>
+        `;
+        
+        container.appendChild(metric);
+      });
+    }
+
+    function updateTestResultsList() {
+      const container = document.getElementById('test-results');
+      container.innerHTML = '';
+      
+      testSuite.testResults.forEach(test => {
+        const testItem = document.createElement('div');
+        testItem.className = 'test-item';
+        
+        const statusIcon = test.passed ? '✓' : '✗';
+        const statusClass = test.passed ? 'passed' : 'failed';
+        
+        testItem.innerHTML = `
+          <div class="test-status ${statusClass}">${statusIcon}</div>
+          <div class="test-details">
+            <div class="test-name">${test.name}</div>
+            <div class="test-message">${test.message}</div>
+          </div>
+          <div class="test-duration">${test.duration.toFixed(2)}ms</div>
+          <div class="test-category">${test.category}</div>
+          <div class="severity-badge severity-${test.severity}">${test.severity}</div>
+        `;
+        
+        container.appendChild(testItem);
+      });
+    }
+
+    function updateRecommendations() {
+      if (!testResults || !testResults.recommendations) return;
+      
+      const container = document.getElementById('recommendations');
+      const list = document.getElementById('recommendations-list');
+      
+      if (testResults.recommendations.length > 0) {
+        container.style.display = 'block';
+        list.innerHTML = '';
+        
+        testResults.recommendations.forEach(rec => {
+          const li = document.createElement('li');
+          li.textContent = rec;
+          list.appendChild(li);
+        });
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    function exportResults() {
+      if (!testResults) {
+        showToast('אין תוצאות לייצוא', 'warning');
+        return;
+      }
+      
+      try {
+        const exportData = testSuite.exportTestResults();
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `integration-test-results-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('תוצאות יוצאו בהצלחה', 'success');
+        
+      } catch (error) {
+        console.error('Export failed:', error);
+        showToast('ייצוא נכשל: ' + error.message, 'error');
+      }
+    }
+
+    function clearResults() {
+      if (isRunning) {
+        showToast('לא ניתן לנקות תוצאות במהלך הבדיקה', 'warning');
+        return;
+      }
+      
+      if (confirm('האם אתה בטוח שברצונך לנקות את כל התוצאות?')) {
+        testResults = null;
+        testSuite.cleanup();
+        logBuffer = [];
+        
+        // Reset UI
+        document.getElementById('total-tests').textContent = '0';
+        document.getElementById('passed-tests').textContent = '0';
+        document.getElementById('failed-tests').textContent = '0';
+        document.getElementById('pass-rate').textContent = '0%';
+        document.getElementById('avg-duration').textContent = '0ms';
+        document.getElementById('test-duration').textContent = '0s';
+        
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('progress-text').textContent = '0%';
+        
+        document.getElementById('test-results').innerHTML = `
+          <div class="test-item">
+            <div class="test-status pending">⏳</div>
+            <div class="test-details">
+              <div class="test-name">בדיקות טרם החלו</div>
+              <div class="test-message">לחץ על "הרץ כל הבדיקות" כדי להתחיל</div>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('recommendations').style.display = 'none';
+        document.getElementById('test-logs-card').style.display = 'none';
+        
+        updateUI();
+        showToast('תוצאות נוקו בהצלחה', 'success');
+      }
+    }
+
+    function showTestLogs() {
+      const logsCard = document.getElementById('test-logs-card');
+      const logOutput = document.getElementById('log-output');
+      
+      if (logsCard.style.display === 'none') {
+        logsCard.style.display = 'block';
+        logOutput.textContent = logBuffer.join('\n') || 'אין יומנים זמינים';
+        logOutput.scrollTop = logOutput.scrollHeight;
+      } else {
+        logsCard.style.display = 'none';
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 4000);
+    }
+
+    // Global functions
+    window.runAllTests = runAllTests;
+    window.runQuickTests = runQuickTests;
+    window.runSecurityTests = runSecurityTests;
+    window.exportResults = exportResults;
+    window.clearResults = clearResults;
+    window.showTestLogs = showTestLogs;
+    
+    // Initialize keyboard shortcuts info
+    setTimeout(() => {
+      console.log('🔧 Test Dashboard - Keyboard shortcuts:');
+      console.log('Ctrl+T: Run all tests');
+      console.log('Ctrl+Q: Run quick tests');
+      console.log('Ctrl+S: Run security tests');
+      console.log('Ctrl+E: Export results');
+    }, 1000);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 't':
+            event.preventDefault();
+            runAllTests();
+            break;
+          case 'q':
+            event.preventDefault();
+            runQuickTests();
+            break;
+          case 's':
+            event.preventDefault();
+            runSecurityTests();
+            break;
+          case 'e':
+            event.preventDefault();
+            if (testResults) exportResults();
+            break;
+        }
+      }
+    });
+  </script>
+
+  <!-- Analytics and monitoring -->
+  <script>
+    // Basic usage analytics
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'page_view', {
+        page_title: 'Integration Test Dashboard',
+        page_location: window.location.href
+      });
+    }
+    
+    // Performance monitoring
+    window.addEventListener('load', () => {
+      const loadTime = performance.now();
+      console.log(`📊 Test Dashboard loaded in ${loadTime.toFixed(2)}ms`);
+    });
+  </script>
+</body>
+</html>
