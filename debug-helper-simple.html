@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Helper Debug</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+    .result { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+    button { padding: 10px 15px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Simple Helper System Debug</h1>
+  
+  <div class="debug-section">
+    <h3>Step 1: Test Basic Function Loading</h3>
+    <button onclick="testBasicFunctions()">Test Basic Functions</button>
+    <div id="basic-result" class="result">Click button to test...</div>
+  </div>
+  
+  <div class="debug-section">
+    <h3>Step 2: Test Direct Helper Update</h3>
+    <button onclick="testDirectUpdate()">Test Direct updateHelper</button>
+    <div id="update-result" class="result">Click button to test...</div>
+  </div>
+  
+  <div class="debug-section">
+    <h3>Step 3: Check SessionStorage</h3>
+    <button onclick="checkStorage()">Check Storage</button>
+    <div id="storage-result" class="result">Click button to test...</div>
+  </div>
+  
+  <div class="debug-section">
+    <h3>Step 4: Test Car Details Screen</h3>
+    <button onclick="testCarScreen()">Test Car Details Screen</button>
+    <div id="screen-result" class="result">Click button to test...</div>
+  </div>
+
+  <script type="module">
+    // Try to import everything and see what fails
+    let updateHelper = null;
+    let helper = null;
+    
+    try {
+      const helperModule = await import('./helper.js');
+      updateHelper = helperModule.updateHelper;
+      helper = helperModule.helper;
+      console.log('✅ Helper module loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load helper module:', error);
+      document.getElementById('basic-result').textContent = 'FAILED: Could not load helper.js - ' + error.message;
+    }
+    
+    try {
+      await import('./data-reception-debugger.js');
+      console.log('✅ Data reception debugger loaded');
+    } catch (error) {
+      console.error('❌ Failed to load data reception debugger:', error);
+    }
+    
+    try {
+      await import('./car-details-floating.js');
+      console.log('✅ Car details floating screen loaded');
+    } catch (error) {
+      console.error('❌ Failed to load car details floating screen:', error);
+    }
+    
+    // Test functions
+    window.testBasicFunctions = function() {
+      const result = [];
+      
+      // Check if functions exist
+      result.push('updateHelper function: ' + (typeof updateHelper));
+      result.push('helper object: ' + (typeof helper));
+      result.push('window.receiveCarData: ' + (typeof window.receiveCarData));
+      result.push('window.toggleCarDetails: ' + (typeof window.toggleCarDetails));
+      result.push('window.dataDebugger: ' + (typeof window.dataDebugger));
+      
+      // Check helper structure
+      if (helper) {
+        result.push('helper.vehicle: ' + (typeof helper.vehicle));
+        result.push('helper.car_details: ' + (typeof helper.car_details));
+        result.push('helper.meta: ' + (typeof helper.meta));
+      }
+      
+      document.getElementById('basic-result').textContent = result.join('\n');
+    };
+    
+    window.testDirectUpdate = function() {
+      if (!updateHelper) {
+        document.getElementById('update-result').textContent = 'ERROR: updateHelper function not available';
+        return;
+      }
+      
+      const testData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק',
+        model: 'LUCERNE',
+        owner: 'כרמל כיוף',
+        date: '2025-01-19',
+        location: 'UMI חיפה'
+      };
+      
+      console.log('🧪 Testing direct updateHelper call...');
+      
+      try {
+        const result = updateHelper('car_details', testData, 'manual_test');
+        
+        const output = [
+          'updateHelper result: ' + result,
+          'helper after update: ' + JSON.stringify(helper, null, 2),
+          'sessionStorage helper: ' + sessionStorage.getItem('helper'),
+          'sessionStorage carData: ' + sessionStorage.getItem('carData')
+        ];
+        
+        document.getElementById('update-result').textContent = output.join('\n\n');
+      } catch (error) {
+        document.getElementById('update-result').textContent = 'ERROR: ' + error.message + '\n\nStack: ' + error.stack;
+      }
+    };
+    
+    window.checkStorage = function() {
+      const output = [];
+      
+      // Check all storage
+      output.push('SessionStorage keys: ' + Object.keys(sessionStorage).join(', '));
+      output.push('LocalStorage keys: ' + Object.keys(localStorage).join(', '));
+      
+      // Check specific items
+      const helperData = sessionStorage.getItem('helper');
+      const carData = sessionStorage.getItem('carData');
+      
+      output.push('\n--- SessionStorage helper ---');
+      if (helperData) {
+        try {
+          const parsed = JSON.parse(helperData);
+          output.push('Helper data exists, structure:');
+          output.push('- meta: ' + JSON.stringify(parsed.meta || {}, null, 2));
+          output.push('- vehicle: ' + JSON.stringify(parsed.vehicle || {}, null, 2));
+          output.push('- car_details: ' + JSON.stringify(parsed.car_details || {}, null, 2));
+        } catch (e) {
+          output.push('Helper data exists but is not valid JSON: ' + e.message);
+        }
+      } else {
+        output.push('No helper data in sessionStorage');
+      }
+      
+      output.push('\n--- SessionStorage carData ---');
+      if (carData) {
+        output.push('CarData: ' + carData);
+      } else {
+        output.push('No carData in sessionStorage');
+      }
+      
+      document.getElementById('storage-result').textContent = output.join('\n');
+    };
+    
+    window.testCarScreen = function() {
+      if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+        document.getElementById('screen-result').textContent = 'Car details screen toggled. Check if it appears.';
+      } else {
+        document.getElementById('screen-result').textContent = 'ERROR: toggleCarDetails function not found';
+      }
+    };
+    
+    // Auto-run basic test after load
+    setTimeout(() => {
+      window.testBasicFunctions();
+    }, 1000);
+  </script>
+</body>
+</html>

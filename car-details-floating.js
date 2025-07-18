@@ -282,13 +282,17 @@
 
   function loadCarData() {
     try {
+      console.log('🔄 loadCarData: Starting to load car data...');
       let helper = {};
       
       // Try to get data from sessionStorage helper
       try {
         const storedHelper = sessionStorage.getItem('helper');
+        console.log('🔍 loadCarData: sessionStorage helper raw:', storedHelper ? storedHelper.substring(0, 200) + '...' : 'null');
+        
         if (storedHelper) {
           helper = JSON.parse(storedHelper);
+          console.log('🔍 loadCarData: parsed helper:', helper);
         }
       } catch (parseError) {
         console.warn('Could not parse helper from sessionStorage:', parseError);
@@ -297,13 +301,22 @@
       // Fallback to global helper variable
       if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
         helper = window.helper;
+        console.log('🔍 loadCarData: using global helper:', helper);
       }
+      
+      // Debug: Check all storage
+      console.log('🔍 loadCarData: sessionStorage carData:', sessionStorage.getItem('carData'));
+      console.log('🔍 loadCarData: all sessionStorage keys:', Object.keys(sessionStorage));
 
       // Get vehicle data using system structure
       const vehicle = helper.vehicle || {};
       const carDetails = helper.car_details || {};
       const client = helper.client || {};
       const meta = helper.meta || {};
+      
+      console.log('🔍 loadCarData: extracted data:', {
+        vehicle, carDetails, client, meta
+      });
       
       // Update UI with car data using proper helper structure
       updateCarDisplay(vehicle, carDetails, client, meta);

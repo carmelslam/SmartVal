@@ -159,13 +159,19 @@ class DataReceptionDebugger {
 
   // Process external data for any module type
   processExternalData(data, section, dataType) {
+    console.log('🔍 processExternalData called with:', { data, section, dataType });
     this.logEvent('EXTERNAL_DATA', `${dataType.toUpperCase()}_RECEIVED`, data);
     
     try {
-      // Use the enhanced updateHelper function with source module tracking
-      updateHelper(section, data, 'external_data_reception');
+      console.log('🔍 About to call updateHelper with:', { section, data });
       
-      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATED_SUCCESS', { section, dataType });
+      // Use the enhanced updateHelper function with source module tracking
+      const result = updateHelper(section, data, 'external_data_reception');
+      
+      console.log('🔍 updateHelper result:', result);
+      console.log('🔍 helper state after update:', helper);
+      
+      this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATED_SUCCESS', { section, dataType, result });
       
       // Show notification
       this.showDataReceivedNotification(data, dataType);
@@ -174,6 +180,7 @@ class DataReceptionDebugger {
       this.refreshFloatingScreens(section, dataType);
       
     } catch (error) {
+      console.error('❌ processExternalData error:', error);
       this.logEvent('EXTERNAL_DATA', 'HELPER_UPDATE_ERROR', { error: error.message, section, data });
     }
   }
@@ -234,6 +241,7 @@ class DataReceptionDebugger {
   setupGlobalFunctions() {
     // Global function for receiving car data from Make.com
     window.receiveCarData = (data) => {
+      console.log('🔍 window.receiveCarData called with:', data);
       this.logEvent('GLOBAL_FUNCTION', 'RECEIVE_CAR_DATA', data);
       this.processExternalData(data, 'car_details', 'Car Data');
     };
