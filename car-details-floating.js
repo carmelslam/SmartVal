@@ -149,12 +149,8 @@
         <div class="value" id="vehicle-chassis">-</div>
       </div>
       <div class="car-field">
-        <div class="label">קוד דגם לוי:</div>
+        <div class="label">קוד דגם:</div>
         <div class="value" id="vehicle-model-code">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">קוד יוניברסלי:</div>
-        <div class="value" id="vehicle-universal-code">-</div>
       </div>
       <div class="car-field">
         <div class="label">סוג דלק:</div>
@@ -287,83 +283,40 @@
   function loadCarData() {
     try {
       let helper = {};
-      let makeCarData = {};
-      let carData = {};
       
-      // Debug: Check all data sources
-      console.log('🔍 FLOATING SCREEN DEBUG - Checking all data sources...');
-      
-      // 1. Check sessionStorage helper
+      // Try to get data from sessionStorage helper
       try {
         const storedHelper = sessionStorage.getItem('helper');
         if (storedHelper) {
           helper = JSON.parse(storedHelper);
-          console.log('✅ Found helper in sessionStorage:', helper);
-        } else {
-          console.log('❌ No helper found in sessionStorage');
         }
       } catch (parseError) {
-        console.warn('❌ Could not parse helper from sessionStorage:', parseError);
+        console.warn('Could not parse helper from sessionStorage:', parseError);
       }
       
-      // 2. Check global helper variable
+      // Fallback to global helper variable
       if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
         helper = window.helper;
-        console.log('✅ Using global helper variable:', helper);
       }
-      
-      // 3. Check Make.com data directly
-      try {
-        const makeDataRaw = sessionStorage.getItem('makeCarData');
-        if (makeDataRaw) {
-          makeCarData = JSON.parse(makeDataRaw);
-          console.log('✅ Found Make.com car data:', makeCarData);
-        } else {
-          console.log('❌ No makeCarData found in sessionStorage');
-        }
-      } catch (parseError) {
-        console.warn('❌ Could not parse makeCarData:', parseError);
-      }
-      
-      // 4. Check basic car data
-      try {
-        const carDataRaw = sessionStorage.getItem('carData');
-        if (carDataRaw) {
-          carData = JSON.parse(carDataRaw);
-          console.log('✅ Found basic car data:', carData);
-        } else {
-          console.log('❌ No carData found in sessionStorage');
-        }
-      } catch (parseError) {
-        console.warn('❌ Could not parse carData:', parseError);
-      }
-      
-      // 5. List all sessionStorage keys for debugging
-      console.log('🔍 All sessionStorage keys:', Object.keys(sessionStorage));
-      
-      // Merge all data sources with priority: makeCarData > helper > carData
-      const vehicle = makeCarData || helper.vehicle || carData || {};
-      const carDetails = makeCarData || helper.car_details || carData || {};
+
+      // Get vehicle data using system structure
+      const vehicle = helper.vehicle || {};
+      const carDetails = helper.car_details || {};
       const client = helper.client || {};
-      const meta = helper.meta || { plate: makeCarData?.plate || carData?.plate } || {};
-      const generalInfo = helper.general_info || {};
+      const meta = helper.meta || {};
       
-      console.log('🔍 Final data being sent to display:', {
-        vehicle, carDetails, client, meta, generalInfo
-      });
-      
-      // Update UI with merged data including general info
-      updateCarDisplay(vehicle, carDetails, client, meta, generalInfo);
+      // Update UI with car data using proper helper structure
+      updateCarDisplay(vehicle, carDetails, client, meta);
 
     } catch (error) {
-      console.error("❌ Error loading car data:", error);
+      console.error("Error loading car data:", error);
       updateCarDisplay({}, {}, {}, {});
     }
   }
 
-  function updateCarDisplay(vehicle, carDetails, client, meta, generalInfo = {}) {
+  function updateCarDisplay(vehicle, carDetails, client, meta) {
     console.log('🔄 updateCarDisplay called with:', {
-      vehicle, carDetails, client, meta, generalInfo
+      vehicle, carDetails, client, meta
     });
     
     // Debug: Check agent data specifically (CORRECTED: helper.client is source of truth)
@@ -378,134 +331,31 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Enhanced field mapping with Make.com Hebrew support
-    // Plate number (multiple sources)
-    document.getElementById("vehicle-plate").textContent = formatValue(
-      meta.plate || vehicle.plate_number || vehicle.plate || carDetails.plate
-    );
-    
-    // Manufacturer (יצרן) - supports both English and Hebrew field names
-    document.getElementById("vehicle-manufacturer").textContent = formatValue(
-      vehicle.manufacturer || carDetails.manufacturer || 
-      vehicle.יצרן || carDetails.יצרן ||
-      vehicle['יצרן'] || carDetails['יצרן']
-    );
-    
-    // Model (דגם) - supports both English and Hebrew field names  
-    document.getElementById("vehicle-model").textContent = formatValue(
-      vehicle.model || carDetails.model ||
-      vehicle.דגם || carDetails.דגם ||
-      vehicle['דגם'] || carDetails['דגם']
-    );
-    
-    // Year (שנת ייצור) - extract from production_date if needed
-    let year = vehicle.year || carDetails.year || 
-               vehicle['שנת ייצור'] || carDetails['שנת ייצור'] ||
-               vehicle.production_date || carDetails.production_date;
-    if (year && year.includes('/')) {
-      year = year.split('/')[1]; // Extract year from MM/YYYY format
-    }
-    document.getElementById("vehicle-year").textContent = formatValue(year);
-    
-    // Kilometers (קילומטראז) - includes general_info odo field
-    document.getElementById("vehicle-km").textContent = formatValue(
-      vehicle.km || carDetails.km ||
-      vehicle['קילומטראז'] || carDetails['קילומטראז'] ||
-      vehicle.mileage || carDetails.mileage ||
-      generalInfo.odo || generalInfo.odometer
-    );
-    
-    // Chassis (מספר שלדה)
-    document.getElementById("vehicle-chassis").textContent = formatValue(
-      vehicle.chassis || carDetails.chassis ||
-      vehicle['מספר שלדה'] || carDetails['מספר שלדה'] ||
-      vehicle.chassis_number || carDetails.chassis_number
-    );
-    
-    // Model code (קוד דגם לוי) - This should be LEVI model code, NOT Make.com universal code
-    // Only populate if we have actual Levi data, not Make.com universal codes
-    document.getElementById("vehicle-model-code").textContent = formatValue(
-      // Only check for actual Levi model codes, not Make.com data
-      vehicle.levi_model_code || carDetails.levi_model_code ||
-      generalInfo.levi_model_code ||
-      // If helper has expertise.levi_report data
-      (window.helper?.expertise?.levi_report?.model_code) ||
-      // Leave empty if only Make.com universal codes available
-      ''
-    );
-    
-    // Universal code (קוד יוניברסלי) - This shows Make.com universal module code like HD572
-    document.getElementById("vehicle-universal-code").textContent = formatValue(
-      vehicle.model_code || carDetails.model_code ||
-      vehicle['קוד דגם רכב'] || carDetails['קוד דגם רכב'] ||
-      vehicle['מספר דגם הרכב'] || carDetails['מספר דגם הרכב'] || // From Make.com
-      vehicle.universal_code || carDetails.universal_code
-    );
-    
-    // Fuel type (סוג דלק)
-    document.getElementById("vehicle-fuel-type").textContent = formatValue(
-      vehicle.fuel_type || carDetails.fuel_type ||
-      vehicle['סוג דלק'] || carDetails['סוג דלק']
-    );
+    // helper.vehicle fields (with fallback to car_details)
+    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
+    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model || carDetails.model);
+    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year || carDetails.year);
+    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km || carDetails.km);
+    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
+    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type || carDetails.fuel_type);
 
-    // Enhanced car details with multiple data source support
-    document.getElementById("car-owner").textContent = formatValue(
-      carDetails.owner || vehicle.owner || meta.owner_name
-    );
-    
-    document.getElementById("car-ownership-type").textContent = formatValue(
-      carDetails.ownership_type || vehicle.ownership_type ||
-      carDetails['סוג בעלות'] || vehicle['סוג בעלות']
-    );
-    
-    document.getElementById("car-market-value").textContent = formatValue(
-      carDetails.market_value || vehicle.market_value ||
-      carDetails.base_price || vehicle.base_price
-    );
-    
-    document.getElementById("car-damage-date").textContent = formatValue(
-      carDetails.damageDate || carDetails.damage_date || vehicle.damage_date ||
-      generalInfo.damageDate || generalInfo.damage_date
-    );
-    
-    document.getElementById("car-owner-address").textContent = formatValue(
-      carDetails.ownerAddress || carDetails.owner_address || vehicle.owner_address ||
-      generalInfo.ownerAddress || generalInfo.owner_address
-    );
-    
-    document.getElementById("car-owner-phone").textContent = formatValue(
-      carDetails.ownerPhone || carDetails.owner_phone || vehicle.owner_phone ||
-      generalInfo.ownerPhone || generalInfo.owner_phone
-    );
+    // helper.car_details fields  
+    document.getElementById("car-owner").textContent = formatValue(carDetails.owner);
+    document.getElementById("car-ownership-type").textContent = formatValue(carDetails.ownership_type);
+    document.getElementById("car-market-value").textContent = formatValue(carDetails.market_value);
+    document.getElementById("car-damage-date").textContent = formatValue(carDetails.damageDate);
+    document.getElementById("car-owner-address").textContent = formatValue(carDetails.ownerAddress);
+    document.getElementById("car-owner-phone").textContent = formatValue(carDetails.ownerPhone);
 
-    // Garage and insurance with enhanced mapping including general_info
-    document.getElementById("garage-name").textContent = formatValue(
-      carDetails.garageName || carDetails.garage_name || vehicle.garage_name ||
-      carDetails.location || vehicle.location ||
-      generalInfo.garageName || generalInfo.garage_name
-    );
-    
-    document.getElementById("garage-phone").textContent = formatValue(
-      carDetails.garagePhone || carDetails.garage_phone || vehicle.garage_phone ||
-      generalInfo.garagePhone || generalInfo.garage_phone
-    );
-    
-    document.getElementById("insurance-company").textContent = formatValue(
-      carDetails.insuranceCompany || carDetails.insurance_company || vehicle.insurance_company ||
-      generalInfo.insuranceCompany || generalInfo.insurance_company
-    );
-    
-    // Agent information with multiple source priority including general_info
-    document.getElementById("agent-name").textContent = formatValue(
-      client.insurance_agent || carDetails.agentName || carDetails.agent_name || vehicle.agent_name ||
-      generalInfo.agentName || generalInfo.agent_name
-    );
-    
-    document.getElementById("agent-phone").textContent = formatValue(
-      client.insurance_agent_phone || carDetails.insurance_agent_phone || 
-      carDetails.agent_phone || vehicle.agent_phone ||
-      generalInfo.agentPhone || generalInfo.agent_phone
-    );
+    // Garage and insurance from helper.car_details
+    document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
+    document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
+    document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
+    // CORRECTED: Helper is source of truth - read from helper.client first
+    document.getElementById("agent-name").textContent = formatValue(client.insurance_agent || carDetails.agentName);
+    document.getElementById("agent-phone").textContent = formatValue(client.insurance_agent_phone || carDetails.insurance_agent_phone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
