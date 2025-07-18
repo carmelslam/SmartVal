@@ -341,7 +341,7 @@ After understanding all the issues and running a comprehensive audit combined wi
 - No repairs section in wizard
 - Missing summary and status functionality
 - Requires comprehensive logic redesign
-- doesnt follow the architecture and flow logic as described in documentaion . mainy teh parts section is critically broken.
+- doesnt follow the architecture and flow logic as described in documentaion . mainy the parts section is critically broken.
   #### the parts section in the wizard:
    - the section needs to open the parts- required - > if the user wants to search => parts search module => filling a form -> send to inner browser site car-part.co.il , or =>> send individual quries to make -->> incoimng results create a list of suggestions ->>back to the parts required UI , entering 2 letters open suggestions , suggestions are getting focused with more letters typed in teh field.-> selcted parts are saved to the case helper as selected , all the unselcted parts are seved to teh helper as unselected or parts bank or whatever .
    - the parts search moduel is independent , teh parts required direct to it when search os selected.
