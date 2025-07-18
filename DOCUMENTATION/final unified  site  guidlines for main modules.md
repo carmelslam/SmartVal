@@ -3,7 +3,7 @@
 Modifications: 
 
 
-Site url live : https://yaron-cayouf-homepage.netlify.app/index.htm
+Site url live : https://yaron-cayouf-portal.netlify.app/index.htm
 New url for this version : https://yaron-cayouf-shamaut.netlify.app/
 
 Login screen :

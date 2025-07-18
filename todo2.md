@@ -5,6 +5,73 @@ All user notes and sections marked with user input must be preserved.
 When making edits, only add new content - never remove existing user notes.
 -->
 
+# ✅ GROSS VS MARKET PRICE CATEGORIZATION FIX COMPLETED
+
+## Status: ✅ FIXED - GROSS VS MARKET PRICE DISTINCTION IMPLEMENTED
+**Date:** July 17, 2025  
+**Issue:** "חישוב אחוז הנזק (הצג/הסתר)" section incorrectly pulling same data as market price calculation  
+**Root Cause:** No distinction between car properties vs user usage adjustments  
+**Solution:** Implemented proper categorization within unified helper structure  
+
+### Problem Analysis:
+- Both gross price and market price sections processed all adjustments together
+- System lacked proper distinction between:
+  - **Car Properties**: base price + מאפיינים + עליה לכביש  
+  - **User Usage**: ק"מ, סוג בעלות, מספר בעלים
+- Helper structure needed enhancement to support categorization
+- Data flow violated single source of truth principle
+
+### Solution Implemented:
+1. ✅ **Enhanced helper.js CalculationInterface** with new functions:
+   - `calculateGrossPrice()` - car properties only
+   - `calculateMarketPrice()` - gross + usage factors  
+   - `updateGrossCalculations()` - stores gross data separately
+   - `updateMarketCalculations()` - stores market data separately
+
+2. ✅ **Updated estimate-builder.html functions**:
+   - `updateGrossMarketValueCalculation()` - now only processes מאפיינים + עליה לכביש
+   - `updateGrossPercentageFromGrossValue()` - uses gross price, not market price
+   - `updateFullMarketValueCalculation()` - processes usage factors separately
+
+3. ✅ **Enhanced helper data structure** (maintaining unified architecture):
+   - Added `damage_percent_gross` vs `damage_percent` distinction  
+   - Added `vehicle_value_gross` vs `vehicle_value_market` separation
+   - Added categorized adjustment storage: `gross_adjustments` & `market_adjustments`
+
+4. ✅ **Updated UI clarity**:
+   - "ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד"
+   - "ערך השוק המלא - כולל גורמי שימוש"  
+   - Added helpful descriptions distinguishing car properties vs usage factors
+
+### Technical Changes:
+**Files Modified:**
+- `helper.js`: Added CalculationInterface methods for proper categorization
+- `estimate-builder.html`: Updated calculation functions and UI labels
+
+**Key Functions:**
+- Lines 4201-4274: `updateGrossMarketValueCalculation()` - car properties only
+- Lines 4507-4557: `updateGrossPercentageFromGrossValue()` - uses gross price  
+- Lines 4652-4715: `updateFullMarketValueCalculation()` - adds usage factors
+
+**Data Flow:**
+1. **Gross Price**: Base + Features + Registration → `helper.calculations.vehicle_value_gross`
+2. **Market Price**: Gross Price + Usage Factors → `helper.calculations.vehicle_value_market`  
+3. **Damage %**: Calculated separately for gross vs market values
+
+### Result:
+- ✅ "חישוב אחוז הנזק" section now correctly uses ONLY car properties (gross price)
+- ✅ Market price section correctly adds usage factors to gross price
+- ✅ Unified helper structure maintained for export/import compatibility  
+- ✅ Single source of truth preserved with proper categorization
+- ✅ Console logs clearly distinguish between gross and market calculations
+
+**Verification:** Check console logs showing:
+- `🏠 GROSS PRICE (Car Properties Only): [amount]`
+- `🏪 MARKET PRICE: Gross [amount] + usage adjustments = [amount]`
+- `📊 GROSS DAMAGE %: [damage] ÷ [gross_price] = [%]`
+
+---
+
 # 🔧 MANUAL EDIT BUTTON NAVIGATION FIX
 
 ## Status: 🔄 IN PROGRESS
