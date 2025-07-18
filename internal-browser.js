@@ -235,7 +235,7 @@
     },
     'portal.levi-itzhak.co.il': {
       name: 'פורטל לוי יצחק',
-      url: 'https://portal.levi-itzhak.co.il',
+      url: 'https://portal.levi-itzhak.co.il/levicars/',
       credentialKey: 'levi_portal_credentials', // Reference to vault
       autoLogin: true,
       loginSelectors: {

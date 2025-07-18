@@ -10,7 +10,7 @@ export const dev_credentials = {
   leviItzhak: {
     username: "s-yaronc",
     password: "1417",
-    url: "https://portal.levi-itzhak.co.il"
+    url: "https://portal.levi-itzhak.co.il/levicars/"
   }
 };
 
