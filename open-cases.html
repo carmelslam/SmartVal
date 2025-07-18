@@ -98,6 +98,22 @@
     <!-- Return button -->
     <button onclick="window.location.href='selection.html'" style="background: #6c757d; color: white; width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">חזור לדף הבחירה</button>
     
+    <!-- Debug button -->
+    <button onclick="window.location.href='helper-debug-test.html'" style="background: #ffc107; color: black; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🔧 דף בדיקות מערכת</button>
+    
+    <!-- Test floating screen button -->
+    <button onclick="testFloatingScreen()" style="background: #17a2b8; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">📱 בדיקת מסך צף</button>
+    
+    <!-- Direct Make.com data test -->
+    <button onclick="populateFloatingWithMakeData()" style="background: #dc3545; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🚗 בדיקת נתוני Make.com</button>
+    
+    <!-- SessionStorage debugging buttons -->
+    <button onclick="debugSessionStorage()" style="background: #6f42c1; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">🔍 בדיקת SessionStorage</button>
+    
+    <button onclick="populateSessionStorageWithScreenshotData()" style="background: #fd7e14; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">📸 מילוי נתוני צילום מסך</button>
+    
+    <button onclick="validateSessionStorageData()" style="background: #20c997; color: white; width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer;">✅ אימות שלמות נתונים</button>
+    
     <!-- Success message and continue button (hidden initially) -->
     <div id="successSection" style="display: none; margin-top: 20px;">
       <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin-bottom: 15px; color: #155724;">
@@ -112,6 +128,7 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
+    import './make-webhook-simulator.js';
     
     // Initialize page
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
@@ -128,6 +145,11 @@
       try {
         password = await decryptPassword(encryptedPassword);
         console.log('✅ Password decrypted successfully');
+        
+        // Store password for prefill system
+        sessionStorage.setItem('prefillPassword', password);
+        console.log('🔑 Password stored for prefill system');
+        
       } catch (error) {
         console.error('❌ Password decryption failed:', error);
         alert("שגיאה בפענוח הסיסמה");
@@ -172,7 +194,13 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שולח בקשה...";
         
-        await sendToWebhook('OPEN_CASE_UI', payload);
+        // Send webhook and wait for response
+        console.log('🌐 Sending case data to Make.com webhook...');
+        const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
+        console.log('📥 Make.com webhook response:', webhookResponse);
+        console.log('📥 Make.com response type:', typeof webhookResponse);
+        console.log('📥 Make.com response stringified:', JSON.stringify(webhookResponse, null, 2));
+        
         const encryptedPassword = await encryptPassword(payload.password);
         const encryptedPayload = JSON.stringify({
           ...payload,
@@ -182,6 +210,151 @@
         
         document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";
         document.getElementById("feedback").style.display = "block";
+        
+        // ENHANCED: Process webhook response for car data
+        console.log('📋 Processing webhook response for car details...');
+        
+        // Store ANY webhook response for debugging
+        sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
+        
+        // ENHANCED: Store the original payload data immediately with office code
+        const initialCaseData = {
+          plate: payload.plate,
+          owner: payload.owner,
+          date: payload.date,
+          location: payload.location,
+          case_id: `YC-${payload.plate}-${new Date().getFullYear()}`,
+          data_source: 'make_com_webhook',
+          webhook_response: webhookResponse,
+          // Add office code if available in webhook response
+          office_code: webhookResponse?.office_code || webhookResponse?.['קוד משרד התחבורה'] || '',
+          processing_timestamp: new Date().toISOString()
+        };
+        
+        // Store with comprehensive logging
+        sessionStorage.setItem('makeCarData', JSON.stringify(initialCaseData));
+        console.log('💾 Initial case data stored in makeCarData:', initialCaseData);
+        
+        // Also update helper immediately with basic data
+        if (typeof window.updateHelper === 'function') {
+          try {
+            window.updateHelper('car_details', initialCaseData);
+            window.updateHelper('vehicle', initialCaseData);
+            window.updateHelper('meta', {
+              plate: initialCaseData.plate,
+              case_id: initialCaseData.case_id,
+              owner_name: initialCaseData.owner
+            });
+            console.log('✅ Helper updated with initial case data');
+          } catch (error) {
+            console.log('❌ Helper update failed:', error);
+          }
+        }
+        
+        // Always show floating screen with at least the basic data
+        console.log('🚗 Showing floating screen with received data...');
+        showCarDetailsFloating({
+          plate: payload.plate,
+          owner: payload.owner,
+          date: payload.date,
+          location: payload.location,
+          manufacturer: 'טוען מבסיס נתונים...',
+          model: 'טוען מבסיס נתונים...',
+          data_source: 'make_com_immediate'
+        });
+        
+        // Process specific response types
+        if (webhookResponse && typeof webhookResponse === 'object') {
+          // Check if response contains car details
+          if (webhookResponse.car_details || webhookResponse.vehicle_data || webhookResponse.vehicle) {
+            const carDetailsFromWebhook = webhookResponse.car_details || webhookResponse.vehicle_data || webhookResponse.vehicle;
+            console.log('🚗 Car details found in webhook response:', carDetailsFromWebhook);
+            
+            // Store rich car data from Make.com
+            sessionStorage.setItem('makeCarData', JSON.stringify(carDetailsFromWebhook));
+            
+            // Update helper immediately
+            if (typeof window.updateHelper === 'function') {
+              window.updateHelper('car_details', carDetailsFromWebhook);
+              window.updateHelper('vehicle', carDetailsFromWebhook);
+              window.updateHelper('meta', { 
+                plate: carDetailsFromWebhook.plate || payload.plate,
+                owner_name: carDetailsFromWebhook.owner || payload.owner
+              });
+            }
+            
+            // Refresh floating screen with rich data
+            setTimeout(() => showCarDetailsFloating(carDetailsFromWebhook), 500);
+          }
+          
+          // Check if response contains Hebrew text body (like from your screenshot)
+          else if (webhookResponse.Body && typeof webhookResponse.Body === 'string' && 
+                   webhookResponse.Body.includes('פרטי רכב')) {
+            console.log('🚗 Hebrew MOT data found in webhook Body, parsing...');
+            const parsedCarData = parseHebrewMOTResponse(webhookResponse.Body, payload);
+            
+            // ENHANCED: Store with comprehensive logging and validation
+            sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+            console.log('💾 Hebrew MOT data stored in makeCarData:', parsedCarData);
+            
+            // Also store in helper immediately
+            if (typeof window.updateHelper === 'function') {
+              window.updateHelper('vehicle', parsedCarData);
+              window.updateHelper('car_details', parsedCarData);
+              console.log('✅ Helper updated with Hebrew MOT data');
+            }
+            
+            setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
+          }
+          
+          // Check for direct car data in response
+          else if (webhookResponse.plate || webhookResponse.manufacturer) {
+            console.log('🚗 Car data found directly in webhook response:', webhookResponse);
+            sessionStorage.setItem('makeCarData', JSON.stringify(webhookResponse));
+            setTimeout(() => showCarDetailsFloating(webhookResponse), 500);
+          }
+          
+          // Check any string fields in the response for Hebrew data
+          else {
+            console.log('🔍 Searching for Hebrew data in webhook response fields...');
+            for (const [key, value] of Object.entries(webhookResponse)) {
+              if (typeof value === 'string' && value.includes('פרטי רכב')) {
+                console.log(`🚗 Hebrew MOT data found in ${key}, parsing...`);
+                const parsedCarData = parseHebrewMOTResponse(value, payload);
+                sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+                setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
+                break;
+              }
+            }
+          }
+        } 
+        
+        // Check for Hebrew MOT response as string
+        else if (typeof webhookResponse === 'string' && webhookResponse.includes('פרטי רכב')) {
+          console.log('🚗 Hebrew MOT data found in string response, parsing...');
+          const parsedCarData = parseHebrewMOTResponse(webhookResponse, payload);
+          sessionStorage.setItem('makeCarData', JSON.stringify(parsedCarData));
+          setTimeout(() => showCarDetailsFloating(parsedCarData), 500);
+        }
+        
+        // Wait for additional data to arrive
+        console.log('⏳ Setting up continuous data checking...');
+        setTimeout(() => {
+          checkForIncomingCarData();
+        }, 3000);
+        
+        // Check every 5 seconds for up to 30 seconds
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+          checkCount++;
+          checkForIncomingCarData();
+          
+          if (checkCount >= 6) { // 6 * 5 = 30 seconds
+            clearInterval(checkInterval);
+            console.log('🔍 Stopped checking for car data after 30 seconds');
+          }
+        }, 5000);
+        
         // Show success message and continue button
         showSuccessAndContinue();
 
@@ -205,7 +378,307 @@
         window.location.href = "general_info.html";
       });
     }
+
+    // Show car details floating screen
+    function showCarDetailsFloating(carData) {
+      console.log('🚗 Showing car details floating screen with data:', carData);
+      
+      // Update helper with rich car data
+      if (typeof window.updateHelper === 'function') {
+        window.updateHelper('car_details', carData);
+        window.updateHelper('vehicle', carData);
+        
+        // Also update meta with basic info
+        window.updateHelper('meta', {
+          plate: carData.plate,
+          case_id: carData.case_id,
+          owner_name: carData.owner
+        });
+      }
+      
+      // Show floating screen immediately if available
+      if (typeof window.showCarDetails === 'function') {
+        window.showCarDetails();
+      } else if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+      }
+      
+      // Also trigger any refresh functions that may exist
+      if (typeof window.refreshCarData === 'function') {
+        setTimeout(() => {
+          window.refreshCarData();
+        }, 100);
+      }
+    }
+
+    // ENHANCED: Parse Hebrew MOT response from Make.com with comprehensive field mapping
+    function parseHebrewMOTResponse(responseText, originalPayload) {
+      console.log('🔍 Parsing Hebrew MOT response:', responseText);
+      console.log('📝 Response length:', responseText.length);
+      
+      const carData = {
+        // Basic data from original payload
+        plate: originalPayload.plate,
+        owner: originalPayload.owner,
+        date: originalPayload.date,
+        location: originalPayload.location,
+        case_id: `YC-${originalPayload.plate}-${new Date().getFullYear()}`,
+        
+        // Default values to be extracted (English keys)
+        manufacturer: '',
+        model: '',
+        year: '',
+        chassis: '',
+        engine_volume: '',
+        fuel_type: '',
+        model_code: '',
+        engine_model: '',
+        drive_type: '',
+        office_code: '',
+        model_type: '',
+        vehicle_type: '',
+        ownership_type: '',
+        production_date: '',
+        
+        // Hebrew field equivalents for compatibility
+        יצרן: '',
+        דגם: '',
+        'שנת ייצור': '',
+        'מספר שלדה': '',
+        'נפח מנוע': '',
+        'סוג דלק': '',
+        'קוד דגם רכב': '',
+        'דגם מנוע': '',
+        הנעה: '',
+        'קוד משרד התחבורה': '',
+        'סוג דגם': '',
+        'סוג רכב': '',
+        'סוג בעלות': '',
+        
+        // Meta
+        data_source: 'mot_database',
+        make_com_processed: true,
+        processing_timestamp: new Date().toISOString(),
+        raw_response: responseText // Store original for debugging
+      };
+      
+      try {
+        // Extract plate number (פרטי רכב)
+        const plateMatch = responseText.match(/פרטי רכב[:\s]*(\d+)/);
+        if (plateMatch) carData.plate = plateMatch[1];
+        
+        // Enhanced field extraction with dual assignment (English + Hebrew keys)
+        const fieldMappings = [
+          // [Hebrew pattern, English key, Hebrew key]
+          [/שם היצרן[:\s]*([^\n\r]+)/, 'manufacturer', 'יצרן'],
+          [/דגם[:\s]*([^\n\r]+)/, 'model', 'דגם'],
+          [/סוג דגם[:\s]*([^\n\r]+)/, 'model_type', 'סוג דגם'],
+          [/סוג רכב[:\s]*([^\n\r]+)/, 'vehicle_type', 'סוג רכב'],
+          [/שנת ייצור[:\s]*([^\n\r]+)/, 'production_date', 'שנת ייצור'],
+          [/מספר שלדה[:\s]*([A-Z0-9]+)/, 'chassis', 'מספר שלדה'],
+          [/שם בעל הרכב[:\s]*([^\n\r]+)/, 'owner', null],
+          [/סוג בעלות[:\s]*([^\n\r]+)/, 'ownership_type', 'סוג בעלות'],
+          [/נפח מנוע[:\s]*(\d+)/, 'engine_volume', 'נפח מנוע'],
+          [/סוג דלק[:\s]*([^\n\r]+)/, 'fuel_type', 'סוג דלק'],
+          [/דגם מנוע[:\s]*([^\n\r]+)/, 'engine_model', 'דגם מנוע'],
+          [/הנעה[:\s]*([^\n\r]+)/, 'drive_type', 'הנעה'],
+          [/מיקום[:\s]*([^\n\r]+)/, 'location', null],
+          [/קוד משרד התחבורה[:\s]*([^\n\r]+)/, 'office_code', 'קוד משרד התחבורה'],
+          // Handle both possible model code patterns
+          [/(?:קוד דגם רכב|מספר דגם הרכב)[:\s]*([^\n\r]+)/, 'model_code', 'מספר דגם הרכב']
+        ];
+        
+        // Apply all field mappings
+        fieldMappings.forEach(([pattern, englishKey, hebrewKey]) => {
+          const match = responseText.match(pattern);
+          if (match && match[1]) {
+            const value = match[1].trim();
+            carData[englishKey] = value;
+            if (hebrewKey) {
+              carData[hebrewKey] = value;
+            }
+            
+            // Special handling for model code - also set as universal_code
+            if (englishKey === 'model_code') {
+              carData.universal_code = value;
+              carData['קוד דגם רכב'] = value; // Also set alternative Hebrew key
+            }
+          }
+        });
+        
+        // Extract year from production_date if needed
+        if (carData.production_date && carData.production_date.includes('/')) {
+          carData.year = carData.production_date.split('/')[1];
+        }
+        
+        console.log('✅ Parsed Hebrew MOT data with enhanced field mapping:', carData);
+        console.log('📊 Extracted fields count:', Object.keys(carData).filter(key => carData[key] && carData[key] !== '').length);
+        return carData;
+        
+      } catch (error) {
+        console.error('❌ Error parsing Hebrew MOT response:', error);
+        return carData; // Return basic data even if parsing fails
+      }
+    }
+
+    // Check for incoming car data
+    function checkForIncomingCarData() {
+      console.log('🔍 Checking for incoming car data...');
+      
+      // Check Make.com car data
+      const makeCarData = sessionStorage.getItem('makeCarData');
+      if (makeCarData) {
+        try {
+          const carData = JSON.parse(makeCarData);
+          console.log('📋 Found Make.com car data:', carData);
+          showCarDetailsFloating(carData);
+          return true;
+        } catch (e) {
+          console.error('Error parsing Make.com car data:', e);
+        }
+      }
+      
+      // Check general car data
+      const carData = sessionStorage.getItem('carData');
+      if (carData) {
+        try {
+          const data = JSON.parse(carData);
+          // Check if this is rich data (has manufacturer, model, etc.) vs basic form data
+          if (data.manufacturer || data.model || data.chassis) {
+            console.log('📋 Found rich car data:', data);
+            showCarDetailsFloating(data);
+            return true;
+          } else {
+            console.log('⚠️ Found only basic form data, waiting for rich data from Make.com');
+          }
+        } catch (e) {
+          console.error('Error parsing car data:', e);
+        }
+      }
+      
+      return false;
+    }
+
+    // Test floating screen function
+    window.testFloatingScreen = function() {
+      console.log('🔍 Testing floating screen functionality...');
+      
+      // Create test data
+      const testData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק',
+        model: 'LUCERNE',
+        year: '2009',
+        owner: 'כרמל כיוף',
+        chassis: '1G4HD57258U196450',
+        engine_volume: '3791',
+        fuel_type: 'בנזין',
+        model_type: 'סדאן',
+        location: 'UMI חיפה'
+      };
+      
+      // Store test data
+      sessionStorage.setItem('makeCarData', JSON.stringify(testData));
+      console.log('✅ Test data stored in makeCarData');
+      
+      // Check if floating screen functions exist
+      console.log('🔍 Checking floating screen functions:');
+      console.log('- toggleCarDetails:', typeof window.toggleCarDetails);
+      console.log('- showCarDetails:', typeof window.showCarDetails);
+      console.log('- refreshCarData:', typeof window.refreshCarData);
+      
+      // Try to show floating screen
+      if (typeof window.toggleCarDetails === 'function') {
+        console.log('🚀 Opening floating screen via toggleCarDetails...');
+        window.toggleCarDetails();
+      } else if (typeof window.showCarDetails === 'function') {
+        console.log('🚀 Opening floating screen via showCarDetails...');
+        window.showCarDetails();
+      } else {
+        console.log('❌ No floating screen functions available');
+        alert('❌ מסך צף לא זמין - קובץ car-details-floating.js לא נטען');
+        return;
+      }
+      
+      // Refresh after a delay
+      setTimeout(() => {
+        if (typeof window.refreshCarData === 'function') {
+          console.log('🔄 Refreshing floating screen data...');
+          window.refreshCarData();
+        }
+      }, 1000);
+      
+      console.log('✅ Floating screen test complete');
+    };
+
+    // Function to manually populate floating screen with Make.com data
+    window.populateFloatingWithMakeData = function() {
+      console.log('🔍 Manually populating floating screen with Make.com data...');
+      
+      // Create exact Make.com data structure from the screenshot
+      const makeComData = {
+        plate: '5785269',
+        manufacturer: 'ביואיק', 
+        model: 'LUCERNE',
+        model_type: 'סדאן',
+        year: '2009',
+        production_date: '05/2009',
+        chassis: '1G4HD57258U196450',
+        engine_volume: '3791',
+        fuel_type: 'בנזין',
+        model_code: 'HD572',
+        'מספר דגם הרכב': 'HD572', // From Make.com - universal code field
+        universal_code: 'HD572', // This is universal, not Levi-specific
+        engine_model: '428',
+        drive_type: '4X2',
+        office_code: '156-11',
+        owner: 'כרמל כיוף',
+        location: 'UMI חיפה',
+        date: new Date().toISOString().split('T')[0],
+        case_id: 'YC-5785269-2025',
+        data_source: 'make_com_manual_test'
+      };
+      
+      console.log('📋 Make.com data structure:', makeComData);
+      
+      // Store in sessionStorage with multiple keys
+      sessionStorage.setItem('makeCarData', JSON.stringify(makeComData));
+      sessionStorage.setItem('carData', JSON.stringify(makeComData));
+      
+      // Update helper directly if available
+      if (typeof window.updateHelper === 'function') {
+        try {
+          window.updateHelper('car_details', makeComData);
+          window.updateHelper('vehicle', makeComData);
+          window.updateHelper('meta', {
+            plate: makeComData.plate,
+            owner_name: makeComData.owner,
+            case_id: `YC-${makeComData.plate}-2025`
+          });
+          console.log('✅ Helper updated with Make.com data');
+        } catch (error) {
+          console.log('❌ Helper update failed:', error);
+        }
+      }
+      
+      // Force refresh floating screen if available
+      if (typeof window.refreshCarData === 'function') {
+        setTimeout(() => {
+          window.refreshCarData();
+          console.log('🔄 Floating screen refreshed');
+        }, 500);
+      }
+      
+      // Show floating screen
+      if (typeof window.toggleCarDetails === 'function') {
+        window.toggleCarDetails();
+      }
+      
+      console.log('✅ Make.com data population complete');
+    };
   </script>
   <script src="assistant-floating.js"></script>
+  <script src="car-details-floating.js"></script>
+  <script src="sessionStorage-debug.js"></script>
 </body>
 </html>
