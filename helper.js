@@ -880,7 +880,6 @@ export function checkForIncomingData() {
         console.log('✅ Helper updated with URL car data');
         
         // Show notification
-        showDataReceivedNotification('Car data loaded from URL parameters');
         
         // Clear URL parameters to prevent re-processing
         if (window.history && window.history.replaceState) {
@@ -912,7 +911,6 @@ export function checkForIncomingData() {
         });
         
         console.log('✅ Helper updated with external car data');
-        showDataReceivedNotification('Car data loaded from Make.com');
         
         // Don't clear this data - it might be needed by other modules
         
@@ -933,20 +931,16 @@ export function checkForIncomingData() {
             case 'leviData':
               updateHelper('levisummary', parsedData);
               updateHelper('expertise', { levi_report: parsedData });
-              showDataReceivedNotification('Levi report data loaded');
               break;
             case 'partsData':
               updateHelper('parts_search', { results: parsedData });
-              showDataReceivedNotification('Parts search data loaded');
               break;
             case 'damageData':
               updateHelper('expertise', { damage_blocks: parsedData });
               updateHelper('damage_centers', parsedData);
-              showDataReceivedNotification('Damage assessment data loaded');
               break;
             case 'invoiceData':
               updateHelper('invoice', parsedData);
-              showDataReceivedNotification('Invoice data loaded');
               break;
           }
           
@@ -961,41 +955,6 @@ export function checkForIncomingData() {
   }
 }
 
-// Show notification when data is received
-function showDataReceivedNotification(message) {
-  console.log(`📥 ${message}`);
-  
-  // Create visual notification if in browser
-  if (typeof document !== 'undefined') {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #28a745;
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      font-weight: bold;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 300px;
-      font-family: 'Assistant', sans-serif;
-      text-align: center;
-    `;
-    
-    notification.innerHTML = `📥 ${message}`;
-    
-    document.body.appendChild(notification);
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 5000);
-  }
-}
 
 export function syncHelperDataBetweenStorages() {
   try {

@@ -309,63 +309,41 @@ class DataReceptionDebugger {
 
   // Show notification when data is received and refresh floating screens
   showDataReceivedNotification(data, type = 'Data') {
-    // Create notification
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #28a745;
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      font-weight: bold;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 350px;
-      cursor: pointer;
-    `;
-    
-    notification.innerHTML = `
-      <div>📥 ${type} התקבל!</div>
-      <div style="font-size: 12px; margin-top: 5px;">
-        ${Object.keys(data).slice(0, 3).join(', ')}...
-      </div>
-      <div style="font-size: 11px; margin-top: 5px; opacity: 0.9;">
-        לחץ לצפייה במידע מפורט
-      </div>
-    `;
-    
-    // Make notification clickable to show car details
-    notification.addEventListener('click', () => {
-      if (type === 'Car Data' && typeof window.refreshCarData === 'function') {
-        // Show car details floating screen
-        const carModal = document.getElementById('carDetailsModal');
-        if (carModal) {
-          carModal.style.display = 'block';
-          window.refreshCarData();
+    // Only show notification for car data, and only a simple success message
+    if (type === 'Car Data') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        max-width: 300px;
+        font-family: 'Assistant', Arial, sans-serif;
+        direction: rtl;
+      `;
+      
+      notification.innerHTML = `✅ נתוני הרכב נקלטו בהצלחה`;
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
         }
-      }
-      // Remove notification when clicked
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    });
+      }, 3000);
+    }
     
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 8000);
-    
-    // Refresh floating screen data if available
+    // Refresh floating screen data if available (without notifications)
     if (type.includes('Car') && typeof window.refreshCarData === 'function') {
       setTimeout(() => {
         window.refreshCarData();
-        console.log('🔄 Refreshed car details floating screen with new data');
       }, 500);
     }
   }
