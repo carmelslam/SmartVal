@@ -296,12 +296,33 @@ After understanding all the issues and running a comprehensive audit combined wi
 
 # ❌ PENDING HIGH PRIORITY TASKS
 
+## ❌ helper and session storage configuration and integration 
+**Status:**  helper and session storage are not capturing any data 
+**Issues:** 
+- the helper as the core system "brain" and the session storage as tetheh system memory , are not capturing any dat input, and tehy are not sending/ integratimg with any of the modules/ floating screeans and builders in the system.
+
 ## ❌ Push Notifications System - HIGH PRIORITY
 **Status:** Critical functionality not working
 **Issues:** 
 - No subscription prompts
 - Cross-platform compatibility problems
 - OneSignal integration incomplete
+
+## ❌ Levi report upload - HIGH PRIORITY  
+**Status:** Most critical- submit button doesnt trigger the webhook 
+**Issues:**
+- submit button doesnt activate the webhook from webhook.js, and so the make.com automation is not triggered
+-levi page is not auto populated with all the data already recieved and supposedaly stored in heloer and sessiom storage.
+
+## ❌ uncaptured data open a new case page and general info page - HIGH PRIORITY  
+**Status:**  data coming from make is not captured into session storage and helper
+**Issues:**
+- when openning a ne case , make successfully sends a json data for the car details to teh system - this data is not registered anywher, helper is not populated, session storage is empty and data is either lost or not found.
+=when the data arrives from make, an automatic floating screen should open iside teh page with a parsed jason to display the car details. 
+- delete the debug notifications :"car data from make.com" and other messages taht biunce on the top right side of the page, those messages also show o other pages .
+- the general info page is a manual fileed page with general information , input information also not captured by the sytem and helepr and session storage are not filled.
+- in general info page the garage email fiield is blocked from typing.
+
 
 ## ❌ Damage Wizard Module - HIGH PRIORITY  
 **Status:** Most critical system component requiring complete rebuild
