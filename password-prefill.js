@@ -22,6 +22,7 @@ window.prefillUserPassword = function() {
     const passwordSelectors = [
       '#passwordInput',
       '#password',
+      '#pass',  // Added for Levi upload form
       '#platePassword',
       '#casePassword',
       '#accessPassword',
