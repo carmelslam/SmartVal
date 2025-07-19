@@ -1518,6 +1518,13 @@ try {
 // ============================================================================
 
 function processCarDetailsData(data, sourceModule) {
+  console.log('🔧 processCarDetailsData: Starting with data:', data);
+  console.log('🔧 processCarDetailsData: Current helper before update:', {
+    meta: helper.meta,
+    vehicle: helper.vehicle,
+    car_details: helper.car_details
+  });
+  
   // Handle car data from Make.com, manual input, or internal browsers
   if (!helper.vehicle) helper.vehicle = {};
   if (!helper.meta) helper.meta = {};
@@ -1525,9 +1532,18 @@ function processCarDetailsData(data, sourceModule) {
   if (!helper.car_details) helper.car_details = {};
   
   // Meta information (essential for floating screens)
-  if (data.plate) helper.meta.plate = data.plate;
-  if (data.location) helper.meta.location = data.location;
-  if (data.date) helper.meta.damage_date = data.date;
+  if (data.plate) {
+    console.log('🔧 Setting helper.meta.plate to:', data.plate);
+    helper.meta.plate = data.plate;
+  }
+  if (data.location) {
+    console.log('🔧 Setting helper.meta.location to:', data.location);
+    helper.meta.location = data.location;
+  }
+  if (data.date) {
+    console.log('🔧 Setting helper.meta.damage_date to:', data.date);
+    helper.meta.damage_date = data.date;
+  }
   
   // Vehicle details according to unified schema
   if (data.plate) helper.vehicle.plate_number = data.plate;
@@ -1549,8 +1565,23 @@ function processCarDetailsData(data, sourceModule) {
   console.log('🚗 processCarDetailsData: Updated helper with:', {
     meta: helper.meta,
     vehicle: helper.vehicle,
-    owner: helper.stakeholders.owner.name
+    owner: helper.stakeholders.owner.name,
+    car_details: helper.car_details
   });
+  
+  // CRITICAL DEBUG: Force verify helper object was actually modified
+  console.log('🔧 VERIFICATION: helper.meta.plate =', helper.meta.plate);
+  console.log('🔧 VERIFICATION: helper.vehicle.manufacturer =', helper.vehicle.manufacturer);
+  console.log('🔧 VERIFICATION: helper.vehicle.model =', helper.vehicle.model);
+  
+  // Also update window.currentCaseData for floating screens compatibility
+  window.currentCaseData = {
+    meta: helper.meta,
+    vehicle: helper.vehicle,
+    car_details: helper.car_details,
+    stakeholders: helper.stakeholders
+  };
+  console.log('🔧 Updated window.currentCaseData for floating screen compatibility');
 }
 
 function processStakeholderData(section, data, sourceModule) {
