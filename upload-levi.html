@@ -1490,8 +1490,27 @@ class LeviProcessor {
     console.log('📥 Levi upload response status:', response.status);
 
     if (response.ok) {
-      const result = await response.json();
-      console.log('✅ Levi upload successful:', result);
+      // ✅ HANDLE BOTH JSON AND TEXT RESPONSES
+      const contentType = response.headers.get('content-type');
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+        console.log('✅ Levi upload successful (JSON):', result);
+      } else {
+        // Handle text response (Hebrew Levi data)
+        const textResult = await response.text();
+        console.log('✅ Levi upload successful (Text):', textResult);
+        
+        // Convert text response to structured data
+        result = {
+          success: true,
+          data: textResult,
+          parsed_data: this.parseLeviTextResponse(textResult),
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       return result;
     } else {
       // ✅ ENHANCED ERROR HANDLING: Get detailed error info
@@ -1511,6 +1530,81 @@ class LeviProcessor {
       });
       
       throw new Error(errorMessage);
+    }
+  }
+
+  // ✅ PARSE HEBREW TEXT RESPONSE: Convert Levi text to structured data
+  parseLeviTextResponse(textData) {
+    const parsed = {
+      vehicle_info: {},
+      price_adjustments: {},
+      final_values: {}
+    };
+    
+    try {
+      const lines = textData.split('\n').map(line => line.trim()).filter(line => line);
+      
+      for (const line of lines) {
+        if (line.includes('\t')) {
+          const [key, value] = line.split('\t').map(part => part.trim());
+          
+          // Map Hebrew keys to structured data
+          switch (key) {
+            case 'תאריך':
+              parsed.vehicle_info.date = value;
+              break;
+            case 'סוג רכב':
+              parsed.vehicle_info.vehicle_type = value;
+              break;
+            case 'יצרן':
+              parsed.vehicle_info.manufacturer = value;
+              break;
+            case 'קוד דגם':
+              parsed.vehicle_info.model_code = value;
+              break;
+            case 'קטגוריה':
+              parsed.vehicle_info.category = value;
+              break;
+            case 'מספר רישוי':
+              parsed.vehicle_info.license_number = value;
+              break;
+            case 'שנת יצור':
+              parsed.vehicle_info.year = value;
+              break;
+            case 'שם דגם מלא':
+              parsed.vehicle_info.full_model_name = value;
+              break;
+            case 'מחיר בסיס':
+              parsed.vehicle_info.base_price = value;
+              break;
+            case 'מחיר סופי לרכב':
+              parsed.final_values.final_price = value;
+              break;
+            case 'שווי מצטבר עליה לכביש':
+              parsed.price_adjustments.registration_total = value;
+              break;
+            case 'שווי מצטבר בעלות':
+              parsed.price_adjustments.ownership_total = value;
+              break;
+            case 'שווי מצטבר מס ק"מ':
+              parsed.price_adjustments.mileage_total = value;
+              break;
+            case 'שווי מצטבר מספר בעלים':
+              parsed.price_adjustments.owners_total = value;
+              break;
+            case 'שווי מצטבר  מאפיינים':
+              parsed.price_adjustments.features_total = value;
+              break;
+          }
+        }
+      }
+      
+      console.log('✅ Parsed Levi text data:', parsed);
+      return parsed;
+      
+    } catch (error) {
+      console.warn('Could not parse Levi text response:', error);
+      return { raw_data: textData };
     }
   }
 
