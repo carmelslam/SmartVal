@@ -130,17 +130,27 @@ ROUTER.register('final-report', {
 });
 
 // 🔄 Submodules - ✅ UNIVERSAL MODULE INTEGRATION
-ROUTER.register('upload-images', () => {
+ROUTER.register('upload-images', async () => {
   console.log('📷 Upload Images initialized');
-  // Trigger helper auto-population for upload-images.html
+  try {
+    const mod = await import('./upload-images.js');
+    if (mod.init) mod.init();
+  } catch (err) {
+    console.warn('⚠️ upload-images.js not found');
+  }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
   }
 });
 
-ROUTER.register('invoice-summary', () => {
+ROUTER.register('invoice-summary', async () => {
   console.log('🧾 Invoice Summary initialized');
-  // Trigger helper auto-population and broadcasting
+  try {
+    const mod = await import('./invoice-summary.js');
+    if (mod.init) mod.init();
+  } catch (err) {
+    console.warn('⚠️ invoice-summary.js not found');
+  }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
   }
@@ -156,9 +166,14 @@ ROUTER.register('fee-module', () => {
   // Fee module already has proper helper integration via fee-module.js
 });
 
-ROUTER.register('parts-search', () => {
+ROUTER.register('parts-search', async () => {
   console.log('🔍 Parts search active');
-  // Basic parts search integration (complex wizard rebuild is separate task)
+  try {
+    const mod = await import('./parts-search.js');
+    if (mod.init) mod.init();
+  } catch (err) {
+    console.warn('⚠️ parts-search.js not found');
+  }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
   }

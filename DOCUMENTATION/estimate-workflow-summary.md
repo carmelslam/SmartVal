@@ -295,6 +295,7 @@ const vaultData = {
 - **Vault System**: Dynamic legal text and attachments
 - **Make.com API**: External processing and notifications
 - **Session Management**: Data persistence across the workflow
+- **Smart Router**: Dynamically loads module scripts and refreshes forms
 
 ## CONCLUSION
 

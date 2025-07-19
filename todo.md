@@ -1069,3 +1069,27 @@ sendHelperToMake cannot succeed until a real webhook URL is provided, so no case
 The old “simple data flow” references (updateCaseData, receiveCarData) conflict with the newer helper architecture and currently serve no purpose.
 The push notification integration is partially implemented but disabled, so cross‑platform notification delivery is still broken.
 Overall, the repository implements the documented helper‑centric architecture, but several modules still rely on missing functions or placeholders. Data capture from Make.com and from manual forms is inconsistent because of these gaps, leaving the helper partially populated in many scenarios.
+
+
+## Plan July 20 2025
+- [x] Implement restoreDamageCentersData in estimate-builder
+- [x] Connect sendHelperToMake to environment-config
+- [x] Remove legacy bridge checks in general and open cases
+- [x] Consolidate OneSignal integration and remove duplicates
+- [x] Improve router modules to load scripts dynamically
+- [x] Delete duplicate and backup files
+- [x] Consolidate helper documentation
+- [x] Normalize plate fields updates
+- [x] Remove obsolete debug utilities
+- [x] Use builder state exclusively in validation page
+### Implementation Report July 20 2025
+- [x] restoreDamageCentersData now rebuilds editable cards and attaches listeners
+- [x] sendHelperToMake fetches the URL from environment-config and returns the promise
+- [x] general_info and open-cases call helper functions directly
+- [x] removed duplicate OneSignal file and added configuration comment
+- [x] router dynamically imports module scripts when available
+- [x] cleaned duplicate/backup files across repo
+- [x] merged helper docs into helper instructions/helper-structure.md
+- [x] plate updates sync meta, vehicle and car_details fields
+- [x] eliminated outdated test and debug files
+- [x] validation page now relies on builder state and redirects if missing
