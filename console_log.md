@@ -236,416 +236,109 @@ Summary
 The error occurs because document.getElementById() returned null. The fix is to check if the element was found before trying to access its properties.
 
 
-**auto calcultion in the תוספות מאפיינים and עליה לכביש and התאמות אומדן (הצג/הסתר):**
-
-error 1:
-estimate-builder.html:3402 Error updating helper from adjustments: TypeError: Assignment to constant variable.
-    at updateHelperFromAdjustments (estimate-builder.html:3235:22)
-    at HTMLSelectElement.onchange (estimate-builder.html:1:38)
-updateHelperFromAdjustments	@	estimate-builder.html:3402
-onchange	@	estimate-builder.html:1
-Explanation
-
+*car-details-floating.js:334 Error loading car data: ReferenceError: client is not defined
+    at updateCarDisplay (car-details-floating.js:371:69)
+    at loadCarData (car-details-floating.js:331:7)
+    at window.toggleCarDetails (car-details-floating.js:224:7)
+    at HTMLDivElement.onclick (upload-levi.html:2298:59)
+loadCarData	@	car-details-floating.js:334
+window.toggleCarDetails	@	car-details-floating.js:224
+onclick	@	upload-levi.html:2298
 Understanding the problem
-This error message, TypeError: Assignment to constant variable., indicates that you are attempting to reassign a value to a variable that was declared using const. Variables declared with const are read-only and cannot be reassigned after their initial declaration.
+The error message ReferenceError: client is not defined indicates that the variable client was used in the updateCarDisplay function without being declared or initialized first. This typically happens when a variable is accessed outside of its scope or before it has been assigned a value.
 
 Suggested fix
-Identify the variable within the updateHelperFromAdjustments function that is causing this error. If the variable needs to be reassigned, change its declaration from const to let.
+Ensure that the client variable is declared and assigned a value within the scope where it is being used in the updateCarDisplay function, or passed into the function as an argument if it's defined elsewhere.
 
 js
 
-// Change const to let for variables that need to be reassigned.
-let myVariable = 'initial value';
-myVariable = 'new value'; // This is now allowed
-Use code snippets with caution
+function updateCarDisplay(carData, client, locationData, otherData) {
+  // ... rest of your code that uses 'client' ...
+}
 
-Summary
-You cannot reassign a value to a variable declared with const. Use let instead if the variable's value will change.
-
-error 2: estimate-builder.html:4013 Uncaught TypeError: Cannot set properties of undefined (setting 'value')
-    at calculateEstimateAdjustmentValue (estimate-builder.html:4013:26)
-    at HTMLInputElement.onchange (estimate-builder.html:1:1)
-calculateEstimateAdjustmentValue	@	estimate-builder.html:4013
-onchange	@	estimate-builder.html:1
-Explanation
-
-Understanding the problem
-The error "Uncaught TypeError: Cannot set properties of undefined (setting 'value')" indicates that you are trying to access or set the value property of a variable that is currently undefined.
-
-In this specific case, the line valueInput.value = ... is causing the error. This means that the variable valueInput is undefined when this line of code is executed.
-
-Looking at the code, valueInput is assigned the value inputs[2]. This suggests that the array inputs, which is populated by row.querySelectorAll('input'), does not have an element at index 2 (the third element). This typically happens if the row element does not contain at least three <input> elements.
-
-How to verify
-You can verify this by inspecting the inputs variable within the if block using the DevTools debugger. Set a breakpoint on the line valueInput.value = .... When the code execution pauses, hover over or inspect the inputs variable in the Scope panel to see its contents and length. If the length is less than 3, this confirms the issue. You can also inspect the row element to understand its structure and the inputs it contains.
-
-Suggested fix
-Ensure that the row element always contains at least three <input> elements when this function is called and the if condition is met. If the structure of your HTML is dynamic, you might need to add checks to ensure inputs[2] exists before attempting to access its value property.
-
-js
-
-const basicPrice = parseFloat(basicPriceInput.value.replace(/[₪,]/g, '')) || 0;
-      const percentage = parseFloat(percentageInput.value) || 0;
-
-      if (percentage && basicPrice) {
-        const calculatedValue = basicPrice * percentage / 100;
-        const inputs = row.querySelectorAll('input');
-        // Check if inputs[2] exists before accessing its value property
-        if (inputs.length > 2) {
-          const valueInput = inputs[2]; // value field is the third input
-          valueInput.value = `₪${calculatedValue.toLocaleString()}`;
-        } else {
-          console.error("Could not find the third input element in the row.");
-          // Handle the case where the third input is missing,
-          // perhaps by logging an error or updating a different element.
-        }
-      }
+function loadCarData() {
+  try {
+    // ... your data fetching logic ...
+    const client = "some value"; // Make sure client is defined and assigned a value
+    updateCarDisplay(carData, client, locationData, otherData);
+  } catch (error) {
+    console.error("Error loading car data:", error);
+    updateCarDisplay({}, undefined, {}, {}); // Pass undefined or a default value if client might not be available
+  }
+}
 
 Use code snippets with caution
 
 Summary
-The error "Cannot set properties of undefined (setting 'value')" occurred because you attempted to set the value property on an undefined variable valueInput. This was caused by row.querySelectorAll('input') returning an array with fewer than three elements, meaning inputs[2] was undefined. The suggested fix adds a check to ensure the third input element exists before trying to access its value property.
-
-error 3:
-
-estimate-builder.html:3402 Error updating helper from adjustments: TypeError: Assignment to constant variable.
-    at updateHelperFromAdjustments (estimate-builder.html:3235:22)
-    at updateEstimateAdjustments (estimate-builder.html:4043:7)
-    at HTMLInputElement.onchange (estimate-builder.html:1:41)
-updateHelperFromAdjustments	@	estimate-builder.html:3402
-updateEstimateAdjustments	@	estimate-builder.html:4043
-onchange	@	estimate-builder.html:1
-Explanation
-
-Understanding the problem
-This error message, TypeError: Assignment to constant variable., indicates that you are attempting to reassign a value to a variable that was declared using const. Variables declared with const are read-only and cannot be reassigned after their initial declaration.
-
-The console message shows the error occurring within the updateHelperFromAdjustments function, specifically at line 3235. The traceback also shows that this function was called by updateEstimateAdjustments, which was triggered by an onchange event on an HTMLInputElement.
-
-How to verify
-To verify this, examine the code within the updateHelperFromAdjustments function (around line 3235 of estimate-builder.html). Look for any variable declared with const that is later being assigned a new value.
-
-Suggested fix
-Identify the variable declared with const that is causing the issue. If you intend to modify the variable's value, change its declaration from const to let.
-
-For example, if your code looks like this:
-
-js
-
-const myValue = 10;
-// ... some code ...
-myValue = newValue; // This will cause the error
-Use code snippets with caution
-
-Change it to:
-
-js
-
-let myValue = 10;
-// ... some code ...
-myValue = newValue; // This is allowed
-Use code snippets with caution
-
-Summary
-The error "Assignment to constant variable" occurs when you try to reassign a value to a variable declared with const. To fix this, change the variable declaration from const to let if you need to modify its value.
-
-new errors : estimate-builder.html:3401 Uncaught SyntaxError: Identifier 'registrationRows' has already been declared (at estimate-builder.html:3401:15)
-xplanation
-
-Understanding the problem
-This error indicates that you are trying to declare a variable named registrationRows using let or const within a scope where registrationRows has already been declared. This is not allowed in JavaScript.
-
-Suggested fix
-Review the code around line 3401 in estimate-builder.html and the surrounding scope (e.g., the current function or the global scope) to identify where registrationRows is being declared multiple times.
-
-If you intended to reassign a value to the existing variable, use registrationRows = ... instead of let registrationRows = ... or const registrationRows = ....
-If you intended to declare a new variable with a similar name but in a different scope, consider using a different variable name or ensuring the variable is declared within a block scope (e.g., inside an if statement or loop) to avoid conflicts.
-Summary
-The error "Identifier 'registrationRows' has already been declared" occurs when you attempt to declare a variable with the same name using let or const in the same scope more than once. To fix this, either reassign the variable's value instead of redeclaring it or use a different variable name if a new variable is intended.
+The ReferenceError: client is not defined error occurs when a variable is used before it has been declared or initialized. To fix this, ensure that the variable client is defined and has a value within the scope where it is being used.
 
 error 2 : 
-estimate-builder.html:793 Uncaught ReferenceError: toggleSection is not defined
-    at HTMLButtonElement.onclick (estimate-builder.html:793:90)
-onclick	@	estimate-builder.html:793
-Explanation
-
+environment-config.js:398 💥 Error Report: 
+{message: 'Uncaught ReferenceError: client is not defined', filename: 'https://yaron-cayouf-portal.netlify.app/car-details-floating.js', lineno: 371, colno: 69, error: 'ReferenceError: client is not defined\n    at updat…youf-portal.netlify.app/upload-levi.html:2298:59)', …}
+sendErrorReport	@	environment-config.js:398
+(anonymous)	@	environment-config.js:379
 Understanding the problem
-This error indicates that the JavaScript function toggleSection was called, but it could not be found in the current scope. This usually happens because the function is not defined within a <script> tag or linked script file that is accessible to the HTML element that is trying to call it.
+The error message Uncaught ReferenceError: client is not defined indicates that your code is trying to access a variable or object named client, but it hasn't been declared or initialized anywhere before being used. This happens at line 371, column 69 of the file car-details-floating.js.
 
+The console output you provided is showing that an error report function (sendErrorReport) is being called due to this underlying ReferenceError. The sendErrorReport function itself is working as intended by logging the error, but the root cause is the undefined client variable.
+
+How to verify
+In the Chrome DevTools, go to the Sources tab.
+Navigate to the file car-details-floating.js.
+Go to line 371.
+Examine the code at or around column 69 to see where client is being used. You will likely find a line of code attempting to access a property or call a method on client, like client.someMethod() or client.someProperty.
 Suggested fix
-Define the toggleSection function in a script that is loaded before or within the HTML page. Ensure the function is globally accessible or defined within a scope that the onclick handler can reach.
+You need to define or import the client variable before it's used at line 371 of car-details-floating.js. The exact fix depends on what client is supposed to represent. Here are a few possibilities:
 
-Here's an example of how you might define the toggleSection function:
-
-html
-
-<script>
-  function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.style.display = section.style.display === 'none' ? 'block' : 'none';
-    } else {
-      console.error(`Section with ID '${sectionId}' not found.`);
-    }
-  }
-</script>
-
-<button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">חישוב אחוז הנזק (הצג/הסתר)</button>
-
-Use code snippets with caution
-
-Alternatively, instead of using inline onclick, you can add an event listener using JavaScript:
-
-html
-
-<button class="collapsible-btn" type="button" data-section-id="grossCalc">חישוב אחוז הנזק (הצג/הסתר)</button>
-
-<script>
-  function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.style.display = section.style.display === 'none' ? 'block' : 'none';
-    } else {
-      console.error(`Section with ID '${sectionId}' not found.`);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const button = document.querySelector('.collapsible-btn');
-    if (button) {
-      button.addEventListener('click', () => {
-        const sectionId = button.getAttribute('data-section-id');
-        if (sectionId) {
-          toggleSection(sectionId);
-        }
-      });
-    }
-  });
-</script>
-
-Use code snippets with caution
-
-This second approach separates HTML structure from JavaScript behavior and is generally considered a better practice.
+If client is a library or SDK: Ensure the script tag for that library is included in your HTML before car-details-floating.js is loaded, or if you are using a module bundler, ensure the library is correctly imported at the top of car-details-floating.js.
+If client is an object you created: Make sure the code that declares and initializes client runs before the line where the error occurs. This might mean moving the declaration to an earlier part of your script or ensuring a function that initializes it is called.
+If client was a typo: Correct the variable name to the intended one.
+Without seeing the code around line 371 of car-details-floating.js, a specific code fix cannot be provided. You will need to locate the usage of client in that file and ensure it's properly defined or imported.
 
 Summary
-The Uncaught ReferenceError: toggleSection is not defined error means the toggleSection JavaScript function could not be found when the button's onclick event fired. To fix this, ensure the toggleSection function is defined and accessible within the scope where it's being called.
+The Uncaught ReferenceError: client is not defined error means the variable client is being used before it has been declared or initialized. To fix this, find where client is used in car-details-floating.js at line 371 and ensure it is properly defined or imported before that point in the execution of your script.
 
-**duplicated field error**
-full console L
-estimate-builder.html:6172 🎯 3-bulk system functions loaded and ready
-internal-browser.js:215 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
-(anonymous) @ internal-browser.js:215
-(anonymous) @ internal-browser.js:824
-estimate-builder.html:4734 🚀 Initializing EstimateCalculations object first
-estimate-builder.html:5947 🚀 Initializing 3-bulk system...
-estimate-builder.html:1360 💰 Loaded claims data: {from_claims_data: {…}, from_calculations: {…}}
-estimate-builder.html:4608 🔍 Updating gross market value field: {vehicleValueGross: 20400, helperCalculations: {…}}
-estimate-builder.html:4635 📊 Updated leviPriceList field with gross market value: 20400
-estimate-builder.html:4643 ✅ Updated helper with vehicle_value_gross: 20400
-estimate-builder.html:1888 🔄 loadAllAdjustments called (will be debounced) from: at loadDataFromHelper (https://yaron-cayouf-portal.netlify.app/estimate-builder.html:1421:9)
-estimate-builder.html:5681 📥 Loading helper data: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
-estimate-builder.html:5700 📄 Found BASE PRICE in helper.car_details.base_price: 20000
-estimate-builder.html:5708 ✅ Auto-filled basic price field: 20000
-estimate-builder.html:5807 ✅ Damage centers loaded from helper: 1
-estimate-builder.html:5779 ✅ Helper data loaded successfully
-estimate-builder.html:5817 🔗 Adding field change listeners...
-estimate-builder.html:5938 ✅ Field change listeners added successfully
-estimate-builder.html:5144 📝 Added event listeners to: damage-center-name
-estimate-builder.html:5144 📝 Added event listeners to: part-name
-estimate-builder.html:5144 📝 Added event listeners to: part-desc
-estimate-builder.html:5144 📝 Added event listeners to: part-price
-estimate-builder.html:5144 📝 Added event listeners to: work-type
-estimate-builder.html:5144 📝 Added event listeners to: work-note
-estimate-builder.html:5144 📝 Added event listeners to: work-cost
-estimate-builder.html:5144 📝 Added event listeners to: repair-text
-estimate-builder.html:5144 📝 Added event listeners to: repair-cost
-estimate-builder.html:1908 🔄 Loading all adjustments (immediate)
-estimate-builder.html:1913 DOM element allAdjustmentsRows-estimate not found, skipping adjustments load
-loadAllAdjustmentsImmediate @ estimate-builder.html:1913
-(anonymous) @ estimate-builder.html:1898
-setTimeout
-loadAllAdjustments @ estimate-builder.html:1897
-loadDataFromHelper @ estimate-builder.html:1421
-(anonymous) @ estimate-builder.html:4738
-setTimeout
-(anonymous) @ estimate-builder.html:4737
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 0, totalClaim: 2950}
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
-estimate-builder.html:5204 💼 Work costs updated: ₪400
-estimate-builder.html:5208 🔧 Parts costs updated: ₪1,300
-estimate-builder.html:5212 🔨 Repairs costs updated (ONLY repairs): ₪800
-estimate-builder.html:5216 💰 Total with VAT updated: ₪2,950
-estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
-estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
-estimate-builder.html:3799 🔧 Loading basic price from helper: 20000
-estimate-builder.html:3820 🔧 Loading features adjustments from Levi: [{…}]
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
-estimate-builder.html:3855 🔧 Loading registration adjustments from Levi: [{…}]
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 800 = 20800
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
-estimate-builder.html:5204 💼 Work costs updated: ₪400
-estimate-builder.html:5208 🔧 Parts costs updated: ₪1,300
-estimate-builder.html:5212 🔨 Repairs costs updated (ONLY repairs): ₪800
-estimate-builder.html:5216 💰 Total with VAT updated: ₪2,950
-estimate-builder.html:5292 💰 Updated total claim with VAT: 2,500 → 2,950
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4745 🚀 Initializing adjustment system on page load
-estimate-builder.html:2216 🔗 Adding event listeners to 0 adjustment inputs
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:3799 🔧 Loading basic price from helper: 20000
-estimate-builder.html:3820 🔧 Loading features adjustments from Levi: [{…}]
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 0 = 20000
-estimate-builder.html:3855 🔧 Loading registration adjustments from Levi: [{…}]
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 800 = 20800
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
-estimate-builder.html:5961 ✅ Bulk 1 & 2 initialized
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
-estimate-builder.html:4218 🔄 Loading full market value data...
-estimate-builder.html:4219 📊 Helper levi_report adjustments: (2) [{…}, {…}]
-estimate-builder.html:4220 📊 Helper custom full_market_adjustments: (3) [{…}, {…}, {…}]
-estimate-builder.html:4242 🧹 Cleared allAdjustmentsList container, children count: 0
-estimate-builder.html:4249 🔄 Setting loading flag on container
-estimate-builder.html:4271 ✅ Added Levi adjustment: sunroof 4 plus
-estimate-builder.html:4271 ✅ Added Levi adjustment: 04/2020 2 minus
-estimate-builder.html:4290 ✅ Added custom adjustment: 04/2020 2 minus
-estimate-builder.html:4295 📊 Total unique adjustments to load: 3
-estimate-builder.html:4299 📝 Loading adjustment 1/3: {description: 'sunroof', percentage: 4, value: 800, type: 'plus', source: 'levi'}
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
-estimate-builder.html:4308 ✅ Loaded row: sunroof - plus - 4% - ₪800
-estimate-builder.html:4299 📝 Loading adjustment 2/3: {description: '04/2020', percentage: 2, value: -400, type: 'minus', source: 'levi'}
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 800 = 20800
-estimate-builder.html:4308 ✅ Loaded row: 04/2020 - minus - 2% - ₪-400
-estimate-builder.html:4299 📝 Loading adjustment 3/3: {description: '04/2020', percentage: 2, value: 400, type: 'minus', source: 'custom'}
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 400 = 20400
-estimate-builder.html:4308 ✅ Loaded row: 04/2020 - minus - 2% - ₪400
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
-estimate-builder.html:4322 ✅ Full market value data loading completed
-estimate-builder.html:5974 ✅ Bulk 3 initialized
-estimate-builder.html:5975 ✅ Complete 3-bulk system initialized
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:4348 Cannot find value input field for full market adjustment calculation
-calculateAdjustmentValue @ estimate-builder.html:4348
-(anonymous) @ estimate-builder.html:3951
-(anonymous) @ estimate-builder.html:3949
-setTimeout
-loadGrossCalculationData @ estimate-builder.html:3947
-(anonymous) @ estimate-builder.html:5960
-setTimeout
-(anonymous) @ estimate-builder.html:5959
-estimate-builder.html:4348 Cannot find value input field for full market adjustment calculation
-calculateAdjustmentValue @ estimate-builder.html:4348
-(anonymous) @ estimate-builder.html:3951
-(anonymous) @ estimate-builder.html:3949
-setTimeout
-loadGrossCalculationData @ estimate-builder.html:3947
-(anonymous) @ estimate-builder.html:5960
-setTimeout
-(anonymous) @ estimate-builder.html:5959
-estimate-builder.html:3761 💰 Gross Market Value: 20000 + 400 = 20400
-estimate-builder.html:4087 💰 Total claim from damage centers: 2950
-estimate-builder.html:4011 🔍 Updating gross percentage from gross value: {grossMarketValue: 20400, totalClaim: 2950}
-estimate-builder.html:4044 📊 Gross percentage updated: 2,950 ÷ 20,400 = 14.46%
-estimate-builder.html:1060 🔄 toggleSection called with: fullMarketValue
-estimate-builder.html:1066 Section fullMarketValue is now visible
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 0 = 20000
-estimate-builder.html:4355 🔄 calculateFullMarketAdjustmentValue called with: 1
-estimate-builder.html:4371 📊 Using fullBasicPrice: 20000
-estimate-builder.html:4398 💰 Calculation: {marketValue: 20000, percent: 1, calculatedValue: 200}
-estimate-builder.html:4402 📝 Found inputs: 3
-estimate-builder.html:4408 ✅ Set value input to: ₪200
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 200 = 20200
-estimate-builder.html:4200 💰 Full Market Value: 20000 + 200 = 20200
-estimate-builder.html:3093 Global depreciation calculation: {percent: 1, marketValue: 20200, calculation: 202}
-estimate-builder.html:2742 📝 Field change detected: garageDays = "5"
-estimate-builder.html:2550 🔄 Triggering floating screen refresh after helper update
-estimate-builder.html:2602 Debug: Available refresh functions: {refreshLeviData: 'function', refreshCarData: 'function', refreshInvoiceData: 'undefined', refreshPartsResults: 'undefined'}
-estimate-builder.html:2611 🔄 Refreshing Levi floating screen
-levi-floating.js:360 🔄 Levi floating screen: refreshLeviData called
-levi-floating.js:364 🔍 DEBUG: Helper structures in Levi floating screen: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
-levi-floating.js:372 🔍 DEBUG: Hebrew adjustment keys in leviReport: {עליה לכביש: '', בעלות: '', מס ק״מ: '', מספר בעלים: '', מאפיינים: '4%'}
-levi-floating.js:455 🔄 updateLeviDisplay called with: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
-estimate-builder.html:2617 🔄 Refreshing Car Details floating screen
-car-details-floating.js:236 🔄 Car Details floating screen: refreshCarData called
-car-details-floating.js:240 🔍 DEBUG: Helper in Car Details floating screen: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
-car-details-floating.js:241 🔍 DEBUG: Helper.car_details: {plate: '5785269', manufacturer: 'Buick', year: '2009', base_price: '20000', model: 'CXL', …}
-car-details-floating.js:242 🔍 DEBUG: Helper.vehicle: {plate: '', manufacturer: 'Buick', model: 'CXL', model_code: '7456', model_type: '', …}
-car-details-floating.js:243 🔍 DEBUG: Helper.meta: {plate: '5785269'}
-car-details-floating.js:318 🔄 updateCarDisplay called with: {vehicle: {…}, carDetails: {…}, client: {…}, meta: {…}}
-car-details-floating.js:323 🔍 DEBUG: Agent data (helper.client is source of truth): {PRIMARY - client.insurance_agent: 'משה כהן', PRIMARY - client.insurance_agent_phone: '0999999', SECONDARY - carDetails.agentName: 'משה כהן', SECONDARY - carDetails.insurance_agent_phone: '0999999'}
-estimate-builder.html:2664 ✅ Helper updated with 3-bulk calculations: {grossMarketValue: 20400, fullMarketValue: 20200, totalClaim: 2950, grossPercentage: 14.46}
-estimate-builder.html:2742 📝 Field change detected: garageDays = "5"
-estimate-builder.html:2550 🔄 Triggering floating screen refresh after helper update
-estimate-builder.html:2602 Debug: Available refresh functions: {refreshLeviData: 'function', refreshCarData: 'function', refreshInvoiceData: 'undefined', refreshPartsResults: 'undefined'}
-estimate-builder.html:2611 🔄 Refreshing Levi floating screen
-levi-floating.js:360 🔄 Levi floating screen: refreshLeviData called
-levi-floating.js:364 🔍 DEBUG: Helper structures in Levi floating screen: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
-levi-floating.js:372 🔍 DEBUG: Hebrew adjustment keys in leviReport: {עליה לכביש: '', בעלות: '', מס ק״מ: '', מספר בעלים: '', מאפיינים: '4%'}
-levi-floating.js:455 🔄 updateLeviDisplay called with: {vehicle: {…}, carDetails: {…}, leviReport: {…}, meta: {…}}
-estimate-builder.html:2617 🔄 Refreshing Car Details floating screen
-car-details-floating.js:236 🔄 Car Details floating screen: refreshCarData called
-car-details-floating.js:240 🔍 DEBUG: Helper in Car Details floating screen: {vehicle: {…}, case_info: {…}, stakeholders: {…}, damage_assessment: {…}, valuation: {…}, …}
-car-details-floating.js:241 🔍 DEBUG: Helper.car_details: {plate: '5785269', manufacturer: 'Buick', year: '2009', base_price: '20000', model: 'CXL', …}
-car-details-floating.js:242 🔍 DEBUG: Helper.vehicle: {plate: '', manufacturer: 'Buick', model: 'CXL', model_code: '7456', model_type: '', …}
-car-details-floating.js:243 🔍 DEBUG: Helper.meta: {plate: '5785269'}
-car-details-floating.js:318 🔄 updateCarDisplay called with: {vehicle: {…}, carDetails: {…}, client: {…}, meta: {…}}
-car-details-floating.js:323 🔍 DEBUG: Agent data (helper.client is source of truth): {PRIMARY - client.insurance_agent: 'משה כהן', PRIMARY - client.insurance_agent_phone: '0999999', SECONDARY - carDetails.agentName: 'משה כהן', SECONDARY - carDetails.insurance_agent_phone: '0999999'}
-estimate-builder.html:2664 ✅ Helper updated with 3-bulk calculations: {grossMarketValue: 20400, fullMarketValue: 20200, totalClaim: 2950, grossPercentage: 14.46}
+error 3 :
+car-details-floating.js:371 Uncaught ReferenceError: client is not defined
+    at updateCarDisplay (car-details-floating.js:371:69)
+    at loadCarData (car-details-floating.js:335:7)
+    at window.toggleCarDetails (car-details-floating.js:224:7)
+    at HTMLDivElement.onclick (upload-levi.html:2298:59)
+updateCarDisplay	@	car-details-floating.js:371
+loadCarData	@	car-details-floating.js:335
+window.toggleCarDetails	@	car-details-floating.js:224
+onclick	@	upload-levi.html:2298
+Understanding the problem
+The error Uncaught ReferenceError: client is not defined means that the variable client was used in your code at line 371 of car-details-floating.js, but it had not been declared or assigned a value before that point. This happens because the JavaScript engine doesn't know what client refers to.
+
+How to verify
+You can verify this by setting a breakpoint on line 371 of car-details-floating.js in the Chrome DevTools Sources panel. When the debugger pauses at that line, hover over the variable client. DevTools will show that client is undefined.
+
+Suggested fix
+Based on the surrounding code and the comment // CORRECTED: Helper is source of truth - read from helper.client first, it seems like client should be a property of a variable named helper. The ReferenceError suggests that client was used directly instead of accessing it through helper.client.
+
+Replace the lines where client is used with helper.client:
+
+js
+
+document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
+    document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
+    // CORRECTED: Helper is source of truth - read from helper.client first
+    document.getElementById("agent-name").textContent = formatValue(helper.client.insurance_agent || carDetails.agentName);
+    document.getElementById("agent-phone").textContent = formatValue(helper.client.insurance_agent_phone || carDetails.insurance_agent_phone);
+
+    // Update value styling
+    document.querySelectorAll('.value').forEach(el => {
+      if (el.textContent === "-") {
+        el.classList.add('empty');
+      } else {
+        el.classList.remove('empty');
+      }
+    });
+
+Use code snippets with caution
+
+Summary
+The error Uncaught ReferenceError: client is not defined occurred because the variable client was used without being declared or assigned a value. The fix is to access the client property from the helper object, which is likely where the client data is intended to be stored.
+
+

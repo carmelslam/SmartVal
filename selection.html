@@ -620,6 +620,21 @@
   }
 
   document.addEventListener("DOMContentLoaded", function() {
+    // ✅ CRITICAL FIX: Check for incoming URL parameters for data capture
+    try {
+      import('./helper.js').then(helperModule => {
+        if (typeof helperModule.checkForIncomingData === 'function') {
+          helperModule.checkForIncomingData();
+          console.log('✅ URL parameter check initiated on selection page');
+        }
+      }).catch(error => {
+        console.warn('Could not import helper.js for URL parameter checking:', error);
+      });
+    } catch (error) {
+      console.warn('Error setting up URL parameter checking:', error);
+    }
+    
+    // Session timeout management
     let idleTimeout;
     function resetIdleTimer() {
       clearTimeout(idleTimeout);

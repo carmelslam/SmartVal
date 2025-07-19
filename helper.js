@@ -876,7 +876,15 @@ export function checkForIncomingData() {
       Object.keys(allParams).forEach(key => {
         const lowerKey = key.toLowerCase();
         if (carDataFields.includes(lowerKey) || lowerKey.includes('car_') || lowerKey.includes('vehicle_')) {
-          foundCarData[lowerKey] = decodeURIComponent(allParams[key]);
+          try {
+            const value = decodeURIComponent(allParams[key]);
+            // Validate that value is not empty and not just whitespace
+            if (value && value.trim().length > 0) {
+              foundCarData[lowerKey] = value.trim();
+            }
+          } catch (decodeError) {
+            console.warn(`⚠️ Failed to decode URL parameter ${key}:`, decodeError);
+          }
         }
       });
       
@@ -893,12 +901,23 @@ export function checkForIncomingData() {
         
         console.log('✅ Helper updated with URL car data');
         
-        // Show notification
-        
-        // Clear URL parameters to prevent re-processing
-        if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, '', window.location.pathname);
+        // Show notification that data was captured
+        if (typeof window.showSystemNotification === 'function') {
+          window.showSystemNotification('✅ נתוני רכב נקלטו מ-URL בהצלחה', 'success');
+        } else {
+          console.log('🔔 נתוני רכב נקלטו מ-URL בהצלחה');
         }
+        
+        // Trigger floating screen updates to show captured data
+        broadcastHelperUpdate(['vehicle', 'meta', 'stakeholders'], 'url_params');
+        
+        // Clear URL parameters to prevent re-processing (with delay for debugging)
+        setTimeout(() => {
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname);
+            console.log('🧹 URL parameters cleared after processing');
+          }
+        }, 2000); // 2 second delay to allow debugging
       }
     }
     
@@ -966,6 +985,22 @@ export function checkForIncomingData() {
     
   } catch (error) {
     console.error('❌ Error checking for incoming data:', error);
+    
+    // Specific error reporting for URL parameter issues
+    if (error.message.includes('URLSearchParams')) {
+      console.error('❌ URL parameter parsing error:', error);
+      if (typeof window.showSystemNotification === 'function') {
+        window.showSystemNotification('⚠️ שגיאה בקליטת נתונים מ-URL', 'error');
+      }
+    }
+    
+    // Log error details for debugging
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 בדיקת זרימת נתונים - מערכת שמאות</title>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #007bff;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f8f9fa;
+    }
+    .test-section h3 {
+      color: #007bff;
+      margin-top: 0;
+    }
+    .test-button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    .test-button:hover {
+      background: #218838;
+    }
+    .test-button.danger {
+      background: #dc3545;
+    }
+    .test-button.danger:hover {
+      background: #c82333;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      background: #e9ecef;
+      border-left: 4px solid #007bff;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .success { border-left-color: #28a745; background: #d4edda; }
+    .error { border-left-color: #dc3545; background: #f8d7da; }
+    .warning { border-left-color: #ffc107; background: #fff3cd; }
+    .form-group {
+      margin: 10px 0;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🧪 בדיקת זרימת נתונים - מערכת שמאות</h1>
+      <p>כלי לבדיקת תקינות זרימת הנתונים במערכת</p>
+    </div>
+
+    <div class="grid">
+      <!-- Helper System Test -->
+      <div class="test-section">
+        <h3>🧠 בדיקת מערכת Helper</h3>
+        <button class="test-button" onclick="testHelperSystem()">בדוק מערכת Helper</button>
+        <button class="test-button" onclick="runHealthCheck()">בדיקת תקינות מערכת</button>
+        <button class="test-button" onclick="monitorPerformance()">ניטור ביצועים</button>
+        <div id="helper-result" class="result"></div>
+      </div>
+
+      <!-- Webhook Test -->
+      <div class="test-section">
+        <h3>🔗 בדיקת Webhooks</h3>
+        <div class="form-group">
+          <label>נתוני בדיקה (JSON):</label>
+          <textarea id="test-data" rows="4">{
+  "plate": "123-45-678",
+  "owner": "בדיקה",
+  "manufacturer": "טויוטה",
+  "model": "קורולה",
+  "year": "2020"
+}</textarea>
+        </div>
+        <button class="test-button" onclick="testWebhookFlow()">בדוק זרימת Webhook</button>
+        <button class="test-button" onclick="simulateIncomingData()">דמה נתונים נכנסים</button>
+        <div id="webhook-result" class="result"></div>
+      </div>
+
+      <!-- Module Integration Test -->
+      <div class="test-section">
+        <h3>📋 בדיקת אינטגרציית מודולים</h3>
+        <button class="test-button" onclick="testModulePopulation()">בדוק מילוי אוטומטי</button>
+        <button class="test-button" onclick="testManualOverrides()">בדוק הגנת עריכה ידנית</button>
+        <button class="test-button" onclick="testBroadcasting()">בדוק שידור עדכונים</button>
+        <div id="module-result" class="result"></div>
+      </div>
+
+      <!-- Builder Integration Test -->
+      <div class="test-section">
+        <h3>🏗️ בדיקת Builder Integration</h3>
+        <button class="test-button" onclick="testBuilderHelperSync()">בדוק סנכרון Builder-Helper</button>
+        <button class="test-button" onclick="testValidationDataSource()">בדוק מקור נתונים לאימות</button>
+        <button class="test-button" onclick="testSessionPersistence()">בדוק התמדה בסשן</button>
+        <div id="builder-result" class="result"></div>
+      </div>
+
+      <!-- Floating Screens Test -->
+      <div class="test-section">
+        <h3>📱 בדיקת מסכים צפים</h3>
+        <button class="test-button" onclick="testFloatingScreens()">בדוק הצגת מסכים צפים</button>
+        <button class="test-button" onclick="testScreenRefresh()">בדוק רענון מסכים</button>
+        <div id="floating-result" class="result"></div>
+      </div>
+
+      <!-- Manual Override Test -->
+      <div class="test-section">
+        <h3>🔒 בדיקת הגנת עריכה ידנית</h3>
+        <div class="form-group">
+          <label>שדה לבדיקה:</label>
+          <input type="text" id="test-field" placeholder="הקלד טקסט לבדיקה">
+        </div>
+        <button class="test-button" onclick="markAsManual()">סמן כעריכה ידנית</button>
+        <button class="test-button" onclick="testAutomaticUpdate()">נסה עדכון אוטומטי</button>
+        <button class="test-button danger" onclick="clearOverrides()">נקה הגנות</button>
+        <div id="override-result" class="result"></div>
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="test-section">
+      <h3>📊 סטטוס מערכת</h3>
+      <button class="test-button" onclick="getSystemStatus()">הצג סטטוס נוכחי</button>
+      <button class="test-button" onclick="clearAllData()">נקה כל הנתונים</button>
+      <button class="test-button" onclick="exportHelper()">ייצא Helper</button>
+      <div id="status-result" class="result"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { helper, updateHelper, broadcastHelperUpdate, processIncomingData, runSystemHealthCheck, monitorHelperPerformance, markFieldAsManuallyModified, isFieldManuallyModified, getManuallyModifiedFields, clearManualOverride, resetAllManualOverrides } from './helper.js';
+    import { sendToWebhook } from './webhook.js';
+
+    // Make functions globally available for testing
+    window.helper = helper;
+    window.updateHelper = updateHelper;
+    window.broadcastHelperUpdate = broadcastHelperUpdate;
+    window.processIncomingData = processIncomingData;
+    window.runSystemHealthCheck = runSystemHealthCheck;
+    window.monitorHelperPerformance = monitorHelperPerformance;
+    window.markFieldAsManuallyModified = markFieldAsManuallyModified;
+    window.isFieldManuallyModified = isFieldManuallyModified;
+    window.getManuallyModifiedFields = getManuallyModifiedFields;
+    window.clearManualOverride = clearManualOverride;
+    window.resetAllManualOverrides = resetAllManualOverrides;
+    window.sendToWebhook = sendToWebhook;
+
+    console.log('🧪 Test interface loaded - Helper functions available globally');
+  </script>
+
+  <script>
+    function displayResult(elementId, result, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.className = `result ${type}`;
+      element.textContent = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
+    }
+
+    function testHelperSystem() {
+      try {
+        const helperStatus = window.helper ? 'Helper loaded ✅' : 'Helper missing ❌';
+        const functions = [
+          'updateHelper', 'broadcastHelperUpdate', 'processIncomingData',
+          'markFieldAsManuallyModified', 'isFieldManuallyModified'
+        ];
+        const functionStatus = functions.map(fn => `${fn}: ${typeof window[fn] === 'function' ? '✅' : '❌'}`);
+        
+        const result = `${helperStatus}\n\nFunctions:\n${functionStatus.join('\n')}`;
+        displayResult('helper-result', result, 'success');
+      } catch (error) {
+        displayResult('helper-result', `Error: ${error.message}`, 'error');
+      }
+    }
+
+    function runHealthCheck() {
+      try {
+        const health = window.runSystemHealthCheck();
+        displayResult('helper-result', health, health.warnings.length > 0 ? 'warning' : 'success');
+      } catch (error) {
+        displayResult('helper-result', `Health check failed: ${error.message}`, 'error');
+      }
+    }
+
+    function monitorPerformance() {
+      try {
+        const performance = window.monitorHelperPerformance();
+        displayResult('helper-result', performance, 'info');
+      } catch (error) {
+        displayResult('helper-result', `Performance check failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testWebhookFlow() {
+      try {
+        const testData = JSON.parse(document.getElementById('test-data').value);
+        window.processIncomingData(testData, 'test_webhook');
+        displayResult('webhook-result', 'Webhook data processed successfully ✅\nCheck helper object for data', 'success');
+      } catch (error) {
+        displayResult('webhook-result', `Webhook test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function simulateIncomingData() {
+      try {
+        const testData = JSON.parse(document.getElementById('test-data').value);
+        // Simulate URL parameters
+        const url = new URL(window.location);
+        Object.keys(testData).forEach(key => {
+          url.searchParams.set(key, testData[key]);
+        });
+        window.history.replaceState({}, '', url);
+        
+        // Trigger data check
+        if (typeof window.checkForIncomingData === 'function') {
+          window.checkForIncomingData();
+        }
+        
+        displayResult('webhook-result', 'Simulated incoming data via URL parameters ✅', 'success');
+      } catch (error) {
+        displayResult('webhook-result', `Simulation failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testModulePopulation() {
+      try {
+        if (typeof window.refreshAllModuleForms === 'function') {
+          window.refreshAllModuleForms();
+          displayResult('module-result', 'Module population triggered ✅\nCheck form fields for auto-populated data', 'success');
+        } else {
+          displayResult('module-result', 'refreshAllModuleForms function not available ❌', 'error');
+        }
+      } catch (error) {
+        displayResult('module-result', `Module test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testManualOverrides() {
+      try {
+        // Test marking a field as manually modified
+        window.markFieldAsManuallyModified('test_field', 'test_value', 'test_interface');
+        const isManual = window.isFieldManuallyModified('test_field');
+        const allOverrides = window.getManuallyModifiedFields();
+        
+        const result = `Field marked as manual: ${isManual ? '✅' : '❌'}\nTotal overrides: ${allOverrides.fields.length}`;
+        displayResult('module-result', result, 'success');
+      } catch (error) {
+        displayResult('module-result', `Manual override test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testBroadcasting() {
+      try {
+        window.broadcastHelperUpdate(['test_section'], 'test_broadcast');
+        displayResult('module-result', 'Helper update broadcast sent ✅\nCheck console for broadcast messages', 'success');
+      } catch (error) {
+        displayResult('module-result', `Broadcasting test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testBuilderHelperSync() {
+      try {
+        const builderState = sessionStorage.getItem('builderCurrentState');
+        const helperData = sessionStorage.getItem('helper');
+        
+        const result = `Builder state: ${builderState ? 'Available ✅' : 'Missing ❌'}\nHelper data: ${helperData ? 'Available ✅' : 'Missing ❌'}`;
+        displayResult('builder-result', result, builderState && helperData ? 'success' : 'warning');
+      } catch (error) {
+        displayResult('builder-result', `Builder sync test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testValidationDataSource() {
+      try {
+        // Test if validation would read from builder state vs helper
+        const hasBuilderState = !!sessionStorage.getItem('builderCurrentState');
+        const result = hasBuilderState ? 
+          'Validation will read from builder state ✅' : 
+          'Validation will fall back to helper data ⚠️';
+        displayResult('builder-result', result, hasBuilderState ? 'success' : 'warning');
+      } catch (error) {
+        displayResult('builder-result', `Validation test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testSessionPersistence() {
+      try {
+        const sessionData = {
+          helper: sessionStorage.getItem('helper'),
+          builderState: sessionStorage.getItem('builderCurrentState'),
+          manualOverrides: sessionStorage.getItem('manualOverrides'),
+          auth: sessionStorage.getItem('auth')
+        };
+        
+        const result = Object.entries(sessionData)
+          .map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`)
+          .join('\n');
+          
+        displayResult('builder-result', `Session persistence:\n${result}`, 'info');
+      } catch (error) {
+        displayResult('builder-result', `Session test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testFloatingScreens() {
+      try {
+        const screenFunctions = [
+          'toggleCarDetails', 'toggleLeviReport', 
+          'togglePartsSearch', 'toggleInvoiceDetails'
+        ];
+        
+        const availability = screenFunctions.map(fn => 
+          `${fn}: ${typeof window[fn] === 'function' ? '✅' : '❌'}`
+        );
+        
+        displayResult('floating-result', `Floating screen functions:\n${availability.join('\n')}`, 'info');
+      } catch (error) {
+        displayResult('floating-result', `Floating screens test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testScreenRefresh() {
+      try {
+        if (typeof window.triggerFloatingScreenUpdates === 'function') {
+          window.triggerFloatingScreenUpdates(['vehicle', 'levi_report']);
+          displayResult('floating-result', 'Floating screen updates triggered ✅', 'success');
+        } else {
+          displayResult('floating-result', 'triggerFloatingScreenUpdates not available ❌', 'error');
+        }
+      } catch (error) {
+        displayResult('floating-result', `Screen refresh test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function markAsManual() {
+      try {
+        const field = document.getElementById('test-field');
+        window.markFieldAsManuallyModified('test_field', field.value, 'test_interface');
+        displayResult('override-result', `Field marked as manually modified ✅\nValue: "${field.value}"`, 'success');
+      } catch (error) {
+        displayResult('override-result', `Manual marking failed: ${error.message}`, 'error');
+      }
+    }
+
+    function testAutomaticUpdate() {
+      try {
+        const isProtected = window.isFieldManuallyModified('test_field');
+        const result = isProtected ? 
+          'Field is protected from automatic updates ✅' : 
+          'Field is NOT protected - will accept automatic updates ⚠️';
+        displayResult('override-result', result, isProtected ? 'success' : 'warning');
+      } catch (error) {
+        displayResult('override-result', `Automatic update test failed: ${error.message}`, 'error');
+      }
+    }
+
+    function clearOverrides() {
+      try {
+        window.resetAllManualOverrides();
+        displayResult('override-result', 'All manual overrides cleared ✅', 'success');
+      } catch (error) {
+        displayResult('override-result', `Clear overrides failed: ${error.message}`, 'error');
+      }
+    }
+
+    function getSystemStatus() {
+      try {
+        const status = {
+          timestamp: new Date().toISOString(),
+          helper_loaded: !!window.helper,
+          helper_size: window.helper ? Object.keys(window.helper).length : 0,
+          session_storage: Object.keys(sessionStorage).length,
+          manual_overrides: window.getManuallyModifiedFields().fields.length,
+          functions_available: [
+            'updateHelper', 'broadcastHelperUpdate', 'processIncomingData',
+            'runSystemHealthCheck', 'refreshAllModuleForms'
+          ].filter(fn => typeof window[fn] === 'function').length
+        };
+        
+        displayResult('status-result', status, 'info');
+      } catch (error) {
+        displayResult('status-result', `Status check failed: ${error.message}`, 'error');
+      }
+    }
+
+    function clearAllData() {
+      try {
+        sessionStorage.clear();
+        localStorage.clear();
+        window.resetAllManualOverrides();
+        displayResult('status-result', 'All data cleared ✅\nPage refresh recommended', 'warning');
+      } catch (error) {
+        displayResult('status-result', `Clear data failed: ${error.message}`, 'error');
+      }
+    }
+
+    function exportHelper() {
+      try {
+        const helperData = JSON.stringify(window.helper, null, 2);
+        const blob = new Blob([helperData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `helper-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        displayResult('status-result', 'Helper data exported to file ✅', 'success');
+      } catch (error) {
+        displayResult('status-result', `Export failed: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -367,9 +367,9 @@
     document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
     document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
     document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
-    // CORRECTED: Helper is source of truth - read from helper.client first
-    document.getElementById("agent-name").textContent = formatValue(client.insurance_agent || carDetails.agentName);
-    document.getElementById("agent-phone").textContent = formatValue(client.insurance_agent_phone || carDetails.insurance_agent_phone);
+    // Insurance agent information from stakeholders or car_details
+    document.getElementById("agent-name").textContent = formatValue(stakeholders.insurance_agent || carDetails.agentName);
+    document.getElementById("agent-phone").textContent = formatValue(stakeholders.insurance_agent_phone || carDetails.insurance_agent_phone);
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
