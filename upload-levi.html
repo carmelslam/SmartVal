@@ -1094,6 +1094,7 @@ class LeviProcessor {
       else if (helper.vehicle?.office_code) officeCode = helper.vehicle.office_code;
       else if (helper.car_details?.office_code) officeCode = helper.car_details.office_code;
       else if (helper.general_info?.office_code) officeCode = helper.general_info.office_code;
+      else officeCode = '01'; // ✅ DEFAULT: Set default office code if none found
       
       if (officeCode) {
         document.getElementById('office_code').value = officeCode;
@@ -1186,6 +1187,12 @@ class LeviProcessor {
     }
     if (!document.getElementById('office_code').value && officeCode) {
       document.getElementById('office_code').value = officeCode;
+    }
+    
+    // ✅ ENSURE DEFAULT: If office_code is still empty, set default
+    if (!document.getElementById('office_code').value) {
+      document.getElementById('office_code').value = '01';
+      console.log('✅ LEVI UPLOAD: Set default office_code: 01');
     }
   }
 
@@ -1371,7 +1378,21 @@ class LeviProcessor {
       this.showContinueButton();
       
     } catch (error) {
-      console.error('Levi processing error:', error);
+      // ✅ ENHANCED ERROR LOGGING: More detailed error information
+      console.error('❌ Levi processing error:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        uploadedFile: !!this.uploadedFile,
+        isManualMode: this.isManualMode,
+        fieldsValues: {
+          plate: document.getElementById('plate')?.value,
+          owner: document.getElementById('owner')?.value,
+          office_code: document.getElementById('office_code')?.value,
+          pass: document.getElementById('pass')?.value ? '[HIDDEN]' : 'EMPTY'
+        }
+      });
+      
       this.showAlert('❌ שגיאה בעיבוד דו"ח לוי יצחק: ' + error.message, 'error');
     } finally {
       this.processingInProgress = false;
@@ -1380,27 +1401,84 @@ class LeviProcessor {
   }
 
   async processFileUpload() {
+    // ✅ VALIDATION: Check if file was uploaded
+    if (!this.uploadedFile) {
+      throw new Error('לא נבחר קובץ לעיבוד. אנא בחר קובץ דו"ח לוי יצחק.');
+    }
+
+    // ✅ VALIDATION: Check required fields
+    const requiredFields = {
+      'plate': 'מספר רכב',
+      'owner': 'שם בעלים', 
+      'office_code': 'קוד משרד',
+      'pass': 'סיסמה'
+    };
+
+    const missingFields = [];
+    for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
+      const value = document.getElementById(fieldId)?.value?.trim();
+      if (!value) {
+        missingFields.push(fieldName);
+      }
+    }
+
+    if (missingFields.length > 0) {
+      throw new Error(`חסרים שדות חובה: ${missingFields.join(', ')}`);
+    }
+
+    // ✅ BUILD FORM DATA: Create FormData with validation
     const formData = new FormData();
     formData.append('file', this.uploadedFile);
-    formData.append('meta', JSON.stringify({
-      plate: document.getElementById('plate').value,
-      owner: document.getElementById('owner').value,
-      office_code: document.getElementById('office_code').value,
-      pass: document.getElementById('pass').value,
-      report_source: document.getElementById('report-source').value,
-      valuation_date: document.getElementById('valuation-date').value
-    }));
+    
+    const metaData = {
+      plate: document.getElementById('plate').value.trim(),
+      owner: document.getElementById('owner').value.trim(),
+      office_code: document.getElementById('office_code').value.trim(),
+      pass: document.getElementById('pass').value.trim(),
+      report_source: document.getElementById('report-source')?.value?.trim() || 'levi_upload',
+      valuation_date: document.getElementById('valuation-date')?.value?.trim() || new Date().toISOString().split('T')[0]
+    };
 
+    formData.append('meta', JSON.stringify(metaData));
+    
+    // ✅ ADD ACTION TYPE: Help Make.com identify the action
+    formData.append('action', 'SUBMIT_LEVI_REPORT');
+    formData.append('timestamp', new Date().toISOString());
+    
+    console.log('📤 Sending Levi report with meta:', metaData);
+    console.log('📎 File:', this.uploadedFile.name, 'Size:', this.uploadedFile.size);
+    console.log('🔗 Webhook URL:', getWebhook('SUBMIT_LEVI_REPORT'));
+
+    // ✅ SEND REQUEST: With better error handling
     const response = await fetch(getWebhook('SUBMIT_LEVI_REPORT'), {
       method: 'POST',
       body: formData
     });
 
+    console.log('📥 Levi upload response status:', response.status);
+
     if (response.ok) {
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ Levi upload successful:', result);
+      return result;
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'שגיאה בעיבוד דו"ח לוי יצחק');
+      // ✅ ENHANCED ERROR HANDLING: Get detailed error info
+      let errorMessage = 'שגיאה בעיבוד דו"ח לוי יצחק';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (parseError) {
+        // If can't parse error response, use status text
+        errorMessage = `שגיאת שרת ${response.status}: ${response.statusText}`;
+      }
+      
+      console.error('❌ Levi upload failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorMessage
+      });
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -1460,7 +1538,8 @@ class LeviProcessor {
   }
 
   validateForm() {
-    const required = ['plate', 'owner', 'pass'];
+    // ✅ FIXED: Include office_code as required field
+    const required = ['plate', 'owner', 'pass', 'office_code'];
     for (const fieldId of required) {
       const field = document.getElementById(fieldId);
       if (!field.value.trim()) {
