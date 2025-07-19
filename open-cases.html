@@ -112,7 +112,7 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
-    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+    import { helper, updateHelper, processIncomingData, broadcastHelperUpdate } from './helper.js'; // Unified helper system
     
     // Initialize page
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
@@ -181,17 +181,11 @@
         });
         sessionStorage.setItem("carData", encryptedPayload);
         
-        // ✅ FIXED: Call bridge function to process data through helper system
-        if (typeof window.receiveCarData === 'function') {
-          console.log('🔥 Calling bridge receiveCarData...');
-          try {
-            await window.receiveCarData(payload, 'open_cases');
-            console.log('✅ Car data processed successfully through helper system');
-          } catch (error) {
-            console.error('❌ Error processing car data through helper:', error);
-          }
-        } else {
-          console.error('❌ receiveCarData bridge function not found!');
+        try {
+          await processIncomingData(payload, 'open_cases');
+          console.log('✅ Car data processed successfully through helper system');
+        } catch (error) {
+          console.error('❌ Error processing car data through helper:', error);
         }
         
         document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";

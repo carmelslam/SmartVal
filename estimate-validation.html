@@ -1143,47 +1143,49 @@
       
       // Priority 1: Get builder current state (what user is currently working on)
       const builderState = getBuilderCurrentState();
-      
-      // Priority 2: Fallback to helper for missing data
+      if (!builderState || Object.keys(builderState).length === 0) {
+        alert('לא נמצאה טיוטה מהבונה. חזור לעריכת האומדן.');
+        window.location.href = 'estimate-builder.html';
+        return;
+      }
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      
+
       currentValidationData = {
-        // Basic metadata (builder state overrides helper)
-        meta: builderState.meta || helper.meta || {},
-        plate: builderState.plate || helper.plate || helper.meta?.plate || '',
+        meta: builderState.meta || {},
+        plate: builderState.plate || '',
         
         // Car details (builder state overrides helper)
         car_details: {
-          plate: builderState.plate || helper.plate || helper.meta?.plate || '',
-          manufacturer: builderState.manufacturer || helper.manufacturer || helper.car_details?.manufacturer || '',
-          model: builderState.model || helper.model || helper.car_details?.model || '',
-          year: builderState.year || helper.year || helper.car_details?.year || '',
-          vin: builderState.vin || helper.vin || helper.car_details?.vin || '',
-          engine: builderState.engine || helper.engine || helper.car_details?.engine || ''
+          plate: builderState.plate || '',
+          manufacturer: builderState.manufacturer || '',
+          model: builderState.model || '',
+          year: builderState.year || '',
+          vin: builderState.vin || '',
+          engine: builderState.engine || ''
         },
         
         // Client/owner information (builder state overrides helper)
         client: {
-          name: builderState.owner_name || helper.owner || helper.client?.name || '',
-          phone_number: builderState.owner_phone || helper.client?.phone_number || '',
-          address: builderState.owner_address || helper.client?.address || '',
-          insurance_company: builderState.insurance_company || helper.client?.insurance_company || ''
+          name: builderState.owner_name || '',
+          phone_number: builderState.owner_phone || '',
+          address: builderState.owner_address || '',
+          insurance_company: builderState.insurance_company || ''
         },
         
         // Levi report data (READ FROM BUILDER STATE FIRST)
-        levi_report: builderState.levi_report || helper.levi_report || helper.expertise?.levi_report || {},
+        levi_report: builderState.levi_report || {},
         
         // Damage centers (READ FROM BUILDER STATE FIRST)
-        damage_blocks: builderState.damage_blocks || helper.expertise?.damage_blocks || [],
+        damage_blocks: builderState.damage_blocks || [],
         
         // Legal text (READ FROM BUILDER STATE FIRST)
-        estimate_legal_text: builderState.estimate_legal_text || helper.estimate_legal_text || '',
+        estimate_legal_text: builderState.estimate_legal_text || '',
         
         // Estimate calculations and totals (READ FROM BUILDER STATE FIRST)
-        estimate_totals: builderState.estimate_totals || extractEstimateTotals(helper),
+        estimate_totals: builderState.estimate_totals || {},
         
         // Depreciation data (READ FROM BUILDER STATE FIRST)
-        estimate_depreciation: builderState.estimate_depreciation || helper.estimate_depreciation || {},
+        estimate_depreciation: builderState.estimate_depreciation || {},
         
         // Store both sources for debugging
         builder_state: builderState,
@@ -1192,7 +1194,6 @@
       
       console.log('✅ Validation data loaded from builder state:', currentValidationData);
       console.log('🏗️ Builder state used:', builderState);
-      console.log('📋 Helper fallback used for missing data');
     }
     
     // Get current builder state (what user is working on in builder)

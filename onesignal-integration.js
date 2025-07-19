@@ -8,7 +8,7 @@
 
   const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
   
-  // Try re-enabling OneSignal with safer initialization approach
+  // Toggle push notifications. Set to true to disable OneSignal.
   const ONESIGNAL_TEMPORARILY_DISABLED = false;
   
   // OneSignal manager class

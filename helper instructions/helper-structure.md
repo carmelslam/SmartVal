@@ -288,3 +288,15 @@ This is the corrected helper structure that maintains compatibility while fixing
 4. **Phase 4**: Clean up deprecated fields after full migration
 
 This structure provides the foundation for fixing the gross vs market price issue while maintaining system stability.
+
+## Incoming Data Mapping
+The following Make.com fields map directly into the helper during the open-case workflow:
+
+- `{{125.plate}}` → `meta.plate`
+- `{{16.$1}}` → `vehicle.manufacturer`
+- `{{18.$1}}` → `vehicle.model`
+- `{{25.$1}}` → `vehicle.year`
+- `{{27.$1}}` → `car_details.chassis`
+- `{{125.owner}}` → `stakeholders.owner`
+- `{{187.$1}}` → `vehicle.ownership_type`
+- Additional Levi fields populate matching keys within `expertise.levi_report`.

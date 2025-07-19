@@ -7117,18 +7117,19 @@
     // Helper function to restore damage centers data
     function restoreDamageCentersData(damageCenters) {
       const container = document.getElementById('damageCentersContent');
-      if (!container) return;
-      
-      // Clear existing centers
-      container.innerHTML = '';
-      
-      // Restore each damage center
-      damageCenters.forEach(center => {
-        // This would need to call the existing damage center creation functions
-        // For now, just log the restoration attempt
-        console.log('Restoring damage center:', center.name);
-        // TODO: Implement proper damage center restoration
+      if (!container || !Array.isArray(damageCenters)) return;
+
+      // Prepare container for editable cards
+      container.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
+      const wrapper = container.querySelector('#editableDamageCenters');
+
+      damageCenters.forEach((center, index) => {
+        const cardHTML = createEditableDamageCenterCard(center, index);
+        wrapper.insertAdjacentHTML('beforeend', cardHTML);
       });
+
+      addDamageCenterEventListeners();
+      updateAllCostDisplays();
     }
     
     // Helper function to show section messages

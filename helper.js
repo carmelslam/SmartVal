@@ -4,6 +4,7 @@
 import { calculate, MathEngine } from './math.js';
 import { securityManager } from './security-manager.js';
 import { errorHandler } from './error-handler.js';
+import { environmentConfig } from './environment-config.js';
 import { 
   standardizeHelperData, 
   convertToLegacyFormat, 
@@ -1112,15 +1113,18 @@ export function clearHelperFromStorage() {
 }
 
 export async function sendHelperToMake(taskLabel = 'generic') {
+  const webhookUrl = environmentConfig.getWebhookConfig().final_report;
   try {
-    const response = await fetch('https://your-webhook-url', {
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ task: taskLabel, helper })
     });
     console.log('📤 Helper sent to Make.com:', response.status);
+    return response;
   } catch (err) {
     console.error('❌ Failed to send helper to Make.com', err);
+    throw err;
   }
 }
 
@@ -2237,10 +2241,14 @@ export function updateHelperField(fieldKey, value, source = 'unknown') {
     // Update the field in the appropriate section
     helper[section][fieldKey] = value;
     
-    // Also update in car_details for backward compatibility if it's a vehicle field
+    // Also update legacy locations for backward compatibility
     if (['plate', 'manufacturer', 'model', 'year', 'km', 'chassis'].includes(fieldKey)) {
       if (!helper.car_details) helper.car_details = {};
       helper.car_details[fieldKey] = value;
+      if (fieldKey === 'plate') {
+        if (!helper.vehicle) helper.vehicle = {};
+        helper.vehicle.plate_number = value;
+      }
     }
     
     // Save to storage
