@@ -284,63 +284,116 @@
     try {
       console.log('🔄 loadCarData: Starting to load car data...');
       
-      // CRITICAL DEBUG: Check all data sources
-      console.log('🔧 FLOATING DEBUG: Checking data sources...');
-      console.log('🔧 window.currentCaseData:', window.currentCaseData);
-      console.log('🔧 sessionStorage currentCaseData:', sessionStorage.getItem('currentCaseData'));
-      console.log('🔧 sessionStorage helper:', sessionStorage.getItem('helper'));
-      console.log('🔧 sessionStorage carData:', sessionStorage.getItem('carData'));
+      // CRITICAL: Primary data source should be the helper from sessionStorage
+      let helperData = null;
+      const helperString = sessionStorage.getItem('helper');
       
-      // Try simple data store first
-      let data = {};
-      if (window.currentCaseData) {
-        data = window.currentCaseData;
-        console.log('🔥 Using window.currentCaseData:', data);
-      } else {
-        // Fallback to sessionStorage
-        const storedData = sessionStorage.getItem('currentCaseData') || sessionStorage.getItem('helper');
-        if (storedData) {
-          data = JSON.parse(storedData);
-          console.log('🔍 Using stored data from sessionStorage:', data);
-        } else {
-          console.log('🚫 No data found in primary sources');
-        }
-      }
-      
-      // Also check legacy carData
-      const carData = sessionStorage.getItem('carData');
-      if (carData) {
+      if (helperString) {
         try {
-          const legacyData = JSON.parse(carData);
-          console.log('🔍 Legacy carData found:', legacyData);
-          
-          // If no modern data, use legacy
-          if (!data.meta && !data.vehicle) {
-            data = {
-              meta: { plate: legacyData.plate, location: legacyData.location, damage_date: legacyData.date },
-              vehicle: { manufacturer: legacyData.manufacturer, model: legacyData.model, year: legacyData.year },
-              car_details: legacyData,
-              stakeholders: { owner_name: legacyData.owner }
-            };
-          }
+          helperData = JSON.parse(helperString);
+          console.log('✅ Successfully loaded helper from sessionStorage');
+          console.log('📊 Helper structure:', {
+            hasVehicle: !!helperData.vehicle,
+            hasMeta: !!helperData.meta,
+            hasCarDetails: !!helperData.car_details,
+            hasStakeholders: !!helperData.stakeholders
+          });
         } catch (e) {
-          console.warn('Could not parse legacy carData:', e);
+          console.error('Failed to parse helper from sessionStorage:', e);
         }
       }
       
-      // Extract display data
-      const vehicle = data.vehicle || {};
-      const carDetails = data.car_details || {};
-      const stakeholders = data.stakeholders || {};
-      const meta = data.meta || {};
+      // Secondary: Check window.currentCaseData
+      if (!helperData && window.currentCaseData) {
+        helperData = window.currentCaseData;
+        console.log('📋 Using window.currentCaseData as fallback');
+      }
       
-      console.log('🔍 Final extracted data:', { vehicle, carDetails, stakeholders, meta });
+      // Tertiary: Check legacy carData
+      if (!helperData || (!helperData.vehicle && !helperData.meta)) {
+        const carDataString = sessionStorage.getItem('carData');
+        if (carDataString) {
+          try {
+            const legacyData = JSON.parse(carDataString);
+            console.log('🔍 Using legacy carData as fallback:', legacyData);
+            
+            // Convert legacy format to helper format
+            helperData = {
+              meta: { 
+                plate: legacyData.plate, 
+                location: legacyData.location, 
+                damage_date: legacyData.damageDate || legacyData.date 
+              },
+              vehicle: { 
+                plate: legacyData.plate,
+                manufacturer: legacyData.manufacturer, 
+                model: legacyData.model, 
+                year: legacyData.year,
+                chassis: legacyData.chassis,
+                km: legacyData.km,
+                model_code: legacyData.model_code,
+                fuel_type: legacyData.fuel_type
+              },
+              car_details: legacyData,
+              stakeholders: { 
+                owner: { name: legacyData.owner },
+                owner_name: legacyData.owner,
+                garage: { 
+                  name: legacyData.garageName,
+                  phone: legacyData.garagePhone
+                },
+                insurance: {
+                  company: legacyData.insuranceCompany,
+                  agent: {
+                    name: legacyData.agentName,
+                    phone: legacyData.insurance_agent_phone
+                  }
+                }
+              }
+            };
+          } catch (e) {
+            console.warn('Could not parse legacy carData:', e);
+          }
+        }
+      }
+      
+      // Default empty structure if no data found
+      if (!helperData) {
+        console.warn('⚠️ No data found in any source, using empty structure');
+        helperData = {
+          vehicle: {},
+          meta: {},
+          car_details: {},
+          stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } }
+        };
+      }
+      
+      // Extract display data from helper structure
+      const vehicle = helperData.vehicle || {};
+      const carDetails = helperData.car_details || {};
+      const stakeholders = helperData.stakeholders || {};
+      const meta = helperData.meta || {};
+      
+      console.log('📊 Extracted data for display:', { 
+        vehicle: Object.keys(vehicle).length ? vehicle : 'empty',
+        carDetails: Object.keys(carDetails).length ? carDetails : 'empty',
+        stakeholders: Object.keys(stakeholders).length ? stakeholders : 'empty',
+        meta: Object.keys(meta).length ? meta : 'empty'
+      });
+      
+      // Debug specific important fields
+      console.log('🔍 Key fields check:');
+      console.log('  - Plate:', meta.plate || vehicle.plate || carDetails.plate || 'NOT FOUND');
+      console.log('  - Manufacturer:', vehicle.manufacturer || carDetails.manufacturer || 'NOT FOUND');
+      console.log('  - Model:', vehicle.model || carDetails.model || 'NOT FOUND');
+      console.log('  - Year:', vehicle.year || carDetails.year || 'NOT FOUND');
+      console.log('  - Owner:', stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || 'NOT FOUND');
       
       // Update UI
       updateCarDisplay(vehicle, carDetails, stakeholders, meta);
 
     } catch (error) {
-      console.error("Error loading car data:", error);
+      console.error("❌ Error loading car data:", error);
       updateCarDisplay({}, {}, {}, {});
     }
   }
@@ -354,31 +407,74 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // helper.vehicle fields (with fallback to car_details)
-    document.getElementById("vehicle-plate").textContent = formatValue(meta.plate || vehicle.plate_number || carDetails.plate);
-    document.getElementById("vehicle-manufacturer").textContent = formatValue(vehicle.manufacturer || carDetails.manufacturer);
-    document.getElementById("vehicle-model").textContent = formatValue(vehicle.model || carDetails.model);
-    document.getElementById("vehicle-year").textContent = formatValue(vehicle.year || carDetails.year);
-    document.getElementById("vehicle-km").textContent = formatValue(vehicle.km || carDetails.km);
-    document.getElementById("vehicle-chassis").textContent = formatValue(vehicle.chassis || carDetails.chassis);
-    document.getElementById("vehicle-model-code").textContent = formatValue(vehicle.model_code || carDetails.model_code);
-    document.getElementById("vehicle-fuel-type").textContent = formatValue(vehicle.fuel_type || carDetails.fuel_type);
+    // Vehicle fields - check multiple possible locations
+    document.getElementById("vehicle-plate").textContent = formatValue(
+      meta.plate || vehicle.plate || vehicle.plate_number || carDetails.plate
+    );
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(
+      vehicle.manufacturer || carDetails.manufacturer
+    );
+    document.getElementById("vehicle-model").textContent = formatValue(
+      vehicle.model || carDetails.model
+    );
+    document.getElementById("vehicle-year").textContent = formatValue(
+      vehicle.year || carDetails.year
+    );
+    document.getElementById("vehicle-km").textContent = formatValue(
+      vehicle.km || carDetails.km
+    );
+    document.getElementById("vehicle-chassis").textContent = formatValue(
+      vehicle.chassis || carDetails.chassis
+    );
+    document.getElementById("vehicle-model-code").textContent = formatValue(
+      vehicle.model_code || carDetails.model_code
+    );
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(
+      vehicle.fuel_type || carDetails.fuel_type
+    );
 
-    // helper.car_details fields  
-    document.getElementById("car-owner").textContent = formatValue(stakeholders.owner_name || carDetails.owner);
-    document.getElementById("car-ownership-type").textContent = formatValue(carDetails.ownership_type);
-    document.getElementById("car-market-value").textContent = formatValue(carDetails.market_value);
-    document.getElementById("car-damage-date").textContent = formatValue(meta.damage_date || carDetails.damageDate);
-    document.getElementById("car-owner-address").textContent = formatValue(carDetails.ownerAddress);
-    document.getElementById("car-owner-phone").textContent = formatValue(carDetails.ownerPhone);
+    // Owner fields - check all possible locations
+    const ownerName = stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner;
+    document.getElementById("car-owner").textContent = formatValue(ownerName);
+    
+    document.getElementById("car-ownership-type").textContent = formatValue(
+      vehicle.ownership_type || carDetails.ownership_type
+    );
+    document.getElementById("car-market-value").textContent = formatValue(
+      carDetails.market_value || vehicle.market_value
+    );
+    document.getElementById("car-damage-date").textContent = formatValue(
+      meta.damage_date || carDetails.damageDate || carDetails.damage_date
+    );
+    
+    // Owner contact info
+    document.getElementById("car-owner-address").textContent = formatValue(
+      stakeholders.owner?.address || stakeholders.owner_address || carDetails.ownerAddress
+    );
+    document.getElementById("car-owner-phone").textContent = formatValue(
+      stakeholders.owner?.phone || stakeholders.owner_phone || carDetails.ownerPhone
+    );
 
-    // Garage and insurance from helper.car_details
-    document.getElementById("garage-name").textContent = formatValue(carDetails.garageName || vehicle.garage_name);
-    document.getElementById("garage-phone").textContent = formatValue(carDetails.garagePhone || vehicle.garage_phone);
-    document.getElementById("insurance-company").textContent = formatValue(carDetails.insuranceCompany);
-    // Insurance agent information from stakeholders or car_details
-    document.getElementById("agent-name").textContent = formatValue(stakeholders.insurance_agent || carDetails.agentName);
-    document.getElementById("agent-phone").textContent = formatValue(stakeholders.insurance_agent_phone || carDetails.insurance_agent_phone);
+    // Garage info - check stakeholders and car_details
+    document.getElementById("garage-name").textContent = formatValue(
+      stakeholders.garage?.name || carDetails.garageName || carDetails.garage_name
+    );
+    document.getElementById("garage-phone").textContent = formatValue(
+      stakeholders.garage?.phone || carDetails.garagePhone || carDetails.garage_phone
+    );
+    
+    // Insurance info
+    document.getElementById("insurance-company").textContent = formatValue(
+      stakeholders.insurance?.company || carDetails.insuranceCompany
+    );
+    
+    // Insurance agent info
+    document.getElementById("agent-name").textContent = formatValue(
+      stakeholders.insurance?.agent?.name || carDetails.agentName
+    );
+    document.getElementById("agent-phone").textContent = formatValue(
+      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone
+    );
 
     // Update value styling
     document.querySelectorAll('.value').forEach(el => {
@@ -388,6 +484,11 @@
         el.classList.remove('empty');
       }
     });
+    
+    // Log populated fields count for debugging
+    const populatedFields = document.querySelectorAll('.value:not(.empty)').length;
+    const totalFields = document.querySelectorAll('.value').length;
+    console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
   }
 
 })();

@@ -206,20 +206,22 @@
         // Store the extracted car data
         if (carData) {
           sessionStorage.setItem('makeCarData', JSON.stringify(carData));
-          sessionStorage.setItem('carData', JSON.stringify(carData));
-          console.log('💾 Stored car data from Make.com:', carData);
+          // DON'T store in carData here - it will be overwritten below
+          console.log('💾 Stored car data from Make.com in makeCarData:', carData);
           
           // Force helper update with the data
           if (typeof window.processIncomingData === 'function') {
             window.processIncomingData(carData, 'OPEN_CASE_UI');
           }
         }
+        
+        // Store encrypted form data separately - don't overwrite carData!
         const encryptedPassword = await encryptPassword(payload.password);
         const encryptedPayload = JSON.stringify({
           ...payload,
           password: encryptedPassword
         });
-        sessionStorage.setItem("carData", encryptedPayload);
+        sessionStorage.setItem("formData", encryptedPayload);
         
         // FIXED: Update helper directly with the new case data
         try {
@@ -263,15 +265,16 @@
     }
   </script>
   <script src="test-data-flow.js"></script>
+  <script src="test-data-flow-validation.js"></script>
   <script src="make-webhook-simulator.js"></script>
   <script src="helper-init.js"></script>
-  <script src="parse-hebrew-response.js"></script>
+  <!-- <script src="parse-hebrew-response.js"></script> Disabled - functionality moved to helper.js -->
   <script src="force-data-capture.js"></script>
   <script src="diagnose-data-issue.js"></script>
   <script src="fix-helper-data-flow.js"></script>
   <script src="debug-data-capture.js"></script>
   <script src="auto-enrich-data.js"></script>
-  <script src="universal-data-sync.js"></script>
+  <script src="test-complete-flow.js"></script>
   <script src="assistant-floating.js"></script>
 </body>
 </html>
