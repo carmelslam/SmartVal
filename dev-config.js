@@ -459,4 +459,79 @@ window.updateConfigPreview = () => configManager.updateConfigPreview();
 // Expose config manager globally
 window.devConfig = configManager;
 
+// FIXED: Implement showAlert function that was missing
+window.showAlert = function(message, type = 'info') {
+  // Create alert container if it doesn't exist
+  let alertContainer = document.getElementById('alert-container');
+  if (!alertContainer) {
+    alertContainer = document.createElement('div');
+    alertContainer.id = 'alert-container';
+    alertContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      max-width: 400px;
+    `;
+    document.body.appendChild(alertContainer);
+  }
+
+  // Create alert element
+  const alert = document.createElement('div');
+  alert.style.cssText = `
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    font-family: 'Assistant', sans-serif;
+    direction: rtl;
+    animation: slideIn 0.3s ease-out;
+    cursor: pointer;
+  `;
+
+  // Set colors based on type
+  const colors = {
+    success: { bg: '#d4edda', text: '#155724', border: '#c3e6cb' },
+    error: { bg: '#f8d7da', text: '#721c24', border: '#f5c6cb' },
+    warning: { bg: '#fff3cd', text: '#856404', border: '#ffeaa7' },
+    info: { bg: '#d1ecf1', text: '#0c5460', border: '#bee5eb' }
+  };
+
+  const color = colors[type] || colors.info;
+  alert.style.backgroundColor = color.bg;
+  alert.style.color = color.text;
+  alert.style.border = `1px solid ${color.border}`;
+  
+  alert.textContent = message;
+  
+  // Add click to dismiss
+  alert.onclick = function() {
+    alert.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => alert.remove(), 300);
+  };
+
+  // Auto dismiss after 5 seconds
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.style.animation = 'slideOut 0.3s ease-in';
+      setTimeout(() => alert.remove(), 300);
+    }
+  }, 5000);
+
+  alertContainer.appendChild(alert);
+};
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
+
 console.log('✅ dev-config.js loaded successfully');

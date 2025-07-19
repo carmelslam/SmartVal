@@ -689,6 +689,16 @@ export function saveHelperToStorage() {
     sessionStorage.setItem('helper', dataString);
     localStorage.setItem('helper_data', dataString);
     
+    // CRITICAL FIX: Verify data was actually saved
+    const savedData = sessionStorage.getItem('helper');
+    if (savedData) {
+      console.log('✅ Helper saved to sessionStorage successfully');
+      console.log('📊 Saved data includes plate:', JSON.parse(savedData).meta?.plate);
+    } else {
+      console.error('❌ CRITICAL: Failed to save helper to sessionStorage!');
+      throw new Error('Failed to save helper data to storage');
+    }
+    
     // VERIFICATION: Immediately read back to confirm it was saved
     const verification = sessionStorage.getItem('helper');
     if (verification) {
@@ -927,6 +937,14 @@ export function checkForIncomingData() {
           carDetails: carUpdateResult,
           vehicle: vehicleUpdateResult
         });
+        
+        // CRITICAL FIX: Force save after URL data processing
+        saveHelperToStorage();
+        console.log('💾 URL data saved to helper storage');
+        
+        // CRITICAL FIX: Broadcast update to all modules
+        broadcastHelperUpdate(['car_details', 'vehicle', 'meta'], 'url_params');
+        console.log('📡 URL data broadcasted to all modules');
         
         // Check helper after update
         console.log('🔧 URL PROCESSING: Helper after update:', {
@@ -1574,47 +1592,75 @@ function processCarDetailsData(data, sourceModule) {
   if (!helper.stakeholders) helper.stakeholders = { owner: {} };
   if (!helper.car_details) helper.car_details = {};
   
+  // CRITICAL FIX: Handle Hebrew field names from Make.com
+  const hebrewToEnglishMap = {
+    'מספר_רכב': 'plate',
+    'יצרן': 'manufacturer',
+    'שם_היצרן': 'manufacturer',
+    'דגם': 'model',
+    'שנת_יצור': 'year',
+    'מספר_שלדה': 'chassis',
+    'קילומטרז': 'km',
+    'בעל_הרכב': 'owner',
+    'טלפון_בעל': 'ownerPhone',
+    'כתובת_בעל': 'ownerAddress'
+  };
+  
+  // Translate Hebrew fields to English
+  const translatedData = { ...data };
+  for (const [hebrewKey, englishKey] of Object.entries(hebrewToEnglishMap)) {
+    if (data[hebrewKey] && !data[englishKey]) {
+      translatedData[englishKey] = data[hebrewKey];
+      console.log(`🔄 Translated ${hebrewKey} → ${englishKey}: ${data[hebrewKey]}`);
+    }
+  }
+  
   // Meta information (essential for floating screens)
-  if (data.plate) {
-    console.log('🔧 Setting helper.meta.plate to:', data.plate);
-    helper.meta.plate = data.plate;
+  if (translatedData.plate || translatedData.מספר_רכב) {
+    const plateValue = translatedData.plate || translatedData.מספר_רכב;
+    console.log('🔧 Setting helper.meta.plate to:', plateValue);
+    helper.meta.plate = plateValue;
   }
-  if (data.location) {
-    console.log('🔧 Setting helper.meta.location to:', data.location);
-    helper.meta.location = data.location;
+  if (translatedData.location) {
+    console.log('🔧 Setting helper.meta.location to:', translatedData.location);
+    helper.meta.location = translatedData.location;
   }
-  if (data.date) {
-    console.log('🔧 Setting helper.meta.damage_date to:', data.date);
-    helper.meta.damage_date = data.date;
+  if (translatedData.date) {
+    console.log('🔧 Setting helper.meta.damage_date to:', translatedData.date);
+    helper.meta.damage_date = translatedData.date;
   }
   
   // Vehicle details according to unified schema
-  if (data.plate) helper.vehicle.plate_number = data.plate;
-  if (data.manufacturer) helper.vehicle.manufacturer = data.manufacturer;
-  if (data.model) helper.vehicle.model = data.model;
-  if (data.year) helper.vehicle.year = data.year;
-  if (data.chassis) helper.vehicle.chassis = data.chassis;
-  if (data.km) helper.vehicle.km = data.km;
-  if (data.engine_volume) helper.vehicle.engine_volume = data.engine_volume;
-  if (data.fuel_type) helper.vehicle.fuel_type = data.fuel_type;
-  if (data.ownership_type) helper.vehicle.ownership_type = data.ownership_type;
+  // FIXED: Use 'plate' instead of 'plate_number' to match UI expectations
+  if (translatedData.plate) {
+    helper.vehicle.plate = translatedData.plate;
+    helper.vehicle.plate_number = translatedData.plate; // Keep for backward compatibility
+  }
+  if (translatedData.manufacturer) helper.vehicle.manufacturer = translatedData.manufacturer;
+  if (translatedData.model) helper.vehicle.model = translatedData.model;
+  if (translatedData.year) helper.vehicle.year = translatedData.year;
+  if (translatedData.chassis) helper.vehicle.chassis = translatedData.chassis;
+  if (translatedData.km) helper.vehicle.km = translatedData.km;
+  if (translatedData.engine_volume) helper.vehicle.engine_volume = translatedData.engine_volume;
+  if (translatedData.fuel_type) helper.vehicle.fuel_type = translatedData.fuel_type;
+  if (translatedData.ownership_type) helper.vehicle.ownership_type = translatedData.ownership_type;
   
   // Owner information - store in multiple formats for compatibility
-  if (data.owner) {
-    helper.stakeholders.owner.name = data.owner;
-    helper.stakeholders.owner_name = data.owner; // Floating screen compatibility
+  if (translatedData.owner) {
+    helper.stakeholders.owner.name = translatedData.owner;
+    helper.stakeholders.owner_name = translatedData.owner; // Floating screen compatibility
   }
-  if (data.ownerPhone) {
-    helper.stakeholders.owner.phone = data.ownerPhone;
-    helper.stakeholders.owner_phone = data.ownerPhone; // Floating screen compatibility  
+  if (translatedData.ownerPhone) {
+    helper.stakeholders.owner.phone = translatedData.ownerPhone;
+    helper.stakeholders.owner_phone = translatedData.ownerPhone; // Floating screen compatibility  
   }
-  if (data.ownerAddress) {
-    helper.stakeholders.owner.address = data.ownerAddress;
-    helper.stakeholders.owner_address = data.ownerAddress; // Floating screen compatibility
+  if (translatedData.ownerAddress) {
+    helper.stakeholders.owner.address = translatedData.ownerAddress;
+    helper.stakeholders.owner_address = translatedData.ownerAddress; // Floating screen compatibility
   }
   
   // Preserve legacy structure for backward compatibility
-  mergeDeep(helper.car_details, data);
+  mergeDeep(helper.car_details, translatedData);
   
   console.log('🚗 processCarDetailsData: Updated helper with:', {
     meta: helper.meta,
@@ -2031,7 +2077,8 @@ function updateBuildersFromHelper(updatedSections) {
 function isCarData(data) {
   return !!(data.plate || data.manufacturer || data.model || data.owner || 
            data.car_details || data.vehicle_data || 
-           (data.שם_היצרן && data.דגם)); // Hebrew field names from Make.com
+           data.יצרן || data.דגם || data.מספר_רכב || // Hebrew field names from Make.com
+           (data.שם_היצרן && data.דגם)); // Alternative Hebrew field names
 }
 
 function isStakeholderData(data) {

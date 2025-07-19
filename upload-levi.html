@@ -1481,55 +1481,38 @@ class LeviProcessor {
     console.log('📎 File:', this.uploadedFile.name, 'Size:', this.uploadedFile.size);
     console.log('🔗 Webhook URL:', getWebhook('SUBMIT_LEVI_REPORT'));
 
-    // ✅ SEND REQUEST: With better error handling
-    const response = await fetch(getWebhook('SUBMIT_LEVI_REPORT'), {
-      method: 'POST',
-      body: formData
-    });
-
-    console.log('📥 Levi upload response status:', response.status);
-
-    if (response.ok) {
-      // ✅ HANDLE BOTH JSON AND TEXT RESPONSES
-      const contentType = response.headers.get('content-type');
-      let result;
+    // ✅ FIXED: Use sendToWebhook instead of direct fetch
+    try {
+      console.log('📤 Sending to SUBMIT_LEVI_REPORT webhook...');
+      const result = await sendToWebhook('SUBMIT_LEVI_REPORT', formData);
       
-      if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
-        console.log('✅ Levi upload successful (JSON):', result);
-      } else {
-        // Handle text response (Hebrew Levi data)
-        const textResult = await response.text();
-        console.log('✅ Levi upload successful (Text):', textResult);
-        
+      console.log('✅ Levi upload webhook response:', result);
+      
+      // Handle the response based on type
+      if (typeof result === 'string') {
         // Convert text response to structured data
-        result = {
+        return {
           success: true,
-          data: textResult,
-          parsed_data: this.parseLeviTextResponse(textResult),
+          data: result,
+          parsed_data: this.parseLeviTextResponse(result),
           timestamp: new Date().toISOString()
         };
+      } else if (result && typeof result === 'object') {
+        // Already structured response
+        return result;
+      } else {
+        throw new Error('תגובה לא תקינה מהשרת');
       }
       
-      return result;
-    } else {
-      // ✅ ENHANCED ERROR HANDLING: Get detailed error info
-      let errorMessage = 'שגיאה בעיבוד דו"ח לוי יצחק';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
-      } catch (parseError) {
-        // If can't parse error response, use status text
-        errorMessage = `שגיאת שרת ${response.status}: ${response.statusText}`;
+    } catch (error) {
+      console.error('❌ Levi upload failed:', error);
+      
+      // Re-throw with Hebrew error message
+      if (error.message.includes('HTTP')) {
+        throw new Error('שגיאת שרת בעיבוד דו"ח לוי יצחק');
+      } else {
+        throw error;
       }
-      
-      console.error('❌ Levi upload failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorMessage
-      });
-      
-      throw new Error(errorMessage);
     }
   }
 

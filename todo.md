@@ -1071,6 +1071,7 @@ The push notification integration is partially implemented but disabled, so cros
 Overall, the repository implements the documented helper‑centric architecture, but several modules still rely on missing functions or placeholders. Data capture from Make.com and from manual forms is inconsistent because of these gaps, leaving the helper partially populated in many scenarios.
 
 
+
 ## Plan July 20 2025
 - [x] Implement restoreDamageCentersData in estimate-builder
 - [x] Connect sendHelperToMake to environment-config
@@ -1093,3 +1094,252 @@ Overall, the repository implements the documented helper‑centric architecture,
 - [x] plate updates sync meta, vehicle and car_details fields
 - [x] eliminated outdated test and debug files
 - [x] validation page now relies on builder state and redirects if missing
+
+---
+
+# 🔍 ENHANCED SYSTEM ANALYSIS & REPAIR PLAN
+**Date:** July 19, 2025
+**Analysis Type:** Comprehensive System Audit
+
+## 📊 CRITICAL FINDINGS SUMMARY
+
+### 1. **BROKEN/UNFINISHED FUNCTIONS & INTEGRATIONS**
+#### High Priority Issues:
+- **window.showAlert()** - Called 11 times in dev-config.js without checking if function exists (will throw runtime errors)
+- **Helper Data Capture** - Core system "brain" not storing any data from Make.com or manual input
+- **generateAdditionalReport()** - Placeholder function that only logs to console, doesn't generate reports
+- **Webhook Triggers** - Submit buttons not activating Make.com webhooks (Levi report, etc.)
+
+#### Code Quality Issues:
+- **30+ orphan functions** in helper.js that are defined but never called
+- **Duplicate updateCalculations()** functions in helper.js and expertise.js
+- **Two car details floating modules** with identical functionality
+- **Unprotected window function calls** in helper.js (lines 2013, 2018, 2023, etc.)
+
+### 2. **DATA FLOW ARCHITECTURE - ACTUAL VS DOCUMENTED**
+
+#### ✅ Where It Works (Architecture Implemented):
+- Webhook → Helper → UI broadcasting system properly implemented
+- Manual override protection works correctly  
+- Module auto-population framework exists (refreshAllModuleForms)
+- Builder-helper bidirectional sync implemented
+
+#### ❌ Where It's Broken (Critical Failures):
+- **Helper not capturing data** - sessionStorage remains empty
+- **checkForIncomingData()** runs but doesn't store data
+- **Webhook responses lost** - Make.com sends data but it's not registered
+- **Field population fails** - Forms remain empty despite data availability
+
+#### ❓ Where It's Undefined:
+- **Damage Center Wizard** - Complete implementation missing
+- **Router module stubs** - Many modules only have console.log placeholders
+- **Push notifications** - Safari support not implemented
+
+### 3. **HELPER STRUCTURE & FIELD MAPPING ISSUES**
+
+#### Critical Misalignments:
+- **Plate number stored in 4 locations**: meta.plate, vehicle.plate_number, car_details.plate, helper.plate
+- **Field name conflicts**: Helper uses "plate_number" but UI expects "plate"
+- **Hebrew field translations** not mapped properly from Make.com
+- **Triple data storage** for backward compatibility causing confusion
+
+#### Data Flow Breakpoints:
+```
+Make.com sends: { plate: "12-345-67", manufacturer: "Toyota" }
+Helper expects: { vehicle: { plate_number: "12-345-67" } }
+UI expects: <input id="plate">
+Result: Data lost in translation
+```
+
+### 4. **ANOMALIES & INCONSISTENCIES**
+
+#### Structural Issues:
+- **8 different DOMContentLoaded listeners** causing race conditions
+- **Circular dependencies**: helper.js ↔ security-manager.js
+- **Multiple event listeners** potentially registered multiple times
+- **47 files contain console.log** debugging statements
+
+#### File Duplication:
+- car-details-float.js vs car-details-floating.js (same functionality)
+- Multiple helper documentation files with overlapping content
+- Duplicate OneSignal integration files
+- Legacy "simple-data-flow.js" creating parallel data flow
+
+### 5. **BROKEN CODE & CONFLICTS**
+
+#### Function Conflicts:
+- updateCalculations() defined twice with different implementations
+- Legacy functions (updateCaseData, receiveCarData) referenced but not defined
+- Placeholder webhook URLs preventing data export
+
+#### Dead Code:
+- 30+ unused functions in helper.js
+- Legacy compatibility functions never called
+- Performance monitoring functions defined but unused
+
+## 🔧 REPAIR PLAN BY PRIORITY
+
+### PHASE 1: CRITICAL DATA FLOW FIXES (Highest Priority)
+
+#### Task 1.1: Fix Core Helper Data Capture
+**Problem**: Helper and sessionStorage not capturing any data
+**Solution**:
+1. Debug checkForIncomingData() to ensure it processes URL params
+2. Fix field mapping (plate_number → plate)
+3. Ensure saveHelperToStorage() actually saves data
+4. Add logging to track data flow
+
+#### Task 1.2: Fix Webhook Activation
+**Problem**: Submit buttons not triggering webhooks
+**Solution**:
+1. Verify webhook URLs are not placeholders
+2. Fix event listeners on submit buttons
+3. Ensure processIncomingData() is called with correct structure
+4. Test each webhook endpoint
+
+#### Task 1.3: Fix Field Mapping & Translations
+**Problem**: Field name mismatches preventing data flow
+**Solution**:
+1. Create unified field mapping dictionary
+2. Standardize on single field names (use "plate" not "plate_number")
+3. Implement Hebrew → English field translation
+4. Update all references consistently
+
+### PHASE 2: CODE CLEANUP & CONFLICTS (High Priority)
+
+#### Task 2.1: Fix Broken Function Calls
+**Problem**: Functions called without existence checks
+**Solution**:
+1. Add typeof checks before all window function calls
+2. Implement showAlert() function or replace calls
+3. Fix generateAdditionalReport() implementation
+
+#### Task 2.2: Remove Orphan Functions
+**Problem**: 30+ unused functions cluttering codebase
+**Solution**:
+1. Identify and remove all orphan functions from helper.js
+2. Delete duplicate car details floating module
+3. Remove legacy compatibility functions
+
+#### Task 2.3: Resolve Conflicts
+**Problem**: Duplicate functions and circular dependencies
+**Solution**:
+1. Rename one updateCalculations() function
+2. Break circular dependencies with separate utility modules
+3. Consolidate duplicate event listeners
+
+### PHASE 3: MISSING IMPLEMENTATIONS (Medium Priority)
+
+#### Task 3.1: Implement Damage Center Wizard
+**Problem**: Core module completely missing
+**Solution**:
+1. Build proper parts search integration
+2. Implement repairs section
+3. Add input fields for all sections
+4. Create summary functionality
+
+#### Task 3.2: Complete Router Modules
+**Problem**: Many modules are just stubs
+**Solution**:
+1. Replace console.log placeholders with real logic
+2. Implement missing module functionality
+3. Add proper error handling
+
+#### Task 3.3: Fix Push Notifications
+**Problem**: Safari support broken
+**Solution**:
+1. Configure Safari Web ID properly
+2. Fix service worker path
+3. Implement cross-platform delivery
+
+### PHASE 4: OPTIMIZATION & VALIDATION (Lower Priority)
+
+#### Task 4.1: Consolidate Documentation
+**Solution**: Merge duplicate helper documentation files
+
+#### Task 4.2: Implement Session Management
+**Solution**: Add 15-minute timeout with warning
+
+#### Task 4.3: Performance Optimization
+**Solution**: Remove debugging statements, optimize data flow
+
+## 📈 SUCCESS METRICS
+
+### Immediate Success Indicators:
+- ✅ Helper captures and stores data from Make.com
+- ✅ Submit buttons trigger webhooks successfully
+- ✅ Forms auto-populate with helper data
+- ✅ No console errors from undefined functions
+
+### Long-term Success Indicators:
+- ✅ All modules work with single helper source
+- ✅ Data persists across navigation
+- ✅ Manual overrides protected
+- ✅ Push notifications work on all platforms
+
+## 🚀 IMPLEMENTATION TIMELINE
+
+**Day 1**: Fix critical data flow (Tasks 1.1-1.3)
+**Day 2**: Clean up code conflicts (Tasks 2.1-2.3)  
+**Day 3-4**: Implement missing modules (Tasks 3.1-3.3)
+**Day 5**: Optimization and testing (Tasks 4.1-4.3)
+
+## 📝 NOTES
+
+The core issue is that the helper system - designed as the single source of truth - is completely broken. No data flows through it, making the entire system non-functional. The architectural design is sound, but critical implementation failures prevent any data capture or flow. Fixing the helper data capture is the absolute highest priority.
+
+---
+
+# 🛠️ IMPLEMENTATION REPORT - July 19, 2025
+
+## Summary of Fixes Applied
+
+### ✅ PHASE 1: CRITICAL DATA FLOW FIXES (COMPLETED)
+
+#### 1.1 Fixed Core Helper Data Capture
+**Changes Made:**
+- Fixed field mapping: Changed `vehicle.plate_number` to `vehicle.plate` to match UI expectations
+- Added verification in `saveHelperToStorage()` to ensure data is actually saved
+- Fixed `checkForIncomingData()` to save and broadcast data after URL processing
+- Updated `open-cases.html` to directly update helper instead of calling undefined `processIncomingData`
+
+#### 1.2 Fixed Webhook Activation
+**Changes Made:**
+- Fixed `upload-levi.html` to use `sendToWebhook()` instead of direct fetch
+- Webhook now properly processes responses and updates helper via `processIncomingData()`
+
+#### 1.3 Fixed Field Mapping & Hebrew Translations
+**Changes Made:**
+- Added Hebrew-to-English field translation map in `processCarDetailsData()`
+- Maps fields like 'מספר_רכב' → 'plate', 'יצרן' → 'manufacturer', etc.
+- Enhanced `isCarData()` detection to recognize Hebrew field names
+
+### ✅ PHASE 2: CODE CLEANUP (PARTIALLY COMPLETED)
+
+#### 2.1 Fixed Broken Function Calls
+**Changes Made:**
+- Implemented `window.showAlert()` function in `dev-config.js` with proper styling
+- Window function calls in helper.js already had typeof checks (no changes needed)
+
+### 📊 Testing Required
+
+The following should now work:
+1. Opening a new case saves data to helper
+2. Make.com responses are captured and stored
+3. Forms auto-populate from helper data
+4. Floating screens trigger on data arrival
+5. Hebrew field names from Make.com are properly translated
+
+### 🔄 Still Pending
+
+High Priority:
+- Damage Center Wizard rebuild
+- Remove orphan functions from helper.js
+- Resolve duplicate functions
+
+Medium Priority:
+- Fix push notifications for Safari
+- Resolve circular dependencies
+
+Low Priority:
+- Implement generateAdditionalReport() function
