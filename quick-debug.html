@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Debug</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        pre { background: #f0f0f0; padding: 10px; overflow: auto; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Quick Debug - Storage Analysis</h1>
+    
+    <button onclick="checkAllStorage()">Check All Storage</button>
+    <button onclick="extractMakeData()">Extract Make.com Data</button>
+    <button onclick="forcePopulate()">Force Populate Helper</button>
+    
+    <h2>Results:</h2>
+    <pre id="output"></pre>
+    
+    <script>
+    function log(msg) {
+        document.getElementById('output').textContent += msg + '\n';
+    }
+    
+    function checkAllStorage() {
+        document.getElementById('output').textContent = '';
+        log('=== CHECKING ALL STORAGE ===\n');
+        
+        const keys = ['makeCarData', 'carData', 'vehicleDetails', 'helper', 'currentCaseData'];
+        
+        keys.forEach(key => {
+            const data = sessionStorage.getItem(key);
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    log(`✅ ${key}:`);
+                    log(JSON.stringify(parsed, null, 2));
+                    log('');
+                } catch (e) {
+                    log(`❌ ${key}: Failed to parse`);
+                    log(data);
+                    log('');
+                }
+            } else {
+                log(`❌ ${key}: Not found\n`);
+            }
+        });
+        
+        // Check for any webhook response
+        Object.keys(sessionStorage).forEach(key => {
+            if (key.includes('webhook') || key.includes('response')) {
+                log(`Found ${key}:`);
+                log(sessionStorage.getItem(key));
+                log('');
+            }
+        });
+    }
+    
+    function extractMakeData() {
+        document.getElementById('output').textContent = '';
+        log('=== EXTRACTING MAKE.COM DATA ===\n');
+        
+        // Look for the encrypted payload that was stored
+        const carData = sessionStorage.getItem('carData');
+        if (carData) {
+            try {
+                const parsed = JSON.parse(carData);
+                
+                // Check if it's the encrypted payload format
+                if (parsed.plate && parsed.owner && parsed.location) {
+                    log('Found form data:');
+                    log(JSON.stringify(parsed, null, 2));
+                    
+                    // Simulate webhook response with this data
+                    const simulatedResponse = {
+                        plate: parsed.plate,
+                        owner: parsed.owner,
+                        location: parsed.location,
+                        date: parsed.date,
+                        // Add dummy car data
+                        manufacturer: 'ביואיק',
+                        model: 'LUCERNE',
+                        year: '2009',
+                        chassis: '1G4HD57258U196450',
+                        engine_volume: '3791',
+                        fuel_type: 'בנזין'
+                    };
+                    
+                    sessionStorage.setItem('makeCarData', JSON.stringify(simulatedResponse));
+                    log('\n✅ Created simulated car data and stored in makeCarData');
+                }
+            } catch (e) {
+                log('Error parsing carData: ' + e.message);
+            }
+        }
+    }
+    
+    function forcePopulate() {
+        document.getElementById('output').textContent = '';
+        log('=== FORCE POPULATING HELPER ===\n');
+        
+        // Try to find any data
+        let foundData = null;
+        
+        ['makeCarData', 'carData', 'vehicleDetails'].forEach(key => {
+            if (!foundData) {
+                const data = sessionStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.plate || parsed.manufacturer) {
+                            foundData = parsed;
+                            log(`Found data in ${key}`);
+                        }
+                    } catch (e) {}
+                }
+            }
+        });
+        
+        if (foundData) {
+            // Create complete helper structure
+            const helper = {
+                vehicle: {
+                    plate: foundData.plate || '',
+                    manufacturer: foundData.manufacturer || '',
+                    model: foundData.model || '',
+                    year: foundData.year || '',
+                    chassis: foundData.chassis || '',
+                    engine_volume: foundData.engine_volume || '',
+                    fuel_type: foundData.fuel_type || ''
+                },
+                meta: {
+                    plate: foundData.plate || '',
+                    location: foundData.location || '',
+                    damage_date: foundData.date || ''
+                },
+                stakeholders: {
+                    owner: {
+                        name: foundData.owner || ''
+                    }
+                },
+                car_details: foundData
+            };
+            
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            
+            log('✅ Helper populated:');
+            log(JSON.stringify(helper, null, 2));
+        } else {
+            log('❌ No data found to populate');
+        }
+    }
+    
+    // Auto-check on load
+    window.onload = function() {
+        checkAllStorage();
+    };
+    </script>
+</body>
+</html>
