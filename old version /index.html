@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ירון כיוף שמאות - פורטל</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" type="image/webp" />
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" />
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" />
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+  <!-- OneSignal Push -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({ appId: "3b924b99-c302-4919-a97e-baf909394696" });
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(to bottom right, #e8f0ff, #ffffff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+    }
+    .logo {
+      width: 120px;
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 10px 0;
+    }
+    h2 {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #555;
+    }
+    input[type="password"] {
+      padding: 12px;
+      font-size: 16px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .footer {
+      margin-top: 25px;
+      font-size: 12px;
+      color: #999;
+    }
+    .watermark {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      font-size: 10px;
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/logo-yaron.webp" class="logo" alt="Logo" />
+    <h1>ירון כיוף שמאות - פורטל</h1>
+    <h2>שמאי רכב והערכת נזקי רכוש</h2>
+    <input type="password" id="password" placeholder="הזן סיסמה" />
+    <button onclick="login()">כניסה</button>
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+    <div class="watermark">ירון כיוף - שמאות והערכת נזקי רכב ורכוש</div>
+  </div>
+
+  <script>
+  function login() {
+  const pass = document.getElementById("password").value.trim();
+  if (!pass) return alert("נא להזין סיסמה");
+
+  fetch("https://hook.eu2.make.com/ho2ogzkuwxg66klgkin7nattl1nr7o6y ", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: pass })
+  })
+  .then(async res => {
+    const text = await res.text();
+    if (res.status === 200) {
+      sessionStorage.setItem("ycPass", pass);
+      sessionStorage.setItem("sessionStart", Date.now().toString());
+      window.location.href = "app.html"; // Replace with correct SPA entry when ready
+    } else {
+      alert("סיסמה לא מאומתת ❌\n" + text);
+    }
+  })
+  .catch(err => alert("שגיאת חיבור מול Make.com ❌\n" + err));
+}
+
+    // Idle logout timer (10 min)
+    let logoutTimer;
+    function resetTimer() {
+      clearTimeout(logoutTimer);
+      logoutTimer = setTimeout(() => {
+        sessionStorage.clear();
+        alert("הפגישה הסתיימה עקב חוסר פעילות.");
+        window.location.href = "index.html";
+      }, 10 * 60 * 1000);
+    }
+    ["click", "mousemove", "keydown", "scroll"].forEach(evt => {
+      document.addEventListener(evt, resetTimer, true);
+    });
+    resetTimer();
+  </script>
+</body>
+</html>
