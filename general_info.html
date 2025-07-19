@@ -158,19 +158,46 @@
       }
     })();
 
-    // Use carData fields as set by open-cases.html
-    let carData = {};
+    // ✅ FIXED: Use helper system instead of old carData
+    let helperData = {};
+    let plateNumber = '';
+    
     try {
-      carData = JSON.parse(sessionStorage.getItem("carData") || '{}');
+      // Get data from helper system (primary source)
+      helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
+      plateNumber = helperData.meta?.plate || helperData.vehicle?.plate_number || '';
+      
+      // Fallback to old carData for backward compatibility
+      if (!plateNumber) {
+        const carData = JSON.parse(sessionStorage.getItem("carData") || '{}');
+        plateNumber = carData.plate || '';
+      }
+      
     } catch (e) {
-      carData = {};
+      console.warn('Error loading helper data:', e);
     }
-    if (!carData.plate) {
+    
+    if (!plateNumber) {
       alert("יש לפתוח תיק לפני מילוי פרטים כלליים");
       window.location.href = "open-cases.html";
     }
 
-    if (carData.plate) document.getElementById("pageTitle").innerText = `רכב מס. ${carData.plate}: פרטים כלליים`;
+    if (plateNumber) document.getElementById("pageTitle").innerText = `רכב מס. ${plateNumber}: פרטים כלליים`;
+    
+    // ✅ AUTO-POPULATE: Load data from helper into form fields
+    try {
+      // Import helper module and populate fields
+      import('./helper.js').then(helperModule => {
+        if (typeof helperModule.refreshAllModuleForms === 'function') {
+          helperModule.refreshAllModuleForms();
+          console.log('✅ General info fields auto-populated from helper');
+        }
+      }).catch(error => {
+        console.warn('Could not auto-populate from helper:', error);
+      });
+    } catch (error) {
+      console.warn('Error setting up auto-population:', error);
+    }
 
     // Fix: Ensure garage email field is always editable
     const garageEmailField = document.getElementById("garageEmail");

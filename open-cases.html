@@ -181,12 +181,17 @@
         });
         sessionStorage.setItem("carData", encryptedPayload);
         
-        // Call simple data reception system
+        // ✅ FIXED: Call bridge function to process data through helper system
         if (typeof window.receiveCarData === 'function') {
-          console.log('🔥 Calling simple receiveCarData...');
-          window.receiveCarData(payload);
+          console.log('🔥 Calling bridge receiveCarData...');
+          try {
+            await window.receiveCarData(payload, 'open_cases');
+            console.log('✅ Car data processed successfully through helper system');
+          } catch (error) {
+            console.error('❌ Error processing car data through helper:', error);
+          }
         } else {
-          console.error('❌ receiveCarData function not found!');
+          console.error('❌ receiveCarData bridge function not found!');
         }
         
         document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";

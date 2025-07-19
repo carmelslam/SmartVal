@@ -42,7 +42,13 @@
     </div>
     
     <div class="section">
-      <h3>4. Debug Information</h3>
+      <h3>4. Test Bridge Functions</h3>
+      <button onclick="testUpdateCaseData()">🌉 Test updateCaseData Bridge</button>
+      <button onclick="testReceiveCarData()">🌉 Test receiveCarData Bridge</button>
+    </div>
+    
+    <div class="section">
+      <h3>5. Debug Information</h3>
       <button onclick="showDebugInfo()">🔍 Show All Debug Info</button>
       <button onclick="clearConsole()">🧹 Clear Console</button>
     </div>
@@ -237,6 +243,68 @@
           hasCarDetails: !!window.helper.car_details,
           hasStakeholders: !!window.helper.stakeholders
         });
+      }
+    };
+    
+    window.testUpdateCaseData = function() {
+      try {
+        console.log('🌉 Testing updateCaseData bridge function...');
+        
+        const testData = {
+          plate: '123-45-678',
+          owner: 'בדיקת גשר',
+          ownerPhone: '050-1234567'
+        };
+        
+        if (typeof window.updateCaseData === 'function') {
+          const result = window.updateCaseData('stakeholders', testData, 'test');
+          console.log('✅ updateCaseData bridge test result:', result);
+          
+          // Check if data was saved to helper
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log('📋 Helper after updateCaseData:', {
+            stakeholders: helper.stakeholders,
+            meta: helper.meta
+          });
+        } else {
+          console.error('❌ updateCaseData bridge function not found');
+        }
+        
+      } catch (error) {
+        console.error('❌ updateCaseData test failed:', error);
+      }
+    };
+    
+    window.testReceiveCarData = async function() {
+      try {
+        console.log('🌉 Testing receiveCarData bridge function...');
+        
+        const testCarData = {
+          plate: '987-65-432',
+          manufacturer: 'יונדאי',
+          model: 'i30',
+          year: '2022',
+          owner: 'בדיקת קליטה',
+          km: '25000'
+        };
+        
+        if (typeof window.receiveCarData === 'function') {
+          const result = await window.receiveCarData(testCarData, 'test');
+          console.log('✅ receiveCarData bridge test result:', result);
+          
+          // Check if data was processed through helper
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log('📋 Helper after receiveCarData:', {
+            meta: helper.meta,
+            vehicle: helper.vehicle,
+            stakeholders: helper.stakeholders
+          });
+        } else {
+          console.error('❌ receiveCarData bridge function not found');
+        }
+        
+      } catch (error) {
+        console.error('❌ receiveCarData test failed:', error);
       }
     };
     

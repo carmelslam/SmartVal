@@ -2313,6 +2313,89 @@ function getFieldSection(fieldKey) {
 loadManualOverrides();
 
 // ============================================================================
+// BRIDGE FUNCTIONS - Legacy System Compatibility
+// ============================================================================
+
+/**
+ * Bridge function for legacy updateCaseData calls
+ * Routes old module calls to new helper system
+ */
+window.updateCaseData = function(section, data, sourceModule = 'legacy') {
+  console.log(`🌉 BRIDGE: updateCaseData(${section}) called from ${sourceModule}`, data);
+  
+  try {
+    // Route to appropriate helper update function
+    switch (section) {
+      case 'stakeholders':
+      case 'vehicle':
+      case 'meta':
+      case 'car_details':
+        const result = updateHelper(section, data, sourceModule);
+        if (result) {
+          console.log(`✅ BRIDGE: Successfully routed ${section} data to helper`);
+          // Trigger module refresh after update
+          if (typeof window.refreshAllModuleForms === 'function') {
+            window.refreshAllModuleForms();
+          }
+        }
+        return result;
+        
+      default:
+        console.warn(`⚠️ BRIDGE: Unknown section ${section}, routing to general helper update`);
+        return updateHelper('general', data, sourceModule);
+    }
+    
+  } catch (error) {
+    console.error(`❌ BRIDGE: Error in updateCaseData for ${section}:`, error);
+    return false;
+  }
+};
+
+/**
+ * Bridge function for legacy receiveCarData calls  
+ * Routes open-cases.html calls to new helper system
+ */
+window.receiveCarData = async function(data, source = 'make_com') {
+  console.log(`🌉 BRIDGE: receiveCarData called from ${source}`, data);
+  
+  try {
+    // Process the incoming data through the new system
+    const result = await processIncomingData(data, source);
+    
+    if (result && result.success) {
+      console.log(`✅ BRIDGE: Successfully processed car data through helper system`);
+      
+      // Broadcast update to all modules and floating screens
+      broadcastHelperUpdate(result.updatedSections || ['vehicle', 'meta', 'stakeholders'], source);
+      
+      // Trigger module refresh
+      if (typeof window.refreshAllModuleForms === 'function') {
+        window.refreshAllModuleForms();
+      }
+      
+      return true;
+    } else {
+      console.error(`❌ BRIDGE: Failed to process car data through helper system`);
+      return false;
+    }
+    
+  } catch (error) {
+    console.error(`❌ BRIDGE: Error in receiveCarData:`, error);
+    
+    // Fallback: try to update helper directly
+    try {
+      updateHelper('car_details', data, source);
+      return true;
+    } catch (fallbackError) {
+      console.error(`❌ BRIDGE: Fallback also failed:`, fallbackError);
+      return false;
+    }
+  }
+};
+
+console.log('🌉 Bridge functions initialized: updateCaseData, receiveCarData');
+
+// ============================================================================
 // UNIVERSAL MODULE AUTO-POPULATION FRAMEWORK
 // ============================================================================
 
