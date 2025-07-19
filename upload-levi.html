@@ -1426,26 +1426,58 @@ class LeviProcessor {
       throw new Error(`חסרים שדות חובה: ${missingFields.join(', ')}`);
     }
 
-    // ✅ BUILD FORM DATA: Create FormData with validation
+    // ✅ BUILD FORM DATA: Use individual fields like working uploads
     const formData = new FormData();
     formData.append('file', this.uploadedFile);
     
-    const metaData = {
-      plate: document.getElementById('plate').value.trim(),
-      owner: document.getElementById('owner').value.trim(),
-      office_code: document.getElementById('office_code').value.trim(),
-      pass: document.getElementById('pass').value.trim(),
-      report_source: document.getElementById('report-source')?.value?.trim() || 'levi_upload',
-      valuation_date: document.getElementById('valuation-date')?.value?.trim() || new Date().toISOString().split('T')[0]
-    };
-
-    formData.append('meta', JSON.stringify(metaData));
+    // ✅ BASIC FIELDS: Required by webhook
+    formData.append('plate', document.getElementById('plate').value.trim());
+    formData.append('owner', document.getElementById('owner').value.trim());
+    formData.append('pass', document.getElementById('pass').value.trim());
+    formData.append('office_code', document.getElementById('office_code').value.trim());
+    formData.append('report_source', document.getElementById('report-source')?.value?.trim() || 'levi_upload');
+    formData.append('valuation_date', document.getElementById('valuation-date')?.value?.trim() || new Date().toISOString().split('T')[0]);
     
-    // ✅ ADD ACTION TYPE: Help Make.com identify the action
+    // ✅ CAR DETAILS: Pull from helper system for webhook
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const vehicle = helper.vehicle || {};
+      const carDetails = helper.car_details || {};
+      const meta = helper.meta || {};
+      
+      // Add car details that webhook expects
+      formData.append('manufacturer', vehicle.manufacturer || carDetails.manufacturer || '');
+      formData.append('model', vehicle.model || carDetails.model || '');
+      formData.append('year', vehicle.year || carDetails.year || '');
+      formData.append('chassis', vehicle.chassis || carDetails.chassis || '');
+      formData.append('km', vehicle.km || carDetails.km || carDetails.odo || '');
+      formData.append('fuel_type', vehicle.fuel_type || carDetails.fuel_type || '');
+      formData.append('engine_volume', vehicle.engine_volume || carDetails.engine_volume || '');
+      formData.append('ownership_type', carDetails.ownership_type || '');
+      formData.append('location', meta.location || meta.inspection_location || '');
+      
+      console.log('✅ Added car details to Levi upload:', {
+        manufacturer: vehicle.manufacturer || carDetails.manufacturer,
+        model: vehicle.model || carDetails.model,
+        year: vehicle.year || carDetails.year,
+        km: vehicle.km || carDetails.km || carDetails.odo
+      });
+    } catch (error) {
+      console.warn('Could not load car details for Levi upload:', error);
+    }
+    
     formData.append('action', 'SUBMIT_LEVI_REPORT');
     formData.append('timestamp', new Date().toISOString());
     
-    console.log('📤 Sending Levi report with meta:', metaData);
+    console.log('📤 Sending Levi report with fields:', {
+      plate: document.getElementById('plate').value.trim(),
+      owner: document.getElementById('owner').value.trim(),
+      office_code: document.getElementById('office_code').value.trim(),
+      password: '[HIDDEN]',
+      report_source: document.getElementById('report-source')?.value?.trim() || 'levi_upload',
+      valuation_date: document.getElementById('valuation-date')?.value?.trim() || new Date().toISOString().split('T')[0]
+    });
+    console.log('🏢 קוד משרד התחבורה being sent:', document.getElementById('office_code').value.trim());
     console.log('📎 File:', this.uploadedFile.name, 'Size:', this.uploadedFile.size);
     console.log('🔗 Webhook URL:', getWebhook('SUBMIT_LEVI_REPORT'));
 
