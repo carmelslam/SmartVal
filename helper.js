@@ -1591,8 +1591,19 @@ function processCarDetailsData(data, sourceModule) {
   if (data.fuel_type) helper.vehicle.fuel_type = data.fuel_type;
   if (data.ownership_type) helper.vehicle.ownership_type = data.ownership_type;
   
-  // Owner information
-  if (data.owner) helper.stakeholders.owner.name = data.owner;
+  // Owner information - store in multiple formats for compatibility
+  if (data.owner) {
+    helper.stakeholders.owner.name = data.owner;
+    helper.stakeholders.owner_name = data.owner; // Floating screen compatibility
+  }
+  if (data.ownerPhone) {
+    helper.stakeholders.owner.phone = data.ownerPhone;
+    helper.stakeholders.owner_phone = data.ownerPhone; // Floating screen compatibility  
+  }
+  if (data.ownerAddress) {
+    helper.stakeholders.owner.address = data.ownerAddress;
+    helper.stakeholders.owner_address = data.ownerAddress; // Floating screen compatibility
+  }
   
   // Preserve legacy structure for backward compatibility
   mergeDeep(helper.car_details, data);
@@ -2199,6 +2210,48 @@ function broadcastManualOverride(fieldKey, value, source) {
 }
 
 /**
+ * Basic helper field update function
+ * Updates a specific field in the helper object structure
+ */
+export function updateHelperField(fieldKey, value, source = 'unknown') {
+  try {
+    console.log(`🔧 updateHelperField: Updating ${fieldKey} = ${value} (source: ${source})`);
+    
+    // Get the section where this field belongs
+    const section = getFieldSection(fieldKey);
+    
+    if (!section) {
+      console.warn(`⚠️ updateHelperField: No section mapping found for field ${fieldKey}`);
+      return false;
+    }
+    
+    // Ensure the section exists in helper
+    if (!helper[section]) {
+      helper[section] = {};
+    }
+    
+    // Update the field in the appropriate section
+    helper[section][fieldKey] = value;
+    
+    // Also update in car_details for backward compatibility if it's a vehicle field
+    if (['plate', 'manufacturer', 'model', 'year', 'km', 'chassis'].includes(fieldKey)) {
+      if (!helper.car_details) helper.car_details = {};
+      helper.car_details[fieldKey] = value;
+    }
+    
+    // Save to storage
+    saveHelperToStorage();
+    
+    console.log(`✅ updateHelperField: Successfully updated ${fieldKey} in ${section}`);
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ updateHelperField: Error updating ${fieldKey}:`, error);
+    return false;
+  }
+}
+
+/**
  * Smart update helper field - respects manual overrides
  * Only updates field if it hasn't been manually modified
  */
@@ -2220,10 +2273,25 @@ export function updateHelperFieldSafe(fieldKey, value, source = 'automatic') {
  */
 function getFieldSection(fieldKey) {
   const sectionMap = {
+    // Meta fields
     plate: 'meta',
+    damageDate: 'meta',
+    location: 'meta',
+    
+    // Vehicle fields
     manufacturer: 'vehicle',
     model: 'vehicle',
     year: 'vehicle',
+    odo: 'vehicle',
+    km: 'vehicle',
+    chassis: 'vehicle',
+    model_code: 'vehicle',
+    fuel_type: 'vehicle',
+    engine_volume: 'vehicle',
+    ownership_type: 'vehicle',
+    market_value: 'vehicle',
+    
+    // Stakeholder fields
     owner: 'stakeholders',
     ownerPhone: 'stakeholders',
     ownerAddress: 'stakeholders',
@@ -2231,13 +2299,14 @@ function getFieldSection(fieldKey) {
     garagePhone: 'stakeholders',
     garageEmail: 'stakeholders',
     agentName: 'stakeholders',
+    insurance_agent_phone: 'stakeholders',
     insuranceCompany: 'stakeholders',
-    damageDate: 'meta',
-    odo: 'vehicle',
-    km: 'vehicle'
+    
+    // Car details (legacy compatibility)
+    damageType: 'car_details'
   };
   
-  return sectionMap[fieldKey] || 'general';
+  return sectionMap[fieldKey] || 'car_details';
 }
 
 // Initialize manual overrides when helper loads

@@ -409,3 +409,251 @@ Summary
 The error "Levi processing error: Error: שגיאה בעיבוד דו"ח לוי יצחק" means that a specific report processing function failed. The fix involves inspecting the input file and debugging the code that handles its processing.
 
 
+**genral info page errors :**
+onesignal-integration.js:1164 📱 OneSignal Integration: System-wide integration loaded
+math.js:210 ✅ math.js loaded with comprehensive calculation engine and VAT: 18%
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:486:26
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:486
+helper.js:2103 ❌ Error marking field as manually modified: ReferenceError: updateHelperField is not defined
+    at Module.markFieldAsManuallyModified (helper.js:2088:5)
+    at general_info.html:503:24
+markFieldAsManuallyModified @ helper.js:2103
+(anonymous) @ general_info.html:503
