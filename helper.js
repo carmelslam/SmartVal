@@ -658,6 +658,15 @@ export function updateHelper(section, data, sourceModule = null) {
 
 export function saveHelperToStorage() {
   try {
+    // HIDDEN DEBUG: Track save operation
+    console.log('🐛 DEBUG saveHelperToStorage:', {
+      timestamp: new Date().toISOString(),
+      helperKeys: Object.keys(helper),
+      vehicleData: helper.vehicle,
+      metaData: helper.meta,
+      stakeholdersData: helper.stakeholders
+    });
+    
     // Create backup before saving
     const currentData = sessionStorage.getItem('helper');
     if (currentData) {
@@ -890,7 +899,65 @@ export function getHelperDataIntegrityReport() {
 export function checkForIncomingData() {
   console.log('🔍 Checking for incoming data from external sources...');
   
+  // HIDDEN DEBUG: Track actual data flow
+  const debugData = {
+    timestamp: new Date().toISOString(),
+    sessionStorageKeys: Object.keys(sessionStorage),
+    helperExists: !!sessionStorage.getItem('helper'),
+    makeCarDataExists: !!sessionStorage.getItem('makeCarData'),
+    carDataExists: !!sessionStorage.getItem('carData')
+  };
+  console.log('🐛 DEBUG checkForIncomingData:', debugData);
+  
   try {
+    // CRITICAL: First check if we have Make.com response data
+    const makeCarData = sessionStorage.getItem('makeCarData');
+    if (makeCarData) {
+      console.log('🎯 Found Make.com car data in sessionStorage!');
+      try {
+        const carData = JSON.parse(makeCarData);
+        console.log('📊 Make.com data:', carData);
+        
+        // HIDDEN DEBUG: Track data processing flow
+        console.log('🐛 DEBUG Processing makeCarData:', {
+          dataKeys: Object.keys(carData),
+          plate: carData.plate,
+          manufacturer: carData.manufacturer,
+          model: carData.model
+        });
+        
+        // Process this data immediately
+        const result = await processIncomingData(carData, 'makeCarData');
+        console.log('🐛 DEBUG processIncomingData result:', result);
+        
+        if (result && result.success) {
+          console.log('✅ Make.com data processed successfully');
+          
+          // Clear the makeCarData after processing to avoid reprocessing
+          sessionStorage.removeItem('makeCarData');
+          
+          // HIDDEN DEBUG: Check helper after processing
+          console.log('🐛 DEBUG Helper after makeCarData processing:', {
+            helperVehicle: helper.vehicle,
+            helperMeta: helper.meta,
+            helperStakeholders: helper.stakeholders
+          });
+          
+          // Force refresh all forms
+          setTimeout(() => {
+            if (typeof window.refreshAllModuleForms === 'function') {
+              console.log('🐛 DEBUG Calling refreshAllModuleForms after makeCarData');
+              window.refreshAllModuleForms();
+            }
+          }, 100);
+          
+          return true;
+        }
+      } catch (error) {
+        console.error('Error processing makeCarData:', error);
+      }
+    }
+    
     // 1. Check URL parameters for car data
     const urlParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -1549,7 +1616,16 @@ export function syncVehicleData(vehicleData) {
 }
 
 
-window.addEventListener('DOMContentLoaded', loadHelperFromStorage);
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 Helper system initializing on DOMContentLoaded...');
+  loadHelperFromStorage();
+  
+  // CRITICAL: Check for incoming data after loading
+  setTimeout(() => {
+    console.log('🔍 Checking for incoming data after DOM load...');
+    checkForIncomingData();
+  }, 100);
+});
 
 // Make updateCalculations globally available for VAT updates
 window.updateCalculations = updateCalculations;
@@ -1880,6 +1956,7 @@ function updateLegacyCarData() {
  */
 export async function processIncomingData(data, webhookId = 'unknown') {
   console.log('🔄 processIncomingData: Processing data from webhook:', webhookId, data);
+  console.log('📊 Current helper BEFORE processing:', JSON.parse(JSON.stringify(helper)));
   
   try {
     const result = {
@@ -1940,6 +2017,7 @@ export async function processIncomingData(data, webhookId = 'unknown') {
     // Update legacy data for backward compatibility
     updateLegacyCarData();
     
+    console.log('📊 Current helper AFTER processing:', JSON.parse(JSON.stringify(helper)));
     console.log('✅ processIncomingData: Successfully processed all data types');
     return result;
     
@@ -2467,6 +2545,18 @@ console.log('🌉 Bridge functions initialized: updateCaseData, receiveCarData')
 export function refreshAllModuleForms(helperData = helper) {
   console.log('🔄 refreshAllModuleForms: Updating all module forms with helper data');
   
+  // HIDDEN DEBUG: Track what data is available for refresh
+  console.log('🐛 DEBUG refreshAllModuleForms:', {
+    timestamp: new Date().toISOString(),
+    helperDataProvided: !!helperData,
+    helperDataKeys: Object.keys(helperData || {}),
+    vehicleData: helperData?.vehicle,
+    metaData: helperData?.meta,
+    stakeholdersData: helperData?.stakeholders,
+    currentHelper: helper,
+    currentPage: window.location.pathname.split('/').pop()
+  });
+  
   try {
     // General Info module fields
     populateGeneralInfoFields(helperData);
@@ -2500,12 +2590,19 @@ export function refreshAllModuleForms(helperData = helper) {
  * Populate General Info form fields
  */
 function populateGeneralInfoFields(helperData) {
-  const fieldMappings = {
-    // Basic fields
-    'plate': helperData.vehicle?.plate_number || helperData.meta?.plate || '',
-    'owner': helperData.stakeholders?.owner?.name || '',
-    'ownerPhone': helperData.stakeholders?.owner?.phone || '',
-    'ownerAddress': helperData.stakeholders?.owner?.address || '',
+  console.log('🔄 populateGeneralInfoFields called with helper data:', helperData);
+  
+  // CRITICAL FIX: Check which page we're on and use appropriate mappings
+  const currentPage = window.location.pathname.split('/').pop();
+  console.log('📄 Current page:', currentPage);
+  
+  // Fields that exist on general_info.html page
+  const generalInfoPageMappings = {
+    // Fields that actually exist on general_info.html
+    'odo': helperData.vehicle?.km || helperData.car_details?.km || '',
+    'damageDate': helperData.case_info?.damage_date || helperData.meta?.damage_date || '',
+    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
+    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',
     
     // Garage information
     'garageName': helperData.stakeholders?.garage?.name || '',
@@ -2519,10 +2616,30 @@ function populateGeneralInfoFields(helperData) {
     'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',
     'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',
     
-    // Case information
+    // Damage type
+    'damageType': helperData.case_info?.damage_type || ''
+  };
+  
+  // Generic mappings for other pages (like floating screens)
+  const genericMappings = {
+    'plate': helperData.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',
+    'owner': helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || helperData.car_details?.owner || '',
+    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
+    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',
+    'garageName': helperData.stakeholders?.garage?.name || '',
+    'garagePhone': helperData.stakeholders?.garage?.phone || '',
+    'garageEmail': helperData.stakeholders?.garage?.email || '',
+    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',
+    'insuranceEmail': helperData.stakeholders?.insurance?.email || '',
+    'agentName': helperData.stakeholders?.insurance?.agent?.name || '',
+    'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',
+    'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',
     'damageType': helperData.case_info?.damage_type || '',
     'damageDate': helperData.case_info?.damage_date || ''
   };
+  
+  // Use appropriate mappings based on current page
+  const fieldMappings = currentPage === 'general_info.html' ? generalInfoPageMappings : genericMappings;
   
   populateFormFields(fieldMappings, 'general_info');
 }
@@ -2531,14 +2648,16 @@ function populateGeneralInfoFields(helperData) {
  * Populate Car Details fields in floating screens and forms
  */
 function populateCarDetailsFields(helperData) {
+  console.log('🔄 populateCarDetailsFields called with helper data:', helperData);
+  
   const fieldMappings = {
-    'plate': helperData.vehicle?.plate_number || helperData.meta?.plate || '',
-    'manufacturer': helperData.vehicle?.manufacturer || '',
-    'model': helperData.vehicle?.model || '',
-    'year': helperData.vehicle?.year || '',
-    'chassis': helperData.vehicle?.chassis || '',
-    'km': helperData.vehicle?.km || '',
-    'owner': helperData.stakeholders?.owner?.name || '',
+    'plate': helperData.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',
+    'manufacturer': helperData.vehicle?.manufacturer || helperData.car_details?.manufacturer || '',
+    'model': helperData.vehicle?.model || helperData.car_details?.model || '',
+    'year': helperData.vehicle?.year || helperData.car_details?.year || '',
+    'chassis': helperData.vehicle?.chassis || helperData.car_details?.chassis || '',
+    'km': helperData.vehicle?.km || helperData.car_details?.km || '',
+    'owner': helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || helperData.car_details?.owner || '',
     'trim': helperData.vehicle?.trim || '',
     'engine_volume': helperData.vehicle?.engine_volume || '',
     'fuel_type': helperData.vehicle?.fuel_type || '',
@@ -2625,12 +2744,36 @@ function populateInvoiceFields(helperData) {
  * Universal field population helper
  */
 function populateFormFields(fieldMappings, moduleType) {
+  console.log(`🔍 populateFormFields called for ${moduleType} with mappings:`, fieldMappings);
+  
+  // HIDDEN DEBUG: Log current page and available fields
+  console.log('🐛 DEBUG populateFormFields:', {
+    currentPage: window.location.pathname.split('/').pop(),
+    moduleType: moduleType,
+    availableElements: Array.from(document.querySelectorAll('input, select, textarea')).map(el => ({
+      id: el.id,
+      type: el.type,
+      value: el.value
+    })),
+    mappingsToApply: Object.keys(fieldMappings).map(key => ({
+      fieldId: key,
+      value: fieldMappings[key]
+    }))
+  });
+  
   let populatedCount = 0;
   let skippedCount = 0;
+  let notFoundCount = 0;
   
   Object.keys(fieldMappings).forEach(fieldId => {
     const value = fieldMappings[fieldId];
     const element = document.getElementById(fieldId);
+    
+    if (!element) {
+      console.log(`⚠️ Element with ID '${fieldId}' not found in DOM`);
+      notFoundCount++;
+      return;
+    }
     
     if (element && value) {
       // ✅ MANUAL OVERRIDE PROTECTION: Check if field has been manually modified

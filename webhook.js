@@ -105,23 +105,31 @@ export async function sendToWebhook(id, payload) {
       // ✅ ENHANCED: Universal data processing and helper integration
       if (data && typeof data === 'object') {
         console.log('📥 Processing webhook response data:', data);
+        console.log('📥 Webhook ID:', id);
         
         try {
           // Use the enhanced processIncomingData function from helper.js
           const processResult = await processIncomingData(data, id);
           
-          if (processResult.success) {
+          if (processResult && processResult.success) {
             console.log('✅ Data successfully processed and integrated into helper');
+            console.log('📊 Updated sections:', processResult.updatedSections);
             
             // Broadcast helper update to all modules and floating screens
             broadcastHelperUpdate(processResult.updatedSections, 'webhook_response');
+            
+            // CRITICAL: Force refresh all module forms
+            if (typeof window.refreshAllModuleForms === 'function') {
+              console.log('🔄 Force refreshing all module forms...');
+              setTimeout(() => window.refreshAllModuleForms(), 100);
+            }
             
             // Show success notification
             if (typeof window.showSystemNotification === 'function') {
               window.showSystemNotification('✅ נתונים התקבלו ועודכנו בהצלחה', 'success');
             }
           } else {
-            console.warn('⚠️ Data processing completed with warnings:', processResult.warnings);
+            console.warn('⚠️ Data processing completed with warnings:', processResult?.warnings || 'Unknown');
           }
           
         } catch (processingError) {

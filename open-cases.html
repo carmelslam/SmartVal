@@ -173,7 +173,15 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שולח בקשה...";
         
-        await sendToWebhook('OPEN_CASE_UI', payload);
+        const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
+        console.log('📥 Webhook response:', webhookResponse);
+        
+        // If webhook returned car data, save it
+        if (webhookResponse && typeof webhookResponse === 'object') {
+          // Store the rich car data from Make.com
+          sessionStorage.setItem('makeCarData', JSON.stringify(webhookResponse));
+          console.log('💾 Stored Make.com response in makeCarData');
+        }
         const encryptedPassword = await encryptPassword(payload.password);
         const encryptedPayload = JSON.stringify({
           ...payload,
@@ -223,5 +231,7 @@
     }
   </script>
   <script src="assistant-floating.js"></script>
+  <script src="test-data-flow.js"></script>
+  <script src="make-webhook-simulator.js"></script>
 </body>
 </html>

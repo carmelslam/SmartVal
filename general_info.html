@@ -185,19 +185,26 @@
     if (plateNumber) document.getElementById("pageTitle").innerText = `רכב מס. ${plateNumber}: פרטים כלליים`;
     
     // ✅ AUTO-POPULATE: Load data from helper into form fields
-    try {
+    setTimeout(() => {
+      console.log('🔍 Attempting to auto-populate general info fields...');
+      
+      // First check if helper data exists
+      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📊 Current helper data:', helperData);
+      
       // Import helper module and populate fields
       import('./helper.js').then(helperModule => {
         if (typeof helperModule.refreshAllModuleForms === 'function') {
+          console.log('🔄 Calling refreshAllModuleForms...');
           helperModule.refreshAllModuleForms();
           console.log('✅ General info fields auto-populated from helper');
+        } else {
+          console.error('❌ refreshAllModuleForms function not found!');
         }
       }).catch(error => {
-        console.warn('Could not auto-populate from helper:', error);
+        console.error('❌ Could not import helper module:', error);
       });
-    } catch (error) {
-      console.warn('Error setting up auto-population:', error);
-    }
+    }, 500); // Small delay to ensure DOM is ready
 
     // Fix: Ensure garage email field is always editable
     const garageEmailField = document.getElementById("garageEmail");
@@ -283,6 +290,7 @@
   <script src="internal-browser.js"></script>
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
+  <script src="test-data-flow.js"></script>
   <script type="module">
     // Import unified helper system for auto-fill
     import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
