@@ -1651,6 +1651,82 @@ try {
 }
 
 // ============================================================================
+// HEBREW TEXT PARSING FUNCTION
+// ============================================================================
+function parseHebrewTextToObject(text) {
+  console.log('🔤 Parsing Hebrew text to object...');
+  
+  const result = {};
+  
+  // Hebrew to English field mapping (same as in processCarDetailsData)
+  const hebrewFieldMap = {
+    'פרטי רכב': 'plate',
+    'מס\' רכב': 'plate',
+    'מספר רכב': 'plate',
+    'שם היצרן': 'manufacturer',
+    'דגם': 'model',
+    'סוג הדגם': 'model_type',
+    'סוג הרכב': 'vehicle_type',
+    'רמת גימור': 'trim',
+    'מספר שילדה': 'chassis',
+    'שנת ייצור': 'year',
+    'שם בעל הרכב': 'owner',
+    'סוג בעלות': 'ownership_type',
+    'נפח מנוע': 'engine_volume',
+    'סוג דלק': 'fuel_type',
+    'מספר דגם הרכב': 'model_code',
+    'דגם מנוע': 'engine_model',
+    'הנעה': 'drive_type',
+    'מוסך': 'garage_name',
+    'קוד משרד התחבורה': 'office_code',
+    'תאריך': 'timestamp',
+    'מיקום': 'location'
+  };
+  
+  // Split by lines and parse each field
+  const lines = text.split('\n');
+  lines.forEach(line => {
+    // Try different separators
+    let parts = line.split(':');
+    if (parts.length < 2) {
+      parts = line.split('：'); // Full-width colon
+    }
+    
+    if (parts.length >= 2) {
+      const hebrewKey = parts[0].trim();
+      const value = parts.slice(1).join(':').trim();
+      
+      // Find English key
+      const englishKey = hebrewFieldMap[hebrewKey];
+      if (englishKey) {
+        result[englishKey] = value;
+        console.log(`  ${hebrewKey} → ${englishKey}: ${value}`);
+      } else if (value) {
+        // Store with Hebrew key if no mapping
+        result[hebrewKey] = value;
+        console.log(`  ${hebrewKey}: ${value} (no mapping)`);
+      }
+    }
+  });
+  
+  // Extract year from production date if needed
+  if (result.year && result.year.includes('/')) {
+    result.year = result.year.split('/').pop();
+  }
+  
+  // Handle special case where first line is "פרטי רכב: [plate]"
+  if (!result.plate && lines[0] && lines[0].includes('פרטי רכב:')) {
+    const firstLineParts = lines[0].split(':');
+    if (firstLineParts.length >= 2) {
+      result.plate = firstLineParts[1].trim();
+    }
+  }
+  
+  console.log('✅ Parsed Hebrew text result:', result);
+  return result;
+}
+
+// ============================================================================
 // DATA PROCESSING FUNCTIONS FOR DIFFERENT MODULE TYPES
 // ============================================================================
 
@@ -1670,16 +1746,57 @@ function processCarDetailsData(data, sourceModule) {
   
   // CRITICAL FIX: Handle Hebrew field names from Make.com
   const hebrewToEnglishMap = {
+    // Plate variations
+    'פרטי רכב': 'plate', // First line with plate
+    'מס\' רכב': 'plate',
+    'מספר רכב': 'plate',
     'מספר_רכב': 'plate',
-    'יצרן': 'manufacturer',
+    
+    // Manufacturer variations
+    'שם היצרן': 'manufacturer',
     'שם_היצרן': 'manufacturer',
+    'יצרן': 'manufacturer',
+    
+    // Model and type
     'דגם': 'model',
-    'שנת_יצור': 'year',
+    'סוג הדגם': 'model_type',
+    'סוג הרכב': 'vehicle_type',
+    'סוג רכב': 'vehicle_type',
+    
+    // Technical details
+    'רמת גימור': 'trim',
+    'מספר שילדה': 'chassis',
+    'מספר שלדה': 'chassis',
     'מספר_שלדה': 'chassis',
-    'קילומטרז': 'km',
+    'שנת ייצור': 'year',
+    'שנת יצור': 'year',
+    'שנת_יצור': 'year',
+    'נפח מנוע': 'engine_volume',
+    'סוג דלק': 'fuel_type',
+    'מספר דגם הרכב': 'model_code',
+    'דגם מנוע': 'engine_model',
+    'הנעה': 'drive_type',
+    'קוד משרד התחבורה': 'office_code',
+    
+    // Owner information
+    'שם בעל הרכב': 'owner',
+    'בעל הרכב': 'owner',
     'בעל_הרכב': 'owner',
+    'סוג בעלות': 'ownership_type',
+    'טלפון בעל': 'ownerPhone',
     'טלפון_בעל': 'ownerPhone',
-    'כתובת_בעל': 'ownerAddress'
+    'כתובת בעל': 'ownerAddress',
+    'כתובת_בעל': 'ownerAddress',
+    
+    // Location and garage
+    'מוסך': 'garage_name',
+    'מיקום': 'location',
+    'מקום בדיקה': 'location',
+    
+    // Other fields
+    'קילומטרז': 'km',
+    'תאריך': 'timestamp',
+    'תאריך רישוי': 'registration_date'
   };
   
   // Translate Hebrew fields to English
@@ -1967,8 +2084,24 @@ export async function processIncomingData(data, webhookId = 'unknown') {
       webhookId: webhookId
     };
     
-    // Detect and process different data types
-    if (isCarData(data)) {
+    // CRITICAL: Check if data contains Hebrew text in Body field
+    if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('מס\' רכב')) {
+      console.log('📥 Detected Hebrew car data in Body field');
+      const parsedData = parseHebrewTextToObject(data.Body);
+      processCarDetailsData(parsedData, `webhook_${webhookId}`);
+      result.updatedSections.push('vehicle', 'meta', 'stakeholders');
+      console.log('✅ Processed Hebrew car data from Body');
+    }
+    // Check for array format with Body field
+    else if (Array.isArray(data) && data[0] && data[0].Body && typeof data[0].Body === 'string') {
+      console.log('📥 Detected array format with Body field');
+      const parsedData = parseHebrewTextToObject(data[0].Body);
+      processCarDetailsData(parsedData, `webhook_${webhookId}`);
+      result.updatedSections.push('vehicle', 'meta', 'stakeholders');
+      console.log('✅ Processed Hebrew car data from array Body');
+    }
+    // Standard car data detection
+    else if (isCarData(data)) {
       processCarDetailsData(data, `webhook_${webhookId}`);
       result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       console.log('✅ Processed car data');
@@ -2949,3 +3082,9 @@ export function monitorHelperPerformance() {
 // Make system monitoring functions globally available
 window.runSystemHealthCheck = runSystemHealthCheck;
 window.monitorHelperPerformance = monitorHelperPerformance;
+
+// Make Hebrew parsing functions globally available for system-wide use
+window.parseHebrewTextToObject = parseHebrewTextToObject;
+window.processIncomingData = processIncomingData;
+
+console.log('✅ Helper.js loaded with Hebrew parsing support');

@@ -4,10 +4,13 @@
   
   // Hebrew to English field mapping
   const hebrewFieldMap = {
+    'פרטי רכב': 'plate', // First line with plate
     'מס\' רכב': 'plate',
     'מספר רכב': 'plate',
+    'שם היצרן': 'manufacturer',
     'שם רכב': 'manufacturer',
     'דגם': 'model',
+    'סוג הדגם': 'model_type',
     'סוג הרכב': 'vehicle_type',
     'סוג רכב': 'vehicle_type',
     'רמת גימור': 'trim',
@@ -15,12 +18,17 @@
     'מספר שלדה': 'chassis',
     'שנת ייצור': 'year',
     'שנת יצור': 'year',
+    'שם בעל הרכב': 'owner',
+    'סוג בעלות': 'ownership_type',
     'נפח מנוע': 'engine_volume',
     'סוג דלק': 'fuel_type',
+    'מספר דגם הרכב': 'model_code',
     'דגם מנוע': 'engine_model',
     'הנעה': 'drive_type',
+    'מוסך': 'garage_name',
     'קוד משרד התחבורה': 'office_code',
     'תאריך רישוי': 'registration_date',
+    'תאריך': 'timestamp',
     'שם בעלים': 'owner',
     'בעל הרכב': 'owner',
     'מיקום': 'location',
