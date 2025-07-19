@@ -73,6 +73,10 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
   sessionStorage.setItem('carDataFromMake', JSON.stringify(richCarData));
   sessionStorage.setItem('vehicleDetails', JSON.stringify(richCarData));
   
+  // CRITICAL FIX: Store as carData for floating button
+  sessionStorage.setItem('carData', JSON.stringify(richCarData));
+  console.log('✅ Stored as carData for floating button compatibility');
+  
   // Update helper if available
   if (typeof window.updateHelper === 'function') {
     window.updateHelper('car_details', richCarData);

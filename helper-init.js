@@ -135,6 +135,14 @@
     // Save to storage
     saveHelper();
     
+    // CRITICAL FIX: Also save as carData for floating button
+    sessionStorage.setItem('carData', JSON.stringify({
+      ...translated,
+      ...window.helper.vehicle,
+      ...window.helper.meta
+    }));
+    console.log('✅ Stored as carData for floating button');
+    
     // Trigger population
     populateCurrentPageFields();
   }
