@@ -221,9 +221,14 @@
         }
       }
       
+      // ✅ FIXED: Get plate and owner from helper system instead of old carData
+      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const plateFromHelper = helperData.meta?.plate || helperData.vehicle?.plate_number || '';
+      const ownerFromHelper = helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || '';
+      
       const data = {
-        plate: carData.plate || '',
-        owner: carData.owner || '',
+        plate: plateFromHelper,
+        owner: ownerFromHelper,
         garageName: document.getElementById("garageName").value.trim(),
         garagePhone: document.getElementById("garagePhone").value.trim(),
         garageEmail: document.getElementById("garageEmail").value.trim(),
@@ -292,56 +297,29 @@
     
     console.log('🚀 General info page loaded - checking for car data and auto-filling...');
     
-    // Check for incoming car data and auto-fill form
+    // ✅ SIMPLIFIED: Use helper system for auto-fill
     function checkAndAutoFillForm() {
       try {
-        let carData = null;
+        console.log('🔄 Auto-filling form from helper system...');
         
-        // Check simple data store first
-        if (window.currentCaseData && (window.currentCaseData.meta?.plate || window.currentCaseData.car_details?.plate)) {
-          carData = {
-            ...window.currentCaseData.car_details,
-            ...window.currentCaseData.meta,
-            owner: window.currentCaseData.stakeholders?.owner_name,
-            manufacturer: window.currentCaseData.vehicle?.manufacturer,
-            model: window.currentCaseData.vehicle?.model,
-            year: window.currentCaseData.vehicle?.year
-          };
-          console.log('🔥 Car data found in simple store:', carData);
-        }
+        // Get data from helper system
+        const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Fallback: Check sessionStorage for car data
-        if (!carData) {
-          const sessionCarData = sessionStorage.getItem('carData');
-          if (sessionCarData) {
-            carData = JSON.parse(sessionCarData);
-            console.log('📋 Car data found in sessionStorage:', carData);
-          }
-        }
-        
-        // Check URL parameters
-        if (!carData) {
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.has('plate')) {
-            carData = {
-              plate: urlParams.get('plate'),
-              manufacturer: urlParams.get('manufacturer'),
-              model: urlParams.get('model'),
-              owner: urlParams.get('owner'),
-              location: urlParams.get('location')
-            };
-            console.log('📋 Car data found in URL:', carData);
-          }
-        }
-        
-        // Auto-fill form if car data is available
-        if (carData) {
-          autoFillFormFields(carData);
-          showCarDataNotification(carData);
+        if (helperData && (helperData.meta?.plate || helperData.vehicle?.plate_number)) {
+          console.log('📋 Helper data found for auto-fill:', helperData);
+          
+          // Auto-fill using helper's populate function (already implemented above)
+          // The helper.refreshAllModuleForms() call in the import section handles this
+          
+          // Show notification about auto-filled data
+          showHelperDataNotification(helperData);
+          
+        } else {
+          console.log('📋 No helper data available for auto-fill');
         }
         
       } catch (error) {
-        console.error('Error checking for car data:', error);
+        console.error('Error checking helper data for auto-fill:', error);
       }
     }
     
