@@ -88,7 +88,7 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
   
   // Trigger data checking across all modules
   if (typeof window.checkForIncomingData === 'function') {
-    window.checkForIncomingData();
+    window.checkForIncomingData().catch(console.error);
   }
   
   // Show notification that rich data was received

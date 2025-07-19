@@ -755,7 +755,7 @@ export function loadHelperFromStorage() {
     console.log('🚀 loadHelperFromStorage: Starting helper initialization...');
     
     // Check for incoming data from external sources FIRST
-    checkForIncomingData();
+    checkForIncomingData().catch(console.error);
     
     // Try sessionStorage first (primary), then localStorage (backup)
     let data = sessionStorage.getItem('helper');
@@ -896,7 +896,7 @@ export function getHelperDataIntegrityReport() {
 }
 
 // Check for incoming data from external sources (Make.com, URL params, etc.)
-export function checkForIncomingData() {
+export async function checkForIncomingData() {
   console.log('🔍 Checking for incoming data from external sources...');
   
   // HIDDEN DEBUG: Track actual data flow
@@ -1623,7 +1623,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // CRITICAL: Check for incoming data after loading
   setTimeout(() => {
     console.log('🔍 Checking for incoming data after DOM load...');
-    checkForIncomingData();
+    checkForIncomingData().catch(console.error);
   }, 100);
 });
 
