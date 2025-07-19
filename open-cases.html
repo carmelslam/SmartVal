@@ -176,15 +176,43 @@
         const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
         console.log('📥 Webhook response:', webhookResponse);
         
-        // If webhook returned car data, save it
-        if (webhookResponse && typeof webhookResponse === 'object') {
-          // Store the rich car data from Make.com
-          sessionStorage.setItem('makeCarData', JSON.stringify(webhookResponse));
-          console.log('💾 Stored Make.com response in makeCarData');
+        // Handle Make.com response format (like in demo)
+        let carData = null;
+        
+        // Check if response is an array (like demo expects)
+        if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
+          console.log('📥 Make.com returned array format');
+          // Extract the actual data from array format
+          const firstItem = webhookResponse[0];
+          if (firstItem && firstItem.value) {
+            // Check if value is a string that needs parsing
+            if (typeof firstItem.value === 'string') {
+              try {
+                carData = JSON.parse(firstItem.value);
+                console.log('✅ Parsed nested JSON from Make.com:', carData);
+              } catch (e) {
+                console.error('Failed to parse nested JSON:', e);
+                carData = firstItem.value;
+              }
+            } else {
+              carData = firstItem.value;
+            }
+          }
+        } else if (webhookResponse && typeof webhookResponse === 'object') {
+          // Direct object response
+          carData = webhookResponse;
+        }
+        
+        // Store the extracted car data
+        if (carData) {
+          sessionStorage.setItem('makeCarData', JSON.stringify(carData));
+          sessionStorage.setItem('carData', JSON.stringify(carData));
+          console.log('💾 Stored car data from Make.com:', carData);
           
-          // CRITICAL FIX: Also store as carData for floating button
-          sessionStorage.setItem('carData', JSON.stringify(webhookResponse));
-          console.log('💾 Stored Make.com response as carData for floating button');
+          // Force helper update with the data
+          if (typeof window.processIncomingData === 'function') {
+            window.processIncomingData(carData, 'OPEN_CASE_UI');
+          }
         }
         const encryptedPassword = await encryptPassword(payload.password);
         const encryptedPayload = JSON.stringify({

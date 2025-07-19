@@ -102,14 +102,41 @@ export async function sendToWebhook(id, payload) {
       data = JSON.parse(responseText);
       console.log(`📥 Parsed JSON data:`, data);
       
+      // Handle Make.com array format (like in demo)
+      let actualData = data;
+      
+      // Check if response is an array format
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('📥 Detected Make.com array response format');
+        const firstItem = data[0];
+        if (firstItem && firstItem.value) {
+          // Check if value is a string that needs parsing
+          if (typeof firstItem.value === 'string') {
+            try {
+              actualData = JSON.parse(firstItem.value);
+              console.log('✅ Extracted nested data from Make.com array:', actualData);
+            } catch (e) {
+              console.error('Failed to parse nested value:', e);
+              actualData = firstItem.value;
+            }
+          } else {
+            actualData = firstItem.value;
+          }
+        }
+      }
+      
       // ✅ ENHANCED: Universal data processing and helper integration
-      if (data && typeof data === 'object') {
-        console.log('📥 Processing webhook response data:', data);
+      if (actualData && typeof actualData === 'object') {
+        console.log('📥 Processing webhook response data:', actualData);
         console.log('📥 Webhook ID:', id);
+        
+        // Store in multiple locations for compatibility
+        sessionStorage.setItem('makeCarData', JSON.stringify(actualData));
+        sessionStorage.setItem('carData', JSON.stringify(actualData));
         
         try {
           // Use the enhanced processIncomingData function from helper.js
-          const processResult = await processIncomingData(data, id);
+          const processResult = await processIncomingData(actualData, id);
           
           if (processResult && processResult.success) {
             console.log('✅ Data successfully processed and integrated into helper');
@@ -139,7 +166,7 @@ export async function sendToWebhook(id, payload) {
           const timestamp = new Date().toISOString();
           sessionStorage.setItem(`webhook_fallback_${timestamp}`, JSON.stringify({
             webhook_id: id,
-            data: data,
+            data: actualData,
             timestamp: timestamp,
             error: processingError.message
           }));
