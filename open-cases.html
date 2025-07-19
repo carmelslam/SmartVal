@@ -64,14 +64,15 @@
       font-size: 12px;
       color: #999;
     }
-    .error {
-      color: red;
+    .feedback {
       text-align: center;
       font-size: 14px;
       margin-bottom: 10px;
     }
-    .success {
-      color: green;
+    .feedback.success { color: green; }
+    .feedback.error { color: red; }
+    .error {
+      color: red;
       text-align: center;
       font-size: 14px;
       margin-bottom: 10px;
@@ -86,7 +87,7 @@
     <div class="title">ירון כיוף - פתיחת תיק חדש</div>
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
     <div id="err" class="error"></div>
-    <div id="feedback" class="success" style="display:none;"></div>
+    <div id="feedback" class="feedback success" style="display:none;"></div>
 
     <input id="plate" type="text" placeholder="מספר רכב" />
     <input id="owner" type="text" placeholder="שם בעל הרכב" />
@@ -165,9 +166,11 @@
         password
       };
 
+      const feedbackEl = document.getElementById("feedback");
       try {
         document.getElementById("err").innerText = "";
-        document.getElementById("feedback").style.display = "none";
+        feedbackEl.className = "feedback success";
+        feedbackEl.style.display = "none";
         
         // Show loading state
         document.getElementById("submitBtn").disabled = true;
@@ -188,14 +191,16 @@
           console.error('❌ Error processing car data through helper:', error);
         }
         
-        document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";
-        document.getElementById("feedback").style.display = "block";
+        feedbackEl.innerText = "הבקשה נשלחה בהצלחה";
+        feedbackEl.className = "feedback success";
+        feedbackEl.style.display = "block";
         // Show success message and continue button
         showSuccessAndContinue();
 
       } catch (err) {
         document.getElementById("err").innerText = "שגיאה בשליחה: " + err.message;
-        document.getElementById("feedback").style.display = "none";
+        feedbackEl.className = "feedback error";
+        feedbackEl.style.display = "none";
         
         // Reset button state on error
         document.getElementById("submitBtn").disabled = false;
