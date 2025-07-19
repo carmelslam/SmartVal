@@ -11,6 +11,7 @@ import {
   UNIFIED_SCHEMAS,
   DataFlowStandardizer
 } from './data-flow-standardizer.js';
+import SystemTracker from './system-tracker.js';
 
 
 const CAR_DETAILS_TEMPLATE = {
@@ -550,9 +551,12 @@ let isUpdatingHelper = false;
 
 export function updateHelper(section, data, sourceModule = null) {
   try {
+    SystemTracker.log('updateHelper_called', { section, sourceModule, dataKeys: Object.keys(data) });
+    
     // Prevent recursion
     if (isUpdatingHelper) {
       console.warn('🔄 updateHelper: Recursion detected, skipping update to prevent infinite loop');
+      SystemTracker.log('updateHelper_recursion_blocked');
       return false;
     }
     
@@ -2322,6 +2326,7 @@ loadManualOverrides();
  */
 window.updateCaseData = function(section, data, sourceModule = 'legacy') {
   console.log(`🌉 BRIDGE: updateCaseData(${section}) called from ${sourceModule}`, data);
+  SystemTracker.log('bridge_updateCaseData_executed', { section, sourceModule, dataKeys: Object.keys(data) });
   
   try {
     // Route to appropriate helper update function
@@ -2331,6 +2336,7 @@ window.updateCaseData = function(section, data, sourceModule = 'legacy') {
       case 'meta':
       case 'car_details':
         const result = updateHelper(section, data, sourceModule);
+        SystemTracker.log('bridge_updateHelper_result', { section, result, helperPlate: helper.meta?.plate });
         if (result) {
           console.log(`✅ BRIDGE: Successfully routed ${section} data to helper`);
           // Trigger module refresh after update
