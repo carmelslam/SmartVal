@@ -675,8 +675,25 @@ export function saveHelperToStorage() {
     
     // Save to both sessionStorage (primary) and localStorage (backup)
     const dataString = JSON.stringify(sanitizedHelper);
+    
+    console.log('💾 saveHelperToStorage: About to save helper data');
+    console.log('💾 Data size:', dataString.length, 'characters');
+    console.log('💾 Helper meta.plate:', sanitizedHelper.meta?.plate);
+    console.log('💾 Helper vehicle.manufacturer:', sanitizedHelper.vehicle?.manufacturer);
+    
     sessionStorage.setItem('helper', dataString);
     localStorage.setItem('helper_data', dataString);
+    
+    // VERIFICATION: Immediately read back to confirm it was saved
+    const verification = sessionStorage.getItem('helper');
+    if (verification) {
+      const parsed = JSON.parse(verification);
+      console.log('✅ VERIFICATION: Data saved successfully to sessionStorage');
+      console.log('✅ VERIFICATION: Saved plate:', parsed.meta?.plate);
+      console.log('✅ VERIFICATION: Saved manufacturer:', parsed.vehicle?.manufacturer);
+    } else {
+      console.error('❌ VERIFICATION FAILED: Data not found in sessionStorage after save!');
+    }
     
     // Security audit
     securityManager.logSecurityEvent('data_saved', {
@@ -891,9 +908,27 @@ export function checkForIncomingData() {
       if (Object.keys(foundCarData).length > 0) {
         console.log('🚗 Car data detected in URL:', foundCarData);
         
+        // CRITICAL DEBUG: Check helper before URL data update
+        console.log('🔧 URL PROCESSING: Helper before update:', {
+          metaPlate: helper.meta?.plate,
+          vehicleManufacturer: helper.vehicle?.manufacturer
+        });
+        
         // Update helper with URL data
-        updateHelper('car_details', foundCarData);
-        updateHelper('vehicle', foundCarData);
+        const carUpdateResult = updateHelper('car_details', foundCarData);
+        const vehicleUpdateResult = updateHelper('vehicle', foundCarData);
+        
+        console.log('🔧 URL PROCESSING: updateHelper results:', {
+          carDetails: carUpdateResult,
+          vehicle: vehicleUpdateResult
+        });
+        
+        // Check helper after update
+        console.log('🔧 URL PROCESSING: Helper after update:', {
+          metaPlate: helper.meta?.plate,
+          vehicleManufacturer: helper.vehicle?.manufacturer,
+          carDetailsPlate: helper.car_details?.plate
+        });
         
         if (foundCarData.plate) {
           updateHelper('meta', { plate: foundCarData.plate });

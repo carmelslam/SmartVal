@@ -236,7 +236,7 @@ Summary
 The error occurs because document.getElementById() returned null. The fix is to check if the element was found before trying to access its properties.
 
 
-*car-details-floating.js:334 Error loading car data: ReferenceError: client is not defined
+**car-details-floating.js:334 Error loading car data: ReferenceError: client is not defined**
     at updateCarDisplay (car-details-floating.js:371:69)
     at loadCarData (car-details-floating.js:331:7)
     at window.toggleCarDetails (car-details-floating.js:224:7)
@@ -340,5 +340,72 @@ Use code snippets with caution
 
 Summary
 The error Uncaught ReferenceError: client is not defined occurred because the variable client was used without being declared or assigned a value. The fix is to access the client property from the helper object, which is likely where the client data is intended to be stored.
+
+
+**Levi report upload console errors :**
+security-manager.js:121 
+ POST https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9 400 (Bad Request)
+window.fetch	@	security-manager.js:121
+window.fetch	@	error-handler.js:75
+window.fetch	@	data-reception-debugger.js:301
+processFileUpload	@	upload-levi.html:1394
+processLevi	@	upload-levi.html:1366
+(anonymous)	@	upload-levi.html:1007
+
+Understanding the problem
+The console message POST https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9 400 (Bad Request) indicates that a POST request was made to the specified URL, but the server responded with a 400 status code, which signifies a "Bad Request." This means the server could not process the request due to something being wrong with the request itself. This could be due to incorrect data format, missing required parameters, or invalid data.
+
+The provided code return originalFetch(url, options); is part of a fetch wrapper function. This wrapper is likely adding some functionality (like logging or error handling) around the native fetch API. The error originates from the underlying fetch call being made to the Make.com hook URL.
+
+Looking at the network request details, the Content-Type is multipart/form-data. This is commonly used for sending files or complex data structures. The 400 error from the Make.com endpoint suggests that the data being sent in the multipart/form-data body does not match the expected format or requirements of the Make.com webhook.
+
+How to verify
+Inspect the Request Payload: In DevTools, go to the "Network" tab, find the failed POST request to hook.eu2.make.com/..., and click on it. Go to the "Payload" tab to examine the exact data being sent in the request body.
+Compare with Make.com Hook Expectations: Check the documentation or configuration of your Make.com webhook. Verify that the data being sent in the request payload (from step 1) matches the structure and expected data types that your Make.com scenario is configured to receive. Pay close attention to field names and whether they are expecting specific data types (e.g., string, number, file).
+Suggested fix
+The most likely cause is that the data being sent in the multipart/form-data request doesn't match what the Make.com hook is expecting. You need to ensure the data structure and types in your FormData object align with the Make.com webhook's requirements.
+
+Here's a general approach to fix this:
+
+Review Your FormData Creation: Examine the code where you are creating the FormData object that is used as the body for your fetch request.
+Match Make.com Expectations: Add keys and values to the FormData object exactly as your Make.com webhook is configured to receive them. If you are sending a file, ensure you are appending the file correctly to the FormData.
+Example (assuming you're sending a file and some other data):
+
+js
+
+const formData = new FormData();
+formData.append('myFileName', file); // 'file' should be the File object
+formData.append('anotherField', 'someValue'); // Add other necessary data
+
+// Now use formData as the body in your fetch request options
+fetch('https://hook.eu2.make.com/xtvmwp6m3nxqge422clhs8v2hc74jid9', {
+  method: 'POST',
+  body: formData // Use the formData object
+  // Headers like Content-Type will be automatically set by fetch for FormData
+});
+Use code snippets with caution
+
+Important: The key names ('myFileName', 'anotherField' in the example above) must exactly match what your Make.com webhook is configured to expect.
+
+Summary
+The 400 Bad Request error when POSTing to a Make.com webhook with multipart/form-data indicates that the data structure or content in the request body does not meet the webhook's requirements. The fix involves ensuring the FormData object created in your JavaScript code matches the expected inputs of your Make.com scenario.
+
+error 2 :
+upload-levi.html:1374 Levi processing error: Error: שגיאה בעיבוד דו"ח לוי יצחק
+    at LeviProcessor.processFileUpload (upload-levi.html:1403:13)
+    at async LeviProcessor.processLevi (upload-levi.html:1366:18)
+processLevi	@	upload-levi.html:1374
+await in processLevi		
+(anonymous)	@	upload-levi.html:1007
+Understanding the problem
+The console message "Levi processing error: Error: שגיאה בעיבוד דו"ח לוי יצחק" indicates that an error occurred during the processing of a report named "Levi Yitzchak" (translated from Hebrew: "דו"ח לוי יצחק"). This error happened within the LeviProcessor.processFileUpload function, which was called by the LeviProcessor.processLevi function. The traceback shows the error originated from line 1403 of upload-levi.html.
+
+Suggested fix
+This error is application-specific and likely related to the content or format of the report being processed. To fix this, you'll need to:
+
+Examine the report file: Check the "Levi Yitzchak" report file that was being processed. Look for any unusual characters, incorrect data formats, or missing information that might be causing the processing error.
+Debug the LeviProcessor.processFileUpload function: Set a breakpoint in DevTools at line 1403 of upload-levi.html. Step through the code to understand what data is being processed and why the error is being thrown. The error message itself ("שגיאה בעיבוד דו"ח לוי יצחק") suggests a general processing failure, so you'll need to inspect the variables and execution flow within the function to pinpoint the exact issue.
+Summary
+The error "Levi processing error: Error: שגיאה בעיבוד דו"ח לוי יצחק" means that a specific report processing function failed. The fix involves inspecting the input file and debugging the code that handles its processing.
 
 

@@ -284,17 +284,26 @@
     try {
       console.log('🔄 loadCarData: Starting to load car data...');
       
+      // CRITICAL DEBUG: Check all data sources
+      console.log('🔧 FLOATING DEBUG: Checking data sources...');
+      console.log('🔧 window.currentCaseData:', window.currentCaseData);
+      console.log('🔧 sessionStorage currentCaseData:', sessionStorage.getItem('currentCaseData'));
+      console.log('🔧 sessionStorage helper:', sessionStorage.getItem('helper'));
+      console.log('🔧 sessionStorage carData:', sessionStorage.getItem('carData'));
+      
       // Try simple data store first
       let data = {};
       if (window.currentCaseData) {
         data = window.currentCaseData;
-        console.log('🔥 Using simple data store:', data);
+        console.log('🔥 Using window.currentCaseData:', data);
       } else {
         // Fallback to sessionStorage
         const storedData = sessionStorage.getItem('currentCaseData') || sessionStorage.getItem('helper');
         if (storedData) {
           data = JSON.parse(storedData);
-          console.log('🔍 Using stored data:', data);
+          console.log('🔍 Using stored data from sessionStorage:', data);
+        } else {
+          console.log('🚫 No data found in primary sources');
         }
       }
       

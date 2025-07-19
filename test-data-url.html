@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 Test Data URL - Helper Debug</title>
+  <style>
+    body { font-family: Arial; padding: 20px; direction: rtl; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+    .console-output { background: #000; color: #0f0; font-family: monospace; padding: 10px; margin: 10px 0; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+    button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+    .success { background: #d4edda; border-color: #c3e6cb; }
+    .error { background: #f8d7da; border-color: #f5c6cb; }
+    .info { background: #d1ecf1; border-color: #bee5eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test Data URL - Helper Debug System</h1>
+    
+    <div class="section info">
+      <h3>📋 Test Instructions</h3>
+      <p>This page will test URL parameter capture and helper data flow with comprehensive debugging.</p>
+      <p><strong>Current URL:</strong> <span id="current-url"></span></p>
+    </div>
+    
+    <div class="section">
+      <h3>1. Set Test URL Parameters</h3>
+      <button onclick="setTestURL()">🔗 Set Test URL with Car Data</button>
+      <button onclick="clearURL()">🧹 Clear URL Parameters</button>
+    </div>
+    
+    <div class="section">
+      <h3>2. Initialize Helper System</h3>
+      <button onclick="initHelper()">🚀 Initialize Helper & Check URL</button>
+    </div>
+    
+    <div class="section">
+      <h3>3. Test Floating Screen</h3>
+      <button onclick="showCarDetails()">🚗 Show Car Details Floating Screen</button>
+    </div>
+    
+    <div class="section">
+      <h3>4. Debug Information</h3>
+      <button onclick="showDebugInfo()">🔍 Show All Debug Info</button>
+      <button onclick="clearConsole()">🧹 Clear Console</button>
+    </div>
+    
+    <div class="section">
+      <h3>📊 Console Output</h3>
+      <div id="console-output" class="console-output">Console output will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    // Console capture
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    function appendToConsole(message, type = 'log') {
+      const output = document.getElementById('console-output');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#ff4444' : type === 'warn' ? '#ffaa00' : '#00ff00';
+      output.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+      output.scrollTop = output.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      appendToConsole(args.join(' '), 'log');
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      appendToConsole('ERROR: ' + args.join(' '), 'error');
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      appendToConsole('WARN: ' + args.join(' '), 'warn');
+    };
+    
+    // Update current URL display
+    function updateURLDisplay() {
+      document.getElementById('current-url').textContent = window.location.href;
+    }
+    
+    window.setTestURL = function() {
+      const testURL = new URL(window.location);
+      testURL.searchParams.set('plate', '123-45-678');
+      testURL.searchParams.set('manufacturer', 'טויוטה');
+      testURL.searchParams.set('model', 'קורולה');
+      testURL.searchParams.set('year', '2021');
+      testURL.searchParams.set('owner', 'בדיקה תקינות');
+      testURL.searchParams.set('location', 'תל אביב');
+      
+      window.history.pushState(null, '', testURL);
+      updateURLDisplay();
+      console.log('✅ Test URL parameters set:', Object.fromEntries(testURL.searchParams));
+    };
+    
+    window.clearURL = function() {
+      const cleanURL = new URL(window.location);
+      cleanURL.search = '';
+      window.history.pushState(null, '', cleanURL);
+      updateURLDisplay();
+      console.log('🧹 URL parameters cleared');
+    };
+    
+    window.initHelper = async function() {
+      try {
+        console.log('🚀 Starting helper initialization test...');
+        
+        const helperModule = await import('./helper.js');
+        console.log('✅ Helper module imported successfully');
+        
+        // Make helper globally available
+        window.helper = helperModule.helper;
+        window.updateHelper = helperModule.updateHelper;
+        window.checkForIncomingData = helperModule.checkForIncomingData;
+        
+        console.log('📋 Current helper state before URL check:', {
+          meta: window.helper.meta,
+          vehicle: window.helper.vehicle,
+          car_details: window.helper.car_details
+        });
+        
+        // Call checkForIncomingData to process URL parameters
+        console.log('🔍 Calling checkForIncomingData...');
+        helperModule.checkForIncomingData();
+        
+        // Wait a bit for processing
+        setTimeout(() => {
+          console.log('📋 Helper state after URL processing:', {
+            meta: window.helper.meta,
+            vehicle: window.helper.vehicle,
+            car_details: window.helper.car_details
+          });
+          
+          // Check sessionStorage
+          const sessionHelper = sessionStorage.getItem('helper');
+          if (sessionHelper) {
+            const parsed = JSON.parse(sessionHelper);
+            console.log('💾 SessionStorage helper after processing:', {
+              meta: parsed.meta,
+              vehicle: parsed.vehicle,
+              car_details: parsed.car_details
+            });
+          } else {
+            console.error('❌ No helper data found in sessionStorage!');
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Helper initialization failed:', error);
+      }
+    };
+    
+    window.showCarDetails = function() {
+      try {
+        console.log('🚗 Testing car details floating screen...');
+        
+        if (typeof window.toggleCarDetails === 'function') {
+          window.toggleCarDetails();
+          console.log('✅ Car details floating screen triggered');
+        } else {
+          console.error('❌ toggleCarDetails function not found');
+          
+          // Try to load the floating screen script
+          const script = document.createElement('script');
+          script.src = './car-details-floating.js';
+          document.head.appendChild(script);
+          console.log('📦 Attempting to load car-details-floating.js...');
+          
+          script.onload = () => {
+            console.log('✅ car-details-floating.js loaded');
+            if (typeof window.toggleCarDetails === 'function') {
+              window.toggleCarDetails();
+            }
+          };
+        }
+        
+      } catch (error) {
+        console.error('❌ Error showing car details:', error);
+      }
+    };
+    
+    window.showDebugInfo = function() {
+      console.log('🔍 === COMPREHENSIVE DEBUG INFO ===');
+      
+      // URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      console.log('🔗 Current URL parameters:', Object.fromEntries(urlParams));
+      
+      // Window objects
+      console.log('🪟 Window objects:', {
+        helper: !!window.helper,
+        updateHelper: typeof window.updateHelper,
+        currentCaseData: !!window.currentCaseData,
+        toggleCarDetails: typeof window.toggleCarDetails
+      });
+      
+      // SessionStorage
+      console.log('💾 SessionStorage keys:', Object.keys(sessionStorage));
+      const helper = sessionStorage.getItem('helper');
+      if (helper) {
+        try {
+          const parsed = JSON.parse(helper);
+          console.log('💾 SessionStorage helper data:', {
+            size: helper.length,
+            sections: Object.keys(parsed),
+            metaPlate: parsed.meta?.plate,
+            vehicleManufacturer: parsed.vehicle?.manufacturer
+          });
+        } catch (e) {
+          console.error('❌ Failed to parse sessionStorage helper:', e);
+        }
+      } else {
+        console.warn('⚠️ No helper data in sessionStorage');
+      }
+      
+      // Helper object state (if available)
+      if (window.helper) {
+        console.log('🧠 Current helper object:', {
+          meta: window.helper.meta,
+          vehicle: window.helper.vehicle,
+          hasCarDetails: !!window.helper.car_details,
+          hasStakeholders: !!window.helper.stakeholders
+        });
+      }
+    };
+    
+    window.clearConsole = function() {
+      document.getElementById('console-output').innerHTML = 'Console cleared...';
+    };
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      updateURLDisplay();
+      console.log('🧪 Test page loaded and ready');
+    });
+  </script>
+</body>
+</html>
