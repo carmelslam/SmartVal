@@ -1703,3 +1703,792 @@ function updateLegacyCarData() {
     isUpdatingLegacyData = false;
   }
 }
+
+// ============================================================================
+// NEW: ENHANCED WEBHOOK INTEGRATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Universal data processing function for webhook responses
+ * Automatically detects data type and routes to appropriate processors
+ */
+export async function processIncomingData(data, webhookId = 'unknown') {
+  console.log('🔄 processIncomingData: Processing data from webhook:', webhookId, data);
+  
+  try {
+    const result = {
+      success: true,
+      updatedSections: [],
+      warnings: [],
+      timestamp: new Date().toISOString(),
+      webhookId: webhookId
+    };
+    
+    // Detect and process different data types
+    if (isCarData(data)) {
+      processCarDetailsData(data, `webhook_${webhookId}`);
+      result.updatedSections.push('vehicle', 'meta', 'stakeholders');
+      console.log('✅ Processed car data');
+    }
+    
+    if (isStakeholderData(data)) {
+      const stakeholderType = detectStakeholderType(data);
+      processStakeholderData(stakeholderType, data, `webhook_${webhookId}`);
+      result.updatedSections.push('stakeholders');
+      console.log('✅ Processed stakeholder data:', stakeholderType);
+    }
+    
+    if (isLeviData(data)) {
+      processValuationData('levi_report', data, `webhook_${webhookId}`);
+      result.updatedSections.push('valuation', 'levisummary');
+      console.log('✅ Processed Levi valuation data');
+    }
+    
+    if (isPartsData(data)) {
+      processPartsData('parts_search', data, `webhook_${webhookId}`);
+      result.updatedSections.push('parts_search');
+      console.log('✅ Processed parts search data');
+    }
+    
+    if (isInvoiceData(data)) {
+      processInvoiceData(data, `webhook_${webhookId}`);
+      result.updatedSections.push('documents', 'financials');
+      console.log('✅ Processed invoice data');
+    }
+    
+    if (isDamageData(data)) {
+      processDamageData('damage_centers', data, `webhook_${webhookId}`);
+      result.updatedSections.push('damage_assessment', 'expertise');
+      console.log('✅ Processed damage assessment data');
+    }
+    
+    if (isDocumentData(data)) {
+      processDocumentData('images', data, `webhook_${webhookId}`);
+      result.updatedSections.push('documents');
+      console.log('✅ Processed document data');
+    }
+    
+    // Save updated helper to storage
+    saveHelperToStorage();
+    
+    // Update legacy data for backward compatibility
+    updateLegacyCarData();
+    
+    console.log('✅ processIncomingData: Successfully processed all data types');
+    return result;
+    
+  } catch (error) {
+    console.error('❌ processIncomingData: Error processing data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Broadcasting system to notify all modules and floating screens of helper updates
+ */
+export function broadcastHelperUpdate(updatedSections = [], source = 'unknown') {
+  console.log('📡 Broadcasting helper update:', { updatedSections, source });
+  
+  try {
+    // Create custom event with helper data
+    const updateEvent = new CustomEvent('helperUpdate', {
+      detail: {
+        helper: helper,
+        updatedSections: updatedSections,
+        source: source,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    // Dispatch to document
+    document.dispatchEvent(updateEvent);
+    
+    // Update all module forms if functions exist
+    if (typeof window.refreshAllModuleForms === 'function') {
+      window.refreshAllModuleForms(helper);
+    }
+    
+    // Trigger floating screen updates
+    triggerFloatingScreenUpdates(updatedSections);
+    
+    // Update builders if they exist
+    updateBuildersFromHelper(updatedSections);
+    
+    console.log('✅ Helper update broadcasted successfully');
+    
+  } catch (error) {
+    console.error('❌ Error broadcasting helper update:', error);
+  }
+}
+
+/**
+ * Trigger floating screen displays based on data type
+ */
+function triggerFloatingScreenUpdates(updatedSections) {
+  console.log('📱 Triggering floating screen updates for sections:', updatedSections);
+  
+  // Car details floating screen
+  if (updatedSections.includes('vehicle') || updatedSections.includes('meta')) {
+    console.log('🚗 Auto-showing car details floating screen');
+    
+    // First refresh the data, then show the screen
+    if (typeof window.refreshCarData === 'function') {
+      window.refreshCarData();
+    }
+    
+    if (typeof window.showCarDetails === 'function') {
+      setTimeout(() => window.showCarDetails(), 100);
+    } else if (typeof window.toggleCarDetails === 'function') {
+      setTimeout(() => window.toggleCarDetails(), 100);
+    }
+  }
+  
+  // Levi floating screen
+  if (updatedSections.includes('valuation') || updatedSections.includes('levisummary')) {
+    console.log('📊 Auto-showing Levi report floating screen');
+    
+    // First refresh the data, then show the screen
+    if (typeof window.refreshLeviData === 'function') {
+      window.refreshLeviData();
+    }
+    
+    if (typeof window.toggleLeviReport === 'function') {
+      setTimeout(() => window.toggleLeviReport(), 100);
+    }
+  }
+  
+  // Parts floating screen
+  if (updatedSections.includes('parts_search')) {
+    console.log('🔧 Auto-showing parts search floating screen');
+    
+    // First refresh the data, then show the screen
+    if (typeof window.refreshPartsResults === 'function') {
+      window.refreshPartsResults();
+    }
+    
+    if (typeof window.togglePartsSearch === 'function') {
+      setTimeout(() => window.togglePartsSearch(), 100);
+    }
+  }
+  
+  // Invoice floating screen
+  if (updatedSections.includes('documents') || updatedSections.includes('financials')) {
+    console.log('📄 Auto-showing invoice floating screen');
+    
+    // Check if invoice floating screen exists
+    if (typeof window.toggleInvoiceDetails === 'function') {
+      setTimeout(() => window.toggleInvoiceDetails(), 100);
+    }
+  }
+}
+
+/**
+ * Update builders with latest helper data
+ */
+function updateBuildersFromHelper(updatedSections) {
+  console.log('🏗️ Updating builders with helper data for sections:', updatedSections);
+  
+  // Update estimate builder if exists
+  if (typeof window.updateEstimateBuilderFromHelper === 'function') {
+    window.updateEstimateBuilderFromHelper(helper);
+  }
+  
+  // Update expertise builder if exists
+  if (typeof window.updateExpertiseBuilderFromHelper === 'function') {
+    window.updateExpertiseBuilderFromHelper(helper);
+  }
+  
+  // Update damage center wizard if exists
+  if (typeof window.updateDamageCentersFromHelper === 'function') {
+    window.updateDamageCentersFromHelper(helper);
+  }
+}
+
+// ============================================================================
+// DATA TYPE DETECTION FUNCTIONS
+// ============================================================================
+
+function isCarData(data) {
+  return !!(data.plate || data.manufacturer || data.model || data.owner || 
+           data.car_details || data.vehicle_data || 
+           (data.שם_היצרן && data.דגם)); // Hebrew field names from Make.com
+}
+
+function isStakeholderData(data) {
+  return !!(data.garageName || data.garagePhone || data.garageEmail ||
+           data.insuranceCompany || data.agentName || 
+           data.ownerPhone || data.ownerAddress);
+}
+
+function isLeviData(data) {
+  return !!(data.levi_report || data.levi_data || data.base_price || 
+           data.final_price || data.adjustments || data.קוד_דגם ||
+           data.מחיר_בסיס || data.מחיר_סופי_לרכב);
+}
+
+function isPartsData(data) {
+  return !!(data.parts_results || data.search_results || 
+           Array.isArray(data.results) || data.part_name || data.parts);
+}
+
+function isInvoiceData(data) {
+  return !!(data.invoice_number || data.invoice_data || data.מספר_חשבונית ||
+           data.garage_name || data.parts_total || data.works_total);
+}
+
+function isDamageData(data) {
+  return !!(data.damage_centers || data.damage_blocks || data.expertise ||
+           data.centers || Array.isArray(data.damages));
+}
+
+function isDocumentData(data) {
+  return !!(data.images || data.photo_count || data.uploaded_files ||
+           Array.isArray(data.files));
+}
+
+function detectStakeholderType(data) {
+  if (data.garageName || data.garagePhone || data.garageEmail) return 'garage';
+  if (data.insuranceCompany || data.agentName) return 'insurance';
+  if (data.ownerPhone || data.ownerAddress) return 'client';
+  return 'general';
+}
+
+// ============================================================================
+// MANUAL INPUT OVERRIDE SYSTEM
+// ============================================================================
+
+/**
+ * Manual Input Override System
+ * Ensures manual user input always takes precedence over automatic data
+ * Tracks manual modifications and prevents automatic overrides
+ */
+
+// Track which fields have been manually modified
+let manualOverrides = {
+  fields: new Set(), // Set of field keys that have been manually modified
+  timestamps: {}, // Timestamp of when each field was manually modified
+  sources: {} // Source of manual modification (which module/page)
+};
+
+/**
+ * Mark a field as manually modified
+ * This prevents automatic systems from overriding the user's input
+ */
+export function markFieldAsManuallyModified(fieldKey, value, source = 'unknown') {
+  try {
+    console.log(`🔒 Manual override: ${fieldKey} = ${value} (source: ${source})`);
+    
+    // Add to manual overrides tracking
+    manualOverrides.fields.add(fieldKey);
+    manualOverrides.timestamps[fieldKey] = new Date().toISOString();
+    manualOverrides.sources[fieldKey] = source;
+    
+    // Update the helper with manual value
+    updateHelperField(fieldKey, value, 'manual_input');
+    
+    // Save manual overrides to sessionStorage for persistence
+    sessionStorage.setItem('manualOverrides', JSON.stringify({
+      fields: Array.from(manualOverrides.fields),
+      timestamps: manualOverrides.timestamps,
+      sources: manualOverrides.sources
+    }));
+    
+    // Broadcast that this field is now manually controlled
+    broadcastManualOverride(fieldKey, value, source);
+    
+    console.log(`✅ Field ${fieldKey} marked as manually modified`);
+    
+  } catch (error) {
+    console.error('❌ Error marking field as manually modified:', error);
+  }
+}
+
+/**
+ * Check if a field has been manually modified
+ * Returns true if field should not be automatically updated
+ */
+export function isFieldManuallyModified(fieldKey) {
+  return manualOverrides.fields.has(fieldKey);
+}
+
+/**
+ * Get all manually modified fields
+ */
+export function getManuallyModifiedFields() {
+  return {
+    fields: Array.from(manualOverrides.fields),
+    timestamps: manualOverrides.timestamps,
+    sources: manualOverrides.sources
+  };
+}
+
+/**
+ * Clear manual override for a specific field
+ * This allows automatic updates to resume for that field
+ */
+export function clearManualOverride(fieldKey) {
+  console.log(`🔓 Clearing manual override for field: ${fieldKey}`);
+  
+  manualOverrides.fields.delete(fieldKey);
+  delete manualOverrides.timestamps[fieldKey];
+  delete manualOverrides.sources[fieldKey];
+  
+  // Update sessionStorage
+  sessionStorage.setItem('manualOverrides', JSON.stringify({
+    fields: Array.from(manualOverrides.fields),
+    timestamps: manualOverrides.timestamps,
+    sources: manualOverrides.sources
+  }));
+  
+  console.log(`✅ Manual override cleared for ${fieldKey}`);
+}
+
+/**
+ * Reset all manual overrides
+ * This allows all automatic updates to resume
+ */
+export function resetAllManualOverrides() {
+  console.log('🔄 Resetting all manual overrides');
+  
+  manualOverrides = {
+    fields: new Set(),
+    timestamps: {},
+    sources: {}
+  };
+  
+  sessionStorage.removeItem('manualOverrides');
+  console.log('✅ All manual overrides reset');
+}
+
+/**
+ * Load manual overrides from sessionStorage on page load
+ */
+export function loadManualOverrides() {
+  try {
+    const stored = sessionStorage.getItem('manualOverrides');
+    if (stored) {
+      const data = JSON.parse(stored);
+      manualOverrides.fields = new Set(data.fields || []);
+      manualOverrides.timestamps = data.timestamps || {};
+      manualOverrides.sources = data.sources || {};
+      
+      console.log(`📋 Loaded ${manualOverrides.fields.size} manual overrides from storage`);
+    }
+  } catch (error) {
+    console.error('❌ Error loading manual overrides:', error);
+  }
+}
+
+/**
+ * Broadcast manual override to other modules/screens
+ */
+function broadcastManualOverride(fieldKey, value, source) {
+  try {
+    // Broadcast to floating screens
+    if (typeof window.broadcastManualOverride === 'function') {
+      window.broadcastManualOverride(fieldKey, value, source);
+    }
+    
+    // Trigger helper update broadcast
+    broadcastHelperUpdate([getFieldSection(fieldKey)], 'manual_override');
+    
+  } catch (error) {
+    console.error('❌ Error broadcasting manual override:', error);
+  }
+}
+
+/**
+ * Smart update helper field - respects manual overrides
+ * Only updates field if it hasn't been manually modified
+ */
+export function updateHelperFieldSafe(fieldKey, value, source = 'automatic') {
+  // Check if field has been manually modified
+  if (isFieldManuallyModified(fieldKey)) {
+    console.log(`⏭️ Skipping automatic update for ${fieldKey} - manually modified by ${manualOverrides.sources[fieldKey]}`);
+    return false; // Update was blocked
+  }
+  
+  // Field is safe to update automatically
+  updateHelperField(fieldKey, value, source);
+  console.log(`✅ Automatic update applied to ${fieldKey}`);
+  return true; // Update was applied
+}
+
+/**
+ * Get the section name for a field key
+ */
+function getFieldSection(fieldKey) {
+  const sectionMap = {
+    plate: 'meta',
+    manufacturer: 'vehicle',
+    model: 'vehicle',
+    year: 'vehicle',
+    owner: 'stakeholders',
+    ownerPhone: 'stakeholders',
+    ownerAddress: 'stakeholders',
+    garageName: 'stakeholders',
+    garagePhone: 'stakeholders',
+    garageEmail: 'stakeholders',
+    agentName: 'stakeholders',
+    insuranceCompany: 'stakeholders',
+    damageDate: 'meta',
+    odo: 'vehicle',
+    km: 'vehicle'
+  };
+  
+  return sectionMap[fieldKey] || 'general';
+}
+
+// Initialize manual overrides when helper loads
+loadManualOverrides();
+
+// ============================================================================
+// UNIVERSAL MODULE AUTO-POPULATION FRAMEWORK
+// ============================================================================
+
+/**
+ * Universal function to populate all module forms from helper data
+ * Called whenever helper is updated to sync all UI elements
+ */
+export function refreshAllModuleForms(helperData = helper) {
+  console.log('🔄 refreshAllModuleForms: Updating all module forms with helper data');
+  
+  try {
+    // General Info module fields
+    populateGeneralInfoFields(helperData);
+    
+    // Car details fields (floating screens and forms)
+    populateCarDetailsFields(helperData);
+    
+    // Damage center fields
+    populateDamageCenterFields(helperData);
+    
+    // Parts search fields
+    populatePartsFields(helperData);
+    
+    // Fee module fields
+    populateFeeFields(helperData);
+    
+    // Levi report fields
+    populateLeviFields(helperData);
+    
+    // Invoice fields
+    populateInvoiceFields(helperData);
+    
+    console.log('✅ All module forms updated successfully');
+    
+  } catch (error) {
+    console.error('❌ Error refreshing module forms:', error);
+  }
+}
+
+/**
+ * Populate General Info form fields
+ */
+function populateGeneralInfoFields(helperData) {
+  const fieldMappings = {
+    // Basic fields
+    'plate': helperData.vehicle?.plate_number || helperData.meta?.plate || '',
+    'owner': helperData.stakeholders?.owner?.name || '',
+    'ownerPhone': helperData.stakeholders?.owner?.phone || '',
+    'ownerAddress': helperData.stakeholders?.owner?.address || '',
+    
+    // Garage information
+    'garageName': helperData.stakeholders?.garage?.name || '',
+    'garagePhone': helperData.stakeholders?.garage?.phone || '',
+    'garageEmail': helperData.stakeholders?.garage?.email || '',
+    
+    // Insurance information
+    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',
+    'insuranceEmail': helperData.stakeholders?.insurance?.email || '',
+    'agentName': helperData.stakeholders?.insurance?.agent?.name || '',
+    'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',
+    'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',
+    
+    // Case information
+    'damageType': helperData.case_info?.damage_type || '',
+    'damageDate': helperData.case_info?.damage_date || ''
+  };
+  
+  populateFormFields(fieldMappings, 'general_info');
+}
+
+/**
+ * Populate Car Details fields in floating screens and forms
+ */
+function populateCarDetailsFields(helperData) {
+  const fieldMappings = {
+    'plate': helperData.vehicle?.plate_number || helperData.meta?.plate || '',
+    'manufacturer': helperData.vehicle?.manufacturer || '',
+    'model': helperData.vehicle?.model || '',
+    'year': helperData.vehicle?.year || '',
+    'chassis': helperData.vehicle?.chassis || '',
+    'km': helperData.vehicle?.km || '',
+    'owner': helperData.stakeholders?.owner?.name || '',
+    'trim': helperData.vehicle?.trim || '',
+    'engine_volume': helperData.vehicle?.engine_volume || '',
+    'fuel_type': helperData.vehicle?.fuel_type || '',
+    'ownership_type': helperData.vehicle?.ownership_type || ''
+  };
+  
+  populateFormFields(fieldMappings, 'car_details');
+}
+
+/**
+ * Populate Damage Center fields
+ */
+function populateDamageCenterFields(helperData) {
+  if (helperData.damage_assessment?.centers) {
+    // Trigger damage center UI update if function exists
+    if (typeof window.updateDamageCentersFromHelper === 'function') {
+      window.updateDamageCentersFromHelper(helperData.damage_assessment.centers);
+    }
+  }
+}
+
+/**
+ * Populate Parts search fields
+ */
+function populatePartsFields(helperData) {
+  if (helperData.parts_search?.results) {
+    // Trigger parts UI update if function exists
+    if (typeof window.updatePartsFromHelper === 'function') {
+      window.updatePartsFromHelper(helperData.parts_search);
+    }
+  }
+}
+
+/**
+ * Populate Fee module fields
+ */
+function populateFeeFields(helperData) {
+  if (helperData.financials?.fees) {
+    const fieldMappings = {
+      'photo_fee': helperData.financials.fees.photography?.total || '',
+      'office_fee': helperData.financials.fees.office?.total || '',
+      'travel_fee': helperData.financials.fees.travel?.total || '',
+      'assessment_fee': helperData.financials.fees.assessment?.total || '',
+      'vat_percentage': helperData.financials.taxes?.vat_percentage || '18'
+    };
+    
+    populateFormFields(fieldMappings, 'fees');
+  }
+}
+
+/**
+ * Populate Levi report fields
+ */
+function populateLeviFields(helperData) {
+  if (helperData.valuation) {
+    const fieldMappings = {
+      'base_price': helperData.valuation.base_price || '',
+      'final_price': helperData.valuation.final_price || '',
+      'market_value': helperData.valuation.final_price || helperData.vehicle?.market_value || ''
+    };
+    
+    populateFormFields(fieldMappings, 'levi');
+    
+    // Update Levi floating screen if function exists
+    if (typeof window.updateLeviFloatingFromHelper === 'function') {
+      window.updateLeviFloatingFromHelper(helperData.valuation);
+    }
+  }
+}
+
+/**
+ * Populate Invoice fields
+ */
+function populateInvoiceFields(helperData) {
+  if (helperData.documents?.invoices?.length > 0) {
+    // Trigger invoice UI update if function exists
+    if (typeof window.updateInvoiceFromHelper === 'function') {
+      window.updateInvoiceFromHelper(helperData.documents.invoices);
+    }
+  }
+}
+
+/**
+ * Universal field population helper
+ */
+function populateFormFields(fieldMappings, moduleType) {
+  let populatedCount = 0;
+  let skippedCount = 0;
+  
+  Object.keys(fieldMappings).forEach(fieldId => {
+    const value = fieldMappings[fieldId];
+    const element = document.getElementById(fieldId);
+    
+    if (element && value) {
+      // ✅ MANUAL OVERRIDE PROTECTION: Check if field has been manually modified
+      if (isFieldManuallyModified(fieldId)) {
+        console.log(`⏭️ Skipping automatic population for ${fieldId} - manually modified`);
+        skippedCount++;
+        return;
+      }
+      
+      // Handle different input types
+      if (element.type === 'checkbox') {
+        element.checked = !!value;
+      } else if (element.tagName === 'SELECT') {
+        // For select elements, try to find matching option
+        const option = Array.from(element.options).find(opt => 
+          opt.value === value || opt.textContent === value
+        );
+        if (option) {
+          element.value = option.value;
+        }
+      } else {
+        element.value = value;
+      }
+      
+      // Trigger change event to update any dependent logic
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      populatedCount++;
+    }
+  });
+  
+  console.log(`✅ Populated ${moduleType} fields: ${populatedCount} updated, ${skippedCount} skipped (manually modified)`);
+}
+
+// Make functions globally available
+window.refreshAllModuleForms = refreshAllModuleForms;
+
+// ============================================================================
+// SYSTEM OPTIMIZATION & VALIDATION
+// ============================================================================
+
+/**
+ * System Health Check - Monitor helper integrity and performance
+ */
+export function runSystemHealthCheck() {
+  const healthReport = {
+    timestamp: new Date().toISOString(),
+    helper_status: 'unknown',
+    manual_overrides: 0,
+    module_integration: 'unknown',
+    session_storage: 'unknown',
+    broadcasting: 'unknown',
+    warnings: [],
+    recommendations: []
+  };
+  
+  try {
+    // Check helper data structure
+    if (helper && typeof helper === 'object') {
+      healthReport.helper_status = 'healthy';
+      
+      // Count manual overrides
+      const manualData = getManuallyModifiedFields();
+      healthReport.manual_overrides = manualData.fields.length;
+      
+      // Check for data consistency
+      const plates = [
+        helper.plate,
+        helper.meta?.plate,
+        helper.vehicle?.plate_number,
+        helper.car_details?.plate
+      ].filter(Boolean);
+      
+      if (new Set(plates).size > 1) {
+        healthReport.warnings.push('Multiple different plate numbers found in helper data');
+        healthReport.recommendations.push('Standardize plate number storage location');
+      }
+      
+    } else {
+      healthReport.helper_status = 'error';
+      healthReport.warnings.push('Helper object is not properly initialized');
+    }
+    
+    // Check sessionStorage
+    try {
+      const storedHelper = sessionStorage.getItem('helper');
+      if (storedHelper) {
+        const parsed = JSON.parse(storedHelper);
+        healthReport.session_storage = 'healthy';
+      } else {
+        healthReport.session_storage = 'empty';
+        healthReport.warnings.push('No helper data found in sessionStorage');
+      }
+    } catch (error) {
+      healthReport.session_storage = 'error';
+      healthReport.warnings.push('SessionStorage contains invalid helper JSON');
+    }
+    
+    // Check module integration
+    if (typeof window.refreshAllModuleForms === 'function') {
+      healthReport.module_integration = 'available';
+    } else {
+      healthReport.module_integration = 'missing';
+      healthReport.warnings.push('Module auto-population function not available');
+    }
+    
+    // Check broadcasting capability
+    if (typeof broadcastHelperUpdate === 'function') {
+      healthReport.broadcasting = 'available';
+    } else {
+      healthReport.broadcasting = 'missing';
+      healthReport.warnings.push('Helper broadcasting system not available');
+    }
+    
+    // Performance recommendations
+    if (healthReport.manual_overrides === 0) {
+      healthReport.recommendations.push('No manual overrides detected - system ready for automatic updates');
+    } else if (healthReport.manual_overrides > 10) {
+      healthReport.recommendations.push('High number of manual overrides - consider reviewing data flow');
+    }
+    
+  } catch (error) {
+    healthReport.helper_status = 'error';
+    healthReport.warnings.push(`System health check failed: ${error.message}`);
+  }
+  
+  console.log('🔍 System Health Report:', healthReport);
+  return healthReport;
+}
+
+/**
+ * Performance monitoring for helper operations
+ */
+export function monitorHelperPerformance() {
+  const performanceData = {
+    helper_size: 0,
+    sessionStorage_size: 0,
+    last_update: null,
+    update_frequency: 0
+  };
+  
+  try {
+    // Calculate helper size
+    performanceData.helper_size = new Blob([JSON.stringify(helper)]).size;
+    
+    // Calculate sessionStorage usage
+    const helperString = sessionStorage.getItem('helper');
+    if (helperString) {
+      performanceData.sessionStorage_size = new Blob([helperString]).size;
+    }
+    
+    // Get last update time
+    performanceData.last_update = helper.last_updated || null;
+    
+    console.log('📊 Helper Performance Metrics:', performanceData);
+    
+    // Performance warnings
+    if (performanceData.helper_size > 1000000) { // 1MB
+      console.warn('⚠️ Helper object is very large (>1MB). Consider data cleanup.');
+    }
+    
+    if (performanceData.sessionStorage_size > 5000000) { // 5MB
+      console.warn('⚠️ SessionStorage usage is high (>5MB). Consider data optimization.');
+    }
+    
+    return performanceData;
+    
+  } catch (error) {
+    console.error('❌ Error monitoring helper performance:', error);
+    return performanceData;
+  }
+}
+
+// Make system monitoring functions globally available
+window.runSystemHealthCheck = runSystemHealthCheck;
+window.monitorHelperPerformance = monitorHelperPerformance;

@@ -1,6 +1,6 @@
-import { updateHelper } from './helper.js';
+import { updateHelper, broadcastHelperUpdate, processIncomingData } from './helper.js';
 
-// ✅ Centralized Webhook Handler – Clean + Unified
+// ✅ Centralized Webhook Handler – Clean + Unified with Enhanced Data Capture
 export const WEBHOOKS = {
   PASSWORD_PAGE: 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk',
   OPEN_CASE_UI: 'https://hook.eu2.make.com/zhvqbvx2yp69rikm6euv0r2du8l6sh61',
@@ -102,38 +102,41 @@ export async function sendToWebhook(id, payload) {
       data = JSON.parse(responseText);
       console.log(`📥 Parsed JSON data:`, data);
       
-      // CRITICAL FIX: Process car data in webhook responses
+      // ✅ ENHANCED: Universal data processing and helper integration
       if (data && typeof data === 'object') {
-        // Check if this response contains car data
-        if (data.plate || data.car_details || data.vehicle_data || 
-            (data.manufacturer && data.model) || data.owner) {
-          console.log('🚗 Car data detected in webhook response:', data);
+        console.log('📥 Processing webhook response data:', data);
+        
+        try {
+          // Use the enhanced processIncomingData function from helper.js
+          const processResult = await processIncomingData(data, id);
           
-          // Call global data reception function if available
-          if (typeof window.receiveCarData === 'function') {
-            console.log('📞 Calling receiveCarData with webhook response data');
-            window.receiveCarData(data);
+          if (processResult.success) {
+            console.log('✅ Data successfully processed and integrated into helper');
+            
+            // Broadcast helper update to all modules and floating screens
+            broadcastHelperUpdate(processResult.updatedSections, 'webhook_response');
+            
+            // Show success notification
+            if (typeof window.showSystemNotification === 'function') {
+              window.showSystemNotification('✅ נתונים התקבלו ועודכנו בהצלחה', 'success');
+            }
           } else {
-            console.log('⚠️ receiveCarData function not available, storing in sessionStorage');
-            // Fallback: store directly in sessionStorage
-            sessionStorage.setItem('carData', JSON.stringify(data));
+            console.warn('⚠️ Data processing completed with warnings:', processResult.warnings);
           }
-        }
-        
-        // Check for Levi data
-        if (data.levi_report || data.levi_data || data.base_price || data.final_price) {
-          console.log('📊 Levi data detected in webhook response:', data);
-          if (typeof window.receiveLeviData === 'function') {
-            window.receiveLeviData(data);
-          }
-        }
-        
-        // Check for parts data
-        if (data.parts_results || data.search_results || Array.isArray(data.results)) {
-          console.log('🔧 Parts data detected in webhook response:', data);
-          if (typeof window.receivePartsData === 'function') {
-            window.receivePartsData(data);
-          }
+          
+        } catch (processingError) {
+          console.error('❌ Error processing webhook data:', processingError);
+          
+          // Fallback: Store raw data in sessionStorage for manual recovery
+          const timestamp = new Date().toISOString();
+          sessionStorage.setItem(`webhook_fallback_${timestamp}`, JSON.stringify({
+            webhook_id: id,
+            data: data,
+            timestamp: timestamp,
+            error: processingError.message
+          }));
+          
+          console.log('💾 Raw data stored in sessionStorage for recovery');
         }
       }
     } catch (jsonError) {

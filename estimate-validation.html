@@ -1136,53 +1136,127 @@
     }
 
     function loadValidationData() {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📊 Loading validation data from builder state...');
       
-      // OPTIMAL FLOW: Validation should read from builder state, not helper directly
+      // ✅ OPTIMAL FLOW: Validation reads from builder state, not helper directly
       // Helper → Builder → Validation (this validation reads from builder current state)
       
+      // Priority 1: Get builder current state (what user is currently working on)
+      const builderState = getBuilderCurrentState();
+      
+      // Priority 2: Fallback to helper for missing data
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
       currentValidationData = {
-        // Basic metadata (from helper or builder override)
-        meta: helper.meta || {},
-        plate: helper.plate || helper.meta?.plate || '',
+        // Basic metadata (builder state overrides helper)
+        meta: builderState.meta || helper.meta || {},
+        plate: builderState.plate || helper.plate || helper.meta?.plate || '',
         
-        // Car details (builder should override helper)
+        // Car details (builder state overrides helper)
         car_details: {
-          plate: helper.plate || helper.meta?.plate || '',
-          manufacturer: helper.manufacturer || helper.car_details?.manufacturer || '',
-          model: helper.model || helper.car_details?.model || '',
-          year: helper.year || helper.car_details?.year || '',
-          vin: helper.vin || helper.car_details?.vin || '',
-          engine: helper.engine || helper.car_details?.engine || ''
+          plate: builderState.plate || helper.plate || helper.meta?.plate || '',
+          manufacturer: builderState.manufacturer || helper.manufacturer || helper.car_details?.manufacturer || '',
+          model: builderState.model || helper.model || helper.car_details?.model || '',
+          year: builderState.year || helper.year || helper.car_details?.year || '',
+          vin: builderState.vin || helper.vin || helper.car_details?.vin || '',
+          engine: builderState.engine || helper.engine || helper.car_details?.engine || ''
         },
         
-        // Client/owner information (builder should override helper)
+        // Client/owner information (builder state overrides helper)
         client: {
-          name: helper.owner || helper.client?.name || '',
-          phone_number: helper.client?.phone_number || '',
-          address: helper.client?.address || '',
-          insurance_company: helper.client?.insurance_company || ''
+          name: builderState.owner_name || helper.owner || helper.client?.name || '',
+          phone_number: builderState.owner_phone || helper.client?.phone_number || '',
+          address: builderState.owner_address || helper.client?.address || '',
+          insurance_company: builderState.insurance_company || helper.client?.insurance_company || ''
         },
         
-        // Levi report data (SHOULD READ FROM BUILDER STATE)
-        // For now using helper until builder integration is complete
-        levi_report: helper.levi_report || helper.expertise?.levi_report || {},
+        // Levi report data (READ FROM BUILDER STATE FIRST)
+        levi_report: builderState.levi_report || helper.levi_report || helper.expertise?.levi_report || {},
         
-        // Damage centers (SHOULD READ FROM BUILDER STATE)
-        damage_blocks: helper.expertise?.damage_blocks || [],
+        // Damage centers (READ FROM BUILDER STATE FIRST)
+        damage_blocks: builderState.damage_blocks || helper.expertise?.damage_blocks || [],
         
-        // Legal text (SHOULD READ FROM BUILDER STATE)
-        estimate_legal_text: helper.estimate_legal_text || '',
+        // Legal text (READ FROM BUILDER STATE FIRST)
+        estimate_legal_text: builderState.estimate_legal_text || helper.estimate_legal_text || '',
         
-        // Estimate calculations and totals (SHOULD READ FROM BUILDER STATE)
-        estimate_totals: extractEstimateTotals(helper),
+        // Estimate calculations and totals (READ FROM BUILDER STATE FIRST)
+        estimate_totals: builderState.estimate_totals || extractEstimateTotals(helper),
         
-        // Store raw helper for fallback reference only
+        // Depreciation data (READ FROM BUILDER STATE FIRST)
+        estimate_depreciation: builderState.estimate_depreciation || helper.estimate_depreciation || {},
+        
+        // Store both sources for debugging
+        builder_state: builderState,
         raw_helper: helper
       };
       
-      console.log('📊 Validation data loaded (should read from builder):', currentValidationData);
-      console.log('⚠️ TODO: Update to read from builder current state instead of helper directly');
+      console.log('✅ Validation data loaded from builder state:', currentValidationData);
+      console.log('🏗️ Builder state used:', builderState);
+      console.log('📋 Helper fallback used for missing data');
+    }
+    
+    // Get current builder state (what user is working on in builder)
+    function getBuilderCurrentState() {
+      try {
+        // Method 1: Try to get from explicit builder state storage
+        const explicitBuilderState = sessionStorage.getItem('builderCurrentState');
+        if (explicitBuilderState) {
+          console.log('📊 Found explicit builder state');
+          return JSON.parse(explicitBuilderState);
+        }
+        
+        // Method 2: Extract current builder state from helper (what builder saved)
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Extract builder-modified data from helper
+        const builderState = {
+          // Car details (if modified by builder)
+          plate: helper.plate || helper.meta?.plate,
+          manufacturer: helper.manufacturer || helper.car_details?.manufacturer,
+          model: helper.model || helper.car_details?.model,
+          year: helper.year || helper.car_details?.year,
+          vin: helper.vin || helper.car_details?.vin,
+          engine: helper.engine || helper.car_details?.engine,
+          
+          // Owner/client details (if modified by builder)
+          owner_name: helper.owner || helper.client?.name,
+          owner_phone: helper.client?.phone_number,
+          owner_address: helper.client?.address,
+          insurance_company: helper.client?.insurance_company || helper.insurance_company,
+          
+          // Estimate-specific data (saved by builder)
+          estimate_type: helper.estimate_type,
+          estimate_notes: helper.estimate_notes,
+          estimate_work_days: helper.estimate_work_days,
+          estimate_legal_text: helper.estimate_legal_text,
+          estimate_attachments: helper.estimate_attachments,
+          estimate_depreciation: helper.estimate_depreciation,
+          estimate_adjustments: helper.estimate_adjustments,
+          
+          // Levi data (if modified by builder)
+          levi_report: helper.levi_report,
+          levi: helper.levi,
+          
+          // Damage data (if modified by builder)
+          damage_blocks: helper.expertise?.damage_blocks,
+          
+          // Calculations (computed by builder)
+          calculations: helper.calculations,
+          claims_data: helper.claims_data,
+          estimate_totals: helper.estimate_totals,
+          summary_totals: helper.summary_totals,
+          
+          // Timestamp of last builder modification
+          last_builder_update: helper.last_builder_update || new Date().toISOString()
+        };
+        
+        console.log('🏗️ Extracted builder state from helper modifications');
+        return builderState;
+        
+      } catch (error) {
+        console.error('❌ Error getting builder current state:', error);
+        return {}; // Return empty state, will fall back to helper
+      }
     }
 
     // Extract estimate totals from damage blocks

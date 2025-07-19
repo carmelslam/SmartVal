@@ -127,7 +127,7 @@
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
     import { decryptPassword } from './auth.js';
-    import './simple-data-flow.js'; // Simple data flow system
+    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js'; // Unified helper system
     
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
@@ -260,8 +260,8 @@
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
   <script type="module">
-    // Import simple data flow system for auto-fill
-    import './simple-data-flow.js';
+    // Import unified helper system for auto-fill
+    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
     
     console.log('🚀 General info page loaded - checking for car data and auto-filling...');
     
@@ -318,7 +318,7 @@
       }
     }
     
-    // Auto-fill form fields with car data
+    // Auto-fill form fields with car data (respects manual overrides)
     function autoFillFormFields(carData) {
       console.log('🖊️ Auto-filling form fields with car data:', carData);
       
@@ -331,23 +331,39 @@
       };
       
       let filledCount = 0;
+      let skippedCount = 0;
       
       Object.entries(fieldMappings).forEach(([dataKey, fieldIds]) => {
         if (carData[dataKey]) {
           fieldIds.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field && !field.value) {
-              field.value = carData[dataKey];
-              field.style.background = '#e8f5e8'; // Light green to indicate auto-filled
-              filledCount++;
-              console.log(`✅ Auto-filled ${fieldId} with ${carData[dataKey]}`);
+              // ✅ MANUAL OVERRIDE PROTECTION: Check if field was manually modified
+              import('./helper.js').then(module => {
+                if (module.isFieldManuallyModified && module.isFieldManuallyModified(fieldId)) {
+                  console.log(`⏭️ Skipping auto-fill for ${fieldId} - manually modified`);
+                  skippedCount++;
+                  return;
+                }
+                
+                field.value = carData[dataKey];
+                field.style.background = '#e8f5e8'; // Light green to indicate auto-filled
+                filledCount++;
+                console.log(`✅ Auto-filled ${fieldId} with ${carData[dataKey]}`);
+              }).catch(error => {
+                // Fallback: fill without override protection if helper import fails
+                field.value = carData[dataKey];
+                field.style.background = '#e8f5e8';
+                filledCount++;
+                console.log(`✅ Auto-filled ${fieldId} with ${carData[dataKey]} (fallback)`);
+              });
             }
           });
         }
       });
       
-      if (filledCount > 0) {
-        console.log(`✅ Auto-filled ${filledCount} form fields`);
+      if (filledCount > 0 || skippedCount > 0) {
+        console.log(`✅ Auto-fill complete: ${filledCount} filled, ${skippedCount} skipped (manual override)`);
         
         // Update helper with the form data
         updateHelper('car_details', carData);
@@ -443,6 +459,64 @@
         clearInterval(checkInterval);
       }
     }, 3000);
+    
+    // ✅ MANUAL INPUT OVERRIDE SYSTEM: Add listeners to all form fields
+    // This detects when user manually modifies fields and prevents automatic overrides
+    function initializeManualOverrideDetection() {
+      console.log('🔒 Initializing manual override detection for general info form');
+      
+      // List of all form fields that should be tracked for manual input
+      const trackedFields = [
+        'odo', 'damageDate', 'ownerPhone', 'ownerAddress',
+        'garageName', 'garagePhone', 'garageEmail',
+        'agentName', 'agentPhone', 'agentEmail',
+        'insuranceCompany', 'otherInsuranceCompany',
+        'insuranceEmail', 'damageType', 'otherDamageType'
+      ];
+      
+      trackedFields.forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+          // Add event listeners for manual input detection
+          ['input', 'change', 'keyup', 'paste'].forEach(eventType => {
+            element.addEventListener(eventType, function(event) {
+              // Only mark as manual if user is actively typing/changing
+              if (event.isTrusted && this.value !== this.defaultValue) {
+                import('./helper.js').then(module => {
+                  module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                }).catch(error => {
+                  console.error('Error importing helper for manual override:', error);
+                });
+              }
+            }, { passive: true });
+          });
+          
+          // Also detect focus events (user clicking into field)
+          element.addEventListener('focus', function() {
+            this.dataset.userFocused = 'true';
+          });
+          
+          // Mark as manually modified when user leaves field with changes
+          element.addEventListener('blur', function() {
+            if (this.dataset.userFocused === 'true' && this.value !== this.defaultValue) {
+              import('./helper.js').then(module => {
+                module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+              }).catch(error => {
+                console.error('Error importing helper for manual override:', error);
+              });
+            }
+            delete this.dataset.userFocused;
+          });
+          
+          console.log(`✅ Manual override detection added to field: ${fieldId}`);
+        }
+      });
+      
+      console.log(`🔒 Manual override detection initialized for ${trackedFields.length} fields`);
+    }
+    
+    // Initialize manual override detection when page loads
+    document.addEventListener('DOMContentLoaded', initializeManualOverrideDetection);
     
   </script>
 </body>

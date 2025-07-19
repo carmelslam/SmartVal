@@ -393,17 +393,34 @@ form button {
           alert('שגיאה בשמירת החלקים');
         }
       } else {
-        // Wizard: save to helper and continue
-        let helper = {};
-        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-        helper.damage_center_draft = helper.damage_center_draft || {};
-        helper.damage_center_draft.parts = validParts;
-        
-        // Also save to parts_search for future suggestions
-        helper.parts_search = helper.parts_search || { results: [] };
-        helper.parts_search.results = [...(helper.parts_search.results || []), ...validParts];
-        
-        sessionStorage.setItem("helper", JSON.stringify(helper));
+        // ✅ UNIFIED HELPER INTEGRATION: Use proper helper functions
+        import('./helper.js').then(helperModule => {
+          // Save parts to damage center draft
+          helperModule.updateHelper('damage_center_draft', { parts: validParts });
+          
+          // Also save to parts_search for future suggestions
+          const existingResults = helperModule.helper.parts_search?.results || [];
+          const allResults = [...existingResults, ...validParts];
+          helperModule.updateHelper('parts_search', { 
+            results: allResults,
+            last_updated: new Date().toISOString(),
+            source: 'parts_required_module'
+          });
+          
+          // Broadcast update to other modules
+          helperModule.broadcastHelperUpdate(['parts_search', 'damage_center_draft'], 'parts_required');
+          
+        }).catch(error => {
+          console.error('Error importing helper module:', error);
+          // Fallback to direct helper manipulation
+          let helper = {};
+          try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+          helper.damage_center_draft = helper.damage_center_draft || {};
+          helper.damage_center_draft.parts = validParts;
+          helper.parts_search = helper.parts_search || { results: [] };
+          helper.parts_search.results = [...(helper.parts_search.results || []), ...validParts];
+          sessionStorage.setItem("helper", JSON.stringify(helper));
+        });
         
         // Save to localStorage as well for persistence
         try {
@@ -437,15 +454,24 @@ form button {
           year: document.getElementById("inputYear").value.trim()
         };
       } else {
-        let helper = {};
-        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-        const car = helper.car_details || {};
-        return {
-          plate: car.plate || sessionStorage.getItem("plate") || "",
-          manufacturer: car.manufacturer || sessionStorage.getItem("manufacturer") || "",
-          model: car.model || sessionStorage.getItem("model") || "",
-          year: car.year || sessionStorage.getItem("year") || ""
-        };
+        // ✅ UNIFIED HELPER INTEGRATION: Use proper helper import
+        try {
+          const helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
+          return {
+            plate: helperData.meta?.plate || helperData.vehicle?.plate_number || helperData.car_details?.plate || "",
+            manufacturer: helperData.vehicle?.manufacturer || helperData.car_details?.manufacturer || "",
+            model: helperData.vehicle?.model || helperData.car_details?.model || "",
+            year: helperData.vehicle?.year || helperData.car_details?.year || ""
+          };
+        } catch(e) {
+          console.error('Error reading helper data:', e);
+          return {
+            plate: sessionStorage.getItem("plate") || "",
+            manufacturer: sessionStorage.getItem("manufacturer") || "",
+            model: sessionStorage.getItem("model") || "",
+            year: sessionStorage.getItem("year") || ""
+          };
+        }
       }
     }
 

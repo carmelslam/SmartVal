@@ -1440,6 +1440,9 @@
         helper.estimate_depreciation = depreciationData;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
+        // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state
+        updateBuilderCurrentState('estimate_depreciation', depreciationData);
+        
         console.log('💾 Depreciation data saved to helper:', depreciationData);
       } catch (error) {
         console.error('Error saving depreciation data:', error);
@@ -1620,6 +1623,15 @@
       helper.estimate_adjustments = adjustmentsData;
       helper.estimate_legal_text = legalText;
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all estimate data
+      updateBuilderCurrentState('estimate_type', selectedType);
+      updateBuilderCurrentState('estimate_notes', additionalNotes);
+      updateBuilderCurrentState('estimate_work_days', garageDays);
+      updateBuilderCurrentState('estimate_summary', summaryData);
+      updateBuilderCurrentState('estimate_depreciation', depreciationData);
+      updateBuilderCurrentState('estimate_adjustments', adjustmentsData);
+      updateBuilderCurrentState('estimate_legal_text', legalText);
       
       alert('אומדן נשמר בהצלחה');
     };
@@ -5280,6 +5292,9 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           helper.estimate_legal_text = this.value;
           sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
+          updateBuilderCurrentState('estimate_legal_text', this.value);
         });
       }
       
@@ -5290,6 +5305,9 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           helper.estimate_attachments = this.value;
           sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
+          updateBuilderCurrentState('estimate_attachments', this.value);
         });
       }
       
@@ -7626,6 +7644,83 @@
       
       console.log('🔘 Expertise button state initialized:', { expertiseExists });
     }
+    
+    // ✅ BIDIRECTIONAL INTEGRATION: Builder State Management
+    // This allows validation page to read current builder state instead of helper directly
+    function updateBuilderCurrentState(key, value) {
+      try {
+        let builderState = {};
+        
+        // Get existing builder state
+        const existingState = sessionStorage.getItem('builderCurrentState');
+        if (existingState) {
+          builderState = JSON.parse(existingState);
+        }
+        
+        // Update the specific key
+        builderState[key] = value;
+        builderState.last_update = new Date().toISOString();
+        builderState.source = 'estimate-builder';
+        
+        // Save updated state
+        sessionStorage.setItem('builderCurrentState', JSON.stringify(builderState));
+        
+        console.log(`✅ Builder state updated: ${key}`, value);
+        
+        // Trigger broadcast to validation pages
+        if (typeof broadcastBuilderStateUpdate === 'function') {
+          broadcastBuilderStateUpdate(key, value);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error updating builder state:', error);
+      }
+    }
+    
+    // Initialize builder state when page loads
+    function initializeBuilderState() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Create initial builder state from current helper data
+        const initialState = {
+          // Car details
+          plate: helper.plate || helper.meta?.plate,
+          manufacturer: helper.manufacturer || helper.car_details?.manufacturer,
+          model: helper.model || helper.car_details?.model,
+          year: helper.year || helper.car_details?.year,
+          
+          // Owner details
+          owner_name: helper.owner || helper.client?.name,
+          insurance_company: helper.client?.insurance_company || helper.insurance_company,
+          
+          // Estimate data
+          estimate_type: helper.estimate_type,
+          estimate_notes: helper.estimate_notes,
+          estimate_work_days: helper.estimate_work_days,
+          estimate_legal_text: helper.estimate_legal_text,
+          estimate_depreciation: helper.estimate_depreciation,
+          
+          // Calculations
+          calculations: helper.calculations,
+          claims_data: helper.claims_data,
+          
+          // Metadata
+          initialized_at: new Date().toISOString(),
+          source: 'estimate-builder',
+          version: '1.0'
+        };
+        
+        sessionStorage.setItem('builderCurrentState', JSON.stringify(initialState));
+        console.log('🏗️ Builder state initialized from helper data');
+        
+      } catch (error) {
+        console.error('❌ Error initializing builder state:', error);
+      }
+    }
+    
+    // Initialize builder state when page loads
+    document.addEventListener('DOMContentLoaded', initializeBuilderState);
     
   </script>
   
