@@ -180,15 +180,20 @@
         // Store the raw webhook response for display
         sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
         
-        // Handle Make.com response format
+        // Handle Make.com response format - FIXED to match working demo pattern
         let carData = null;
         
-        // Check if response is an array (like demo expects)
+        // Use the working demo pattern for extracting nested JSON
         if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
-          console.log('📥 Make.com returned array format');
-          const firstItem = webhookResponse[0];
-          if (firstItem) {
-            carData = firstItem;
+          console.log('📥 Make.com returned array format - using demo extraction pattern');
+          const parsed = webhookResponse;
+          
+          // Apply the working demo pattern: extract nested JSON from first item's value
+          const deep = typeof parsed[0]?.value === "string" ? JSON.parse(parsed[0].value) : parsed[0]?.value;
+          
+          if (deep) {
+            carData = deep;
+            console.log('✅ Successfully extracted nested JSON using demo pattern:', carData);
           }
         } else if (webhookResponse && typeof webhookResponse === 'object') {
           carData = webhookResponse;
