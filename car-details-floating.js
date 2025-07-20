@@ -606,42 +606,42 @@
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Vehicle fields - check multiple possible locations
+    // Vehicle fields - prioritize vehicle section, then car_details
     document.getElementById("vehicle-plate").textContent = formatValue(
-      meta.plate || vehicle.plate || vehicle.plate_number || carDetails.plate || carDetails['מס\' רכב']
+      vehicle.plate || meta.plate || carDetails.plate
     );
     document.getElementById("vehicle-manufacturer").textContent = formatValue(
-      vehicle.manufacturer || carDetails.manufacturer || carDetails['שם היצרן']
+      vehicle.manufacturer || carDetails.manufacturer
     );
     document.getElementById("vehicle-model").textContent = formatValue(
-      vehicle.model || carDetails.model || carDetails['דגם']
+      vehicle.model || carDetails.model
     );
     document.getElementById("vehicle-model-type").textContent = formatValue(
-      vehicle.model_type || carDetails.model_type || carDetails['סוג הדגם']
+      vehicle.model_type || carDetails.model_type
     );
     document.getElementById("vehicle-type").textContent = formatValue(
-      vehicle.vehicle_type || carDetails.vehicle_type || carDetails['סוג הרכב']
+      vehicle.vehicle_type || carDetails.vehicle_type
     );
     document.getElementById("vehicle-trim").textContent = formatValue(
-      vehicle.trim || carDetails.trim || carDetails['רמת גימור']
+      vehicle.trim || carDetails.trim
     );
     document.getElementById("vehicle-chassis").textContent = formatValue(
-      vehicle.chassis || carDetails.chassis || carDetails['מספר שילדה']
+      vehicle.chassis || carDetails.chassis
     );
     document.getElementById("vehicle-year").textContent = formatValue(
-      vehicle.year || carDetails.year || carDetails['שנת ייצור']
+      vehicle.year || carDetails.year
     );
     document.getElementById("vehicle-ownership-type").textContent = formatValue(
-      vehicle.ownership_type || carDetails.ownership_type || carDetails['סוג בעלות']
+      vehicle.ownership_type || carDetails.ownership_type
     );
     document.getElementById("vehicle-engine-volume").textContent = formatValue(
-      vehicle.engine_volume || carDetails.engine_volume || carDetails['נפח מנוע']
+      vehicle.engine_volume || carDetails.engine_volume
     );
     document.getElementById("vehicle-fuel-type").textContent = formatValue(
-      vehicle.fuel_type || carDetails.fuel_type || carDetails['סוג דלק']
+      vehicle.fuel_type || carDetails.fuel_type
     );
     document.getElementById("vehicle-model-code").textContent = formatValue(
-      vehicle.model_code || carDetails.model_code || carDetails['מספר דגם הרכב']
+      vehicle.model_code || carDetails.model_code
     );
     // Levi code - will be mapped from Levi report webhook response
     document.getElementById("vehicle-levi-code").textContent = formatValue(
@@ -652,32 +652,32 @@
       vehicle.universal_code || carDetails.universal_code
     );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
-      vehicle.engine_model || carDetails.engine_model || carDetails['דגם מנוע']
+      vehicle.engine_model || carDetails.engine_model
     );
     document.getElementById("vehicle-drive-type").textContent = formatValue(
-      vehicle.drive_type || carDetails.drive_type || carDetails['הנעה']
+      vehicle.drive_type || carDetails.drive_type
     );
     document.getElementById("vehicle-office-code").textContent = formatValue(
-      vehicle.office_code || meta.office_code || carDetails.office_code || carDetails['קוד משרד התחבורה']
+      vehicle.office_code || meta.office_code || carDetails.office_code
     );
     document.getElementById("vehicle-km").textContent = formatValue(
       vehicle.km || carDetails.km || carDetails.odo
     );
 
-    // Owner fields - check all possible locations
-    const ownerName = stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || carDetails['שם בעל הרכב'];
+    // Owner fields - prioritize stakeholders section
+    const ownerName = stakeholders.owner?.name || carDetails.owner;
     document.getElementById("car-owner").textContent = formatValue(ownerName);
     
     document.getElementById("car-damage-date").textContent = formatValue(
-      meta.damage_date || carDetails.damageDate || carDetails.damage_date || carDetails['תאריך נזק']
+      meta.damage_date || carDetails.damageDate || carDetails.damage_date
     );
     
     // Owner contact info
     document.getElementById("car-owner-address").textContent = formatValue(
-      stakeholders.owner?.address || stakeholders.owner_address || carDetails.ownerAddress || carDetails['כתובת בעלים']
+      stakeholders.owner?.address || carDetails.ownerAddress
     );
     document.getElementById("car-owner-phone").textContent = formatValue(
-      stakeholders.owner?.phone || stakeholders.owner_phone || carDetails.ownerPhone || carDetails['טלפון בעלים']
+      stakeholders.owner?.phone || carDetails.ownerPhone
     );
     
     // Additional fields from general info
@@ -686,37 +686,37 @@
       carDetails.market_value || vehicle.market_value
     );
     document.getElementById("car-odometer").textContent = formatValue(
-      carDetails.odo || vehicle.km || carDetails['מד אוץ']
+      vehicle.km || carDetails.odo || carDetails.km
     );
     document.getElementById("car-inspection-location").textContent = formatValue(
-      meta.location || carDetails.location || carDetails['מקום בדיקה']
+      meta.location || carDetails.location
     );
 
     // Garage info - check stakeholders and car_details
     document.getElementById("garage-name").textContent = formatValue(
-      stakeholders.garage?.name || carDetails.garageName || carDetails.garage_name || carDetails['שם מוסך'] || meta.location || carDetails['מוסך']
+      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName || meta.location
     );
     document.getElementById("garage-phone").textContent = formatValue(
-      stakeholders.garage?.phone || carDetails.garagePhone || carDetails.garage_phone || carDetails['טלפון מוסך']
+      stakeholders.garage?.phone || carDetails.garage_phone || carDetails.garagePhone
     );
     document.getElementById("garage-email").textContent = formatValue(
-      stakeholders.garage?.email || carDetails.garageEmail || carDetails.garage_email
+      stakeholders.garage?.email || carDetails.garage_email || carDetails.garageEmail
     );
     
     // Insurance info
     document.getElementById("insurance-company").textContent = formatValue(
-      stakeholders.insurance?.company || carDetails.insuranceCompany || carDetails['חברת ביטוח']
+      stakeholders.insurance?.company || carDetails.insuranceCompany
     );
     document.getElementById("insurance-email").textContent = formatValue(
-      stakeholders.insurance?.email || carDetails.insuranceEmail || carDetails.insurance_email
+      stakeholders.insurance?.email || carDetails.insurance_email || carDetails.insuranceEmail
     );
     
     // Insurance agent info
     document.getElementById("agent-name").textContent = formatValue(
-      stakeholders.insurance?.agent?.name || carDetails.agentName || carDetails['סוכן']
+      stakeholders.insurance?.agent?.name || carDetails.agentName
     );
     document.getElementById("agent-phone").textContent = formatValue(
-      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone || carDetails.agentPhone || carDetails['טלפון סוכן']
+      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone || carDetails.agentPhone
     );
     document.getElementById("agent-email").textContent = formatValue(
       stakeholders.insurance?.agent?.email || carDetails.insurance_agent_email || carDetails.agentEmail

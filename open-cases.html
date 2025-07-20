@@ -76,33 +76,9 @@
       font-size: 14px;
       margin-bottom: 10px;
     }
-    .car-details-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 25px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-      font-size: 14px;
-    }
-    .car-details-toggle:hover {
-      background: #218838;
-      transform: scale(1.05);
-    }
   </style>
 </head>
 <body>
-  <!-- Car Details Toggle Button -->
-  <button class="car-details-toggle" onclick="toggleCarDetails()" style="display: none;">
-    🚗 הצג פרטי רכב
-  </button>
-  
   <div class="container">
     <div class="logo">
       <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
@@ -219,29 +195,51 @@
         
         // Parse the car data from Make.com response
         if (carData) {
-          // Extract fields from the response
-          const parsedData = {
-            plate: carData['מס\' רכב'] || carData.plate || plate,
-            manufacturer: carData['שם היצרן'] || carData.manufacturer,
-            model: carData['דגם'] || carData.model,
-            model_type: carData['סוג הדגם'] || carData.model_type,
-            vehicle_type: carData['סוג הרכב'] || carData.vehicle_type,
-            trim: carData['רמת גימור'] || carData.trim,
-            chassis: carData['מספר שילדה'] || carData.chassis,
-            year: carData['שנת ייצור'] || carData.year,
-            owner: carData['שם בעל הרכב'] || carData.owner || owner,
-            ownership_type: carData['סוג בעלות'] || carData.ownership_type,
-            engine_volume: carData['נפח מנוע'] || carData.engine_volume,
-            fuel_type: carData['סוג דלק'] || carData.fuel_type,
-            model_code: carData['מספר דגם הרכב'] || carData.model_code,
-            engine_model: carData['דגם מנוע'] || carData.engine_model,
-            drive_type: carData['הנעה'] || carData.drive_type,
-            garage_name: carData['מוסך'] || carData.garage_name,
-            office_code: carData['קוד משרד התחבורה'] || carData.office_code
+          // Map Hebrew fields to English
+          const hebrewToEnglishMap = {
+            'מס\' רכב': 'plate',
+            'מספר רכב': 'plate',
+            'שם היצרן': 'manufacturer',
+            'דגם': 'model',
+            'סוג הדגם': 'model_type',
+            'סוג הרכב': 'vehicle_type',
+            'רמת גימור': 'trim',
+            'מספר שילדה': 'chassis',
+            'שנת ייצור': 'year',
+            'שם בעל הרכב': 'owner',
+            'סוג בעלות': 'ownership_type',
+            'נפח מנוע': 'engine_volume',
+            'סוג דלק': 'fuel_type',
+            'מספר דגם הרכב': 'model_code',
+            'דגם מנוע': 'engine_model',
+            'הנעה': 'drive_type',
+            'מוסך': 'garage_name',
+            'קוד משרד התחבורה': 'office_code'
           };
+          
+          // Create parsed data object
+          const parsedData = {};
+          
+          // Map Hebrew fields to English
+          Object.keys(carData).forEach(key => {
+            const englishKey = hebrewToEnglishMap[key];
+            if (englishKey) {
+              parsedData[englishKey] = carData[key];
+            } else {
+              // Keep English fields as is
+              parsedData[key] = carData[key];
+            }
+          });
+          
+          // Add form data if not present
+          if (!parsedData.plate && plate) parsedData.plate = plate;
+          if (!parsedData.owner && owner) parsedData.owner = owner;
+          if (!parsedData.location && location) parsedData.location = location;
+          if (!parsedData.damage_date && date) parsedData.damage_date = date;
           
           // Use the parsed data
           carData = parsedData;
+          console.log('✅ Mapped Hebrew fields to English:', carData);
         }
         
         // Store the extracted car data
@@ -263,11 +261,6 @@
             if (typeof window.showCarDetails === 'function') {
               console.log('🖼️ Triggering car details floating screen');
               window.showCarDetails();
-            }
-            // Show the toggle button
-            const toggleBtn = document.querySelector('.car-details-toggle');
-            if (toggleBtn) {
-              toggleBtn.style.display = 'block';
             }
           }, 500);
         }

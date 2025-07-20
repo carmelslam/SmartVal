@@ -2085,6 +2085,13 @@ function processCarDetailsData(data, sourceModule) {
     car_details_keys: Object.keys(helper.car_details)
   });
   
+  // CRITICAL: Clean year format if needed
+  if (helper.vehicle.year && helper.vehicle.year.includes('/')) {
+    const yearParts = helper.vehicle.year.split('/');
+    helper.vehicle.year = yearParts[yearParts.length - 1].trim();
+    helper.car_details.year = helper.vehicle.year;
+  }
+  
   // CRITICAL DEBUG: Verify specific fields
   console.log('🔧 VERIFICATION after mapping:');
   console.log('  - helper.meta.plate =', helper.meta.plate);
