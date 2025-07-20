@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Unified Helper</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+    .test { margin: 20px 0; padding: 15px; background: white; border-radius: 8px; }
+    .success { color: green; }
+    .fail { color: red; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    pre { background: #f0f0f0; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test Unified Helper System</h1>
+  
+  <div class="test">
+    <h2>1. Helper Status</h2>
+    <div id="helperStatus"></div>
+  </div>
+  
+  <div class="test">
+    <h2>2. Test Data Flow</h2>
+    <button onclick="testWebhookData()">Test Webhook Data</button>
+    <button onclick="testManualInput()">Test Manual Input</button>
+    <button onclick="testHebrewData()">Test Hebrew Data</button>
+    <div id="dataFlowResult"></div>
+  </div>
+  
+  <div class="test">
+    <h2>3. Helper Contents</h2>
+    <button onclick="showHelper()">Show Helper</button>
+    <pre id="helperContents"></pre>
+  </div>
+
+  <script src="helper.js" type="module"></script>
+  <script src="unified-helper-solution.js"></script>
+  <script>
+    // Check helper status
+    function checkHelperStatus() {
+      const status = document.getElementById('helperStatus');
+      const checks = [
+        { name: 'window.helper exists', test: () => typeof window.helper !== 'undefined' },
+        { name: 'window.updateHelper exists', test: () => typeof window.updateHelper === 'function' },
+        { name: 'window.processIncomingData exists', test: () => typeof window.processIncomingData === 'function' },
+        { name: 'window.saveHelperToStorage exists', test: () => typeof window.saveHelperToStorage === 'function' },
+        { name: 'Helper has correct structure', test: () => window.helper && window.helper.vehicle && window.helper.meta }
+      ];
+      
+      let html = '<ul>';
+      checks.forEach(check => {
+        const passed = check.test();
+        html += `<li class="${passed ? 'success' : 'fail'}">
+          ${passed ? '✅' : '❌'} ${check.name}
+        </li>`;
+      });
+      html += '</ul>';
+      status.innerHTML = html;
+    }
+    
+    // Test webhook data
+    function testWebhookData() {
+      if (!window.processIncomingData) {
+        alert('processIncomingData not available yet');
+        return;
+      }
+      
+      const testData = {
+        plate: 'TEST-123',
+        manufacturer: 'Toyota',
+        model: 'Corolla',
+        year: '2023'
+      };
+      
+      window.processIncomingData(testData, 'test_webhook');
+      document.getElementById('dataFlowResult').innerHTML = 
+        '<p class="success">✅ Webhook data sent. Check helper contents.</p>';
+    }
+    
+    // Test manual input
+    function testManualInput() {
+      if (!window.updateHelper) {
+        alert('updateHelper not available yet');
+        return;
+      }
+      
+      window.updateHelper('vehicle', { plate: 'MANUAL-456' }, 'test_manual');
+      window.updateHelper('stakeholders', { owner: { name: 'Test Owner' } }, 'test_manual');
+      
+      document.getElementById('dataFlowResult').innerHTML = 
+        '<p class="success">✅ Manual data updated. Check helper contents.</p>';
+    }
+    
+    // Test Hebrew data
+    function testHebrewData() {
+      if (!window.processIncomingData) {
+        alert('processIncomingData not available yet');
+        return;
+      }
+      
+      const hebrewData = {
+        Body: `פרטי רכב: 12-345-67
+מס' רכב: 12-345-67
+שם היצרן: טויוטה
+דגם: קורולה
+שנת ייצור: 2023
+שם בעל הרכב: ישראל ישראלי`
+      };
+      
+      window.processIncomingData(hebrewData, 'test_hebrew');
+      document.getElementById('dataFlowResult').innerHTML = 
+        '<p class="success">✅ Hebrew data sent. Check helper contents.</p>';
+    }
+    
+    // Show helper contents
+    function showHelper() {
+      const contents = document.getElementById('helperContents');
+      if (window.helper) {
+        contents.textContent = JSON.stringify(window.helper, null, 2);
+      } else {
+        contents.textContent = 'Helper not loaded yet';
+      }
+    }
+    
+    // Check status when page loads
+    setTimeout(checkHelperStatus, 1000);
+  </script>
+</body>
+</html>

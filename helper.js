@@ -3273,4 +3273,11 @@ window.monitorHelperPerformance = monitorHelperPerformance;
 window.parseHebrewTextToObject = parseHebrewTextToObject;
 window.processIncomingData = processIncomingData;
 
-console.log('✅ Helper.js loaded with Hebrew parsing support');
+// CRITICAL: Make the module helper THE global helper
+window.helper = helper;
+window.updateHelper = updateHelper;
+window.saveHelperToStorage = saveHelperToStorage;
+window.broadcastHelperUpdate = broadcastHelperUpdate;
+window.loadHelperFromStorage = loadHelperFromStorage;
+
+console.log('✅ Helper.js loaded - Single source of truth established');
