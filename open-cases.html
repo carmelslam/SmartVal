@@ -76,9 +76,33 @@
       font-size: 14px;
       margin-bottom: 10px;
     }
+    .car-details-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      font-size: 14px;
+    }
+    .car-details-toggle:hover {
+      background: #218838;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
+  <!-- Car Details Toggle Button -->
+  <button class="car-details-toggle" onclick="toggleCarDetails()" style="display: none;">
+    🚗 הצג פרטי רכב
+  </button>
+  
   <div class="container">
     <div class="logo">
       <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
@@ -176,6 +200,9 @@
         const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
         console.log('📥 Webhook response:', webhookResponse);
         
+        // Store the raw webhook response for display
+        sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
+        
         // Handle Make.com response format
         let carData = null;
         
@@ -240,6 +267,11 @@
             if (typeof window.showCarDetails === 'function') {
               console.log('🖼️ Triggering car details floating screen');
               window.showCarDetails();
+            }
+            // Show the toggle button
+            const toggleBtn = document.querySelector('.car-details-toggle');
+            if (toggleBtn) {
+              toggleBtn.style.display = 'block';
             }
           }, 500);
         }
@@ -309,5 +341,6 @@
   <script src="universal-data-sync.js"></script>
   <script src="make-webhook-simulator.js"></script>
   <script src="assistant-floating.js"></script>
+  <script src="car-details-floating.js"></script>
 </body>
 </html>

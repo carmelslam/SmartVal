@@ -1,5 +1,9 @@
 (function () {
-  if (document.getElementById("carDetailsModal")) return;
+  console.log('🚗 Car Details Floating Module loaded');
+  if (document.getElementById("carDetailsModal")) {
+    console.log('⚠️ Car details modal already exists, skipping initialization');
+    return;
+  }
 
   const style = document.createElement("style");
   style.innerHTML = `
@@ -310,10 +314,17 @@
       </div>
     </div>
 
+    <div class="car-section" id="webhook-response-section" style="display: none;">
+      <h4>תגובת Webhook מ-Make.com</h4>
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;">
+        <pre id="webhook-response-data" style="margin: 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;">אין נתונים</pre>
+      </div>
+    </div>
+
     <div class="car-buttons">
       <button class="car-btn close" onclick="toggleCarDetails()">סגור</button>
       <button class="car-btn refresh" onclick="refreshCarData()">רענן נתונים</button>
-      <button class="car-btn refresh" onclick="debugCarData()" style="background: #ffc107;">🔍 בדוק נתונים</button>
+      <button class="car-btn refresh" onclick="toggleWebhookData()" style="background: #6c757d;">📡 הצג/הסתר נתוני Webhook</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -345,6 +356,30 @@
   };
 
   window.showCarDetails = window.toggleCarDetails;
+  
+  // Toggle webhook data visibility
+  window.toggleWebhookData = function() {
+    const section = document.getElementById('webhook-response-section');
+    if (section) {
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+        // Load fresh webhook data if available
+        const webhookResponse = sessionStorage.getItem('lastWebhookResponse') || 
+                               sessionStorage.getItem('makeCarData') || 
+                               sessionStorage.getItem('carDataFromMake');
+        if (webhookResponse) {
+          try {
+            const responseData = JSON.parse(webhookResponse);
+            displayWebhookResponse(responseData);
+          } catch (e) {
+            document.getElementById('webhook-response-data').textContent = webhookResponse;
+          }
+        }
+      } else {
+        section.style.display = 'none';
+      }
+    }
+  };
   
   // Debug function to check all data sources
   window.debugCarData = function() {
@@ -662,6 +697,19 @@
       // Update UI and persist the data
       updateCarDisplay(vehicle, carDetails, stakeholders, meta);
       
+      // Check for raw webhook response data
+      const webhookResponse = sessionStorage.getItem('makeCarData') || 
+                             sessionStorage.getItem('carDataFromMake') ||
+                             sessionStorage.getItem('lastWebhookResponse');
+      if (webhookResponse) {
+        try {
+          const responseData = JSON.parse(webhookResponse);
+          displayWebhookResponse(responseData);
+        } catch (e) {
+          console.log('Could not parse webhook response for display');
+        }
+      }
+      
       // Persist the loaded data
       persistedCarData = {
         vehicle: vehicle,
@@ -674,6 +722,35 @@
     } catch (error) {
       console.error("❌ Error loading car data:", error);
       updateCarDisplay({}, {}, {}, {});
+    }
+  }
+
+  function displayWebhookResponse(data) {
+    const section = document.getElementById('webhook-response-section');
+    const preElement = document.getElementById('webhook-response-data');
+    
+    if (section && preElement) {
+      section.style.display = 'block';
+      
+      // Format the data nicely
+      let formattedData = '';
+      
+      // Check if data contains the Hebrew response text
+      if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('פרטי רכב:')) {
+        // Display the Hebrew text directly
+        formattedData = data.Body;
+      } else if (Array.isArray(data) && data[0] && data[0].Body) {
+        // Array format with Body field
+        formattedData = data[0].Body;
+      } else if (typeof data === 'string' && data.includes('פרטי רכב:')) {
+        // Direct string format
+        formattedData = data;
+      } else {
+        // Otherwise show as formatted JSON
+        formattedData = JSON.stringify(data, null, 2);
+      }
+      
+      preElement.textContent = formattedData;
     }
   }
 
@@ -898,4 +975,5 @@
     }
   }, 2000);
 
+  console.log('✅ Car Details Floating Module initialized successfully');
 })();
