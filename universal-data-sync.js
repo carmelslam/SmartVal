@@ -6,9 +6,19 @@
   const originalSetItem = sessionStorage.setItem;
   sessionStorage.setItem = function(key, value) {
     originalSetItem.call(this, key, value);
-    
-    // If helper was updated, sync data everywhere
+
+    // If helper was updated, keep global object in sync
     if (key === 'helper') {
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof window.helper === 'object' && window.helper !== null) {
+          Object.assign(window.helper, parsed);
+        } else {
+          window.helper = parsed || {};
+        }
+      } catch (e) {
+        console.error('Failed to parse helper for sync:', e);
+      }
       syncHelperDataEverywhere();
     }
   };
