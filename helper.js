@@ -1708,22 +1708,6 @@ window.updateCalculations = updateCalculations;
 // Make data checking function globally available for testing
 window.checkForIncomingData = checkForIncomingData;
 
-// Load debugging tools in development
-try {
-  import('./data-reception-debugger.js').then(() => {
-    console.log('🔍 Data reception debugger loaded');
-  }).catch(e => {
-    console.log('ℹ️ Data reception debugger not loaded (optional)');
-  });
-  
-  import('./helper-test-suite.js').then(() => {
-    console.log('🧪 Helper test suite loaded');
-  }).catch(e => {
-    console.log('ℹ️ Helper test suite not loaded (optional)');
-  });
-} catch (e) {
-  // Debug tools are optional
-}
 
 // ============================================================================
 // HEBREW TEXT PARSING FUNCTION
