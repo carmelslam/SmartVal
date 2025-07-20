@@ -318,11 +318,25 @@
   `;
   document.body.appendChild(modal);
 
+  // Store loaded data to persist between refreshes
+  let persistedCarData = null;
+
   // Global functions
   window.toggleCarDetails = function () {
     const modal = document.getElementById("carDetailsModal");
     if (modal.style.display === "none" || !modal.style.display) {
-      loadCarData();
+      // If we have persisted data, use it; otherwise load fresh
+      if (persistedCarData) {
+        console.log('📌 Using persisted car data');
+        updateCarDisplay(
+          persistedCarData.vehicle || {}, 
+          persistedCarData.carDetails || {}, 
+          persistedCarData.stakeholders || {}, 
+          persistedCarData.meta || {}
+        );
+      } else {
+        loadCarData();
+      }
       modal.style.display = "block";
       makeDraggable(modal);
     } else {
@@ -404,7 +418,14 @@
       
       sessionStorage.setItem('helper', JSON.stringify(testData));
       window.helper = testData;
-      console.log('✅ Test data loaded!');
+      // Persist the test data
+      persistedCarData = {
+        vehicle: testData.vehicle || {},
+        carDetails: testData.car_details || {},
+        stakeholders: testData.stakeholders || {},
+        meta: testData.meta || {}
+      };
+      console.log('✅ Test data loaded and persisted!');
       refreshCarData();
     }
   };
@@ -426,6 +447,10 @@
       if (window.currentCaseData) {
         delete window.currentCaseData;
       }
+      
+      // Clear persisted data to force fresh load
+      persistedCarData = null;
+      console.log('🧹 Cleared persisted data, forcing fresh load');
       
       // Get fresh data from sessionStorage
       const helperString = sessionStorage.getItem('helper');
@@ -634,8 +659,17 @@
       console.log('  - Year:', vehicle.year || carDetails.year || 'NOT FOUND');
       console.log('  - Owner:', stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || 'NOT FOUND');
       
-      // Update UI
+      // Update UI and persist the data
       updateCarDisplay(vehicle, carDetails, stakeholders, meta);
+      
+      // Persist the loaded data
+      persistedCarData = {
+        vehicle: vehicle,
+        carDetails: carDetails,
+        stakeholders: stakeholders,
+        meta: meta
+      };
+      console.log('💾 Data persisted for future use');
 
     } catch (error) {
       console.error("❌ Error loading car data:", error);
