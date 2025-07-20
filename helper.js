@@ -2285,8 +2285,9 @@ export async function processIncomingData(data, webhookId = 'unknown') {
       result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       console.log('✅ Processed Hebrew car data from array Body');
     }
-    // Standard car data detection
-    else if (isCarData(data)) {
+    // Standard car data detection - ENHANCED to handle any object with car-like fields
+    else if (data && typeof data === 'object' && (isCarData(data) || data.plate || data.owner)) {
+      console.log('📥 Detected direct car data object');
       processCarDetailsData(data, `webhook_${webhookId}`);
       result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       console.log('✅ Processed car data');

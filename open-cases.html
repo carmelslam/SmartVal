@@ -176,7 +176,7 @@
         const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
         console.log('📥 Webhook response:', webhookResponse);
         
-        // Handle Make.com response format (like in demo)
+        // Handle Make.com response format
         let carData = null;
         
         // Check if response is an array (like demo expects)
@@ -184,19 +184,37 @@
           console.log('📥 Make.com returned array format');
           // Extract the actual data from array format
           const firstItem = webhookResponse[0];
-          if (firstItem && firstItem.value) {
-            // Check if value is a string that needs parsing
-            if (typeof firstItem.value === 'string') {
-              try {
-                carData = JSON.parse(firstItem.value);
-                console.log('✅ Parsed nested JSON from Make.com:', carData);
-              } catch (e) {
-                console.error('Failed to parse nested JSON:', e);
+          if (firstItem) {
+            // Check for different possible data locations
+            if (firstItem.value) {
+              // Check if value is a string that needs parsing
+              if (typeof firstItem.value === 'string') {
+                try {
+                  carData = JSON.parse(firstItem.value);
+                  console.log('✅ Parsed nested JSON from Make.com:', carData);
+                } catch (e) {
+                  console.error('Failed to parse nested JSON:', e);
+                  carData = firstItem.value;
+                }
+              } else {
                 carData = firstItem.value;
               }
+            } else if (firstItem.Body && typeof firstItem.Body === 'string') {
+              // Hebrew text in Body field - parse it
+              console.log('📥 Found Hebrew text in Body field');
+              if (typeof window.parseHebrewTextToObject === 'function') {
+                carData = window.parseHebrewTextToObject(firstItem.Body);
+              }
             } else {
-              carData = firstItem.value;
+              // Direct data in array item
+              carData = firstItem;
             }
+          }
+        } else if (webhookResponse && webhookResponse.Body && typeof webhookResponse.Body === 'string') {
+          // Direct Body field with Hebrew text
+          console.log('📥 Found Hebrew text in direct Body field');
+          if (typeof window.parseHebrewTextToObject === 'function') {
+            carData = window.parseHebrewTextToObject(webhookResponse.Body);
           }
         } else if (webhookResponse && typeof webhookResponse === 'object') {
           // Direct object response
@@ -205,14 +223,25 @@
         
         // Store the extracted car data
         if (carData) {
+          // Store in multiple locations for compatibility
           sessionStorage.setItem('makeCarData', JSON.stringify(carData));
-          // DON'T store in carData here - it will be overwritten below
-          console.log('💾 Stored car data from Make.com in makeCarData:', carData);
+          sessionStorage.setItem('carData', JSON.stringify(carData));
+          sessionStorage.setItem('carDataFromMake', JSON.stringify(carData));
+          console.log('💾 Stored car data from Make.com:', carData);
           
-          // Force helper update with the data
+          // Process the data through helper system
           if (typeof window.processIncomingData === 'function') {
+            console.log('🔄 Calling processIncomingData with carData');
             window.processIncomingData(carData, 'OPEN_CASE_UI');
           }
+          
+          // Also trigger the floating screen directly
+          setTimeout(() => {
+            if (typeof window.showCarDetails === 'function') {
+              console.log('🖼️ Triggering car details floating screen');
+              window.showCarDetails();
+            }
+          }, 500);
         }
         
         // Store encrypted form data separately - don't overwrite carData!
@@ -223,19 +252,31 @@
         });
         sessionStorage.setItem("formData", encryptedPayload);
         
-        // FIXED: Update helper directly with the new case data
+        // Update helper with form data (basic info from user input)
         try {
           // Update helper with new case data
           updateHelper('meta', { plate, damage_date: date, location }, 'open_cases');
           updateHelper('vehicle', { plate }, 'open_cases');
           updateHelper('stakeholders', { owner: { name: owner } }, 'open_cases');
           
-          // Broadcast the update to all modules
-          broadcastHelperUpdate(['meta', 'vehicle', 'stakeholders'], 'open_cases');
+          // If we have car data from Make.com, update helper with that too
+          if (carData) {
+            // Update with rich data from Make.com
+            updateHelper('vehicle', carData, 'make_com_response');
+            updateHelper('car_details', carData, 'make_com_response');
+            
+            // Update meta with additional data if available
+            if (carData.owner) {
+              updateHelper('stakeholders', { owner: { name: carData.owner } }, 'make_com_response');
+            }
+          }
           
-          console.log('✅ Car data saved to helper system successfully');
+          // Broadcast the update to all modules
+          broadcastHelperUpdate(['meta', 'vehicle', 'stakeholders', 'car_details'], 'open_cases');
+          
+          console.log('✅ All data saved to helper system successfully');
         } catch (error) {
-          console.error('❌ Error saving car data to helper:', error);
+          console.error('❌ Error saving data to helper:', error);
         }
         
         document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";
@@ -264,17 +305,11 @@
       });
     }
   </script>
-  <script src="test-data-flow.js"></script>
-  <script src="test-data-flow-validation.js"></script>
-  <script src="make-webhook-simulator.js"></script>
+  <script src="helper.js" type="module"></script>
   <script src="helper-init.js"></script>
-  <!-- <script src="parse-hebrew-response.js"></script> Disabled - functionality moved to helper.js -->
-  <script src="force-data-capture.js"></script>
-  <script src="diagnose-data-issue.js"></script>
-  <script src="fix-helper-data-flow.js"></script>
-  <script src="debug-data-capture.js"></script>
-  <script src="auto-enrich-data.js"></script>
-  <script src="test-complete-flow.js"></script>
+  <script src="unified-data-capture.js"></script>
+  <script src="make-webhook-simulator.js"></script>
   <script src="assistant-floating.js"></script>
+  <script src="global-field-updater.js"></script>
 </body>
 </html>

@@ -1343,3 +1343,650 @@ Medium Priority:
 
 Low Priority:
 - Implement generateAdditionalReport() function
+
+**HELPER DISFUNCTION ANAYSIS FROM CO-PILOT AND CODEX - 20/07/2025:**
+*Co pilot findings  for helper problems 20/7/25:*
+1. Current Data Flow Overview
+* helper.js is intended as the centralized data store ("single source of truth").
+* sessionStorage is used for persistence across reloads and for sharing data between modules/pages.
+* webhook.js handles incoming POST data from Make.com (external).
+* UI modules/scripts handle local user input and are expected to update both the helper and sessionStorage.
+
+2. Symptoms & Root Causes
+A. Webhook Data Not Captured
+* webhook.js is responsible for receiving and processing Make.com POST data.
+* There is no clear evidence in the code that webhook.js, after receiving data, updates the helper object or sessionStorage.
+    * Typically, you would expect a function like updateHelperFromWebhook(data) or similar, but this is missing or not invoked.
+* If webhook.js is loaded as a module, but the POST handler is not properly wired to update the global helper/session, the data will not propagate.
+Root Cause:Missing integration logic between webhook.js and helper.js/sessionStorage. Webhook data is not being assigned to the helper or persisted.
+
+B. UI Input Not Captured
+* UI fields (inputs, forms) are expected to update the helper and sessionStorage on change/submit.
+* There is no evidence of a universal event handler or binding that ensures every input change updates both the helper and sessionStorage.
+* Some modules may update only local state or only sessionStorage, but not both, or may not update the helper at all.
+Root Cause:Lack of a unified data binding mechanism between UI fields and the helper/sessionStorage. Updates may be inconsistent or missing.
+
+C. Data Types & Multilingual Support
+* JavaScript natively supports Unicode, so Hebrew/English/numeric values should not be corrupted if handled properly.
+* If data is not being stringified/parsed correctly (e.g., improper use of JSON.stringify/parse), encoding issues may occur.
+* No explicit encoding/decoding issues are visible, but if data is not stored as UTF-8 or is manipulated incorrectly, corruption is possible.
+Root Cause:Potential mishandling of data serialization/deserialization when storing or retrieving from sessionStorage or when passing data between modules.
+
+3. Systemic Issues Identified
+* No central update function: There is no single function that takes any incoming data (webhook or UI) and updates both the helper and sessionStorage.
+* No event-driven updates: UI fields do not appear to have a universal event listener that updates the helper/sessionStorage on change.
+* Webhook data is not merged: Data from Make.com is not merged into the helper or sessionStorage automatically.
+* Modules may not read/write dynamically: Some modules may read stale data or not update the helper, leading to inconsistencies.
+* No data validation/parsing layer: There is no layer ensuring that numeric, Hebrew, and English values are parsed and stored correctly.
+
+4. Summary Table
+Source	Updates Helper?	Updates sessionStorage?	Notes
+Webhook (Make)	❌	❌	No integration logic present
+UI Input	❓ (inconsistent)	❓ (inconsistent)	No universal binding/event handler
+5. Recommendations (No Code Changes Yet)
+1. Add a central update function (e.g., updateHelperAndSession(key, value)) that all modules and webhook.js can call.
+2. In webhook.js, after receiving POST data, call this function to update both helper and sessionStorage.
+3. For UI fields, add a universal event listener (or use a framework/data binding) to update helper/sessionStorage on every change.
+4. Ensure all data is serialized/deserialized using UTF-8 safe methods (JSON.stringify/parse) to preserve multilingual/numeric data.
+5. Audit all modules to ensure they always read from the helper, not from local variables or stale sessionStorage.
+
+6. Conclusion
+* The main issue is missing or inconsistent data propagation from both webhook and UI to the helper and sessionStorage.
+* There is no central mechanism ensuring all data flows through the helper as the single source of truth.
+* Multilingual/numeric support is not explicitly broken, but could be at risk if serialization is not handled carefully.
+Co pilot plan :
+1. Design a Central Update Function
+* Create a function (e.g., updateHelperAndSession(key, value)) in helper.js.
+* This function should:
+    * Update the relevant field in the helper object.
+    * Update the same field in sessionStorage (using JSON.stringify for objects/arrays).
+    * Optionally, trigger any listeners or events for modules that need to react to changes.
+
+2. Integrate Webhook Data
+* In webhook.js, after receiving and parsing POST data:
+    * For each key-value pair in the incoming data, call updateHelperAndSession(key, value).
+    * Ensure all fields from the webhook are mapped to the correct helper/sessionStorage variables.
+
+3. Bind UI Inputs to the Central Function
+* For all user-editable fields (inputs, selects, textareas):
+    * Add event listeners (e.g., onchange, oninput) that call updateHelperAndSession(fieldName, value).
+    * This ensures every manual change is reflected in both the helper and sessionStorage.
+
+4. Initialize Helper from sessionStorage on Load
+* On page/module load, check sessionStorage for existing data.
+* Populate the helper object with this data (using JSON.parse).
+* This ensures persistence across reloads and modules.
+
+5. Ensure All Modules Use the Helper as Source of Truth
+* Refactor modules to always read/write data via the helper object, not directly from sessionStorage or local variables.
+* When a module needs to update data, it should use the central update function.
+
+6. Handle Multilingual and Numeric Data Safely
+* Always use JSON.stringify and JSON.parse for storing/retrieving objects/arrays in sessionStorage.
+* For strings (including Hebrew/English), JavaScript and sessionStorage handle Unicode natively, but avoid manual encoding/decoding unless necessary.
+* For numbers, ensure type consistency when reading/writing (e.g., use parseFloat or parseInt as needed).
+
+7. Test the Full Data Flow
+* Simulate a webhook POST and verify the helper and sessionStorage are updated.
+* Enter data in the UI and verify updates propagate to both helper and sessionStorage.
+* Reload the page/module and ensure data persists and is correctly initialized.
+* Test with Hebrew, English, and numeric values.
+
+8. (Optional) Add Debug Logging
+* Temporarily add console.log statements in the central update function to trace data flow and catch issues during development.
+
+9. Document the Data Flow
+* Update your README or developer docs to describe the new data flow and the role of the central update function.
+
+
+*Codex finding for helper problems 20/7/25:*
+Summary
+* sendToWebhook() saves webhook responses into both makeCarData and carData sessionStorage keys, then calls processIncomingData() and broadcasts updates to all modules
+* checkForIncomingData() looks for makeCarData and processes it through processIncomingData, updating the helper and removing the stored data afterward
+* Every call to updateHelper() first checks session validity via securityManager.validateSession(). If that check fails, the helper is not updated and the function exits early
+If authentication or the lastActivityTime value is missing or expired, validateSession() in security-manager.js triggers logout and returns false
+
+. Because updateHelper() relies on this check, any incoming data—whether from Make.com or local UI events—will be discarded when the session is invalid.
+Testing
+* ✅ npm test → all unit tests pass
+Notes
+The helper depends on a valid session. If users submit forms or receive webhook data after the session expires (or before logging in), updateHelper() will refuse to save. Ensure the login flow correctly sets auth and lastActivityTime and that pages periodically refresh this timestamp. Once session validity is maintained, webhook responses and manual input should populate helper and sessionStorage as expected.
+Assuming that the session validation rule is required and that the incoming data is made within a verified session , why doesn’t the helper or the storage capture any data ?
+
+Copy
+The codebase maintains two distinct helper objects:
+1. helper-init.js creates and manipulates window.helper.// Ensure helper exists in window
+2. if (typeof window.helper === 'undefined') {
+3.   window.helper = {
+4.     vehicle: {},
+5.     meta: {},
+6.     stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } },
+7.     car_details: {},
+8.     case_info: {},
+9.     documents: { images: [] },
+10.     expertise: {},
+11.     damage_assessment: { centers: [] }
+12.   };
+13.   console.log('✅ Created new helper structure');
+14. }
+15. // Load helper from storage if available
+16. const storedHelper = sessionStorage.getItem('helper');
+17. if (storedHelper) {
+18.   const parsed = JSON.parse(storedHelper);
+19.   Object.assign(window.helper, parsed);
+20.   console.log('✅ Loaded helper from storage:', window.helper);
+21. }
+22. ```​:codex-file-citation[codex-file-citation]{line_range_start=12 line_range_end=35 path=helper-init.js git_url="https://github.com/carmelslam/evalsystem/blob/main/helper-init.js#L12-L35"}​
+23. 
+24. 
+25. helper.js exports a different helper constant for module usage, without assigning it to window.helper:window.MathEngine = MathEngine;
+26. window.CalculationInterface = CalculationInterface;
+27. 
+28. export const helper = {
+29.   meta: {
+30.     case_id: '',
+31.     plate: '',
+32.     report_type: 'final',
+33.     report_type_display: 'חוות דעת שמאי פרטית',
+34.     ...
+35. ```​:codex-file-citation[codex-file-citation]{line_range_start=213 line_range_end=221 path=helper.js git_url="https://github.com/carmelslam/evalsystem/blob/main/helper.js#L213-L221"}​
+36. 
+Pages such as open-cases.html import this exported helper and call updateHelper():
+
+<script type="module">
+  import { sendToWebhook } from './webhook.js';
+  import { encryptPassword, decryptPassword } from './auth.js';
+  import { helper, updateHelper, processIncomingData, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+
+Later in the same page a non‑module script loads helper-init.js, which manipulates window.helper instead of the exported helper object:
+
+<script src="helper-init.js"></script>
+
+Because the two helper objects are separate:
+* Webhook responses processed via processIncomingData and updateHelper() modify only the module’s exported helper, which helper-init.js does not reference.
+* Scripts relying on window.helper (created by helper-init.js or other legacy code) do not update the module’s helper or persist their changes with saveHelperToStorage.
+Therefore even with a valid session, one helper instance may change while the other—and sessionStorage—remains unchanged, giving the appearance that data was never captured. Synchronizing these objects (or using a single shared helper) is necessary for consistent storage updates.
+Are both paths necessary? And what needs to synchronize them ? Isn’t this the data standardizer purpose?
+
+Copy
+Both helper.js and helper-init.js create their own “helper” instances.open-cases.html first imports the module‑level helper and its APIs:
+
+112  <script type="module">
+113    import { sendToWebhook } from './webhook.js';
+114    import { encryptPassword, decryptPassword } from './auth.js';
+115    import { helper, updateHelper, processIncomingData, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+
+Later the page loads helper-init.js, which establishes window.helper:
+
+264    </script>
+...
+270    <script src="helper-init.js"></script>
+
+helper-init.js constructs or loads a new helper object and stores it on window:
+
+11  function initializeHelperSystem() {
+14    // 1. Ensure helper exists in window
+15    if (typeof window.helper === 'undefined') {
+16      window.helper = {
+17        vehicle: {},
+18        meta: {},
+19        stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } },
+20        car_details: {},
+21        case_info: {},
+22        documents: { images: [] },
+23        expertise: {},
+24        damage_assessment: { centers: [] }
+25      };
+26      console.log('✅ Created new helper structure');
+27    }
+28
+29    // 2. Load helper from storage if available
+30    const storedHelper = sessionStorage.getItem('helper');
+31    if (storedHelper) {
+32      try {
+33        const parsed = JSON.parse(storedHelper);
+34        Object.assign(window.helper, parsed);
+35        console.log('✅ Loaded helper from storage:', window.helper);
+
+Meanwhile helper.js exports a different helper object that modules use:
+
+212  window.MathEngine = MathEngine;
+213  window.CalculationInterface = CalculationInterface;
+
+216  export const helper = {
+217    meta: {
+218      case_id: '',
+219      plate: '',
+...
+
+Because these objects are separate, updates performed via updateHelper() affect only the exported helper, while legacy scripts that manipulate window.helper (like helper-init.js or fixes such as fix-helper-data-flow.js) modify a different instance. The universal-data-sync.js script attempts to bridge some of this gap by watching sessionStorage.setItem('helper') and copying the data to legacy locations:
+
+5    // Watch for helper updates and sync to all expected locations
+6    const originalSetItem = sessionStorage.setItem;
+7    sessionStorage.setItem = function(key, value) {
+8      originalSetItem.call(this, key, value);
+
+10      // If helper was updated, sync data everywhere
+11      if (key === 'helper') {
+12        syncHelperDataEverywhere();
+13      }
+
+However, the DataFlow Standardizer’s role is different—it standardizes structure and converts between new and legacy formats, as shown by standardizeHelperData() and updateHelperWithStandardizedData():
+
+774  // Function to convert standardized data back to legacy format (for compatibility)
+...
+822  export function updateHelperWithStandardizedData(helper, standardizedData) {
+824    // Perform selective updates to maintain compatibility
+
+It doesn’t automatically synchronize the two helper objects.
+Are both paths necessary?They stem from legacy code. The module version (helper.js) is meant to be the single source of truth. Loading helper-init.js creates another helper in global scope, so unless older scripts strictly need window.helper, this duplication isn’t required.
+What synchronizes them?Currently synchronization relies on manual copying through functions like saveHelperToStorage() in helper.js (which writes to sessionStorage), and universal-data-sync.js that listens for storage updates. But there’s no built‑in mechanism that keeps window.helper and the exported helper in lockstep.
+Isn’t that the data standardizer’s purpose?No—the DataFlow Standardizer ensures the helper’s data structure matches a unified schema and can convert between old and new formats. It doesn’t address the two helper instances. To avoid lost updates, the codebase needs to either:
+1. Eliminate helper-init.js and rely solely on the module helper, or
+2. Introduce a dedicated synchronization routine that copies changes between helper and window.helper whenever either is modified.
+Without such consolidation, data coming from the webhook or UI can update one helper path while leaving the other—and the session storage—out of sync.
+In simple explanation what is the role of the helper-init.js, what modules does it serve and is it the function responsible just for the pop up window in the open case module ?
+
+Copy
+helper-init.js is an initialization script that runs on many pages.At the top of the file it announces the initialization process:
+
+// 🚀 Helper Initialization Module
+// This ensures helper system is properly initialized on all pages
+(function() {
+  console.log('🚀 Helper initialization starting...');
+
+Inside initializeHelperSystem() it ensures a global window.helper object exists and loads any previously saved helper data from sessionStorage:
+
+function initializeHelperSystem() {
+  console.log('🔧 Initializing helper system...');
+
+  // 1. Ensure helper exists in window
+  if (typeof window.helper === 'undefined') {
+    window.helper = {
+      vehicle: {},
+      meta: {},
+      stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } },
+      car_details: {},
+      case_info: {},
+      documents: { images: [] },
+      expertise: {},
+      damage_assessment: { centers: [] }
+    };
+    console.log('✅ Created new helper structure');
+  }
+
+  // 2. Load helper from storage if available
+  const storedHelper = sessionStorage.getItem('helper');
+  if (storedHelper) {
+    try {
+      const parsed = JSON.parse(storedHelper);
+      Object.assign(window.helper, parsed);
+      console.log('✅ Loaded helper from storage:', window.helper);
+    } catch (e) {
+      console.error('❌ Failed to parse stored helper:', e);
+    }
+  }
+  ...
+}
+
+After initialization, it looks for incoming data in session storage (makeCarData or carData) and in URL parameters to update the helper:
+
+// Synchronous data check (no async/await)
+function checkForIncomingDataSync() {
+  console.log('🔍 Checking for incoming data (sync)...');
+
+  // Check makeCarData
+  const makeCarData = sessionStorage.getItem('makeCarData');
+  if (makeCarData) {
+    ...
+    processWebhookData(data);
+    setTimeout(() => {
+      sessionStorage.removeItem('makeCarData');
+    }, 5000);
+  }
+
+  // Check legacy carData
+  const carData = sessionStorage.getItem('carData');
+  if (carData) {
+    ...
+    processLegacyData(data);
+  }
+
+  // Check URL parameters
+  checkUrlParameters();
+}
+
+When the helper is updated, the script can fill form fields and refresh floating windows:
+
+function populateCurrentPageFields() {
+  ...
+  // Also update floating screens if they exist
+  updateFloatingScreens();
+}
+
+// Update floating screens
+function updateFloatingScreens() {
+  // Update car details floating screen
+  if (typeof window.refreshCarData === 'function') {
+    window.refreshCarData();
+  }
+
+  // Ensure currentCaseData is updated
+  window.currentCaseData = window.helper;
+  sessionStorage.setItem('currentCaseData', JSON.stringify(window.helper));
+}
+
+It also registers global helper utilities:
+
+// Set up global functions
+function setupGlobalFunctions() {
+  // Make functions globally available
+  window.forcePopulateFields = populateCurrentPageFields;
+  window.forceCaptureFormData = function() { ... };
+  window.ensureFloatingScreenData = function() { ... };
+  console.log('✅ Global functions registered');
+}
+
+helper-init.js is therefore responsible for:
+1. Creating and loading the global window.helper object.
+2. Checking various sources (webhook data, legacy data, URL parameters) to populate that object.
+3. Saving the helper back to session storage and propagating changes to floating screens.
+4. Exposing helper-related utilities globally.
+Multiple pages include this script—open-cases.html, general_info.html, and others:
+
+<script src="helper-init.js"></script>
+
+
+Thus helper-init.js serves all modules that rely on window.helper and the floating “car details” panels across the system. It is not limited to the open case module or just the popup window. Instead, it initializes and synchronizes helper data for every page that loads it, ensuring that data from webhooks or user input is stored in sessionStorage and reflected in floating panels.
+So it’s an important script. The only problem from what I understand that its designed to capture just the core car data and not all the helper fields with the complex information it accumulate, also its targeting just car details floating screen when in fact I need it to target All floating screens , is this correct ?
+
+Copy
+Yes. helper-init.js focuses mainly on a subset of vehicle data and owner details.processWebhookData() maps only a few fields from Hebrew to English (plate, manufacturer, model, year, chassis, etc.) and saves them to window.helper and carData in session storage:
+
+  function processWebhookData(data) {
+    ...
+    const hebrewMap = {
+      'מספר_רכב': 'plate',
+      'מס_רכב': 'plate',
+      'יצרן': 'manufacturer',
+      'שם_היצרן': 'manufacturer',
+      'דגם': 'model',
+      'שנת_יצור': 'year',
+      'מספר_שלדה': 'chassis',
+      'נפח_מנוע': 'engine_volume',
+      'סוג_דלק': 'fuel_type',
+      'בעל_הרכב': 'owner',
+      'שם_בעל_הרכב': 'owner'
+    };
+    ...
+    ['manufacturer', 'model', 'year', 'chassis', 'engine_volume', 'fuel_type']
+      .forEach(field => {
+        if (translated[field]) {
+          window.helper.vehicle[field] = translated[field];
+        }
+      });
+    ...
+    sessionStorage.setItem('carData', JSON.stringify({
+      ...translated,
+      ...window.helper.vehicle,
+      ...window.helper.meta
+    }));
+  }
+
+
+When populating fields, it looks only for car‑related IDs such as plate, model, year, owner, and so on:
+
+    const fieldMappings = {
+      'plate': window.helper.vehicle?.plate || window.helper.meta?.plate,
+      'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate,
+      'owner': window.helper.stakeholders?.owner?.name,
+      'manufacturer': window.helper.vehicle?.manufacturer,
+      'make': window.helper.vehicle?.manufacturer,
+      'model': window.helper.vehicle?.model,
+      'year': window.helper.vehicle?.year,
+      'chassis': window.helper.vehicle?.chassis,
+      ...
+    };
+
+And updateFloatingScreens() refreshes only the car‑details floating screen via window.refreshCarData():
+
+  function updateFloatingScreens() {
+    // Update car details floating screen
+    if (typeof window.refreshCarData === 'function') {
+      window.refreshCarData();
+    }
+
+    // Ensure currentCaseData is updated
+    window.currentCaseData = window.helper;
+    sessionStorage.setItem('currentCaseData', JSON.stringify(window.helper));
+  }
+
+So while it initializes the overall helper object, this script mainly captures and updates core car data and refreshes the car‑details floating panel. It does not populate or refresh all the other floating screens or the more complex helper fields on its own.
+The proper system function should be that any incoming data or UI manual data automatically updates the helper and the session storage . The helper is the one source that feeds all modules, floating screens and builders based on a predefined mapping , the car details is not just one group of data , it is an accumulated database that each module contributes to its integrity , the floating screens offer a glance of selected data in selected pages from easier data access . The helper cannot change its structure or format since this will break the automation in make when exporting either the full helper or parts of it because of mapping limits . Think of it as a centralized hub that sends “tubes” of information to all the system files that expect data and at the same time it can receive incoming data from those files either as a new data that fills predetermined fields in the helper or , modify existing data with new values , the helper is also connected to the outside world ( make.come) via webhooks that are triggered within the different modules so when a module triggers a webhook the returning data to that webhook path is instantly captured by the helper and session storage . With this in mind what is the best way in your opinion to build it and if compared to the current structure what changes need to be done ?
+
+
+Analysis
+* Duplicate helper instances
+    * Pages import the module-based helper APIs first, then load helper-init.js, which creates a separate window.helper object. For example, open-cases.html loads helper-init.js after other data‑flow scripts, and general_info.html does the same.
+    * helper-init.js builds a new global helper and loads any existing data from storage when it runs.
+    * The module helper in helper.js performs updates only if securityManager.validateSession() returns true.
+* Session validation requirement
+    * securityManager.validateSession() checks for an auth token and a recent lastActivityTime; if missing or expired, it logs the user out and returns false.
+    * Because updateHelper() calls this validation before merging data, any webhook or form updates during an invalid session are discarded.
+* Automatic data syncing
+    * universal-data-sync.js overrides sessionStorage.setItem to watch for the “helper” key and then synchronize all derived locations (e.g., currentCaseData, carData) when the helper changes.
+* Current behavior
+    * Webhooks processed via the module helper are stored in sessionStorage under makeCarData. The initialization script (helper-init.js) also looks for makeCarData to populate its own copy of window.helper. Because the module helper and window.helper are separate objects, changes to one may not propagate to the other.
+    * If the session has expired, updateHelper() exits early, so neither the helper nor sessionStorage receives the new data.
+Recommended Architecture
+1. Single helper instance
+    * Use the ES‑module helper.js as the definitive data store.
+    * Expose it globally (e.g., window.helper = helper) when loadHelperFromStorage() runs so legacy scripts still access the same object.
+    * Remove or refactor helper-init.js so it does not create a second helper. Instead, its initialization logic should import the module and call loadHelperFromStorage().
+2. Central update mechanism
+    * Keep updateHelper(section, data) as the only function that merges incoming webhook data and manual UI entries. It should always persist to sessionStorage via saveHelperToStorage(), which in turn triggers universal-data-sync.js to update floating screens and other modules.
+3. Session handling
+    * Ensure the login workflow sets auth and lastActivityTime in sessionStorage. Pages should periodically refresh lastActivityTime to keep the session valid, otherwise calls to updateHelper() will be rejected.
+    * Consider a graceful fallback: if the session is invalid when data arrives, queue the data locally and apply it after the user re-authenticates.
+4. Data normalization and localization
+    * Retain the current mapping and sanitization logic within helper.js. Hebrew and English fields are already converted via functions such as processIncomingData and sanitizeHelperData.
+    * Keep the helper’s structure unchanged to preserve Make.com mappings, but define a standardized schema using the DataFlowStandardizer to validate that modules write to the correct keys.
+5. Cross-module communication
+    * Continue using the broadcast functions (broadcastHelperUpdate and the storage watcher in universal-data-sync.js) so that when the helper changes, floating screens and builders refresh automatically.
+Benefits Over Current Structure
+* Eliminates the dual-helper confusion—every module reads and writes to the same object, whether via module imports or through window.helper.
+* SessionStorage always receives the latest data since saveHelperToStorage() runs from a single location.
+* Floating screens and legacy components update consistently through universal-data-sync.js.
+* Multilingual text remains intact because updates go through the existing sanitization and Hebrew-to-English mapping functions.
+* Fewer scripts are needed (no separate helper-init.js duplication), reducing maintenance and potential race conditions.
+By consolidating all data flows through one helper instance and ensuring session validity, both webhook responses and manual inputs will reliably populate the helper and session storage. Modules can modify specific fields without breaking the overall structure, and Make.com can continue to export the same mapped fields without disruption.
+Is this solution built to handle all data in the session not just the car details data ? Data such as depreciation calculations, depreciation values, damage centers data, parts data , invoice data , Levi data market values, gross values comments, directives, summaries and so on ? Each data that I just mentioned is a part of the accuracy information in the helper and the session storage, the problem is not just to capture legacy car details , the purpose is to capture the whole case spectrum with all data that when a helper is called to the system from the drive via make it can restore the whole case in the system .
+
+Copy
+The centralized helper.js defines a comprehensive structure that stores far more than just vehicle basics. It includes depreciation info, damage blocks, invoice details, Levi market values, and other sections required to reconstruct a full case. For example, the expertise object holds depreciation and calculation fields while the invoice section captures invoice totals and line items:
+
+  expertise: {
+    ...
+    depreciation: {
+      global_percent: '',
+      global_amount: '',
+      work_days: '',
+      centers: []
+    },
+    calculations: {
+      total_damage: '',
+      vehicle_value_gross: '',
+      vehicle_value_market: '',
+      ...
+    }
+  },
+  ...
+  invoice: {
+    garage_name: '',
+    garage_email: '',
+    garage_phone: '',
+    total_parts: '',
+    ...
+    parts: [],
+    works: [],
+    repairs: []
+  },
+
+updateHelper() is designed to merge data into the appropriate section of this structure. Its switch statement routes updates for vehicle details, stakeholders, damage centers, Levi valuations, invoices, and more, then saves the result to sessionStorage:
+
+export function updateHelper(section, data, sourceModule = null) {
+  ...
+  switch (section) {
+    case 'vehicle':
+    case 'car_details':
+      processCarDetailsData(sanitizedData, sourceModule);
+      break;
+    case 'stakeholders':
+    case 'garage':
+    case 'insurance':
+    case 'client':
+      processStakeholderData(section, sanitizedData, sourceModule);
+      break;
+    case 'damage_assessment':
+    case 'damage_centers':
+    case 'expertise':
+      processDamageData(section, sanitizedData, sourceModule);
+      break;
+    case 'valuation':
+    case 'levisummary':
+    case 'levi_report':
+      processValuationData(section, sanitizedData, sourceModule);
+      break;
+    case 'parts_search':
+    case 'parts_results':
+      processPartsData(section, sanitizedData, sourceModule);
+      break;
+    case 'invoice':
+    case 'invoices':
+      processInvoiceData(sanitizedData, sourceModule);
+      break;
+    case 'documents':
+    case 'images':
+      processDocumentData(section, sanitizedData, sourceModule);
+      break;
+    case 'financials':
+    case 'fees':
+    case 'costs':
+      processFinancialData(section, sanitizedData, sourceModule);
+      break;
+    default:
+      mergeDeep(helper[section], sanitizedData);
+  }
+
+  saveHelperToStorage();
+  if (['vehicle', 'car_details', 'stakeholders'].includes(section)) {
+    updateLegacyCarData();
+  }
+  ...
+}
+
+Webhook data is processed through processIncomingData(), which detects multiple data formats—car details, Levi reports, invoices, damage assessments, document uploads, etc.—and updates the corresponding helper sections before saving:
+
+export async function processIncomingData(data, webhookId = 'unknown') {
+  ...
+  if (isLeviData(data)) {
+    processValuationData('levi_report', data, `webhook_${webhookId}`);
+    result.updatedSections.push('valuation', 'levisummary');
+  }
+  if (isPartsData(data)) {
+    processPartsData('parts_search', data, `webhook_${webhookId}`);
+    result.updatedSections.push('parts_search');
+  }
+  if (isInvoiceData(data)) {
+    processInvoiceData(data, `webhook_${webhookId}`);
+    result.updatedSections.push('documents', 'financials');
+  }
+  if (isDamageData(data)) {
+    processDamageData('damage_centers', data, `webhook_${webhookId}`);
+    result.updatedSections.push('damage_assessment', 'expertise');
+  }
+  ...
+  saveHelperToStorage();
+  updateLegacyCarData();
+  ...
+}
+
+Finally, universal-data-sync.js listens for changes to the helper in sessionStorage and synchronizes this data to floating screens and other components so the entire case state is restored:
+
+const originalSetItem = sessionStorage.setItem;
+sessionStorage.setItem = function(key, value) {
+  originalSetItem.call(this, key, value);
+  if (key === 'helper') {
+    syncHelperDataEverywhere();
+  }
+};
+
+function syncHelperDataEverywhere() {
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  ...
+  sessionStorage.setItem('currentCaseData', JSON.stringify(currentCaseData));
+  window.currentCaseData = currentCaseData;
+  ...
+  refreshAllUIComponents();
+}
+
+Because of this design, once the duplicate helper instances are consolidated and session validation succeeds, the system can capture webhook data or manual input for every module—depreciation calculations, invoice values, Levi market prices, comments, summaries, and more—and persist them to sessionStorage. When the helper is loaded again (e.g., via Make.com), all these sections are restored, allowing the full case state to re‑populate the UI.
+ok , give me a full plan with detailed tasks based on your previous suggestion and understanding of the correct helper functionality
+
+Copy
+Plan Overview
+The codebase currently maintains two separate helper objects. helper-init.js creates window.helper and loads a small subset of fields, while helper.js exports a different helper object that the modules use. Updates in one don’t always propagate to the other or to sessionStorage. For example, helper-init.js initializes its own structure at lines 11‑26
+
+, while helper.js’s updateHelper() validates the session and updates the module helper only
+
+. A universal sync script watches for changes in sessionStorage to try to keep things aligned
+
+, but the two helper instances still diverge.
+To ensure consistent data capture from webhooks and UI input, the following tasks are recommended.
+
+1. Unify the Helper Instance
+* Task 1.1 – Remove Duplicate Initialization
+    * Deprecate the helper creation inside helper-init.js (lines 11‑26). Instead, rely on the helper exported from helper.js.
+    * If legacy code requires window.helper, assign the exported helper to window.helper after loading helper.js.
+* Task 1.2 – Adjust loadHelperFromStorage()
+    * Ensure loadHelperFromStorage() in helper.js sets window.helper = helper after loading data from storage.
+    * Remove the redundant initialization calls in helper-init.js so only the module function manages helper state.
+2. Standardize Update Flow
+* Task 2.1 – Centralize updateHelper() Usage
+    * All incoming webhook handlers and UI forms should call updateHelper() so data passes through the same validation and sanitization steps.
+    * Confirm all modules import this function and remove any alternative update paths.
+* Task 2.2 – Maintain Universal Sync
+    * Keep universal-data-sync.js to synchronize derived structures such as carData or currentCaseData. This script currently listens for sessionStorage.setItem('helper') and is already prepared for that role (lines 5‑14 in universal-data-sync.js).
+3. Session Validation and Activity Refresh
+* Task 3.1 – Verify Login Process
+    * Ensure the login flow sets auth and lastActivityTime in sessionStorage. (The login code in index.html already writes these values on success.)
+* Task 3.2 – Refresh Activity Timestamp
+    * Add a periodic timer or user‑interaction events to update lastActivityTime so sessions remain valid during active use.
+* Task 3.3 – Graceful Session Expiry Handling
+    * If updateHelper() detects an invalid session (lines 566‑571), queue the incoming data locally (e.g., in localStorage). Apply that queue once the user re-authenticates.
+4. Input Normalization and Encoding
+* Task 4.1 – Maintain Multilingual Support
+    * Continue using the Hebrew→English mappings in processWebhookData() and the sanitization routines already in helper.js and helper-init.js.
+    * Verify that sanitizeHelperData() correctly handles UTF‑8 Hebrew text without modification.
+* Task 4.2 – Validate Numeric Fields
+    * Use the existing sanitizeHelperData() to convert numeric strings to numbers where appropriate, ensuring decimals and Hebrew numerals remain intact.
+5. Remove Legacy Artifacts
+* Task 5.1 – Clean Up helper-init.js
+    * Once the helper instance is unified, trim helper-init.js down to only functions that populate forms or trigger floating screens. Its role will be limited to UI helpers rather than data storage.
+* Task 5.2 – Audit All Modules
+    * Search the repository for references to window.helper and adjust them to rely on the exported helper object. Confirm each module’s update calls funnel through updateHelper().
+6. Testing and Validation
+* Task 6.1 – Run Existing Test Suites
+    * After refactoring, run npm test and the integration tests to ensure no regressions.
+* Task 6.2 – Manual Data Flow Verification
+    * Simulate a webhook POST via make-webhook-simulator.js and confirm that the helper and session storage capture the data.
+    * Manually enter data in the UI and verify it immediately appears in sessionStorage and in the floating screens.
+7. Documentation and Deployment
+* Task 7.1 – Update Documentation
+    * Update README sections describing the helper architecture to reflect the single-source helper design.
+    * Provide instructions for developers on how to access and update helper fields.
+* Task 7.2 – Increment Version / Tag
+    * After thorough testing, tag the repository to indicate a stable release with the unified helper.
+
+Outcome
+By consolidating helper initialization, routing all updates through updateHelper(), and keeping session timestamps refreshed, the system will reliably capture both webhook data and manual input. helper.js will serve as the single source of truth, exposing window.helper for legacy components while ensuring that multilingual text and numeric values remain intact. The universal sync script will then propagate this data to all floating screens and modules automatically.
