@@ -89,13 +89,15 @@
     .car-field .label {
       font-weight: bold;
       color: #6c757d;
-      font-size: 14px;
+      font-size: 13px;
+      min-width: 120px;
     }
     
     .car-field .value {
       color: #212529;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
+      text-align: left;
     }
     
     .value.empty {
@@ -210,6 +212,14 @@
           <div class="value" id="vehicle-model-code">-</div>
         </div>
         <div class="car-field">
+          <div class="label">קוד לוי יצחק:</div>
+          <div class="value" id="vehicle-levi-code">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">קוד אוניברסלי:</div>
+          <div class="value" id="vehicle-universal-code">-</div>
+        </div>
+        <div class="car-field">
           <div class="label">דגם מנוע:</div>
           <div class="value" id="vehicle-engine-model">-</div>
         </div>
@@ -254,6 +264,10 @@
         <div class="car-field">
           <div class="label">מד אוץ:</div>
           <div class="value" id="car-odometer">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">מקום בדיקה:</div>
+          <div class="value" id="car-inspection-location">-</div>
         </div>
       </div>
     </div>
@@ -573,6 +587,12 @@
     document.getElementById("vehicle-model-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code || carDetails['מספר דגם הרכב']
     );
+    document.getElementById("vehicle-levi-code").textContent = formatValue(
+      vehicle.levi_code || carDetails.levi_code || carDetails['קוד לוי יצחק']
+    );
+    document.getElementById("vehicle-universal-code").textContent = formatValue(
+      vehicle.universal_code || carDetails.universal_code || carDetails['קוד אוניברסלי']
+    );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
       vehicle.engine_model || carDetails.engine_model || carDetails['דגם מנוע']
     );
@@ -608,6 +628,9 @@
     );
     document.getElementById("car-odometer").textContent = formatValue(
       carDetails.odo || vehicle.km || carDetails['מד אוץ']
+    );
+    document.getElementById("car-inspection-location").textContent = formatValue(
+      meta.location || carDetails.location || carDetails['מקום בדיקה']
     );
 
     // Garage info - check stakeholders and car_details
