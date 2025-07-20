@@ -120,11 +120,6 @@
 
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
-  
-  <!-- Floating button to show car details -->
-  <button onclick="toggleCarDetails()" style="position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-weight: bold; z-index: 1000;">
-    🚗 פרטי רכב
-  </button>
 
   <div id="vehiclePopup" style="display:none; position:fixed; bottom:20px; left:20px; background:#fff; border:1px solid #ccc; border-radius:8px; padding:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:1000; font-size:14px; text-align:right; max-width:280px;"></div>
 
@@ -223,7 +218,6 @@
 
     // When saving, keep field names consistent with helper/contact structure
     document.getElementById("submitBtn").addEventListener("click", async () => {
-      console.log('🚀 Submit button clicked!');
       // Ensure password is decrypted before use
       if (!password) {
         try {
@@ -265,50 +259,9 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שומר נתונים...";
         
-        console.log('📊 Updating helper with form data...');
-        
-        // Update helper with proper structure
-        const stakeholdersData = {
-          owner: {
-            name: data.owner,
-            phone: data.ownerPhone,
-            address: data.ownerAddress
-          },
-          garage: {
-            name: data.garageName,
-            phone: data.garagePhone,
-            email: data.garageEmail
-          },
-          insurance: {
-            company: data.insuranceCompany,
-            email: data.insuranceEmail,
-            agent: {
-              name: data.agentName,
-              phone: data.insurance_agent_phone,
-              email: data.insurance_agent_email
-            }
-          }
-        };
-        console.log('📊 Stakeholders data:', stakeholdersData);
-        updateHelper('stakeholders', stakeholdersData, 'general_info');
-        
-        const vehicleData = { 
-          plate: data.plate, 
-          km: data.odo 
-        };
-        console.log('📊 Vehicle data:', vehicleData);
-        updateHelper('vehicle', vehicleData, 'general_info');
-        
-        const metaData = {
-          damage_date: data.damageDate,
-          damage_type: data.damageType
-        };
-        console.log('📊 Meta data:', metaData);
-        updateHelper('meta', metaData, 'general_info');
-        
-        // Check if helper was updated
-        console.log('✅ Helper after updates:', window.helper);
-        console.log('📊 Helper in sessionStorage:', sessionStorage.getItem('helper'));
+        // Update helper directly
+        updateHelper('stakeholders', data, 'general_info');
+        updateHelper('vehicle', { plate: data.plate, km: data.odo }, 'general_info');
         
         // Legacy support - functions will be called by simple data flow
         
@@ -572,6 +525,5 @@
   </script>
   <script src="helper.js" type="module"></script>
   <script src="universal-data-sync.js"></script>
-  <script src="car-details-float.js"></script>
 </body>
 </html>
