@@ -3426,3 +3426,26 @@ if (typeof document !== 'undefined') {
 }
 
 console.log('✅ Helper.js loaded - Single source of truth established');
+
+// CRITICAL: Initialize helper from storage on page load
+(function initializeOnPageLoad() {
+  console.log('🚀 Initializing helper on page load...');
+  
+  // Load helper from storage
+  const loaded = loadHelperFromStorage();
+  
+  if (loaded) {
+    console.log('✅ Helper loaded from storage on page initialization');
+    console.log('📊 Current helper data:', {
+      hasVehicle: !!helper.vehicle,
+      hasMeta: !!helper.meta,
+      hasStakeholders: !!helper.stakeholders,
+      plateNumber: helper.vehicle?.plate || helper.meta?.plate || 'Not set'
+    });
+  } else {
+    console.log('ℹ️ No existing helper data found, starting fresh');
+  }
+  
+  // Ensure window.helper is set
+  window.helper = helper;
+})();
