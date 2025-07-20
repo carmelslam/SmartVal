@@ -747,19 +747,12 @@ class InvoiceProcessor {
         invoice_type: document.getElementById('invoice-type').value
       }));
 
-      const response = await fetch(getWebhook('OCR_INVOICES'), {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        this.handleOCRResults(result);
-        this.showAlert('✅ חשבונית עובדה בהצלחה', 'success');
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'שגיאה בעיבוד החשבונית');
-      }
+      // FIXED: Use sendToWebhook to get proper Make.com array parsing
+      const result = await sendToWebhook('OCR_INVOICES', formData);
+      
+      console.log('✅ Invoice OCR webhook response:', result);
+      this.handleOCRResults(result);
+      this.showAlert('✅ חשבונית עובדה בהצלחה', 'success');
       
     } catch (error) {
       console.error('Invoice processing error:', error);
