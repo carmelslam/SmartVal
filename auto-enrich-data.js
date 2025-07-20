@@ -109,13 +109,14 @@
   function updateHelperWithData(data) {
     console.log('🔧 Updating helper with enriched data...');
     
-    // Ensure helper exists
-    window.helper = window.helper || {
-      vehicle: {},
-      meta: {},
-      stakeholders: { owner: {}, garage: {} },
-      car_details: {}
-    };
+    // Ensure helper exists (use existing helper if available)
+    if (!window.helper) {
+      console.warn('⚠️ Helper not loaded - loading it now');
+      // Try to load helper module
+      if (window.loadHelperFromStorage) {
+        window.loadHelperFromStorage();
+      }
+    }
     
     // Update all sections
     window.helper.vehicle = {

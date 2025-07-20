@@ -470,9 +470,13 @@ class SecurityManager {
     localStorage.removeItem('lastCaseTimestamp');
     sessionStorage.removeItem('helper');
     
-    // Clear sensitive data from memory
+    // Clear sensitive data from memory (don't create new helper)
     if (window.helper) {
-      window.helper = {};
+      // Clear helper data without creating new object
+      Object.keys(window.helper).forEach(key => {
+        delete window.helper[key];
+      });
+      console.log('🔒 Helper data cleared for new case');
     }
     
     this.logSecurityEvent('new_case_started', {

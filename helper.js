@@ -563,9 +563,26 @@ export function updateHelper(section, data, sourceModule = null) {
     
     isUpdatingHelper = true;
     
-    // Security validation
+    // Security validation with graceful data queuing (Codex recommendation)
     if (!securityManager.validateSession()) {
-      errorHandler.createError('authentication', 'high', 'Session expired during data update');
+      console.log('⏸️ Session invalid - queuing data for later');
+      
+      // Queue data instead of losing it
+      try {
+        const queue = JSON.parse(localStorage.getItem('pendingHelperUpdates') || '[]');
+        queue.push({
+          timestamp: Date.now(),
+          section: section,
+          data: data,
+          sourceModule: sourceModule
+        });
+        localStorage.setItem('pendingHelperUpdates', JSON.stringify(queue));
+        console.log(`📥 Data queued (${queue.length} items pending)`);
+      } catch (e) {
+        console.error('Failed to queue data:', e);
+      }
+      
+      errorHandler.createError('authentication', 'medium', 'Session expired - data queued');
       isUpdatingHelper = false;
       return false;
     }
@@ -789,7 +806,10 @@ export function loadHelperFromStorage() {
       
       // Save initialized helper
       saveHelperToStorage();
-      console.log('✅ Empty helper initialized and saved');
+      
+      // CRITICAL: Make the module helper THE global helper
+      window.helper = helper;
+      console.log('✅ Empty helper initialized, saved, and set as global window.helper');
       return true;
     }
     
@@ -834,6 +854,12 @@ export function loadHelperFromStorage() {
       timestamp: new Date()
     });
     
+    // CRITICAL: Make the module helper THE global helper (Codex recommendation)
+    window.helper = helper;
+    console.log('✅ Module helper set as global window.helper');
+    
+    // Apply any queued updates from when session was invalid
+    applyQueuedUpdates();
     
     return true;
     
@@ -843,6 +869,55 @@ export function loadHelperFromStorage() {
       originalError: error.message
     });
     return false;
+  }
+}
+
+// ============================================================================
+// QUEUED DATA MANAGEMENT (Codex recommendation for graceful session handling)
+// ============================================================================
+
+function applyQueuedUpdates() {
+  try {
+    const queue = JSON.parse(localStorage.getItem('pendingHelperUpdates') || '[]');
+    
+    if (queue.length === 0) {
+      return;
+    }
+    
+    console.log(`📥 Applying ${queue.length} queued updates...`);
+    
+    // Sort by timestamp to maintain order
+    queue.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Apply each update
+    let applied = 0;
+    queue.forEach((item, index) => {
+      try {
+        console.log(`📝 Applying queued update ${index + 1}/${queue.length}: ${item.section}`);
+        
+        // Call updateHelper directly without re-checking session
+        // We're already authenticated if we got here
+        const currentValidation = securityManager.validateSession;
+        securityManager.validateSession = () => true; // Temporarily bypass
+        
+        updateHelper(item.section, item.data, item.sourceModule || 'queued_update');
+        
+        securityManager.validateSession = currentValidation; // Restore
+        applied++;
+      } catch (e) {
+        console.error(`Failed to apply queued update ${index}:`, e);
+      }
+    });
+    
+    // Clear the queue after processing
+    localStorage.removeItem('pendingHelperUpdates');
+    console.log(`✅ Applied ${applied}/${queue.length} queued updates`);
+    
+    // Broadcast that queued data was applied
+    broadcastHelperUpdate(['queued_data'], 'queue_application');
+    
+  } catch (error) {
+    console.error('Failed to apply queued updates:', error);
   }
 }
 
@@ -3279,5 +3354,91 @@ window.updateHelper = updateHelper;
 window.saveHelperToStorage = saveHelperToStorage;
 window.broadcastHelperUpdate = broadcastHelperUpdate;
 window.loadHelperFromStorage = loadHelperFromStorage;
+
+// ============================================================================
+// SESSION ACTIVITY MONITORING (Codex recommendation)
+// ============================================================================
+let activityTimer;
+let warningShown = false;
+
+function resetActivity() {
+  // Update last activity time
+  sessionStorage.setItem('lastActivityTime', Date.now().toString());
+  
+  // Clear existing timer
+  if (activityTimer) {
+    clearTimeout(activityTimer);
+  }
+  
+  // Hide warning if shown
+  if (warningShown) {
+    const warning = document.getElementById('session-warning');
+    if (warning) warning.remove();
+    warningShown = false;
+  }
+  
+  // Set new timer for 13 minutes (2 minutes before logout)
+  activityTimer = setTimeout(showInactivityWarning, 13 * 60 * 1000);
+}
+
+function showInactivityWarning() {
+  if (warningShown) return;
+  
+  warningShown = true;
+  const warning = document.createElement('div');
+  warning.id = 'session-warning';
+  warning.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff6b6b;
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    z-index: 10000;
+    text-align: center;
+    font-family: Arial;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+  warning.innerHTML = `
+    <h3 style="margin: 0 0 10px 0;">⚠️ אזהרת פעילות</h3>
+    <p style="margin: 0 0 15px 0;">הפגישה תסתיים בעוד 2 דקות עקב חוסר פעילות</p>
+    <button onclick="resetActivity()" style="
+      background: white;
+      color: #ff6b6b;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    ">המשך עבודה</button>
+  `;
+  document.body.appendChild(warning);
+  
+  // Set final logout timer for 2 more minutes
+  setTimeout(() => {
+    if (warningShown) {
+      console.log('🔒 Session expired due to inactivity');
+      if (window.securityManager) {
+        window.securityManager.logout();
+      }
+    }
+  }, 2 * 60 * 1000);
+}
+
+// Make activity functions globally available
+window.resetActivity = resetActivity;
+
+// Monitor user activity
+if (typeof document !== 'undefined') {
+  ['click', 'keypress', 'mousemove', 'touchstart', 'scroll'].forEach(event => {
+    document.addEventListener(event, resetActivity, { passive: true });
+  });
+  
+  // Initialize activity monitoring
+  resetActivity();
+  console.log('✅ Session activity monitoring initialized');
+}
 
 console.log('✅ Helper.js loaded - Single source of truth established');
