@@ -9,7 +9,7 @@
       left: 50%;
       transform: translateX(-50%);
       width: 95%;
-      max-width: 650px;
+      max-width: 800px;
       max-height: 90vh;
       background: white;
       border: 1px solid #28a745;
@@ -54,22 +54,36 @@
     }
     
     .car-section h4 {
-      margin: 0 0 10px 0;
+      margin: 0 0 15px 0;
       color: #495057;
       font-size: 16px;
       font-weight: bold;
+      text-align: center;
+      border-bottom: 2px solid #dee2e6;
+      padding-bottom: 8px;
+    }
+    
+    .car-fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .car-fields-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
     }
     
     .car-field {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .car-field:last-child {
-      border-bottom: none;
+      padding: 8px 10px;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      background: white;
     }
     
     .car-field .label {
@@ -113,6 +127,28 @@
     .car-btn.refresh {
       background: #28a745;
       color: white;
+      transition: all 0.3s ease;
+    }
+    
+    .car-btn.refresh:hover:not(:disabled) {
+      background: #218838;
+      transform: scale(1.05);
+    }
+    
+    .car-btn.refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .car-btn.refresh.spinning::before {
+      content: "🔄 ";
+      display: inline-block;
+      animation: spin 1s linear infinite;
     }
   `;
   document.head.appendChild(style);
@@ -123,90 +159,140 @@
     <div class="car-modal-title">פרטי רכב</div>
     
     <div class="car-section">
-      <h4>פרטי רכב (Vehicle)</h4>
-      <div class="car-field">
-        <div class="label">מספר רכב:</div>
-        <div class="value" id="vehicle-plate">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">יצרן:</div>
-        <div class="value" id="vehicle-manufacturer">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">דגם:</div>
-        <div class="value" id="vehicle-model">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">שנת יצור:</div>
-        <div class="value" id="vehicle-year">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">קילומטראז׳:</div>
-        <div class="value" id="vehicle-km">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">שילדה:</div>
-        <div class="value" id="vehicle-chassis">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">קוד דגם:</div>
-        <div class="value" id="vehicle-model-code">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">סוג דלק:</div>
-        <div class="value" id="vehicle-fuel-type">-</div>
+      <h4>פרטי רכב</h4>
+      <div class="car-fields-grid">
+        <div class="car-field">
+          <div class="label">מספר רכב:</div>
+          <div class="value" id="vehicle-plate">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">שם היצרן:</div>
+          <div class="value" id="vehicle-manufacturer">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">דגם:</div>
+          <div class="value" id="vehicle-model">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">סוג הדגם:</div>
+          <div class="value" id="vehicle-model-type">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">סוג הרכב:</div>
+          <div class="value" id="vehicle-type">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">רמת גימור:</div>
+          <div class="value" id="vehicle-trim">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">מספר שילדה:</div>
+          <div class="value" id="vehicle-chassis">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">שנת ייצור:</div>
+          <div class="value" id="vehicle-year">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">סוג בעלות:</div>
+          <div class="value" id="vehicle-ownership-type">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">נפח מנוע:</div>
+          <div class="value" id="vehicle-engine-volume">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">סוג דלק:</div>
+          <div class="value" id="vehicle-fuel-type">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">מספר דגם הרכב:</div>
+          <div class="value" id="vehicle-model-code">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">דגם מנוע:</div>
+          <div class="value" id="vehicle-engine-model">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">הנעה:</div>
+          <div class="value" id="vehicle-drive-type">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">קוד משרד התחבורה:</div>
+          <div class="value" id="vehicle-office-code">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">קילומטראז׳:</div>
+          <div class="value" id="vehicle-km">-</div>
+        </div>
       </div>
     </div>
 
     <div class="car-section">
-      <h4>פרטי רכב נוספים (Car Details)</h4>
-      <div class="car-field">
-        <div class="label">בעלים:</div>
-        <div class="value" id="car-owner">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">סוג בעלות:</div>
-        <div class="value" id="car-ownership-type">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">ערך שוק:</div>
-        <div class="value" id="car-market-value">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">תאריך נזק:</div>
-        <div class="value" id="car-damage-date">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">כתובת בעלים:</div>
-        <div class="value" id="car-owner-address">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">טלפון בעלים:</div>
-        <div class="value" id="car-owner-phone">-</div>
+      <h4>פרטי בעלים ונזק</h4>
+      <div class="car-fields-grid">
+        <div class="car-field">
+          <div class="label">שם בעל הרכב:</div>
+          <div class="value" id="car-owner">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">תאריך נזק:</div>
+          <div class="value" id="car-damage-date">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">כתובת בעלים:</div>
+          <div class="value" id="car-owner-address">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">טלפון בעלים:</div>
+          <div class="value" id="car-owner-phone">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">ערך שוק:</div>
+          <div class="value" id="car-market-value">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">מד אוץ:</div>
+          <div class="value" id="car-odometer">-</div>
+        </div>
       </div>
     </div>
 
     <div class="car-section">
       <h4>פרטי מוסך וביטוח</h4>
-      <div class="car-field">
-        <div class="label">שם מוסך:</div>
-        <div class="value" id="garage-name">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">טלפון מוסך:</div>
-        <div class="value" id="garage-phone">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">חברת ביטוח:</div>
-        <div class="value" id="insurance-company">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">סוכן:</div>
-        <div class="value" id="agent-name">-</div>
-      </div>
-      <div class="car-field">
-        <div class="label">טלפון סוכן:</div>
-        <div class="value" id="agent-phone">-</div>
+      <div class="car-fields-grid">
+        <div class="car-field">
+          <div class="label">שם מוסך:</div>
+          <div class="value" id="garage-name">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">טלפון מוסך:</div>
+          <div class="value" id="garage-phone">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">דואר אלקטרוני מוסך:</div>
+          <div class="value" id="garage-email">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">חברת ביטוח:</div>
+          <div class="value" id="insurance-company">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">סוכן ביטוח:</div>
+          <div class="value" id="agent-name">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">טלפון סוכן:</div>
+          <div class="value" id="agent-phone">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">דואר אלקטרוני סוכן:</div>
+          <div class="value" id="agent-email">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">דואר אלקטרוני חברת ביטוח:</div>
+          <div class="value" id="insurance-email">-</div>
+        </div>
       </div>
     </div>
 
@@ -235,14 +321,57 @@
   window.refreshCarData = function () {
     console.log('🔄 Car Details floating screen: refreshCarData called');
     
-    // Debug: Check what data is in sessionStorage
-    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    console.log('🔍 DEBUG: Helper in Car Details floating screen:', helper);
-    console.log('🔍 DEBUG: Helper.car_details:', helper.car_details);
-    console.log('🔍 DEBUG: Helper.vehicle:', helper.vehicle);
-    console.log('🔍 DEBUG: Helper.meta:', helper.meta);
+    // Get refresh button for feedback
+    const refreshBtn = document.querySelector('.car-btn.refresh');
+    if (refreshBtn) {
+      refreshBtn.textContent = 'מרענן...';
+      refreshBtn.disabled = true;
+    }
     
-    loadCarData();
+    // Force reload from sessionStorage to get latest data
+    try {
+      // Clear any cached data
+      if (window.currentCaseData) {
+        delete window.currentCaseData;
+      }
+      
+      // Get fresh data from sessionStorage
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        const helper = JSON.parse(helperString);
+        console.log('🔍 Fresh helper data loaded:', helper);
+        console.log('🔍 Helper.car_details:', helper.car_details);
+        console.log('🔍 Helper.vehicle:', helper.vehicle);
+        console.log('🔍 Helper.meta:', helper.meta);
+        console.log('🔍 Helper.stakeholders:', helper.stakeholders);
+      }
+      
+      // Load the fresh data
+      loadCarData();
+      
+      // Show success feedback
+      setTimeout(() => {
+        if (refreshBtn) {
+          refreshBtn.textContent = '✅ עודכן!';
+          refreshBtn.disabled = false;
+          
+          // Reset button text after 2 seconds
+          setTimeout(() => {
+            refreshBtn.textContent = 'רענן נתונים';
+          }, 2000);
+        }
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Error refreshing data:', error);
+      if (refreshBtn) {
+        refreshBtn.textContent = '❌ שגיאה';
+        refreshBtn.disabled = false;
+        setTimeout(() => {
+          refreshBtn.textContent = 'רענן נתונים';
+        }, 2000);
+      }
+    }
   };
 
   // Make modal draggable
@@ -409,71 +538,106 @@
 
     // Vehicle fields - check multiple possible locations
     document.getElementById("vehicle-plate").textContent = formatValue(
-      meta.plate || vehicle.plate || vehicle.plate_number || carDetails.plate
+      meta.plate || vehicle.plate || vehicle.plate_number || carDetails.plate || carDetails['מס\' רכב']
     );
     document.getElementById("vehicle-manufacturer").textContent = formatValue(
-      vehicle.manufacturer || carDetails.manufacturer
+      vehicle.manufacturer || carDetails.manufacturer || carDetails['שם היצרן']
     );
     document.getElementById("vehicle-model").textContent = formatValue(
-      vehicle.model || carDetails.model
+      vehicle.model || carDetails.model || carDetails['דגם']
     );
-    document.getElementById("vehicle-year").textContent = formatValue(
-      vehicle.year || carDetails.year
+    document.getElementById("vehicle-model-type").textContent = formatValue(
+      vehicle.model_type || carDetails.model_type || carDetails['סוג הדגם']
     );
-    document.getElementById("vehicle-km").textContent = formatValue(
-      vehicle.km || carDetails.km
+    document.getElementById("vehicle-type").textContent = formatValue(
+      vehicle.vehicle_type || carDetails.vehicle_type || carDetails['סוג הרכב']
+    );
+    document.getElementById("vehicle-trim").textContent = formatValue(
+      vehicle.trim || carDetails.trim || carDetails['רמת גימור']
     );
     document.getElementById("vehicle-chassis").textContent = formatValue(
-      vehicle.chassis || carDetails.chassis
+      vehicle.chassis || carDetails.chassis || carDetails['מספר שילדה']
     );
-    document.getElementById("vehicle-model-code").textContent = formatValue(
-      vehicle.model_code || carDetails.model_code
+    document.getElementById("vehicle-year").textContent = formatValue(
+      vehicle.year || carDetails.year || carDetails['שנת ייצור']
+    );
+    document.getElementById("vehicle-ownership-type").textContent = formatValue(
+      vehicle.ownership_type || carDetails.ownership_type || carDetails['סוג בעלות']
+    );
+    document.getElementById("vehicle-engine-volume").textContent = formatValue(
+      vehicle.engine_volume || carDetails.engine_volume || carDetails['נפח מנוע']
     );
     document.getElementById("vehicle-fuel-type").textContent = formatValue(
-      vehicle.fuel_type || carDetails.fuel_type
+      vehicle.fuel_type || carDetails.fuel_type || carDetails['סוג דלק']
+    );
+    document.getElementById("vehicle-model-code").textContent = formatValue(
+      vehicle.model_code || carDetails.model_code || carDetails['מספר דגם הרכב']
+    );
+    document.getElementById("vehicle-engine-model").textContent = formatValue(
+      vehicle.engine_model || carDetails.engine_model || carDetails['דגם מנוע']
+    );
+    document.getElementById("vehicle-drive-type").textContent = formatValue(
+      vehicle.drive_type || carDetails.drive_type || carDetails['הנעה']
+    );
+    document.getElementById("vehicle-office-code").textContent = formatValue(
+      vehicle.office_code || meta.office_code || carDetails.office_code || carDetails['קוד משרד התחבורה']
+    );
+    document.getElementById("vehicle-km").textContent = formatValue(
+      vehicle.km || carDetails.km || carDetails.odo
     );
 
     // Owner fields - check all possible locations
-    const ownerName = stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner;
+    const ownerName = stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || carDetails['שם בעל הרכב'];
     document.getElementById("car-owner").textContent = formatValue(ownerName);
     
-    document.getElementById("car-ownership-type").textContent = formatValue(
-      vehicle.ownership_type || carDetails.ownership_type
-    );
-    document.getElementById("car-market-value").textContent = formatValue(
-      carDetails.market_value || vehicle.market_value
-    );
     document.getElementById("car-damage-date").textContent = formatValue(
-      meta.damage_date || carDetails.damageDate || carDetails.damage_date
+      meta.damage_date || carDetails.damageDate || carDetails.damage_date || carDetails['תאריך נזק']
     );
     
     // Owner contact info
     document.getElementById("car-owner-address").textContent = formatValue(
-      stakeholders.owner?.address || stakeholders.owner_address || carDetails.ownerAddress
+      stakeholders.owner?.address || stakeholders.owner_address || carDetails.ownerAddress || carDetails['כתובת בעלים']
     );
     document.getElementById("car-owner-phone").textContent = formatValue(
-      stakeholders.owner?.phone || stakeholders.owner_phone || carDetails.ownerPhone
+      stakeholders.owner?.phone || stakeholders.owner_phone || carDetails.ownerPhone || carDetails['טלפון בעלים']
+    );
+    
+    // Additional fields from general info
+    document.getElementById("car-market-value").textContent = formatValue(
+      carDetails.market_value || vehicle.market_value || carDetails['ערך שוק']
+    );
+    document.getElementById("car-odometer").textContent = formatValue(
+      carDetails.odo || vehicle.km || carDetails['מד אוץ']
     );
 
     // Garage info - check stakeholders and car_details
     document.getElementById("garage-name").textContent = formatValue(
-      stakeholders.garage?.name || carDetails.garageName || carDetails.garage_name
+      stakeholders.garage?.name || carDetails.garageName || carDetails.garage_name || carDetails['שם מוסך'] || meta.location || carDetails['מוסך']
     );
     document.getElementById("garage-phone").textContent = formatValue(
-      stakeholders.garage?.phone || carDetails.garagePhone || carDetails.garage_phone
+      stakeholders.garage?.phone || carDetails.garagePhone || carDetails.garage_phone || carDetails['טלפון מוסך']
+    );
+    document.getElementById("garage-email").textContent = formatValue(
+      stakeholders.garage?.email || carDetails.garageEmail || carDetails.garage_email
     );
     
     // Insurance info
     document.getElementById("insurance-company").textContent = formatValue(
-      stakeholders.insurance?.company || carDetails.insuranceCompany
+      stakeholders.insurance?.company || carDetails.insuranceCompany || carDetails['חברת ביטוח']
+    );
+    document.getElementById("insurance-email").textContent = formatValue(
+      stakeholders.insurance?.email || carDetails.insuranceEmail || carDetails.insurance_email
     );
     
     // Insurance agent info
     document.getElementById("agent-name").textContent = formatValue(
-      stakeholders.insurance?.agent?.name || carDetails.agentName
+      stakeholders.insurance?.agent?.name || carDetails.agentName || carDetails['סוכן']
     );
     document.getElementById("agent-phone").textContent = formatValue(
-      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone
+      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone || carDetails.agentPhone || carDetails['טלפון סוכן']
+    );
+    document.getElementById("agent-email").textContent = formatValue(
+      stakeholders.insurance?.agent?.email || carDetails.insurance_agent_email || carDetails.agentEmail
     );
 
     // Update value styling
@@ -490,5 +654,35 @@
     const totalFields = document.querySelectorAll('.value').length;
     console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
   }
+
+  // Listen for helper updates to auto-refresh
+  document.addEventListener('helperUpdate', function(event) {
+    console.log('📡 Car details floating detected helper update:', event.detail);
+    
+    // Only refresh if the modal is visible
+    const modal = document.getElementById("carDetailsModal");
+    if (modal && modal.style.display !== "none") {
+      console.log('🔄 Auto-refreshing car details due to helper update');
+      setTimeout(() => {
+        window.refreshCarData();
+      }, 100); // Small delay to ensure data is fully saved
+    }
+  });
+
+  // Also listen for storage events from other tabs
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'helper' && e.newValue) {
+      console.log('📡 Car details floating detected helper update from another tab');
+      
+      // Only refresh if the modal is visible
+      const modal = document.getElementById("carDetailsModal");
+      if (modal && modal.style.display !== "none") {
+        console.log('🔄 Auto-refreshing car details due to cross-tab update');
+        setTimeout(() => {
+          window.refreshCarData();
+        }, 100);
+      }
+    }
+  });
 
 })();
