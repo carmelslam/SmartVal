@@ -598,18 +598,29 @@
   }
 
   function updateCarDisplay(vehicle, carDetails, stakeholders, meta) {
-    console.log('🔄 updateCarDisplay called with:', {
+    console.log('🔄 ENHANCED updateCarDisplay called with:', {
       vehicle, carDetails, stakeholders, meta
     });
+    
+    // ENHANCED: Log what data we actually have
+    console.log('🔍 Vehicle data available:', vehicle ? Object.keys(vehicle) : 'null/undefined');
+    console.log('🔍 CarDetails data available:', carDetails ? Object.keys(carDetails) : 'null/undefined');
+    console.log('🔍 Stakeholders data available:', stakeholders ? Object.keys(stakeholders) : 'null/undefined');
+    console.log('🔍 Meta data available:', meta ? Object.keys(meta) : 'null/undefined');
     
     const formatValue = (value) => {
       return value && value.toString().trim() ? value : "-";
     };
 
-    // Vehicle fields - prioritize vehicle section, then car_details
-    document.getElementById("vehicle-plate").textContent = formatValue(
-      vehicle.plate || meta.plate || carDetails.plate
-    );
+    // ENHANCED: Vehicle fields - prioritize vehicle section, then car_details
+    const plateValue = vehicle.plate || meta.plate || carDetails.plate;
+    console.log('🆔 Plate values check:', {
+      'vehicle.plate': vehicle.plate,
+      'meta.plate': meta.plate,
+      'carDetails.plate': carDetails.plate,
+      'final plateValue': plateValue
+    });
+    document.getElementById("vehicle-plate").textContent = formatValue(plateValue);
     document.getElementById("vehicle-manufacturer").textContent = formatValue(
       vehicle.manufacturer || carDetails.manufacturer
     );

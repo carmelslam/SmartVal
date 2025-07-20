@@ -828,6 +828,64 @@
       window.location.href = "index.html";
     }
 
+    // ENHANCED: Auto-populate depreciation values from helper
+    function populateDepreciationDataFromHelper() {
+      console.log('📉 Depreciation Module: Auto-populating data from helper...');
+      
+      try {
+        const helperString = sessionStorage.getItem('helper');
+        if (helperString) {
+          const helper = JSON.parse(helperString);
+          console.log('✅ Helper data loaded for depreciation module:', helper);
+          
+          // Populate market value if available
+          if (helper.vehicle?.market_value) {
+            const marketValueField = document.getElementById('sumMarketValue');
+            if (marketValueField) {
+              marketValueField.value = helper.vehicle.market_value;
+              console.log(`  ✅ sumMarketValue: ${helper.vehicle.market_value}`);
+            }
+            
+            const globalMarketValueField = document.getElementById('sumMarketValueGlobal');
+            if (globalMarketValueField) {
+              globalMarketValueField.value = helper.vehicle.market_value;
+              console.log(`  ✅ sumMarketValueGlobal: ${helper.vehicle.market_value}`);
+            }
+          }
+          
+          // Populate depreciation values if available
+          if (helper.valuation?.depreciation) {
+            const depreciation = helper.valuation.depreciation;
+            
+            if (depreciation.global_percentage) {
+              const globalDepField = document.getElementById('globalDep1');
+              if (globalDepField) {
+                globalDepField.value = depreciation.global_percentage;
+                console.log(`  ✅ globalDep1: ${depreciation.global_percentage}%`);
+              }
+            }
+            
+            if (depreciation.global_amount) {
+              const globalDepValueField = document.getElementById('globalDepValue');
+              if (globalDepValueField) {
+                globalDepValueField.value = depreciation.global_amount;
+                console.log(`  ✅ globalDepValue: ${depreciation.global_amount}`);
+              }
+            }
+          }
+          
+          console.log('✅ Depreciation module auto-population completed');
+        } else {
+          console.log('⚠️ No helper data found in sessionStorage');
+        }
+      } catch (error) {
+        console.error('❌ Error auto-populating depreciation data:', error);
+      }
+    }
+    
+    // Auto-populate on page load
+    populateDepreciationDataFromHelper();
+
     // Logout function with enhanced sound
     function logout() {
       // Use the enhanced logout with sound if available

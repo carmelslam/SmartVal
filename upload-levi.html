@@ -2412,6 +2412,92 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Levi processor
   window.leviProcessor = new LeviProcessor();
   
+  // ENHANCED: Auto-populate vehicle data from helper
+  function populateVehicleDataFromHelper() {
+    console.log('📋 Levi Upload: Auto-populating vehicle data from helper...');
+    
+    try {
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        const helper = JSON.parse(helperString);
+        console.log('✅ Helper data loaded for Levi upload:', helper);
+        
+        // Populate basic vehicle fields
+        const basicFieldMappings = {
+          'plate': helper.vehicle?.plate || helper.meta?.plate,
+          'owner': helper.stakeholders?.owner?.name,
+          'office_code': helper.vehicle?.office_code,
+          'manual-vehicle-type': helper.vehicle?.vehicle_type,
+          'manual-manufacturer': helper.vehicle?.manufacturer,
+          'manual-model-code': helper.vehicle?.model_code,
+          'manual-category': helper.vehicle?.category,
+          'manual-year': helper.vehicle?.year,
+          'manual-full-model': `${helper.vehicle?.manufacturer || ''} ${helper.vehicle?.model || ''}`.trim(),
+          'manual-km': helper.vehicle?.km,
+          'manual-features': helper.vehicle?.features
+        };
+        
+        // Populate valuation fields if available
+        if (helper.valuation) {
+          basicFieldMappings['manual-base-price'] = helper.valuation.base_price;
+          basicFieldMappings['manual-final-price'] = helper.valuation.final_price;
+          
+          // Registration adjustments
+          if (helper.valuation.adjustments?.registration) {
+            basicFieldMappings['manual-registration'] = helper.valuation.adjustments.registration.reason;
+            basicFieldMappings['manual-registration-percent'] = helper.valuation.adjustments.registration.percent;
+          }
+          
+          // Ownership adjustments  
+          if (helper.valuation.adjustments?.ownership_type) {
+            basicFieldMappings['manual-ownership'] = helper.valuation.adjustments.ownership_type.type;
+            basicFieldMappings['manual-ownership-percent'] = helper.valuation.adjustments.ownership_type.percent;
+          }
+          
+          // Mileage adjustments
+          if (helper.valuation.adjustments?.mileage) {
+            basicFieldMappings['manual-km-percent'] = helper.valuation.adjustments.mileage.percent;
+          }
+          
+          // Ownership history adjustments
+          if (helper.valuation.adjustments?.ownership_history) {
+            basicFieldMappings['manual-owners'] = helper.valuation.adjustments.ownership_history.owner_count;
+            basicFieldMappings['manual-owners-percent'] = helper.valuation.adjustments.ownership_history.percent;
+          }
+          
+          // Features adjustments
+          if (helper.valuation.adjustments?.features) {
+            basicFieldMappings['manual-features-percent'] = helper.valuation.adjustments.features.percent;
+          }
+        }
+        
+        // Apply the mappings
+        Object.entries(basicFieldMappings).forEach(([fieldId, value]) => {
+          const element = document.getElementById(fieldId);
+          if (element && value !== undefined && value !== null && value !== '') {
+            element.value = value;
+            console.log(`  ✅ ${fieldId}: "${value}"`);
+          }
+        });
+        
+        // Set valuation date to today if not set
+        const valuationDateElement = document.getElementById('valuation-date');
+        if (valuationDateElement && !valuationDateElement.value) {
+          valuationDateElement.value = new Date().toISOString().split('T')[0];
+        }
+        
+        console.log('✅ Levi upload auto-population completed');
+      } else {
+        console.log('⚠️ No helper data found in sessionStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error auto-populating Levi vehicle data:', error);
+    }
+  }
+  
+  // Auto-populate on page load
+  populateVehicleDataFromHelper();
+  
   // Trigger password prefill immediately when page loads
   setTimeout(() => {
     console.log('🔑 LEVI UPLOAD: Page loaded, triggering password prefill...');

@@ -8,21 +8,44 @@ function $(id) {
 }
 
 function init() {
+  console.log('💰 Fee Module: Initializing with ENHANCED helper integration...');
+  
   const meta = helper.meta || {};
+  const vehicle = helper.vehicle || {};
+  const stakeholders = helper.stakeholders || {};
   const vatRate = MathEngine.getVatRate ? MathEngine.getVatRate() : (helper.vat || 18);
 
-  $('pageTitle').innerText = `רכב מס. ${meta.plate || '...'}`;
+  // ENHANCED: Use proper helper paths for vehicle and stakeholder data
+  const plateValue = vehicle.plate || meta.plate || '...';
+  $('pageTitle').innerText = `רכב מס. ${plateValue}`;
   $('caseNumber').innerText = meta.case_number || '';
-  $('ownerName').innerText = meta.owner_name || '';
-  $('ownerAddress').innerText = meta.owner_address || '';
-  $('ownerPhone').innerText = meta.owner_phone || '';
-  $('insuranceCompany').innerText = meta.insurance_company || '';
-  $('insuranceEmail').innerText = meta.insurance_email || '';
-  $('agentName').innerText = meta.agent_name || '';
-  $('agentPhone').innerText = meta.insurance_agent_phone || '';
-  $('agentEmail').innerText = meta.insurance_agent_email || '';
+  
+  // Owner data from stakeholders section
+  $('ownerName').innerText = stakeholders.owner?.name || meta.owner_name || '';
+  $('ownerAddress').innerText = stakeholders.owner?.address || meta.owner_address || '';
+  $('ownerPhone').innerText = stakeholders.owner?.phone || meta.owner_phone || '';
+  
+  // Insurance data from stakeholders section
+  $('insuranceCompany').innerText = stakeholders.insurance?.company || meta.insurance_company || '';
+  $('insuranceEmail').innerText = stakeholders.insurance?.email || meta.insurance_email || '';
+  $('agentName').innerText = stakeholders.insurance?.agent?.name || meta.agent_name || '';
+  $('agentPhone').innerText = stakeholders.insurance?.agent?.phone || meta.insurance_agent_phone || '';
+  $('agentEmail').innerText = stakeholders.insurance?.agent?.email || meta.insurance_agent_email || '';
+  
   $('issueDate').innerText = new Date().toISOString().split('T')[0];
   $('vat_rate').value = vatRate;
+  
+  // ENHANCED: Auto-populate fee values from helper if available
+  if (helper.financials?.fees) {
+    const fees = helper.financials.fees;
+    if (fees.travel?.total) $('travel_fee').value = fees.travel.total;
+    if (fees.photography?.total) $('media_fee').value = fees.photography.total;
+    if (fees.office?.total) $('office_fee').value = fees.office.total;
+    
+    console.log('✅ Auto-populated fee values from helper');
+  }
+  
+  console.log('✅ Fee module initialization completed with enhanced mapping');
 
   ['travel_fee', 'media_fee', 'office_fee'].forEach(id => {
     $(id).addEventListener('input', calculateFees);

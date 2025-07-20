@@ -168,6 +168,58 @@
 </div>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+  // ENHANCED: Auto-populate vehicle data from helper
+  function populateVehicleDataFromHelper() {
+    console.log('🚗 Parts Search: Auto-populating vehicle data from helper...');
+    
+    try {
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        const helper = JSON.parse(helperString);
+        console.log('✅ Helper data loaded for parts search:', helper);
+        
+        // Populate form fields with helper data using field mapping
+        const fieldMappings = {
+          'plate': helper.vehicle?.plate || helper.meta?.plate,
+          'manufacturer': helper.vehicle?.manufacturer,
+          'model': helper.vehicle?.model,
+          'trim': helper.vehicle?.trim,
+          'year': helper.vehicle?.year,
+          'engine_volume': helper.vehicle?.engine_volume,
+          'engine_code': helper.vehicle?.model_code,
+          'engine_type': helper.vehicle?.engine_model,
+          'vin': helper.vehicle?.chassis
+        };
+        
+        // Apply the mappings
+        Object.entries(fieldMappings).forEach(([fieldId, value]) => {
+          const element = document.getElementById(fieldId);
+          if (element && value) {
+            element.value = value;
+            console.log(`  ✅ ${fieldId}: "${value}"`);
+          }
+        });
+        
+        console.log('✅ Parts search auto-population completed');
+      } else {
+        console.log('⚠️ No helper data found in sessionStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error auto-populating vehicle data:', error);
+    }
+  }
+  
+  // Auto-populate on page load
+  populateVehicleDataFromHelper();
+  
+  // Listen for helper updates
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'helper') {
+      console.log('🔄 Helper data updated, re-populating parts search...');
+      populateVehicleDataFromHelper();
+    }
+  });
+
   const groupSelect = document.getElementById('part_group');
   const nameSelect = document.getElementById('part_name');
 

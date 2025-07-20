@@ -1105,6 +1105,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize invoice processor
   window.invoiceProcessor = new InvoiceProcessor();
+  
+  // ENHANCED: Auto-populate vehicle data from helper
+  function populateVehicleDataFromHelper() {
+    console.log('🧾 Invoice Upload: Auto-populating vehicle data from helper...');
+    
+    try {
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        const helper = JSON.parse(helperString);
+        console.log('✅ Helper data loaded for invoice upload:', helper);
+        
+        // Populate basic fields
+        const fieldMappings = {
+          'plate': helper.vehicle?.plate || helper.meta?.plate,
+          'owner': helper.stakeholders?.owner?.name
+        };
+        
+        // Apply the mappings
+        Object.entries(fieldMappings).forEach(([fieldId, value]) => {
+          const element = document.getElementById(fieldId);
+          if (element && value) {
+            element.value = value;
+            console.log(`  ✅ ${fieldId}: "${value}"`);
+          }
+        });
+        
+        console.log('✅ Invoice upload auto-population completed');
+      } else {
+        console.log('⚠️ No helper data found in sessionStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error auto-populating invoice upload vehicle data:', error);
+    }
+  }
+  
+  // Auto-populate on page load
+  populateVehicleDataFromHelper();
 });
 
 </script>
