@@ -1487,6 +1487,10 @@ class LeviProcessor {
     // ✅ FIXED: Use sendToWebhook instead of direct fetch
     try {
       console.log('📤 Sending to SUBMIT_LEVI_REPORT webhook...');
+      console.log('🔍 DEBUGGING: Webhook function exists?', typeof sendToWebhook);
+      console.log('🔍 DEBUGGING: Webhook URL:', getWebhook('SUBMIT_LEVI_REPORT'));
+      console.log('🔍 DEBUGGING: FormData keys:', Array.from(formData.keys()));
+      
       const result = await sendToWebhook('SUBMIT_LEVI_REPORT', formData);
       
       console.log('✅ Levi upload webhook response:', result);
@@ -1938,7 +1942,11 @@ class LeviProcessor {
 
   updateHelperWithResults(result) {
     try {
+      console.log('🔄 updateHelperWithResults: Starting with result:', result);
+      console.log('🔄 updateHelperWithResults: updateHelper function exists?', typeof updateHelper);
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📊 Current helper before Levi update:', helper);
       
       // Update levi summary data
       helper.levisummary = {
@@ -1989,12 +1997,22 @@ class LeviProcessor {
       
       // Update session storage
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('💾 Updated sessionStorage with Levi data');
       
       // Update via helper system (update each section individually)
-      updateHelper('levisummary', helper.levisummary);
-      updateHelper('expertise', helper.expertise);
-      updateHelper('calculations', helper.calculations);
-      updateHelper('meta', helper.meta);
+      console.log('🔄 Calling updateHelper for levisummary:', helper.levisummary);
+      updateHelper('levisummary', helper.levisummary, 'levi_ocr');
+      
+      console.log('🔄 Calling updateHelper for expertise:', helper.expertise);
+      updateHelper('expertise', helper.expertise, 'levi_ocr');
+      
+      console.log('🔄 Calling updateHelper for calculations:', helper.calculations);
+      updateHelper('calculations', helper.calculations, 'levi_ocr');
+      
+      console.log('🔄 Calling updateHelper for meta:', helper.meta);
+      updateHelper('meta', helper.meta, 'levi_ocr');
+      
+      console.log('✅ All updateHelper calls completed for Levi OCR data');
       
     } catch (e) {
       console.warn('Could not update helper with Levi results:', e);
@@ -2582,6 +2600,7 @@ window.testPasswordPrefill = function() {
 <script src="levi-floating.js"></script>
 <script src="internal-browser.js"></script>
 <script src="password-prefill.js"></script>
+<script src="universal-data-capture.js" type="module"></script>
 
 </body>
 </html>

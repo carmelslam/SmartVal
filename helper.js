@@ -718,8 +718,24 @@ export function saveHelperToStorage() {
     console.log('💾 Helper meta.plate:', sanitizedHelper.meta?.plate);
     console.log('💾 Helper vehicle.manufacturer:', sanitizedHelper.vehicle?.manufacturer);
     
+    // PRIMARY: Save to sessionStorage
     sessionStorage.setItem('helper', dataString);
+    
+    // BACKUP: Save to localStorage with multiple keys for debugging
     localStorage.setItem('helper_data', dataString);
+    localStorage.setItem('helper_backup', dataString);
+    localStorage.setItem('helper_timestamp', new Date().toISOString());
+    
+    // DEBUG: Store simplified version for inspection
+    const debugData = {
+      plate: sanitizedHelper.meta?.plate || sanitizedHelper.vehicle?.plate,
+      manufacturer: sanitizedHelper.vehicle?.manufacturer,
+      model: sanitizedHelper.vehicle?.model,
+      owner: sanitizedHelper.stakeholders?.owner?.name,
+      lastUpdated: new Date().toISOString(),
+      sectionsPresent: Object.keys(sanitizedHelper)
+    };
+    localStorage.setItem('helper_debug', JSON.stringify(debugData, null, 2));
     
     // CRITICAL FIX: Verify data was actually saved
     const savedData = sessionStorage.getItem('helper');
@@ -2285,7 +2301,8 @@ function updateLegacyCarData() {
  * Automatically detects data type and routes to appropriate processors
  */
 export async function processIncomingData(data, webhookId = 'unknown') {
-  console.log('🔄 processIncomingData: Processing data from webhook:', webhookId, data);
+  console.log('🔄 processIncomingData: Processing data from webhook:', webhookId);
+  console.log('📥 RAW WEBHOOK DATA:', JSON.stringify(data, null, 2));
   console.log('📊 Current helper BEFORE processing:', JSON.parse(JSON.stringify(helper)));
   
   try {
@@ -2296,6 +2313,25 @@ export async function processIncomingData(data, webhookId = 'unknown') {
       timestamp: new Date().toISOString(),
       webhookId: webhookId
     };
+    
+    // ENHANCED: Always try to store any incoming data, even if detection fails
+    if (data && typeof data === 'object') {
+      console.log('💾 FORCE STORING: Attempting to store all incoming data regardless of type detection');
+      
+      // Try to extract any car-related data
+      const potentialCarData = extractCarDataFromAnyFormat(data);
+      if (potentialCarData && Object.keys(potentialCarData).length > 0) {
+        console.log('🚗 Extracted potential car data:', potentialCarData);
+        processCarDetailsData(potentialCarData, `webhook_${webhookId}_forced`);
+        result.updatedSections.push('vehicle', 'meta', 'stakeholders');
+      }
+      
+      // Store raw data for debugging
+      updateHelper('raw_webhook_data', {
+        [`${webhookId}_${Date.now()}`]: data
+      }, 'webhook_storage');
+      result.updatedSections.push('raw_webhook_data');
+    }
     
     // CRITICAL: Check if data contains Hebrew text in Body field
     if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('מס\' רכב')) {
@@ -2496,8 +2532,81 @@ function updateBuildersFromHelper(updatedSections) {
 }
 
 // ============================================================================
-// DATA TYPE DETECTION FUNCTIONS
+// DATA EXTRACTION AND TYPE DETECTION FUNCTIONS
 // ============================================================================
+
+/**
+ * Enhanced data extraction that tries to find car data in any format
+ */
+function extractCarDataFromAnyFormat(data) {
+  console.log('🔍 Attempting to extract car data from any format...');
+  
+  const extracted = {};
+  
+  // Handle different data structures
+  if (Array.isArray(data)) {
+    console.log('📋 Processing array data');
+    data.forEach((item, index) => {
+      const itemData = extractCarDataFromAnyFormat(item);
+      Object.assign(extracted, itemData);
+    });
+  } else if (data && typeof data === 'object') {
+    // Check all possible field variations
+    const fieldMappings = {
+      // Plate number variations
+      plate: ['plate', 'plateNumber', 'plate_number', 'מספר_רכב', 'מס_רכב', 'license_plate'],
+      // Manufacturer variations  
+      manufacturer: ['manufacturer', 'make', 'יצרן', 'שם_היצרן', 'חברה'],
+      // Model variations
+      model: ['model', 'דגם', 'שם_דגם', 'model_name'],
+      // Year variations
+      year: ['year', 'שנת_יצור', 'model_year', 'שנה'],
+      // Owner variations
+      owner: ['owner', 'owner_name', 'בעלים', 'שם_בעלים'],
+      // KM variations
+      km: ['km', 'mileage', 'odo', 'קילומטראז', 'מספר_ק_מ'],
+      // Chassis variations
+      chassis: ['chassis', 'chassis_number', 'מספר_שילדה', 'שילדה']
+    };
+    
+    // Extract fields using all possible variations
+    Object.keys(fieldMappings).forEach(standardField => {
+      const variations = fieldMappings[standardField];
+      
+      for (const variation of variations) {
+        if (data[variation] !== undefined && data[variation] !== null && data[variation] !== '') {
+          extracted[standardField] = data[variation];
+          console.log(`✅ Found ${standardField}: ${data[variation]} (from field: ${variation})`);
+          break; // Use first match
+        }
+      }
+    });
+    
+    // Also check nested objects
+    Object.keys(data).forEach(key => {
+      if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+        const nestedData = extractCarDataFromAnyFormat(data[key]);
+        Object.assign(extracted, nestedData);
+      }
+    });
+    
+    // Check for Hebrew text that might contain car data
+    Object.keys(data).forEach(key => {
+      if (typeof data[key] === 'string' && data[key].includes('מס\' רכב')) {
+        console.log('📥 Found Hebrew text with car data, parsing...');
+        try {
+          const parsedData = parseHebrewTextToObject(data[key]);
+          Object.assign(extracted, parsedData);
+        } catch (e) {
+          console.warn('Failed to parse Hebrew text:', e);
+        }
+      }
+    });
+  }
+  
+  console.log('🎯 Extracted car data:', extracted);
+  return extracted;
+}
 
 function isCarData(data) {
   return !!(data.plate || data.manufacturer || data.model || data.owner || 

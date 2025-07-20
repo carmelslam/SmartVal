@@ -134,6 +134,46 @@ export async function sendToWebhook(id, payload) {
         sessionStorage.setItem('makeCarData', JSON.stringify(actualData));
         sessionStorage.setItem('carData', JSON.stringify(actualData));
         
+        // ENHANCED: Force immediate form population regardless of helper processing
+        console.log('🔄 FORCE POPULATING FORMS: Attempting immediate form update');
+        try {
+          if (typeof window.refreshAllModuleForms === 'function') {
+            console.log('🔄 Force refreshing all module forms (before helper processing)...');
+            window.refreshAllModuleForms();
+          }
+          
+          // Also try to populate specific form fields directly
+          const directFieldMappings = {
+            'plate': actualData.plate || actualData.מספר_רכב || actualData.license_plate,
+            'manufacturer': actualData.manufacturer || actualData.יצרן || actualData.make,
+            'model': actualData.model || actualData.דגם,
+            'year': actualData.year || actualData.שנת_יצור,
+            'owner': actualData.owner || actualData.בעלים || actualData.owner_name,
+            'km': actualData.km || actualData.mileage || actualData.קילומטראז
+          };
+          
+          let populatedCount = 0;
+          Object.keys(directFieldMappings).forEach(fieldId => {
+            const value = directFieldMappings[fieldId];
+            if (value) {
+              const element = document.getElementById(fieldId);
+              if (element) {
+                element.value = value;
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                populatedCount++;
+                console.log(`✅ Direct populated ${fieldId}: ${value}`);
+              }
+            }
+          });
+          
+          if (populatedCount > 0) {
+            console.log(`✅ Direct form population: ${populatedCount} fields updated`);
+          }
+          
+        } catch (directError) {
+          console.warn('⚠️ Direct form population failed:', directError);
+        }
+        
         try {
           // Use the enhanced processIncomingData function from helper.js
           const processResult = await processIncomingData(actualData, id);
@@ -145,10 +185,10 @@ export async function sendToWebhook(id, payload) {
             // Broadcast helper update to all modules and floating screens
             broadcastHelperUpdate(processResult.updatedSections, 'webhook_response');
             
-            // CRITICAL: Force refresh all module forms
+            // CRITICAL: Force refresh all module forms AGAIN after helper update
             if (typeof window.refreshAllModuleForms === 'function') {
-              console.log('🔄 Force refreshing all module forms...');
-              setTimeout(() => window.refreshAllModuleForms(), 100);
+              console.log('🔄 Force refreshing all module forms (after helper processing)...');
+              setTimeout(() => window.refreshAllModuleForms(), 200);
             }
             
             // Show success notification
