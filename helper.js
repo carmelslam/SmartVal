@@ -565,26 +565,25 @@ export function updateHelper(section, data, sourceModule = null) {
     
     // Security validation with graceful data queuing (Codex recommendation)
     if (!securityManager.validateSession()) {
-      console.log('⏸️ Session invalid - queuing data for later');
-      
-      // Queue data instead of losing it
+      console.log('⏸️ Session invalid - applying update locally and queuing for later');
+
+      // Queue data so it can be re-sent once session is restored
       try {
         const queue = JSON.parse(localStorage.getItem('pendingHelperUpdates') || '[]');
         queue.push({
           timestamp: Date.now(),
-          section: section,
-          data: data,
-          sourceModule: sourceModule
+          section,
+          data,
+          sourceModule
         });
         localStorage.setItem('pendingHelperUpdates', JSON.stringify(queue));
         console.log(`📥 Data queued (${queue.length} items pending)`);
       } catch (e) {
         console.error('Failed to queue data:', e);
       }
-      
+
       errorHandler.createError('authentication', 'medium', 'Session expired - data queued');
-      isUpdatingHelper = false;
-      return false;
+      // ⚠️ Do not return – continue updating helper locally so data isn't lost
     }
 
     // Input sanitization
