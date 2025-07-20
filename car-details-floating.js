@@ -587,11 +587,13 @@
     document.getElementById("vehicle-model-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code || carDetails['מספר דגם הרכב']
     );
+    // Levi code - will be mapped from Levi report webhook response
     document.getElementById("vehicle-levi-code").textContent = formatValue(
-      vehicle.levi_code || carDetails.levi_code || carDetails['קוד לוי יצחק']
+      vehicle.levi_code || carDetails.levi_code
     );
+    // Universal code - to be mapped later
     document.getElementById("vehicle-universal-code").textContent = formatValue(
-      vehicle.universal_code || carDetails.universal_code || carDetails['קוד אוניברסלי']
+      vehicle.universal_code || carDetails.universal_code
     );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
       vehicle.engine_model || carDetails.engine_model || carDetails['דגם מנוע']
@@ -623,8 +625,9 @@
     );
     
     // Additional fields from general info
+    // Market value - to be mapped from valuation/pricing module
     document.getElementById("car-market-value").textContent = formatValue(
-      carDetails.market_value || vehicle.market_value || carDetails['ערך שוק']
+      carDetails.market_value || vehicle.market_value
     );
     document.getElementById("car-odometer").textContent = formatValue(
       carDetails.odo || vehicle.km || carDetails['מד אוץ']
