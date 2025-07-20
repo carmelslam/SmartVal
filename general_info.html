@@ -259,11 +259,62 @@
         document.getElementById("submitBtn").disabled = true;
         document.getElementById("submitBtn").innerText = "שומר נתונים...";
         
-        // Update helper directly
-        updateHelper('stakeholders', data, 'general_info');
-        updateHelper('vehicle', { plate: data.plate, km: data.odo }, 'general_info');
+        // Update helper with proper structure
+        const stakeholdersData = {
+          owner: {
+            name: data.owner,
+            phone: data.ownerPhone,
+            address: data.ownerAddress
+          },
+          garage: {
+            name: data.garageName,
+            phone: data.garagePhone,
+            email: data.garageEmail
+          },
+          insurance: {
+            company: data.insuranceCompany,
+            email: data.insuranceEmail,
+            agent: {
+              name: data.agentName,
+              phone: data.insurance_agent_phone,
+              email: data.insurance_agent_email
+            }
+          }
+        };
         
-        // Legacy support - functions will be called by simple data flow
+        const vehicleData = {
+          plate_number: data.plate,
+          km: data.odo
+        };
+        
+        const damageData = {
+          damage_date: data.damageDate,
+          damage_type: data.damageType
+        };
+        
+        // Update helper sections
+        updateHelper('stakeholders', stakeholdersData, 'general_info');
+        updateHelper('vehicle', vehicleData, 'general_info');
+        updateHelper('damage_info', damageData, 'general_info');
+        
+        // Also update meta for completeness
+        updateHelper('meta', {
+          last_updated: new Date().toISOString(),
+          source: 'general_info_form'
+        }, 'general_info');
+        
+        // Force save to storage
+        if (window.saveHelperToStorage) {
+          window.saveHelperToStorage();
+          console.log('✅ Helper data saved to storage');
+        }
+        
+        // Broadcast update for other components
+        if (window.broadcastHelperUpdate) {
+          window.broadcastHelperUpdate('stakeholders', stakeholdersData);
+          window.broadcastHelperUpdate('vehicle', vehicleData);
+          window.broadcastHelperUpdate('damage_info', damageData);
+        }
         
         await sendToWebhook('FILL_FINAL_REPORT', data);
         showSuccessAndContinue();
@@ -379,8 +430,8 @@
       }
     }
     
-    // Show car data notification
-    function showCarDataNotification(carData) {
+    // Show helper data notification
+    function showHelperDataNotification(helperData) {
       const notification = document.createElement('div');
       notification.style.cssText = `
         position: fixed;
@@ -413,7 +464,7 @@
           <div>
             <div style="font-size: 16px; margin-bottom: 5px;">📋 טופס מולא אוטומטית</div>
             <div style="font-size: 14px; opacity: 0.9;">
-              רכב: ${carData.plate || 'N/A'} • ${carData.manufacturer || ''} ${carData.model || ''}
+              רכב: ${helperData.vehicle?.plate_number || helperData.meta?.plate || 'N/A'} • ${helperData.vehicle?.manufacturer || ''} ${helperData.vehicle?.model || ''}
             </div>
           </div>
           <button onclick="this.parentElement.parentElement.style.display='none'" 
