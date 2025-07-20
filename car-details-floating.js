@@ -817,18 +817,13 @@
     console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
   }
 
-  // Listen for helper updates to auto-refresh
+  // Listen for helper updates but don't auto-refresh - just update persisted data
   document.addEventListener('helperUpdate', function(event) {
     console.log('📡 Car details floating detected helper update:', event.detail);
     
-    // Only refresh if the modal is visible
-    const modal = document.getElementById("carDetailsModal");
-    if (modal && modal.style.display !== "none") {
-      console.log('🔄 Auto-refreshing car details due to helper update');
-      setTimeout(() => {
-        window.refreshCarData();
-      }, 100); // Small delay to ensure data is fully saved
-    }
+    // Update persisted data without refreshing display
+    loadCarData();
+    console.log('💾 Updated persisted data from helper update');
   });
 
   // Also listen for storage events from other tabs
@@ -846,5 +841,61 @@
       }
     }
   });
+
+  // Auto-load and persist data on page load
+  setTimeout(() => {
+    console.log('🚀 Auto-loading car data on page load...');
+    
+    // Check all data sources
+    const helperStr = sessionStorage.getItem('helper');
+    const carDataStr = sessionStorage.getItem('carData');
+    const localHelperStr = localStorage.getItem('helper_data');
+    
+    if (helperStr || carDataStr || localHelperStr || window.helper) {
+      console.log('✅ Found car data - loading and persisting automatically');
+      
+      // Load the data which will automatically persist it
+      loadCarData();
+      
+      // Also check window.helper
+      if (!persistedCarData && window.helper) {
+        persistedCarData = {
+          vehicle: window.helper.vehicle || {},
+          carDetails: window.helper.car_details || {},
+          stakeholders: window.helper.stakeholders || {},
+          meta: window.helper.meta || {}
+        };
+        console.log('💾 Persisted data from window.helper');
+      }
+    }
+  }, 500);
+
+  // Also check periodically for data (in case it arrives later)
+  let dataCheckCount = 0;
+  const dataCheckInterval = setInterval(() => {
+    dataCheckCount++;
+    
+    if (!persistedCarData) {
+      const hasData = sessionStorage.getItem('helper') || 
+                     sessionStorage.getItem('carData') || 
+                     localStorage.getItem('helper_data') || 
+                     window.helper;
+                     
+      if (hasData) {
+        console.log('✅ Found car data on periodic check - loading and persisting');
+        loadCarData();
+        clearInterval(dataCheckInterval);
+      }
+    } else {
+      console.log('📌 Data already persisted, stopping periodic checks');
+      clearInterval(dataCheckInterval);
+    }
+    
+    // Stop checking after 10 attempts (20 seconds)
+    if (dataCheckCount >= 10) {
+      console.log('⏹️ Stopping periodic data checks');
+      clearInterval(dataCheckInterval);
+    }
+  }, 2000);
 
 })();
