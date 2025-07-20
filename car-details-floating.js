@@ -313,6 +313,7 @@
     <div class="car-buttons">
       <button class="car-btn close" onclick="toggleCarDetails()">סגור</button>
       <button class="car-btn refresh" onclick="refreshCarData()">רענן נתונים</button>
+      <button class="car-btn refresh" onclick="debugCarData()" style="background: #ffc107;">🔍 בדוק נתונים</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -330,6 +331,83 @@
   };
 
   window.showCarDetails = window.toggleCarDetails;
+  
+  // Debug function to check all data sources
+  window.debugCarData = function() {
+    console.log('=== 🔍 DEBUGGING CAR DATA ===');
+    
+    // Check sessionStorage
+    console.log('1️⃣ Checking sessionStorage:');
+    const helperStr = sessionStorage.getItem('helper');
+    if (helperStr) {
+      try {
+        const helper = JSON.parse(helperStr);
+        console.log('✅ helper in sessionStorage:', helper);
+      } catch (e) {
+        console.error('❌ Failed to parse helper:', e);
+      }
+    } else {
+      console.log('❌ No helper in sessionStorage');
+    }
+    
+    const carDataStr = sessionStorage.getItem('carData');
+    if (carDataStr) {
+      try {
+        const carData = JSON.parse(carDataStr);
+        console.log('✅ carData in sessionStorage:', carData);
+      } catch (e) {
+        console.error('❌ Failed to parse carData:', e);
+      }
+    } else {
+      console.log('❌ No carData in sessionStorage');
+    }
+    
+    // Check window objects
+    console.log('2️⃣ Checking window objects:');
+    console.log('window.helper:', window.helper);
+    console.log('window.currentCaseData:', window.currentCaseData);
+    
+    // Check if helper.js is loaded
+    console.log('3️⃣ Checking if helper module is loaded:');
+    console.log('window.updateHelper exists:', typeof window.updateHelper === 'function');
+    console.log('window.broadcastHelperUpdate exists:', typeof window.broadcastHelperUpdate === 'function');
+    
+    // Try to populate with test data
+    if (confirm('האם לטעון נתוני בדיקה?')) {
+      const testData = {
+        vehicle: {
+          plate: '5785269',
+          manufacturer: 'ביואיק',
+          model: 'LUCERNE',
+          model_type: 'סדאן',
+          vehicle_type: 'פרטי',
+          trim: 'CXL',
+          chassis: '1G4HD57258U196450',
+          year: '2009',
+          ownership_type: 'פרטי',
+          engine_volume: '3791',
+          fuel_type: 'בנזין',
+          model_code: 'HD572',
+          engine_model: '428',
+          drive_type: '4X2',
+          office_code: '156-11'
+        },
+        stakeholders: {
+          owner: { name: 'כרמל כיוף' },
+          garage: { name: 'UMI חיפה' }
+        },
+        meta: {
+          plate: '5785269',
+          damage_date: '2025-07-20'
+        }
+      };
+      
+      sessionStorage.setItem('helper', JSON.stringify(testData));
+      window.helper = testData;
+      console.log('✅ Test data loaded!');
+      refreshCarData();
+    }
+  };
 
   // Expose refresh function to global scope for automatic updates from builder
   window.refreshCarData = function () {
@@ -435,15 +513,39 @@
         try {
           helperData = JSON.parse(helperString);
           console.log('✅ Successfully loaded helper from sessionStorage');
+          console.log('📊 Full helper data:', helperData);
           console.log('📊 Helper structure:', {
             hasVehicle: !!helperData.vehicle,
             hasMeta: !!helperData.meta,
             hasCarDetails: !!helperData.car_details,
             hasStakeholders: !!helperData.stakeholders
           });
+          
+          // Log specific fields we're looking for
+          if (helperData.vehicle) {
+            console.log('🚗 Vehicle data:', helperData.vehicle);
+          }
+          if (helperData.car_details) {
+            console.log('📋 Car details:', helperData.car_details);
+          }
+          if (helperData.meta) {
+            console.log('📌 Meta data:', helperData.meta);
+          }
+          if (helperData.stakeholders) {
+            console.log('👥 Stakeholders:', helperData.stakeholders);
+          }
         } catch (e) {
           console.error('Failed to parse helper from sessionStorage:', e);
         }
+      } else {
+        console.warn('⚠️ No helper data in sessionStorage!');
+      }
+      
+      // Check window.helper first (since we set window.helper = helper in helper.js)
+      if (!helperData && window.helper) {
+        helperData = window.helper;
+        console.log('📋 Using window.helper as data source');
+        console.log('📊 window.helper contents:', window.helper);
       }
       
       // Secondary: Check window.currentCaseData
