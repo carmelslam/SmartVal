@@ -344,7 +344,7 @@ levi report response for OCRed reports :
 ערך כספי מאפיינים : 
 שווי מצטבר מאפיינים
 
-core car detailes response to the open case webhook:
+core car detailes response to the open case webhook OPEN_CASE_UI:
 
 פרטי רכב: 5785269
 תאריך: 2025-07-20T18:26:27.643+02:00
