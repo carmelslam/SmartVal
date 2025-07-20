@@ -113,6 +113,7 @@
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
     import { helper, updateHelper, processIncomingData, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+    import { HEBREW_TO_ENGLISH, processIncomingDataWithMapping } from './field-mapping-dictionary.js';
     
     // Initialize page
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
@@ -195,36 +196,18 @@
         
         // Parse the car data from Make.com response
         if (carData) {
-          // Map Hebrew fields to English
-          const hebrewToEnglishMap = {
-            'מס\' רכב': 'plate',
-            'מספר רכב': 'plate',
-            'שם היצרן': 'manufacturer',
-            'דגם': 'model',
-            'סוג הדגם': 'model_type',
-            'סוג הרכב': 'vehicle_type',
-            'רמת גימור': 'trim',
-            'מספר שילדה': 'chassis',
-            'שנת ייצור': 'year',
-            'שם בעל הרכב': 'owner',
-            'סוג בעלות': 'ownership_type',
-            'נפח מנוע': 'engine_volume',
-            'סוג דלק': 'fuel_type',
-            'מספר דגם הרכב': 'model_code',
-            'דגם מנוע': 'engine_model',
-            'הנעה': 'drive_type',
-            'מוסך': 'garage_name',
-            'קוד משרד התחבורה': 'office_code'
-          };
+          // ENHANCED: Use centralized field mapping dictionary
+          console.log('🔤 Using centralized HEBREW_TO_ENGLISH mapping...');
           
           // Create parsed data object
           const parsedData = {};
           
-          // Map Hebrew fields to English
+          // Map Hebrew fields to English using centralized dictionary
           Object.keys(carData).forEach(key => {
-            const englishKey = hebrewToEnglishMap[key];
+            const englishKey = HEBREW_TO_ENGLISH[key];
             if (englishKey) {
               parsedData[englishKey] = carData[key];
+              console.log(`  🔤 Mapped: ${key} → ${englishKey}: ${carData[key]}`);
             } else {
               // Keep English fields as is
               parsedData[key] = carData[key];

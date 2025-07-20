@@ -1,6 +1,7 @@
-// 🚗 CAR DETAILS MODULE (Full Map Integration)
+// 🚗 CAR DETAILS MODULE (Enhanced with Field Mapping)
 import { helper, updateHelper, saveHelperToStorage, getVehicleData, syncVehicleData } from './helper.js';
 import { ROUTER } from './router.js';
+import { populateUIFromHelper, getNestedValue } from './field-mapping-dictionary.js';
 
 export function carDetails() {
   const container = document.getElementById('app');
@@ -9,33 +10,33 @@ export function carDetails() {
   container.innerHTML = `
     <div class="module">
       <h2>פרטי רכב שהתקבלו</h2>
-      <label>מספר תיק: YC-${helper.meta?.plate || ''}-${new Date().getFullYear()}</label><br/>
-      <label>מספר רכב: <input type="text" id="plate" value="${helper.meta?.plate || ''}" /></label><br/>
-      <label>שם היצרן: <input type="text" id="manufacturer" value="${vehicle.manufacturer || ''}" /></label><br/>
-      <label>דגם: <input type="text" id="model" value="${vehicle.model || ''}" /></label><br/>
-      <label>רמת גימור: <input type="text" id="trim" value="${vehicle.trim || ''}" /></label><br/>
-      <label>מספר שילדה: <input type="text" id="chassis" value="${vehicle.chassis || ''}" /></label><br/>
-      <label>שנת ייצור: <input type="number" id="year" value="${vehicle.year || ''}" /></label><br/>
-     <label>קוד משרד התחבורה: <input type="text" id="office_code" value="${vehicle.office_code || ''}" /></label><br/>
-      <label>סוג הדגם: <input type="text" id="model_type" value="${vehicle.model_type || ''}" /></label><br/>
-      <label>מד אוץ (קילומטראז׳): <input type="number" id="km" value="${vehicle.km || ''}" /></label><br/>
-      <label>תאריך נזק: <input type="date" id="damage_date" value="${helper.meta?.damage_date || ''}" /></label><br/>
-      <label>תאריך בדיקה: <input type="date" id="inspection_date" value="${helper.meta?.inspection_date || ''}" /></label><br/>
-      <label>קוד דגם: <input type="text" id="model_code" value="${vehicle.model_code || ''}" /></label><br/>
-      <label>סוג הרכב: <input type="text" id="ownership" value="${vehicle.ownership_type || ''}" /></label><br/>
-      <label>שם בעל הרכב: <input type="text" id="owner_name" value="${helper.meta?.owner_name || ''}" /></label><br/>
-      <label>כתובת: <input type="text" id="address" value="${helper.meta?.address || ''}" /></label><br/>
-      <label>טלפון: <input type="text" id="phone" value="${helper.meta?.phone || ''}" /></label><br/>
-      <label>מוסך: <input type="text" id="garage" value="${helper.meta?.garage || ''}" /></label><br/>
-      <label>אימייל מוסך: <input type="email" id="garage_email" value="${helper.meta?.garage_email || ''}" /></label><br/>
-      <label>טלפון מוסך: <input type="text" id="garage_phone" value="${helper.meta?.garage_phone || ''}" /></label><br/>
-      <label>חברת ביטוח: <input type="text" id="insurance_company" value="${helper.meta?.insurance_company || ''}" /></label><br/>
-      <label>אימייל חברת ביטוח: <input type="email" id="insurance_email" value="${helper.meta?.insurance_email || ''}" /></label><br/>
-      <label>סוכן ביטוח: <input type="text" id="insurance_agent" value="${helper.meta?.insurance_agent || ''}" /></label><br/>
-      <label>טלפון סוכן ביטוח: <input type="text" id="insurance_agent_phone" value="${helper.meta?.insurance_agent_phone || ''}" /></label><br/>
-      <label>אימייל סוכן ביטוח: <input type="email" id="insurance_agent_email" value="${helper.meta?.insurance_agent_email || ''}" /></label><br/>
-      <label>סוג נזק: <input type="text" id="damage_type" value="${helper.meta?.damage_type || ''}" /></label><br/>
-      <label>מקום בדיקה: <input type="text" id="inspection_location" value="${helper.meta?.inspection_location || ''}" /></label><br/>
+      <label>מספר תיק: YC-${getNestedValue(helper, 'vehicle.plate', '')}-${new Date().getFullYear()}</label><br/>
+      <label>מספר רכב: <input type="text" id="plate" value="${getNestedValue(helper, 'vehicle.plate', '')}" /></label><br/>
+      <label>שם היצרן: <input type="text" id="manufacturer" value="${getNestedValue(helper, 'vehicle.manufacturer', '')}" /></label><br/>
+      <label>דגם: <input type="text" id="model" value="${getNestedValue(helper, 'vehicle.model', '')}" /></label><br/>
+      <label>רמת גימור: <input type="text" id="trim" value="${getNestedValue(helper, 'vehicle.trim', '')}" /></label><br/>
+      <label>מספר שילדה: <input type="text" id="chassis" value="${getNestedValue(helper, 'vehicle.chassis', '')}" /></label><br/>
+      <label>שנת ייצור: <input type="number" id="year" value="${getNestedValue(helper, 'vehicle.year', '')}" /></label><br/>
+     <label>קוד משרד התחבורה: <input type="text" id="office_code" value="${getNestedValue(helper, 'vehicle.office_code', '')}" /></label><br/>
+      <label>סוג הדגם: <input type="text" id="model_type" value="${getNestedValue(helper, 'vehicle.model_type', '')}" /></label><br/>
+      <label>מד אוץ (קילומטראז׳): <input type="number" id="km" value="${getNestedValue(helper, 'vehicle.km', '')}" /></label><br/>
+      <label>תאריך נזק: <input type="date" id="damage_date" value="${getNestedValue(helper, 'case_info.damage_date', '')}" /></label><br/>
+      <label>תאריך בדיקה: <input type="date" id="inspection_date" value="${getNestedValue(helper, 'case_info.inspection_date', '')}" /></label><br/>
+      <label>קוד דגם: <input type="text" id="model_code" value="${getNestedValue(helper, 'vehicle.model_code', '')}" /></label><br/>
+      <label>סוג הרכב: <input type="text" id="ownership" value="${getNestedValue(helper, 'vehicle.ownership_type', '')}" /></label><br/>
+      <label>שם בעל הרכב: <input type="text" id="owner_name" value="${getNestedValue(helper, 'stakeholders.owner.name', '')}" /></label><br/>
+      <label>כתובת: <input type="text" id="address" value="${getNestedValue(helper, 'stakeholders.owner.address', '')}" /></label><br/>
+      <label>טלפון: <input type="text" id="phone" value="${getNestedValue(helper, 'stakeholders.owner.phone', '')}" /></label><br/>
+      <label>מוסך: <input type="text" id="garage" value="${getNestedValue(helper, 'stakeholders.garage.name', '')}" /></label><br/>
+      <label>אימייל מוסך: <input type="email" id="garage_email" value="${getNestedValue(helper, 'stakeholders.garage.email', '')}" /></label><br/>
+      <label>טלפון מוסך: <input type="text" id="garage_phone" value="${getNestedValue(helper, 'stakeholders.garage.phone', '')}" /></label><br/>
+      <label>חברת ביטוח: <input type="text" id="insurance_company" value="${getNestedValue(helper, 'stakeholders.insurance.company', '')}" /></label><br/>
+      <label>אימייל חברת ביטוח: <input type="email" id="insurance_email" value="${getNestedValue(helper, 'stakeholders.insurance.email', '')}" /></label><br/>
+      <label>סוכן ביטוח: <input type="text" id="insurance_agent" value="${getNestedValue(helper, 'stakeholders.insurance.agent.name', '')}" /></label><br/>
+      <label>טלפון סוכן ביטוח: <input type="text" id="insurance_agent_phone" value="${getNestedValue(helper, 'stakeholders.insurance.agent.phone', '')}" /></label><br/>
+      <label>אימייל סוכן ביטוח: <input type="email" id="insurance_agent_email" value="${getNestedValue(helper, 'stakeholders.insurance.agent.email', '')}" /></label><br/>
+      <label>סוג נזק: <input type="text" id="damage_type" value="${getNestedValue(helper, 'case_info.damage_type', '')}" /></label><br/>
+      <label>מקום בדיקה: <input type="text" id="inspection_location" value="${getNestedValue(helper, 'case_info.inspection_location', '')}" /></label><br/>
       <label>מחיר בסיס: <input type="text" id="base_price" value="${vehicle.base_price || ''}" /></label><br/>
       <label>נפח מנוע: <input type="text" id="engine_volume" value="${vehicle.engine_volume || ''}" /></label><br/>
       <label>סוג דלק: <input type="text" id="fuel_type" value="${vehicle.fuel_type || ''}" /></label><br/>

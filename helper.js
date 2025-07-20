@@ -13,6 +13,13 @@ import {
   DataFlowStandardizer
 } from './data-flow-standardizer.js';
 import SystemTracker from './system-tracker.js';
+import { 
+  processIncomingDataWithMapping, 
+  setNestedValue, 
+  getNestedValue,
+  HEBREW_TO_ENGLISH,
+  MAKECOM_TO_HELPER 
+} from './field-mapping-dictionary.js';
 
 
 const CAR_DETAILS_TEMPLATE = {
@@ -227,7 +234,7 @@ export const helper = {
   },
 
   vehicle: {
-    plate_number: '',
+    plate: '', // CRITICAL FIX: Changed from plate_number to plate for unified schema alignment
     manufacturer: '',
     model: '',
     trim: '',
@@ -1712,77 +1719,10 @@ window.checkForIncomingData = checkForIncomingData;
 // HEBREW TEXT PARSING FUNCTION
 // ============================================================================
 function parseHebrewTextToObject(text) {
-  console.log('🔤 Parsing Hebrew text to object...');
+  console.log('🔤 Parsing Hebrew text with ENHANCED field mapping dictionary...');
   console.log('📝 Raw text received:', text);
   
   const result = {};
-  
-  // Comprehensive Hebrew to English field mapping
-  const hebrewFieldMap = {
-    // Plate variations
-    'פרטי רכב': 'plate',
-    'מס\' רכב': 'plate',
-    'מספר רכב': 'plate',
-    'מס רכב': 'plate',
-    'לוחית רישוי': 'plate',
-    
-    // Manufacturer variations
-    'שם היצרן': 'manufacturer',
-    'יצרן': 'manufacturer',
-    'שם רכב': 'manufacturer',
-    
-    // Model and type
-    'דגם': 'model',
-    'סוג הדגם': 'model_type',
-    'סוג הרכב': 'vehicle_type',
-    'סוג רכב': 'vehicle_type',
-    
-    // Technical details
-    'רמת גימור': 'trim',
-    'גימור': 'trim',
-    'מספר שילדה': 'chassis',
-    'מספר שלדה': 'chassis',
-    'שילדה': 'chassis',
-    'שנת ייצור': 'year',
-    'שנת יצור': 'year',
-    'שנה': 'year',
-    
-    // Owner information
-    'שם בעל הרכב': 'owner',
-    'בעל הרכב': 'owner',
-    'שם בעלים': 'owner',
-    'בעלים': 'owner',
-    'סוג בעלות': 'ownership_type',
-    'בעלות': 'ownership_type',
-    
-    // Engine and fuel
-    'נפח מנוע': 'engine_volume',
-    'נפח': 'engine_volume',
-    'סוג דלק': 'fuel_type',
-    'דלק': 'fuel_type',
-    'מספר דגם הרכב': 'model_code',
-    'קוד דגם': 'model_code',
-    'דגם מנוע': 'engine_model',
-    'מנוע': 'engine_model',
-    'הנעה': 'drive_type',
-    
-    // Location and garage
-    'מוסך': 'garage_name',
-    'שם מוסך': 'garage_name',
-    'קוד משרד התחבורה': 'office_code',
-    'קוד משרד': 'office_code',
-    'תאריך': 'timestamp',
-    'מיקום': 'location',
-    'מקום': 'location',
-    
-    // Additional fields
-    'קילומטר': 'km',
-    'קילומטראז': 'km',
-    'ק"מ': 'km',
-    'צבע': 'color',
-    'מספר דלתות': 'doors',
-    'דלתות': 'doors'
-  };
   
   // Split by lines and parse each field
   const lines = text.split('\n').filter(line => line.trim());
@@ -1812,8 +1752,8 @@ function parseHebrewTextToObject(text) {
       // Skip if value is empty
       if (!value) return;
       
-      // Find English key
-      const englishKey = hebrewFieldMap[hebrewKey];
+      // ENHANCED: Use the centralized field mapping dictionary
+      const englishKey = HEBREW_TO_ENGLISH[hebrewKey];
       if (englishKey) {
         // Don't override if we already have a value for this key
         if (!result[englishKey] || result[englishKey] === '-') {
@@ -1821,9 +1761,9 @@ function parseHebrewTextToObject(text) {
           console.log(`  ✅ Line ${index + 1}: ${hebrewKey} → ${englishKey}: "${value}"`);
         }
       } else if (value) {
-        // Store with Hebrew key if no mapping
+        // Store with Hebrew key if no mapping found in dictionary
         result[hebrewKey] = value;
-        console.log(`  ⚠️ Line ${index + 1}: ${hebrewKey}: "${value}" (no English mapping)`);
+        console.log(`  ⚠️ Line ${index + 1}: ${hebrewKey}: "${value}" (add to HEBREW_TO_ENGLISH dictionary)`);
       }
     } else if (line.trim()) {
       console.log(`  ❓ Line ${index + 1}: Could not parse: "${line}"`);
@@ -1871,75 +1811,97 @@ function parseHebrewTextToObject(text) {
 // ============================================================================
 
 function processCarDetailsData(data, sourceModule) {
-  console.log('🔧 processCarDetailsData: Starting with data:', data);
-  console.log('🔧 processCarDetailsData: Data keys:', Object.keys(data));
-  console.log('🔧 processCarDetailsData: Current helper before update:', {
-    meta: helper.meta,
-    vehicle: helper.vehicle,
-    car_details: helper.car_details
-  });
+  console.log('🔧 processCarDetailsData: Starting with ENHANCED field mapping system');
+  console.log('🔧 Raw incoming data:', data);
+  console.log('🔧 Source module:', sourceModule);
   
   // Initialize helper sections if they don't exist
   if (!helper.vehicle) helper.vehicle = {};
   if (!helper.meta) helper.meta = {};
   if (!helper.stakeholders) helper.stakeholders = { owner: {}, garage: {}, insurance: { agent: {} } };
   if (!helper.car_details) helper.car_details = {};
+  if (!helper.case_info) helper.case_info = {};
+  if (!helper.valuation) helper.valuation = {};
   
-  // Process data - no need for Hebrew translation if already parsed by parseHebrewTextToObject
+  // CRITICAL FIX: Use the new field mapping system
+  const mappedData = processIncomingDataWithMapping(data, sourceModule);
+  console.log('🗺️ Data after field mapping:', mappedData);
   
-  // CRITICAL: Map all plate data
-  if (data.plate) {
-    console.log('🔧 Mapping plate data:', data.plate);
-    helper.meta.plate = data.plate;
-    helper.vehicle.plate = data.plate;
-    helper.vehicle.plate_number = data.plate;
-    helper.car_details.plate = data.plate;
+  // Apply mapped data to helper structure
+  Object.entries(mappedData).forEach(([section, sectionData]) => {
+    if (typeof sectionData === 'object' && sectionData !== null) {
+      // Merge section data into helper
+      if (!helper[section]) helper[section] = {};
+      Object.assign(helper[section], sectionData);
+      console.log(`  ✅ Updated helper.${section}:`, sectionData);
+    } else {
+      // Direct field assignment
+      if (section === 'plate') {
+        // CRITICAL: Ensure plate is stored in all required locations for backward compatibility
+        helper.meta.plate = sectionData;
+        helper.vehicle.plate = sectionData;
+        helper.car_details.plate = sectionData;
+        console.log(`  🔧 PLATE mapped to all locations: ${sectionData}`);
+      }
+    }
+  });
+  
+  // CRITICAL FIX: Remove the old plate_number field to prevent confusion
+  if (helper.vehicle.plate_number) {
+    delete helper.vehicle.plate_number;
+    console.log('  🧹 Cleaned up legacy plate_number field');
   }
   
-  // Map manufacturer data
-  if (data.manufacturer) {
-    console.log('🔧 Mapping manufacturer:', data.manufacturer);
-    helper.vehicle.manufacturer = data.manufacturer;
-    helper.car_details.manufacturer = data.manufacturer;
+  // CRITICAL: Maintain backward compatibility by duplicating key data to car_details
+  if (helper.vehicle) {
+    const vehicleFields = ['plate', 'manufacturer', 'model', 'year', 'chassis', 'km', 'trim', 'model_type', 'ownership_type'];
+    vehicleFields.forEach(field => {
+      if (helper.vehicle[field]) {
+        helper.car_details[field] = helper.vehicle[field];
+      }
+    });
+    console.log('  🔄 Synced vehicle data to car_details for backward compatibility');
   }
   
-  // Map model data
-  if (data.model) {
-    console.log('🔧 Mapping model:', data.model);
-    helper.vehicle.model = data.model;
-    helper.car_details.model = data.model;
+  // CRITICAL: Clean year format if needed  
+  if (helper.vehicle.year && helper.vehicle.year.includes('/')) {
+    const yearParts = helper.vehicle.year.split('/');
+    helper.vehicle.year = yearParts[yearParts.length - 1].trim();
+    helper.car_details.year = helper.vehicle.year;
+    console.log(`  📅 Cleaned year format: ${helper.vehicle.year}`);
   }
   
-  // Map year data
-  if (data.year) {
-    console.log('🔧 Mapping year:', data.year);
-    helper.vehicle.year = data.year;
-    helper.car_details.year = data.year;
+  // CRITICAL: Update legacy sessionStorage for floating popup compatibility
+  if (helper.vehicle.plate) {
+    const legacyCarData = {
+      plate: helper.vehicle.plate,
+      manufacturer: helper.vehicle.manufacturer || '',
+      model: helper.vehicle.model || '',
+      year: helper.vehicle.year || '',
+      owner: helper.stakeholders?.owner?.name || '',
+      location: helper.case_info?.inspection_location || '',
+      ...data // Include original data for compatibility
+    };
+    sessionStorage.setItem('carData', JSON.stringify(legacyCarData));
+    console.log('  💾 Updated legacy carData in sessionStorage');
   }
   
-  // Map technical details
-  if (data.model_type) {
-    helper.vehicle.model_type = data.model_type;
-    helper.car_details.model_type = data.model_type;
-  }
+  // Update window.currentCaseData for floating screens compatibility
+  window.currentCaseData = {
+    meta: helper.meta,
+    vehicle: helper.vehicle,
+    car_details: helper.car_details,
+    stakeholders: helper.stakeholders
+  };
   
-  if (data.vehicle_type) {
-    helper.vehicle.vehicle_type = data.vehicle_type;
-    helper.car_details.vehicle_type = data.vehicle_type;
-  }
+  console.log('✅ processCarDetailsData completed with ENHANCED field mapping');
+}
+
+// Temporary function to clean up orphaned code - DELETE AFTER CLEANUP
+function cleanupOrphanedCode() {
+  // This function will be removed after cleanup
   
-  if (data.trim) {
-    helper.vehicle.trim = data.trim;
-    helper.car_details.trim = data.trim;
-  }
-  
-  if (data.chassis) {
-    console.log('🔧 Mapping chassis:', data.chassis);
-    helper.vehicle.chassis = data.chassis;
-    helper.car_details.chassis = data.chassis;
-  }
-  
-  if (data.model_code) {
+  if (false && data.model_code) {
     helper.vehicle.model_code = data.model_code;
     helper.car_details.model_code = data.model_code;
   }
@@ -2124,8 +2086,9 @@ function processCarDetailsData(data, sourceModule) {
     console.log('🔧 Updated legacy carData in sessionStorage');
   }
   
-  console.log('✅ processCarDetailsData completed successfully');
+  console.log('✅ processCarDetailsData completed successfully - ORPHANED VERSION');
 }
+// END OF CLEANUP FUNCTION
 
 function processStakeholderData(section, data, sourceModule) {
   if (!helper.stakeholders) helper.stakeholders = { owner: {}, garage: {}, insurance: { agent: {} } };
