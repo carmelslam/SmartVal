@@ -209,43 +209,39 @@
         // Check if response is an array (like demo expects)
         if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
           console.log('📥 Make.com returned array format');
-          // Extract the actual data from array format
           const firstItem = webhookResponse[0];
           if (firstItem) {
-            // Check for different possible data locations
-            if (firstItem.value) {
-              // Check if value is a string that needs parsing
-              if (typeof firstItem.value === 'string') {
-                try {
-                  carData = JSON.parse(firstItem.value);
-                  console.log('✅ Parsed nested JSON from Make.com:', carData);
-                } catch (e) {
-                  console.error('Failed to parse nested JSON:', e);
-                  carData = firstItem.value;
-                }
-              } else {
-                carData = firstItem.value;
-              }
-            } else if (firstItem.Body && typeof firstItem.Body === 'string') {
-              // Hebrew text in Body field - parse it
-              console.log('📥 Found Hebrew text in Body field');
-              if (typeof window.parseHebrewTextToObject === 'function') {
-                carData = window.parseHebrewTextToObject(firstItem.Body);
-              }
-            } else {
-              // Direct data in array item
-              carData = firstItem;
-            }
-          }
-        } else if (webhookResponse && webhookResponse.Body && typeof webhookResponse.Body === 'string') {
-          // Direct Body field with Hebrew text
-          console.log('📥 Found Hebrew text in direct Body field');
-          if (typeof window.parseHebrewTextToObject === 'function') {
-            carData = window.parseHebrewTextToObject(webhookResponse.Body);
+            carData = firstItem;
           }
         } else if (webhookResponse && typeof webhookResponse === 'object') {
-          // Direct object response
           carData = webhookResponse;
+        }
+        
+        // Parse the car data from Make.com response
+        if (carData) {
+          // Extract fields from the response
+          const parsedData = {
+            plate: carData['מס\' רכב'] || carData.plate || meta.plate,
+            manufacturer: carData['שם היצרן'] || carData.manufacturer,
+            model: carData['דגם'] || carData.model,
+            model_type: carData['סוג הדגם'] || carData.model_type,
+            vehicle_type: carData['סוג הרכב'] || carData.vehicle_type,
+            trim: carData['רמת גימור'] || carData.trim,
+            chassis: carData['מספר שילדה'] || carData.chassis,
+            year: carData['שנת ייצור'] || carData.year,
+            owner: carData['שם בעל הרכב'] || carData.owner || stakeholders.owner?.name,
+            ownership_type: carData['סוג בעלות'] || carData.ownership_type,
+            engine_volume: carData['נפח מנוע'] || carData.engine_volume,
+            fuel_type: carData['סוג דלק'] || carData.fuel_type,
+            model_code: carData['מספר דגם הרכב'] || carData.model_code,
+            engine_model: carData['דגם מנוע'] || carData.engine_model,
+            drive_type: carData['הנעה'] || carData.drive_type,
+            garage_name: carData['מוסך'] || carData.garage_name,
+            office_code: carData['קוד משרד התחבורה'] || carData.office_code
+          };
+          
+          // Use the parsed data
+          carData = parsedData;
         }
         
         // Store the extracted car data

@@ -314,17 +314,10 @@
       </div>
     </div>
 
-    <div class="car-section" id="webhook-response-section" style="display: none;">
-      <h4>תגובת Webhook מ-Make.com</h4>
-      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;">
-        <pre id="webhook-response-data" style="margin: 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;">אין נתונים</pre>
-      </div>
-    </div>
 
     <div class="car-buttons">
       <button class="car-btn close" onclick="toggleCarDetails()">סגור</button>
       <button class="car-btn refresh" onclick="refreshCarData()">רענן נתונים</button>
-      <button class="car-btn refresh" onclick="toggleWebhookData()" style="background: #6c757d;">📡 הצג/הסתר נתוני Webhook</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -356,114 +349,6 @@
   };
 
   window.showCarDetails = window.toggleCarDetails;
-  
-  // Toggle webhook data visibility
-  window.toggleWebhookData = function() {
-    const section = document.getElementById('webhook-response-section');
-    if (section) {
-      if (section.style.display === 'none') {
-        section.style.display = 'block';
-        // Load fresh webhook data if available
-        const webhookResponse = sessionStorage.getItem('lastWebhookResponse') || 
-                               sessionStorage.getItem('makeCarData') || 
-                               sessionStorage.getItem('carDataFromMake');
-        if (webhookResponse) {
-          try {
-            const responseData = JSON.parse(webhookResponse);
-            displayWebhookResponse(responseData);
-          } catch (e) {
-            document.getElementById('webhook-response-data').textContent = webhookResponse;
-          }
-        }
-      } else {
-        section.style.display = 'none';
-      }
-    }
-  };
-  
-  // Debug function to check all data sources
-  window.debugCarData = function() {
-    console.log('=== 🔍 DEBUGGING CAR DATA ===');
-    
-    // Check sessionStorage
-    console.log('1️⃣ Checking sessionStorage:');
-    const helperStr = sessionStorage.getItem('helper');
-    if (helperStr) {
-      try {
-        const helper = JSON.parse(helperStr);
-        console.log('✅ helper in sessionStorage:', helper);
-      } catch (e) {
-        console.error('❌ Failed to parse helper:', e);
-      }
-    } else {
-      console.log('❌ No helper in sessionStorage');
-    }
-    
-    const carDataStr = sessionStorage.getItem('carData');
-    if (carDataStr) {
-      try {
-        const carData = JSON.parse(carDataStr);
-        console.log('✅ carData in sessionStorage:', carData);
-      } catch (e) {
-        console.error('❌ Failed to parse carData:', e);
-      }
-    } else {
-      console.log('❌ No carData in sessionStorage');
-    }
-    
-    // Check window objects
-    console.log('2️⃣ Checking window objects:');
-    console.log('window.helper:', window.helper);
-    console.log('window.currentCaseData:', window.currentCaseData);
-    
-    // Check if helper.js is loaded
-    console.log('3️⃣ Checking if helper module is loaded:');
-    console.log('window.updateHelper exists:', typeof window.updateHelper === 'function');
-    console.log('window.broadcastHelperUpdate exists:', typeof window.broadcastHelperUpdate === 'function');
-    
-    // Try to populate with test data
-    if (confirm('האם לטעון נתוני בדיקה?')) {
-      const testData = {
-        vehicle: {
-          plate: '5785269',
-          manufacturer: 'ביואיק',
-          model: 'LUCERNE',
-          model_type: 'סדאן',
-          vehicle_type: 'פרטי',
-          trim: 'CXL',
-          chassis: '1G4HD57258U196450',
-          year: '2009',
-          ownership_type: 'פרטי',
-          engine_volume: '3791',
-          fuel_type: 'בנזין',
-          model_code: 'HD572',
-          engine_model: '428',
-          drive_type: '4X2',
-          office_code: '156-11'
-        },
-        stakeholders: {
-          owner: { name: 'כרמל כיוף' },
-          garage: { name: 'UMI חיפה' }
-        },
-        meta: {
-          plate: '5785269',
-          damage_date: '2025-07-20'
-        }
-      };
-      
-      sessionStorage.setItem('helper', JSON.stringify(testData));
-      window.helper = testData;
-      // Persist the test data
-      persistedCarData = {
-        vehicle: testData.vehicle || {},
-        carDetails: testData.car_details || {},
-        stakeholders: testData.stakeholders || {},
-        meta: testData.meta || {}
-      };
-      console.log('✅ Test data loaded and persisted!');
-      refreshCarData();
-    }
-  };
 
   // Expose refresh function to global scope for automatic updates from builder
   window.refreshCarData = function () {
@@ -697,19 +582,6 @@
       // Update UI and persist the data
       updateCarDisplay(vehicle, carDetails, stakeholders, meta);
       
-      // Check for raw webhook response data
-      const webhookResponse = sessionStorage.getItem('makeCarData') || 
-                             sessionStorage.getItem('carDataFromMake') ||
-                             sessionStorage.getItem('lastWebhookResponse');
-      if (webhookResponse) {
-        try {
-          const responseData = JSON.parse(webhookResponse);
-          displayWebhookResponse(responseData);
-        } catch (e) {
-          console.log('Could not parse webhook response for display');
-        }
-      }
-      
       // Persist the loaded data
       persistedCarData = {
         vehicle: vehicle,
@@ -722,35 +594,6 @@
     } catch (error) {
       console.error("❌ Error loading car data:", error);
       updateCarDisplay({}, {}, {}, {});
-    }
-  }
-
-  function displayWebhookResponse(data) {
-    const section = document.getElementById('webhook-response-section');
-    const preElement = document.getElementById('webhook-response-data');
-    
-    if (section && preElement) {
-      section.style.display = 'block';
-      
-      // Format the data nicely
-      let formattedData = '';
-      
-      // Check if data contains the Hebrew response text
-      if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('פרטי רכב:')) {
-        // Display the Hebrew text directly
-        formattedData = data.Body;
-      } else if (Array.isArray(data) && data[0] && data[0].Body) {
-        // Array format with Body field
-        formattedData = data[0].Body;
-      } else if (typeof data === 'string' && data.includes('פרטי רכב:')) {
-        // Direct string format
-        formattedData = data;
-      } else {
-        // Otherwise show as formatted JSON
-        formattedData = JSON.stringify(data, null, 2);
-      }
-      
-      preElement.textContent = formattedData;
     }
   }
 
