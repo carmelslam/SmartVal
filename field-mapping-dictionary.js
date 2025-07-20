@@ -18,6 +18,7 @@ export const HEBREW_TO_ENGLISH = {
   // === Vehicle Identification ===
   'פרטי רכב': 'plate',
   'מס\' רכב': 'plate',
+  "מס' רכב": 'plate',         // CRITICAL FIX: Real apostrophe from Make.com
   'מספר רכב': 'plate',
   'מס רכב': 'plate',
   'לוחית רישוי': 'plate',

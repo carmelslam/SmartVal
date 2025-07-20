@@ -3266,6 +3266,62 @@ function populateFormFields(fieldMappings, moduleType) {
 // Make functions globally available
 window.refreshAllModuleForms = refreshAllModuleForms;
 
+// 🧪 DEBUG FUNCTION: Test data parsing with real Make.com data
+window.testDataParsing = function() {
+  console.log('🧪 TESTING DATA PARSING WITH ACTUAL MAKE.COM DATA');
+  console.log('=' .repeat(60));
+  
+  const testMakeComData = `פרטי רכב: 5785269
+תאריך: 2025-07-20T18:26:27.643+02:00
+מס' רכב: 5785269
+שם היצרן: ביואיק
+דגם: LUCERNE
+סוג הדגם: סדאן
+סוג הרכב: פרטי
+רמת גימור:CXL
+מספר שילדה: 1G4HD57258U196450
+שנת ייצור: 05/2009
+שם בעל הרכב: כרמל כיוף
+סוג בעלות: פרטי
+נפח מנוע: 3791
+סוג דלק: בנזין
+מספר דגם הרכב:HD572
+דגם מנוע: 428
+הנעה: 4X2
+מוסך: UMI חיפה
+קוד משרד התחבורה:156-11`;
+
+  console.log('📝 Testing parseHebrewTextToObject with real data...');
+  const result = parseHebrewTextToObject(testMakeComData);
+  
+  console.log('\n🎯 CRITICAL FIELDS CHECK:');
+  const criticalFields = ['plate', 'manufacturer', 'model', 'owner', 'year'];
+  criticalFields.forEach(field => {
+    const value = result[field];
+    const status = value ? '✅' : '❌';
+    console.log(`  ${status} ${field}: ${value || 'MISSING'}`);
+  });
+  
+  console.log('\n📊 Full parsed result:', result);
+  
+  // Test if this data would be processed correctly
+  console.log('\n🔄 Testing processCarDetailsData...');
+  try {
+    processCarDetailsData(result, 'debug_test');
+    console.log('✅ processCarDetailsData completed without errors');
+    
+    console.log('\n📋 Current helper after processing:');
+    console.log('  vehicle:', helper.vehicle);
+    console.log('  meta:', helper.meta);
+    console.log('  stakeholders:', helper.stakeholders);
+    
+  } catch (error) {
+    console.error('❌ processCarDetailsData failed:', error);
+  }
+  
+  return result;
+};
+
 // ============================================================================
 // SYSTEM OPTIMIZATION & VALIDATION
 // ============================================================================
