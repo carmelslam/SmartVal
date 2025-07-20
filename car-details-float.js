@@ -322,6 +322,10 @@
   window.toggleCarDetails = function () {
     const modal = document.getElementById("carDetailsModal");
     if (modal.style.display === "none" || !modal.style.display) {
+      // Ensure helper is loaded before showing modal
+      if (typeof window.loadHelperFromStorage === 'function') {
+        window.loadHelperFromStorage();
+      }
       loadCarData();
       modal.style.display = "block";
       makeDraggable(modal);
@@ -810,6 +814,28 @@
           window.refreshCarData();
         }, 100);
       }
+    }
+  });
+
+  // Initialize helper on page load
+  window.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Car details floating: Page loaded, checking helper...');
+    
+    // Try to load helper from storage if available
+    if (typeof window.loadHelperFromStorage === 'function') {
+      window.loadHelperFromStorage();
+      console.log('✅ Helper loaded from storage');
+    }
+    
+    // Check if helper.js module is loaded
+    if (!window.helper && !window.updateHelper) {
+      console.log('⏳ Waiting for helper.js module to load...');
+      
+      // Try to load helper.js module
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = 'helper.js';
+      document.head.appendChild(script);
     }
   });
 
