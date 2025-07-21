@@ -247,7 +247,54 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
     }
   });
 
-  sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+  // ✅ FIXED: Proper helper system integration instead of bypass
+  console.log('🔄 Updating helper with works data...');
+  
+  try {
+    // Get current helper data
+    let helper = {};
+    try {
+      helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    } catch (e) {
+      console.warn('Failed to parse helper from sessionStorage, using empty object');
+      helper = {};
+    }
+    
+    // Initialize damage_assessment structure if needed
+    helper.damage_assessment = helper.damage_assessment || {};
+    helper.damage_assessment.works = helper.damage_assessment.works || {};
+    
+    // Store works data in proper helper structure
+    helper.damage_assessment.works = {
+      takana389: takana,
+      work_items: works,
+      updated_at: new Date().toISOString(),
+      updated_by: 'work_module'
+    };
+    
+    // Update meta information
+    helper.meta = helper.meta || {};
+    helper.meta.last_updated = new Date().toISOString();
+    
+    // Save to session storage
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    // Also maintain backward compatibility by keeping the legacy format
+    sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+    
+    console.log('✅ Helper updated successfully with works data:', helper.damage_assessment.works);
+    
+    // Trigger helper update broadcast if available
+    if (typeof window.broadcastHelperUpdate === 'function') {
+      window.broadcastHelperUpdate(['damage_assessment'], 'work_module');
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to update helper with works data:', error);
+    // Fallback to legacy storage to prevent data loss
+    sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+  }
+  
   location.href = "general-comments.html";
 });
 

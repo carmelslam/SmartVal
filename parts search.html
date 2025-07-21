@@ -330,13 +330,25 @@
         displaySearchResults(results.parts);
         alert(`✅ נמצאו ${results.parts.length} חלקים`);
         
-        // Save ALL results to helper for future use (including unselected)
+        // ✅ FIXED: Save ALL results to helper using correct sessionStorage location
         try {
-          const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+          // Get helper data from correct location (sessionStorage, not localStorage)
+          let helper = {};
+          try {
+            helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          } catch (e) {
+            console.warn('Failed to parse helper from sessionStorage, using empty object');
+            helper = {};
+          }
+          
+          // Initialize parts_search structure if needed
           helper.parts_search = helper.parts_search || { 
             results: [],
             search_history: [],
-            all_results: []
+            all_results: [],
+            selected_parts: [],
+            unselected_parts: [],
+            summary: {}
           };
           
           // Save search context and parameters
@@ -374,11 +386,26 @@
           helper.parts_search.summary = {
             total_searches: helper.parts_search.search_history.length,
             total_results: helper.parts_search.all_results.length,
+            selected_count: helper.parts_search.selected_parts.length || 0,
             last_search: new Date().toISOString()
           };
           
+          // Update meta information
+          helper.meta = helper.meta || {};
+          helper.meta.last_updated = new Date().toISOString();
+          
+          // ✅ FIXED: Save to correct sessionStorage location
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Also save to localStorage for backup (maintaining original functionality)
           localStorage.setItem('helper_data', JSON.stringify(helper));
-          console.log(`✅ Saved ${markedResults.length} search results (including unselected) to helper`);
+          
+          console.log(`✅ FIXED: Saved ${markedResults.length} search results to helper (sessionStorage)`);
+          
+          // Trigger helper update broadcast if available
+          if (typeof window.broadcastHelperUpdate === 'function') {
+            window.broadcastHelperUpdate(['parts_search'], 'parts_search_module');
+          }
         } catch (e) {
           console.warn('Could not save search results:', e);
         }
@@ -548,11 +575,23 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
     
     try {
-      const helper = JSON.parse(localStorage.getItem('helper_data') || '{}');
+      // ✅ FIXED: Use correct sessionStorage location for helper data
+      let helper = {};
+      try {
+        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      } catch (e) {
+        console.warn('Failed to parse helper from sessionStorage, using empty object');
+        helper = {};
+      }
+      
+      // Initialize parts_search structure
       helper.parts_search = helper.parts_search || { 
         results: [], 
         all_results: [], 
-        search_history: [] 
+        search_history: [],
+        selected_parts: [],
+        unselected_parts: [],
+        summary: {}
       };
       
       // Mark selected parts in all_results
@@ -569,15 +608,37 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         });
       }
       
+      // Save selected parts to the dedicated selected_parts array
+      helper.parts_search.selected_parts = [...(helper.parts_search.selected_parts || []), ...selectedParts];
+      
       // Save selected parts to results (for backward compatibility)
       helper.parts_search.results = [...(helper.parts_search.results || []), ...selectedParts];
+      
+      // Update summary with comprehensive information
       helper.parts_search.summary = {
         total_results: helper.parts_search.results.length,
         total_all_results: helper.parts_search.all_results?.length || 0,
-        selected_count: selectedParts.length,
+        selected_count: helper.parts_search.selected_parts.length || selectedParts.length,
+        total_searches: helper.parts_search.search_history?.length || 0,
         last_updated: new Date().toISOString()
       };
+      
+      // Update meta information
+      helper.meta = helper.meta || {};
+      helper.meta.last_updated = new Date().toISOString();
+      
+      // ✅ FIXED: Save to correct sessionStorage location
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Also save to localStorage for backup compatibility
       localStorage.setItem('helper_data', JSON.stringify(helper));
+      
+      console.log(`✅ FIXED: Saved ${selectedParts.length} selected parts to helper (sessionStorage)`);
+      
+      // Trigger helper update broadcast if available
+      if (typeof window.broadcastHelperUpdate === 'function') {
+        window.broadcastHelperUpdate(['parts_search'], 'parts_save_session');
+      }
       
       // Check if opened from estimate builder
       const partSearchTarget = sessionStorage.getItem('partSearchTarget');
