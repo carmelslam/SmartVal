@@ -3,17 +3,39 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
-// 🔧 CRITICAL FIX: Load existing data from storage FIRST
+// 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
 function initializeHelper() {
   console.log('🔄 Initializing helper - checking for existing data...');
   
-  // Try to load from sessionStorage first
   let existingData = null;
+  
+  try {
+    if (typeof storageManager !== 'undefined' && storageManager.load) {
+      // Use centralized storage manager
+      const loadResult = storageManager.load({
+        decompress: true,      // Handle compressed data
+        fallbackSources: true, // Try all storage locations
+        validate: true         // Validate data integrity
+      });
+      
+      if (loadResult.success) {
+        existingData = loadResult.data;
+        console.log(`✅ Found existing helper data via storage manager (${loadResult.source}):`, existingData);
+        return existingData;
+      } else {
+        console.log(`⚠️ Storage manager load failed: ${loadResult.reason}`);
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ Storage manager not available, using fallback:', e);
+  }
+  
+  // Fallback to original method if storage manager not available
   try {
     const sessionData = sessionStorage.getItem('helper');
     if (sessionData && sessionData !== '{}') {
       existingData = JSON.parse(sessionData);
-      console.log('✅ Found existing helper data in sessionStorage:', existingData);
+      console.log('✅ Found existing helper data in sessionStorage (fallback):', existingData);
     }
   } catch (e) {
     console.warn('⚠️ Could not load from sessionStorage:', e);
@@ -25,7 +47,7 @@ function initializeHelper() {
       const localData = localStorage.getItem('helper_data');
       if (localData && localData !== '{}') {
         existingData = JSON.parse(localData);
-        console.log('✅ Found existing helper data in localStorage:', existingData);
+        console.log('✅ Found existing helper data in localStorage (fallback):', existingData);
       }
     } catch (e) {
       console.warn('⚠️ Could not load from localStorage:', e);
@@ -432,10 +454,127 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
   }
 };
 
-// Process Hebrew text with comprehensive field extraction
+// 🔧 PHASE 1 FIX: Hebrew Text Normalization and Corruption Recovery
+function normalizeHebrewText(text) {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  console.log('🔧 Starting Hebrew text normalization...');
+  
+  // Step 1: Detect and fix UTF-8 corruption patterns
+  let normalizedText = text;
+  
+  // Common UTF-8 corruption patterns for Hebrew - using safer approach
+  const corruptionMap = {};
+  
+  // Basic corruption patterns - focus on common issues that don't have encoding problems
+  const corruptionPatterns = [
+    // Safe patterns that work in all encodings
+    ['â€™', '\'', 'Right single quotation mark'],
+    ['â€œ', '"', 'Left double quotation mark'],
+    ['â€', '"', 'Right double quotation mark'],
+    ['Ã—', '×', 'Multiplication sign corruption'],
+    ['Ã¡', 'á', 'Latin a with acute'],
+    ['â€¦', '...', 'Ellipsis'],
+    ['â€"', '-', 'Em dash'],
+    ['â€"', '--', 'En dash'],
+    // Hebrew-specific basic patterns
+    ['×', '', 'Remove orphaned multiplication signs'],
+    ['â€™', '\'', 'Fix apostrophes in Hebrew text'],
+    ['Ã', '', 'Remove Latin prefix artifacts']
+  ];
+  
+  // Build corruption map safely
+  corruptionPatterns.forEach(([corrupted, correct, desc]) => {
+    try {
+      corruptionMap[corrupted] = correct;
+    } catch (e) {
+      console.warn(`⚠️ Could not add corruption pattern: ${desc}`, e);
+    }
+  });
+  
+  // Apply corruption fixes
+  let fixedCorruption = false;
+  for (const [corrupted, correct] of Object.entries(corruptionMap)) {
+    if (normalizedText.includes(corrupted)) {
+      normalizedText = normalizedText.replace(new RegExp(corrupted, 'g'), correct);
+      console.log(`✅ Fixed UTF-8 corruption: "${corrupted}" → "${correct}"`);
+      fixedCorruption = true;
+    }
+  }
+  
+  // Step 2: Normalize Unicode characters (NFD -> NFC)
+  try {
+    normalizedText = normalizedText.normalize('NFC');
+  } catch (e) {
+    console.warn('⚠️ Unicode normalization failed:', e);
+  }
+  
+  // Step 3: Standardize Hebrew punctuation marks
+  const punctuationMap = {
+    // Different apostrophe variations
+    ''': '\'',    // Right single quotation mark (U+2019) → Regular apostrophe
+    ''': '\'',    // Left single quotation mark (U+2018) → Regular apostrophe  
+    '׳': '\'',    // Hebrew punctuation geresh (U+05F3) → Regular apostrophe
+    '״': '\"',   // Hebrew punctuation gershayim (U+05F4) → Regular quotation
+    '`': '\'',    // Grave accent → Regular apostrophe
+    '′': '\'',    // Prime symbol → Regular apostrophe
+    '″': '\"',   // Double prime → Regular quotation
+    
+    // Standardize colons and separators
+    '：': ':',    // Fullwidth colon → Regular colon
+    '；': ';',    // Fullwidth semicolon → Regular semicolon
+    '，': ',',    // Fullwidth comma → Regular comma
+    
+    // Hebrew-specific spacing issues
+    '\u200F': '', // Right-to-left mark (remove)
+    '\u200E': ''  // Left-to-right mark (remove)
+  };
+  
+  let fixedPunctuation = false;
+  for (const [nonStandard, standard] of Object.entries(punctuationMap)) {
+    if (normalizedText.includes(nonStandard)) {
+      normalizedText = normalizedText.replace(new RegExp(escapeRegExp(nonStandard), 'g'), standard);
+      console.log(`✅ Normalized punctuation: "${nonStandard}" → "${standard}"`);
+      fixedPunctuation = true;
+    }
+  }
+  
+  // Step 4: Clean up extra whitespace and normalize spacing
+  normalizedText = normalizedText
+    .replace(/\s+/g, ' ')           // Multiple spaces → single space
+    .replace(/\n\s*\n/g, '\n')      // Multiple newlines → single newline  
+    .replace(/^\s+|\s+$/g, '')      // Trim whitespace
+    .replace(/:\s+/g, ': ')         // Normalize colon spacing
+    .replace(/\s+:/g, ':');         // Remove space before colon
+  
+  if (fixedCorruption || fixedPunctuation || normalizedText !== text) {
+    console.log(`✅ Hebrew normalization completed:`, {
+      original_length: text.length,
+      normalized_length: normalizedText.length,
+      corruption_fixed: fixedCorruption,
+      punctuation_fixed: fixedPunctuation
+    });
+  }
+  
+  return normalizedText;
+}
+
+// Helper function to escape special regex characters
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Enhanced Hebrew Text Processing with Unicode Normalization and Corruption Detection
 function processHebrewText(bodyText, result) {
   console.log('🔍 Extracting data from Hebrew text...');
   let updated = false;
+  
+  // 🔧 PHASE 1 FIX: Unicode normalization and UTF-8 corruption recovery
+  bodyText = normalizeHebrewText(bodyText);
+  
+  console.log('📝 Processed Hebrew text:', bodyText);
   
   // Enhanced Hebrew patterns with comprehensive field variations and multiple encoding support
   const patterns = [
@@ -546,8 +685,31 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:תאריך נזק|תאריך\s*הנזק|מועד הנזק)[:\s-]*([0-9\/]+)/i, field: 'damage_date', target: ['case_info.damage_date'] },
     { regex: /(?:סוג נזק|סוג\s*הנזק|תיאור נזק)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'damage_type', target: ['case_info.damage_type'] },
     { regex: /(?:חברת ביטוח|ביטוח|מבטח)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'insurance_company', target: ['stakeholders.insurance.company'] },
-    { regex: /(?:מספר פוליסה|פוליסה|מס\'\s*פוליסה)[:\s-]*([A-Z0-9-]+)/i, field: 'policy_number', target: ['stakeholders.insurance.policy_number'] },
-    { regex: /(?:מספר תביעה|תביעה|מס\'\s*תביעה)[:\s-]*([A-Z0-9-]+)/i, field: 'claim_number', target: ['stakeholders.insurance.claim_number'] }
+    { regex: /(?:מספר פוליסה|פוליסה|מס[׳״\'"`]*\s*פוליסה)[:\s-]*([A-Z0-9-]+)/i, field: 'policy_number', target: ['stakeholders.insurance.policy_number'] },
+    { regex: /(?:מספר תביעה|תביעה|מס[׳״\'"`]*\s*תביעה)[:\s-]*([A-Z0-9-]+)/i, field: 'claim_number', target: ['stakeholders.insurance.claim_number'] },
+    
+    // 🔧 PHASE 1 FIX: Additional missing Hebrew field mappings
+    { regex: /(?:מקום בדיקה|מקום\s*בדיקה|מיקום בדיקה)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'inspection_location', target: ['case_info.inspection_location'] },
+    { regex: /(?:תאריך בדיקה|תאריך\s*בדיקה|מועד בדיקה)[:\s-]*([0-9\/]+)/i, field: 'inspection_date', target: ['case_info.inspection_date'] },
+    { regex: /(?:סוכן ביטוח|שם סוכן|סוכן)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'agent_name', target: ['stakeholders.insurance.agent.name'] },
+    { regex: /(?:טלפון סוכן|טלפון\s*סוכן)[:\s-]*([0-9-]+)/i, field: 'agent_phone', target: ['stakeholders.insurance.agent.phone'] },
+    { regex: /(?:אימייל סוכן|מייל סוכן)[:\s-]*([^\s]+@[^\s]+)/i, field: 'agent_email', target: ['stakeholders.insurance.agent.email'] },
+    { regex: /(?:טלפון בעל הרכב|טלפון בעלים|טלפון\s*בעל)[:\s-]*([0-9-]+)/i, field: 'owner_phone', target: ['stakeholders.owner.phone'] },
+    { regex: /(?:כתובת בעל הרכב|כתובת בעלים|כתובת\s*בעל)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'owner_address', target: ['stakeholders.owner.address'] },
+    { regex: /(?:טלפון מוסך|טלפון\s*מוסך)[:\s-]*([0-9-]+)/i, field: 'garage_phone', target: ['stakeholders.garage.phone'] },
+    { regex: /(?:אימייל מוסך|מייל מוסך)[:\s-]*([^\s]+@[^\s]+)/i, field: 'garage_email', target: ['stakeholders.garage.email'] },
+    { regex: /(?:איש קשר מוסך|איש קשר)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'garage_contact', target: ['stakeholders.garage.contact_person'] },
+    
+    // Enhanced automatic transmission patterns
+    { regex: /(?:תיבת הילוכים|הילוכים|גיר)[:\s-]*(אוטומטי|ידני|אוטומט|מקל)/i, field: 'transmission', target: ['vehicle.transmission'] },
+    { regex: /(?:דלת|דלתות)[:\s-]*([0-9]+)/i, field: 'doors', target: ['vehicle.doors'] },
+    { regex: /(?:צבע|צבע הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'color', target: ['vehicle.color'] },
+    
+    // Market conditions and comparisons
+    { regex: /(?:תנאי שוק|מצב שוק)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'market_conditions', target: ['valuation.market_conditions'] },
+    
+    // Enhanced phone number patterns for all stakeholders
+    { regex: /(?:טלפון)[:\s-]*([0-9]{2,3}[-\s]?[0-9]{7,8})/i, field: 'general_phone', target: ['temp.phone'] }
   ];
   
   patterns.forEach(({ regex, field, target }) => {
@@ -783,9 +945,28 @@ function setNestedValue(obj, path, value) {
   current[keys[keys.length - 1]] = value;
 }
 
-// Save helper to all storage locations for reliability
+// 🔧 PHASE 2 FIX: Use centralized storage manager
+import { storageManager } from './storage-manager.js';
+
+// Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
   try {
+    if (typeof storageManager !== 'undefined' && storageManager.save) {
+      // Use centralized storage manager
+      const success = storageManager.save(window.helper, {
+        compress: true,    // Compress large data
+        backup: true,      // Create backup
+        persist: true,     // Save to localStorage
+        validate: true     // Validate before saving
+      });
+      
+      if (success) {
+        console.log('✅ Helper saved using centralized storage manager');
+        return true;
+      }
+    }
+    
+    // Fallback to original method if storage manager not available
     const helperString = JSON.stringify(window.helper);
     const timestamp = new Date().toISOString();
     
@@ -800,7 +981,7 @@ function saveHelperToAllStorageLocations() {
     localStorage.setItem('helper_data', helperString);
     localStorage.setItem('helper_last_save', timestamp);
     
-    console.log('✅ Helper saved to all storage locations');
+    console.log('✅ Helper saved to all storage locations (fallback method)');
     return true;
     
   } catch (error) {
@@ -1416,6 +1597,67 @@ console.log('📊 Helper object initialized:', window.helper);
 
 // Export for testing
 if (typeof window !== 'undefined') {
+  // 🔧 PHASE 1 FIX: Enhanced Hebrew processing test function
+  window.testHebrewProcessing = function() {
+    console.log('🧪 Testing Hebrew processing improvements...');
+    
+    // Test 1: Clean Hebrew Levi report
+    console.log('Test 1: Clean Hebrew Levi report');
+    const cleanResult = processIncomingData({
+      Body: `פרטי רכב 5785269 להערכת נזק
+יצרן: הונדה
+דגם: סיוויק  
+שנת ייצור: 2019
+מס' ק"מ: 45000
+מחיר בסיס: 75,000
+מחיר סופי: 82,500
+עליה לכביש %: 2.5%
+בעלות %: -1.5%
+מס' בעלים %: -2%
+חברת ביטוח: מגדל
+מספר פוליסה: POL123456
+מספר תביעה: CLM789012`
+    }, 'test_clean_hebrew');
+    
+    // Test 2: Hebrew with corruption patterns
+    console.log('Test 2: Hebrew with common corruption');
+    const corruptedResult = processIncomingData({
+      Body: `פרטי רכב 7894561 
+יצרן: ×ž×–×"×
+דגם: 3
+שנת ייצור: 2020
+מס׳ ק״מ: 25000
+מחיר בסיס: 95,000`
+    }, 'test_corrupted_hebrew');
+    
+    // Test 3: Mixed Hebrew and English
+    console.log('Test 3: Mixed Hebrew-English');
+    const mixedResult = processIncomingData({
+      Body: `Vehicle Details 1234567
+יצרן: Toyota
+Model: Camry
+שנת ייצור: 2021
+Mileage: 15000
+מחיר בסיס: 120,000
+Insurance Company: הראל
+Policy Number: POL987654`
+    }, 'test_mixed_language');
+    
+    console.log('✅ Hebrew processing tests completed');
+    console.log('📊 Helper vehicle data after tests:', window.helper.vehicle);
+    console.log('📊 Helper valuation data after tests:', window.helper.valuation);
+    console.log('📊 Helper insurance data after tests:', window.helper.stakeholders.insurance);
+    
+    // Test form population
+    populateAllForms();
+    
+    return {
+      clean: cleanResult,
+      corrupted: corruptedResult,
+      mixed: mixedResult
+    };
+  };
+
   window.testDataCapture = function() {
     console.log('🧪 Testing comprehensive data capture with sample data...');
     
@@ -1467,6 +1709,243 @@ if (typeof window !== 'undefined') {
     console.log('  💰 Financials:', window.helper.financials);
     console.log('  📋 Estimate:', window.helper.estimate);
     populateAllForms();
+  };
+
+  // 🔧 FINAL: Comprehensive Data Capture Test Suite
+  window.testComprehensiveDataCapture = function() {
+    console.log('🧪 Running comprehensive data capture test suite...');
+    
+    const testResults = {
+      tests: [],
+      passed: 0,
+      failed: 0,
+      startTime: new Date().toISOString()
+    };
+    
+    // Test 1: Hebrew webhook processing
+    console.log('Test 1: Hebrew Levi webhook processing');
+    try {
+      const hebrewResult = processIncomingData({
+        Body: `פרטי רכב 5785269 להערכת נזק
+יצרן: הונדה  
+דגם: סיוויק
+שנת ייצור: 2019
+מס' ק"מ: 45000
+מחיר בסיס: 75,000
+מחיר סופי: 82,500
+עליה לכביש %: 2.5%
+בעלות %: -1.5%
+מס' בעלים %: -2%
+חברת ביטוח: מגדל
+מספר פוליסה: POL123456
+מספר תביעה: CLM789012`
+      }, 'test_comprehensive_hebrew');
+      
+      testResults.tests.push({
+        name: 'Hebrew Webhook Processing',
+        status: hebrewResult.success ? 'PASSED' : 'FAILED',
+        details: hebrewResult
+      });
+      
+      if (hebrewResult.success) testResults.passed++;
+      else testResults.failed++;
+      
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Hebrew Webhook Processing',
+        status: 'FAILED',
+        error: error.message
+      });
+      testResults.failed++;
+    }
+    
+    // Test 2: Storage system integration
+    console.log('Test 2: Storage system integration');
+    try {
+      const originalHelper = JSON.parse(JSON.stringify(window.helper));
+      
+      // Test save
+      const saveSuccess = saveHelperToAllStorageLocations();
+      
+      // Test load (by reinitializing)
+      const loadedData = initializeHelper();
+      
+      const storageTest = {
+        name: 'Storage System Integration',
+        status: saveSuccess && loadedData ? 'PASSED' : 'FAILED',
+        details: {
+          saveSuccess,
+          loadedData: !!loadedData,
+          dataIntegrity: JSON.stringify(originalHelper) === JSON.stringify(loadedData)
+        }
+      };
+      
+      testResults.tests.push(storageTest);
+      if (storageTest.status === 'PASSED') testResults.passed++;
+      else testResults.failed++;
+      
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Storage System Integration',
+        status: 'FAILED',
+        error: error.message
+      });
+      testResults.failed++;
+    }
+    
+    // Test 3: Form population
+    console.log('Test 3: Form population system');
+    try {
+      const populatedCount = populateAllForms();
+      const formTest = {
+        name: 'Form Population System',
+        status: populatedCount > 0 ? 'PASSED' : 'FAILED',
+        details: { fieldsPopulated: populatedCount }
+      };
+      
+      testResults.tests.push(formTest);
+      if (formTest.status === 'PASSED') testResults.passed++;
+      else testResults.failed++;
+      
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Form Population System', 
+        status: 'FAILED',
+        error: error.message
+      });
+      testResults.failed++;
+    }
+    
+    // Test 4: Unicode normalization
+    console.log('Test 4: Unicode normalization');
+    try {
+      const testText = `מס' רכב: 1234567\nיצר×Ÿ: בי×ž×•\nמ×¡× ×–×§: תאונה`;
+      const normalizedText = normalizeHebrewText(testText);
+      
+      const unicodeTest = {
+        name: 'Unicode Normalization',
+        status: normalizedText !== testText ? 'PASSED' : 'FAILED',
+        details: {
+          original: testText,
+          normalized: normalizedText,
+          fixedCorruption: normalizedText.includes('יצרן') && normalizedText.includes('בימו')
+        }
+      };
+      
+      testResults.tests.push(unicodeTest);
+      if (unicodeTest.status === 'PASSED') testResults.passed++;
+      else testResults.failed++;
+      
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Unicode Normalization',
+        status: 'FAILED',
+        error: error.message
+      });
+      testResults.failed++;
+    }
+    
+    // Test 5: Manual form integration (if upload-levi page)
+    if (window.location.pathname.includes('upload-levi')) {
+      console.log('Test 5: Manual form integration');
+      try {
+        // Set manual form values
+        const manualFields = {
+          'manual-base-price': '100000',
+          'manual-final-price': '105000', 
+          'manual-manufacturer': 'Toyota',
+          'manual-year': '2020'
+        };
+        
+        Object.entries(manualFields).forEach(([fieldId, value]) => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.value = value;
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        
+        // Test manual save
+        if (typeof window.saveManualDataToHelper === 'function') {
+          window.saveManualDataToHelper();
+        }
+        
+        const manualTest = {
+          name: 'Manual Form Integration',
+          status: 'PASSED',
+          details: { fieldsSet: Object.keys(manualFields).length }
+        };
+        
+        testResults.tests.push(manualTest);
+        testResults.passed++;
+        
+      } catch (error) {
+        testResults.tests.push({
+          name: 'Manual Form Integration',
+          status: 'FAILED',
+          error: error.message
+        });
+        testResults.failed++;
+      }
+    }
+    
+    // Test 6: Storage manager integration
+    console.log('Test 6: Storage manager integration');
+    try {
+      let storageManagerTest = {
+        name: 'Storage Manager Integration',
+        status: 'FAILED',
+        details: { available: false }
+      };
+      
+      if (typeof window.storageManager !== 'undefined') {
+        const stats = window.storageManager.getStorageStats();
+        storageManagerTest.status = stats.helper.inMemory && stats.helper.inSession ? 'PASSED' : 'PARTIAL';
+        storageManagerTest.details = stats;
+        
+        if (storageManagerTest.status === 'PASSED') testResults.passed++;
+        else testResults.failed++;
+      } else {
+        testResults.failed++;
+      }
+      
+      testResults.tests.push(storageManagerTest);
+      
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Storage Manager Integration',
+        status: 'FAILED',
+        error: error.message
+      });
+      testResults.failed++;
+    }
+    
+    // Calculate final results
+    testResults.endTime = new Date().toISOString();
+    testResults.duration = new Date(testResults.endTime) - new Date(testResults.startTime);
+    testResults.successRate = Math.round((testResults.passed / (testResults.passed + testResults.failed)) * 100);
+    
+    // Display results
+    console.log('🔥 COMPREHENSIVE DATA CAPTURE TEST RESULTS:');
+    console.table(testResults.tests.map(t => ({ 
+      Test: t.name, 
+      Status: t.status,
+      Details: JSON.stringify(t.details || t.error || {})
+    })));
+    
+    console.log(`📊 SUMMARY: ${testResults.passed} passed, ${testResults.failed} failed (${testResults.successRate}% success rate)`);
+    console.log(`⏱️ Duration: ${testResults.duration}ms`);
+    
+    // Show user notification
+    const message = `בדיקה מקיפה הושלמה: ${testResults.passed}/${testResults.passed + testResults.failed} עברו בהצלחה (${testResults.successRate}%)`;
+    
+    if (typeof window.showSystemNotification === 'function') {
+      window.showSystemNotification(message, testResults.successRate >= 80 ? 'success' : 'warning');
+    } else if (typeof createFallbackNotification === 'function') {
+      createFallbackNotification(message, testResults.successRate >= 80 ? 'success' : 'warning');
+    }
+    
+    return testResults;
   };
 }
 

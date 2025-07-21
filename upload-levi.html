@@ -2400,21 +2400,77 @@ window.saveManualDataToHelper = function() {
       if (fullModel) helper.car_details.full_model = fullModel;
     }
     
-    // Save back to session storage
-    sessionStorage.setItem('helper', JSON.stringify(helper));
-    
-    // Update the helper system (if updateHelper function exists)
-    if (typeof updateHelper === 'function') {
-      updateHelper(helper);
+    // 🔧 PHASE 4 FIX: Use centralized storage and enhanced helper integration
+    try {
+      // Save using centralized storage manager if available
+      if (typeof window.storageManager !== 'undefined' && window.storageManager.save) {
+        const success = window.storageManager.save(helper, {
+          compress: true,
+          backup: true,
+          persist: true,
+          validate: true
+        });
+        
+        if (success) {
+          console.log('✅ Manual Levi data saved using centralized storage manager');
+        } else {
+          console.warn('⚠️ Centralized storage save failed, using fallback');
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+      } else {
+        // Fallback to direct storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('💾 Updated sessionStorage with manual Levi data (fallback)');
+      }
+      
+      // Ensure window.helper is updated
+      window.helper = helper;
+      
+      // Use enhanced helper update with proper section-based updates
+      console.log('🔄 Broadcasting manual data updates to all modules...');
+      if (typeof updateHelper === 'function') {
+        updateHelper('levisummary', helper.levisummary, 'manual_input');
+        updateHelper('expertise', helper.expertise, 'manual_input'); 
+        updateHelper('calculations', helper.calculations, 'manual_input');
+        updateHelper('vehicle', helper.vehicle, 'manual_input');
+        updateHelper('car_details', helper.car_details, 'manual_input');
+      }
+      
+      // Broadcast comprehensive update to all floating screens and modules
+      if (typeof window.broadcastHelperUpdate === 'function') {
+        window.broadcastHelperUpdate(['levisummary', 'expertise', 'calculations', 'vehicle', 'car_details'], 'manual_levi_input');
+      }
+      
+      // Force refresh all module forms to show updated data
+      if (typeof window.refreshAllModuleForms === 'function') {
+        console.log('🔄 Force refreshing all module forms with manual data...');
+        setTimeout(() => window.refreshAllModuleForms(), 200);
+        setTimeout(() => window.refreshAllModuleForms(), 500); // Retry for safety
+      }
+      
+      // Trigger floating screen updates
+      if (typeof refreshLeviData === 'function' || typeof window.refreshLeviData === 'function') {
+        console.log('🔄 Refreshing Levi floating screen...');
+        (refreshLeviData || window.refreshLeviData)();
+      }
+      
+      if (typeof window.refreshCarData === 'function') {
+        console.log('🔄 Refreshing car details floating screen...');
+        window.refreshCarData();
+      }
+      
+      console.log('✅ Manual data saved to helper system and all modules refreshed');
+      
+    } catch (storageError) {
+      console.error('❌ Error saving manual data:', storageError);
+      // Emergency fallback
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('💾 Emergency save to sessionStorage completed');
+      } catch (e) {
+        console.error('❌ Even emergency save failed:', e);
+      }
     }
-    
-    // Refresh floating Levi report with new manual data
-    if (typeof refreshLeviData === 'function') {
-      refreshLeviData();
-      console.log('Floating Levi report updated with manual data');
-    }
-    
-    console.log('Manual data saved to helper system and floating screen refreshed');
     
   } catch (error) {
     console.error('Error saving manual data to helper:', error);

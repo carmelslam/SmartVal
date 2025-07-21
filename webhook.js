@@ -102,27 +102,79 @@ export async function sendToWebhook(id, payload) {
       data = JSON.parse(responseText);
       console.log(`📥 Parsed JSON data:`, data);
       
-      // Handle Make.com array format (like in demo)
+      // 🔧 PHASE 3 FIX: Enhanced Make.com array format parsing
       let actualData = data;
       
-      // Check if response is an array format
+      // Check if response is an array format (multiple possible structures)
       if (Array.isArray(data) && data.length > 0) {
         console.log('📥 Detected Make.com array response format');
+        
+        // Method 1: Standard Make.com format with 'value' field
         const firstItem = data[0];
         if (firstItem && firstItem.value) {
-          // Check if value is a string that needs parsing
+          console.log('📦 Found Make.com standard format with value field');
+          
+          // Handle nested JSON string in value field
           if (typeof firstItem.value === 'string') {
             try {
+              // Try to parse as JSON
               actualData = JSON.parse(firstItem.value);
-              console.log('✅ Extracted nested data from Make.com array:', actualData);
+              console.log('✅ Extracted nested JSON from Make.com array:', actualData);
             } catch (e) {
-              console.error('Failed to parse nested value:', e);
-              actualData = firstItem.value;
+              console.warn('⚠️ Value field is not JSON, using as text:', e);
+              // Handle as plain text (might be Hebrew text from webhook)
+              actualData = { Body: firstItem.value };
             }
-          } else {
+          } else if (typeof firstItem.value === 'object') {
             actualData = firstItem.value;
+            console.log('✅ Using object from Make.com value field:', actualData);
           }
         }
+        
+        // Method 2: Direct array format (each item is a data field)
+        else if (firstItem && !firstItem.value && typeof firstItem === 'object') {
+          console.log('📦 Found Make.com direct array format');
+          // Combine all array items into single object
+          actualData = {};
+          data.forEach((item, index) => {
+            if (item && typeof item === 'object') {
+              Object.assign(actualData, item);
+            }
+          });
+          console.log('✅ Combined Make.com array items:', actualData);
+        }
+        
+        // Method 3: Body field array format (common for Hebrew text)
+        else if (data.some(item => item && item.Body)) {
+          console.log('📦 Found Make.com Body field array format');
+          const bodyItem = data.find(item => item && item.Body);
+          if (bodyItem) {
+            actualData = bodyItem;
+            console.log('✅ Using Body field data from Make.com array:', actualData);
+          }
+        }
+        
+        // Method 4: Collection/bundle format
+        else if (firstItem && (firstItem.collection || firstItem.bundle)) {
+          console.log('📦 Found Make.com collection/bundle format');
+          const collectionData = firstItem.collection || firstItem.bundle;
+          if (Array.isArray(collectionData) && collectionData.length > 0) {
+            actualData = collectionData[0];
+            console.log('✅ Using first item from Make.com collection:', actualData);
+          }
+        }
+        
+        // Method 5: Fallback - use entire array as data
+        else {
+          console.log('📦 Using entire Make.com array as data');
+          actualData = { array_data: data };
+        }
+      }
+      
+      // Handle special case: single item array with nested structure
+      else if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'object') {
+        console.log('📥 Single item array format detected');
+        actualData = data[0];
       }
       
       // ✅ ENHANCED: Universal data processing and helper integration
@@ -287,27 +339,59 @@ export async function sendToWebhook(id, payload) {
               setTimeout(() => window.refreshAllModuleForms(), 200);
             }
             
-            // Show success notification
+            // 🔧 PHASE 3 FIX: Enhanced user feedback system
             if (typeof window.showSystemNotification === 'function') {
-              window.showSystemNotification('✅ נתונים התקבלו ועודכנו בהצלחה', 'success');
+              const sectionsText = processResult.updatedSections.length > 0 ? 
+                `עודכנו: ${processResult.updatedSections.join(', ')}` : 'נתונים עודכנו';
+              window.showSystemNotification(`✅ ${sectionsText}`, 'success');
+            } else {
+              // Fallback notification
+              console.log('📢 Creating fallback success notification');
+              createFallbackNotification('✅ נתונים התקבלו ועודכנו בהצלחה', 'success');
             }
+            
           } else {
             console.warn('⚠️ Data processing completed with warnings:', processResult?.warnings || 'Unknown');
+            
+            // Show warning to user
+            const warningMsg = `⚠️ עיבוד נתונים הושלם עם אזהרות: ${processResult?.warnings?.join(', ') || 'לא ידוע'}`;
+            if (typeof window.showSystemNotification === 'function') {
+              window.showSystemNotification(warningMsg, 'warning');
+            } else {
+              createFallbackNotification(warningMsg, 'warning');
+            }
           }
           
         } catch (processingError) {
           console.error('❌ Error processing webhook data:', processingError);
           
+          // 🔧 PHASE 3 FIX: Better error handling and user feedback
+          const errorMsg = `❌ שגיאה בעיבוד נתונים: ${processingError.message}`;
+          
+          // Show error to user
+          if (typeof window.showSystemNotification === 'function') {
+            window.showSystemNotification(errorMsg, 'error');
+          } else {
+            createFallbackNotification(errorMsg, 'error');
+          }
+          
           // Fallback: Store raw data in sessionStorage for manual recovery
           const timestamp = new Date().toISOString();
-          sessionStorage.setItem(`webhook_fallback_${timestamp}`, JSON.stringify({
+          const fallbackKey = `webhook_fallback_${timestamp}`;
+          sessionStorage.setItem(fallbackKey, JSON.stringify({
             webhook_id: id,
             data: actualData,
             timestamp: timestamp,
-            error: processingError.message
+            error: processingError.message,
+            recovery_instructions: 'Use testDataCapture() in console to retry processing this data'
           }));
           
-          console.log('💾 Raw data stored in sessionStorage for recovery');
+          console.log('💾 Raw data stored in sessionStorage for recovery:', fallbackKey);
+          
+          // Show recovery option to user
+          if (typeof window.showSystemNotification === 'function') {
+            window.showSystemNotification('💾 נתונים נשמרו לשחזור - בדוק בקונסול', 'info');
+          }
         }
       }
     } catch (jsonError) {
@@ -464,6 +548,82 @@ export async function sendToWebhook(id, payload) {
       webhook_id: id,
       timestamp: new Date().toISOString()
     };
+  }
+}
+
+// 🔧 PHASE 3 FIX: Fallback notification system for better user feedback
+function createFallbackNotification(message, type = 'info', duration = 5000) {
+  console.log('📢 Creating fallback notification:', { message, type });
+  
+  try {
+    // Remove any existing fallback notifications
+    const existingNotification = document.getElementById('fallback-notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = 'fallback-notification';
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      direction: rtl;
+      text-align: right;
+    `;
+    
+    // Set colors based on type
+    const colors = {
+      success: '#28a745',
+      warning: '#ffc107',
+      error: '#dc3545',
+      info: '#17a2b8'
+    };
+    
+    notification.style.backgroundColor = colors[type] || colors.info;
+    notification.textContent = message;
+    
+    // Add to document
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = 'translateX(0)';
+      notification.style.opacity = '1';
+    }, 100);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100px)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      }
+    }, duration);
+    
+    console.log('✅ Fallback notification created and displayed');
+    
+  } catch (error) {
+    console.error('❌ Failed to create fallback notification:', error);
+    // Final fallback - just alert
+    if (typeof alert !== 'undefined') {
+      alert(message);
+    }
   }
 }
 
