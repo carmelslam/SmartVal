@@ -3,6 +3,19 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
+// Import storage manager (optional - will work with fallback if not available)
+let storageManager = null;
+try {
+  import('./storage-manager.js').then(module => {
+    storageManager = module.storageManager;
+    console.log('✅ Storage manager loaded successfully');
+  }).catch(error => {
+    console.warn('⚠️ Storage manager not available, using fallback methods:', error);
+  });
+} catch (error) {
+  console.warn('⚠️ Could not load storage manager:', error);
+}
+
 // 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
 function initializeHelper() {
   console.log('🔄 Initializing helper - checking for existing data...');
@@ -10,7 +23,7 @@ function initializeHelper() {
   let existingData = null;
   
   try {
-    if (typeof storageManager !== 'undefined' && storageManager.load) {
+    if (storageManager && typeof storageManager.load === 'function') {
       // Use centralized storage manager
       const loadResult = storageManager.load({
         decompress: true,      // Handle compressed data
@@ -954,8 +967,6 @@ function setNestedValue(obj, path, value) {
 }
 
 // 🔧 PHASE 2 FIX: Use centralized storage manager
-import { storageManager } from './storage-manager.js';
-
 // Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
   try {
