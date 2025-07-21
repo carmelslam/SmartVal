@@ -1177,7 +1177,7 @@ window.broadcastHelperUpdate = function(updatedSections = [], source = 'unknown'
     }
     
     // Trigger floating screen updates
-    triggerFloatingScreenUpdates(updatedSections);
+    triggerFloatingScreenUpdates(updatedSections, source);
     
     console.log('✅ Helper update broadcasted successfully');
     
@@ -1196,7 +1196,7 @@ window.updateHelperAndSession = function(section, data, sourceModule = null) {
 };
 
 // Helper function to trigger floating screen updates
-function triggerFloatingScreenUpdates(updatedSections) {
+function triggerFloatingScreenUpdates(updatedSections, source = '') {
   console.log('📱 Triggering floating screen updates for sections:', updatedSections);
   
   // Car details floating screen
