@@ -771,9 +771,9 @@
     }
   });
 
-  // Auto-load and persist data on page load
+  // Auto-persist data on page load (but don't auto-open the floating screen)
   setTimeout(() => {
-    console.log('🚀 Auto-loading car data on page load...');
+    console.log('🚀 Auto-persisting car data on page load (not opening screen)...');
     
     // Check all data sources
     const helperStr = sessionStorage.getItem('helper');
@@ -781,13 +781,10 @@
     const localHelperStr = localStorage.getItem('helper_data');
     
     if (helperStr || carDataStr || localHelperStr || window.helper) {
-      console.log('✅ Found car data - loading and persisting automatically');
+      console.log('✅ Found car data - persisting automatically (screen remains closed)');
       
-      // Load the data which will automatically persist it
-      loadCarData();
-      
-      // Also check window.helper
-      if (!persistedCarData && window.helper) {
+      // Only persist data, don't call loadCarData which might show the screen
+      if (window.helper && !persistedCarData) {
         persistedCarData = {
           vehicle: window.helper.vehicle || {},
           carDetails: window.helper.car_details || {},
@@ -795,6 +792,22 @@
           meta: window.helper.meta || {}
         };
         console.log('💾 Persisted data from window.helper');
+      }
+      
+      // Parse and persist from sessionStorage if needed
+      try {
+        if (helperStr && helperStr !== '{}' && !persistedCarData) {
+          const helper = JSON.parse(helperStr);
+          persistedCarData = {
+            vehicle: helper.vehicle || {},
+            carDetails: helper.car_details || {},
+            stakeholders: helper.stakeholders || {},
+            meta: helper.meta || {}
+          };
+          console.log('💾 Persisted data from sessionStorage');
+        }
+      } catch (e) {
+        console.warn('Could not parse helper data for persistence:', e);
       }
     }
   }, 500);
@@ -811,8 +824,32 @@
                      window.helper;
                      
       if (hasData) {
-        console.log('✅ Found car data on periodic check - loading and persisting');
-        loadCarData();
+        console.log('✅ Found car data on periodic check - persisting (not opening screen)');
+        
+        // Only persist the data, don't call loadCarData
+        try {
+          if (window.helper) {
+            persistedCarData = {
+              vehicle: window.helper.vehicle || {},
+              carDetails: window.helper.car_details || {},
+              stakeholders: window.helper.stakeholders || {},
+              meta: window.helper.meta || {}
+            };
+            console.log('💾 Persisted from window.helper on periodic check');
+          } else if (sessionStorage.getItem('helper')) {
+            const helper = JSON.parse(sessionStorage.getItem('helper'));
+            persistedCarData = {
+              vehicle: helper.vehicle || {},
+              carDetails: helper.car_details || {},
+              stakeholders: helper.stakeholders || {},
+              meta: helper.meta || {}
+            };
+            console.log('💾 Persisted from sessionStorage on periodic check');
+          }
+        } catch (e) {
+          console.warn('Could not persist data on periodic check:', e);
+        }
+        
         clearInterval(dataCheckInterval);
       }
     } else {
