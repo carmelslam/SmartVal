@@ -168,6 +168,10 @@
       <h4>פרטי רכב</h4>
       <div class="car-fields-grid">
         <div class="car-field">
+          <div class="label">תאריך בדיקה:</div>
+          <div class="value" id="vehicle-inspection-date">-</div>
+        </div>
+        <div class="car-field">
           <div class="label">מספר רכב:</div>
           <div class="value" id="vehicle-plate">-</div>
         </div>
@@ -220,10 +224,6 @@
           <div class="value" id="vehicle-levi-code">-</div>
         </div>
         <div class="car-field">
-          <div class="label">קוד אוניברסלי:</div>
-          <div class="value" id="vehicle-universal-code">-</div>
-        </div>
-        <div class="car-field">
           <div class="label">דגם מנוע:</div>
           <div class="value" id="vehicle-engine-model">-</div>
         </div>
@@ -260,6 +260,10 @@
         <div class="car-field">
           <div class="label">טלפון בעלים:</div>
           <div class="value" id="car-owner-phone">-</div>
+        </div>
+        <div class="car-field">
+          <div class="label">מחיר בסיס:</div>
+          <div class="value" id="car-base-price">-</div>
         </div>
         <div class="car-field">
           <div class="label">ערך שוק:</div>
@@ -563,6 +567,8 @@
       const carDetails = helperData.car_details || {};
       const stakeholders = helperData.stakeholders || {};
       const meta = helperData.meta || {};
+      const caseInfo = helperData.case_info || {};
+      const valuationData = helperData.valuation || {};
       
       console.log('📊 Extracted data for display:', { 
         vehicle: Object.keys(vehicle).length ? vehicle : 'empty',
@@ -654,13 +660,22 @@
     document.getElementById("vehicle-model-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code
     );
-    // Levi code - will be mapped from Levi report webhook response
+    // Levi code - mapped from Levi report webhook response
     document.getElementById("vehicle-levi-code").textContent = formatValue(
-      vehicle.levi_code || carDetails.levi_code
+      vehicle.model_code || 
+      valuationData.model_code ||
+      carDetails.model_code ||
+      vehicle.levi_code || 
+      carDetails.levi_code
     );
-    // Universal code - to be mapped later
-    document.getElementById("vehicle-universal-code").textContent = formatValue(
-      vehicle.universal_code || carDetails.universal_code
+    // Inspection date - mapped from open case data
+    document.getElementById("vehicle-inspection-date").textContent = formatValue(
+      meta.inspection_date || 
+      meta.date || 
+      meta.created_at || 
+      caseInfo.inspection_date ||
+      vehicle.inspection_date ||
+      "-"
     );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
       vehicle.engine_model || carDetails.engine_model
@@ -692,6 +707,13 @@
     );
     
     // Additional fields from general info
+    // Base price - mapped from Levi report valuation data
+    document.getElementById("car-base-price").textContent = formatValue(
+      valuationData.base_price || 
+      carDetails.base_price || 
+      vehicle.base_price ||
+      "-"
+    );
     // Market value - to be mapped from valuation/pricing module
     document.getElementById("car-market-value").textContent = formatValue(
       carDetails.market_value || vehicle.market_value
