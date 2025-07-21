@@ -1,3 +1,12 @@
+import { helper, getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
+
+// Example: On load, populate all forms from helper
+window.forcePopulateFields = function() {
+  // Use helper as single source of truth
+  const vehicle = getVehicleData();
+  // ...populate UI fields from vehicle, etc...
+};
+
 // 🔄 Force Form Population - Ensures forms are populated from helper on page load
 // This addresses the issue where data is in helper but forms are empty
 

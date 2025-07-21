@@ -748,13 +748,11 @@
     console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
   }
 
-  // Listen for helper updates but don't auto-refresh - just update persisted data
+  // Listen for helper updates and always refresh display from helper
   document.addEventListener('helperUpdate', function(event) {
     console.log('📡 Car details floating detected helper update:', event.detail);
-    
-    // Update persisted data without refreshing display
+    // Always reload from helper (sessionStorage)
     loadCarData();
-    console.log('💾 Updated persisted data from helper update');
   });
 
   // Also listen for storage events from other tabs

@@ -48,6 +48,25 @@ export function carDetails() {
     </div>
   `;
 
+  // --- ADD: Attach change/blur listeners to all fields for live update ---
+  [
+    'plate','manufacturer','model','model_type','year','chassis','km','trim','model_code','ownership','ownership_type',
+    'engine_volume','fuel_type','engine_model','drive','base_price','office_code','inspection_date','damage_date',
+    'owner_name','address','phone','garage','garage_email','garage_phone','insurance_company','insurance_email',
+    'insurance_agent','insurance_agent_phone','insurance_agent_email','damage_type','inspection_location'
+  ].forEach(fieldId => {
+    const el = document.getElementById(fieldId);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        // Use updateHelperField for each field
+        window.updateHelperField?.(fieldId, el.value, 'car-details-ui');
+      });
+      el.addEventListener('blur', (e) => {
+        window.updateHelperField?.(fieldId, el.value, 'car-details-ui');
+      });
+    }
+  });
+
   document.getElementById('save-car').onclick = () => {
     // Use synchronized vehicle data update
     const vehicleData = {
