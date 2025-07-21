@@ -1,4 +1,4 @@
-import { updateHelper, broadcastHelperUpdate, processIncomingData } from './helper.js';
+import { updateHelper, broadcastHelperUpdate, processIncomingData, updateHelperAndSession } from './helper.js';
 
 // ✅ Centralized Webhook Handler – Clean + Unified with Enhanced Data Capture
 export const WEBHOOKS = {
@@ -435,3 +435,15 @@ export function getWebhook(key) {
   return WEBHOOKS[key] || '';
 }
 window.WEBHOOKS = WEBHOOKS;
+
+// Handle incoming webhook data from Make.com
+function handleWebhookData(data) {
+  Object.entries(data).forEach(([key, value]) => {
+    updateHelperAndSession(key, value);
+  });
+}
+
+// Example: receiving data from Make.com
+window.addEventListener('makeWebhook', (event) => {
+  handleWebhookData(event.detail); // event.detail should be the data object
+});
