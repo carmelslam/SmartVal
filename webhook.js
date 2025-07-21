@@ -1,4 +1,4 @@
-import { updateHelper, broadcastHelperUpdate, processIncomingData } from './helper.js';
+import { updateHelperAndSession, broadcastHelperUpdate, processIncomingData } from './helper.js';
 
 // ✅ Centralized Webhook Handler – Clean + Unified with Enhanced Data Capture
 export const WEBHOOKS = {
@@ -390,7 +390,7 @@ export function sendPartSearch(data) {
       alert('הבקשה נשלחה בהצלחה!');
 
       if (Array.isArray(response.results)) {
-        updateHelper("parts_search", {
+        updateHelperAndSession("parts_search", {
           summary: {
             total_results: response.results.length,
             recommended: response.recommended || ''
