@@ -67,6 +67,42 @@ window.helper = window.helper || {
       features: { percent: 0, amount: 0, cumulative: 0 }
     }
   },
+  damage_assessment: {
+    summary: {
+      total_damage_amount: 0,
+      damage_percentage: 0,
+      is_total_loss: false,
+      classification: '',
+      assessment_notes: ''
+    },
+    centers: []
+  },
+  financials: {
+    costs: {
+      parts_total: 0,
+      repairs_total: 0,
+      works_total: 0,
+      subtotal: 0
+    },
+    fees: {
+      photography: { count: 0, unit_price: 0, total: 0 },
+      office: { fixed_fee: 0, percentage: 0, total: 0 },
+      travel: { count: 0, unit_price: 0, total: 0 },
+      assessment: { hours: 0, hourly_rate: 0, total: 0 },
+      subtotal: 0
+    },
+    taxes: {
+      vat_percentage: 18,
+      vat_amount: 0
+    },
+    totals: {
+      before_tax: 0,
+      after_tax: 0,
+      total_compensation: 0,
+      salvage_value: 0,
+      net_settlement: 0
+    }
+  },
   documents: {
     images: [],
     invoices: [],
@@ -427,6 +463,77 @@ window.updateHelper = function(section, data, sourceModule = null) {
 window.saveHelperToStorage = saveHelperToAllStorageLocations;
 window.refreshAllModuleForms = populateAllForms;
 
+// Enhanced broadcastHelperUpdate function for system-wide notifications
+window.broadcastHelperUpdate = function(updatedSections = [], source = 'unknown') {
+  console.log('📡 Broadcasting helper update:', { updatedSections, source });
+  
+  try {
+    // Create custom event with helper data
+    const updateEvent = new CustomEvent('helperUpdate', {
+      detail: {
+        helper: window.helper,
+        updatedSections: updatedSections,
+        source: source,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    // Dispatch to document
+    document.dispatchEvent(updateEvent);
+    
+    // Update all module forms if functions exist
+    if (typeof window.refreshAllModuleForms === 'function') {
+      window.refreshAllModuleForms(window.helper);
+    }
+    
+    // Trigger floating screen updates
+    triggerFloatingScreenUpdates(updatedSections);
+    
+    console.log('✅ Helper update broadcasted successfully');
+    
+  } catch (error) {
+    console.error('❌ Error broadcasting helper update:', error);
+  }
+};
+
+// Enhanced updateHelperAndSession function
+window.updateHelperAndSession = function(section, data, sourceModule = null) {
+  const success = window.updateHelper(section, data, sourceModule);
+  if (success) {
+    window.broadcastHelperUpdate([section], sourceModule || "updateHelperAndSession");
+  }
+  return success;
+};
+
+// Helper function to trigger floating screen updates
+function triggerFloatingScreenUpdates(updatedSections) {
+  console.log('📱 Triggering floating screen updates for sections:', updatedSections);
+  
+  // Car details floating screen
+  if (updatedSections.includes('vehicle') || updatedSections.includes('meta')) {
+    if (typeof window.refreshCarData === 'function') {
+      window.refreshCarData();
+    }
+    if (typeof window.showCarDetails === 'function') {
+      setTimeout(() => window.showCarDetails(), 500);
+    }
+  }
+  
+  // Stakeholder floating screens
+  if (updatedSections.includes('stakeholders')) {
+    if (typeof window.refreshStakeholderData === 'function') {
+      window.refreshStakeholderData();
+    }
+  }
+  
+  // Valuation floating screens
+  if (updatedSections.includes('valuation')) {
+    if (typeof window.refreshValuationData === 'function') {
+      window.refreshValuationData();
+    }
+  }
+}
+
 // Auto-save every 30 seconds
 setInterval(() => {
   if (window.helper && Object.keys(window.helper).length > 0) {
@@ -459,3 +566,38 @@ if (typeof window !== 'undefined') {
     populateAllForms();
   };
 }
+
+// Helper functions that other files expect
+window.getVehicleData = function() {
+  return window.helper.vehicle || {};
+};
+
+window.getDamageData = function() {
+  return window.helper.damage_assessment || {};
+};
+
+window.getValuationData = function() {
+  return window.helper.valuation || {};
+};
+
+window.getFinancialData = function() {
+  return window.helper.financials || {};
+};
+
+window.syncDamageData = function(damageData) {
+  return window.updateHelper('damage_assessment', damageData, 'syncDamageData');
+};
+
+// ES6 Module Exports for other files to import
+export const updateHelper = window.updateHelper;
+export const updateHelperAndSession = window.updateHelperAndSession;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+export const processIncomingData = window.processIncomingData;
+export const saveHelperToStorage = window.saveHelperToStorage;
+export const refreshAllModuleForms = window.refreshAllModuleForms;
+export const getVehicleData = window.getVehicleData;
+export const getDamageData = window.getDamageData;
+export const getValuationData = window.getValuationData;
+export const getFinancialData = window.getFinancialData;
+export const syncDamageData = window.syncDamageData;
+export const helper = window.helper;
