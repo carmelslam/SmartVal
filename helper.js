@@ -734,7 +734,20 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:תנאי שוק|מצב שוק)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'market_conditions', target: ['valuation.market_conditions'] },
     
     // Enhanced phone number patterns for all stakeholders
-    { regex: /(?:טלפון)[:\s-]*([0-9]{2,3}[-\s]?[0-9]{7,8})/i, field: 'general_phone', target: ['temp.phone'] }
+    { regex: /(?:טלפון)[:\s-]*([0-9]{2,3}[-\s]?[0-9]{7,8})/i, field: 'general_phone', target: ['temp.phone'] },
+    
+    // 🔧 LEVI OCR SPECIFIC PATTERNS - Optimized for Levi report OCR format
+    { regex: /קוד הדגם\s+([A-Z0-9]+)/i, field: 'levi_model', target: ['vehicle.model'] },
+    { regex: /רמת ג.ימור\s*([A-Z0-9]+)/i, field: 'levi_trim', target: ['vehicle.trim'] },
+    { regex: /שילדה\s*\n\s*([A-Z0-9]{17})/im, field: 'levi_chassis', target: ['vehicle.chassis'] },
+    { regex: /שנת ייצור\s+(?:\d{2}\/)?(\d{4})/i, field: 'levi_year', target: ['vehicle.year'] },
+    { regex: /בעל הרכב\s+([^\n]+?)(?:\s*\n|\s*קוד)/i, field: 'levi_owner', target: ['stakeholders.owner.name'] },
+    { regex: /קוד בעלות\s+([^\s]+)/i, field: 'levi_ownership_type', target: ['vehicle.ownership_type'] },
+    { regex: /(\d{4})\s+מנוע/i, field: 'levi_engine_volume', target: ['vehicle.engine_volume'] },
+    { regex: /(בנזין|דיזל|היברידי)\s+מספר דגם/i, field: 'levi_fuel_type', target: ['vehicle.fuel_type'] },
+    { regex: /הנעה\s+([A-Z0-9]+)/i, field: 'levi_drive_type', target: ['vehicle.drive_type'] },
+    { regex: /התחבורה-(\d+-\d+)/i, field: 'levi_office_code', target: ['vehicle.office_code'] },
+    { regex: /מנוע\s+(\d+)/i, field: 'levi_engine_code', target: ['vehicle.engine_model'] }
   ];
   
   patterns.forEach(({ regex, field, target }) => {
