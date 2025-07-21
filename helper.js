@@ -1179,6 +1179,43 @@ window.initHelper = function(initialData = {}) {
   return true;
 };
 
+// Manual override tracking system for user input protection
+window.manualOverrides = window.manualOverrides || {};
+
+window.markFieldAsManuallyModified = function(fieldId, value, source = 'unknown') {
+  console.log(`🔒 Marking field ${fieldId} as manually modified:`, { value, source });
+  
+  if (!window.manualOverrides) {
+    window.manualOverrides = {};
+  }
+  
+  window.manualOverrides[fieldId] = {
+    value: value,
+    timestamp: new Date().toISOString(),
+    source: source,
+    manually_modified: true
+  };
+  
+  console.log(`✅ Field ${fieldId} marked as manually modified`);
+};
+
+window.isFieldManuallyModified = function(fieldId) {
+  const isModified = window.manualOverrides && window.manualOverrides[fieldId] && window.manualOverrides[fieldId].manually_modified;
+  console.log(`🔍 Checking if field ${fieldId} is manually modified:`, isModified);
+  return isModified;
+};
+
+window.clearFieldManualOverride = function(fieldId) {
+  if (window.manualOverrides && window.manualOverrides[fieldId]) {
+    delete window.manualOverrides[fieldId];
+    console.log(`🗑️ Cleared manual override for field: ${fieldId}`);
+  }
+};
+
+window.getAllManualOverrides = function() {
+  return window.manualOverrides || {};
+};
+
 // ES6 Module Exports for other files to import
 // Use function wrappers to ensure availability
 export const updateHelper = (...args) => window.updateHelper?.(...args);
@@ -1203,6 +1240,12 @@ export const syncLeviData = (...args) => window.syncLeviData?.(...args);
 export const updateCalculations = (...args) => window.updateCalculations?.(...args);
 export const syncVehicleData = (...args) => window.syncVehicleData?.(...args);
 export const initHelper = (...args) => window.initHelper?.(...args);
+
+// Manual override functions
+export const markFieldAsManuallyModified = (...args) => window.markFieldAsManuallyModified?.(...args);
+export const isFieldManuallyModified = (...args) => window.isFieldManuallyModified?.(...args);
+export const clearFieldManualOverride = (...args) => window.clearFieldManualOverride?.(...args);
+export const getAllManualOverrides = (...args) => window.getAllManualOverrides?.(...args);
 
 // Helper object getter
 export const helper = typeof window !== 'undefined' ? window.helper : {};
