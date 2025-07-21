@@ -794,94 +794,178 @@ function populateAllForms() {
   console.log('🔄 Populating all forms from helper data');
   
   const fieldMappings = {
-    // Basic vehicle fields with fallback values
+    // 🔧 COMPREHENSIVE FIELD MAPPINGS: All variations from screenshots and modules
+    
+    // Vehicle identification - Primary
     'plate': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
     'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
+    'vehicle_plate': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
+    'rish': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate, // רישוי
+    
+    // Vehicle details - Manufacturer/Model
     'manufacturer': window.helper.vehicle?.manufacturer,
+    'make': window.helper.vehicle?.manufacturer,
+    'yitzran': window.helper.vehicle?.manufacturer, // יצרן
     'model': window.helper.vehicle?.model,
+    'degem': window.helper.vehicle?.model, // דגם
     'year': window.helper.vehicle?.year,
+    'shana': window.helper.vehicle?.year, // שנה
+    'model_year': window.helper.vehicle?.year,
+    
+    // Vehicle specifications
     'chassis': window.helper.vehicle?.chassis,
     'vin': window.helper.vehicle?.chassis,
+    'shelda': window.helper.vehicle?.chassis, // שלדה
     'km': window.helper.vehicle?.km,
     'odo': window.helper.vehicle?.km,
+    'mileage': window.helper.vehicle?.km,
+    'kilometraz': window.helper.vehicle?.km, // קילומטראז
     'engine_volume': window.helper.vehicle?.engine_volume,
+    'nefach': window.helper.vehicle?.engine_volume, // נפח
+    'engine_code': window.helper.vehicle?.engine_code,
+    'engine_type': window.helper.vehicle?.engine_type,
     'fuel_type': window.helper.vehicle?.fuel_type,
+    'delak': window.helper.vehicle?.fuel_type, // דלק
     'ownership_type': window.helper.vehicle?.ownership_type,
+    'baalut': window.helper.vehicle?.ownership_type, // בעלות
     'trim': window.helper.vehicle?.trim,
+    'gimur': window.helper.vehicle?.trim, // גימור
     'model_type': window.helper.vehicle?.model_type,
     'office_code': window.helper.vehicle?.office_code,
     'model_code': window.helper.vehicle?.model_code,
     'features': window.helper.vehicle?.features,
+    'maafiynei': window.helper.vehicle?.features, // מאפיינים
     'category': window.helper.vehicle?.category,
+    'kategoria': window.helper.vehicle?.category, // קטגוריה  
     'is_automatic': window.helper.vehicle?.is_automatic,
+    'automatic': window.helper.vehicle?.is_automatic,
+    'automat': window.helper.vehicle?.is_automatic, // אוטומט
     'registration_date': window.helper.vehicle?.registration_date,
+    'aliya_lekavish': window.helper.vehicle?.registration_date, // עליה לכביש
     'market_value': window.helper.vehicle?.market_value || window.helper.valuation?.final_price,
+    'shvi': window.helper.vehicle?.market_value || window.helper.valuation?.final_price, // שווי
     
-    // Owner/Stakeholder fields
+    // Owner/Client information
     'owner': window.helper.stakeholders?.owner?.name,
     'ownerName': window.helper.stakeholders?.owner?.name,
     'client_name': window.helper.stakeholders?.owner?.name,
+    'baal_harechev': window.helper.stakeholders?.owner?.name, // בעל הרכב
     'owner_phone': window.helper.stakeholders?.owner?.phone,
     'ownerPhone': window.helper.stakeholders?.owner?.phone,
+    'telefon_baal': window.helper.stakeholders?.owner?.phone, // טלפון בעל
     'owner_address': window.helper.stakeholders?.owner?.address,
     'ownerAddress': window.helper.stakeholders?.owner?.address,
+    'ktovev_baal': window.helper.stakeholders?.owner?.address, // כתובת בעל
     
-    // Garage fields
+    // Garage information
     'garage_name': window.helper.stakeholders?.garage?.name,
     'garageName': window.helper.stakeholders?.garage?.name,
     'garage': window.helper.stakeholders?.garage?.name,
+    'shem_musach': window.helper.stakeholders?.garage?.name, // שם מוסך
     'garage_phone': window.helper.stakeholders?.garage?.phone,
     'garagePhone': window.helper.stakeholders?.garage?.phone,
+    'telefon_musach': window.helper.stakeholders?.garage?.phone, // טלפון מוסך
     'garage_email': window.helper.stakeholders?.garage?.email,
     'garageEmail': window.helper.stakeholders?.garage?.email,
+    'email_musach': window.helper.stakeholders?.garage?.email, // אימייל מוסך
     
-    // Insurance fields
+    // Insurance information  
     'insurance_company': window.helper.stakeholders?.insurance?.company,
     'insuranceCompany': window.helper.stakeholders?.insurance?.company,
+    'chevrat_bituach': window.helper.stakeholders?.insurance?.company, // חברת ביטוח
     'insurance_email': window.helper.stakeholders?.insurance?.email,
     'insuranceEmail': window.helper.stakeholders?.insurance?.email,
+    'email_bituach': window.helper.stakeholders?.insurance?.email, // אימייל ביטוח
     'policy_number': window.helper.stakeholders?.insurance?.policy_number,
+    'mispar_polisa': window.helper.stakeholders?.insurance?.policy_number, // מספר פוליסה
     'claim_number': window.helper.stakeholders?.insurance?.claim_number,
+    'mispar_tabia': window.helper.stakeholders?.insurance?.claim_number, // מספר תביעה
+    
+    // Insurance agent
     'agent_name': window.helper.stakeholders?.insurance?.agent?.name,
     'agentName': window.helper.stakeholders?.insurance?.agent?.name,
+    'shem_sachen': window.helper.stakeholders?.insurance?.agent?.name, // שם סוכן
     'agent_phone': window.helper.stakeholders?.insurance?.agent?.phone,
     'agentPhone': window.helper.stakeholders?.insurance?.agent?.phone,
+    'telefon_sachen': window.helper.stakeholders?.insurance?.agent?.phone, // טלפון סוכן
     'agent_email': window.helper.stakeholders?.insurance?.agent?.email,
     'agentEmail': window.helper.stakeholders?.insurance?.agent?.email,
+    'email_sachen': window.helper.stakeholders?.insurance?.agent?.email, // אימייל סוכן
     
-    // Case information fields
+    // Damage/Case information
     'damage_date': window.helper.case_info?.damage_date,
     'damageDate': window.helper.case_info?.damage_date,
+    'taarich_nezek': window.helper.case_info?.damage_date, // תאריך נזק
     'damage_type': window.helper.case_info?.damage_type,
     'damageType': window.helper.case_info?.damage_type,
+    'sug_nezek': window.helper.case_info?.damage_type, // סוג נזק
     'inspection_date': window.helper.case_info?.inspection_date,
+    'taarich_bdika': window.helper.case_info?.inspection_date, // תאריך בדיקה
     'location': window.helper.case_info?.inspection_location,
     'inspection_location': window.helper.case_info?.inspection_location,
+    'makom_bdika': window.helper.case_info?.inspection_location, // מקום בדיקה
     
     // Valuation fields
     'base_price': window.helper.valuation?.base_price,
+    'mechir_basis': window.helper.valuation?.base_price, // מחיר בסיס
     'final_price': window.helper.valuation?.final_price,
+    'mechir_sofi': window.helper.valuation?.final_price, // מחיר סופי
     'report_date': window.helper.valuation?.report_date,
+    'taarich_doch': window.helper.valuation?.report_date, // תאריך דוח
     'owner_count': window.helper.valuation?.adjustments?.ownership_history?.owner_count,
+    'mispar_baalim': window.helper.valuation?.adjustments?.ownership_history?.owner_count, // מספר בעלים
     
-    // Adjustment fields for forms that might show them
-    'registration_percent': window.helper.valuation?.adjustments?.registration?.percent,
-    'registration_amount': window.helper.valuation?.adjustments?.registration?.amount,
-    'mileage_percent': window.helper.valuation?.adjustments?.mileage?.percent,
-    'mileage_amount': window.helper.valuation?.adjustments?.mileage?.amount,
-    'ownership_percent': window.helper.valuation?.adjustments?.ownership_type?.percent,
-    'ownership_amount': window.helper.valuation?.adjustments?.ownership_type?.amount,
-    'owners_percent': window.helper.valuation?.adjustments?.ownership_history?.percent,
-    'owners_amount': window.helper.valuation?.adjustments?.ownership_history?.amount,
-    'features_percent': window.helper.valuation?.adjustments?.features?.percent,
-    'features_amount': window.helper.valuation?.adjustments?.features?.amount
+    // Parts search fields (from screenshots)
+    'part_image': null, // File input, no value to populate
+    'part_group': null, // Dropdown, populated separately
+    'part_name': null,  // Dropdown, populated separately 
+    'part_source': null, // Dropdown, populated separately
+    'part_quantity': 1, // Default quantity
+    'free_query': null, // Free text search
+    'chofshi_chipus': null, // חיפוש חופשי
+    
+    // Additional fields that might appear in various modules
+    'transmission': window.helper.vehicle?.transmission,
+    'tzemudot': window.helper.vehicle?.transmission, // צמדות
+    'drive_type': window.helper.vehicle?.drive_type,
+    'sug_nahaga': window.helper.vehicle?.drive_type, // סוג נהגה
+    'condition': window.helper.vehicle?.condition,
+    'matzav': window.helper.vehicle?.condition, // מצב
+    'created_at': window.helper.meta?.created_at,
+    'updated_at': window.helper.meta?.updated_at,
+    'plate_number': window.helper.vehicle?.plate || window.helper.meta?.plate // Alternative plate field
   };
   
   let populatedCount = 0;
   
   Object.entries(fieldMappings).forEach(([fieldId, value]) => {
     if (value && value !== '' && value !== null && value !== undefined) {
-      const element = document.getElementById(fieldId);
+      // 🔧 ENHANCED FIELD DETECTION: Try multiple selectors to find the element
+      let element = null;
+      const selectors = [
+        `#${fieldId}`,                                    // Exact ID match
+        `[name="${fieldId}"]`,                           // Name attribute match
+        `input[placeholder*="${fieldId}"]`,              // Placeholder contains field name
+        `#${fieldId.toLowerCase()}`,                     // Lowercase ID
+        `#${fieldId.replace('_', '')}`,                  // Remove underscores
+        `#${fieldId.replace('_', '-')}`,                 // Replace underscore with dash
+        `[data-field="${fieldId}"]`,                     // Data attribute
+        `[data-helper-field="${fieldId}"]`,              // Helper data attribute
+      ];
+      
+      // Try each selector until we find an element
+      for (const selector of selectors) {
+        try {
+          element = document.querySelector(selector);
+          if (element) {
+            console.log(`✅ Found element for ${fieldId} using selector: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Ignore invalid selectors
+        }
+      }
+      
       if (element) {
         const currentValue = element.value?.trim() || '';
         const newValue = String(value).trim();
@@ -912,7 +996,7 @@ function populateAllForms() {
           populatedCount++;
         }
       } else {
-        console.log(`⚠️ Element not found for field: ${fieldId}`);
+        console.log(`⚠️ Element not found for field: ${fieldId} (tried ${selectors.length} selectors)`);
       }
     }
   });
@@ -950,6 +1034,58 @@ window.updateHelper = function(section, data, sourceModule = null) {
 
 window.saveHelperToStorage = saveHelperToAllStorageLocations;
 window.refreshAllModuleForms = populateAllForms;
+
+// 🔧 DEBUG FUNCTION: Force populate all forms with detailed logging
+window.forcePopulateDebug = function() {
+  console.log('🔧 DEBUG: Force populating all forms with detailed logging...');
+  console.log('🔍 Current helper data:', window.helper);
+  
+  // First, ensure helper data is loaded
+  if (!window.helper || Object.keys(window.helper).length === 0) {
+    console.log('⚠️ No helper data found, attempting to load from storage...');
+    
+    try {
+      const sessionData = sessionStorage.getItem('helper');
+      if (sessionData) {
+        window.helper = JSON.parse(sessionData);
+        console.log('✅ Loaded helper data from sessionStorage:', window.helper);
+      } else {
+        const localData = localStorage.getItem('helper_data');
+        if (localData) {
+          window.helper = JSON.parse(localData);
+          console.log('✅ Loaded helper data from localStorage:', window.helper);
+        } else {
+          console.error('❌ No helper data found in any storage location');
+          return false;
+        }
+      }
+    } catch (e) {
+      console.error('❌ Error loading helper data:', e);
+      return false;
+    }
+  }
+  
+  // Find all input fields on the page
+  const allInputs = document.querySelectorAll('input, select, textarea');
+  console.log(`🔍 Found ${allInputs.length} input elements on page`);
+  
+  // Show which fields exist on current page
+  const existingFields = Array.from(allInputs).map(el => ({
+    id: el.id,
+    name: el.name,
+    type: el.type,
+    placeholder: el.placeholder,
+    currentValue: el.value
+  })).filter(f => f.id || f.name);
+  
+  console.log('📋 Existing form fields:', existingFields);
+  
+  // Now populate using our enhanced function
+  const result = populateAllForms();
+  
+  console.log(`✅ DEBUG population completed: ${result} fields populated`);
+  return result;
+};
 
 // Enhanced broadcastHelperUpdate function for system-wide notifications
 window.broadcastHelperUpdate = function(updatedSections = [], source = 'unknown') {

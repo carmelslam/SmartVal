@@ -197,12 +197,30 @@ export async function sendToWebhook(id, payload) {
           Object.keys(directFieldMappings).forEach(fieldId => {
             const value = directFieldMappings[fieldId];
             if (value && value !== '' && value !== '-' && value !== null) {
-              // Try to find the element by ID
-              let element = document.getElementById(fieldId);
+              // 🔧 ENHANCED FIELD DETECTION: Try multiple selectors to find the element
+              let element = null;
+              const selectors = [
+                `#${fieldId}`,                                    // Exact ID match
+                `[name="${fieldId}"]`,                           // Name attribute match
+                `input[placeholder*="${fieldId}"]`,              // Placeholder contains field name
+                `#${fieldId.toLowerCase()}`,                     // Lowercase ID
+                `#${fieldId.replace('_', '')}`,                  // Remove underscores
+                `#${fieldId.replace('_', '-')}`,                 // Replace underscore with dash
+                `[data-field="${fieldId}"]`,                     // Data attribute
+                `[data-helper-field="${fieldId}"]`,              // Helper data attribute
+              ];
               
-              // If not found by exact ID, try variations
-              if (!element) {
-                element = document.querySelector(`[name="${fieldId}"]`);
+              // Try each selector until we find an element
+              for (const selector of selectors) {
+                try {
+                  element = document.querySelector(selector);
+                  if (element) {
+                    console.log(`✅ Webhook found element for ${fieldId} using selector: ${selector}`);
+                    break;
+                  }
+                } catch (e) {
+                  // Ignore invalid selectors
+                }
               }
               
               if (element) {
