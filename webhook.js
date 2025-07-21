@@ -323,22 +323,22 @@ export async function sendToWebhook(id, payload) {
         }
         
         try {
-          // Simple direct helper update - restore original working method
-          if (typeof updateHelperAndSession === 'function') {
-            // Update each field directly in helper
+          // 🔧 CORE FIX: Use processIncomingData FIRST for Hebrew text processing
+          if (typeof processIncomingData === 'function') {
+            console.log('🔄 Processing webhook data via processIncomingData...');
+            await processIncomingData(actualData, id);
+            console.log('✅ Data processed via processIncomingData');
+          } else if (typeof updateHelperAndSession === 'function') {
+            // Fallback for simple updates
             Object.keys(actualData).forEach(key => {
               updateHelperAndSession(key, actualData[key]);
             });
-            console.log('✅ Data processed and helper updated');
-          } else if (typeof processIncomingData === 'function') {
-            // Use processIncomingData if available
-            await processIncomingData(actualData, id);
-            console.log('✅ Data processed via processIncomingData');
+            console.log('✅ Data processed and helper updated (fallback)');
           } else {
-            // Direct sessionStorage update as fallback
+            // Direct sessionStorage update as final fallback
             sessionStorage.setItem('helper', JSON.stringify(actualData));
             window.helper = actualData;
-            console.log('✅ Data stored in sessionStorage and window.helper');
+            console.log('✅ Data stored in sessionStorage and window.helper (final fallback)');
           }
         } catch (error) {
           console.error('❌ Error updating helper:', error);
