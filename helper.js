@@ -3,18 +3,7 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
-// Import storage manager (optional - will work with fallback if not available)
-let storageManager = null;
-try {
-  import('./storage-manager.js').then(module => {
-    storageManager = module.storageManager;
-    console.log('✅ Storage manager loaded successfully');
-  }).catch(error => {
-    console.warn('⚠️ Storage manager not available, using fallback methods:', error);
-  });
-} catch (error) {
-  console.warn('⚠️ Could not load storage manager:', error);
-}
+// Removed storage manager to prevent system conflicts
 
 // 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
 function initializeHelper() {
