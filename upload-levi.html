@@ -1094,7 +1094,22 @@ class LeviProcessor {
       else if (helper.vehicle?.office_code) officeCode = helper.vehicle.office_code;
       else if (helper.car_details?.office_code) officeCode = helper.car_details.office_code;
       else if (helper.general_info?.office_code) officeCode = helper.general_info.office_code;
-      else officeCode = '01'; // ✅ DEFAULT: Set default office code if none found
+      
+      // ENHANCED: Extract from car_details raw text if not found in structured data
+      else if (helper.car_details?.raw_response || helper.car_details?.message) {
+        const rawText = helper.car_details.raw_response || helper.car_details.message;
+        const officeCodeMatch = rawText.match(/(?:קוד משרד התחבורה|קוד משרד|משרד התחבורה|קוד\s*משרד)[:\s-]*([0-9-]+)/i);
+        if (officeCodeMatch && officeCodeMatch[1]) {
+          officeCode = officeCodeMatch[1];
+          console.log('✅ EXTRACTED office_code from car_details raw text:', officeCode);
+        }
+      }
+      
+      // Fallback to default only if still not found
+      if (!officeCode) {
+        officeCode = '01'; // ✅ DEFAULT: Set default office code if none found
+        console.log('⚠️ Using default office_code:', officeCode);
+      }
       
       if (officeCode) {
         document.getElementById('office_code').value = officeCode;
@@ -1189,10 +1204,9 @@ class LeviProcessor {
       document.getElementById('office_code').value = officeCode;
     }
     
-    // ✅ ENSURE DEFAULT: If office_code is still empty, set default
+    // ✅ ENSURE FIELD: If office_code is still empty, leave it empty rather than default
     if (!document.getElementById('office_code').value) {
-      document.getElementById('office_code').value = '01';
-      console.log('✅ LEVI UPLOAD: Set default office_code: 01');
+      console.log('⚠️ LEVI UPLOAD: No office_code found in any data source');
     }
   }
 
