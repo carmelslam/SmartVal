@@ -18,7 +18,9 @@ export const HEBREW_TO_ENGLISH = {
   // === Vehicle Identification ===
   'פרטי רכב': 'plate',
   'מס\' רכב': 'plate',
-  "מס' רכב": 'plate',         // CRITICAL FIX: Real apostrophe from Make.com
+  "מס' רכב": 'plate',         // CRITICAL FIX: Real apostrophe from Make.com  
+  'מס׳ רכב': 'plate',         // CRITICAL FIX: Hebrew geresh character
+  'מס״ רכב': 'plate',         // CRITICAL FIX: Hebrew gershayim character
   'מספר רכב': 'plate',
   'מס רכב': 'plate',
   'לוחית רישוי': 'plate',
@@ -115,14 +117,24 @@ export const HEBREW_TO_ENGLISH = {
   'ערך כספי עליה לכביש': 'registration_amount',
   'שווי מצטבר עליה לכביש': 'registration_cumulative',
   'מס ק"מ %': 'mileage_percent',
+  'מס׳ ק"מ %': 'mileage_percent',
+  'מס״ ק״מ %': 'mileage_percent',
   'ערך כספי מס\' ק"מ': 'mileage_amount',
+  'ערך כספי מס׳ ק״מ': 'mileage_amount',
+  'ערך כספי מס״ ק״מ': 'mileage_amount',
   'שווי מצטבר מס\' ק"מ': 'mileage_cumulative',
+  'שווי מצטבר מס׳ ק״מ': 'mileage_cumulative',
+  'שווי מצטבר מס״ ק״מ': 'mileage_cumulative',
   'בעלות %': 'ownership_type_percent',
   'ערך כספי בעלות': 'ownership_type_amount',
   'שווי מצטבר בעלות': 'ownership_type_cumulative',
   'מספר בעלים %': 'ownership_history_percent',
   'ערך כספי מס\' בעלים': 'ownership_history_amount',
+  'ערך כספי מס׳ בעלים': 'ownership_history_amount',
+  'ערך כספי מס״ בעלים': 'ownership_history_amount',
   'שווי מצטבר מס\' בעלים': 'ownership_history_cumulative',
+  'שווי מצטבר מס׳ בעלים': 'ownership_history_cumulative',
+  'שווי מצטבר מס״ בעלים': 'ownership_history_cumulative',
   'מחיר מאפיינים %': 'features_percent',
   'ערך כספי מאפיינים': 'features_amount',
   'שווי מצטבר מאפיינים': 'features_cumulative',
