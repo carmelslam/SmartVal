@@ -469,17 +469,19 @@
       return value && value.toString().trim() ? `${value}%` : "0%";
     };
 
-    // Basic vehicle information - FIXED: Use processed helper data from Hebrew regex patterns
+    // Basic vehicle information - FIXED: Use exact JSON field mappings from valuation data
     console.log('🔍 LEVI DEBUG: Available data sources:', {
       vehicle: Object.keys(vehicle),
       carDetails: Object.keys(carDetails), 
       leviReport: Object.keys(leviReport),
-      meta: Object.keys(meta)
+      meta: Object.keys(meta),
+      valuation: Object.keys(helper.valuation || {})
     });
     
-    // Comprehensive data sources from helper system after Hebrew text processing
-    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport };
-    console.log('🔍 LEVI DEBUG: Merged helper data:', allData);
+    // Use valuation data which contains the Levi JSON mappings
+    const valuation = helper.valuation || {};
+    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation };
+    console.log('🔍 LEVI DEBUG: Merged helper data with valuation:', allData);
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       allData.model_type || 
@@ -517,129 +519,136 @@
       '-'
     );
     document.getElementById("levi-base-price").textContent = formatPrice(
+      valuation.base_price || 
       allData.base_price || 
       allData['מחיר בסיס'] || 
       0
     );
     document.getElementById("levi-final-price").textContent = formatPrice(
+      valuation.final_price || 
       allData.final_price || 
       allData['מחיר סופי לרכב'] || 
       allData.market_value ||
       0
     );
 
-    // FIXED: Registration adjustments - use allData comprehensive sources
+    // FIXED: Registration adjustments - use nested valuation.adjustments structure
+    const regAdj = valuation.adjustments?.registration || {};
     document.getElementById("levi-registration").textContent = formatValue(
+      regAdj.value || 
+      regAdj.description ||
       allData.registration_date || 
-      allData['עליה לכביש'] || 
-      allData['תאריך רישום'] ||
       "-"
     );
     document.getElementById("levi-registration-percent").textContent = formatPercent(
+      regAdj.percent || 
       allData.registration_percent || 
-      allData['עליה לכביש %'] || 
       0
     );
     document.getElementById("levi-registration-value").textContent = formatPrice(
+      regAdj.amount || 
       allData.registration_amount || 
-      allData['ערך כספי עליה לכביש'] || 
       0
     );
     document.getElementById("levi-registration-total").textContent = formatPrice(
+      regAdj.cumulative || 
       allData.registration_cumulative || 
-      allData['שווי מצטבר עליה לכביש'] || 
       0
     );
 
-    // FIXED: Ownership adjustments - use comprehensive allData sources
+    // FIXED: Ownership adjustments - use nested structure
+    const ownAdj = valuation.adjustments?.ownership_type || {};
     document.getElementById("levi-ownership").textContent = formatValue(
+      ownAdj.value || 
+      ownAdj.description ||
       allData.ownership_type || 
-      allData['סוג בעלות'] || 
-      allData.ownership_value ||
       "-"
     );
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
+      ownAdj.percent || 
       allData.ownership_percent || 
-      allData['בעלות %'] || 
       0
     );
     document.getElementById("levi-ownership-value").textContent = formatPrice(
+      ownAdj.amount || 
       allData.ownership_amount || 
-      allData['ערך כספי בעלות'] || 
       0
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
+      ownAdj.cumulative || 
       allData.ownership_cumulative || 
-      allData['שווי מצטבר בעלות'] || 
       0
     );
 
-    // FIXED: KM adjustments - use comprehensive allData sources
+    // FIXED: KM adjustments - use nested structure
+    const kmAdj = valuation.adjustments?.mileage || {};
     document.getElementById("levi-km").textContent = formatValue(
+      kmAdj.value || 
+      kmAdj.description ||
       allData.km || 
-      allData.mileage ||
-      allData['מס\' ק"מ'] || 
-      allData['קילומטראז'] ||
       "-"
     );
     document.getElementById("levi-km-percent").textContent = formatPercent(
+      kmAdj.percent || 
       allData.mileage_percent || 
-      allData['מס\' ק"מ %'] || 
       0
     );
     document.getElementById("levi-km-value").textContent = formatPrice(
+      kmAdj.amount || 
       allData.mileage_amount || 
-      allData['ערך כספי מס\' ק"מ'] || 
       0
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
+      kmAdj.cumulative || 
       allData.mileage_cumulative || 
-      allData['שווי מצטבר מס\' ק"מ'] || 
       0
     );
 
-    // FIXED: Owners adjustments - use comprehensive allData sources  
+    // FIXED: Owners adjustments - use nested structure
+    const ownerAdj = valuation.adjustments?.ownership_history || {};
     document.getElementById("levi-owners").textContent = formatValue(
+      ownerAdj.value || 
+      ownerAdj.owner_count ||
       allData.owner_count || 
-      allData['מספר בעלים'] || 
       "-"
     );
     document.getElementById("levi-owners-percent").textContent = formatPercent(
+      ownerAdj.percent || 
       allData.owners_percent || 
-      allData['מס\' בעלים %'] || 
       0
     );
     document.getElementById("levi-owners-value").textContent = formatPrice(
+      ownerAdj.amount || 
       allData.owners_amount || 
-      allData['ערך כספי מס\' בעלים'] || 
       0
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
+      ownerAdj.cumulative || 
       allData.owners_cumulative || 
-      allData['שווי מצטבר מס\' בעלים'] || 
       0
     );
 
-    // FIXED: Features adjustments - use comprehensive allData sources
+    // FIXED: Features adjustments - use nested structure
+    const featAdj = valuation.adjustments?.features || {};
     document.getElementById("levi-features").textContent = formatValue(
+      featAdj.value || 
+      featAdj.description ||
       allData.features || 
-      allData['מאפיינים'] || 
-      allData['אבזור'] ||
       "-"
     );
     document.getElementById("levi-features-percent").textContent = formatPercent(
+      featAdj.percent || 
       allData.features_percent || 
-      allData['מאפיינים %'] || 
       0
     );
     document.getElementById("levi-features-value").textContent = formatPrice(
+      featAdj.amount || 
       allData.features_amount || 
-      allData['ערך כספי מאפיינים'] || 
       0
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
+      featAdj.cumulative || 
       allData.features_cumulative || 
-      allData['שווי מצטבר מאפיינים'] || 
       0
     );
 

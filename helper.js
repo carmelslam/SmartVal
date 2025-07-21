@@ -903,6 +903,56 @@ function processDirectData(data, result) {
     'מספר_דגם_הרכב': ['vehicle.model_code'],
     'קוד_משרד_התחבורה': ['vehicle.office_code'],
     
+    // 🔧 EXACT LEVI JSON MAPPINGS - Critical for system-wide data consistency
+    'תאריך': ['case_info.date', 'meta.created_at'],
+    'סוג רכב': ['vehicle.vehicle_type'], 
+    'יצרן': ['vehicle.manufacturer'],
+    'קוד דגם': ['vehicle.model_code'],
+    'קטגוריה': ['vehicle.category'],
+    'מספר רישוי': ['vehicle.plate', 'meta.plate'],
+    'אוטומט': ['vehicle.is_automatic'],
+    'שנת יצור': ['vehicle.year'],
+    'מחיר בסיס': ['valuation.base_price'],
+    'שם דגם מלא': ['vehicle.full_model_name', 'vehicle.model'],
+    'מאפיינים': ['vehicle.features'],
+    
+    // Levi adjustment fields - Registration
+    'עליה לכביש': ['valuation.adjustments.registration.description'],
+    'ערך עליה לכביש': ['valuation.adjustments.registration.value'],
+    'עליה לכביש %': ['valuation.adjustments.registration.percent'],
+    'ערך ש"ח עליה לכביש': ['valuation.adjustments.registration.amount'],
+    'שווי מצטבר עליה לכביש': ['valuation.adjustments.registration.cumulative'],
+    
+    // Levi adjustment fields - Ownership
+    'בעלות': ['valuation.adjustments.ownership_type.description'],
+    'ערך בעלות': ['valuation.adjustments.ownership_type.value'],
+    'בעלות %': ['valuation.adjustments.ownership_type.percent'],
+    'ערך ש"ח בעלות': ['valuation.adjustments.ownership_type.amount'],
+    'שווי מצטבר בעלות': ['valuation.adjustments.ownership_type.cumulative'],
+    
+    // Levi adjustment fields - Mileage 
+    'מס ק"מ': ['valuation.adjustments.mileage.description'],
+    'ערך מס ק"מ': ['valuation.adjustments.mileage.value', 'vehicle.km'],
+    'מס ק"מ %': ['valuation.adjustments.mileage.percent'],
+    'ערך ש"ח מס ק"מ': ['valuation.adjustments.mileage.amount'],
+    'שווי מצטבר מס ק"מ': ['valuation.adjustments.mileage.cumulative'],
+    
+    // Levi adjustment fields - Owner Count
+    'מספר בעלים': ['valuation.adjustments.ownership_history.description'],
+    'ערך מספר בעלים': ['valuation.adjustments.ownership_history.value', 'valuation.adjustments.ownership_history.owner_count'],
+    'מספר בעלים %': ['valuation.adjustments.ownership_history.percent'],
+    'ערך ש"ח מספר בעלים': ['valuation.adjustments.ownership_history.amount'],
+    'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
+    
+    // Levi adjustment fields - Features (note: duplicate key 'מאפיינים' handled)
+    'ערך מאפיינים ': ['valuation.adjustments.features.value'],
+    'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
+    'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
+    'שווי מצטבר  מאפיינים': ['valuation.adjustments.features.cumulative'],
+    
+    // Final price
+    'מחיר סופי לרכב': ['valuation.final_price', 'vehicle.market_value'],
+    
     // Owner fields
     'owner': ['stakeholders.owner.name'],
     'owner_name': ['stakeholders.owner.name'],
@@ -982,13 +1032,24 @@ function processDirectData(data, result) {
     console.log(`🔍 Processing key: "${key}" → "${keyLower}"`);
     
     if (value && value !== '') {
-      const targets = fieldMappings[keyLower];
-      if (targets) {
-        targets.forEach(target => {
-          console.log(`📍 Setting ${target} = ${value}`);
-          setNestedValue(window.helper, target, value);
+      const targets = fieldMappings[key]; // Try exact key first
+      const targetsLower = fieldMappings[keyLower]; // Then try lowercase
+      const finalTargets = targets || targetsLower;
+      
+      if (finalTargets) {
+        // 🔧 PRICE FORMATTING FIX: Handle number strings with commas
+        let processedValue = value;
+        if (typeof value === 'string' && /^[\d,]+$/.test(value)) {
+          // Keep original string format for prices like "85,000"
+          processedValue = value;
+          console.log(`💰 Preserving price format: ${value}`);
+        }
+        
+        finalTargets.forEach(target => {
+          console.log(`📍 Setting ${target} = ${processedValue}`);
+          setNestedValue(window.helper, target, processedValue);
         });
-        console.log(`✅ Mapped ${key}: ${value}`);
+        console.log(`✅ Mapped ${key}: ${processedValue}`);
         updated = true;
       } else {
         console.warn(`⚠️ No mapping found for key: "${key}" (${keyLower})`);
@@ -1326,6 +1387,70 @@ window.broadcastHelperUpdate = function(sections, source) {
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
   console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
   setTimeout(() => populateAllForms(), 100);
+};
+
+// Test function for Levi JSON webhook data processing
+window.testLeviJSONData = function() {
+  console.log('🧪 Testing Levi JSON webhook data processing...');
+  
+  // Exact Levi JSON data from your webhook
+  const leviData = {
+    "תאריך": "07/04/2025",
+    "סוג רכב": "פרטי",
+    "יצרן": "ג'יפ",
+    "קוד דגם": "870170",
+    "קטגוריה": "פנאי שטח",
+    "מספר רישוי": "608-26-402",
+    "אוטומט": "כן",
+    "שנת יצור": "2021",
+    "מחיר בסיס": "85,000",
+    "שם דגם מלא": "ג'יפ ריינג'ד 150(1332) LATITUDE כ\"ס 2X4 אוטו'",
+    "מאפיינים": "הגה כוח,4 חלונות חשמל חישוקי מגנזיום, מניעת גניבה,מניעת הנעה,רדיו מובנה",
+    "עליה לכביש": "עליה לכביש",
+    "ערך עליה לכביש": "08/2021",
+    "עליה לכביש %": "0%",
+    "ערך ש\"ח עליה לכביש": "3,500",
+    "שווי מצטבר עליה לכביש": "88,500",
+    "בעלות": "בעלות",
+    "ערך בעלות": "פרטית",
+    "בעלות %": "0%",
+    "ערך ש\"ח בעלות": "0",
+    "שווי מצטבר בעלות": "88,500",
+    "מס ק\"מ": "מס ק\"מ",
+    "ערך מס ק\"מ": "16290",
+    "מס ק\"מ %": "+7.95%",
+    "ערך ש\"ח מס ק\"מ": "7,036",
+    "שווי מצטבר מס ק\"מ": "95,536",
+    "מספר בעלים": "מספר בעלים",
+    "ערך מספר בעלים": "2",
+    "מספר בעלים %": "-3%",
+    "ערך ש\"ח מספר בעלים": "-2,866",
+    "שווי מצטבר מספר בעלים": "92,670",
+    "מאפיינים": "מאפיינים",
+    "ערך מאפיינים ": "",
+    "מחיר מאפיינים %": "0%",
+    "ערך ש\"ח מאפיינים": "0",
+    "שווי מצטבר  מאפיינים": "92,670",
+    "מחיר סופי לרכב": "92,670"
+  };
+  
+  console.log('🧠 Helper before Levi test:', window.helper?.valuation);
+  
+  // Test processing
+  const result = window.processIncomingData(leviData, 'TEST_LEVI_JSON');
+  
+  console.log('📊 Levi processing result:', result);
+  console.log('🧠 Helper vehicle after test:', window.helper?.vehicle);
+  console.log('💰 Helper valuation after test:', window.helper?.valuation);
+  console.log('🔧 Adjustment data:', window.helper?.valuation?.adjustments);
+  
+  return {
+    success: result?.success || false,
+    helperData: window.helper,
+    vehicleData: window.helper?.vehicle,
+    valuationData: window.helper?.valuation,
+    adjustments: window.helper?.valuation?.adjustments
+  };
 };
 
 // Test function for JSON webhook data processing
