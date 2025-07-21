@@ -1266,3 +1266,51 @@ export function updateCalculations() {
 export function initHelper() {
   return initializeHelper();
 }
+
+// Missing function: markFieldAsManuallyModified
+export function markFieldAsManuallyModified(fieldId, value, origin) {
+  console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
+  
+  if (!window.helper) {
+    initializeHelper();
+  }
+  
+  // Create override record
+  const override = {
+    fieldId: fieldId,
+    value: value,
+    origin: origin,
+    timestamp: new Date().toISOString(),
+    type: 'manual_override'
+  };
+  
+  // Initialize overrides array if it doesn't exist
+  if (!window.helper.financials) {
+    window.helper.financials = {};
+  }
+  if (!window.helper.financials.overrides) {
+    window.helper.financials.overrides = [];
+  }
+  
+  // Remove any existing override for this field
+  window.helper.financials.overrides = window.helper.financials.overrides.filter(
+    override => override.fieldId !== fieldId
+  );
+  
+  // Add new override
+  window.helper.financials.overrides.push(override);
+  
+  // Update helper timestamp
+  window.helper.meta.last_updated = new Date().toISOString();
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Field ${fieldId} marked as manually modified`);
+}
+
+// Missing function: refreshAllModuleForms
+export function refreshAllModuleForms() {
+  console.log('🔄 Refreshing all module forms...');
+  populateAllForms();
+}
