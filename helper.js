@@ -1188,3 +1188,55 @@ if (document.readyState === 'loading') {
 }
 
 console.log('✅ Helper system loaded and ready');
+
+// Export all the functions that other modules need
+export const helper = window.helper;
+export const updateHelper = window.updateHelper;
+export const updateHelperAndSession = window.updateHelperAndSession;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+export const processIncomingData = window.processIncomingData;
+export const testDataCapture = window.testDataCapture;
+export const getVehicleData = window.getVehicleData;
+export const getOwnerData = window.getOwnerData;
+
+// Additional exports that modules might need
+export const saveHelperToStorage = saveHelperToAllStorageLocations;
+export const saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+
+// Data getter functions
+export function getDamageData() {
+  return window.helper?.damage_assessment || {};
+}
+
+export function getValuationData() {
+  return window.helper?.valuation || {};
+}
+
+export function getFinancialData() {
+  return window.helper?.financials || {};
+}
+
+export function syncVehicleData() {
+  console.log('Syncing vehicle data...');
+  populateAllForms();
+}
+
+export function syncDamageData() {
+  console.log('Syncing damage data...');
+  populateAllForms();
+}
+
+export function syncLeviData() {
+  console.log('Syncing Levi data...');
+  populateAllForms();
+}
+
+export function updateCalculations() {
+  console.log('Updating calculations...');
+  window.helper.meta.last_updated = new Date().toISOString();
+  saveHelperToAllStorageLocations();
+}
+
+export function initHelper() {
+  return initializeHelper();
+}
