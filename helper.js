@@ -809,9 +809,46 @@ function saveHelperToAllStorageLocations() {
   }
 }
 
+// Detect current module to optimize field population
+function detectCurrentModule() {
+  const url = window.location.pathname.toLowerCase();
+  const title = document.title.toLowerCase();
+  
+  if (url.includes('parts') || title.includes('parts')) return 'parts';
+  if (url.includes('general') || title.includes('general')) return 'general';
+  if (url.includes('levi') || url.includes('upload') || title.includes('levi')) return 'levi';
+  if (url.includes('open') || url.includes('cases') || title.includes('cases')) return 'cases';
+  if (url.includes('damage') || title.includes('damage')) return 'damage';
+  
+  // Check for specific form elements
+  if (document.querySelector('#part_quantity, #free_query')) return 'parts';
+  if (document.querySelector('#odo, #ownerPhone, #garageName')) return 'general';
+  if (document.querySelector('#manual-base-price, #manual-final-price')) return 'levi';
+  if (document.querySelector('#plate, #owner, #date, #location')) return 'cases';
+  
+  return 'unknown';
+}
+
+// Get relevant fields for current module
+function getModuleFields(module) {
+  const moduleFieldSets = {
+    'parts': ['plate', 'manufacturer', 'model', 'year', 'chassis', 'vin', 'part_quantity', 'free_query', 'part_name', 'part_group'],
+    'general': ['plate', 'odo', 'km', 'mileage', 'ownerPhone', 'owner_phone', 'ownerAddress', 'owner_address', 'garageName', 'garage_name', 'garagePhone', 'garage_phone', 'garageEmail', 'garage_email', 'agentName', 'agent_name', 'agentPhone', 'agent_phone', 'damageDate', 'damage_date'],
+    'levi': ['manual-base-price', 'manual-final-price', 'manual-registration-percent', 'manual-km', 'plate'],
+    'cases': ['plate', 'owner', 'date', 'location'],
+    'damage': ['plate', 'damage_type', 'damage_date', 'location', 'inspection_location']
+  };
+  
+  return moduleFieldSets[module] || Object.keys(moduleFieldSets).reduce((all, key) => [...all, ...moduleFieldSets[key]], []);
+}
+
 // Populate all forms from helper data
 function populateAllForms() {
   console.log('🔄 Populating all forms from helper data');
+  
+  // Detect current module to reduce console noise
+  const currentModule = detectCurrentModule();
+  console.log(`📍 Current module detected: ${currentModule}`);
   
   const fieldMappings = {
     // 🔧 COMPREHENSIVE FIELD MAPPINGS: All variations from screenshots and modules
@@ -1003,8 +1040,13 @@ function populateAllForms() {
   };
   
   let populatedCount = 0;
+  const relevantFields = getModuleFields(currentModule);
   
   Object.entries(fieldMappings).forEach(([fieldId, value]) => {
+    // Skip fields that aren't relevant to current module (reduces console noise)
+    if (currentModule !== 'unknown' && !relevantFields.includes(fieldId)) {
+      return;
+    }
     if (value && value !== '' && value !== null && value !== undefined) {
       // 🔧 ENHANCED FIELD DETECTION: Try multiple selectors to find the element
       let element = null;
