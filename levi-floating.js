@@ -636,6 +636,7 @@
     const featAdj = valuation.adjustments?.features || {};
     // FIXED: Handle features text properly - check multiple locations
     console.log('🔧 FEATURES DEBUG:', {
+      'vehicle.features_text': vehicle.features_text,
       'featAdj.value': featAdj.value,
       'featAdj.description': featAdj.description,
       'allData.features': allData.features,
@@ -643,7 +644,8 @@
     });
     
     document.getElementById("levi-features").textContent = formatValue(
-      vehicle.features ||  // Try vehicle.features first 
+      vehicle.features_text ||  // Try preserved features text first
+      vehicle.features ||  // Then vehicle.features 
       featAdj.value || 
       featAdj.description ||
       allData.features || 

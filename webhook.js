@@ -203,6 +203,24 @@ export async function sendToWebhook(id, payload) {
             window.refreshAllModuleForms();
           }
           
+          // 🔧 FEATURES TEXT PRESERVATION: Handle duplicate "מאפיינים" keys in Levi JSON
+          // Extract features text before it gets overwritten by duplicate key
+          let featuresText = '';
+          if (typeof actualData === 'object') {
+            // Check for features in the full JSON string to capture both instances
+            const jsonString = JSON.stringify(actualData);
+            const featuresRegex = /"מאפיינים"\s*:\s*"([^"]+(?:,[^"]+)*)"/g;
+            let match;
+            while ((match = featuresRegex.exec(jsonString)) !== null) {
+              const value = match[1];
+              // Take the longer value (likely the actual features, not just "מאפיינים")
+              if (value.length > featuresText.length && value !== 'מאפיינים') {
+                featuresText = value;
+              }
+            }
+            console.log('🔧 FEATURES EXTRACTION:', { featuresText, actualDataFeatures: actualData['מאפיינים'] });
+          }
+          
           // Enhanced direct field population with comprehensive mappings
           const directFieldMappings = {
             // Basic vehicle fields with Hebrew alternatives
@@ -280,7 +298,10 @@ export async function sendToWebhook(id, payload) {
             'manual-features-total': actualData['שווי מצטבר  מאפיינים'],
             
             'base-price': actualData['מחיר בסיס'],
-            'final-price': actualData['מחיר סופי לרכב']
+            'final-price': actualData['מחיר סופי לרכב'],
+            
+            // 🔧 FEATURES TEXT FIX: Use preserved features text
+            'features-text': featuresText
           };
           
           let populatedCount = 0;

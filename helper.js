@@ -3,6 +3,61 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
+// 🛠️ UNIVERSAL SOLUTION: Duplicate Key JSON Parser
+// Handles JSON objects with duplicate keys by preserving all values
+function parseJSONWithDuplicates(jsonString) {
+  if (typeof jsonString !== 'string') {
+    return jsonString; // Already parsed object
+  }
+
+  const duplicateValues = new Map();
+  
+  // Find all duplicate key instances and preserve the most meaningful value
+  const keyPattern = /"([^"]+)"\s*:\s*"([^"]*)"/g;
+  let match;
+  
+  while ((match = keyPattern.exec(jsonString)) !== null) {
+    const key = match[1];
+    const value = match[2];
+    
+    if (duplicateValues.has(key)) {
+      const existing = duplicateValues.get(key);
+      // Choose the longer, more meaningful value
+      if (value.length > existing.length && value !== key) {
+        duplicateValues.set(key, value);
+        console.log(`🔄 Duplicate key "${key}": choosing longer value "${value}" over "${existing}"`);
+      }
+    } else {
+      duplicateValues.set(key, value);
+    }
+  }
+  
+  // Parse the JSON normally
+  let parsedData;
+  try {
+    parsedData = JSON.parse(jsonString);
+  } catch (e) {
+    console.error('❌ JSON parsing failed:', e);
+    return {};
+  }
+  
+  // Restore the better values for duplicate keys
+  for (const [key, value] of duplicateValues) {
+    if (parsedData[key] && parsedData[key] !== value && value.length > parsedData[key].length) {
+      console.log(`🔧 Restoring duplicate key "${key}": "${parsedData[key]}" → "${value}"`);
+      parsedData[key] = value;
+      
+      // For מאפיינים specifically, also store in features_text field
+      if (key === 'מאפיינים' && value !== 'מאפיינים') {
+        parsedData['מאפיינים_text'] = value;
+        console.log(`🚗 Preserved features text as מאפיינים_text: "${value}"`);
+      }
+    }
+  }
+  
+  return parsedData;
+}
+
 // Removed storage manager to prevent system conflicts
 
 // 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
@@ -915,6 +970,10 @@ function processDirectData(data, result) {
     'מחיר בסיס': ['valuation.base_price'],
     'שם דגם מלא': ['vehicle.full_model_name', 'vehicle.model'],
     'מאפיינים': ['vehicle.features'],
+    'מאפיינים_text': ['vehicle.features_text'],
+    
+    // 🔧 UNIVERSAL SOLUTION: Features text preservation from duplicate key parser
+    'features-text': ['vehicle.features_text'],
     
     // Levi adjustment fields - Registration
     'עליה לכביש': ['valuation.adjustments.registration.description'],
