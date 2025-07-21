@@ -220,7 +220,33 @@ export const CalculationInterface = {
 window.MathEngine = MathEngine;
 window.CalculationInterface = CalculationInterface;
 
-export const helper = {
+export const helper = window.helper || {};
+
+export function updateHelperAndSession(key, value) {
+  helper[key] = value;
+  try {
+    const toStore = typeof value === 'object' ? JSON.stringify(value) : value;
+    sessionStorage.setItem(key, toStore);
+  } catch (e) {
+    console.error('Failed to store in sessionStorage:', e);
+  }
+}
+
+export function initializeHelperFromSession(keys) {
+  keys.forEach(key => {
+    let val = sessionStorage.getItem(key);
+    if (val !== null) {
+      try {
+        helper[key] = JSON.parse(val);
+      } catch {
+        helper[key] = val;
+      }
+    }
+  });
+}
+
+// --- FIX: Ensure only one helper object is exported and used globally ---
+const _globalHelper = window.helper || {
   meta: {
     case_id: '',
     plate: '',
@@ -428,28 +454,24 @@ function mergeDeep(target, source) {
   }
 }
 
+// --- FIX: Relax sanitization for Hebrew/numeric fields ---
 function sanitizeHelperData(data) {
   if (!data || typeof data !== 'object') return data;
-  
   const sanitized = Array.isArray(data) ? [] : {};
-  
   for (const key in data) {
     const value = data[key];
-    
     if (typeof value === 'string') {
-      // Remove potential XSS vectors
+      // Only strip script tags and dangerous JS, but do NOT alter encoding or numeric/Hebrew chars
       sanitized[key] = value
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '') script tags, do not re-encode or decode
         .replace(/javascript:/gi, '')
-        .replace(/on\w+\s*=\s*['"]/gi, '')
-        .replace(/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/gi, '');
+        .replace(/on\w+\s*=\s*['"]/gi, '');
     } else if (typeof value === 'object' && value !== null) {
       sanitized[key] = sanitizeHelperData(value);
     } else {
       sanitized[key] = value;
     }
   }
-  
   return sanitized;
 }
 
@@ -596,9 +618,17 @@ export function updateHelper(section, data, sourceModule = null) {
     // Input sanitization
     const sanitizedData = sanitizeHelperData(data);
     
-    // Initialize section if needed
-    if (!helper[section]) helper[section] = {};
-    
+    // --- FIX: Initialize section as correct type ---
+    if (!helper[section]) {
+      if (Array.isArray(sanitizedData)) {
+        helper[section] = [];
+      } else if (typeof sanitizedData === 'object') {
+        helper[section] = {};
+      } else {
+        helper[section] = sanitizedData;
+      }
+    }
+
     // Handle different data source types according to specifications
     switch (section) {
       case 'vehicle':
@@ -661,7 +691,7 @@ export function updateHelper(section, data, sourceModule = null) {
       console.warn('Data standardization skipped:', e.message);
     }
     
-    // Always save to sessionStorage after updates
+    // --- FIX: Always save to sessionStorage after updates ---
     saveHelperToStorage();
     
     // Update legacy carData for backward compatibility
@@ -678,15 +708,6 @@ export function updateHelper(section, data, sourceModule = null) {
     return false;
   }
 }
-
-export function updateHelperAndSession(section, data, sourceModule = null) {
-  const success = updateHelper(section, data, sourceModule);
-  if (success) {
-    broadcastHelperUpdate([section], sourceModule || "updateHelperAndSession");
-  }
-  return success;
-}
-
 
 export function saveHelperToStorage() {
   try {
@@ -1733,7 +1754,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 100);
 });
 
-// Make updateCalculations globally available for VAT updates
+// Make updateCalculations globally available
 window.updateCalculations = updateCalculations;
 
 // Make data checking function globally available for testing
@@ -1832,7 +1853,7 @@ function parseHebrewTextToObject(text) {
 }
 
 // ============================================================================
-// DATA PROCESSING FUNCTIONS FOR DIFFERENT MODULE TYPES
+// DATA PROCESSING FUNCTIONS FOR DIFFERENT MODULES
 // ============================================================================
 
 function processCarDetailsData(data, sourceModule) {
@@ -1922,358 +1943,161 @@ function processCarDetailsData(data, sourceModule) {
   console.log('✅ processCarDetailsData completed with ENHANCED field mapping');
 }
 
-// Temporary function to clean up orphaned code - DELETE AFTER CLEANUP
-function cleanupOrphanedCode() {
-  // This function will be removed after cleanup
-  
-  if (false && data.model_code) {
-    helper.vehicle.model_code = data.model_code;
-    helper.car_details.model_code = data.model_code;
-  }
-  
-  if (data.engine_volume) {
-    helper.vehicle.engine_volume = data.engine_volume;
-    helper.car_details.engine_volume = data.engine_volume;
-  }
-  
-  if (data.fuel_type) {
-    helper.vehicle.fuel_type = data.fuel_type;
-    helper.car_details.fuel_type = data.fuel_type;
-  }
-  
-  if (data.engine_model) {
-    helper.vehicle.engine_model = data.engine_model;
-    helper.car_details.engine_model = data.engine_model;
-  }
-  
-  if (data.drive_type) {
-    helper.vehicle.drive_type = data.drive_type;
-    helper.car_details.drive_type = data.drive_type;
-  }
-  
-  if (data.km) {
-    console.log('🔧 Mapping km:', data.km);
-    helper.vehicle.km = data.km;
-    helper.car_details.km = data.km;
-  }
-  
-  if (data.color) {
-    helper.vehicle.color = data.color;
-    helper.car_details.color = data.color;
-  }
-  
-  if (data.doors) {
-    helper.vehicle.doors = data.doors;
-    helper.car_details.doors = data.doors;
-  }
-  
-  // Map ownership and owner data
-  if (data.ownership_type) {
-    console.log('🔧 Mapping ownership_type:', data.ownership_type);
-    helper.vehicle.ownership_type = data.ownership_type;
-    helper.car_details.ownership_type = data.ownership_type;
-  }
-  
-  if (data.owner) {
-    console.log('🔧 Mapping owner:', data.owner);
-    helper.stakeholders.owner.name = data.owner;
-    helper.stakeholders.owner_name = data.owner; // Floating screen compatibility
-    helper.car_details.owner = data.owner;
-  }
-  
-  if (data.ownerPhone) {
-    helper.stakeholders.owner.phone = data.ownerPhone;
-    helper.stakeholders.owner_phone = data.ownerPhone;
-    helper.car_details.ownerPhone = data.ownerPhone;
-  }
-  
-  if (data.ownerAddress) {
-    helper.stakeholders.owner.address = data.ownerAddress;
-    helper.stakeholders.owner_address = data.ownerAddress;
-    helper.car_details.ownerAddress = data.ownerAddress;
-  }
-  
-  // Map location and meta data
-  if (data.location) {
-    console.log('🔧 Mapping location:', data.location);
-    helper.meta.location = data.location;
-    helper.car_details.location = data.location;
-  }
-  
-  if (data.timestamp) {
-    helper.meta.timestamp = data.timestamp;
-  }
-  
-  if (data.damageDate || data.damage_date) {
-    helper.meta.damage_date = data.damageDate || data.damage_date;
-    helper.car_details.damageDate = data.damageDate || data.damage_date;
-  }
-  
-  // Map garage data
-  if (data.garage_name || data.garageName) {
-    const garageName = data.garage_name || data.garageName;
-    console.log('🔧 Mapping garage:', garageName);
-    helper.stakeholders.garage.name = garageName;
-    helper.car_details.garageName = garageName;
-  }
-  
-  if (data.garagePhone) {
-    helper.stakeholders.garage.phone = data.garagePhone;
-    helper.car_details.garagePhone = data.garagePhone;
-  }
-  
-  if (data.garageEmail) {
-    helper.stakeholders.garage.email = data.garageEmail;
-    helper.car_details.garageEmail = data.garageEmail;
-  }
-  
-  // Map insurance data if present
-  if (data.insuranceCompany) {
-    helper.stakeholders.insurance.company = data.insuranceCompany;
-    helper.car_details.insuranceCompany = data.insuranceCompany;
-  }
-  
-  if (data.insuranceEmail) {
-    helper.stakeholders.insurance.email = data.insuranceEmail;
-    helper.car_details.insuranceEmail = data.insuranceEmail;
-  }
-  
-  if (data.agentName) {
-    helper.stakeholders.insurance.agent.name = data.agentName;
-    helper.car_details.agentName = data.agentName;
-  }
-  
-  if (data.insurance_agent_phone) {
-    helper.stakeholders.insurance.agent.phone = data.insurance_agent_phone;
-    helper.car_details.insurance_agent_phone = data.insurance_agent_phone;
-  }
-  
-  if (data.insurance_agent_email) {
-    helper.stakeholders.insurance.agent.email = data.insurance_agent_email;
-    helper.car_details.insurance_agent_email = data.insurance_agent_email;
-  }
-  
-  // Map any additional fields
-  if (data.office_code) {
-    helper.vehicle.office_code = data.office_code;
-    helper.car_details.office_code = data.office_code;
-  }
-  
-  if (data.registration_date) {
-    helper.vehicle.registration_date = data.registration_date;
-    helper.car_details.registration_date = data.registration_date;
-  }
-  
-  // CRITICAL: Ensure all data is properly stored
-  console.log('🚗 processCarDetailsData: Final helper state:', {
-    meta: helper.meta,
-    vehicle: helper.vehicle,
-    stakeholders: helper.stakeholders,
-    car_details_keys: Object.keys(helper.car_details)
-  });
-  
-  // CRITICAL: Clean year format if needed
-  if (helper.vehicle.year && helper.vehicle.year.includes('/')) {
-    const yearParts = helper.vehicle.year.split('/');
-    helper.vehicle.year = yearParts[yearParts.length - 1].trim();
-    helper.car_details.year = helper.vehicle.year;
-  }
-  
-  // CRITICAL DEBUG: Verify specific fields
-  console.log('🔧 VERIFICATION after mapping:');
-  console.log('  - helper.meta.plate =', helper.meta.plate);
-  console.log('  - helper.vehicle.plate =', helper.vehicle.plate);
-  console.log('  - helper.vehicle.manufacturer =', helper.vehicle.manufacturer);
-  console.log('  - helper.vehicle.model =', helper.vehicle.model);
-  console.log('  - helper.vehicle.year =', helper.vehicle.year);
-  console.log('  - helper.stakeholders.owner.name =', helper.stakeholders.owner.name);
-  
-  // Update window.currentCaseData for floating screens compatibility
-  window.currentCaseData = {
-    meta: helper.meta,
-    vehicle: helper.vehicle,
-    car_details: helper.car_details,
-    stakeholders: helper.stakeholders
-  };
-  
-  // Also update legacy data stores for maximum compatibility
-  if (data.plate) {
-    const legacyCarData = {
-      plate: data.plate,
-      manufacturer: data.manufacturer || '',
-      model: data.model || '',
-      year: data.year || '',
-      owner: data.owner || '',
-      location: data.location || '',
-      ...data
-    };
-    sessionStorage.setItem('carData', JSON.stringify(legacyCarData));
-    console.log('🔧 Updated legacy carData in sessionStorage');
-  }
-  
-  console.log('✅ processCarDetailsData completed successfully - ORPHANED VERSION');
-}
-// END OF CLEANUP FUNCTION
-
 function processStakeholderData(section, data, sourceModule) {
   if (!helper.stakeholders) helper.stakeholders = { owner: {}, garage: {}, insurance: { agent: {} } };
   
-  if (section === 'garage' || data.garageName || data.garagePhone) {
+  if (section === 'garage' || data.garageName || data.garagePhone) {  // --- ADD: Always save after update ---
     helper.stakeholders.garage.name = data.garageName || data.name || helper.stakeholders.garage.name;
     helper.stakeholders.garage.phone = data.garagePhone || data.phone || helper.stakeholders.garage.phone;
     helper.stakeholders.garage.email = data.garageEmail || data.email || helper.stakeholders.garage.email;
-  }
-  
-  if (section === 'insurance' || data.insuranceCompany || data.agentName) {
+  } Patch processStakeholderData to always save after update
+  ection, data, sourceModule) {
+  if (section === 'insurance' || data.insuranceCompany || data.agentName) {= { owner: {}, garage: {}, insurance: { agent: {} } };
     helper.stakeholders.insurance.company = data.insuranceCompany || data.company || helper.stakeholders.insurance.company;
-    helper.stakeholders.insurance.email = data.insuranceEmail || data.email || helper.stakeholders.insurance.email;
-    helper.stakeholders.insurance.agent.name = data.agentName || data.agent_name || helper.stakeholders.insurance.agent.name;
-    helper.stakeholders.insurance.agent.phone = data.insurance_agent_phone || data.agent_phone || helper.stakeholders.insurance.agent.phone;
-    helper.stakeholders.insurance.agent.email = data.insurance_agent_email || data.agent_email || helper.stakeholders.insurance.agent.email;
+    helper.stakeholders.insurance.email = data.insuranceEmail || data.email || helper.stakeholders.insurance.email;f (section === 'garage' || data.garageName || data.garagePhone) {
+    helper.stakeholders.insurance.agent.name = data.agentName || data.agent_name || helper.stakeholders.insurance.agent.name;  helper.stakeholders.garage.name = data.garageName || data.name || helper.stakeholders.garage.name;
+    helper.stakeholders.insurance.agent.phone = data.insurance_agent_phone || data.agent_phone || helper.stakeholders.insurance.agent.phone;age.phone = data.garagePhone || data.phone || helper.stakeholders.garage.phone;
+    helper.stakeholders.insurance.agent.email = data.insurance_agent_email || data.agent_email || helper.stakeholders.insurance.agent.email;l || data.email || helper.stakeholders.garage.email;
   }
   
-  if (section === 'client' || data.ownerPhone || data.ownerAddress) {
-    helper.stakeholders.owner.phone = data.ownerPhone || data.phone || helper.stakeholders.owner.phone;
-    helper.stakeholders.owner.address = data.ownerAddress || data.address || helper.stakeholders.owner.address;
-    if (data.damageDate) helper.case_info.damage_date = data.damageDate;
-  }
-}
+  if (section === 'client' || data.ownerPhone || data.ownerAddress) {if (section === 'insurance' || data.insuranceCompany || data.agentName) {
+    helper.stakeholders.owner.phone = data.ownerPhone || data.phone || helper.stakeholders.owner.phone;.insurance.company = data.insuranceCompany || data.company || helper.stakeholders.insurance.company;
+    helper.stakeholders.owner.address = data.ownerAddress || data.address || helper.stakeholders.owner.address;.insuranceEmail || data.email || helper.stakeholders.insurance.email;
+    if (data.damageDate) helper.case_info.damage_date = data.damageDate;a.agentName || data.agent_name || helper.stakeholders.insurance.agent.name;
+  } helper.stakeholders.insurance.agent.phone = data.insurance_agent_phone || data.agent_phone || helper.stakeholders.insurance.agent.phone;
+}  helper.stakeholders.insurance.agent.email = data.insurance_agent_email || data.agent_email || helper.stakeholders.insurance.agent.email;
 
 function processDamageData(section, data, sourceModule) {
-  if (!helper.damage_assessment) helper.damage_assessment = { summary: {}, centers: [] };
-  
-  if (section === 'damage_centers' || section === 'expertise') {
-    if (Array.isArray(data)) {
+  if (!helper.damage_assessment) helper.damage_assessment = { summary: {}, centers: [] };nerAddress) {
+   helper.stakeholders.owner.phone = data.ownerPhone || data.phone || helper.stakeholders.owner.phone;
+  if (section === 'damage_centers' || section === 'expertise') {  helper.stakeholders.owner.address = data.ownerAddress || data.address || helper.stakeholders.owner.address;
+    if (Array.isArray(data)) { helper.case_info.damage_date = data.damageDate;
       helper.damage_assessment.centers = data;
     } else if (data.centers) {
-      helper.damage_assessment.centers = data.centers;
-    } else if (data.damage_blocks) {
+      helper.damage_assessment.centers = data.centers;/ --- ADD: Always save after update ---
+    } else if (data.damage_blocks) {saveHelperToStorage();
       helper.damage_assessment.centers = data.damage_blocks;
     }
-  }
-  
-  // Preserve legacy expertise structure
+  }ways save after update
+  data, sourceModule) {
+  // Preserve legacy expertise structuref (!helper.damage_assessment) helper.damage_assessment = { summary: {}, centers: [] };
   if (!helper.expertise) helper.expertise = {};
-  mergeDeep(helper.expertise, data);
+  mergeDeep(helper.expertise, data);damage_centers' || section === 'expertise') {
 }
-
-function processValuationData(section, data, sourceModule) {
-  if (!helper.valuation) helper.valuation = { adjustments: {}, calculations: {} };
-  
-  if (section === 'levisummary' || section === 'levi_report') {
+ata;
+function processValuationData(section, data, sourceModule) { } else if (data.centers) {
+  if (!helper.valuation) helper.valuation = { adjustments: {}, calculations: {} };    helper.damage_assessment.centers = data.centers;
+  .damage_blocks) {
+  if (section === 'levisummary' || section === 'levi_report') { = data.damage_blocks;
     // Handle Levi OCR data according to specifications
     if (data.base_price) helper.valuation.base_price = parseFloat(data.base_price) || 0;
     if (data.final_price) helper.valuation.final_price = parseFloat(data.final_price) || 0;
-    
-    // Process adjustments according to unified schema
+    ructure
+    // Process adjustments according to unified schemaper.expertise = {};
     if (data.adjustments) {
       Object.keys(data.adjustments).forEach(key => {
         if (!helper.valuation.adjustments[key]) helper.valuation.adjustments[key] = {};
-        Object.assign(helper.valuation.adjustments[key], data.adjustments[key]);
+        Object.assign(helper.valuation.adjustments[key], data.adjustments[key]);aveHelperToStorage();
       });
     }
-  }
-  
-  // Preserve legacy structure
-  if (!helper[section]) helper[section] = {};
-  mergeDeep(helper[section], data);
-}
-
+  }r update
+}rceModule) {
+;
 function processPartsData(section, data, sourceModule) {
-  if (!helper.parts_search) helper.parts_search = { search_history: [], all_results: [], results: [], summary: {} };
-  
-  if (Array.isArray(data)) {
-    // Add to all_results and mark as selected/unselected
+  if (!helper.parts_search) helper.parts_search = { search_history: [], all_results: [], results: [], summary: {} };f (section === 'levisummary' || section === 'levi_report') {
+    // Handle Levi OCR data according to specifications
+  if (Array.isArray(data)) { helper.valuation.base_price = parseFloat(data.base_price) || 0;
+    // Add to all_results and mark as selected/unselected = parseFloat(data.final_price) || 0;
     data.forEach(part => {
-      const partEntry = {
-        ...part,
-        search_timestamp: new Date().toISOString(),
-        source_module: sourceModule,
-        selected: part.selected !== false // Default to selected unless explicitly false
+      const partEntry = {ma
+        ...part, if (data.adjustments) {
+        search_timestamp: new Date().toISOString(),    Object.keys(data.adjustments).forEach(key => {
+        source_module: sourceModule,ion.adjustments[key]) helper.valuation.adjustments[key] = {};
+        selected: part.selected !== false // Default to selected unless explicitly falseata.adjustments[key]);
       };
       helper.parts_search.all_results.push(partEntry);
       
       if (partEntry.selected) {
-        helper.parts_search.results.push(partEntry);
-      }
+        helper.parts_search.results.push(partEntry); update ---
+      });
     });
   } else if (data.results) {
-    processPartsData('parts_search', data.results, sourceModule);
-  }
-  
+    processPartsData('parts_search', data.results, sourceModule);pdate
+  }ction processPartsData(section, data, sourceModule) {
+  if (!helper.parts_search) helper.parts_search = { search_history: [], all_results: [], results: [], summary: {} };
   // Update summary
   helper.parts_search.summary.total_results = helper.parts_search.all_results.length;
-  helper.parts_search.summary.selected_count = helper.parts_search.results.length;
-  helper.parts_search.summary.last_search = new Date().toISOString();
+  helper.parts_search.summary.selected_count = helper.parts_search.results.length; // Add to all_results and mark as selected/unselected
+  helper.parts_search.summary.last_search = new Date().toISOString();  data.forEach(part => {
 }
 
 function processInvoiceData(data, sourceModule) {
-  if (!helper.documents) helper.documents = { invoices: [] };
-  if (!helper.financials) helper.financials = { costs: {} };
+  if (!helper.documents) helper.documents = { invoices: [] };     source_module: sourceModule,
+  if (!helper.financials) helper.financials = { costs: {} };      selected: part.selected !== false // Default to selected unless explicitly false
   
-  // Store invoice document
+  // Store invoice documentartEntry);
   helper.documents.invoices.push({
     ...data,
-    processed_date: new Date().toISOString(),
+    processed_date: new Date().toISOString(),y);
     source_module: sourceModule
-  });
-  
-  // Extract financial data from invoice
+  }); });
+  } else if (data.results) {
+  // Extract financial data from invoicets_search', data.results, sourceModule);
   if (data.parts_total) helper.financials.costs.parts_total = parseFloat(data.parts_total) || 0;
   if (data.works_total) helper.financials.costs.works_total = parseFloat(data.works_total) || 0;
-  if (data.repairs_total) helper.financials.costs.repairs_total = parseFloat(data.repairs_total) || 0;
-  if (data.vat_amount) helper.financials.taxes.vat_amount = parseFloat(data.vat_amount) || 0;
-}
-
+  if (data.repairs_total) helper.financials.costs.repairs_total = parseFloat(data.repairs_total) || 0;/ Update summary
+  if (data.vat_amount) helper.financials.taxes.vat_amount = parseFloat(data.vat_amount) || 0;helper.parts_search.summary.total_results = helper.parts_search.all_results.length;
+}mary.selected_count = helper.parts_search.results.length;
+oISOString();
 function processDocumentData(section, data, sourceModule) {
   if (!helper.documents) helper.documents = { images: [], invoices: [], reports: [], pdfs: [], other_files: [] };
-  
-  if (section === 'images' && Array.isArray(data)) {
-    helper.documents.images.push(...data.map(img => ({
+   Patch processInvoiceData to always save after update
+  if (section === 'images' && Array.isArray(data)) {sourceModule) {
+    helper.documents.images.push(...data.map(img => ({r.documents = { invoices: [] };
       ...img,
       upload_date: new Date().toISOString(),
-      source_module: sourceModule
-    })));
+      source_module: sourceModule/ Store invoice document
+    })));helper.documents.invoices.push({
   } else if (data.photo_count) {
     // Accumulative photo count
     helper.documents.photo_count = (helper.documents.photo_count || 0) + parseInt(data.photo_count);
-  }
+  });
 }
-
-function processFinancialData(section, data, sourceModule) {
-  if (!helper.financials) helper.financials = { costs: {}, fees: {}, taxes: {}, totals: {} };
-  
-  if (section === 'fees') {
+data from invoice
+function processFinancialData(section, data, sourceModule) {parseFloat(data.parts_total) || 0;
+  if (!helper.financials) helper.financials = { costs: {}, fees: {}, taxes: {}, totals: {} };rks_total = parseFloat(data.works_total) || 0;
+  f (data.repairs_total) helper.financials.costs.repairs_total = parseFloat(data.repairs_total) || 0;
+  if (section === 'fees') {if (data.vat_amount) helper.financials.taxes.vat_amount = parseFloat(data.vat_amount) || 0;
     Object.assign(helper.financials.fees, data);
   } else if (section === 'costs') {
     Object.assign(helper.financials.costs, data);
   } else {
     mergeDeep(helper.financials, data);
-  }
+  }ays save after update
   
-  // Recalculate totals
+  // Recalculate totalsports: [], pdfs: [], other_files: [] };
   updateCalculations();
-}
-
+}if (section === 'images' && Array.isArray(data)) {
+sh(...data.map(img => ({
 // Flag to prevent legacy update recursion
 let isUpdatingLegacyData = false;
 
-function updateLegacyCarData() {
-  // Prevent recursion
+function updateLegacyCarData() { })));
+  // Prevent recursion} else if (data.photo_count) {
   if (isUpdatingLegacyData) {
-    console.warn('🔄 updateLegacyCarData: Recursion detected, skipping legacy update');
+    console.warn('🔄 updateLegacyCarData: Recursion detected, skipping legacy update');nt || 0) + parseInt(data.photo_count);
     return;
   }
-  
+  // --- ADD: Always save after update ---
   isUpdatingLegacyData = true;
   
   try {
-    // Update legacy carData in sessionStorage for backward compatibility
-    const carData = {
-      plate: helper.vehicle?.plate_number || helper.vehicle?.plate || helper.car_details?.plate || '',
+    // Update legacy carData in sessionStorage for backward compatibilitya to always save after update
+    const carData = { data, sourceModule) {
+      plate: helper.vehicle?.plate_number || helper.vehicle?.plate || helper.car_details?.plate || '',: {}, fees: {}, taxes: {}, totals: {} };
       owner: helper.stakeholders?.owner?.name || helper.car_details?.owner || '',
-      manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
-      model: helper.vehicle?.model || helper.car_details?.model || '',
+      manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',if (section === 'fees') {
+      model: helper.vehicle?.model || helper.car_details?.model || '',data);
       year: helper.vehicle?.year || helper.car_details?.year || '',
       location: helper.stakeholders?.garage?.name || helper.car_details?.garageName || '',
       date: helper.case_info?.inspection_date || helper.car_details?.damageDate || ''
@@ -2288,42 +2112,42 @@ function updateLegacyCarData() {
     }
     
     sessionStorage.setItem('carData', dataString);
-    
+    t isUpdatingLegacyData = false;
     // Reset internal flag after brief delay
-    setTimeout(() => {
+    setTimeout(() => {() {
       if (window.dataDebugger) {
-        window.dataDebugger._internalUpdate = false;
-      }
+        window.dataDebugger._internalUpdate = false;{
+      }Data: Recursion detected, skipping legacy update');
     }, 100);
     
   } finally {
     isUpdatingLegacyData = false;
   }
 }
-
+Data in sessionStorage for backward compatibility
 // ============================================================================
-// NEW: ENHANCED WEBHOOK INTEGRATION FUNCTIONS
-// ============================================================================
-
-/**
- * Universal data processing function for webhook responses
- * Automatically detects data type and routes to appropriate processors
- */
+// NEW: ENHANCED WEBHOOK INTEGRATION FUNCTIONSlate_number || helper.vehicle?.plate || helper.car_details?.plate || '',
+// ============================================================================ders?.owner?.name || helper.car_details?.owner || '',
+icle?.manufacturer || helper.car_details?.manufacturer || '',
+/**| helper.car_details?.model || '',
+ * Universal data processing function for webhook responseselper.vehicle?.year || helper.car_details?.year || '',
+ * Automatically detects data type and routes to appropriate processorslocation: helper.stakeholders?.garage?.name || helper.car_details?.garageName || '',
+ */damageDate || ''
 export async function processIncomingData(data, webhookId = 'unknown') {
-  console.log('🔄 processIncomingData: Processing data from webhook:', webhookId);
-  console.log('📥 RAW WEBHOOK DATA:', JSON.stringify(data, null, 2));
+  console.log('🔄 processIncomingData: Processing data from webhook:', webhookId); 
+  console.log('📥 RAW WEBHOOK DATA:', JSON.stringify(data, null, 2));  // Add internal flag to prevent monitor from processing this
   console.log('📊 Current helper BEFORE processing:', JSON.parse(JSON.stringify(helper)));
-  
-  try {
+     
+  try {    // Temporarily mark as internal update
     const result = {
       success: true,
-      updatedSections: [],
+      updatedSections: [],  }
       warnings: [],
       timestamp: new Date().toISOString(),
       webhookId: webhookId
     };
-    
-    // ENHANCED: Always try to store any incoming data, even if detection fails
+     setTimeout(() => {
+    // ENHANCED: Always try to store any incoming data, even if detection fails    if (window.dataDebugger) {
     if (data && typeof data === 'object') {
       console.log('💾 FORCE STORING: Attempting to store all incoming data regardless of type detection');
       
@@ -2335,36 +2159,36 @@ export async function processIncomingData(data, webhookId = 'unknown') {
         result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       }
       
-      // Store raw data for debugging
+      // Store raw data for debugging=======
       updateHelper('raw_webhook_data', {
-        [`${webhookId}_${Date.now()}`]: data
-      }, 'webhook_storage');
-      result.updatedSections.push('raw_webhook_data');
+        [`${webhookId}_${Date.now()}`]: data**
+      }, 'webhook_storage'); * Universal data processing function for webhook responses
+      result.updatedSections.push('raw_webhook_data');ate processors
     }
-    
-    // CRITICAL: Check if data contains Hebrew text in Body field
-    if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('מס\' רכב')) {
-      console.log('📥 Detected Hebrew car data in Body field');
+    port async function processIncomingData(data, webhookId = 'unknown') {
+    // CRITICAL: Check if data contains Hebrew text in Body fieldook:', webhookId);
+    if (data && data.Body && typeof data.Body === 'string' && data.Body.includes('מס\' רכב')) {DATA:', JSON.stringify(data, null, 2));
+      console.log('📥 Detected Hebrew car data in Body field');sing:', JSON.parse(JSON.stringify(helper)));
       const parsedData = parseHebrewTextToObject(data.Body);
       processCarDetailsData(parsedData, `webhook_${webhookId}`);
       result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       console.log('✅ Processed Hebrew car data from Body');
-    }
-    // Check for array format with Body field
-    else if (Array.isArray(data) && data[0] && data[0].Body && typeof data[0].Body === 'string') {
+    } updatedSections: [],
+    // Check for array format with Body field   warnings: [],
+    else if (Array.isArray(data) && data[0] && data[0].Body && typeof data[0].Body === 'string') {    timestamp: new Date().toISOString(),
       console.log('📥 Detected array format with Body field');
       const parsedData = parseHebrewTextToObject(data[0].Body);
       processCarDetailsData(parsedData, `webhook_${webhookId}`);
-      result.updatedSections.push('vehicle', 'meta', 'stakeholders');
-      console.log('✅ Processed Hebrew car data from array Body');
-    }
+      result.updatedSections.push('vehicle', 'meta', 'stakeholders');   // ENHANCED: Always try to store any incoming data, even if detection fails
+      console.log('✅ Processed Hebrew car data from array Body');    if (data && typeof data === 'object') {
+    } incoming data regardless of type detection');
     // Standard car data detection - ENHANCED to handle any object with car-like fields
-    else if (data && typeof data === 'object' && (isCarData(data) || data.plate || data.owner)) {
-      console.log('📥 Detected direct car data object');
-      processCarDetailsData(data, `webhook_${webhookId}`);
+    else if (data && typeof data === 'object' && (isCarData(data) || data.plate || data.owner)) {    // Try to extract any car-related data
+      console.log('📥 Detected direct car data object'););
+      processCarDetailsData(data, `webhook_${webhookId}`);ata).length > 0) {
       result.updatedSections.push('vehicle', 'meta', 'stakeholders');
       console.log('✅ Processed car data');
-    }
+    }    result.updatedSections.push('vehicle', 'meta', 'stakeholders');
     
     if (isStakeholderData(data)) {
       const stakeholderType = detectStakeholderType(data);
@@ -2372,93 +2196,93 @@ export async function processIncomingData(data, webhookId = 'unknown') {
       result.updatedSections.push('stakeholders');
       console.log('✅ Processed stakeholder data:', stakeholderType);
     }
-    
+      }
     if (isLeviData(data)) {
-      processValuationData('levi_report', data, `webhook_${webhookId}`);
-      result.updatedSections.push('valuation', 'levisummary');
-      console.log('✅ Processed Levi valuation data');
-    }
-    
-    if (isPartsData(data)) {
+      processValuationData('levi_report', data, `webhook_${webhookId}`);dy field
+      result.updatedSections.push('valuation', 'levisummary');&& typeof data.Body === 'string' && data.Body.includes('מס\' רכב')) {
+      console.log('✅ Processed Levi valuation data');ected Hebrew car data in Body field');
+    }edData = parseHebrewTextToObject(data.Body);
+    webhookId}`);
+    if (isPartsData(data)) {ehicle', 'meta', 'stakeholders');
       processPartsData('parts_search', data, `webhook_${webhookId}`);
       result.updatedSections.push('parts_search');
       console.log('✅ Processed parts search data');
+    }se if (Array.isArray(data) && data[0] && data[0].Body && typeof data[0].Body === 'string') {
+    array format with Body field');
+    if (isInvoiceData(data)) {a[0].Body);
+      processInvoiceData(data, `webhook_${webhookId}`);rocessCarDetailsData(parsedData, `webhook_${webhookId}`);
+      result.updatedSections.push('documents', 'financials');esult.updatedSections.push('vehicle', 'meta', 'stakeholders');
+      console.log('✅ Processed invoice data');ed Hebrew car data from array Body');
     }
-    
-    if (isInvoiceData(data)) {
-      processInvoiceData(data, `webhook_${webhookId}`);
-      result.updatedSections.push('documents', 'financials');
-      console.log('✅ Processed invoice data');
-    }
-    
-    if (isDamageData(data)) {
-      processDamageData('damage_centers', data, `webhook_${webhookId}`);
+     // Standard car data detection - ENHANCED to handle any object with car-like fields
+    if (isDamageData(data)) {  else if (data && typeof data === 'object' && (isCarData(data) || data.plate || data.owner)) {
+      processDamageData('damage_centers', data, `webhook_${webhookId}`);📥 Detected direct car data object');
       result.updatedSections.push('damage_assessment', 'expertise');
       console.log('✅ Processed damage assessment data');
     }
-    
-    if (isDocumentData(data)) {
+       }
+    if (isDocumentData(data)) {    
       processDocumentData('images', data, `webhook_${webhookId}`);
       result.updatedSections.push('documents');
-      console.log('✅ Processed document data');
-    }
-    
+      console.log('✅ Processed document data');_${webhookId}`);
+    }    result.updatedSections.push('stakeholders');
+    sed stakeholder data:', stakeholderType);
     // Save updated helper to storage
     saveHelperToStorage();
     
-    // Update legacy data for backward compatibility
-    updateLegacyCarData();
-    
+    // Update legacy data for backward compatibilityi_report', data, `webhook_${webhookId}`);
+    updateLegacyCarData(); result.updatedSections.push('valuation', 'levisummary');
+        console.log('✅ Processed Levi valuation data');
     console.log('📊 Current helper AFTER processing:', JSON.parse(JSON.stringify(helper)));
     console.log('✅ processIncomingData: Successfully processed all data types');
     return result;
     
   } catch (error) {
-    console.error('❌ processIncomingData: Error processing data:', error);
-    throw error;
+    console.error('❌ processIncomingData: Error processing data:', error);     console.log('✅ Processed parts search data');
+    throw error;    }
   }
 }
-
-/**
+    processInvoiceData(data, `webhook_${webhookId}`);
+/**ncials');
  * Broadcasting system to notify all modules and floating screens of helper updates
  */
 export function broadcastHelperUpdate(updatedSections = [], source = 'unknown') {
   console.log('📡 Broadcasting helper update:', { updatedSections, source });
-  
-  try {
-    // Create custom event with helper data
+  cessDamageData('damage_centers', data, `webhook_${webhookId}`);
+  try {h('damage_assessment', 'expertise');
+    // Create custom event with helper datadamage assessment data');
     const updateEvent = new CustomEvent('helperUpdate', {
-      detail: {
-        helper: helper,
-        updatedSections: updatedSections,
+      detail: { 
+        helper: helper,   if (isDocumentData(data)) {
+        updatedSections: updatedSections,      processDocumentData('images', data, `webhook_${webhookId}`);
         source: source,
         timestamp: new Date().toISOString()
-      }
+      }  }
     });
     
     // Dispatch to document
     document.dispatchEvent(updateEvent);
-    
+    ate legacy data for backward compatibility
     // Update all module forms if functions exist
-    if (typeof window.refreshAllModuleForms === 'function') {
-      window.refreshAllModuleForms(helper);
-    }
+    if (typeof window.refreshAllModuleForms === 'function') { 
+      window.refreshAllModuleForms(helper);  console.log('📊 Current helper AFTER processing:', JSON.parse(JSON.stringify(helper)));
+    }essIncomingData: Successfully processed all data types');
     
-    // Trigger floating screen updates
-    triggerFloatingScreenUpdates(updatedSections);
-    
+    // Trigger floating screen updates to show captured data   
+    triggerFloatingScreenUpdates(updatedSections);  } catch (error) {
+    Error processing data:', error);
     // Update builders if they exist
-    updateBuildersFromHelper(updatedSections);
+    updateBuildersFromHelper(updatedSections);  }
     
     console.log('✅ Helper update broadcasted successfully');
     
   } catch (error) {
-    console.error('❌ Error broadcasting helper update:', error);
-  }
-}
+    console.error('❌ Error broadcasting manual override:', error);
+  }ort function broadcastHelperUpdate(updatedSections = [], source = 'unknown') {
+}console.log('📡 Broadcasting helper update:', { updatedSections, source });
 
-/**
- * Trigger floating screen displays based on data type
+/**try {
+ * Trigger floating screen displays based on data typeCreate custom event with helper data
  */
 function triggerFloatingScreenUpdates(updatedSections) {
   console.log('📱 Triggering floating screen updates for sections:', updatedSections);
@@ -2468,56 +2292,56 @@ function triggerFloatingScreenUpdates(updatedSections) {
     console.log('🚗 Auto-showing car details floating screen');
     
     // First refresh the data, then show the screen
-    if (typeof window.refreshCarData === 'function') {
-      window.refreshCarData();
+    if (typeof window.refreshCarData === 'function') { Dispatch to document
+      window.refreshCarData();document.dispatchEvent(updateEvent);
     }
-    
-    if (typeof window.showCarDetails === 'function') {
-      setTimeout(() => window.showCarDetails(), 100);
+    st
+    if (typeof window.showCarDetails === 'function') {if (typeof window.refreshAllModuleForms === 'function') {
+      setTimeout(() => window.showCarDetails(), 100);;
     } else if (typeof window.toggleCarDetails === 'function') {
       setTimeout(() => window.toggleCarDetails(), 100);
-    }
-  }
+    }/ Trigger floating screen updates to show captured data
+  }triggerFloatingScreenUpdates(updatedSections);
   
-  // Levi floating screen
-  if (updatedSections.includes('valuation') || updatedSections.includes('levisummary')) {
+  // Levi floating screen// Update builders if they exist
+  if (updatedSections.includes('valuation') || updatedSections.includes('levisummary')) {);
     console.log('📊 Auto-showing Levi report floating screen');
-    
+     broadcasted successfully');
     // First refresh the data, then show the screen
-    if (typeof window.refreshLeviData === 'function') {
-      window.refreshLeviData();
+    if (typeof window.refreshLeviData === 'function') {ch (error) {
+      window.refreshLeviData();error('❌ Error broadcasting manual override:', error);
     }
     
     if (typeof window.toggleLeviReport === 'function') {
       setTimeout(() => window.toggleLeviReport(), 100);
-    }
-  }
+    }* Trigger floating screen displays based on data type
+  } */
   
-  // Parts floating screen
+  // Parts floating screenpdates for sections:', updatedSections);
   if (updatedSections.includes('parts_search')) {
-    console.log('🔧 Auto-showing parts search floating screen');
-    
-    // First refresh the data, then show the screen
+    console.log('🔧 Auto-showing parts search floating screen');  // Car details floating screen
+    f (updatedSections.includes('vehicle') || updatedSections.includes('meta')) {
+    // First refresh the data, then show the screenn');
     if (typeof window.refreshPartsResults === 'function') {
-      window.refreshPartsResults();
+      window.refreshPartsResults(); // First refresh the data, then show the screen
     }
     
     if (typeof window.togglePartsSearch === 'function') {
       setTimeout(() => window.togglePartsSearch(), 100);
-    }
-  }
-  
-  // Invoice floating screen
+    }  if (typeof window.showCarDetails === 'function') {
+  }etTimeout(() => window.showCarDetails(), 100);
+  f window.toggleCarDetails === 'function') {
+  // Invoice floating screen=> window.toggleCarDetails(), 100);
   if (updatedSections.includes('documents') || updatedSections.includes('financials')) {
     console.log('📄 Auto-showing invoice floating screen');
     
     // Check if invoice floating screen exists
-    if (typeof window.toggleInvoiceDetails === 'function') {
-      setTimeout(() => window.toggleInvoiceDetails(), 100);
+    if (typeof window.toggleInvoiceDetails === 'function') {updatedSections.includes('valuation') || updatedSections.includes('levisummary')) {
+      setTimeout(() => window.toggleInvoiceDetails(), 100);console.log('📊 Auto-showing Levi report floating screen');
     }
-  }
+  }e screen
 }
-
+window.refreshLeviData();
 /**
  * Update builders with latest helper data
  */
@@ -2525,14 +2349,14 @@ function updateBuildersFromHelper(updatedSections) {
   console.log('🏗️ Updating builders with helper data for sections:', updatedSections);
   
   // Update estimate builder if exists
-  if (typeof window.updateEstimateBuilderFromHelper === 'function') {
-    window.updateEstimateBuilderFromHelper(helper);
-  }
+  if (typeof window.updateEstimateBuilderFromHelper === 'function') {arts floating screen
+    window.updateEstimateBuilderFromHelper(helper);_search')) {
+  }earch floating screen');
   
-  // Update expertise builder if exists
-  if (typeof window.updateExpertiseBuilderFromHelper === 'function') {
-    window.updateExpertiseBuilderFromHelper(helper);
-  }
+  // Update expertise builder if existsa, then show the screen
+  if (typeof window.updateExpertiseBuilderFromHelper === 'function') {n') {
+    window.updateExpertiseBuilderFromHelper(helper); window.refreshPartsResults();
+  }}
   
   // Update damage center wizard if exists
   if (typeof window.updateDamageCentersFromHelper === 'function') {
@@ -2540,8 +2364,8 @@ function updateBuildersFromHelper(updatedSections) {
   }
 }
 
-// ============================================================================
-// DATA EXTRACTION AND TYPE DETECTION FUNCTIONS
+// ============================================================================(updatedSections.includes('documents') || updatedSections.includes('financials')) {
+// DATA EXTRACTION AND TYPE DETECTION FUNCTIONSting screen');
 // ============================================================================
 
 /**
@@ -2554,208 +2378,202 @@ function extractCarDataFromAnyFormat(data) {
   
   // Handle different data structures
   if (Array.isArray(data)) {
-    console.log('📋 Processing array data');
+    console.log('📋 Processing array data');helper data for sections:', updatedSections);
     data.forEach((item, index) => {
-      const itemData = extractCarDataFromAnyFormat(item);
-      Object.assign(extracted, itemData);
+      const itemData = extractCarDataFromAnyFormat(item); Update estimate builder if exists
+      Object.assign(extracted, itemData);BuilderFromHelper === 'function') {
     });
   } else if (data && typeof data === 'object') {
     // Check all possible field variations
     const fieldMappings = {
-      // Plate number variations
-      plate: ['plate', 'plateNumber', 'plate_number', 'מספר_רכב', 'מס_רכב', 'license_plate'],
+      // Plate number variations(typeof window.updateExpertiseBuilderFromHelper === 'function') {
+      plate: ['plate', 'plateNumber', 'plate_number', 'מספר_רכב', 'מס_רכב', 'license_plate'],window.updateExpertiseBuilderFromHelper(helper);
       // Manufacturer variations  
       manufacturer: ['manufacturer', 'make', 'יצרן', 'שם_היצרן', 'חברה'],
       // Model variations
-      model: ['model', 'דגם', 'שם_דגם', 'model_name'],
-      // Year variations
+      model: ['model', 'דגם', 'שם_דגם', 'model_name'], 'function') {
+      // Year variationsindow.updateDamageCentersFromHelper(helper);
       year: ['year', 'שנת_יצור', 'model_year', 'שנה'],
       // Owner variations
       owner: ['owner', 'owner_name', 'בעלים', 'שם_בעלים'],
-      // KM variations
+      // KM variations=============================
       km: ['km', 'mileage', 'odo', 'קילומטראז', 'מספר_ק_מ'],
-      // Chassis variations
+      // Chassis variations==========================================================================
       chassis: ['chassis', 'chassis_number', 'מספר_שילדה', 'שילדה']
     };
-    
+     in any format
     // Extract fields using all possible variations
     Object.keys(fieldMappings).forEach(standardField => {
-      const variations = fieldMappings[standardField];
+      const variations = fieldMappings[standardField];sole.log('🔍 Attempting to extract car data from any format...');
       
       for (const variation of variations) {
         if (data[variation] !== undefined && data[variation] !== null && data[variation] !== '') {
           extracted[standardField] = data[variation];
           console.log(`✅ Found ${standardField}: ${data[variation]} (from field: ${variation})`);
-          break; // Use first match
-        }
-      }
+          break; // Use first matchonsole.log('📋 Processing array data');
+        }data.forEach((item, index) => {
+      }arDataFromAnyFormat(item);
     });
     
-    // Also check nested objects
-    Object.keys(data).forEach(key => {
-      if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+    // Also check nested objects{
+    Object.keys(data).forEach(key => {/ Check all possible field variations
+      if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {const fieldMappings = {
         const nestedData = extractCarDataFromAnyFormat(data[key]);
-        Object.assign(extracted, nestedData);
-      }
-    });
+        Object.assign(extracted, nestedData);ateNumber', 'plate_number', 'מספר_רכב', 'מס_רכב', 'license_plate'],
+      }  // Manufacturer variations  
+    }); 'שם_היצרן', 'חברה'],
     
-    // Check for Hebrew text that might contain car data
+    // Check for Hebrew text that might contain car data  model: ['model', 'דגם', 'שם_דגם', 'model_name'],
     Object.keys(data).forEach(key => {
       if (typeof data[key] === 'string' && data[key].includes('מס\' רכב')) {
-        console.log('📥 Found Hebrew text with car data, parsing...');
-        try {
-          const parsedData = parseHebrewTextToObject(data[key]);
+        console.log('📥 Found Hebrew text with car data, parsing...');iations
+        try {  owner: ['owner', 'owner_name', 'בעלים', 'שם_בעלים'],
+          const parsedData = parseHebrewTextToObject(data[key]);ons
           Object.assign(extracted, parsedData);
-        } catch (e) {
-          console.warn('Failed to parse Hebrew text:', e);
-        }
-      }
-    });
+        } catch (e) { variations
+          console.warn('Failed to parse Hebrew text:', e);   chassis: ['chassis', 'chassis_number', 'מספר_שילדה', 'שילדה']
+        }   };
+      }    
+    }); // Extract fields using all possible variations
   }
-  
+     const variations = fieldMappings[standardField];
   console.log('🎯 Extracted car data:', extracted);
   return extracted;
-}
-
-function isCarData(data) {
+}      if (data[variation] !== undefined && data[variation] !== null && data[variation] !== '') {
+   extracted[standardField] = data[variation];
+function isCarData(data) {eld}: ${data[variation]} (from field: ${variation})`);
   return !!(data.plate || data.manufacturer || data.model || data.owner || 
            data.car_details || data.vehicle_data || 
            data.יצרן || data.דגם || data.מספר_רכב || // Hebrew field names from Make.com
            (data.שם_היצרן && data.דגם)); // Alternative Hebrew field names
 }
 
-function isStakeholderData(data) {
-  return !!(data.garageName || data.garagePhone || data.garageEmail ||
-           data.insuranceCompany || data.agentName || 
-           data.ownerPhone || data.ownerAddress);
+function isStakeholderData(data) {ect.keys(data).forEach(key => {
+  return !!(data.garageName || data.garagePhone || data.garageEmail ||f (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+           data.insuranceCompany || data.agentName ||     const nestedData = extractCarDataFromAnyFormat(data[key]);
+           data.ownerPhone || data.ownerAddress);cted, nestedData);
 }
-
+});
 function isLeviData(data) {
   return !!(data.levi_report || data.levi_data || data.base_price || 
            data.final_price || data.adjustments || data.קוד_דגם ||
-           data.מחיר_בסיס || data.מחיר_סופי_לרכב);
-}
+           data.מחיר_בסיס || data.מחיר_סופי_לרכב); if (typeof data[key] === 'string' && data[key].includes('מס\' רכב')) {
+}    console.log('📥 Found Hebrew text with car data, parsing...');
 
-function isPartsData(data) {
-  return !!(data.parts_results || data.search_results || 
+function isPartsData(data) {ct(data[key]);
+  return !!(data.parts_results || data.search_results ||       Object.assign(extracted, parsedData);
            Array.isArray(data.results) || data.part_name || data.parts);
-}
-
+} text:', e);
+    }
 function isInvoiceData(data) {
-  return !!(data.invoice_number || data.invoice_data || data.מספר_חשבונית ||
+  return !!(data.invoice_number || data.invoice_data || data.מספר_חשבונית ||});
            data.garage_name || data.parts_total || data.works_total);
 }
-
-function isDamageData(data) {
-  return !!(data.damage_centers || data.damage_blocks || data.expertise ||
+onsole.log('🎯 Extracted car data:', extracted);
+function isDamageData(data) { return extracted;
+  return !!(data.damage_centers || data.damage_blocks || data.expertise ||}
            data.centers || Array.isArray(data.damages));
 }
-
+eturn !!(data.plate || data.manufacturer || data.model || data.owner || 
 function isDocumentData(data) {
-  return !!(data.images || data.photo_count || data.uploaded_files ||
-           Array.isArray(data.files));
+  return !!(data.images || data.photo_count || data.uploaded_files ||om
+           Array.isArray(data.files));         (data.שם_היצרן && data.דגם)); // Alternative Hebrew field names
 }
 
 function detectStakeholderType(data) {
-  if (data.garageName || data.garagePhone || data.garageEmail) return 'garage';
-  if (data.insuranceCompany || data.agentName) return 'insurance';
+  if (data.garageName || data.garagePhone || data.garageEmail) return 'garage';turn !!(data.garageName || data.garagePhone || data.garageEmail ||
+  if (data.insuranceCompany || data.agentName) return 'insurance';|| 
   if (data.ownerPhone || data.ownerAddress) return 'client';
   return 'general';
 }
-
-// ============================================================================
-// MANUAL INPUT OVERRIDE SYSTEM
+tion isLeviData(data) {
+// ============================================================================.base_price || 
+// MANUAL INPUT OVERRIDE SYSTEMta.קוד_דגם ||
 // ============================================================================
 
 /**
- * Manual Input Override System
- * Ensures manual user input always takes precedence over automatic data
- * Tracks manual modifications and prevents automatic overrides
+ * Manual Input Override Systemction isPartsData(data) {
+ * Ensures manual user input always takes precedence over automatic datareturn !!(data.parts_results || data.search_results || 
+ * Tracks manual modifications and prevents automatic overridesdata.results) || data.part_name || data.parts);
  */
 
-// Track which fields have been manually modified
-let manualOverrides = {
-  fields: new Set(), // Set of field keys that have been manually modified
+// Track which fields have been manually modifiedtion isInvoiceData(data) {
+let manualOverrides = {a || data.מספר_חשבונית ||
+  fields: new Set(), // Set of field keys that have been manually modified.works_total);
   timestamps: {}, // Timestamp of when each field was manually modified
   sources: {} // Source of manual modification (which module/page)
-};
-
-/**
+};tion isDamageData(data) {
+ data.expertise ||
+/**;
  * Mark a field as manually modified
  * This prevents automatic systems from overriding the user's input
- */
-export function markFieldAsManuallyModified(fieldKey, value, source = 'unknown') {
+ */nction isDocumentData(data) {
+export function markFieldAsManuallyModified(fieldKey, value, source = 'unknown') { data.photo_count || data.uploaded_files ||
   try {
     console.log(`🔒 Manual override: ${fieldKey} = ${value} (source: ${source})`);
     
     // Add to manual overrides tracking
-    manualOverrides.fields.add(fieldKey);
-    manualOverrides.timestamps[fieldKey] = new Date().toISOString();
-    manualOverrides.sources[fieldKey] = source;
-    
+    manualOverrides.fields.add(fieldKey);il) return 'garage';
+    manualOverrides.timestamps[fieldKey] = new Date().toISOString();.agentName) return 'insurance';
+    manualOverrides.sources[fieldKey] = source;(data.ownerPhone || data.ownerAddress) return 'client';
+    turn 'general';
     // Update the helper with manual value
     updateHelperField(fieldKey, value, 'manual_input');
-    
-    // Save manual overrides to sessionStorage for persistence
-    sessionStorage.setItem('manualOverrides', JSON.stringify({
-      fields: Array.from(manualOverrides.fields),
-      timestamps: manualOverrides.timestamps,
-      sources: manualOverrides.sources
-    }));
-    
-    // Broadcast that this field is now manually controlled
+    saveHelperToStorage();==========================================================================
+    MANUAL INPUT OVERRIDE SYSTEM
+    // Broadcast that this field is now manually controlled ============================================================================
     broadcastManualOverride(fieldKey, value, source);
     
     console.log(`✅ Field ${fieldKey} marked as manually modified`);
-    
-  } catch (error) {
+    nsures manual user input always takes precedence over automatic data
+  } catch (error) {tomatic overrides
     console.error('❌ Error marking field as manually modified:', error);
   }
-}
-
-/**
- * Check if a field has been manually modified
- * Returns true if field should not be automatically updated
+}ack which fields have been manually modified
+ manualOverrides = {
+/** fields: new Set(), // Set of field keys that have been manually modified
+ * Check if a field has been manually modified  timestamps: {}, // Timestamp of when each field was manually modified
+ * Returns true if field should not be automatically updatedources: {} // Source of manual modification (which module/page)
  */
 export function isFieldManuallyModified(fieldKey) {
   return manualOverrides.fields.has(fieldKey);
 }
-
+ This prevents automatic systems from overriding the user's input
 /**
- * Get all manually modified fields
+ * Get all manually modified fields 'unknown') {
  */
-export function getManuallyModifiedFields() {
-  return {
+export function getManuallyModifiedFields() { console.log(`🔒 Manual override: ${fieldKey} = ${value} (source: ${source})`);
+  return {  
     fields: Array.from(manualOverrides.fields),
     timestamps: manualOverrides.timestamps,
-    sources: manualOverrides.sources
-  };
-}
+    sources: manualOverrides.sources).toISOString();
+  }; manualOverrides.sources[fieldKey] = source;
+}  
 
 /**
  * Clear manual override for a specific field
- * This allows automatic updates to resume for that field
- */
-export function clearManualOverride(fieldKey) {
+ * This allows automatic updates to resume for that field // Save manual overrides to sessionStorage for persistence
+ */   sessionStorage.setItem('manualOverrides', JSON.stringify({
+export function clearManualOverride(fieldKey) {      fields: Array.from(manualOverrides.fields),
   console.log(`🔓 Clearing manual override for field: ${fieldKey}`);
   
   manualOverrides.fields.delete(fieldKey);
-  delete manualOverrides.timestamps[fieldKey];
-  delete manualOverrides.sources[fieldKey];
+  delete manualOverrides.timestamps[fieldKey];    
+  delete manualOverrides.sources[fieldKey]; // Broadcast that this field is now manually controlled
   
-  // Update sessionStorage
-  sessionStorage.setItem('manualOverrides', JSON.stringify({
+  // Update sessionStorage 
+  sessionStorage.setItem('manualOverrides', JSON.stringify({as manually modified`);
     fields: Array.from(manualOverrides.fields),
-    timestamps: manualOverrides.timestamps,
-    sources: manualOverrides.sources
-  }));
+    timestamps: manualOverrides.timestamps,} catch (error) {
+    sources: manualOverrides.sourcesror marking field as manually modified:', error);
+  }));}
   
   console.log(`✅ Manual override cleared for ${fieldKey}`);
 }
-
-/**
+ly modified
+/**ted
  * Reset all manual overrides
- * This allows all automatic updates to resume
+ * This allows all automatic updates to resumefunction isFieldManuallyModified(fieldKey) {
  */
 export function resetAllManualOverrides() {
   console.log('🔄 Resetting all manual overrides');
@@ -2765,259 +2583,269 @@ export function resetAllManualOverrides() {
     timestamps: {},
     sources: {}
   };
-  
+  errides.timestamps,
   sessionStorage.removeItem('manualOverrides');
   console.log('✅ All manual overrides reset');
 }
 
 /**
- * Load manual overrides from sessionStorage on page load
+ * Load manual overrides from sessionStorage on page loadr a specific field
  */
 export function loadManualOverrides() {
-  try {
-    const stored = sessionStorage.getItem('manualOverrides');
+  try {rt function clearManualOverride(fieldKey) {
+    const stored = sessionStorage.getItem('manualOverrides');d: ${fieldKey}`);
     if (stored) {
       const data = JSON.parse(stored);
-      manualOverrides.fields = new Set(data.fields || []);
+      manualOverrides.fields = new Set(data.fields || []);te manualOverrides.timestamps[fieldKey];
       manualOverrides.timestamps = data.timestamps || {};
       manualOverrides.sources = data.sources || {};
       
       console.log(`📋 Loaded ${manualOverrides.fields.size} manual overrides from storage`);
-    }
-  } catch (error) {
-    console.error('❌ Error loading manual overrides:', error);
+    }des.fields),
+  } catch (error) {tamps: manualOverrides.timestamps,
+    console.error('❌ Error loading manual overrides:', error);rces: manualOverrides.sources
   }
 }
-
+ cleared for ${fieldKey}`);
 /**
  * Broadcast manual override to other modules/screens
  */
 function broadcastManualOverride(fieldKey, value, source) {
-  try {
+  try { allows all automatic updates to resume
     // Broadcast to floating screens
-    if (typeof window.broadcastManualOverride === 'function') {
+    if (typeof window.broadcastManualOverride === 'function') {rt function resetAllManualOverrides() {
       window.broadcastManualOverride(fieldKey, value, source);
     }
     
     // Trigger helper update broadcast
-    broadcastHelperUpdate([getFieldSection(fieldKey)], 'manual_override');
+    broadcastHelperUpdate([getFieldSection(fieldKey)], 'manual_override');s: {},
     
   } catch (error) {
     console.error('❌ Error broadcasting manual override:', error);
   }
-}
+}.log('✅ All manual overrides reset');
 
 /**
  * Basic helper field update function
- * Updates a specific field in the helper object structure
+ * Updates a specific field in the helper object structure Load manual overrides from sessionStorage on page load
  */
-export function updateHelperField(fieldKey, value, source = 'unknown') {
-  try {
-    console.log(`🔧 updateHelperField: Updating ${fieldKey} = ${value} (source: ${source})`);
+export function updateHelperField(fieldKey, value, source = 'unknown') {dManualOverrides() {
+  try { try {
+    console.log(`🔧 updateHelperField: Updating ${fieldKey} = ${value} (source: ${source})`);    const stored = sessionStorage.getItem('manualOverrides');
     
     // Get the section where this field belongs
-    const section = getFieldSection(fieldKey);
+    const section = getFieldSection(fieldKey);| []);
     
     if (!section) {
-      console.warn(`⚠️ updateHelperField: No section mapping found for field ${fieldKey}`);
-      return false;
+      console.warn(`⚠️ updateHelperField: No section mapping found for field ${fieldKey}`);     
+      return false;      console.log(`📋 Loaded ${manualOverrides.fields.size} manual overrides from storage`);
     }
     
-    // Ensure the section exists in helper
+    // Ensure the section exists in helper error);
     if (!helper[section]) {
       helper[section] = {};
     }
     
     // Update the field in the appropriate section
     helper[section][fieldKey] = value;
-    
-    // Also update legacy locations for backward compatibility
-    if (['plate', 'manufacturer', 'model', 'year', 'km', 'chassis'].includes(fieldKey)) {
-      if (!helper.car_details) helper.car_details = {};
-      helper.car_details[fieldKey] = value;
+    source) {
+    // Also update legacy locations for backward compatibility try {
+    if (['plate', 'manufacturer', 'model', 'year', 'km', 'chassis'].includes(fieldKey)) {    // Broadcast to floating screens
+      if (!helper.car_details) helper.car_details = {};astManualOverride === 'function') {
+      helper.car_details[fieldKey] = value;rce);
       if (fieldKey === 'plate') {
-        if (!helper.vehicle) helper.vehicle = {};
-        helper.vehicle.plate_number = value;
-      }
+        if (!helper.vehicle) helper.vehicle = {};   
+        helper.vehicle.plate_number = value;    // Trigger helper update broadcast
+      }FieldSection(fieldKey)], 'manual_override');
     }
     
-    // Save to storage
-    saveHelperToStorage();
+    // Always save after update   console.error('❌ Error broadcasting manual override:', error);
+    saveHelperToStorage();  }
     
     console.log(`✅ updateHelperField: Successfully updated ${fieldKey} in ${section}`);
     return true;
-    
-  } catch (error) {
+    * Basic helper field update function
+  } catch (error) { * Updates a specific field in the helper object structure
     console.error(`❌ updateHelperField: Error updating ${fieldKey}:`, error);
-    return false;
+    return false;) {
   }
-}
-
-/**
+}   console.log(`🔧 updateHelperField: Updating ${fieldKey} = ${value} (source: ${source})`);
+    
+/**d belongs
  * Smart update helper field - respects manual overrides
  * Only updates field if it hasn't been manually modified
  */
-export function updateHelperFieldSafe(fieldKey, value, source = 'automatic') {
-  // Check if field has been manually modified
-  if (isFieldManuallyModified(fieldKey)) {
+export function updateHelperFieldSafe(fieldKey, value, source = 'automatic') {`⚠️ updateHelperField: No section mapping found for field ${fieldKey}`);
+  // Check if field has been manually modified     return false;
+  if (isFieldManuallyModified(fieldKey)) {    }
     console.log(`⏭️ Skipping automatic update for ${fieldKey} - manually modified by ${manualOverrides.sources[fieldKey]}`);
-    return false; // Update was blocked
+    return false; // Update was blockeds in helper
   }
-  
-  // Field is safe to update automatically
+        helper[section] = {};
+  // Field is safe to update automatically }
   updateHelperField(fieldKey, value, source);
   console.log(`✅ Automatic update applied to ${fieldKey}`);
   return true; // Update was applied
-}
-
-/**
- * Get the section name for a field key
+} 
+    // Also update legacy locations for backward compatibility
+/**, 'km', 'chassis'].includes(fieldKey)) {
+ * --- FIX: getFieldSection covers more field keys, including Hebrew ---etails) helper.car_details = {};
  */
 function getFieldSection(fieldKey) {
   const sectionMap = {
-    // Meta fields
-    plate: 'meta',
-    damageDate: 'meta',
+    // Meta fields      helper.vehicle.plate_number = value;
+    plate: 'meta',      }
+    damageDate: 'meta', }
     location: 'meta',
     
-    // Vehicle fields
+    // Vehicle fields saveHelperToStorage();
     manufacturer: 'vehicle',
-    model: 'vehicle',
+    model: 'vehicle',sole.log(`✅ updateHelperField: Successfully updated ${fieldKey} in ${section}`);
     year: 'vehicle',
     odo: 'vehicle',
     km: 'vehicle',
-    chassis: 'vehicle',
+    chassis: 'vehicle',rror updating ${fieldKey}:`, error);
     model_code: 'vehicle',
     fuel_type: 'vehicle',
     engine_volume: 'vehicle',
     ownership_type: 'vehicle',
     market_value: 'vehicle',
-    
+    mart update helper field - respects manual overrides
     // Stakeholder fields
     owner: 'stakeholders',
-    ownerPhone: 'stakeholders',
-    ownerAddress: 'stakeholders',
-    garageName: 'stakeholders',
-    garagePhone: 'stakeholders',
-    garageEmail: 'stakeholders',
+    ownerPhone: 'stakeholders',alue, source = 'automatic') {
+    ownerAddress: 'stakeholders',d
+    garageName: 'stakeholders',)) {
+    garagePhone: 'stakeholders',ole.log(`⏭️ Skipping automatic update for ${fieldKey} - manually modified by ${manualOverrides.sources[fieldKey]}`);
+    garageEmail: 'stakeholders',return false; // Update was blocked
     agentName: 'stakeholders',
     insurance_agent_phone: 'stakeholders',
-    insuranceCompany: 'stakeholders',
+    insuranceCompany: 'stakeholders', Field is safe to update automatically
     
-    // Car details (legacy compatibility)
-    damageType: 'car_details'
-  };
-  
-  return sectionMap[fieldKey] || 'car_details';
+    // Car details (legacy compatibility)nsole.log(`✅ Automatic update applied to ${fieldKey}`);
+    damageType: 'car_details',pdate was applied
+    
+    // Hebrew field keys (add more as needed)
+    'מספר_רכב': 'meta',**
+    'יצרן': 'vehicle', * Get the section name for a field key
+    'דגם': 'vehicle',
+    'שנת_יצור': 'vehicle',
+    'בעלים': 'stakeholders',
+    'שם_בעלים': 'stakeholders', // Meta fields
+    'קילומטראז': 'vehicle',
+    'מספר_שילדה': 'vehicle'
+  };   location: 'meta',
+      
+  return sectionMap[fieldKey] || 'car_details'; // Vehicle fields
 }
-
+ model: 'vehicle',
 // Initialize manual overrides when helper loads
-loadManualOverrides();
+loadManualOverrides();vehicle',
 
 // ============================================================================
 // BRIDGE FUNCTIONS - Legacy System Compatibility
-// ============================================================================
-
-/**
- * Bridge function for legacy updateCaseData calls
+// ============================================================================fuel_type: 'vehicle',
+   engine_volume: 'vehicle',
+/**    ownership_type: 'vehicle',
+ * Bridge function for legacy updateCaseData calls market_value: 'vehicle',
  * Routes old module calls to new helper system
  */
-window.updateCaseData = function(section, data, sourceModule = 'legacy') {
+window.updateCaseData = function(section, data, sourceModule = 'legacy') { owner: 'stakeholders',
   console.log(`🌉 BRIDGE: updateCaseData(${section}) called from ${sourceModule}`, data);
   SystemTracker.log('bridge_updateCaseData_executed', { section, sourceModule, dataKeys: Object.keys(data) });
-  
+    garageName: 'stakeholders',
   try {
     // Route to appropriate helper update function
     switch (section) {
-      case 'stakeholders':
-      case 'vehicle':
+      case 'stakeholders':  insurance_agent_phone: 'stakeholders',
+      case 'vehicle':keholders',
       case 'meta':
       case 'car_details':
         const result = updateHelper(section, data, sourceModule);
         SystemTracker.log('bridge_updateHelper_result', { section, result, helperPlate: helper.meta?.plate });
         if (result) {
-          console.log(`✅ BRIDGE: Successfully routed ${section} data to helper`);
+          console.log(`✅ BRIDGE: Successfully routed ${section} data to helper`);return sectionMap[fieldKey] || 'car_details';
           // Trigger module refresh after update
           if (typeof window.refreshAllModuleForms === 'function') {
-            window.refreshAllModuleForms();
-          }
+            window.refreshAllModuleForms();// Initialize manual overrides when helper loads
+          }dManualOverrides();
         }
-        return result;
-        
-      default:
+        return result;=================================
+        BRIDGE FUNCTIONS - Legacy System Compatibility
+      default:====================================
         console.warn(`⚠️ BRIDGE: Unknown section ${section}, routing to general helper update`);
-        return updateHelper('general', data, sourceModule);
-    }
-    
+        return updateHelper('general', data, sourceModule);*
+    }r legacy updateCaseData calls
+    alls to new helper system
   } catch (error) {
-    console.error(`❌ BRIDGE: Error in updateCaseData for ${section}:`, error);
-    return false;
-  }
+    console.error(`❌ BRIDGE: Error in updateCaseData for ${section}:`, error);seData = function(section, data, sourceModule = 'legacy') {
+    return false;nsole.log(`🌉 BRIDGE: updateCaseData(${section}) called from ${sourceModule}`, data);
+  }SystemTracker.log('bridge_updateCaseData_executed', { section, sourceModule, dataKeys: Object.keys(data) });
 };
 
-/**
- * Bridge function for legacy receiveCarData calls  
- * Routes open-cases.html calls to new helper system
+/**   // Route to appropriate helper update function
+ * Bridge function for legacy receiveCarData calls      switch (section) {
+ * Routes open-cases.html calls to new helper system   case 'stakeholders':
  */
-window.receiveCarData = async function(data, source = 'make_com') {
+window.receiveCarData = async function(data, source = 'make_com') {   case 'meta':
   console.log(`🌉 BRIDGE: receiveCarData called from ${source}`, data);
-  
-  try {
-    // Process the incoming data through the new system
-    const result = await processIncomingData(data, source);
+   const result = updateHelper(section, data, sourceModule);
+  try {tion, result, helperPlate: helper.meta?.plate });
+    // Process the incoming data through the new systemt) {
+    const result = await processIncomingData(data, source);ssfully routed ${section} data to helper`);
     
-    if (result && result.success) {
+    if (result && result.success) {nction') {
       console.log(`✅ BRIDGE: Successfully processed car data through helper system`);
-      
+          }
       // Broadcast update to all modules and floating screens
-      broadcastHelperUpdate(result.updatedSections || ['vehicle', 'meta', 'stakeholders'], source);
+      broadcastHelperUpdate(result.updatedSections || ['vehicle', 'meta', 'stakeholders'], source);   return result;
       
       // Trigger module refresh
-      if (typeof window.refreshAllModuleForms === 'function') {
-        window.refreshAllModuleForms();
-      }
-      
+      if (typeof window.refreshAllModuleForms === 'function') {     console.warn(`⚠️ BRIDGE: Unknown section ${section}, routing to general helper update`);
+        window.refreshAllModuleForms();       return updateHelper('general', data, sourceModule);
+      }    }
+       
       return true;
-    } else {
+    } else { console.error(`❌ BRIDGE: Error in updateCaseData for ${section}:`, error);
       console.error(`❌ BRIDGE: Failed to process car data through helper system`);
       return false;
     }
     
   } catch (error) {
-    console.error(`❌ BRIDGE: Error in receiveCarData:`, error);
-    
+    console.error(`❌ BRIDGE: Error in receiveCarData:`, error);idge function for legacy receiveCarData calls  
+    outes open-cases.html calls to new helper system
     // Fallback: try to update helper directly
     try {
-      updateHelper('car_details', data, source);
+      updateHelper('car_details', data, source);nsole.log(`🌉 BRIDGE: receiveCarData called from ${source}`, data);
       return true;
     } catch (fallbackError) {
-      console.error(`❌ BRIDGE: Fallback also failed:`, fallbackError);
-      return false;
-    }
-  }
-};
+      console.error(`❌ BRIDGE: Fallback also failed:`, fallbackError); // Process the incoming data through the new system
+      return false;   const result = await processIncomingData(data, source);
+    }    
+  } if (result && result.success) {
+};ully processed car data through helper system`);
 
-console.log('🌉 Bridge functions initialized: updateCaseData, receiveCarData');
-
+console.log('🌉 Bridge functions initialized: updateCaseData, receiveCarData');   // Broadcast update to all modules and floating screens
+, 'stakeholders'], source);
 // ============================================================================
 // UNIVERSAL MODULE AUTO-POPULATION FRAMEWORK
-// ============================================================================
+// ============================================================================  if (typeof window.refreshAllModuleForms === 'function') {
 
 /**
- * Universal function to populate all module forms from helper data
+ * Universal function to populate all module forms from helper data  
  * Called whenever helper is updated to sync all UI elements
  */
-export function refreshAllModuleForms(helperData = helper) {
-  console.log('🔄 refreshAllModuleForms: Updating all module forms with helper data');
-  
+export function refreshAllModuleForms(helperData = helper) {(`❌ BRIDGE: Failed to process car data through helper system`);
+  console.log('🔄 refreshAllModuleForms: Updating all module forms with helper data'); return false;
+  }
   // HIDDEN DEBUG: Track what data is available for refresh
   console.log('🐛 DEBUG refreshAllModuleForms:', {
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString(),: Error in receiveCarData:`, error);
     helperDataProvided: !!helperData,
-    helperDataKeys: Object.keys(helperData || {}),
+    helperDataKeys: Object.keys(helperData || {}),// Fallback: try to update helper directly
     vehicleData: helperData?.vehicle,
-    metaData: helperData?.meta,
-    stakeholdersData: helperData?.stakeholders,
+    metaData: helperData?.meta,, source);
+    stakeholdersData: helperData?.stakeholders,  return true;
     currentHelper: helper,
     currentPage: window.location.pathname.split('/').pop()
   });
@@ -3025,93 +2853,280 @@ export function refreshAllModuleForms(helperData = helper) {
   try {
     // General Info module fields
     populateGeneralInfoFields(helperData);
-    
+    .log('🌉 Bridge functions initialized: updateCaseData, receiveCarData');
     // Car details fields (floating screens and forms)
-    populateCarDetailsFields(helperData);
-    
-    // Damage center fields
+    populateCarDetailsFields(helperData);===========================================================================
+    TO-POPULATION FRAMEWORK
+    // Damage center fields=====================================================
     populateDamageCenterFields(helperData);
     
-    // Parts search fields
-    populatePartsFields(helperData);
+    // Parts search fieldsction to populate all module forms from helper data
+    populatePartsFields(helperData);alled whenever helper is updated to sync all UI elements
     
     // Fee module fields
-    populateFeeFields(helperData);
+    populateFeeFields(helperData); refreshAllModuleForms: Updating all module forms with helper data');
     
-    // Levi report fields
-    populateLeviFields(helperData);
-    
+    // Levi report fields // HIDDEN DEBUG: Track what data is available for refresh
+    populateLeviFields(helperData);  console.log('🐛 DEBUG refreshAllModuleForms:', {
+     timestamp: new Date().toISOString(),
     // Invoice fields
     populateInvoiceFields(helperData);
-    
+     vehicleData: helperData?.vehicle,
     console.log('✅ All module forms updated successfully');
-    
+    ,
   } catch (error) {
     console.error('❌ Error refreshing module forms:', error);
   }
 }
-
+try {
 /**
  * Populate General Info form fields
  */
-function populateGeneralInfoFields(helperData) {
-  console.log('🔄 populateGeneralInfoFields called with helper data:', helperData);
+function populateGeneralInfoFields(helperData) {screens and forms)
+  console.log('🔄 populateGeneralInfoFields called with helper data:', helperData);   populateCarDetailsFields(helperData);
+      
+  // CRITICAL FIX: Check which page we're on and use appropriate mappings // Damage center fields
+  const currentPage = window.location.pathname.split('/').pop();ta);
+  console.log('📄 Current page:', currentPage); 
   
-  // CRITICAL FIX: Check which page we're on and use appropriate mappings
-  const currentPage = window.location.pathname.split('/').pop();
-  console.log('📄 Current page:', currentPage);
-  
-  // Fields that exist on general_info.html page
+  // Fields that exist on general_info.html pages(helperData);
   const generalInfoPageMappings = {
-    // Fields that actually exist on general_info.html
-    'odo': helperData.vehicle?.km || helperData.car_details?.km || '',
+    // Fields that actually exist on general_info.htmlfields
+    'odo': helperData.vehicle?.km || helperData.car_details?.km || '',elperData);
     'damageDate': helperData.case_info?.damage_date || helperData.meta?.damage_date || '',
-    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
-    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',
+    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',// Levi report fields
+    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',s(helperData);
     
     // Garage information
-    'garageName': helperData.stakeholders?.garage?.name || '',
+    'garageName': helperData.stakeholders?.garage?.name || '',ields(helperData);
     'garagePhone': helperData.stakeholders?.garage?.phone || '',
-    'garageEmail': helperData.stakeholders?.garage?.email || '',
+    'garageEmail': helperData.stakeholders?.garage?.email || '', All module forms updated successfully');
     
     // Insurance information
-    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',
+    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',r refreshing module forms:', error);
     'insuranceEmail': helperData.stakeholders?.insurance?.email || '',
     'agentName': helperData.stakeholders?.insurance?.agent?.name || '',
     'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',
     'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',
-    
+    form fields
     // Damage type
-    'damageType': helperData.case_info?.damage_type || ''
-  };
+    'damageType': helperData.case_info?.damage_type || ''lds(helperData) {
+  };InfoFields called with helper data:', helperData);
   
-  // Generic mappings for other pages (like floating screens)
-  const genericMappings = {
-    'plate': helperData.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',
+  // Generic mappings for other pages (like floating screens)age we're on and use appropriate mappings
+  const genericMappings = {ation.pathname.split('/').pop();
+    'plate': helperData.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',:', currentPage);
     'owner': helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || helperData.car_details?.owner || '',
-    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
-    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',
-    'garageName': helperData.stakeholders?.garage?.name || '',
-    'garagePhone': helperData.stakeholders?.garage?.phone || '',
-    'garageEmail': helperData.stakeholders?.garage?.email || '',
-    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',
-    'insuranceEmail': helperData.stakeholders?.insurance?.email || '',
-    'agentName': helperData.stakeholders?.insurance?.agent?.name || '',
-    'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',
-    'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',
-    'damageType': helperData.case_info?.damage_type || '',
-    'damageDate': helperData.case_info?.damage_date || ''
+    'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',o.html page
+    'ownerAddress': helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',nst generalInfoPageMappings = {
+    'garageName': helperData.stakeholders?.garage?.name || '',ral_info.html
+    'garagePhone': helperData.stakeholders?.garage?.phone || '',?.km || helperData.car_details?.km || '',
+    'garageEmail': helperData.stakeholders?.garage?.email || '','damageDate': helperData.case_info?.damage_date || helperData.meta?.damage_date || '',
+    'insuranceCompany': helperData.stakeholders?.insurance?.company || '',  'ownerPhone': helperData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
+    'insuranceEmail': helperData.stakeholders?.insurance?.email || '',ner?.address || helperData.stakeholders?.owner_address || '',
+    'agentName': helperData.stakeholders?.insurance?.agent?.name || '',   
+    'agentPhone': helperData.stakeholders?.insurance?.agent?.phone || '',    // Garage information
+    'agentEmail': helperData.stakeholders?.insurance?.agent?.email || '',e?.name || '',
+    'damageType': helperData.case_info?.damage_type || '',perData.stakeholders?.garage?.phone || '',
+    'damageDate': helperData.case_info?.damage_date || ''    'garageEmail': helperData.stakeholders?.garage?.email || '',
   };
   
   // Use appropriate mappings based on current page
-  const fieldMappings = currentPage === 'general_info.html' ? generalInfoPageMappings : genericMappings;
-  
-  populateFormFields(fieldMappings, 'general_info');
-}
-
+  const fieldMappings = currentPage === 'general_info.html' ? generalInfoPageMappings : genericMappings;    'insuranceEmail': helperData.stakeholders?.insurance?.email || '',
+   'agentName': helperData.stakeholders?.insurance?.agent?.name || '',
+  populateFormFields(fieldMappings, 'general_info');ce?.agent?.phone || '',
+}rance?.agent?.email || '',
+ 
 /**
  * Populate Car Details fields in floating screens and forms
  */
+function populateCarDetailsFields(helperData) {
+  console.log('🔄 populateCarDetailsFields called with helper data:', helperData);neric mappings for other pages (like floating screens)
+  
+  const fieldMappings = {a.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',
+    'plate': helperData.vehicle?.plate || helperData.meta?.plate || helperData.car_details?.plate || '',akeholders?.owner?.name || helperData.stakeholders?.owner_name || helperData.car_details?.owner || '',
+    'manufacturer': helperData.vehicle?.manufacturer || helperData.car_details?.manufacturer || '',perData.stakeholders?.owner?.phone || helperData.stakeholders?.owner_phone || '',
+    'model': helperData.vehicle?.model || helperData.car_details?.model || '',: helperData.stakeholders?.owner?.address || helperData.stakeholders?.owner_address || '',
+    'year': helperData.vehicle?.year || helperData.car_details?.year || '',ata.stakeholders?.garage?.name || '',
+    'chassis': helperData.vehicle?.chassis || helperData.car_details?.chassis || '',
+    'km': helperData.vehicle?.km || helperData.car_details?.km || '',
+    'owner': helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || helperData.car_details?.owner || '',': helperData.stakeholders?.insurance?.company || '',
+    'trim': helperData.vehicle?.trim || '',
+    'engine_volume': helperData.vehicle?.engine_volume || '',nce?.agent?.name || '',
+    'fuel_type': helperData.vehicle?.fuel_type || '',|| '',
+    'ownership_type': helperData.vehicle?.ownership_type || ''insurance?.agent?.email || '',
+  };Type': helperData.case_info?.damage_type || '',
+  geDate': helperData.case_info?.damage_date || ''
+  populateFormFields(fieldMappings, 'car_details');
+}
+priate mappings based on current page
+/**appings;
+ * Populate Damage Center fields
+ */ulateFormFields(fieldMappings, 'general_info');
+function populateDamageCenterFields(helperData) {
+  if (helperData.damage_assessment?.centers) {
+    // Trigger damage center UI update if function exists
+    if (typeof window.updateDamageCentersFromHelper === 'function') {etails fields in floating screens and forms
+      window.updateDamageCentersFromHelper(helperData.damage_assessment.centers);
+    }nction populateCarDetailsFields(helperData) {
+  }  console.log('🔄 populateCarDetailsFields called with helper data:', helperData);
+}
+
+/**.meta?.plate || helperData.car_details?.plate || '',
+ * Populate Parts search fields 'manufacturer': helperData.vehicle?.manufacturer || helperData.car_details?.manufacturer || '',
+ */odel || '',
+function populatePartsFields(helperData) { '',
+  if (helperData.parts_search?.results) {  'chassis': helperData.vehicle?.chassis || helperData.car_details?.chassis || '',
+    // Trigger parts UI update if function exists': helperData.vehicle?.km || helperData.car_details?.km || '',
+    if (typeof window.updatePartsFromHelper === 'function') {lperData.stakeholders?.owner_name || helperData.car_details?.owner || '',
+      window.updatePartsFromHelper(helperData.parts_search);
+    }'engine_volume': helperData.vehicle?.engine_volume || '',
+  }?.fuel_type || '',
+}
+
+/**
+ * Populate Fee module fields
+ */
+function populateFeeFields(helperData) {
+  if (helperData.financials?.fees) {
+    const fieldMappings = {
+      'photo_fee': helperData.financials.fees.photography?.total || '',
+      'office_fee': helperData.financials.fees.office?.total || '',on populateDamageCenterFields(helperData) {
+      'travel_fee': helperData.financials.fees.travel?.total || '',amage_assessment?.centers) {
+      'assessment_fee': helperData.financials.fees.assessment?.total || '',er damage center UI update if function exists
+      'vat_percentage': helperData.financials.taxes?.vat_percentage || '18'
+    };DamageCentersFromHelper(helperData.damage_assessment.centers);
+    
+    populateFormFields(fieldMappings, 'fees');
+  }
+}
+
+/**
+ * Populate Levi report fields
+ */
+function populateLeviFields(helperData) {arts_search?.results) {
+  if (helperData.valuation) {e if function exists
+    const fieldMappings = {
+      'base_price': helperData.valuation.base_price || '',PartsFromHelper(helperData.parts_search);
+      'final_price': helperData.valuation.final_price || '',
+      'market_value': helperData.valuation.final_price || helperData.vehicle?.market_value || ''
+    };
+    
+    populateFormFields(fieldMappings, 'levi');
+     * Populate Fee module fields
+    // Update Levi floating screen if function exists
+    if (typeof window.updateLeviFloatingFromHelper === 'function') {
+      window.updateLeviFloatingFromHelper(helperData.valuation);
+    }    const fieldMappings = {
+  }   'photo_fee': helperData.financials.fees.photography?.total || '',
+}
+ || '',
+/**   'assessment_fee': helperData.financials.fees.assessment?.total || '',
+ * Populate Invoice fieldscentage || '18'
+ */
+function populateInvoiceFields(helperData) {  
+  if (helperData.documents?.invoices?.length > 0) {
+    // Trigger invoice UI update if function exists
+    if (typeof window.updateInvoiceFromHelper === 'function') {
+      window.updateInvoiceFromHelper(helperData.documents.invoices);
+    }
+  }
+}
+
+/**) {
+ * Universal field population helper
+ */ 'base_price': helperData.valuation.base_price || '',
+function populateFormFields(fieldMappings, moduleType) {    'final_price': helperData.valuation.final_price || '',
+  console.log(`🔍 populateFormFields called for ${moduleType} with mappings:`, fieldMappings);market_value': helperData.valuation.final_price || helperData.vehicle?.market_value || ''
+  
+  // HIDDEN DEBUG: Log current page and available fields
+  console.log('🐛 DEBUG populateFormFields:', {populateFormFields(fieldMappings, 'levi');
+    currentPage: window.location.pathname.split('/').pop(),
+    moduleType: moduleType,ction exists
+    availableElements: Array.from(document.querySelectorAll('input, select, textarea')).map(el => ({if (typeof window.updateLeviFloatingFromHelper === 'function') {
+      id: el.id,tingFromHelper(helperData.valuation);
+      type: el.type,
+      value: el.value
+    })),
+    mappingsToApply: Object.keys(fieldMappings).map(key => ({
+      fieldId: key,
+      value: fieldMappings[key]ds
+    }))
+  });tion populateInvoiceFields(helperData) {
+  s?.invoices?.length > 0) {
+  let populatedCount = 0; function exists
+  let skippedCount = 0;if (typeof window.updateInvoiceFromHelper === 'function') {
+  let notFoundCount = 0;voiceFromHelper(helperData.documents.invoices);
+  
+  Object.keys(fieldMappings).forEach(fieldId => {
+    const value = fieldMappings[fieldId];
+    const element = document.getElementById(fieldId);
+    
+    if (!element) {
+      console.log(`⚠️ Element with ID '${fieldId}' not found in DOM`);
+      notFoundCount++;unction populateFormFields(fieldMappings, moduleType) {
+      return;  console.log(`🔍 populateFormFields called for ${moduleType} with mappings:`, fieldMappings);
+    }
+    and available fields
+    if (element && value) {onsole.log('🐛 DEBUG populateFormFields:', {
+      // ✅ MANUAL OVERRIDE PROTECTION: Check if field has been manually modified'/').pop(),
+      if (isFieldManuallyModified(fieldId)) {
+        console.log(`⏭️ Skipping automatic population for ${fieldId} - manually modified`);  availableElements: Array.from(document.querySelectorAll('input, select, textarea')).map(el => ({
+        skippedCount++;
+        return;
+      }
+        })),
+      // Handle different input typesmap(key => ({
+      if (element.type === 'checkbox') {
+        element.checked = !!value;
+      } else if (element.tagName === 'SELECT') {
+        // For select elements, try to find matching option
+        const option = Array.from(element.options).find(opt => 
+          opt.value === value || opt.textContent === value
+        );t skippedCount = 0;
+        if (option) {
+          element.value = option.value;
+        }
+      } else {
+        element.value = value;const element = document.getElementById(fieldId);
+      }
+      
+      // Trigger change event to update any dependent logic
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      populatedCount++;
+    }
+  });
+   value) {
+  console.log(`✅ Populated ${moduleType} fields: ${populatedCount} updated, ${skippedCount} skipped (manually modified)`); been manually modified
+}  if (isFieldManuallyModified(fieldId)) {
+        console.log(`⏭️ Skipping automatic population for ${fieldId} - manually modified`);
+        skippedCount++;
+        return;
+      }
+      
+      // Handle different input types
+      if (element.type === 'checkbox') {
+        element.checked = !!value;
+      } else if (element.tagName === 'SELECT') {
+        // For select elements, try to find matching option
+        const option = Array.from(element.options).find(opt => 
+          opt.value === value || opt.textContent === value
+        );
+        if (option) {
+          element.value = option.value;
+        }
+      } else {
+        element.value = value;
+      }
+      
+      // Trigger change event to update any dependent logic
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      populatedCount++;
+    }
+  });
+  
+  console.log(`✅ Populated ${moduleType} fields: ${populatedCount} updated, ${skippedCount} skipped (manually modified)`);
+}
 function populateCarDetailsFields(helperData) {
   console.log('🔄 populateCarDetailsFields called with helper data:', helperData);
   
@@ -3271,301 +3286,3 @@ function populateFormFields(fieldMappings, moduleType) {
   
   console.log(`✅ Populated ${moduleType} fields: ${populatedCount} updated, ${skippedCount} skipped (manually modified)`);
 }
-
-// Make functions globally available
-window.refreshAllModuleForms = refreshAllModuleForms;
-
-// 🧪 DEBUG FUNCTION: Test data parsing with real Make.com data
-window.testDataParsing = function() {
-  console.log('🧪 TESTING DATA PARSING WITH ACTUAL MAKE.COM DATA');
-  console.log('=' .repeat(60));
-  
-  const testMakeComData = `פרטי רכב: 5785269
-תאריך: 2025-07-20T18:26:27.643+02:00
-מס' רכב: 5785269
-שם היצרן: ביואיק
-דגם: LUCERNE
-סוג הדגם: סדאן
-סוג הרכב: פרטי
-רמת גימור:CXL
-מספר שילדה: 1G4HD57258U196450
-שנת ייצור: 05/2009
-שם בעל הרכב: כרמל כיוף
-סוג בעלות: פרטי
-נפח מנוע: 3791
-סוג דלק: בנזין
-מספר דגם הרכב:HD572
-דגם מנוע: 428
-הנעה: 4X2
-מוסך: UMI חיפה
-קוד משרד התחבורה:156-11`;
-
-  console.log('📝 Testing parseHebrewTextToObject with real data...');
-  const result = parseHebrewTextToObject(testMakeComData);
-  
-  console.log('\n🎯 CRITICAL FIELDS CHECK:');
-  const criticalFields = ['plate', 'manufacturer', 'model', 'owner', 'year'];
-  criticalFields.forEach(field => {
-    const value = result[field];
-    const status = value ? '✅' : '❌';
-    console.log(`  ${status} ${field}: ${value || 'MISSING'}`);
-  });
-  
-  console.log('\n📊 Full parsed result:', result);
-  
-  // Test if this data would be processed correctly
-  console.log('\n🔄 Testing processCarDetailsData...');
-  try {
-    processCarDetailsData(result, 'debug_test');
-    console.log('✅ processCarDetailsData completed without errors');
-    
-    console.log('\n📋 Current helper after processing:');
-    console.log('  vehicle:', helper.vehicle);
-    console.log('  meta:', helper.meta);
-    console.log('  stakeholders:', helper.stakeholders);
-    
-  } catch (error) {
-    console.error('❌ processCarDetailsData failed:', error);
-  }
-  
-  return result;
-};
-
-// ============================================================================
-// SYSTEM OPTIMIZATION & VALIDATION
-// ============================================================================
-
-/**
- * System Health Check - Monitor helper integrity and performance
- */
-export function runSystemHealthCheck() {
-  const healthReport = {
-    timestamp: new Date().toISOString(),
-    helper_status: 'unknown',
-    manual_overrides: 0,
-    module_integration: 'unknown',
-    session_storage: 'unknown',
-    broadcasting: 'unknown',
-    warnings: [],
-    recommendations: []
-  };
-  
-  try {
-    // Check helper data structure
-    if (helper && typeof helper === 'object') {
-      healthReport.helper_status = 'healthy';
-      
-      // Count manual overrides
-      const manualData = getManuallyModifiedFields();
-      healthReport.manual_overrides = manualData.fields.length;
-      
-      // Check for data consistency
-      const plates = [
-        helper.plate,
-        helper.meta?.plate,
-        helper.vehicle?.plate_number,
-        helper.car_details?.plate
-      ].filter(Boolean);
-      
-      if (new Set(plates).size > 1) {
-        healthReport.warnings.push('Multiple different plate numbers found in helper data');
-        healthReport.recommendations.push('Standardize plate number storage location');
-      }
-      
-    } else {
-      healthReport.helper_status = 'error';
-      healthReport.warnings.push('Helper object is not properly initialized');
-    }
-    
-    // Check sessionStorage
-    try {
-      const storedHelper = sessionStorage.getItem('helper');
-      if (storedHelper) {
-        const parsed = JSON.parse(storedHelper);
-        healthReport.session_storage = 'healthy';
-      } else {
-        healthReport.session_storage = 'empty';
-        healthReport.warnings.push('No helper data found in sessionStorage');
-      }
-    } catch (error) {
-      healthReport.session_storage = 'error';
-      healthReport.warnings.push('SessionStorage contains invalid helper JSON');
-    }
-    
-    // Check module integration
-    if (typeof window.refreshAllModuleForms === 'function') {
-      healthReport.module_integration = 'available';
-    } else {
-      healthReport.module_integration = 'missing';
-      healthReport.warnings.push('Module auto-population function not available');
-    }
-    
-    // Check broadcasting capability
-    if (typeof broadcastHelperUpdate === 'function') {
-      healthReport.broadcasting = 'available';
-    } else {
-      healthReport.broadcasting = 'missing';
-      healthReport.warnings.push('Helper broadcasting system not available');
-    }
-    
-    // Performance recommendations
-    if (healthReport.manual_overrides === 0) {
-      healthReport.recommendations.push('No manual overrides detected - system ready for automatic updates');
-    } else if (healthReport.manual_overrides > 10) {
-      healthReport.recommendations.push('High number of manual overrides - consider reviewing data flow');
-    }
-    
-  } catch (error) {
-    healthReport.helper_status = 'error';
-    healthReport.warnings.push(`System health check failed: ${error.message}`);
-  }
-  
-  console.log('🔍 System Health Report:', healthReport);
-  return healthReport;
-}
-
-/**
- * Performance monitoring for helper operations
- */
-export function monitorHelperPerformance() {
-  const performanceData = {
-    helper_size: 0,
-    sessionStorage_size: 0,
-    last_update: null,
-    update_frequency: 0
-  };
-  
-  try {
-    // Calculate helper size
-    performanceData.helper_size = new Blob([JSON.stringify(helper)]).size;
-    
-    // Calculate sessionStorage usage
-    const helperString = sessionStorage.getItem('helper');
-    if (helperString) {
-      performanceData.sessionStorage_size = new Blob([helperString]).size;
-    }
-    
-    // Get last update time
-    performanceData.last_update = helper.last_updated || null;
-    
-    console.log('📊 Helper Performance Metrics:', performanceData);
-    
-    // Performance warnings
-    if (performanceData.helper_size > 1000000) { // 1MB
-      console.warn('⚠️ Helper object is very large (>1MB). Consider data cleanup.');
-    }
-    
-    if (performanceData.sessionStorage_size > 5000000) { // 5MB
-      console.warn('⚠️ SessionStorage usage is high (>5MB). Consider data optimization.');
-    }
-    
-    return performanceData;
-    
-  } catch (error) {
-    console.error('❌ Error monitoring helper performance:', error);
-    return performanceData;
-  }
-}
-
-// Make system monitoring functions globally available
-window.runSystemHealthCheck = runSystemHealthCheck;
-window.monitorHelperPerformance = monitorHelperPerformance;
-
-// Make Hebrew parsing functions globally available for system-wide use
-window.parseHebrewTextToObject = parseHebrewTextToObject;
-window.processIncomingData = processIncomingData;
-
-// CRITICAL: Make the module helper THE global helper
-window.helper = helper;
-window.updateHelper = updateHelper;
-window.saveHelperToStorage = saveHelperToStorage;
-window.broadcastHelperUpdate = broadcastHelperUpdate;
-window.loadHelperFromStorage = loadHelperFromStorage;
-
-// ============================================================================
-// SESSION ACTIVITY MONITORING (Codex recommendation)
-// ============================================================================
-let activityTimer;
-let warningShown = false;
-
-function resetActivity() {
-  // Update last activity time
-  sessionStorage.setItem('lastActivityTime', Date.now().toString());
-  
-  // Clear existing timer
-  if (activityTimer) {
-    clearTimeout(activityTimer);
-  }
-  
-  // Hide warning if shown
-  if (warningShown) {
-    const warning = document.getElementById('session-warning');
-    if (warning) warning.remove();
-    warningShown = false;
-  }
-  
-  // Set new timer for 13 minutes (2 minutes before logout)
-  activityTimer = setTimeout(showInactivityWarning, 13 * 60 * 1000);
-}
-
-function showInactivityWarning() {
-  if (warningShown) return;
-  
-  warningShown = true;
-  const warning = document.createElement('div');
-  warning.id = 'session-warning';
-  warning.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #ff6b6b;
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    z-index: 10000;
-    text-align: center;
-    font-family: Arial;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  `;
-  warning.innerHTML = `
-    <h3 style="margin: 0 0 10px 0;">⚠️ אזהרת פעילות</h3>
-    <p style="margin: 0 0 15px 0;">הפגישה תסתיים בעוד 2 דקות עקב חוסר פעילות</p>
-    <button onclick="resetActivity()" style="
-      background: white;
-      color: #ff6b6b;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    ">המשך עבודה</button>
-  `;
-  document.body.appendChild(warning);
-  
-  // Set final logout timer for 2 more minutes
-  setTimeout(() => {
-    if (warningShown) {
-      console.log('🔒 Session expired due to inactivity');
-      if (window.securityManager) {
-        window.securityManager.logout();
-      }
-    }
-  }, 2 * 60 * 1000);
-}
-
-// Make activity functions globally available
-window.resetActivity = resetActivity;
-
-// Monitor user activity
-if (typeof document !== 'undefined') {
-  ['click', 'keypress', 'mousemove', 'touchstart', 'scroll'].forEach(event => {
-    document.addEventListener(event, resetActivity, { passive: true });
-  });
-  
-  // Initialize activity monitoring
-  resetActivity();
-  console.log('✅ Session activity monitoring initialized');
-}
-
-console.log('✅ Helper.js loaded - Single source of truth established');
