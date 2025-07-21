@@ -511,26 +511,34 @@ function normalizeHebrewText(text) {
     console.warn('⚠️ Unicode normalization failed:', e);
   }
   
-  // Step 3: Standardize Hebrew punctuation marks
-  const punctuationMap = {
-    // Different apostrophe variations
-    ''': '\'',    // Right single quotation mark (U+2019) → Regular apostrophe
-    ''': '\'',    // Left single quotation mark (U+2018) → Regular apostrophe  
-    '׳': '\'',    // Hebrew punctuation geresh (U+05F3) → Regular apostrophe
-    '״': '\"',   // Hebrew punctuation gershayim (U+05F4) → Regular quotation
-    '`': '\'',    // Grave accent → Regular apostrophe
-    '′': '\'',    // Prime symbol → Regular apostrophe
-    '″': '\"',   // Double prime → Regular quotation
-    
-    // Standardize colons and separators
-    '：': ':',    // Fullwidth colon → Regular colon
-    '；': ';',    // Fullwidth semicolon → Regular semicolon
-    '，': ',',    // Fullwidth comma → Regular comma
-    
-    // Hebrew-specific spacing issues
-    '\u200F': '', // Right-to-left mark (remove)
-    '\u200E': ''  // Left-to-right mark (remove)
-  };
+  // Step 3: Standardize Hebrew punctuation marks - using safer character codes
+  const punctuationMap = {};
+  
+  // Build punctuation map programmatically to avoid syntax errors
+  const punctuationPatterns = [
+    // Format: [searchChar, replaceChar, description]
+    ['\u2019', '\'', 'Right single quotation mark → Regular apostrophe'],
+    ['\u2018', '\'', 'Left single quotation mark → Regular apostrophe'],
+    ['\u05F3', '\'', 'Hebrew punctuation geresh → Regular apostrophe'],
+    ['\u05F4', '"', 'Hebrew punctuation gershayim → Regular quotation'],
+    ['`', '\'', 'Grave accent → Regular apostrophe'],
+    ['\u2032', '\'', 'Prime symbol → Regular apostrophe'],
+    ['\u2033', '"', 'Double prime → Regular quotation'],
+    ['\uFF1A', ':', 'Fullwidth colon → Regular colon'],
+    ['\uFF1B', ';', 'Fullwidth semicolon → Regular semicolon'],
+    ['\uFF0C', ',', 'Fullwidth comma → Regular comma'],
+    ['\u200F', '', 'Right-to-left mark (remove)'],
+    ['\u200E', '', 'Left-to-right mark (remove)']
+  ];
+  
+  // Build punctuation map safely
+  punctuationPatterns.forEach(([search, replace, desc]) => {
+    try {
+      punctuationMap[search] = replace;
+    } catch (e) {
+      console.warn(`⚠️ Could not add punctuation pattern: ${desc}`, e);
+    }
+  });
   
   let fixedPunctuation = false;
   for (const [nonStandard, standard] of Object.entries(punctuationMap)) {
@@ -1296,7 +1304,7 @@ function populateAllForms() {
 
 // Enhanced functions to replace broken ones
 window.updateHelper = function(section, data, sourceModule = null) {
-  console.log(`🔄 ENHANCED: Updating helper section '${section}':`, data);
+  console.log(`🔄 ENHANCED: Updating helper section '${section}' from ${sourceModule || 'unknown'}:`, data);
   
   try {
     if (!window.helper[section]) {
@@ -1898,8 +1906,9 @@ Policy Number: POL987654`
         details: { available: false }
       };
       
-      if (typeof window.storageManager !== 'undefined') {
-        const stats = window.storageManager.getStorageStats();
+      const storageManager = window['storageManager'];
+      if (typeof storageManager !== 'undefined' && storageManager) {
+        const stats = storageManager.getStorageStats();
         storageManagerTest.status = stats.helper.inMemory && stats.helper.inSession ? 'PASSED' : 'PARTIAL';
         storageManagerTest.details = stats;
         
