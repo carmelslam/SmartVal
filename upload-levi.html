@@ -1098,25 +1098,8 @@ class LeviProcessor {
       console.log('🔍 helper.general_info?.office_code:', helper.general_info?.office_code);
       console.log('🔍 helper.car_details structure:', helper.car_details);
       
-      if (makeCarData.office_code) {
-        officeCode = makeCarData.office_code;
-        console.log('✅ Using office_code from makeCarData:', officeCode);
-      }
-      else if (helper.vehicle?.office_code) {
-        officeCode = helper.vehicle.office_code;
-        console.log('✅ Using office_code from helper.vehicle:', officeCode);
-      }
-      else if (helper.car_details?.office_code) {
-        officeCode = helper.car_details.office_code;
-        console.log('✅ Using office_code from helper.car_details:', officeCode);
-      }
-      else if (helper.general_info?.office_code) {
-        officeCode = helper.general_info.office_code;
-        console.log('✅ Using office_code from helper.general_info:', officeCode);
-      }
-      
-      // ENHANCED: Extract from car_details raw text if not found in structured data
-      else if (helper.car_details?.raw_response || helper.car_details?.message) {
+      // PRIORITY 1: Extract from car_details raw text FIRST (most accurate source)
+      if (helper.car_details?.raw_response || helper.car_details?.message) {
         const rawText = helper.car_details.raw_response || helper.car_details.message;
         console.log('🔍 Searching in car_details raw text:', rawText?.substring(0, 200) + '...');
         
@@ -1126,9 +1109,27 @@ class LeviProcessor {
         if (officeCodeMatch && officeCodeMatch[1]) {
           officeCode = officeCodeMatch[1];
           console.log('✅ EXTRACTED office_code from car_details raw text:', officeCode);
-        } else {
-          console.log('❌ No office_code found in raw text');
         }
+      }
+      
+      // PRIORITY 2: Check structured data sources if raw text extraction failed
+      if (!officeCode && makeCarData.office_code) {
+        officeCode = makeCarData.office_code;
+        console.log('✅ Using office_code from makeCarData:', officeCode);
+      }
+      else if (!officeCode && helper.car_details?.office_code) {
+        officeCode = helper.car_details.office_code;
+        console.log('✅ Using office_code from helper.car_details:', officeCode);
+      }
+      else if (!officeCode && helper.general_info?.office_code) {
+        officeCode = helper.general_info.office_code;
+        console.log('✅ Using office_code from helper.general_info:', officeCode);
+      }
+      
+      // PRIORITY 3: Use helper.vehicle.office_code ONLY as last resort (may be default value)
+      else if (!officeCode && helper.vehicle?.office_code && helper.vehicle.office_code !== '01') {
+        officeCode = helper.vehicle.office_code;
+        console.log('✅ Using office_code from helper.vehicle (non-default):', officeCode);
       }
       
       // Fallback to default only if still not found
