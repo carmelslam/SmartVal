@@ -477,11 +477,9 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
     // Save to storage immediately
     saveHelperToAllStorageLocations();
     
-    // Force UI refresh with retry
+    // Force UI refresh
     if (result.helperUpdated) {
-      setTimeout(() => populateAllForms(), 100);
-      setTimeout(() => populateAllForms(), 500);  // Retry
-      setTimeout(() => populateAllForms(), 1000); // Final retry
+      setTimeout(() => populateAllForms(), 200);
     }
     
     // 🔧 PHASE 2 FIX: Show what was captured
@@ -1445,7 +1443,7 @@ window.broadcastHelperUpdate = function(sections, source) {
   // Handle case where sections might not be an array
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
   console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
-  setTimeout(() => populateAllForms(), 100);
+  setTimeout(() => populateAllForms(), 200);
 };
 
 // Test function for Levi JSON webhook data processing
@@ -1688,10 +1686,10 @@ window.getOwnerData = function() {
 // Auto-populate on load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => populateAllForms(), 500);
+    setTimeout(() => populateAllForms(), 300);
   });
 } else {
-  setTimeout(() => populateAllForms(), 500);
+  setTimeout(() => populateAllForms(), 300);
 }
 
 console.log('✅ Helper system loaded and ready');

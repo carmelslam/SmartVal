@@ -591,7 +591,7 @@ class SecurityManager {
       } else {
         devtools.open = false;
       }
-    }, 500);
+    }, 5000);
     
     // Monitor for console access
     const originalConsoleLog = console.log;

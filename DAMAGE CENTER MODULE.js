@@ -3,6 +3,27 @@ import { helper, updateHelper, saveHelperToStorage, getDamageData, syncDamageDat
 import { ROUTER } from './router.js';
 import { PARTS_BANK } from './parts.js';
 
+// Cache for parts suggestions - built once, reused
+let partsCache = null;
+function buildPartsCache() {
+  if (partsCache) return partsCache;
+  
+  partsCache = [];
+  if (window.PARTS_BANK) {
+    Object.keys(window.PARTS_BANK).forEach(category => {
+      window.PARTS_BANK[category].forEach(part => {
+        partsCache.push({
+          name: part,
+          description: category,
+          source: 'מקורי',
+          searchText: part.toLowerCase()
+        });
+      });
+    });
+  }
+  return partsCache;
+}
+
 export function damageCenters() {
   const container = document.getElementById('app');
   const damageData = getDamageData();
@@ -230,21 +251,19 @@ function showPartsSuggestions(input, query) {
 
 function getPartsSuggestions(query) {
   const suggestions = [];
+  const queryLower = query.toLowerCase();
   
-  // Search in PARTS_BANK
-  if (window.PARTS_BANK) {
-    Object.keys(window.PARTS_BANK).forEach(category => {
-      window.PARTS_BANK[category].forEach(part => {
-        if (part.toLowerCase().includes(query.toLowerCase())) {
-          suggestions.push({
-            name: part,
-            description: category,
-            source: 'מקורי'
-          });
-        }
+  // Search in cached PARTS_BANK (much faster)
+  const cache = buildPartsCache();
+  cache.forEach(part => {
+    if (part.searchText.includes(queryLower)) {
+      suggestions.push({
+        name: part.name,
+        description: part.description,
+        source: part.source
       });
-    });
-  }
+    }
+  });
   
   // Search in all stored search results (including unselected)
   try {

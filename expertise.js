@@ -17,7 +17,7 @@ const helper = JSON.parse(sessionStorage.getItem("expertise")) || {
   invoice_uploaded: false
 };
 
-function updateCalculations() {
+function updateExpertiseCalculations() {
   // Use standardized data access
   const vehicleData = getVehicleData();
   const damageData = getDamageData();
@@ -66,7 +66,7 @@ function updateInvoiceCalculations() {
 }
 
 function exportExpertise() {
-  updateCalculations();
+  updateExpertiseCalculations();
   updateInvoiceCalculations();
 
   sessionStorage.setItem("expertise", JSON.stringify(helper));
