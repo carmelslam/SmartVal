@@ -12,28 +12,6 @@ function initializeHelper() {
   let existingData = null;
   
   try {
-    if (storageManager && typeof storageManager.load === 'function') {
-      // Use centralized storage manager
-      const loadResult = storageManager.load({
-        decompress: true,      // Handle compressed data
-        fallbackSources: true, // Try all storage locations
-        validate: true         // Validate data integrity
-      });
-      
-      if (loadResult.success) {
-        existingData = loadResult.data;
-        console.log(`✅ Found existing helper data via storage manager (${loadResult.source}):`, existingData);
-        return existingData;
-      } else {
-        console.log(`⚠️ Storage manager load failed: ${loadResult.reason}`);
-      }
-    }
-  } catch (e) {
-    console.warn('⚠️ Storage manager not available, using fallback:', e);
-  }
-  
-  // Fallback to original method if storage manager not available
-  try {
     const sessionData = sessionStorage.getItem('helper');
     if (sessionData && sessionData !== '{}') {
       existingData = JSON.parse(sessionData);
@@ -959,22 +937,6 @@ function setNestedValue(obj, path, value) {
 // Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
   try {
-    if (typeof storageManager !== 'undefined' && storageManager.save) {
-      // Use centralized storage manager
-      const success = storageManager.save(window.helper, {
-        compress: true,    // Compress large data
-        backup: true,      // Create backup
-        persist: true,     // Save to localStorage
-        validate: true     // Validate before saving
-      });
-      
-      if (success) {
-        console.log('✅ Helper saved using centralized storage manager');
-        return true;
-      }
-    }
-    
-    // Fallback to original method if storage manager not available
     const helperString = JSON.stringify(window.helper);
     const timestamp = new Date().toISOString();
     
@@ -1897,37 +1859,7 @@ Policy Number: POL987654`
       }
     }
     
-    // Test 6: Storage manager integration
-    console.log('Test 6: Storage manager integration');
-    try {
-      let storageManagerTest = {
-        name: 'Storage Manager Integration',
-        status: 'FAILED',
-        details: { available: false }
-      };
-      
-      const storageManager = window['storageManager'];
-      if (typeof storageManager !== 'undefined' && storageManager) {
-        const stats = storageManager.getStorageStats();
-        storageManagerTest.status = stats.helper.inMemory && stats.helper.inSession ? 'PASSED' : 'PARTIAL';
-        storageManagerTest.details = stats;
-        
-        if (storageManagerTest.status === 'PASSED') testResults.passed++;
-        else testResults.failed++;
-      } else {
-        testResults.failed++;
-      }
-      
-      testResults.tests.push(storageManagerTest);
-      
-    } catch (error) {
-      testResults.tests.push({
-        name: 'Storage Manager Integration',
-        status: 'FAILED',
-        error: error.message
-      });
-      testResults.failed++;
-    }
+    // Storage manager test removed to prevent system conflicts
     
     // Calculate final results
     testResults.endTime = new Date().toISOString();
