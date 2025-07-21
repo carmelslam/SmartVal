@@ -1431,6 +1431,40 @@ if (document.readyState === 'loading') {
 
 console.log('✅ Helper system loaded and ready');
 
+// 🔧 CORE PROBLEM TEST: Simple test with your data
+setTimeout(() => {
+  console.log('🧪 TESTING CORE HELPER with your webhook data...');
+  
+  const testData = `פרטי רכב: 5785269
+מס' רכב: 5785269
+שם היצרן: ביואיק
+דגם: LUCERNE
+סוג הדגם: סדאן
+רמת גימור:CXL
+מספר שילדה: 1G4HD57258U196450
+שם בעל הרכב: כרמל כיוף
+סוג בעלות: פרטי
+נפח מנוע: 3791
+סוג דלק: בנזין
+מספר דגם הרכב:HD572
+דגם מנוע: 428
+הנעה: 4X2
+מוסך: UMI חיפה
+קוד משרד התחבורה:156-11`;
+
+  console.log('📥 Testing with data:', testData.substring(0, 100) + '...');
+  
+  try {
+    const result = window.processIncomingData(testData, 'CORE_TEST');
+    console.log('📊 CORE TEST Result:', result);
+    console.log('🎯 Helper plate after test:', window.helper?.vehicle?.plate);
+    console.log('🎯 Helper manufacturer after test:', window.helper?.vehicle?.manufacturer);
+    console.log('🎯 Helper owner after test:', window.helper?.stakeholders?.owner?.name);
+  } catch (error) {
+    console.error('❌ CORE TEST FAILED:', error);
+  }
+}, 2000);
+
 // 🔧 PHASE 2 FIX: Universal webhook receiver with Hebrew data auto-detection
 window.universalWebhookReceiver = function(data, source = 'unknown') {
   console.log('🌐 Universal webhook receiver activated:', source);
