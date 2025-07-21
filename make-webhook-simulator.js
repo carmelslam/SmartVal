@@ -95,8 +95,9 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
     window.checkForIncomingData().catch(console.error);
   }
   
-  // Show notification that rich data was received
-  showRichDataNotification(richCarData);
+  // Show notification that rich data was received - DISABLED to prevent UI popups
+  // showRichDataNotification(richCarData); // Commented out to remove UI notifications
+  console.log('✅ Rich data received (UI notification disabled):', richCarData);
   
   return richCarData;
 };
