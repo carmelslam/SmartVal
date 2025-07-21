@@ -439,21 +439,22 @@
       const carDetails = helper.car_details || {};
       const leviReport = helper.expertise?.levi_report || {};
       const meta = helper.meta || {};
+      const valuation = helper.valuation || {};
       
       // Update UI with Levi data using proper helper structure
-      updateLeviDisplay(vehicle, carDetails, leviReport, meta);
+      updateLeviDisplay(vehicle, carDetails, leviReport, meta, valuation);
 
     } catch (error) {
       console.error("Error loading Levi data:", error);
-      updateLeviDisplay({}, {}, {}, {});
+      updateLeviDisplay({}, {}, {}, {}, {});
     }
   }
 
   // Removed deepMerge function - no longer needed with simplified data loading
 
-  function updateLeviDisplay(vehicle, carDetails, leviReport, meta) {
+  function updateLeviDisplay(vehicle, carDetails, leviReport, meta, valuation = {}) {
     console.log('🔄 updateLeviDisplay called with:', {
-      vehicle, carDetails, leviReport, meta
+      vehicle, carDetails, leviReport, meta, valuation
     });
     
     const formatPrice = (value) => {
@@ -479,11 +480,10 @@
       carDetails: Object.keys(carDetails), 
       leviReport: Object.keys(leviReport),
       meta: Object.keys(meta),
-      valuation: Object.keys(helper.valuation || {})
+      valuation: Object.keys(valuation || {})
     });
     
     // Use valuation data which contains the Levi JSON mappings
-    const valuation = helper.valuation || {};
     const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation };
     console.log('🔍 LEVI DEBUG: Merged helper data with valuation:', allData);
     
