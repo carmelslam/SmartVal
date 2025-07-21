@@ -1241,6 +1241,12 @@ window.updateHelperAndSession = function(section, data, sourceModule = null) {
 function triggerFloatingScreenUpdates(updatedSections, source = '') {
   console.log('📱 Triggering floating screen updates for sections:', updatedSections);
   
+  // Ensure source is a string to prevent TypeError on .includes()
+  if (typeof source !== 'string') {
+    console.warn('⚠️ Source is not a string, converting:', typeof source, source);
+    source = String(source || '');
+  }
+  
   // Car details floating screen
   if (updatedSections.includes('vehicle') || updatedSections.includes('meta')) {
     if (typeof window.refreshCarData === 'function') {
