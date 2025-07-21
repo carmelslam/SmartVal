@@ -1088,20 +1088,46 @@ class LeviProcessor {
         console.log('✅ LEVI UPLOAD: Owner loaded:', owner);
       }
       
-      // Load office code from multiple sources
+      // Load office code from multiple sources with detailed logging
       let officeCode = '';
-      if (makeCarData.office_code) officeCode = makeCarData.office_code;
-      else if (helper.vehicle?.office_code) officeCode = helper.vehicle.office_code;
-      else if (helper.car_details?.office_code) officeCode = helper.car_details.office_code;
-      else if (helper.general_info?.office_code) officeCode = helper.general_info.office_code;
+      
+      console.log('🔍 DEBUG: Checking office_code sources...');
+      console.log('🔍 makeCarData.office_code:', makeCarData.office_code);
+      console.log('🔍 helper.vehicle?.office_code:', helper.vehicle?.office_code);
+      console.log('🔍 helper.car_details?.office_code:', helper.car_details?.office_code);
+      console.log('🔍 helper.general_info?.office_code:', helper.general_info?.office_code);
+      console.log('🔍 helper.car_details structure:', helper.car_details);
+      
+      if (makeCarData.office_code) {
+        officeCode = makeCarData.office_code;
+        console.log('✅ Using office_code from makeCarData:', officeCode);
+      }
+      else if (helper.vehicle?.office_code) {
+        officeCode = helper.vehicle.office_code;
+        console.log('✅ Using office_code from helper.vehicle:', officeCode);
+      }
+      else if (helper.car_details?.office_code) {
+        officeCode = helper.car_details.office_code;
+        console.log('✅ Using office_code from helper.car_details:', officeCode);
+      }
+      else if (helper.general_info?.office_code) {
+        officeCode = helper.general_info.office_code;
+        console.log('✅ Using office_code from helper.general_info:', officeCode);
+      }
       
       // ENHANCED: Extract from car_details raw text if not found in structured data
       else if (helper.car_details?.raw_response || helper.car_details?.message) {
         const rawText = helper.car_details.raw_response || helper.car_details.message;
+        console.log('🔍 Searching in car_details raw text:', rawText?.substring(0, 200) + '...');
+        
         const officeCodeMatch = rawText.match(/(?:קוד משרד התחבורה|קוד משרד|משרד התחבורה|קוד\s*משרד)[:\s-]*([0-9-]+)/i);
+        console.log('🔍 Regex match result:', officeCodeMatch);
+        
         if (officeCodeMatch && officeCodeMatch[1]) {
           officeCode = officeCodeMatch[1];
           console.log('✅ EXTRACTED office_code from car_details raw text:', officeCode);
+        } else {
+          console.log('❌ No office_code found in raw text');
         }
       }
       
@@ -1109,6 +1135,8 @@ class LeviProcessor {
       if (!officeCode) {
         officeCode = '01'; // ✅ DEFAULT: Set default office code if none found
         console.log('⚠️ Using default office_code:', officeCode);
+      } else {
+        console.log('✅ Final office_code selected:', officeCode);
       }
       
       if (officeCode) {
