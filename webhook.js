@@ -332,9 +332,11 @@ export async function sendToWebhook(id, payload) {
         }
         
         try {
-          // 🔧 CORE FIX: GUARANTEE processIncomingData is called for ALL webhook responses
-          if (typeof processIncomingData === 'function') {
-            console.log('🔄 CRITICAL: Processing ALL webhook data via processIncomingData...');
+          // 🔧 CORE FIX: Skip webhook processing for OPEN_CASE_UI (handled by open-cases.html)
+          if (id === 'OPEN_CASE_UI') {
+            console.log('⏭️ Skipping webhook processing for OPEN_CASE_UI - handled by page-specific logic');
+          } else if (typeof processIncomingData === 'function') {
+            console.log('🔄 CRITICAL: Processing webhook data via processIncomingData...');
             console.log('📊 Data type:', typeof actualData, 'Webhook ID:', id);
             
             // Ensure we process the data even if it's a string
