@@ -109,6 +109,18 @@ window.helper = window.helper || {
     reports: [],
     photo_count: 0
   },
+  levi_data: {
+    base_value: 0,
+    adjusted_value: 0,
+    depreciation_factors: {},
+    calculation_notes: ''
+  },
+  calculations: {
+    depreciation: {},
+    adjustments: {},
+    final_values: {},
+    calculation_log: []
+  },
   raw_webhook_data: {},
   system: {
     version: '2.0.0-enhanced',
@@ -588,6 +600,36 @@ window.syncDamageData = function(damageData) {
   return window.updateHelper('damage_assessment', damageData, 'syncDamageData');
 };
 
+// Sync Levi data function for depreciation module
+window.syncLeviData = function(leviData) {
+  console.log('🔄 Syncing Levi data to helper:', leviData);
+  return window.updateHelper('levi_data', leviData, 'syncLeviData');
+};
+
+// Update calculations function for modules
+window.updateCalculations = function(calculationData) {
+  console.log('🧮 Updating calculations in helper:', calculationData);
+  return window.updateHelper('calculations', calculationData, 'updateCalculations');
+};
+
+// Sync vehicle data function for car details module
+window.syncVehicleData = function(vehicleData) {
+  console.log('🚗 Syncing vehicle data to helper:', vehicleData);
+  return window.updateHelper('vehicle', vehicleData, 'syncVehicleData');
+};
+
+// Initialize helper function for initial input module
+window.initHelper = function(initialData = {}) {
+  console.log('🔧 Initializing helper with data:', initialData);
+  if (initialData && Object.keys(initialData).length > 0) {
+    Object.keys(initialData).forEach(section => {
+      window.updateHelper(section, initialData[section], 'initHelper');
+    });
+  }
+  console.log('✅ Helper initialized successfully');
+  return true;
+};
+
 // ES6 Module Exports for other files to import
 export const updateHelper = window.updateHelper;
 export const updateHelperAndSession = window.updateHelperAndSession;
@@ -600,4 +642,8 @@ export const getDamageData = window.getDamageData;
 export const getValuationData = window.getValuationData;
 export const getFinancialData = window.getFinancialData;
 export const syncDamageData = window.syncDamageData;
+export const syncLeviData = window.syncLeviData;
+export const updateCalculations = window.updateCalculations;
+export const syncVehicleData = window.syncVehicleData;
+export const initHelper = window.initHelper;
 export const helper = window.helper;
