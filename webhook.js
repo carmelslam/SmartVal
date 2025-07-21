@@ -177,8 +177,17 @@ export async function sendToWebhook(id, payload) {
         actualData = data[0];
       }
       
-      // ✅ ENHANCED: Universal data processing and helper integration
-      if (actualData && typeof actualData === 'object') {
+      // 🔧 CRITICAL FIX: Ensure ALL non-error webhook responses are processed
+      if (!actualData && data && typeof data === 'object') {
+        console.log('📥 No actualData set, using original data directly');
+        actualData = data;
+      } else if (!actualData && data && typeof data === 'string') {
+        console.log('📥 String response detected, wrapping for processing');
+        actualData = { Body: data };
+      }
+      
+      // ✅ ENHANCED: Universal data processing and helper integration  
+      if (actualData && (typeof actualData === 'object' || typeof actualData === 'string')) {
         console.log('📥 Processing webhook response data:', actualData);
         console.log('📥 Webhook ID:', id);
         
@@ -323,11 +332,16 @@ export async function sendToWebhook(id, payload) {
         }
         
         try {
-          // 🔧 CORE FIX: Use processIncomingData FIRST for Hebrew text processing
+          // 🔧 CORE FIX: GUARANTEE processIncomingData is called for ALL webhook responses
           if (typeof processIncomingData === 'function') {
-            console.log('🔄 Processing webhook data via processIncomingData...');
-            await processIncomingData(actualData, id);
-            console.log('✅ Data processed via processIncomingData');
+            console.log('🔄 CRITICAL: Processing ALL webhook data via processIncomingData...');
+            console.log('📊 Data type:', typeof actualData, 'Webhook ID:', id);
+            
+            // Ensure we process the data even if it's a string
+            const dataToProcess = (typeof actualData === 'string') ? { Body: actualData } : actualData;
+            
+            await processIncomingData(dataToProcess, id);
+            console.log('✅ CRITICAL: Data processed via processIncomingData successfully');
           } else if (typeof updateHelperAndSession === 'function') {
             // Fallback for simple updates
             Object.keys(actualData).forEach(key => {
