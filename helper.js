@@ -593,56 +593,54 @@ function processHebrewText(bodyText, result) {
     // Plate number - multiple variants with better Hebrew support
     { regex: /(?:פרטי רכב|מס[׳״\'"`]*\s*רכב|מספר רכב|מס רכב|מס\'\s*רכב|מספר ציון|מספר זיהוי)[:\s-]*([0-9]{7,8})/i, field: 'plate', target: ['vehicle.plate', 'meta.plate', 'case_info.plate'] },
     
-    // Manufacturer - expanded patterns
-    { regex: /(?:שם היצרן|יצרן|שם\s*יצרן|יצרן\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'manufacturer', target: ['vehicle.manufacturer'] },
+    // Manufacturer - FIXED patterns
+    { regex: /(?:שם היצרן|יצרן)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'manufacturer', target: ['vehicle.manufacturer'] },
     
-    // Model - expanded patterns
-    { regex: /(?:דגם|שם דגם|דגם רכב|דגם\s*הרכב|שם\s*הדגם)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model', target: ['vehicle.model'] },
+    // Model - FIXED patterns  
+    { regex: /(?:דגם)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'model', target: ['vehicle.model'] },
     
     // Year - handle multiple formats: MM/YYYY, YYYY, DD/MM/YYYY
     { regex: /(?:שנת ייצור|שנת יצור|שנת\s*ייצור|שנת\s*יצור|שנה|שנת\s*רכישה)[:\s-]*(?:(\d{1,2})\/)?(\d{4})(?:\/(\d{1,2}))?/i, field: 'year', target: ['vehicle.year'] },
     
-    // Owner - comprehensive patterns
-    { regex: /(?:שם בעל הרכב|בעל הרכב|שם בעלים|בעלים|שם\s*בעל\s*הרכב|בעל\s*הרכב|בעלי\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'owner', target: ['stakeholders.owner.name'] },
+    // Owner - FIXED patterns
+    { regex: /(?:שם בעל הרכב)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'owner', target: ['stakeholders.owner.name'] },
     
-    // Chassis/VIN - expanded patterns
-    { regex: /(?:מספר שילדה|מספר שלדה|שילדה|מס\'\s*שילדה|מס\s*שילדה|מזהה שילדה|VIN)[:\s-]*([A-Z0-9]{8,})/i, field: 'chassis', target: ['vehicle.chassis'] },
+    // Chassis/VIN - FIXED patterns
+    { regex: /(?:מספר שילדה)[:\s]*([A-Z0-9]+)/i, field: 'chassis', target: ['vehicle.chassis'] },
     
     // Engine volume - various patterns
     { regex: /(?:נפח מנוע|נפח|נפח\s*מנוע|נפח\s*המנוע|עוצמת מנוע)[:\s-]*([0-9,]+)/i, field: 'engine_volume', target: ['vehicle.engine_volume'] },
     
-    // Fuel type - expanded patterns
-    { regex: /(?:סוג דלק|דלק|סוג\s*דלק|סוג\s*הדלק|סוג\s*הדלק|דלק\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'fuel_type', target: ['vehicle.fuel_type'] },
+    // Fuel type - FIXED patterns
+    { regex: /(?:סוג דלק)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'fuel_type', target: ['vehicle.fuel_type'] },
     
-    // Ownership type - multiple variations
-    { regex: /(?:סוג בעלות|בעלות|סוג\s*בעלות|סוג\s*הבעלות|רישום|סוג רישום)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'ownership_type', target: ['vehicle.ownership_type'] },
+    // Ownership type - FIXED patterns
+    { regex: /(?:סוג בעלות)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'ownership_type', target: ['vehicle.ownership_type'] },
     
     // Mileage - comprehensive patterns with comma support
     { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ|קילומטר|ק[״׳\"'`]מ|מרחק\s*נסיעה|קילומטרים|מס\'\s*ק\"מ|מס\s*ק\"מ)[:\s-]*([0-9,]+)/i, field: 'km', target: ['vehicle.km'] },
     
-    // Model type - expanded (FIXED: handles both : and :\s formats)
-    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type', target: ['vehicle.model_type'] },
-    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type_no_space', target: ['vehicle.model_type'] },
+    // Model type - FIXED patterns
+    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'model_type', target: ['vehicle.model_type'] },
     
-    // Trim/Equipment level (FIXED: handles both : and :\s formats)
-    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim', target: ['vehicle.trim'] },
-    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim_no_space', target: ['vehicle.trim'] },
+    // Trim/Equipment level - FIXED patterns
+    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'trim', target: ['vehicle.trim'] },
     
-    // Garage - expanded patterns
-    { regex: /(?:מוסך|בית מלאכה|מוסך\s*מורשה|גרש|מרכז שירות)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'garage', target: ['stakeholders.garage.name'] },
+    // Garage - FIXED patterns
+    { regex: /(?:מוסך|בית מלאכה|מוסך\s*מורשה|גרש|מרכז שירות)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'garage', target: ['stakeholders.garage.name'] },
     
     // Office code - MOT registration office
     { regex: /(?:קוד משרד התחבורה|קוד משרד|משרד התחבורה|קוד\s*משרד)[:\s-]*([0-9-]+)/i, field: 'office_code', target: ['vehicle.office_code'] },
     
     // Enhanced Levi-specific patterns with better Hebrew support
     { regex: /(?:קוד דגם|קוד\s*דגם|מזהה\s*דגם)[:\s-]*([0-9]+)/i, field: 'model_code', target: ['vehicle.model_code'] },
-    { regex: /(?:שם דגם מלא|דגם מלא|שם\s*דגם\s*מלא|תיאור מלא)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'full_model_name', target: ['vehicle.model'] },
+    { regex: /(?:שם דגם מלא|דגם מלא|שם\s*דגם\s*מלא|תיאור מלא)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'full_model_name', target: ['vehicle.model'] },
     { regex: /(?:אוטומט|תיבת הילוכים|הילוכים)[:\s-]*(כן|לא|אוטומטית|ידנית)/i, field: 'is_automatic', target: ['vehicle.is_automatic'] },
     { regex: /(?:מאפייני הרכב|מאפיינים|אבזור|ציוד נוסף)[:\s-]*([^\n\r\t]+?)(?:\s*(?:\n|\r|$))/i, field: 'features', target: ['vehicle.features'] },
     { regex: /(?:תאריך הוצאת הדו[״׳\"'`]ח|תאריך דוח|תאריך הערכה)[:\s-]*([0-9\/]+)/i, field: 'report_date', target: ['valuation.report_date'] },
     { regex: /(?:עליה לכביש|רישום|תאריך רישום|רישום ראשון)[:\s-]*([0-9\/]+)/i, field: 'registration_date', target: ['vehicle.registration_date'] },
     { regex: /(?:מספר בעלים|מס[׳״\'"`]*\s*בעלים|כמות בעלים|קודמים)[:\s-]*(\d+)/i, field: 'owner_count', target: ['valuation.adjustments.ownership_history.owner_count'] },
-    { regex: /(?:קטיגוריה|קטגוריית רכב|סיווג רכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'category', target: ['vehicle.category'] },
+    { regex: /(?:קטיגוריה|קטגוריית רכב|סיווג רכב)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'category', target: ['vehicle.category'] },
     
     // Levi pricing data with enhanced number recognition
     { regex: /(?:מחיר בסיס|מחיר\s*בסיס|ערך בסיס)[:\s-]*([0-9,]+)/i, field: 'base_price', target: ['valuation.base_price'] },
@@ -700,8 +698,7 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:מספר דגם הרכב):([A-Z0-9]+)/i, field: 'vehicle_model_code_no_space', target: ['vehicle.model_code'] },
     { regex: /(?:דגם מנוע):\s*([A-Z0-9]+)/i, field: 'engine_model', target: ['vehicle.engine_model'] },
     { regex: /(?:דגם מנוע):([A-Z0-9]+)/i, field: 'engine_model_no_space', target: ['vehicle.engine_model'] },
-    { regex: /(?:הנעה):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'drive_type', target: ['vehicle.drive_type'] },
-    { regex: /(?:הנעה):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'drive_type_no_space', target: ['vehicle.drive_type'] },
+    { regex: /(?:הנעה)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'drive_type', target: ['vehicle.drive_type'] },
     
     // 🔧 ENHANCED DATE PATTERNS - Handle both ISO timestamps and Hebrew dates
     { regex: /(?:תאריך):\s*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}\+[0-9]{2}:[0-9]{2})/i, field: 'iso_timestamp', target: ['case_info.created_at'] },
@@ -711,30 +708,30 @@ function processHebrewText(bodyText, result) {
     
     // Additional important fields for comprehensive capture
     { regex: /(?:תאריך נזק|תאריך\s*הנזק|מועד הנזק)[:\s-]*([0-9\/]+)/i, field: 'damage_date', target: ['case_info.damage_date'] },
-    { regex: /(?:סוג נזק|סוג\s*הנזק|תיאור נזק)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'damage_type', target: ['case_info.damage_type'] },
-    { regex: /(?:חברת ביטוח|ביטוח|מבטח)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'insurance_company', target: ['stakeholders.insurance.company'] },
+    { regex: /(?:סוג נזק|סוג\s*הנזק|תיאור נזק)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'damage_type', target: ['case_info.damage_type'] },
+    { regex: /(?:חברת ביטוח|ביטוח|מבטח)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'insurance_company', target: ['stakeholders.insurance.company'] },
     { regex: /(?:מספר פוליסה|פוליסה|מס[׳״\'"`]*\s*פוליסה)[:\s-]*([A-Z0-9-]+)/i, field: 'policy_number', target: ['stakeholders.insurance.policy_number'] },
     { regex: /(?:מספר תביעה|תביעה|מס[׳״\'"`]*\s*תביעה)[:\s-]*([A-Z0-9-]+)/i, field: 'claim_number', target: ['stakeholders.insurance.claim_number'] },
     
     // 🔧 PHASE 1 FIX: Additional missing Hebrew field mappings
-    { regex: /(?:מקום בדיקה|מקום\s*בדיקה|מיקום בדיקה)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'inspection_location', target: ['case_info.inspection_location'] },
+    { regex: /(?:מקום בדיקה|מקום\s*בדיקה|מיקום בדיקה)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'inspection_location', target: ['case_info.inspection_location'] },
     { regex: /(?:תאריך בדיקה|תאריך\s*בדיקה|מועד בדיקה)[:\s-]*([0-9\/]+)/i, field: 'inspection_date', target: ['case_info.inspection_date'] },
-    { regex: /(?:סוכן ביטוח|שם סוכן|סוכן)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'agent_name', target: ['stakeholders.insurance.agent.name'] },
+    { regex: /(?:סוכן ביטוח|שם סוכן|סוכן)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'agent_name', target: ['stakeholders.insurance.agent.name'] },
     { regex: /(?:טלפון סוכן|טלפון\s*סוכן)[:\s-]*([0-9-]+)/i, field: 'agent_phone', target: ['stakeholders.insurance.agent.phone'] },
     { regex: /(?:אימייל סוכן|מייל סוכן)[:\s-]*([^\s]+@[^\s]+)/i, field: 'agent_email', target: ['stakeholders.insurance.agent.email'] },
     { regex: /(?:טלפון בעל הרכב|טלפון בעלים|טלפון\s*בעל)[:\s-]*([0-9-]+)/i, field: 'owner_phone', target: ['stakeholders.owner.phone'] },
-    { regex: /(?:כתובת בעל הרכב|כתובת בעלים|כתובת\s*בעל)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'owner_address', target: ['stakeholders.owner.address'] },
+    { regex: /(?:כתובת בעל הרכב|כתובת בעלים|כתובת\s*בעל)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'owner_address', target: ['stakeholders.owner.address'] },
     { regex: /(?:טלפון מוסך|טלפון\s*מוסך)[:\s-]*([0-9-]+)/i, field: 'garage_phone', target: ['stakeholders.garage.phone'] },
     { regex: /(?:אימייל מוסך|מייל מוסך)[:\s-]*([^\s]+@[^\s]+)/i, field: 'garage_email', target: ['stakeholders.garage.email'] },
-    { regex: /(?:איש קשר מוסך|איש קשר)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'garage_contact', target: ['stakeholders.garage.contact_person'] },
+    { regex: /(?:איש קשר מוסך|איש קשר)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'garage_contact', target: ['stakeholders.garage.contact_person'] },
     
     // Enhanced automatic transmission patterns
     { regex: /(?:תיבת הילוכים|הילוכים|גיר)[:\s-]*(אוטומטי|ידני|אוטומט|מקל)/i, field: 'transmission', target: ['vehicle.transmission'] },
     { regex: /(?:דלת|דלתות)[:\s-]*([0-9]+)/i, field: 'doors', target: ['vehicle.doors'] },
-    { regex: /(?:צבע|צבע הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'color', target: ['vehicle.color'] },
+    { regex: /(?:צבע|צבע הרכב)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'color', target: ['vehicle.color'] },
     
     // Market conditions and comparisons
-    { regex: /(?:תנאי שוק|מצב שוק)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'market_conditions', target: ['valuation.market_conditions'] },
+    { regex: /(?:תנאי שוק|מצב שוק)[:\s-]*([^\n\r]+?)(?=\n|$)/i, field: 'market_conditions', target: ['valuation.market_conditions'] },
     
     // Enhanced phone number patterns for all stakeholders
     { regex: /(?:טלפון)[:\s-]*([0-9]{2,3}[-\s]?[0-9]{7,8})/i, field: 'general_phone', target: ['temp.phone'] }
