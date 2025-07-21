@@ -345,101 +345,112 @@ function processHebrewText(bodyText, result) {
   console.log('🔍 Extracting data from Hebrew text...');
   let updated = false;
   
-  // Enhanced Hebrew patterns with multiple apostrophe variants
+  // Enhanced Hebrew patterns with comprehensive field variations and multiple encoding support
   const patterns = [
-    // Plate number - multiple variants
-    { regex: /(?:פרטי רכב|מס[׳״\']*\s*רכב|מספר רכב|מס רכב)[:\s]*(\d+)/i, field: 'plate', target: ['vehicle.plate', 'meta.plate'] },
+    // Plate number - multiple variants with better Hebrew support
+    { regex: /(?:פרטי רכב|מס[׳״\'"`]*\s*רכב|מספר רכב|מס רכב|מס\'\s*רכב|מספר ציון|מספר זיהוי)[:\s-]*([0-9]{7,8})/i, field: 'plate', target: ['vehicle.plate', 'meta.plate', 'case_info.plate'] },
     
-    // Manufacturer
-    { regex: /(?:שם היצרן|יצרן)[:\s]*([^\n\r]+)/i, field: 'manufacturer', target: ['vehicle.manufacturer'] },
+    // Manufacturer - expanded patterns
+    { regex: /(?:שם היצרן|יצרן|שם\s*יצרן|יצרן\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'manufacturer', target: ['vehicle.manufacturer'] },
     
-    // Model
-    { regex: /(?:דגם|שם דגם)[:\s]*([^\n\r]+)/i, field: 'model', target: ['vehicle.model'] },
+    // Model - expanded patterns
+    { regex: /(?:דגם|שם דגם|דגם רכב|דגם\s*הרכב|שם\s*הדגם)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model', target: ['vehicle.model'] },
     
-    // Year - handle both formats: MM/YYYY or just YYYY
-    { regex: /(?:שנת ייצור|שנת יצור|שנה)[:\s]*(?:(\d{2})\/)?(\d{4})/i, field: 'year', target: ['vehicle.year'] },
+    // Year - handle multiple formats: MM/YYYY, YYYY, DD/MM/YYYY
+    { regex: /(?:שנת ייצור|שנת יצור|שנת\s*ייצור|שנת\s*יצור|שנה|שנת\s*רכישה)[:\s-]*(?:(\d{1,2})\/)?(\d{4})(?:\/(\d{1,2}))?/i, field: 'year', target: ['vehicle.year'] },
     
-    // Owner
-    { regex: /(?:שם בעל הרכב|בעל הרכב|שם בעלים|בעלים)[:\s]*([^\n\r]+)/i, field: 'owner', target: ['stakeholders.owner.name'] },
+    // Owner - comprehensive patterns
+    { regex: /(?:שם בעל הרכב|בעל הרכב|שם בעלים|בעלים|שם\s*בעל\s*הרכב|בעל\s*הרכב|בעלי\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'owner', target: ['stakeholders.owner.name'] },
     
-    // Chassis/VIN
-    { regex: /(?:מספר שילדה|מספר שלדה|שילדה)[:\s]*([A-Z0-9]+)/i, field: 'chassis', target: ['vehicle.chassis'] },
+    // Chassis/VIN - expanded patterns
+    { regex: /(?:מספר שילדה|מספר שלדה|שילדה|מס\'\s*שילדה|מס\s*שילדה|מזהה שילדה|VIN)[:\s-]*([A-Z0-9]{8,})/i, field: 'chassis', target: ['vehicle.chassis'] },
     
-    // Engine volume
-    { regex: /(?:נפח מנוע|נפח)[:\s]*(\d+)/i, field: 'engine_volume', target: ['vehicle.engine_volume'] },
+    // Engine volume - various patterns
+    { regex: /(?:נפח מנוע|נפח|נפח\s*מנוע|נפח\s*המנוע|עוצמת מנוע)[:\s-]*([0-9,]+)/i, field: 'engine_volume', target: ['vehicle.engine_volume'] },
     
-    // Fuel type
-    { regex: /(?:סוג דלק|דלק)[:\s]*([^\n\r]+)/i, field: 'fuel_type', target: ['vehicle.fuel_type'] },
+    // Fuel type - expanded patterns
+    { regex: /(?:סוג דלק|דלק|סוג\s*דלק|סוג\s*הדלק|סוג\s*הדלק|דלק\s*הרכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'fuel_type', target: ['vehicle.fuel_type'] },
     
-    // Ownership type
-    { regex: /(?:סוג בעלות|בעלות)[:\s]*([^\n\r]+)/i, field: 'ownership_type', target: ['vehicle.ownership_type'] },
+    // Ownership type - multiple variations
+    { regex: /(?:סוג בעלות|בעלות|סוג\s*בעלות|סוג\s*הבעלות|רישום|סוג רישום)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'ownership_type', target: ['vehicle.ownership_type'] },
     
-    // Mileage with comma removal
-    { regex: /(?:מס[׳״\']*\s*ק[״׳\"]מ|קילומטר|ק[״׳\"]מ)[:\s]*([0-9,]+)/i, field: 'km', target: ['vehicle.km'] },
+    // Mileage - comprehensive patterns with comma support
+    { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ|קילומטר|ק[״׳\"'`]מ|מרחק\s*נסיעה|קילומטרים|מס\'\s*ק\"מ|מס\s*ק\"מ)[:\s-]*([0-9,]+)/i, field: 'km', target: ['vehicle.km'] },
     
-    // Model type
-    { regex: /(?:סוג הדגם|סוג הרכב)[:\s]*([^\n\r]+)/i, field: 'model_type', target: ['vehicle.model_type'] },
+    // Model type - expanded
+    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type', target: ['vehicle.model_type'] },
     
-    // Trim
-    { regex: /(?:רמת גימור|גימור)[:\s]*([^\n\r]+)/i, field: 'trim', target: ['vehicle.trim'] },
+    // Trim/Equipment level
+    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim', target: ['vehicle.trim'] },
     
-    // Garage
-    { regex: /(?:מוסך)[:\s]*([^\n\r]+)/i, field: 'garage', target: ['stakeholders.garage.name'] },
+    // Garage - expanded patterns
+    { regex: /(?:מוסך|בית מלאכה|מוסך\s*מורשה|גרש|מרכז שירות)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'garage', target: ['stakeholders.garage.name'] },
     
-    // Office code
-    { regex: /(?:קוד משרד התחבורה|קוד משרד)[:\s]*([0-9-]+)/i, field: 'office_code', target: ['vehicle.office_code'] },
+    // Office code - MOT registration office
+    { regex: /(?:קוד משרד התחבורה|קוד משרד|משרד התחבורה|קוד\s*משרד)[:\s-]*([0-9-]+)/i, field: 'office_code', target: ['vehicle.office_code'] },
     
-    // Enhanced Levi-specific patterns
-    { regex: /(?:קוד דגם)[:\s]*([0-9]+)/i, field: 'model_code', target: ['vehicle.model_code'] },
-    { regex: /(?:שם דגם מלא)[:\s]*([^\n\r]+)/i, field: 'full_model_name', target: ['vehicle.model'] },
-    { regex: /(?:אוטומט)[:\s]*(כן|לא)/i, field: 'is_automatic', target: ['vehicle.is_automatic'] },
-    { regex: /(?:מאפייני הרכב)[:\s]*([^\n\r]+)/i, field: 'features', target: ['vehicle.features'] },
-    { regex: /(?:תאריך הוצאת הדו"ח)[:\s]*([0-9\/]+)/i, field: 'report_date', target: ['valuation.report_date'] },
-    { regex: /(?:עליה לכביש)[:\s]*([0-9\/]+)/i, field: 'registration_date', target: ['vehicle.registration_date'] },
-    { regex: /(?:מספר בעלים)[:\s]*(\d+)/i, field: 'owner_count', target: ['valuation.adjustments.ownership_history.owner_count'] },
-    { regex: /(?:קטיגוריה)[:\s]*([^\n\r]+)/i, field: 'category', target: ['vehicle.category'] },
+    // Enhanced Levi-specific patterns with better Hebrew support
+    { regex: /(?:קוד דגם|קוד\s*דגם|מזהה\s*דגם)[:\s-]*([0-9]+)/i, field: 'model_code', target: ['vehicle.model_code'] },
+    { regex: /(?:שם דגם מלא|דגם מלא|שם\s*דגם\s*מלא|תיאור מלא)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'full_model_name', target: ['vehicle.model'] },
+    { regex: /(?:אוטומט|תיבת הילוכים|הילוכים)[:\s-]*(כן|לא|אוטומטית|ידנית)/i, field: 'is_automatic', target: ['vehicle.is_automatic'] },
+    { regex: /(?:מאפייני הרכב|מאפיינים|אבזור|ציוד נוסף)[:\s-]*([^\n\r\t]+?)(?:\s*(?:\n|\r|$))/i, field: 'features', target: ['vehicle.features'] },
+    { regex: /(?:תאריך הוצאת הדו[״׳\"'`]ח|תאריך דוח|תאריך הערכה)[:\s-]*([0-9\/]+)/i, field: 'report_date', target: ['valuation.report_date'] },
+    { regex: /(?:עליה לכביש|רישום|תאריך רישום|רישום ראשון)[:\s-]*([0-9\/]+)/i, field: 'registration_date', target: ['vehicle.registration_date'] },
+    { regex: /(?:מספר בעלים|מס[׳״\'"`]*\s*בעלים|כמות בעלים|קודמים)[:\s-]*(\d+)/i, field: 'owner_count', target: ['valuation.adjustments.ownership_history.owner_count'] },
+    { regex: /(?:קטיגוריה|קטגוריית רכב|סיווג רכב)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'category', target: ['vehicle.category'] },
     
-    // Levi pricing data
-    { regex: /(?:מחיר בסיס)[:\s]*([0-9,]+)/i, field: 'base_price', target: ['valuation.base_price'] },
-    { regex: /(?:מחיר סופי לרכב)[:\s]*([0-9,]+)/i, field: 'final_price', target: ['valuation.final_price'] },
+    // Levi pricing data with enhanced number recognition
+    { regex: /(?:מחיר בסיס|מחיר\s*בסיס|ערך בסיס)[:\s-]*([0-9,]+)/i, field: 'base_price', target: ['valuation.base_price'] },
+    { regex: /(?:מחיר סופי לרכב|מחיר סופי|ערך סופי|שווי סופי)[:\s-]*([0-9,]+)/i, field: 'final_price', target: ['valuation.final_price'] },
+    { regex: /(?:שווי שוק|ערך שוק|מחיר שוק)[:\s-]*([0-9,]+)/i, field: 'market_value', target: ['vehicle.market_value'] },
     
-    // Levi adjustment patterns - Registration
-    { regex: /(?:עליה לכביש %)[:\s]*([0-9.%-]+)/i, field: 'registration_percent', target: ['valuation.adjustments.registration.percent'] },
-    { regex: /(?:ערך כספי עליה לכביש)[:\s]*([0-9,]+)/i, field: 'registration_amount', target: ['valuation.adjustments.registration.amount'] },
-    { regex: /(?:שווי מצטבר עליה לכביש)[:\s]*([0-9,]+)/i, field: 'registration_cumulative', target: ['valuation.adjustments.registration.cumulative'] },
+    // Levi adjustment patterns - Registration (enhanced)
+    { regex: /(?:עליה לכביש\s*%|עליה לכביש\s*אחוז|התאמה עליה לכביש)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'registration_percent', target: ['valuation.adjustments.registration.percent'] },
+    { regex: /(?:ערך כספי עליה לכביש|סכום עליה לכביש|התאמה כספית עליה לכביש)[:\s-]*([+-]?[0-9,]+)/i, field: 'registration_amount', target: ['valuation.adjustments.registration.amount'] },
+    { regex: /(?:שווי מצטבר עליה לכביש|סך הכל עליה לכביש)[:\s-]*([0-9,]+)/i, field: 'registration_cumulative', target: ['valuation.adjustments.registration.cumulative'] },
     
-    // Levi adjustment patterns - Mileage
-    { regex: /(?:מס\' ק"מ %)[:\s]*([0-9.%-]+)/i, field: 'mileage_percent', target: ['valuation.adjustments.mileage.percent'] },
-    { regex: /(?:ערך כספי מס\' ק"מ)[:\s]*([0-9,]+)/i, field: 'mileage_amount', target: ['valuation.adjustments.mileage.amount'] },
-    { regex: /(?:שווי מצטבר מס\' ק"מ)[:\s]*([0-9,]+)/i, field: 'mileage_cumulative', target: ['valuation.adjustments.mileage.cumulative'] },
+    // Levi adjustment patterns - Mileage (enhanced)
+    { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ\s*%|קילומטראז\s*%|התאמת קילומטראז)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'mileage_percent', target: ['valuation.adjustments.mileage.percent'] },
+    { regex: /(?:ערך כספי מס[׳״\'"`]*\s*ק[״׳\"'`]מ|ערך כספי קילומטראז|התאמה כספית ק\"מ)[:\s-]*([+-]?[0-9,]+)/i, field: 'mileage_amount', target: ['valuation.adjustments.mileage.amount'] },
+    { regex: /(?:שווי מצטבר מס[׳״\'"`]*\s*ק[״׳\"'`]מ|סך הכל קילומטראז)[:\s-]*([0-9,]+)/i, field: 'mileage_cumulative', target: ['valuation.adjustments.mileage.cumulative'] },
     
-    // Levi adjustment patterns - Ownership Type
-    { regex: /(?:סוג בעלות)[:\s]*(פרטית|חברה)/i, field: 'ownership_value', target: ['valuation.adjustments.ownership_type.type'] },
-    { regex: /(?:בעלות %)[:\s]*([0-9.%-]+)/i, field: 'ownership_percent', target: ['valuation.adjustments.ownership_type.percent'] },
-    { regex: /(?:ערך כספי בעלות)[:\s]*([0-9,]+)/i, field: 'ownership_amount', target: ['valuation.adjustments.ownership_type.amount'] },
-    { regex: /(?:שווי מצטבר בעלות)[:\s]*([0-9,]+)/i, field: 'ownership_cumulative', target: ['valuation.adjustments.ownership_type.cumulative'] },
+    // Levi adjustment patterns - Ownership Type (enhanced)
+    { regex: /(?:סוג בעלות)[:\s-]*(פרטית|חברה|מסחרית|ציבורית)/i, field: 'ownership_value', target: ['valuation.adjustments.ownership_type.type'] },
+    { regex: /(?:בעלות\s*%|אחוז בעלות|התאמת בעלות)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'ownership_percent', target: ['valuation.adjustments.ownership_type.percent'] },
+    { regex: /(?:ערך כספי בעלות|התאמה כספית בעלות)[:\s-]*([+-]?[0-9,]+)/i, field: 'ownership_amount', target: ['valuation.adjustments.ownership_type.amount'] },
+    { regex: /(?:שווי מצטבר בעלות|סך הכל בעלות)[:\s-]*([0-9,]+)/i, field: 'ownership_cumulative', target: ['valuation.adjustments.ownership_type.cumulative'] },
     
-    // Levi adjustment patterns - Ownership History
-    { regex: /(?:מס\' בעלים %)[:\s]*([0-9.%-]+)/i, field: 'owners_percent', target: ['valuation.adjustments.ownership_history.percent'] },
-    { regex: /(?:ערך כספי מס\' בעלים)[:\s]*([0-9,]+)/i, field: 'owners_amount', target: ['valuation.adjustments.ownership_history.amount'] },
-    { regex: /(?:שווי מצטבר מס\' בעלים)[:\s]*([0-9,]+)/i, field: 'owners_cumulative', target: ['valuation.adjustments.ownership_history.cumulative'] },
+    // Levi adjustment patterns - Ownership History (enhanced)
+    { regex: /(?:מס[׳״\'"`]*\s*בעלים\s*%|מספר בעלים\s*%|התאמת בעלים)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'owners_percent', target: ['valuation.adjustments.ownership_history.percent'] },
+    { regex: /(?:ערך כספי מס[׳״\'"`]*\s*בעלים|ערך כספי בעלים קודמים)[:\s-]*([+-]?[0-9,]+)/i, field: 'owners_amount', target: ['valuation.adjustments.ownership_history.amount'] },
+    { regex: /(?:שווי מצטבר מס[׳״\'"`]*\s*בעלים|סך הכל בעלים קודמים)[:\s-]*([0-9,]+)/i, field: 'owners_cumulative', target: ['valuation.adjustments.ownership_history.cumulative'] },
     
-    // Levi adjustment patterns - Features
-    { regex: /(?:מאפיינים %)[:\s]*([0-9.%-]+)/i, field: 'features_percent', target: ['valuation.adjustments.features.percent'] },
-    { regex: /(?:ערך כספי מאפיינים)[:\s]*([0-9,]+)/i, field: 'features_amount', target: ['valuation.adjustments.features.amount'] },
-    { regex: /(?:שווי מצטבר מאפיינים)[:\s]*([0-9,]+)/i, field: 'features_cumulative', target: ['valuation.adjustments.features.cumulative'] }
+    // Levi adjustment patterns - Features (enhanced)
+    { regex: /(?:מאפיינים\s*%|אבזור\s*%|התאמת מאפיינים|התאמת אבזור)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'features_percent', target: ['valuation.adjustments.features.percent'] },
+    { regex: /(?:ערך כספי מאפיינים|ערך כספי אבזור|התאמה כספית מאפיינים)[:\s-]*([+-]?[0-9,]+)/i, field: 'features_amount', target: ['valuation.adjustments.features.amount'] },
+    { regex: /(?:שווי מצטבר מאפיינים|סך הכל מאפיינים)[:\s-]*([0-9,]+)/i, field: 'features_cumulative', target: ['valuation.adjustments.features.cumulative'] },
+    
+    // Additional important fields for comprehensive capture
+    { regex: /(?:תאריך נזק|תאריך\s*הנזק|מועד הנזק)[:\s-]*([0-9\/]+)/i, field: 'damage_date', target: ['case_info.damage_date'] },
+    { regex: /(?:סוג נזק|סוג\s*הנזק|תיאור נזק)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'damage_type', target: ['case_info.damage_type'] },
+    { regex: /(?:חברת ביטוח|ביטוח|מבטח)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'insurance_company', target: ['stakeholders.insurance.company'] },
+    { regex: /(?:מספר פוליסה|פוליסה|מס\'\s*פוליסה)[:\s-]*([A-Z0-9-]+)/i, field: 'policy_number', target: ['stakeholders.insurance.policy_number'] },
+    { regex: /(?:מספר תביעה|תביעה|מס\'\s*תביעה)[:\s-]*([A-Z0-9-]+)/i, field: 'claim_number', target: ['stakeholders.insurance.claim_number'] }
   ];
   
   patterns.forEach(({ regex, field, target }) => {
     const match = bodyText.match(regex);
     if (match) {
-      let value = match[1] || match[2] || match[0];
-      value = value.trim();
+      let value = match[1] || match[2] || match[3] || match[0];
+      value = value ? value.trim() : '';
       
-      // Clean and process values based on field type
-      if (field === 'km' || field.includes('amount') || field.includes('cumulative') || field.includes('price')) {
-        // Remove commas from numeric values
-        value = value.replace(/,/g, '');
+      // Skip empty values
+      if (!value) return;
+      
+      // Enhanced value processing based on field type
+      if (field === 'km' || field.includes('amount') || field.includes('cumulative') || field.includes('price') || field === 'engine_volume') {
+        // Remove commas and spaces from numeric values
+        value = value.replace(/[,\s]/g, '');
         // Convert to number if it's a pure number
         if (/^\d+$/.test(value)) {
           value = parseInt(value);
@@ -448,28 +459,52 @@ function processHebrewText(bodyText, result) {
       
       if (field.includes('percent')) {
         // Handle percentage values - remove % symbol and convert to number
-        value = value.replace(/%/g, '');
-        if (/^-?\d+(\.\d+)?$/.test(value)) {
+        value = value.replace(/%/g, '').trim();
+        if (/^[+-]?\d+(\.\d+)?$/.test(value)) {
           value = parseFloat(value);
         }
       }
       
       if (field === 'is_automatic') {
-        // Convert Hebrew yes/no to boolean
-        value = value === 'כן';
+        // Convert Hebrew yes/no or automatic/manual to boolean
+        value = value === 'כן' || value === 'אוטומטית' || value.toLowerCase() === 'automatic';
       }
       
-      // Handle year - use 4-digit year if available
-      if (field === 'year' && match[2]) {
-        value = match[2];
+      // Handle year - prefer 4-digit year from any capture group
+      if (field === 'year') {
+        if (match[2] && /^\d{4}$/.test(match[2])) {
+          value = parseInt(match[2]);
+        } else if (match[1] && /^\d{4}$/.test(match[1])) {
+          value = parseInt(match[1]);
+        } else if (/^\d{4}$/.test(value)) {
+          value = parseInt(value);
+        }
       }
       
-      // Set values in helper
+      // Clean text fields - remove extra whitespace and special characters
+      if (typeof value === 'string' && !field.includes('amount') && !field.includes('percent') && !field.includes('price') && field !== 'km') {
+        value = value.replace(/\s+/g, ' ').trim();
+        // Remove common OCR artifacts
+        value = value.replace(/[^\u0590-\u05FF\u200F\u200Ea-zA-Z0-9\s\-\.\/\(\)]/g, '');
+      }
+      
+      // Validate plate numbers (Israeli format: 7-8 digits)
+      if (field === 'plate') {
+        const plateMatch = value.match(/(\d{7,8})/);
+        if (plateMatch) {
+          value = plateMatch[1];
+        }
+      }
+      
+      // Set values in helper with validation
       target.forEach(path => {
-        setNestedValue(window.helper, path, value);
+        // Only update if we have a meaningful value
+        if (value !== '' && value !== null && value !== undefined) {
+          setNestedValue(window.helper, path, value);
+        }
       });
       
-      console.log(`✅ Extracted ${field}: ${value}`);
+      console.log(`✅ Extracted ${field}: ${value} (type: ${typeof value})`);
       updated = true;
     }
   });
@@ -487,41 +522,118 @@ function processDirectData(data, result) {
   let updated = false;
   
   const fieldMappings = {
-    // Vehicle fields
-    'plate': ['vehicle.plate', 'meta.plate'],
-    'license_plate': ['vehicle.plate', 'meta.plate'],
+    // Vehicle fields - comprehensive mapping
+    'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'license_plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'מספר_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'מס_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'manufacturer': ['vehicle.manufacturer'],
     'make': ['vehicle.manufacturer'],
+    'יצרן': ['vehicle.manufacturer'],
+    'שם_היצרן': ['vehicle.manufacturer'],
     'model': ['vehicle.model'],
+    'דגם': ['vehicle.model'],
+    'שם_דגם': ['vehicle.model'],
     'year': ['vehicle.year'],
+    'שנת_ייצור': ['vehicle.year'],
+    'שנת_יצור': ['vehicle.year'],
     'chassis': ['vehicle.chassis'],
     'vin': ['vehicle.chassis'],
+    'מספר_שילדה': ['vehicle.chassis'],
+    'שילדה': ['vehicle.chassis'],
     'km': ['vehicle.km'],
     'mileage': ['vehicle.km'],
+    'קילומטרים': ['vehicle.km'],
+    'קילומטראז': ['vehicle.km'],
     'engine_volume': ['vehicle.engine_volume'],
+    'נפח_מנוע': ['vehicle.engine_volume'],
     'fuel_type': ['vehicle.fuel_type'],
+    'סוג_דלק': ['vehicle.fuel_type'],
+    'דלק': ['vehicle.fuel_type'],
     'ownership_type': ['vehicle.ownership_type'],
+    'סוג_בעלות': ['vehicle.ownership_type'],
+    'בעלות': ['vehicle.ownership_type'],
     'trim': ['vehicle.trim'],
+    'רמת_גימור': ['vehicle.trim'],
+    'גימור': ['vehicle.trim'],
     'model_type': ['vehicle.model_type'],
+    'סוג_הדגם': ['vehicle.model_type'],
     'office_code': ['vehicle.office_code'],
+    'קוד_משרד': ['vehicle.office_code'],
+    'model_code': ['vehicle.model_code'],
+    'קוד_דגם': ['vehicle.model_code'],
+    'features': ['vehicle.features'],
+    'מאפיינים': ['vehicle.features'],
+    'אבזור': ['vehicle.features'],
+    'category': ['vehicle.category'],
+    'קטיגוריה': ['vehicle.category'],
+    'is_automatic': ['vehicle.is_automatic'],
+    'אוטומט': ['vehicle.is_automatic'],
     
     // Owner fields
     'owner': ['stakeholders.owner.name'],
     'owner_name': ['stakeholders.owner.name'],
+    'בעלים': ['stakeholders.owner.name'],
+    'שם_בעל_הרכב': ['stakeholders.owner.name'],
     'owner_phone': ['stakeholders.owner.phone'],
     'owner_address': ['stakeholders.owner.address'],
+    'client_name': ['stakeholders.owner.name'],
     
     // Garage fields
     'garage_name': ['stakeholders.garage.name'],
     'garage': ['stakeholders.garage.name'],
+    'מוסך': ['stakeholders.garage.name'],
+    'garage_phone': ['stakeholders.garage.phone'],
+    'garage_email': ['stakeholders.garage.email'],
     
     // Insurance fields
     'insurance_company': ['stakeholders.insurance.company'],
+    'חברת_ביטוח': ['stakeholders.insurance.company'],
+    'ביטוח': ['stakeholders.insurance.company'],
+    'insurance_email': ['stakeholders.insurance.email'],
+    'policy_number': ['stakeholders.insurance.policy_number'],
+    'מספר_פוליסה': ['stakeholders.insurance.policy_number'],
+    'claim_number': ['stakeholders.insurance.claim_number'],
+    'מספר_תביעה': ['stakeholders.insurance.claim_number'],
+    'agent_name': ['stakeholders.insurance.agent.name'],
+    'agent_phone': ['stakeholders.insurance.agent.phone'],
+    'agent_email': ['stakeholders.insurance.agent.email'],
+    
+    // Case info fields
+    'damage_date': ['case_info.damage_date'],
+    'תאריך_נזק': ['case_info.damage_date'],
+    'damage_type': ['case_info.damage_type'],
+    'סוג_נזק': ['case_info.damage_type'],
+    'inspection_date': ['case_info.inspection_date'],
+    'תאריך_בדיקה': ['case_info.inspection_date'],
+    'location': ['case_info.inspection_location'],
+    'מקום_בדיקה': ['case_info.inspection_location'],
     
     // Valuation fields
     'base_price': ['valuation.base_price'],
+    'מחיר_בסיס': ['valuation.base_price'],
     'final_price': ['valuation.final_price'],
-    'market_value': ['vehicle.market_value', 'valuation.final_price']
+    'מחיר_סופי': ['valuation.final_price'],
+    'market_value': ['vehicle.market_value', 'valuation.final_price'],
+    'שווי_שוק': ['vehicle.market_value'],
+    'report_date': ['valuation.report_date'],
+    'תאריך_דוח': ['valuation.report_date'],
+    'registration_date': ['vehicle.registration_date'],
+    'עליה_לכביש': ['vehicle.registration_date'],
+    'owner_count': ['valuation.adjustments.ownership_history.owner_count'],
+    'מספר_בעלים': ['valuation.adjustments.ownership_history.owner_count'],
+    
+    // Adjustment fields
+    'registration_percent': ['valuation.adjustments.registration.percent'],
+    'registration_amount': ['valuation.adjustments.registration.amount'],
+    'mileage_percent': ['valuation.adjustments.mileage.percent'],
+    'mileage_amount': ['valuation.adjustments.mileage.amount'],
+    'ownership_percent': ['valuation.adjustments.ownership_type.percent'],
+    'ownership_amount': ['valuation.adjustments.ownership_type.amount'],
+    'owners_percent': ['valuation.adjustments.ownership_history.percent'],
+    'owners_amount': ['valuation.adjustments.ownership_history.amount'],
+    'features_percent': ['valuation.adjustments.features.percent'],
+    'features_amount': ['valuation.adjustments.features.amount']
   };
   
   Object.entries(data).forEach(([key, value]) => {
@@ -590,31 +702,87 @@ function populateAllForms() {
   console.log('🔄 Populating all forms from helper data');
   
   const fieldMappings = {
-    // Basic form fields
-    'plate': window.helper.vehicle?.plate || window.helper.meta?.plate,
+    // Basic vehicle fields with fallback values
+    'plate': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
+    'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
     'manufacturer': window.helper.vehicle?.manufacturer,
     'model': window.helper.vehicle?.model,
     'year': window.helper.vehicle?.year,
-    'owner': window.helper.stakeholders?.owner?.name,
     'chassis': window.helper.vehicle?.chassis,
+    'vin': window.helper.vehicle?.chassis,
     'km': window.helper.vehicle?.km,
+    'odo': window.helper.vehicle?.km,
     'engine_volume': window.helper.vehicle?.engine_volume,
     'fuel_type': window.helper.vehicle?.fuel_type,
     'ownership_type': window.helper.vehicle?.ownership_type,
     'trim': window.helper.vehicle?.trim,
     'model_type': window.helper.vehicle?.model_type,
     'office_code': window.helper.vehicle?.office_code,
+    'model_code': window.helper.vehicle?.model_code,
+    'features': window.helper.vehicle?.features,
+    'category': window.helper.vehicle?.category,
+    'is_automatic': window.helper.vehicle?.is_automatic,
+    'registration_date': window.helper.vehicle?.registration_date,
+    'market_value': window.helper.vehicle?.market_value || window.helper.valuation?.final_price,
     
-    // Stakeholder fields
+    // Owner/Stakeholder fields
+    'owner': window.helper.stakeholders?.owner?.name,
+    'ownerName': window.helper.stakeholders?.owner?.name,
+    'client_name': window.helper.stakeholders?.owner?.name,
     'owner_phone': window.helper.stakeholders?.owner?.phone,
+    'ownerPhone': window.helper.stakeholders?.owner?.phone,
     'owner_address': window.helper.stakeholders?.owner?.address,
+    'ownerAddress': window.helper.stakeholders?.owner?.address,
+    
+    // Garage fields
     'garage_name': window.helper.stakeholders?.garage?.name,
+    'garageName': window.helper.stakeholders?.garage?.name,
+    'garage': window.helper.stakeholders?.garage?.name,
+    'garage_phone': window.helper.stakeholders?.garage?.phone,
+    'garagePhone': window.helper.stakeholders?.garage?.phone,
+    'garage_email': window.helper.stakeholders?.garage?.email,
+    'garageEmail': window.helper.stakeholders?.garage?.email,
+    
+    // Insurance fields
     'insurance_company': window.helper.stakeholders?.insurance?.company,
+    'insuranceCompany': window.helper.stakeholders?.insurance?.company,
+    'insurance_email': window.helper.stakeholders?.insurance?.email,
+    'insuranceEmail': window.helper.stakeholders?.insurance?.email,
+    'policy_number': window.helper.stakeholders?.insurance?.policy_number,
+    'claim_number': window.helper.stakeholders?.insurance?.claim_number,
+    'agent_name': window.helper.stakeholders?.insurance?.agent?.name,
+    'agentName': window.helper.stakeholders?.insurance?.agent?.name,
+    'agent_phone': window.helper.stakeholders?.insurance?.agent?.phone,
+    'agentPhone': window.helper.stakeholders?.insurance?.agent?.phone,
+    'agent_email': window.helper.stakeholders?.insurance?.agent?.email,
+    'agentEmail': window.helper.stakeholders?.insurance?.agent?.email,
+    
+    // Case information fields
+    'damage_date': window.helper.case_info?.damage_date,
+    'damageDate': window.helper.case_info?.damage_date,
+    'damage_type': window.helper.case_info?.damage_type,
+    'damageType': window.helper.case_info?.damage_type,
+    'inspection_date': window.helper.case_info?.inspection_date,
+    'location': window.helper.case_info?.inspection_location,
+    'inspection_location': window.helper.case_info?.inspection_location,
     
     // Valuation fields
     'base_price': window.helper.valuation?.base_price,
     'final_price': window.helper.valuation?.final_price,
-    'market_value': window.helper.vehicle?.market_value || window.helper.valuation?.final_price
+    'report_date': window.helper.valuation?.report_date,
+    'owner_count': window.helper.valuation?.adjustments?.ownership_history?.owner_count,
+    
+    // Adjustment fields for forms that might show them
+    'registration_percent': window.helper.valuation?.adjustments?.registration?.percent,
+    'registration_amount': window.helper.valuation?.adjustments?.registration?.amount,
+    'mileage_percent': window.helper.valuation?.adjustments?.mileage?.percent,
+    'mileage_amount': window.helper.valuation?.adjustments?.mileage?.amount,
+    'ownership_percent': window.helper.valuation?.adjustments?.ownership_type?.percent,
+    'ownership_amount': window.helper.valuation?.adjustments?.ownership_type?.amount,
+    'owners_percent': window.helper.valuation?.adjustments?.ownership_history?.percent,
+    'owners_amount': window.helper.valuation?.adjustments?.ownership_history?.amount,
+    'features_percent': window.helper.valuation?.adjustments?.features?.percent,
+    'features_amount': window.helper.valuation?.adjustments?.features?.amount
   };
   
   let populatedCount = 0;
@@ -740,6 +908,129 @@ function triggerFloatingScreenUpdates(updatedSections) {
       window.refreshValuationData();
     }
   }
+}
+
+// Enhanced Universal Data Capture Integration - Monitor all UI inputs
+function setupUniversalInputCapture() {
+  console.log('🔄 Setting up universal input capture integration...');
+  
+  // Monitor all input fields in real-time
+  const inputSelector = 'input, select, textarea, [contenteditable="true"]';
+  
+  // Enhanced field mapping for UI capture
+  const getHelperPath = (input) => {
+    const fieldId = input.id || input.name || '';
+    
+    // Comprehensive field to helper path mapping
+    const pathMappings = {
+      // Vehicle fields
+      'plate': 'vehicle.plate', 'plateNumber': 'vehicle.plate',
+      'manufacturer': 'vehicle.manufacturer', 'make': 'vehicle.manufacturer',
+      'model': 'vehicle.model', 'year': 'vehicle.year',
+      'chassis': 'vehicle.chassis', 'vin': 'vehicle.chassis',
+      'km': 'vehicle.km', 'odo': 'vehicle.km', 'mileage': 'vehicle.km',
+      'engine_volume': 'vehicle.engine_volume', 'fuel_type': 'vehicle.fuel_type',
+      'ownership_type': 'vehicle.ownership_type', 'trim': 'vehicle.trim',
+      'model_type': 'vehicle.model_type', 'office_code': 'vehicle.office_code',
+      'model_code': 'vehicle.model_code', 'features': 'vehicle.features',
+      'category': 'vehicle.category', 'registration_date': 'vehicle.registration_date',
+      
+      // Owner/Stakeholder fields
+      'owner': 'stakeholders.owner.name', 'ownerName': 'stakeholders.owner.name',
+      'client_name': 'stakeholders.owner.name', 'owner_phone': 'stakeholders.owner.phone',
+      'ownerPhone': 'stakeholders.owner.phone', 'owner_address': 'stakeholders.owner.address',
+      'ownerAddress': 'stakeholders.owner.address',
+      
+      // Garage fields
+      'garage_name': 'stakeholders.garage.name', 'garageName': 'stakeholders.garage.name',
+      'garage': 'stakeholders.garage.name', 'garage_phone': 'stakeholders.garage.phone',
+      'garagePhone': 'stakeholders.garage.phone', 'garage_email': 'stakeholders.garage.email',
+      'garageEmail': 'stakeholders.garage.email',
+      
+      // Insurance fields
+      'insurance_company': 'stakeholders.insurance.company', 'insuranceCompany': 'stakeholders.insurance.company',
+      'insurance_email': 'stakeholders.insurance.email', 'insuranceEmail': 'stakeholders.insurance.email',
+      'policy_number': 'stakeholders.insurance.policy_number', 'claim_number': 'stakeholders.insurance.claim_number',
+      'agent_name': 'stakeholders.insurance.agent.name', 'agentName': 'stakeholders.insurance.agent.name',
+      'agent_phone': 'stakeholders.insurance.agent.phone', 'agentPhone': 'stakeholders.insurance.agent.phone',
+      'agent_email': 'stakeholders.insurance.agent.email', 'agentEmail': 'stakeholders.insurance.agent.email',
+      
+      // Case info fields
+      'damage_date': 'case_info.damage_date', 'damageDate': 'case_info.damage_date',
+      'damage_type': 'case_info.damage_type', 'damageType': 'case_info.damage_type',
+      'inspection_date': 'case_info.inspection_date', 'location': 'case_info.inspection_location',
+      'inspection_location': 'case_info.inspection_location',
+      
+      // Valuation fields
+      'base_price': 'valuation.base_price', 'final_price': 'valuation.final_price',
+      'market_value': 'vehicle.market_value', 'report_date': 'valuation.report_date',
+      'owner_count': 'valuation.adjustments.ownership_history.owner_count'
+    };
+    
+    // Direct mapping first
+    if (pathMappings[fieldId]) {
+      return pathMappings[fieldId];
+    }
+    
+    // Pattern matching for similar fields
+    if (fieldId.includes('plate')) return 'vehicle.plate';
+    if (fieldId.includes('owner') && !fieldId.includes('phone') && !fieldId.includes('address')) return 'stakeholders.owner.name';
+    if (fieldId.includes('garage') && !fieldId.includes('phone') && !fieldId.includes('email')) return 'stakeholders.garage.name';
+    if (fieldId.includes('insurance') && !fieldId.includes('email')) return 'stakeholders.insurance.company';
+    
+    // Default fallback
+    return `general.${fieldId}`;
+  };
+  
+  const attachInputListener = (input) => {
+    if (input.dataset.helperCaptureAttached) return;
+    
+    const helperPath = getHelperPath(input);
+    console.log(`🔗 Attaching capture to: ${input.id || input.name} → ${helperPath}`);
+    
+    ['input', 'change', 'blur'].forEach(eventType => {
+      input.addEventListener(eventType, (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        if (value !== '' && value !== null && value !== undefined) {
+          setNestedValue(window.helper, helperPath, value);
+          console.log(`📝 Captured: ${helperPath} = ${value}`);
+          
+          // Save to storage after input
+          saveHelperToAllStorageLocations();
+        }
+      });
+    });
+    
+    input.dataset.helperCaptureAttached = 'true';
+  };
+  
+  // Attach to existing inputs
+  document.querySelectorAll(inputSelector).forEach(attachInputListener);
+  
+  // Monitor for dynamic inputs
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.matches && node.matches(inputSelector)) {
+            attachInputListener(node);
+          }
+          const inputs = node.querySelectorAll ? node.querySelectorAll(inputSelector) : [];
+          inputs.forEach(attachInputListener);
+        }
+      });
+    });
+  });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
+  console.log('✅ Universal input capture integration active');
+}
+
+// Initialize universal input capture when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupUniversalInputCapture);
+} else {
+  setupUniversalInputCapture();
 }
 
 // Auto-save every 30 seconds

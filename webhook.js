@@ -142,24 +142,82 @@ export async function sendToWebhook(id, payload) {
             window.refreshAllModuleForms();
           }
           
-          // Also try to populate specific form fields directly
+          // Enhanced direct field population with comprehensive mappings
           const directFieldMappings = {
-            'plate': actualData.plate || actualData.מספר_רכב || actualData.license_plate,
-            'manufacturer': actualData.manufacturer || actualData.יצרן || actualData.make,
-            'model': actualData.model || actualData.דגם,
-            'year': actualData.year || actualData.שנת_יצור,
-            'owner': actualData.owner || actualData.בעלים || actualData.owner_name,
-            'km': actualData.km || actualData.mileage || actualData.קילומטראז
+            // Basic vehicle fields with Hebrew alternatives
+            'plate': actualData.plate || actualData.מספר_רכב || actualData['מס\' רכב'] || actualData['מס רכב'] || actualData.license_plate,
+            'plateNumber': actualData.plate || actualData.מספר_רכב || actualData['מס\' רכב'] || actualData['מס רכב'] || actualData.license_plate,
+            'manufacturer': actualData.manufacturer || actualData.יצרן || actualData['שם היצרן'] || actualData.make,
+            'model': actualData.model || actualData.דגם || actualData['שם דגם'],
+            'year': actualData.year || actualData['שנת ייצור'] || actualData['שנת יצור'] || actualData.שנת_ייצור,
+            'owner': actualData.owner || actualData.בעלים || actualData['שם בעל הרכב'] || actualData.owner_name || actualData.client_name,
+            'ownerName': actualData.owner || actualData.בעלים || actualData['שם בעל הרכב'] || actualData.owner_name || actualData.client_name,
+            'client_name': actualData.owner || actualData.בעלים || actualData['שם בעל הרכב'] || actualData.owner_name || actualData.client_name,
+            'km': actualData.km || actualData.mileage || actualData.קילומטראז || actualData['מס\' ק\"מ'] || actualData.קילומטרים,
+            'odo': actualData.km || actualData.mileage || actualData.קילומטראז || actualData['מס\' ק\"מ'] || actualData.קילומטרים,
+            'chassis': actualData.chassis || actualData.vin || actualData['מספר שילדה'] || actualData.שילדה,
+            'vin': actualData.chassis || actualData.vin || actualData['מספר שילדה'] || actualData.שילדה,
+            'engine_volume': actualData.engine_volume || actualData['נפח מנוע'] || actualData.נפח_מנוע,
+            'fuel_type': actualData.fuel_type || actualData['סוג דלק'] || actualData.דלק,
+            'ownership_type': actualData.ownership_type || actualData['סוג בעלות'] || actualData.בעלות,
+            'trim': actualData.trim || actualData['רמת גימור'] || actualData.גימור,
+            'model_type': actualData.model_type || actualData['סוג הדגם'],
+            'office_code': actualData.office_code || actualData['קוד משרד התחבורה'] || actualData['קוד משרד'],
+            'model_code': actualData.model_code || actualData['קוד דגם'],
+            'features': actualData.features || actualData.מאפיינים || actualData['מאפייני הרכב'],
+            'category': actualData.category || actualData.קטיגוריה,
+            'is_automatic': actualData.is_automatic || actualData.אוטומט,
+            
+            // Stakeholder fields
+            'garage_name': actualData.garage_name || actualData.garage || actualData.מוסך,
+            'garageName': actualData.garage_name || actualData.garage || actualData.מוסך,
+            'garage': actualData.garage_name || actualData.garage || actualData.מוסך,
+            'insurance_company': actualData.insurance_company || actualData['חברת ביטוח'] || actualData.ביטוח,
+            'insuranceCompany': actualData.insurance_company || actualData['חברת ביטוח'] || actualData.ביטוח,
+            
+            // Valuation fields
+            'base_price': actualData.base_price || actualData['מחיר בסיס'],
+            'final_price': actualData.final_price || actualData['מחיר סופי'] || actualData['מחיר סופי לרכב'],
+            'market_value': actualData.market_value || actualData['שווי שוק'] || actualData.final_price,
+            'report_date': actualData.report_date || actualData['תאריך דוח'] || actualData['תאריך הוצאת הדוח'],
+            'registration_date': actualData.registration_date || actualData['עליה לכביש'],
+            'owner_count': actualData.owner_count || actualData['מספר בעלים'],
+            
+            // Case info fields
+            'damage_date': actualData.damage_date || actualData['תאריך נזק'],
+            'damageDate': actualData.damage_date || actualData['תאריך נזק'],
+            'damage_type': actualData.damage_type || actualData['סוג נזק'],
+            'damageType': actualData.damage_type || actualData['סוג נזק'],
+            'inspection_date': actualData.inspection_date || actualData['תאריך בדיקה'],
+            'location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
+            'inspection_location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location
           };
           
           let populatedCount = 0;
           Object.keys(directFieldMappings).forEach(fieldId => {
             const value = directFieldMappings[fieldId];
-            if (value) {
-              const element = document.getElementById(fieldId);
-              if (element) {
-                element.value = value;
-                element.dispatchEvent(new Event('change', { bubbles: true }));
+            if (value && value !== '' && value !== '-' && value !== null) {
+              // Try to find the element by ID
+              let element = document.getElementById(fieldId);
+              
+              // If not found by exact ID, try variations
+              if (!element) {
+                element = document.querySelector(`[name="${fieldId}"]`);
+              }
+              
+              if (element && (!element.value || element.value.trim() === '')) {
+                // Handle different input types
+                if (element.type === 'checkbox') {
+                  element.checked = value === true || value === 'כן' || value === 'yes';
+                } else {
+                  element.value = value;
+                }
+                
+                // Trigger multiple events for compatibility
+                ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+                  element.dispatchEvent(new Event(eventType, { bubbles: true }));
+                });
+                
                 populatedCount++;
                 console.log(`✅ Direct populated ${fieldId}: ${value}`);
               }

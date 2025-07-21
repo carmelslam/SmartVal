@@ -40,15 +40,25 @@ export const sessionEngine = {
     return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
   },
 
-  // Enhanced data loading with validation and recovery
+  // Enhanced data loading with validation and recovery - prioritizes helper.js
   loadSessionData() {
     try {
-      // Try primary source (sessionStorage)
+      console.log('🔄 SessionEngine: Loading session data...');
+      
+      // Priority 1: Check if window.helper already exists (live data)
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        console.log('✅ Using existing window.helper as data source');
+        this.helper = window.helper;
+        this.lastSaveTimestamp = Date.now();
+        return { success: true, source: 'window.helper' };
+      }
+      
+      // Priority 2: Try primary source (sessionStorage)
       let raw = sessionStorage.getItem('helper');
       let dataSource = 'sessionStorage';
       
       if (!raw) {
-        // Try backup source (localStorage)
+        // Priority 3: Try backup source (localStorage)
         raw = localStorage.getItem('helper_data');
         dataSource = 'localStorage';
         
@@ -58,7 +68,7 @@ export const sessionEngine = {
       }
       
       if (!raw) {
-        console.log('📭 No session data found');
+        console.log('📭 No session data found in storage');
         return { success: false, reason: 'no_data' };
       }
 
@@ -66,13 +76,14 @@ export const sessionEngine = {
       const parsedData = JSON.parse(raw);
       const validation = this.validateSessionData(parsedData);
       
-      if (!validation.isValid) {
+      if (!validation.isValid && validation.score < 50) {
         console.warn('❌ Session data validation failed:', validation.errors);
         return { success: false, reason: 'validation_failed', errors: validation.errors };
       }
 
-      // Load successful
+      // Load successful - sync with window.helper
       this.helper = parsedData;
+      window.helper = parsedData;  // Ensure window.helper is updated
       this.lastSaveTimestamp = Date.now();
       
       // If data was loaded from localStorage, sync to sessionStorage
@@ -241,43 +252,73 @@ export const sessionEngine = {
     return { success: true, method: 'empty session' };
   },
 
-  // Enhanced session saving with backup
+  // Enhanced session saving with backup - syncs with window.helper
   saveSessionData() {
     try {
+      console.log('💾 SessionEngine: Saving session data...');
+      
+      // Priority 1: Use window.helper if it's more recent or complete
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        // Check if window.helper is newer or has more data
+        const helperMetaTime = window.helper.meta?.updated_at ? new Date(window.helper.meta.updated_at).getTime() : 0;
+        const sessionMetaTime = this.helper?.meta?.updated_at ? new Date(this.helper.meta.updated_at).getTime() : 0;
+        
+        if (helperMetaTime >= sessionMetaTime || Object.keys(window.helper).length > Object.keys(this.helper || {}).length) {
+          console.log('🔄 Using window.helper as data source for saving (more recent/complete)');
+          this.helper = window.helper;
+        }
+      }
+      
+      // Ensure meta section exists
+      if (!this.helper) {
+        this.helper = window.helper || {};
+      }
+      
       if (!this.helper.meta) {
         this.helper.meta = {};
       }
       
       // Update timestamp
       this.helper.meta.updated_at = new Date().toISOString();
+      this.helper.meta.last_session_save = new Date().toISOString();
       
       const dataString = JSON.stringify(this.helper);
+      
+      // Ensure window.helper is in sync
+      window.helper = this.helper;
       
       // Save to primary storage
       sessionStorage.setItem('helper', dataString);
       
-      // Save to backup storage
+      // Save to backup storage locations
       localStorage.setItem('helper_data', dataString);
-      
-      // Create additional backup
       localStorage.setItem('helper_data_backup', dataString);
+      
+      // Also save to compatibility locations
+      sessionStorage.setItem('helper_backup', dataString);
+      sessionStorage.setItem('helper_timestamp', new Date().toISOString());
       
       this.lastSaveTimestamp = Date.now();
       
       // Log save event
-      securityManager.logSecurityEvent('session_saved', {
-        sessionId: this.sessionId,
-        dataSize: dataString.length,
-        timestamp: new Date()
-      });
+      if (typeof securityManager !== 'undefined') {
+        securityManager.logSecurityEvent('session_saved', {
+          sessionId: this.sessionId,
+          dataSize: dataString.length,
+          timestamp: new Date()
+        });
+      }
       
+      console.log(`✅ Session data saved successfully (${Math.round(dataString.length / 1024)} KB)`);
       return true;
       
     } catch (error) {
       console.error('❌ Failed to save session data:', error);
-      errorHandler.createError('session', 'high', 'Failed to save session data', {
-        originalError: error.message
-      });
+      if (typeof errorHandler !== 'undefined') {
+        errorHandler.createError('session', 'high', 'Failed to save session data', {
+          originalError: error.message
+        });
+      }
       return false;
     }
   },
