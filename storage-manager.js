@@ -22,7 +22,8 @@ export class StorageManager {
     
     this.initializeStorage();
     this.setupStorageQuotaMonitoring();
-    this.registerStorageOverride();
+    // TEMPORARILY DISABLED to prevent infinite loops
+    // this.registerStorageOverride();
     
     console.log('✅ Centralized Storage Manager initialized');
   }
@@ -106,14 +107,15 @@ export class StorageManager {
       
       const timestamp = new Date().toISOString();
       
-      // Save to primary storage (sessionStorage)
-      sessionStorage.setItem(this.storageKeys.PRIMARY, dataString);
-      sessionStorage.setItem(this.storageKeys.TIMESTAMP, timestamp);
+      // Save to primary storage (sessionStorage) - use direct call to avoid override loop
+      const originalSetItem = Object.getPrototypeOf(sessionStorage).setItem;
+      originalSetItem.call(sessionStorage, this.storageKeys.PRIMARY, dataString);
+      originalSetItem.call(sessionStorage, this.storageKeys.TIMESTAMP, timestamp);
       console.log('✅ Data saved to primary storage (sessionStorage)');
       
       // Save backup in sessionStorage if requested
       if (backup) {
-        sessionStorage.setItem(this.storageKeys.BACKUP, dataString);
+        originalSetItem.call(sessionStorage, this.storageKeys.BACKUP, dataString);
         console.log('✅ Data backed up in sessionStorage');
       }
       
@@ -396,15 +398,27 @@ export class StorageManager {
     const originalGetItem = sessionStorage.getItem;
     const storageManager = this;
     
+    // Add flag to prevent infinite loops
+    let isProcessingStorageCall = false;
+    
     sessionStorage.setItem = function(key, value) {
+      // Prevent infinite loop - if we're already processing a storage call, use original method
+      if (isProcessingStorageCall) {
+        return originalSetItem.call(this, key, value);
+      }
+      
       // Intercept helper-related storage calls
       if (key === 'helper' || key === storageManager.storageKeys.PRIMARY) {
         console.log('🔧 Intercepted storage call for helper data');
         
         try {
+          isProcessingStorageCall = true;
           const data = JSON.parse(value);
-          return storageManager.save(data, { backup: true, persist: true });
+          const result = storageManager.save(data, { backup: true, persist: true });
+          isProcessingStorageCall = false;
+          return result;
         } catch (e) {
+          isProcessingStorageCall = false;
           // If it's not JSON, use original method
           return originalSetItem.call(this, key, value);
         }
@@ -414,7 +428,7 @@ export class StorageManager {
       return originalSetItem.call(this, key, value);
     };
     
-    console.log('✅ Storage override registered');
+    console.log('✅ Storage override registered with loop prevention');
   }
   
   // Event system for storage operations
