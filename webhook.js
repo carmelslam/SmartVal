@@ -205,21 +205,41 @@ export async function sendToWebhook(id, payload) {
                 element = document.querySelector(`[name="${fieldId}"]`);
               }
               
-              if (element && (!element.value || element.value.trim() === '')) {
-                // Handle different input types
-                if (element.type === 'checkbox') {
-                  element.checked = value === true || value === 'כן' || value === 'yes';
-                } else {
-                  element.value = value;
+              if (element) {
+                // 🔧 CRITICAL FIX: Force populate from webhook data (override existing values)
+                const currentValue = element.value?.trim() || '';
+                const newValue = String(value).trim();
+                
+                // Only populate if we have a meaningful new value and it's different
+                if (newValue && newValue !== '' && newValue !== '-' && newValue !== 'undefined' && newValue !== 'null') {
+                  // Handle different input types
+                  if (element.type === 'checkbox') {
+                    const shouldBeChecked = value === true || value === 'כן' || value === 'yes' || value === 'true';
+                    if (element.checked !== shouldBeChecked) {
+                      element.checked = shouldBeChecked;
+                      populatedCount++;
+                      console.log(`✅ Direct populated checkbox ${fieldId}: ${shouldBeChecked}`);
+                    }
+                  } else if (currentValue !== newValue) {
+                    // Force update the value
+                    element.value = newValue;
+                    
+                    // Add visual indicator for webhook-populated fields
+                    element.style.borderLeft = '4px solid #28a745';
+                    element.style.backgroundColor = '#f8fff8';
+                    element.title = `Auto-populated from webhook: ${newValue}`;
+                    
+                    // Trigger multiple events for compatibility
+                    ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+                      element.dispatchEvent(new Event(eventType, { bubbles: true }));
+                    });
+                    
+                    populatedCount++;
+                    console.log(`✅ Direct populated ${fieldId}: "${currentValue}" → "${newValue}"`);
+                  }
                 }
-                
-                // Trigger multiple events for compatibility
-                ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
-                  element.dispatchEvent(new Event(eventType, { bubbles: true }));
-                });
-                
-                populatedCount++;
-                console.log(`✅ Direct populated ${fieldId}: ${value}`);
+              } else {
+                console.log(`⚠️ Element not found for field: ${fieldId}`);
               }
             }
           });

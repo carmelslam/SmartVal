@@ -3,8 +3,43 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
+// 🔧 CRITICAL FIX: Load existing data from storage FIRST
+function initializeHelper() {
+  console.log('🔄 Initializing helper - checking for existing data...');
+  
+  // Try to load from sessionStorage first
+  let existingData = null;
+  try {
+    const sessionData = sessionStorage.getItem('helper');
+    if (sessionData && sessionData !== '{}') {
+      existingData = JSON.parse(sessionData);
+      console.log('✅ Found existing helper data in sessionStorage:', existingData);
+    }
+  } catch (e) {
+    console.warn('⚠️ Could not load from sessionStorage:', e);
+  }
+  
+  // Fallback to localStorage if sessionStorage is empty
+  if (!existingData) {
+    try {
+      const localData = localStorage.getItem('helper_data');
+      if (localData && localData !== '{}') {
+        existingData = JSON.parse(localData);
+        console.log('✅ Found existing helper data in localStorage:', existingData);
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not load from localStorage:', e);
+    }
+  }
+  
+  return existingData;
+}
+
+// Load existing data or create default structure
+const existingHelper = initializeHelper();
+
 // Create comprehensive helper system with ALL required fields
-window.helper = window.helper || {
+window.helper = existingHelper || {
   meta: {
     plate: '',
     case_id: 'YC-UNKNOWN-2025',
@@ -266,6 +301,63 @@ window.helper = window.helper || {
     }
   }
 };
+
+// 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
+if (existingHelper && typeof existingHelper === 'object') {
+  console.log('🔄 Merging existing helper data with default structure...');
+  
+  // Deep merge function to preserve existing data while ensuring all required fields exist
+  function deepMerge(target, source) {
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        target[key] = target[key] || {};
+        deepMerge(target[key], source[key]);
+      } else if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
+        target[key] = source[key];
+      }
+    }
+  }
+  
+  // Apply the merge
+  deepMerge(window.helper, existingHelper);
+  console.log('✅ Helper data merged successfully:', window.helper);
+  
+  // Immediately trigger form population with restored data
+  setTimeout(() => {
+    console.log('🔄 Auto-populating forms with restored helper data...');
+    if (typeof populateAllForms === 'function') {
+      populateAllForms();
+    }
+    
+    // Force broadcast update to all listening components
+    if (typeof broadcastHelperUpdate === 'function') {
+      broadcastHelperUpdate(['vehicle', 'stakeholders', 'case_info', 'valuation'], 'helper_restoration');
+    }
+  }, 500);
+}
+
+// 🔧 CRITICAL: Also watch for DOM changes and ensure forms are populated
+if (typeof window !== 'undefined') {
+  // Set up immediate population when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        console.log('🔄 DOM loaded - force populating forms...');
+        if (window.helper && Object.keys(window.helper).length > 0) {
+          populateAllForms();
+        }
+      }, 1000);
+    });
+  } else {
+    // DOM already ready, populate immediately
+    setTimeout(() => {
+      console.log('🔄 DOM ready - force populating forms...');
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        populateAllForms();
+      }
+    }, 1000);
+  }
+}
 
 // Enhanced processIncomingData function with comprehensive field mapping
 window.processIncomingData = async function(data, webhookId = 'unknown') {
@@ -788,19 +880,39 @@ function populateAllForms() {
   let populatedCount = 0;
   
   Object.entries(fieldMappings).forEach(([fieldId, value]) => {
-    if (value) {
+    if (value && value !== '' && value !== null && value !== undefined) {
       const element = document.getElementById(fieldId);
-      if (element && (!element.value || element.value.trim() === '')) {
-        element.value = value;
+      if (element) {
+        const currentValue = element.value?.trim() || '';
+        const newValue = String(value).trim();
         
-        // Trigger events for compatibility
-        const events = ['input', 'change', 'keyup', 'blur'];
-        events.forEach(eventType => {
-          element.dispatchEvent(new Event(eventType, { bubbles: true }));
-        });
-        
-        populatedCount++;
-        console.log(`✅ Populated ${fieldId}: ${value}`);
+        // Force populate if we have meaningful new data and it's different
+        if (newValue !== '' && newValue !== '-' && currentValue !== newValue) {
+          // Handle different input types
+          if (element.type === 'checkbox') {
+            const shouldBeChecked = value === true || value === 'כן' || value === 'yes' || value === 'true';
+            element.checked = shouldBeChecked;
+            console.log(`✅ Populated checkbox ${fieldId}: ${shouldBeChecked}`);
+          } else {
+            element.value = newValue;
+            
+            // Add visual indicator for helper-populated fields
+            element.style.borderLeft = '3px solid #007bff';
+            element.style.backgroundColor = '#f8f9ff';
+            element.title = `Auto-populated from helper: ${newValue}`;
+            
+            console.log(`✅ Populated ${fieldId}: "${currentValue}" → "${newValue}"`);
+          }
+          
+          // Trigger events for compatibility
+          ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+            element.dispatchEvent(new Event(eventType, { bubbles: true }));
+          });
+          
+          populatedCount++;
+        }
+      } else {
+        console.log(`⚠️ Element not found for field: ${fieldId}`);
       }
     }
   });
