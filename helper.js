@@ -463,7 +463,7 @@ function sanitizeHelperData(data) {
     if (typeof value === 'string') {
       // Only strip script tags and dangerous JS, but do NOT alter encoding or numeric/Hebrew chars
       sanitized[key] = value
-        .replace(/<script[\s\S]*?<\/script>/gi, '') script tags, do not re-encode or decode
+        .replace(/<script[\s\S]*?<\/script>/gi, '') // Remove script tags, do not re-encode or decode
         .replace(/javascript:/gi, '')
         .replace(/on\w+\s*=\s*['"]/gi, '');
     } else if (typeof value === 'object' && value !== null) {
