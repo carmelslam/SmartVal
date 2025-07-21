@@ -631,19 +631,22 @@ window.initHelper = function(initialData = {}) {
 };
 
 // ES6 Module Exports for other files to import
-export const updateHelper = window.updateHelper;
-export const updateHelperAndSession = window.updateHelperAndSession;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const saveHelperToStorage = window.saveHelperToStorage;
-export const refreshAllModuleForms = window.refreshAllModuleForms;
-export const getVehicleData = window.getVehicleData;
-export const getDamageData = window.getDamageData;
-export const getValuationData = window.getValuationData;
-export const getFinancialData = window.getFinancialData;
-export const syncDamageData = window.syncDamageData;
-export const syncLeviData = window.syncLeviData;
-export const updateCalculations = window.updateCalculations;
-export const syncVehicleData = window.syncVehicleData;
-export const initHelper = window.initHelper;
-export const helper = window.helper;
+// Use function wrappers to ensure availability
+export const updateHelper = (...args) => window.updateHelper?.(...args);
+export const updateHelperAndSession = (...args) => window.updateHelperAndSession?.(...args);
+export const broadcastHelperUpdate = (...args) => window.broadcastHelperUpdate?.(...args);
+export const processIncomingData = (...args) => window.processIncomingData?.(...args);
+export const saveHelperToStorage = (...args) => window.saveHelperToStorage?.(...args);
+export const refreshAllModuleForms = (...args) => window.refreshAllModuleForms?.(...args);
+export const getVehicleData = (...args) => window.getVehicleData?.(...args);
+export const getDamageData = (...args) => window.getDamageData?.(...args);
+export const getValuationData = (...args) => window.getValuationData?.(...args);
+export const getFinancialData = (...args) => window.getFinancialData?.(...args);
+export const syncDamageData = (...args) => window.syncDamageData?.(...args);
+export const syncLeviData = (...args) => window.syncLeviData?.(...args);
+export const updateCalculations = (...args) => window.updateCalculations?.(...args);
+export const syncVehicleData = (...args) => window.syncVehicleData?.(...args);
+export const initHelper = (...args) => window.initHelper?.(...args);
+
+// Helper object getter
+export const helper = typeof window !== 'undefined' ? window.helper : {};
