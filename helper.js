@@ -1201,7 +1201,7 @@ export const getOwnerData = window.getOwnerData;
 
 // Additional exports that modules might need
 export const saveHelperToStorage = saveHelperToAllStorageLocations;
-export const saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+export { saveHelperToAllStorageLocations };
 
 // Data getter functions
 export function getDamageData() {
