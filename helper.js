@@ -496,26 +496,46 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:מחיר סופי לרכב|מחיר סופי|ערך סופי|שווי סופי)[:\s-]*([0-9,]+)/i, field: 'final_price', target: ['valuation.final_price'] },
     { regex: /(?:שווי שוק|ערך שוק|מחיר שוק)[:\s-]*([0-9,]+)/i, field: 'market_value', target: ['vehicle.market_value'] },
     
-    // Levi adjustment patterns - Registration (enhanced)
+    // Levi adjustment patterns - Registration (enhanced + exact Make.com format)
     { regex: /(?:עליה לכביש\s*%|עליה לכביש\s*אחוז|התאמה עליה לכביש)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'registration_percent', target: ['valuation.adjustments.registration.percent'] },
     { regex: /(?:ערך כספי עליה לכביש|סכום עליה לכביש|התאמה כספית עליה לכביש)[:\s-]*([+-]?[0-9,]+)/i, field: 'registration_amount', target: ['valuation.adjustments.registration.amount'] },
     { regex: /(?:שווי מצטבר עליה לכביש|סך הכל עליה לכביש)[:\s-]*([0-9,]+)/i, field: 'registration_cumulative', target: ['valuation.adjustments.registration.cumulative'] },
     
-    // Levi adjustment patterns - Mileage (enhanced)
-    { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ\s*%|קילומטראז\s*%|התאמת קילומטראז)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'mileage_percent', target: ['valuation.adjustments.mileage.percent'] },
+    // 🔧 EXACT Make.com format for registration (from your example: "עליה לכביש % : 0%")  
+    { regex: /עליה\s*לכביש\s*%\s*:\s*([+-]?[0-9.]+)%?/i, field: 'registration_percent', target: ['valuation.adjustments.registration.percent'] },
+    { regex: /ערך\s*כספי\s*עליה\s*לכביש\s*:\s*([+-]?[0-9,]+)/i, field: 'registration_amount', target: ['valuation.adjustments.registration.amount'] },
+    { regex: /שווי\s*מצטבר\s*עליה\s*לכביש\s*:\s*([0-9,]+)/i, field: 'registration_cumulative', target: ['valuation.adjustments.registration.cumulative'] },
+    
+    // Levi adjustment patterns - Mileage (enhanced + exact Make.com format)
+    { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ\s*%|קילומטראז\s*%|התאמת קילומטראז)[:\s-]*([+-]?[0-9.,]+)%?/i, field: 'mileage_percent', target: ['valuation.adjustments.mileage.percent'] },
     { regex: /(?:ערך כספי מס[׳״\'"`]*\s*ק[״׳\"'`]מ|ערך כספי קילומטראז|התאמה כספית ק\"מ)[:\s-]*([+-]?[0-9,]+)/i, field: 'mileage_amount', target: ['valuation.adjustments.mileage.amount'] },
     { regex: /(?:שווי מצטבר מס[׳״\'"`]*\s*ק[״׳\"'`]מ|סך הכל קילומטראז)[:\s-]*([0-9,]+)/i, field: 'mileage_cumulative', target: ['valuation.adjustments.mileage.cumulative'] },
     
-    // Levi adjustment patterns - Ownership Type (enhanced)
+    // 🔧 EXACT Make.com response format patterns (from your example)
+    { regex: /מס[׳״\'\"`]*\s*ק[״׳\"\'\`]מ\s*%\s*:\s*([+-]?[0-9.,]+)/i, field: 'mileage_percent', target: ['valuation.adjustments.mileage.percent'] },
+    { regex: /ערך\s*כספי\s*מס[׳״\'\"`]*\s*ק[״׳\"\'\`]מ\s*:\s*([+-]?[0-9,]+)/i, field: 'mileage_amount', target: ['valuation.adjustments.mileage.amount'] },
+    { regex: /שווי\s*מצטבר\s*מס[׳״\'\"`]*\s*ק[״׳\"\'\`]מ\s*:\s*([0-9,]+)/i, field: 'mileage_cumulative', target: ['valuation.adjustments.mileage.cumulative'] },
+    
+    // Levi adjustment patterns - Ownership Type (enhanced + exact Make.com format)
     { regex: /(?:סוג בעלות)[:\s-]*(פרטית|חברה|מסחרית|ציבורית)/i, field: 'ownership_value', target: ['valuation.adjustments.ownership_type.type'] },
     { regex: /(?:בעלות\s*%|אחוז בעלות|התאמת בעלות)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'ownership_percent', target: ['valuation.adjustments.ownership_type.percent'] },
     { regex: /(?:ערך כספי בעלות|התאמה כספית בעלות)[:\s-]*([+-]?[0-9,]+)/i, field: 'ownership_amount', target: ['valuation.adjustments.ownership_type.amount'] },
     { regex: /(?:שווי מצטבר בעלות|סך הכל בעלות)[:\s-]*([0-9,]+)/i, field: 'ownership_cumulative', target: ['valuation.adjustments.ownership_type.cumulative'] },
     
-    // Levi adjustment patterns - Ownership History (enhanced)
+    // 🔧 EXACT Make.com format for ownership (from your example: "בעלות % : +7.95%")
+    { regex: /בעלות\s*%\s*:\s*([+-]?[0-9.]+)%?/i, field: 'ownership_percent', target: ['valuation.adjustments.ownership_type.percent'] },
+    { regex: /ערך\s*כספי\s*בעלות\s*:\s*([+-]?[0-9,]+)/i, field: 'ownership_amount', target: ['valuation.adjustments.ownership_type.amount'] },
+    { regex: /שווי\s*מצטבר\s*בעלות\s*:\s*([0-9,]+)/i, field: 'ownership_cumulative', target: ['valuation.adjustments.ownership_type.cumulative'] },
+    
+    // Levi adjustment patterns - Ownership History (enhanced + exact Make.com format)
     { regex: /(?:מס[׳״\'"`]*\s*בעלים\s*%|מספר בעלים\s*%|התאמת בעלים)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'owners_percent', target: ['valuation.adjustments.ownership_history.percent'] },
     { regex: /(?:ערך כספי מס[׳״\'"`]*\s*בעלים|ערך כספי בעלים קודמים)[:\s-]*([+-]?[0-9,]+)/i, field: 'owners_amount', target: ['valuation.adjustments.ownership_history.amount'] },
     { regex: /(?:שווי מצטבר מס[׳״\'"`]*\s*בעלים|סך הכל בעלים קודמים)[:\s-]*([0-9,]+)/i, field: 'owners_cumulative', target: ['valuation.adjustments.ownership_history.cumulative'] },
+    
+    // 🔧 EXACT Make.com format for owner count (from your example: "מס' בעלים % : -3%")
+    { regex: /מס[׳״\'\"`]*\s*בעלים\s*%\s*:\s*([+-]?[0-9.]+)%?/i, field: 'owners_percent', target: ['valuation.adjustments.ownership_history.percent'] },
+    { regex: /ערך\s*כספי\s*מס[׳״\'\"`]*\s*בעלים\s*:\s*([+-]?[0-9,]+)/i, field: 'owners_amount', target: ['valuation.adjustments.ownership_history.amount'] },
+    { regex: /שווי\s*מצטבר\s*מס[׳״\'\"`]*\s*בעלים\s*:\s*([0-9,]+)/i, field: 'owners_cumulative', target: ['valuation.adjustments.ownership_history.cumulative'] },
     
     // Levi adjustment patterns - Features (enhanced)
     { regex: /(?:מאפיינים\s*%|אבזור\s*%|התאמת מאפיינים|התאמת אבזור)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'features_percent', target: ['valuation.adjustments.features.percent'] },
@@ -933,7 +953,53 @@ function populateAllForms() {
     'matzav': window.helper.vehicle?.condition, // מצב
     'created_at': window.helper.meta?.created_at,
     'updated_at': window.helper.meta?.updated_at,
-    'plate_number': window.helper.vehicle?.plate || window.helper.meta?.plate // Alternative plate field
+    'plate_number': window.helper.vehicle?.plate || window.helper.meta?.plate, // Alternative plate field
+    
+    // 🔧 LEVI UPLOAD SPECIFIC FIELDS: Manual adjustment form fields
+    'manual-vehicle-type': window.helper.vehicle?.model_type,
+    'manual-manufacturer': window.helper.vehicle?.manufacturer,
+    'manual-model-code': window.helper.vehicle?.model_code,
+    'manual-category': window.helper.vehicle?.category,
+    'manual-year': window.helper.vehicle?.year,
+    'manual-full-model': window.helper.vehicle?.model,
+    'manual-base-price': window.helper.valuation?.base_price,
+    'manual-final-price': window.helper.valuation?.final_price,
+    
+    // Registration adjustments
+    'manual-registration': window.helper.valuation?.adjustments?.registration?.type,
+    'manual-registration-percent': window.helper.valuation?.adjustments?.registration?.percent,
+    'manual-registration-value': window.helper.valuation?.adjustments?.registration?.amount,
+    'manual-registration-total': window.helper.valuation?.adjustments?.registration?.cumulative,
+    
+    // Ownership adjustments  
+    'manual-ownership': window.helper.valuation?.adjustments?.ownership_type?.type,
+    'manual-ownership-percent': window.helper.valuation?.adjustments?.ownership_type?.percent,
+    'manual-ownership-value': window.helper.valuation?.adjustments?.ownership_type?.amount,
+    'manual-ownership-total': window.helper.valuation?.adjustments?.ownership_type?.cumulative,
+    
+    // Mileage/KM adjustments
+    'manual-km': window.helper.vehicle?.km,
+    'manual-km-percent': window.helper.valuation?.adjustments?.mileage?.percent,
+    'manual-km-value': window.helper.valuation?.adjustments?.mileage?.amount,
+    'manual-km-total': window.helper.valuation?.adjustments?.mileage?.cumulative,
+    
+    // Owner count adjustments
+    'manual-owners': window.helper.valuation?.adjustments?.ownership_history?.owner_count,
+    'manual-owners-percent': window.helper.valuation?.adjustments?.ownership_history?.percent,
+    'manual-owners-value': window.helper.valuation?.adjustments?.ownership_history?.amount,
+    'manual-owners-total': window.helper.valuation?.adjustments?.ownership_history?.cumulative,
+    
+    // Features adjustments
+    'manual-features': window.helper.vehicle?.features,
+    'manual-features-percent': window.helper.valuation?.adjustments?.features?.percent,
+    'manual-features-value': window.helper.valuation?.adjustments?.features?.amount,
+    'manual-features-total': window.helper.valuation?.adjustments?.features?.cumulative,
+    
+    // Report source fields
+    'report-source': 'levi-yitzhak', // Default value
+    'valuation-date': window.helper.valuation?.report_date,
+    'office_code': window.helper.vehicle?.office_code,
+    'owner': window.helper.stakeholders?.owner?.name
   };
   
   let populatedCount = 0;
@@ -1154,6 +1220,14 @@ function triggerFloatingScreenUpdates(updatedSections) {
   if (updatedSections.includes('valuation')) {
     if (typeof window.refreshValuationData === 'function') {
       window.refreshValuationData();
+    }
+  }
+  
+  // 🔧 CRITICAL: Levi floating screen updates - trigger after valuation data changes
+  if (updatedSections.includes('valuation') || updatedSections.includes('vehicle') || source.includes('levi') || source.includes('hebrew')) {
+    if (typeof window.refreshLeviData === 'function') {
+      console.log('🔄 Triggering Levi floating screen update...');
+      window.refreshLeviData();
     }
   }
 }
