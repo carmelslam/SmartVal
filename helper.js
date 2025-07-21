@@ -1184,7 +1184,9 @@ window.updateHelperAndSession = function(field, value) {
 };
 
 window.broadcastHelperUpdate = function(sections, source) {
-  console.log(`Broadcasting helper update: ${sections.join(', ')} (source: ${source})`);
+  // Handle case where sections might not be an array
+  const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
+  console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
   setTimeout(() => populateAllForms(), 100);
 };
 
