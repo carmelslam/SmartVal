@@ -1252,9 +1252,10 @@ function triggerFloatingScreenUpdates(updatedSections, source = '') {
     if (typeof window.refreshCarData === 'function') {
       window.refreshCarData();
     }
-    if (typeof window.showCarDetails === 'function') {
-      setTimeout(() => window.showCarDetails(), 500);
-    }
+    // Auto-show car details removed - user must manually click button to open
+    // if (typeof window.showCarDetails === 'function') {
+    //   setTimeout(() => window.showCarDetails(), 500);
+    // }
   }
   
   // Stakeholder floating screens
