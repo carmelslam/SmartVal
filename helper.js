@@ -365,11 +365,20 @@ if (typeof window !== 'undefined') {
 window.processIncomingData = async function(data, webhookId = 'unknown') {
   console.log('🔄 ENHANCED: Processing incoming data from webhook:', webhookId);
   console.log('📥 Raw data:', data);
+  console.log('📊 Data type:', typeof data);
+  console.log('📈 Data keys:', typeof data === 'object' ? Object.keys(data) : 'N/A');
   
   if (!data) {
     console.warn('⚠️ No data received');
     return { success: false, error: 'No data provided' };
   }
+  
+  // 🔧 PHASE 2 FIX: Enhanced debugging and validation
+  console.log('🧠 Helper before processing:', {
+    plate: window.helper?.vehicle?.plate,
+    manufacturer: window.helper?.vehicle?.manufacturer,
+    owner: window.helper?.stakeholders?.owner?.name
+  });
   
   try {
     const result = {
@@ -420,7 +429,22 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
       setTimeout(() => populateAllForms(), 1000); // Final retry
     }
     
+    // 🔧 PHASE 2 FIX: Show what was captured
+    console.log('🧠 Helper after processing:', {
+      plate: window.helper?.vehicle?.plate,
+      manufacturer: window.helper?.vehicle?.manufacturer,
+      model: window.helper?.vehicle?.model,
+      owner: window.helper?.stakeholders?.owner?.name,
+      garage: window.helper?.stakeholders?.garage?.name,
+      model_code: window.helper?.vehicle?.model_code,
+      engine_model: window.helper?.vehicle?.engine_model,
+      drive_type: window.helper?.vehicle?.drive_type
+    });
+    
     console.log('✅ ENHANCED: Data processing completed:', result);
+    console.log('📊 Fields updated:', result.helperUpdated ? 'YES' : 'NO');
+    console.log('🎯 Sections processed:', result.updatedSections);
+    
     return result;
     
   } catch (error) {
@@ -596,11 +620,13 @@ function processHebrewText(bodyText, result) {
     // Mileage - comprehensive patterns with comma support
     { regex: /(?:מס[׳״\'"`]*\s*ק[״׳\"'`]מ|קילומטר|ק[״׳\"'`]מ|מרחק\s*נסיעה|קילומטרים|מס\'\s*ק\"מ|מס\s*ק\"מ)[:\s-]*([0-9,]+)/i, field: 'km', target: ['vehicle.km'] },
     
-    // Model type - expanded
-    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type', target: ['vehicle.model_type'] },
+    // Model type - expanded (FIXED: handles both : and :\s formats)
+    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type', target: ['vehicle.model_type'] },
+    { regex: /(?:סוג הדגם|סוג הרכב|סוג\s*הדגם|סוג\s*רכב|קטגוריה|סיווג):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'model_type_no_space', target: ['vehicle.model_type'] },
     
-    // Trim/Equipment level
-    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim', target: ['vehicle.trim'] },
+    // Trim/Equipment level (FIXED: handles both : and :\s formats)
+    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim', target: ['vehicle.trim'] },
+    { regex: /(?:רמת גימור|גימור|רמת\s*גימור|רמת\s*ציוד|ציוד|דרגת\s*ציוד):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'trim_no_space', target: ['vehicle.trim'] },
     
     // Garage - expanded patterns
     { regex: /(?:מוסך|בית מלאכה|מוסך\s*מורשה|גרש|מרכז שירות)[:\s-]*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'garage', target: ['stakeholders.garage.name'] },
@@ -668,6 +694,20 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:מאפיינים\s*%|אבזור\s*%|התאמת מאפיינים|התאמת אבזור)[:\s-]*([+-]?[0-9.]+)%?/i, field: 'features_percent', target: ['valuation.adjustments.features.percent'] },
     { regex: /(?:ערך כספי מאפיינים|ערך כספי אבזור|התאמה כספית מאפיינים)[:\s-]*([+-]?[0-9,]+)/i, field: 'features_amount', target: ['valuation.adjustments.features.amount'] },
     { regex: /(?:שווי מצטבר מאפיינים|סך הכל מאפיינים)[:\s-]*([0-9,]+)/i, field: 'features_cumulative', target: ['valuation.adjustments.features.cumulative'] },
+    
+    // 🔧 MISSING PATTERNS - Added for specific webhook fields (handles both : and :\s formats)
+    { regex: /(?:מספר דגם הרכב):\s*([A-Z0-9]+)/i, field: 'vehicle_model_code', target: ['vehicle.model_code'] },
+    { regex: /(?:מספר דגם הרכב):([A-Z0-9]+)/i, field: 'vehicle_model_code_no_space', target: ['vehicle.model_code'] },
+    { regex: /(?:דגם מנוע):\s*([A-Z0-9]+)/i, field: 'engine_model', target: ['vehicle.engine_model'] },
+    { regex: /(?:דגם מנוע):([A-Z0-9]+)/i, field: 'engine_model_no_space', target: ['vehicle.engine_model'] },
+    { regex: /(?:הנעה):\s*([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'drive_type', target: ['vehicle.drive_type'] },
+    { regex: /(?:הנעה):([^\n\r\t,;]+?)(?:\s*(?:\n|\r|\t|,|;|$))/i, field: 'drive_type_no_space', target: ['vehicle.drive_type'] },
+    
+    // 🔧 ENHANCED DATE PATTERNS - Handle both ISO timestamps and Hebrew dates
+    { regex: /(?:תאריך):\s*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}\+[0-9]{2}:[0-9]{2})/i, field: 'iso_timestamp', target: ['case_info.created_at'] },
+    { regex: /(?:תאריך):([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}\+[0-9]{2}:[0-9]{2})/i, field: 'iso_timestamp_no_space', target: ['case_info.created_at'] },
+    { regex: /(?:תאריך):\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i, field: 'date_simple', target: ['case_info.created_at'] },
+    { regex: /(?:תאריך):([0-9]{4}-[0-9]{2}-[0-9]{2})/i, field: 'date_simple_no_space', target: ['case_info.created_at'] },
     
     // Additional important fields for comprehensive capture
     { regex: /(?:תאריך נזק|תאריך\s*הנזק|מועד הנזק)[:\s-]*([0-9\/]+)/i, field: 'damage_date', target: ['case_info.damage_date'] },
@@ -740,6 +780,17 @@ function processHebrewText(bodyText, result) {
           value = parseInt(match[1]);
         } else if (/^\d{4}$/.test(value)) {
           value = parseInt(value);
+        }
+      }
+      
+      // Handle ISO timestamps - extract date portion
+      if (field === 'iso_timestamp' || field === 'iso_timestamp_no_space') {
+        if (value && value.includes('T')) {
+          // Extract just the date part (YYYY-MM-DD)
+          const dateMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+          if (dateMatch) {
+            value = dateMatch[1];
+          }
         }
       }
       
@@ -1015,7 +1066,7 @@ function populateAllForms() {
   console.log('🔄 Populating all forms from helper data');
   
   const currentModule = detectCurrentModule();
-  const priorityFields = getModuleFields(currentModule);
+  console.log('📍 Detected current module:', currentModule);
   
   let updated = 0;
   
@@ -1042,6 +1093,12 @@ function populateAllForms() {
     'features': window.helper.vehicle?.features,
     'category': window.helper.vehicle?.category,
     'is_automatic': window.helper.vehicle?.is_automatic,
+    
+    // 🔧 PHASE 3 FIX: Add missing vehicle fields from webhook
+    'vehicle_model_code': window.helper.vehicle?.model_code,
+    'engine_model': window.helper.vehicle?.engine_model,
+    'drive_type': window.helper.vehicle?.drive_type,
+    'model_type': window.helper.vehicle?.model_type,
     
     // Owner info
     'owner': window.helper.stakeholders?.owner?.name,
@@ -1108,12 +1165,21 @@ function populateAllForms() {
     'manual-owners-percent': window.helper.valuation?.adjustments?.ownership_history?.percent
   };
 
-  // Populate form fields
+  // 🔧 PHASE 3 FIX: Enhanced form population with better field detection
   Object.entries(dataMapping).forEach(([fieldId, value]) => {
     if (value !== undefined && value !== null && value !== '') {
+      // Multiple field detection strategies
       const element = document.getElementById(fieldId) || 
                      document.querySelector(`[name="${fieldId}"]`) || 
-                     document.querySelector(`input[placeholder*="${fieldId}"]`);
+                     document.querySelector(`input[placeholder*="${fieldId}"]`) ||
+                     document.querySelector(`input[id*="${fieldId}"]`) ||
+                     document.querySelector(`select[name="${fieldId}"]`) ||
+                     document.querySelector(`textarea[name="${fieldId}"]`) ||
+                     // Hebrew field mappings for vehicle details form
+                     (fieldId === 'manufacturer' ? document.querySelector('[id*="יצרן"], [name*="manufacturer"]') : null) ||
+                     (fieldId === 'model' ? document.querySelector('[id*="דגם"], [name*="model"]') : null) ||
+                     (fieldId === 'year' ? document.querySelector('[id*="שנה"], [name*="year"]') : null) ||
+                     (fieldId === 'plate' ? document.querySelector('[id*="רכב"], [name*="plate"]') : null);
                      
       if (element) {
         const currentValue = element.value?.trim() || '';
@@ -1133,8 +1199,17 @@ function populateAllForms() {
             element.dispatchEvent(new Event(eventType, { bubbles: true }));
           });
           
+          // Visual feedback for populated fields
+          element.style.borderLeft = '3px solid #4CAF50';
+          element.title = `Auto-populated by webhook (${fieldId})`;
+          
           updated++;
-          console.log(`✅ Updated ${fieldId}: ${newValue}`);
+          console.log(`✅ Updated ${fieldId}: ${newValue} (element: ${element.tagName}#${element.id || element.name})`);
+        }
+      } else {
+        // Debug: log missing elements
+        if (['plate', 'manufacturer', 'model', 'year', 'owner', 'garage'].includes(fieldId)) {
+          console.log(`⚠️ Element not found for key field: ${fieldId} (value: ${value})`);
         }
       }
     }
@@ -1145,6 +1220,33 @@ function populateAllForms() {
   // Update helper timestamp
   window.helper.meta.last_updated = new Date().toISOString();
   saveHelperToAllStorageLocations();
+  
+  // 🔧 PHASE 3 FIX: Return success info for retry logic
+  return { updated, totalFields: Object.keys(dataMapping).length };
+}
+
+// Enhanced form population with retry mechanism
+function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
+  console.log('🔄 Starting enhanced form population with retry...');
+  
+  let attempt = 0;
+  
+  const tryPopulate = () => {
+    attempt++;
+    console.log(`📝 Form population attempt ${attempt}/${maxRetries}`);
+    
+    const result = populateAllForms();
+    
+    // If we updated few fields and have retries left, try again after delay
+    if (result.updated < 3 && attempt < maxRetries) {
+      console.log(`⏳ Only ${result.updated} fields updated, retrying in ${delay}ms...`);
+      setTimeout(tryPopulate, delay);
+    } else {
+      console.log(`🎯 Form population completed after ${attempt} attempts: ${result.updated} fields`);
+    }
+  };
+  
+  tryPopulate();
 }
 
 // Simple helper update functions
@@ -1197,6 +1299,118 @@ window.testDataCapture = function() {
   populateAllForms();
 };
 
+// 🔧 COMPREHENSIVE TEST: Test with your actual webhook data
+window.testWithActualWebhookData = function() {
+  console.log('🧪 Testing with actual Hebrew webhook data...');
+  
+  const actualWebhookData = `פרטי רכב: 5785269
+תאריך: 2025-07-21T15:26:07.129+02:00
+מס' רכב: 5785269
+שם היצרן: ביואיק
+דגם: LUCERNE
+סוג הדגם: סדאן
+סוג הרכב: פרטי
+רמת גימור:CXL
+מספר שילדה: 1G4HD57258U196450
+שנת ייצור: 05/2009
+שם בעל הרכב: כרמל כיוף
+סוג בעלות: פרטי
+נפח מנוע: 3791
+סוג דלק: בנזין
+מספר דגם הרכב:HD572
+דגם מנוע: 428
+הנעה: 4X2
+מוסך: UMI חיפה
+קוד משרד התחבורה:156-11`;
+
+  console.log('🔄 Processing actual webhook data...');
+  const result = window.universalWebhookReceiver(actualWebhookData, 'TEST_ACTUAL_DATA');
+  
+  console.log('📊 Test Results:');
+  console.log('Success:', result.success);
+  console.log('Sections updated:', result.updatedSections);
+  
+  // Check specific fields that should be captured
+  const expectedFields = {
+    'plate': '5785269',
+    'manufacturer': 'ביואיק', 
+    'model': 'LUCERNE',
+    'model_type': 'סדאן',
+    'trim': 'CXL',
+    'chassis': '1G4HD57258U196450',
+    'owner': 'כרמל כיוף',
+    'ownership_type': 'פרטי',
+    'engine_volume': '3791',
+    'fuel_type': 'בנזין',
+    'model_code': 'HD572',
+    'engine_model': '428',
+    'drive_type': '4X2',
+    'garage': 'UMI חיפה',
+    'office_code': '156-11'
+  };
+  
+  console.log('🎯 Field Capture Analysis:');
+  let captured = 0;
+  let total = Object.keys(expectedFields).length;
+  
+  for (const [field, expectedValue] of Object.entries(expectedFields)) {
+    const actualValue = getNestedValue(window.helper, getFieldPath(field));
+    const isMatch = actualValue === expectedValue;
+    
+    if (isMatch) {
+      captured++;
+      console.log(`✅ ${field}: "${actualValue}" (CAPTURED)`);
+    } else {
+      console.log(`❌ ${field}: Expected "${expectedValue}", Got "${actualValue}" (MISSED)`);
+    }
+  }
+  
+  const captureRate = Math.round((captured / total) * 100);
+  console.log(`📈 CAPTURE RATE: ${captured}/${total} (${captureRate}%)`);
+  
+  // Test form population
+  setTimeout(() => {
+    console.log('🔄 Testing form population...');
+    const populateResult = populateAllForms();
+    console.log(`📝 Forms populated: ${populateResult.updated} fields`);
+  }, 1000);
+  
+  return { 
+    captureRate, 
+    captured, 
+    total, 
+    helperData: window.helper,
+    processingResult: result 
+  };
+};
+
+// Helper function to get nested values
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((curr, key) => curr && curr[key], obj);
+}
+
+// Helper function to get field path in helper structure
+function getFieldPath(field) {
+  const pathMap = {
+    'plate': 'vehicle.plate',
+    'manufacturer': 'vehicle.manufacturer',
+    'model': 'vehicle.model',
+    'model_type': 'vehicle.model_type',
+    'trim': 'vehicle.trim',
+    'chassis': 'vehicle.chassis',
+    'owner': 'stakeholders.owner.name',
+    'ownership_type': 'vehicle.ownership_type',
+    'engine_volume': 'vehicle.engine_volume',
+    'fuel_type': 'vehicle.fuel_type',
+    'model_code': 'vehicle.model_code',
+    'engine_model': 'vehicle.engine_model',
+    'drive_type': 'vehicle.drive_type',
+    'garage': 'stakeholders.garage.name',
+    'office_code': 'vehicle.office_code'
+  };
+  return pathMap[field] || `vehicle.${field}`;
+}
+
 // Window-level helper functions
 window.getVehicleData = function() {
   return window.helper?.vehicle || {};
@@ -1217,6 +1431,209 @@ if (document.readyState === 'loading') {
 
 console.log('✅ Helper system loaded and ready');
 
+// 🔧 PHASE 2 FIX: Universal webhook receiver with Hebrew data auto-detection
+window.universalWebhookReceiver = function(data, source = 'unknown') {
+  console.log('🌐 Universal webhook receiver activated:', source);
+  console.log('📥 Raw incoming data:', data);
+  
+  if (!data) {
+    console.warn('⚠️ No data received by universal webhook receiver');
+    return { success: false, error: 'No data provided' };
+  }
+  
+  // Auto-detect Hebrew text in incoming data
+  const hasHebrewText = detectHebrewText(data);
+  console.log('🔍 Hebrew text detected:', hasHebrewText);
+  
+  // Route to appropriate processor
+  let result;
+  if (hasHebrewText) {
+    console.log('🔄 Routing Hebrew data to processIncomingData...');
+    result = window.processIncomingData(data, source);
+  } else if (typeof data === 'object') {
+    console.log('🔄 Routing object data to processIncomingData...');
+    result = window.processIncomingData(data, source);
+  } else {
+    console.log('🔄 Routing string data to processIncomingData...');
+    result = window.processIncomingData({ Body: data }, source);
+  }
+  
+  // Force UI refresh regardless of result
+  setTimeout(() => {
+    console.log('🔄 Force refreshing forms after webhook data...');
+    populateAllForms();
+  }, 100);
+  
+  return result;
+};
+
+// Hebrew text detection function
+function detectHebrewText(data) {
+  const hebrewRegex = /[\u0590-\u05FF]/;
+  
+  if (typeof data === 'string') {
+    return hebrewRegex.test(data);
+  }
+  
+  if (typeof data === 'object') {
+    // Check all string values in object
+    const checkObject = (obj) => {
+      for (const key in obj) {
+        if (typeof obj[key] === 'string' && hebrewRegex.test(obj[key])) {
+          return true;
+        }
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+          if (checkObject(obj[key])) return true;
+        }
+      }
+      return false;
+    };
+    return checkObject(data);
+  }
+  
+  return false;
+}
+
+// Enhanced event system for webhook processing
+window.addEventListener('makeWebhookData', (event) => {
+  console.log('📨 Webhook event received:', event.detail);
+  window.universalWebhookReceiver(event.detail.data, event.detail.source || 'makeWebhookEvent');
+});
+
+// Global webhook processor that can be called from anywhere
+window.processWebhookData = function(data, source = 'manual') {
+  return window.universalWebhookReceiver(data, source);
+};
+
+// 🔧 PHASE 4 FIX: Universal manual input capture system
+window.setupUniversalInputCapture = function() {
+  console.log('🎯 Setting up universal input capture for all forms...');
+  
+  // Field mapping for input capture (reverse of populateAllForms mapping)
+  const fieldToHelperMapping = {
+    // Vehicle fields
+    'plate': 'vehicle.plate',
+    'plateNumber': 'vehicle.plate', 
+    'manufacturer': 'vehicle.manufacturer',
+    'model': 'vehicle.model',
+    'year': 'vehicle.year',
+    'chassis': 'vehicle.chassis',
+    'vin': 'vehicle.chassis',
+    'km': 'vehicle.km',
+    'odo': 'vehicle.km',
+    'mileage': 'vehicle.km',
+    'engine_volume': 'vehicle.engine_volume',
+    'fuel_type': 'vehicle.fuel_type',
+    'ownership_type': 'vehicle.ownership_type',
+    'trim': 'vehicle.trim',
+    'model_type': 'vehicle.model_type',
+    'model_code': 'vehicle.model_code',
+    'engine_model': 'vehicle.engine_model',
+    'drive_type': 'vehicle.drive_type',
+    
+    // Owner fields
+    'owner': 'stakeholders.owner.name',
+    'ownerName': 'stakeholders.owner.name',
+    'client_name': 'stakeholders.owner.name',
+    'ownerPhone': 'stakeholders.owner.phone',
+    'owner_phone': 'stakeholders.owner.phone',
+    'ownerAddress': 'stakeholders.owner.address',
+    'owner_address': 'stakeholders.owner.address',
+    
+    // Garage fields
+    'garage': 'stakeholders.garage.name',
+    'garageName': 'stakeholders.garage.name',
+    'garage_name': 'stakeholders.garage.name',
+    'garagePhone': 'stakeholders.garage.phone',
+    'garage_phone': 'stakeholders.garage.phone',
+    'garageEmail': 'stakeholders.garage.email',
+    'garage_email': 'stakeholders.garage.email',
+    
+    // Case fields
+    'damageDate': 'case_info.damage_date',
+    'damage_date': 'case_info.damage_date',
+    'damageType': 'case_info.damage_type',
+    'damage_type': 'case_info.damage_type',
+    'location': 'case_info.inspection_location',
+    'inspection_location': 'case_info.inspection_location'
+  };
+  
+  // Set up input listeners on all form elements
+  const setupInputListener = (element) => {
+    if (!element || element.dataset.helperCaptureSetup === 'true') return;
+    
+    const fieldId = element.id || element.name;
+    const helperPath = fieldToHelperMapping[fieldId];
+    
+    if (helperPath) {
+      console.log(`🎯 Setting up capture for field: ${fieldId} → ${helperPath}`);
+      
+      element.addEventListener('input', function() {
+        const value = this.value?.trim();
+        if (value && value !== '') {
+          console.log(`📝 Manual input captured: ${fieldId} = ${value}`);
+          setNestedValue(window.helper, helperPath, value);
+          
+          // Update meta info  
+          window.helper.meta.last_updated = new Date().toISOString();
+          saveHelperToAllStorageLocations();
+          
+          // Visual feedback
+          this.style.borderLeft = '3px solid #2196F3';
+          this.title = `Manually entered - synced to helper (${helperPath})`;
+        }
+      });
+      
+      element.addEventListener('change', function() {
+        const value = this.value?.trim();
+        if (value && value !== '') {
+          console.log(`✅ Manual input confirmed: ${fieldId} = ${value}`);
+          setNestedValue(window.helper, helperPath, value);
+          window.helper.meta.last_updated = new Date().toISOString();
+          saveHelperToAllStorageLocations();
+        }
+      });
+      
+      element.dataset.helperCaptureSetup = 'true';
+    }
+  };
+  
+  // Find all form elements and set up listeners
+  const allInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], select, textarea');
+  allInputs.forEach(setupInputListener);
+  
+  console.log(`🎯 Universal input capture setup complete: ${allInputs.length} elements monitored`);
+  
+  // Monitor for new form elements (dynamic forms)
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const newInputs = node.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], select, textarea');
+          newInputs.forEach(setupInputListener);
+          
+          if (newInputs.length > 0) {
+            console.log(`🎯 Added capture to ${newInputs.length} new form elements`);
+          }
+        }
+      });
+    });
+  });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  return { monitored: allInputs.length, observer };
+};
+
+// Auto-setup when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => window.setupUniversalInputCapture(), 1000);
+  });
+} else {
+  setTimeout(() => window.setupUniversalInputCapture(), 1000);
+}
+
 // Export all the functions that other modules need
 export const helper = window.helper;
 export const updateHelper = window.updateHelper;
@@ -1226,6 +1643,11 @@ export const processIncomingData = window.processIncomingData;
 export const testDataCapture = window.testDataCapture;
 export const getVehicleData = window.getVehicleData;
 export const getOwnerData = window.getOwnerData;
+export const universalWebhookReceiver = window.universalWebhookReceiver;
+export const processWebhookData = window.processWebhookData;
+export const setupUniversalInputCapture = window.setupUniversalInputCapture;
+export const populateAllFormsWithRetry = populateAllFormsWithRetry;
+export const testWithActualWebhookData = window.testWithActualWebhookData;
 
 // Additional exports that modules might need
 export const saveHelperToStorage = saveHelperToAllStorageLocations;
