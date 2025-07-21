@@ -323,75 +323,24 @@ export async function sendToWebhook(id, payload) {
         }
         
         try {
-          // Use the enhanced processIncomingData function from helper.js
-          const processResult = await processIncomingData(actualData, id);
-          
-          if (processResult && processResult.success) {
-            console.log('✅ Data successfully processed and integrated into helper');
-            console.log('📊 Updated sections:', processResult.updatedSections);
-            
-            // Broadcast helper update to all modules and floating screens
-            broadcastHelperUpdate(processResult.updatedSections, 'webhook_response');
-            
-            // CRITICAL: Force refresh all module forms AGAIN after helper update
-            if (typeof window.refreshAllModuleForms === 'function') {
-              console.log('🔄 Force refreshing all module forms (after helper processing)...');
-              setTimeout(() => window.refreshAllModuleForms(), 200);
-            }
-            
-            // 🔧 PHASE 3 FIX: Enhanced user feedback system
-            if (typeof window.showSystemNotification === 'function') {
-              const sectionsText = processResult.updatedSections.length > 0 ? 
-                `עודכנו: ${processResult.updatedSections.join(', ')}` : 'נתונים עודכנו';
-              window.showSystemNotification(`✅ ${sectionsText}`, 'success');
-            } else {
-              // Fallback notification
-              console.log('📢 Creating fallback success notification');
-              createFallbackNotification('✅ נתונים התקבלו ועודכנו בהצלחה', 'success');
-            }
-            
+          // Simple direct helper update - restore original working method
+          if (typeof updateHelperAndSession === 'function') {
+            // Update each field directly in helper
+            Object.keys(actualData).forEach(key => {
+              updateHelperAndSession(key, actualData[key]);
+            });
+            console.log('✅ Data processed and helper updated');
           } else {
-            console.warn('⚠️ Data processing completed with warnings:', processResult?.warnings || 'Unknown');
-            
-            // Show warning to user
-            const warningMsg = `⚠️ עיבוד נתונים הושלם עם אזהרות: ${processResult?.warnings?.join(', ') || 'לא ידוע'}`;
-            if (typeof window.showSystemNotification === 'function') {
-              window.showSystemNotification(warningMsg, 'warning');
-            } else {
-              createFallbackNotification(warningMsg, 'warning');
-            }
+            // Direct sessionStorage update as fallback
+            sessionStorage.setItem('helper', JSON.stringify(actualData));
+            window.helper = actualData;
+            console.log('✅ Data stored in sessionStorage and window.helper');
           }
-          
-        } catch (processingError) {
-          console.error('❌ Error processing webhook data:', processingError);
-          
-          // 🔧 PHASE 3 FIX: Better error handling and user feedback
-          const errorMsg = `❌ שגיאה בעיבוד נתונים: ${processingError.message}`;
-          
-          // Show error to user
-          if (typeof window.showSystemNotification === 'function') {
-            window.showSystemNotification(errorMsg, 'error');
-          } else {
-            createFallbackNotification(errorMsg, 'error');
-          }
-          
-          // Fallback: Store raw data in sessionStorage for manual recovery
-          const timestamp = new Date().toISOString();
-          const fallbackKey = `webhook_fallback_${timestamp}`;
-          sessionStorage.setItem(fallbackKey, JSON.stringify({
-            webhook_id: id,
-            data: actualData,
-            timestamp: timestamp,
-            error: processingError.message,
-            recovery_instructions: 'Use testDataCapture() in console to retry processing this data'
-          }));
-          
-          console.log('💾 Raw data stored in sessionStorage for recovery:', fallbackKey);
-          
-          // Show recovery option to user
-          if (typeof window.showSystemNotification === 'function') {
-            window.showSystemNotification('💾 נתונים נשמרו לשחזור - בדוק בקונסול', 'info');
-          }
+        } catch (error) {
+          console.error('❌ Error updating helper:', error);
+          // Simple fallback
+          sessionStorage.setItem('helper', JSON.stringify(actualData));
+          window.helper = actualData;
         }
       }
     } catch (jsonError) {

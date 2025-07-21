@@ -997,1046 +997,194 @@ function getModuleFields(module) {
 function populateAllForms() {
   console.log('🔄 Populating all forms from helper data');
   
-  // Detect current module to reduce console noise
   const currentModule = detectCurrentModule();
-  console.log(`📍 Current module detected: ${currentModule}`);
+  const priorityFields = getModuleFields(currentModule);
   
-  const fieldMappings = {
-    // 🔧 COMPREHENSIVE FIELD MAPPINGS: All variations from screenshots and modules
-    
-    // Vehicle identification - Primary
-    'plate': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
-    'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
-    'vehicle_plate': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate,
-    'rish': window.helper.vehicle?.plate || window.helper.meta?.plate || window.helper.case_info?.plate, // רישוי
-    
-    // Vehicle details - Manufacturer/Model
+  let updated = 0;
+  
+  // Helper data mapping with comprehensive field coverage
+  const dataMapping = {
+    // Basic vehicle info
+    'plate': window.helper.vehicle?.plate || window.helper.meta?.plate,
+    'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate,
     'manufacturer': window.helper.vehicle?.manufacturer,
-    'make': window.helper.vehicle?.manufacturer,
-    'yitzran': window.helper.vehicle?.manufacturer, // יצרן
     'model': window.helper.vehicle?.model,
-    'degem': window.helper.vehicle?.model, // דגם
     'year': window.helper.vehicle?.year,
-    'shana': window.helper.vehicle?.year, // שנה
-    'model_year': window.helper.vehicle?.year,
-    
-    // Vehicle specifications
     'chassis': window.helper.vehicle?.chassis,
     'vin': window.helper.vehicle?.chassis,
-    'shelda': window.helper.vehicle?.chassis, // שלדה
     'km': window.helper.vehicle?.km,
     'odo': window.helper.vehicle?.km,
     'mileage': window.helper.vehicle?.km,
-    'kilometraz': window.helper.vehicle?.km, // קילומטראז
     'engine_volume': window.helper.vehicle?.engine_volume,
-    'nefach': window.helper.vehicle?.engine_volume, // נפח
-    'engine_code': window.helper.vehicle?.engine_code,
-    'engine_type': window.helper.vehicle?.engine_type,
     'fuel_type': window.helper.vehicle?.fuel_type,
-    'delak': window.helper.vehicle?.fuel_type, // דלק
     'ownership_type': window.helper.vehicle?.ownership_type,
-    'baalut': window.helper.vehicle?.ownership_type, // בעלות
     'trim': window.helper.vehicle?.trim,
-    'gimur': window.helper.vehicle?.trim, // גימור
     'model_type': window.helper.vehicle?.model_type,
     'office_code': window.helper.vehicle?.office_code,
     'model_code': window.helper.vehicle?.model_code,
     'features': window.helper.vehicle?.features,
-    'maafiynei': window.helper.vehicle?.features, // מאפיינים
     'category': window.helper.vehicle?.category,
-    'kategoria': window.helper.vehicle?.category, // קטגוריה  
     'is_automatic': window.helper.vehicle?.is_automatic,
-    'automatic': window.helper.vehicle?.is_automatic,
-    'automat': window.helper.vehicle?.is_automatic, // אוטומט
-    'registration_date': window.helper.vehicle?.registration_date,
-    'aliya_lekavish': window.helper.vehicle?.registration_date, // עליה לכביש
-    'market_value': window.helper.vehicle?.market_value || window.helper.valuation?.final_price,
-    'shvi': window.helper.vehicle?.market_value || window.helper.valuation?.final_price, // שווי
     
-    // Owner/Client information
+    // Owner info
     'owner': window.helper.stakeholders?.owner?.name,
     'ownerName': window.helper.stakeholders?.owner?.name,
     'client_name': window.helper.stakeholders?.owner?.name,
-    'baal_harechev': window.helper.stakeholders?.owner?.name, // בעל הרכב
-    'owner_phone': window.helper.stakeholders?.owner?.phone,
     'ownerPhone': window.helper.stakeholders?.owner?.phone,
-    'telefon_baal': window.helper.stakeholders?.owner?.phone, // טלפון בעל
-    'owner_address': window.helper.stakeholders?.owner?.address,
+    'owner_phone': window.helper.stakeholders?.owner?.phone,
     'ownerAddress': window.helper.stakeholders?.owner?.address,
-    'ktovev_baal': window.helper.stakeholders?.owner?.address, // כתובת בעל
+    'owner_address': window.helper.stakeholders?.owner?.address,
+    'ownerEmail': window.helper.stakeholders?.owner?.email,
     
-    // Garage information
-    'garage_name': window.helper.stakeholders?.garage?.name,
-    'garageName': window.helper.stakeholders?.garage?.name,
+    // Garage info
     'garage': window.helper.stakeholders?.garage?.name,
-    'shem_musach': window.helper.stakeholders?.garage?.name, // שם מוסך
-    'garage_phone': window.helper.stakeholders?.garage?.phone,
+    'garageName': window.helper.stakeholders?.garage?.name,
+    'garage_name': window.helper.stakeholders?.garage?.name,
     'garagePhone': window.helper.stakeholders?.garage?.phone,
-    'telefon_musach': window.helper.stakeholders?.garage?.phone, // טלפון מוסך
-    'garage_email': window.helper.stakeholders?.garage?.email,
+    'garage_phone': window.helper.stakeholders?.garage?.phone,
     'garageEmail': window.helper.stakeholders?.garage?.email,
-    'email_musach': window.helper.stakeholders?.garage?.email, // אימייל מוסך
+    'garage_email': window.helper.stakeholders?.garage?.email,
+    'garageContact': window.helper.stakeholders?.garage?.contact_person,
     
-    // Insurance information  
-    'insurance_company': window.helper.stakeholders?.insurance?.company,
+    // Insurance info
+    'insurance': window.helper.stakeholders?.insurance?.company,
     'insuranceCompany': window.helper.stakeholders?.insurance?.company,
-    'chevrat_bituach': window.helper.stakeholders?.insurance?.company, // חברת ביטוח
-    'insurance_email': window.helper.stakeholders?.insurance?.email,
-    'insuranceEmail': window.helper.stakeholders?.insurance?.email,
-    'email_bituach': window.helper.stakeholders?.insurance?.email, // אימייל ביטוח
-    'policy_number': window.helper.stakeholders?.insurance?.policy_number,
-    'mispar_polisa': window.helper.stakeholders?.insurance?.policy_number, // מספר פוליסה
-    'claim_number': window.helper.stakeholders?.insurance?.claim_number,
-    'mispar_tabia': window.helper.stakeholders?.insurance?.claim_number, // מספר תביעה
-    
-    // Insurance agent
-    'agent_name': window.helper.stakeholders?.insurance?.agent?.name,
+    'insurance_company': window.helper.stakeholders?.insurance?.company,
     'agentName': window.helper.stakeholders?.insurance?.agent?.name,
-    'shem_sachen': window.helper.stakeholders?.insurance?.agent?.name, // שם סוכן
-    'agent_phone': window.helper.stakeholders?.insurance?.agent?.phone,
+    'agent_name': window.helper.stakeholders?.insurance?.agent?.name,
     'agentPhone': window.helper.stakeholders?.insurance?.agent?.phone,
-    'telefon_sachen': window.helper.stakeholders?.insurance?.agent?.phone, // טלפון סוכן
-    'agent_email': window.helper.stakeholders?.insurance?.agent?.email,
+    'agent_phone': window.helper.stakeholders?.insurance?.agent?.phone,
     'agentEmail': window.helper.stakeholders?.insurance?.agent?.email,
-    'email_sachen': window.helper.stakeholders?.insurance?.agent?.email, // אימייל סוכן
+    'agent_email': window.helper.stakeholders?.insurance?.agent?.email,
+    'policyNumber': window.helper.stakeholders?.insurance?.policy_number,
+    'policy_number': window.helper.stakeholders?.insurance?.policy_number,
+    'claimNumber': window.helper.stakeholders?.insurance?.claim_number,
+    'claim_number': window.helper.stakeholders?.insurance?.claim_number,
     
-    // Damage/Case information
-    'damage_date': window.helper.case_info?.damage_date,
+    // Case info
     'damageDate': window.helper.case_info?.damage_date,
-    'taarich_nezek': window.helper.case_info?.damage_date, // תאריך נזק
-    'damage_type': window.helper.case_info?.damage_type,
+    'damage_date': window.helper.case_info?.damage_date,
     'damageType': window.helper.case_info?.damage_type,
-    'sug_nezek': window.helper.case_info?.damage_type, // סוג נזק
+    'damage_type': window.helper.case_info?.damage_type,
+    'inspectionDate': window.helper.case_info?.inspection_date,
     'inspection_date': window.helper.case_info?.inspection_date,
-    'taarich_bdika': window.helper.case_info?.inspection_date, // תאריך בדיקה
     'location': window.helper.case_info?.inspection_location,
     'inspection_location': window.helper.case_info?.inspection_location,
-    'makom_bdika': window.helper.case_info?.inspection_location, // מקום בדיקה
+    'date': window.helper.case_info?.damage_date || window.helper.case_info?.inspection_date,
     
     // Valuation fields
     'base_price': window.helper.valuation?.base_price,
-    'mechir_basis': window.helper.valuation?.base_price, // מחיר בסיס
     'final_price': window.helper.valuation?.final_price,
-    'mechir_sofi': window.helper.valuation?.final_price, // מחיר סופי
+    'market_value': window.helper.vehicle?.market_value || window.helper.valuation?.final_price,
     'report_date': window.helper.valuation?.report_date,
-    'taarich_doch': window.helper.valuation?.report_date, // תאריך דוח
+    'registration_date': window.helper.vehicle?.registration_date,
     'owner_count': window.helper.valuation?.adjustments?.ownership_history?.owner_count,
-    'mispar_baalim': window.helper.valuation?.adjustments?.ownership_history?.owner_count, // מספר בעלים
     
-    // Parts search fields (from screenshots)
-    'part_image': null, // File input, no value to populate
-    'part_group': null, // Dropdown, populated separately
-    'part_name': null,  // Dropdown, populated separately 
-    'part_source': null, // Dropdown, populated separately
-    'part_quantity': 1, // Default quantity
-    'free_query': null, // Free text search
-    'chofshi_chipus': null, // חיפוש חופשי
-    
-    // Additional fields that might appear in various modules
-    'transmission': window.helper.vehicle?.transmission,
-    'tzemudot': window.helper.vehicle?.transmission, // צמדות
-    'drive_type': window.helper.vehicle?.drive_type,
-    'sug_nahaga': window.helper.vehicle?.drive_type, // סוג נהגה
-    'condition': window.helper.vehicle?.condition,
-    'matzav': window.helper.vehicle?.condition, // מצב
-    'created_at': window.helper.meta?.created_at,
-    'updated_at': window.helper.meta?.updated_at,
-    'plate_number': window.helper.vehicle?.plate || window.helper.meta?.plate, // Alternative plate field
-    
-    // 🔧 LEVI UPLOAD SPECIFIC FIELDS: Manual adjustment form fields
-    'manual-vehicle-type': window.helper.vehicle?.model_type,
-    'manual-manufacturer': window.helper.vehicle?.manufacturer,
-    'manual-model-code': window.helper.vehicle?.model_code,
-    'manual-category': window.helper.vehicle?.category,
-    'manual-year': window.helper.vehicle?.year,
-    'manual-full-model': window.helper.vehicle?.model,
+    // Manual Levi form fields
     'manual-base-price': window.helper.valuation?.base_price,
     'manual-final-price': window.helper.valuation?.final_price,
-    
-    // Registration adjustments
-    'manual-registration': window.helper.valuation?.adjustments?.registration?.type,
-    'manual-registration-percent': window.helper.valuation?.adjustments?.registration?.percent,
-    'manual-registration-value': window.helper.valuation?.adjustments?.registration?.amount,
-    'manual-registration-total': window.helper.valuation?.adjustments?.registration?.cumulative,
-    
-    // Ownership adjustments  
-    'manual-ownership': window.helper.valuation?.adjustments?.ownership_type?.type,
-    'manual-ownership-percent': window.helper.valuation?.adjustments?.ownership_type?.percent,
-    'manual-ownership-value': window.helper.valuation?.adjustments?.ownership_type?.amount,
-    'manual-ownership-total': window.helper.valuation?.adjustments?.ownership_type?.cumulative,
-    
-    // Mileage/KM adjustments
+    'manual-market-value': window.helper.vehicle?.market_value,
     'manual-km': window.helper.vehicle?.km,
+    'manual-registration-percent': window.helper.valuation?.adjustments?.registration?.percent,
     'manual-km-percent': window.helper.valuation?.adjustments?.mileage?.percent,
-    'manual-km-value': window.helper.valuation?.adjustments?.mileage?.amount,
-    'manual-km-total': window.helper.valuation?.adjustments?.mileage?.cumulative,
-    
-    // Owner count adjustments
-    'manual-owners': window.helper.valuation?.adjustments?.ownership_history?.owner_count,
-    'manual-owners-percent': window.helper.valuation?.adjustments?.ownership_history?.percent,
-    'manual-owners-value': window.helper.valuation?.adjustments?.ownership_history?.amount,
-    'manual-owners-total': window.helper.valuation?.adjustments?.ownership_history?.cumulative,
-    
-    // Features adjustments
-    'manual-features': window.helper.vehicle?.features,
-    'manual-features-percent': window.helper.valuation?.adjustments?.features?.percent,
-    'manual-features-value': window.helper.valuation?.adjustments?.features?.amount,
-    'manual-features-total': window.helper.valuation?.adjustments?.features?.cumulative,
-    
-    // Report source fields
-    'report-source': 'levi-yitzhak', // Default value
-    'valuation-date': window.helper.valuation?.report_date,
-    'office_code': window.helper.vehicle?.office_code,
-    'owner': window.helper.stakeholders?.owner?.name
+    'manual-ownership-percent': window.helper.valuation?.adjustments?.ownership_type?.percent,
+    'manual-owners-percent': window.helper.valuation?.adjustments?.ownership_history?.percent
   };
-  
-  let populatedCount = 0;
-  const relevantFields = getModuleFields(currentModule);
-  
-  Object.entries(fieldMappings).forEach(([fieldId, value]) => {
-    // Skip fields that aren't relevant to current module (reduces console noise)
-    if (currentModule !== 'unknown' && !relevantFields.includes(fieldId)) {
-      return;
-    }
-    if (value && value !== '' && value !== null && value !== undefined) {
-      // 🔧 ENHANCED FIELD DETECTION: Try multiple selectors to find the element
-      let element = null;
-      const selectors = [
-        `#${fieldId}`,                                    // Exact ID match
-        `[name="${fieldId}"]`,                           // Name attribute match
-        `input[placeholder*="${fieldId}"]`,              // Placeholder contains field name
-        `#${fieldId.toLowerCase()}`,                     // Lowercase ID
-        `#${fieldId.replace('_', '')}`,                  // Remove underscores
-        `#${fieldId.replace('_', '-')}`,                 // Replace underscore with dash
-        `[data-field="${fieldId}"]`,                     // Data attribute
-        `[data-helper-field="${fieldId}"]`,              // Helper data attribute
-      ];
-      
-      // Try each selector until we find an element
-      for (const selector of selectors) {
-        try {
-          element = document.querySelector(selector);
-          if (element) {
-            console.log(`✅ Found element for ${fieldId} using selector: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          // Ignore invalid selectors
-        }
-      }
-      
+
+  // Populate form fields
+  Object.entries(dataMapping).forEach(([fieldId, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      const element = document.getElementById(fieldId) || 
+                     document.querySelector(`[name="${fieldId}"]`) || 
+                     document.querySelector(`input[placeholder*="${fieldId}"]`);
+                     
       if (element) {
         const currentValue = element.value?.trim() || '';
         const newValue = String(value).trim();
         
-        // Force populate if we have meaningful new data and it's different
-        if (newValue !== '' && newValue !== '-' && currentValue !== newValue) {
-          // Handle different input types
+        // Only update if different and meaningful
+        if (newValue && newValue !== currentValue && newValue !== '-' && newValue !== 'undefined') {
           if (element.type === 'checkbox') {
             const shouldBeChecked = value === true || value === 'כן' || value === 'yes' || value === 'true';
             element.checked = shouldBeChecked;
-            console.log(`✅ Populated checkbox ${fieldId}: ${shouldBeChecked}`);
           } else {
             element.value = newValue;
-            
-            // Add visual indicator for helper-populated fields
-            element.style.borderLeft = '3px solid #007bff';
-            element.style.backgroundColor = '#f8f9ff';
-            element.title = `Auto-populated from helper: ${newValue}`;
-            
-            console.log(`✅ Populated ${fieldId}: "${currentValue}" → "${newValue}"`);
           }
           
-          // Trigger events for compatibility
-          ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+          // Trigger events
+          ['input', 'change', 'blur'].forEach(eventType => {
             element.dispatchEvent(new Event(eventType, { bubbles: true }));
           });
           
-          populatedCount++;
+          updated++;
+          console.log(`✅ Updated ${fieldId}: ${newValue}`);
         }
-      } else {
-        console.log(`⚠️ Element not found for field: ${fieldId} (tried ${selectors.length} selectors)`);
       }
     }
   });
   
-  console.log(`✅ Form population completed: ${populatedCount} fields populated`);
-  return populatedCount;
+  console.log(`✅ Form population completed: ${updated} fields updated`);
+  
+  // Update helper timestamp
+  window.helper.meta.last_updated = new Date().toISOString();
+  saveHelperToAllStorageLocations();
 }
 
-// Enhanced functions to replace broken ones
-window.updateHelper = function(section, data, sourceModule = null) {
-  console.log(`🔄 ENHANCED: Updating helper section '${section}' from ${sourceModule || 'unknown'}:`, data);
+// Simple helper update functions
+window.updateHelper = function(field, value) {
+  if (!window.helper) initializeHelper();
   
-  try {
-    if (!window.helper[section]) {
-      window.helper[section] = {};
-    }
-    
-    if (typeof data === 'object' && data !== null) {
-      Object.assign(window.helper[section], data);
-    } else {
-      window.helper[section] = data;
-    }
-    
-    window.helper.meta.last_updated = new Date().toISOString();
-    saveHelperToAllStorageLocations();
-    
-    console.log(`✅ Helper section '${section}' updated successfully`);
-    return true;
-    
-  } catch (error) {
-    console.error(`❌ Failed to update helper section '${section}':`, error);
-    return false;
-  }
-};
-
-window.saveHelperToStorage = saveHelperToAllStorageLocations;
-window.refreshAllModuleForms = populateAllForms;
-
-// 🔧 DEBUG FUNCTION: Force populate all forms with detailed logging
-window.forcePopulateDebug = function() {
-  console.log('🔧 DEBUG: Force populating all forms with detailed logging...');
-  console.log('🔍 Current helper data:', window.helper);
-  
-  // First, ensure helper data is loaded
-  if (!window.helper || Object.keys(window.helper).length === 0) {
-    console.log('⚠️ No helper data found, attempting to load from storage...');
-    
-    try {
-      const sessionData = sessionStorage.getItem('helper');
-      if (sessionData) {
-        window.helper = JSON.parse(sessionData);
-        console.log('✅ Loaded helper data from sessionStorage:', window.helper);
-      } else {
-        const localData = localStorage.getItem('helper_data');
-        if (localData) {
-          window.helper = JSON.parse(localData);
-          console.log('✅ Loaded helper data from localStorage:', window.helper);
-        } else {
-          console.error('❌ No helper data found in any storage location');
-          return false;
-        }
-      }
-    } catch (e) {
-      console.error('❌ Error loading helper data:', e);
-      return false;
-    }
-  }
-  
-  // Find all input fields on the page
-  const allInputs = document.querySelectorAll('input, select, textarea');
-  console.log(`🔍 Found ${allInputs.length} input elements on page`);
-  
-  // Show which fields exist on current page
-  const existingFields = Array.from(allInputs).map(el => ({
-    id: el.id,
-    name: el.name,
-    type: el.type,
-    placeholder: el.placeholder,
-    currentValue: el.value
-  })).filter(f => f.id || f.name);
-  
-  console.log('📋 Existing form fields:', existingFields);
-  
-  // Now populate using our enhanced function
-  const result = populateAllForms();
-  
-  console.log(`✅ DEBUG population completed: ${result} fields populated`);
-  return result;
-};
-
-// Enhanced broadcastHelperUpdate function for system-wide notifications
-window.broadcastHelperUpdate = function(updatedSections = [], source = 'unknown') {
-  console.log('📡 Broadcasting helper update:', { updatedSections, source });
-  
-  try {
-    // Create custom event with helper data
-    const updateEvent = new CustomEvent('helperUpdate', {
-      detail: {
-        helper: window.helper,
-        updatedSections: updatedSections,
-        source: source,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-    // Dispatch to document
-    document.dispatchEvent(updateEvent);
-    
-    // Update all module forms if functions exist
-    if (typeof window.refreshAllModuleForms === 'function') {
-      window.refreshAllModuleForms(window.helper);
-    }
-    
-    // Trigger floating screen updates
-    triggerFloatingScreenUpdates(updatedSections, source);
-    
-    console.log('✅ Helper update broadcasted successfully');
-    
-  } catch (error) {
-    console.error('❌ Error broadcasting helper update:', error);
-  }
-};
-
-// Enhanced updateHelperAndSession function
-window.updateHelperAndSession = function(section, data, sourceModule = null) {
-  const success = window.updateHelper(section, data, sourceModule);
-  if (success) {
-    window.broadcastHelperUpdate([section], sourceModule || "updateHelperAndSession");
-  }
-  return success;
-};
-
-// Helper function to trigger floating screen updates
-function triggerFloatingScreenUpdates(updatedSections, source = '') {
-  console.log('📱 Triggering floating screen updates for sections:', updatedSections);
-  
-  // Ensure source is a string to prevent TypeError on .includes()
-  if (typeof source !== 'string') {
-    console.warn('⚠️ Source is not a string, converting:', typeof source, source);
-    source = String(source || '');
-  }
-  
-  // Car details floating screen
-  if (updatedSections.includes('vehicle') || updatedSections.includes('meta')) {
-    if (typeof window.refreshCarData === 'function') {
-      window.refreshCarData();
-    }
-    // Auto-show car details removed - user must manually click button to open
-    // if (typeof window.showCarDetails === 'function') {
-    //   setTimeout(() => window.showCarDetails(), 500);
-    // }
-  }
-  
-  // Stakeholder floating screens
-  if (updatedSections.includes('stakeholders')) {
-    if (typeof window.refreshStakeholderData === 'function') {
-      window.refreshStakeholderData();
-    }
-  }
-  
-  // Valuation floating screens
-  if (updatedSections.includes('valuation')) {
-    if (typeof window.refreshValuationData === 'function') {
-      window.refreshValuationData();
-    }
-  }
-  
-  // 🔧 CRITICAL: Levi floating screen updates - trigger after valuation data changes
-  if (updatedSections.includes('valuation') || updatedSections.includes('vehicle') || source.includes('levi') || source.includes('hebrew')) {
-    if (typeof window.refreshLeviData === 'function') {
-      console.log('🔄 Triggering Levi floating screen update...');
-      window.refreshLeviData();
-    }
-  }
-}
-
-// Enhanced Universal Data Capture Integration - Monitor all UI inputs
-function setupUniversalInputCapture() {
-  console.log('🔄 Setting up universal input capture integration...');
-  
-  // Monitor all input fields in real-time
-  const inputSelector = 'input, select, textarea, [contenteditable="true"]';
-  
-  // Enhanced field mapping for UI capture
-  const getHelperPath = (input) => {
-    const fieldId = input.id || input.name || '';
-    
-    // Comprehensive field to helper path mapping
-    const pathMappings = {
-      // Vehicle fields
-      'plate': 'vehicle.plate', 'plateNumber': 'vehicle.plate',
-      'manufacturer': 'vehicle.manufacturer', 'make': 'vehicle.manufacturer',
-      'model': 'vehicle.model', 'year': 'vehicle.year',
-      'chassis': 'vehicle.chassis', 'vin': 'vehicle.chassis',
-      'km': 'vehicle.km', 'odo': 'vehicle.km', 'mileage': 'vehicle.km',
-      'engine_volume': 'vehicle.engine_volume', 'fuel_type': 'vehicle.fuel_type',
-      'ownership_type': 'vehicle.ownership_type', 'trim': 'vehicle.trim',
-      'model_type': 'vehicle.model_type', 'office_code': 'vehicle.office_code',
-      'model_code': 'vehicle.model_code', 'features': 'vehicle.features',
-      'category': 'vehicle.category', 'registration_date': 'vehicle.registration_date',
-      
-      // Owner/Stakeholder fields
-      'owner': 'stakeholders.owner.name', 'ownerName': 'stakeholders.owner.name',
-      'client_name': 'stakeholders.owner.name', 'owner_phone': 'stakeholders.owner.phone',
-      'ownerPhone': 'stakeholders.owner.phone', 'owner_address': 'stakeholders.owner.address',
-      'ownerAddress': 'stakeholders.owner.address',
-      
-      // Garage fields
-      'garage_name': 'stakeholders.garage.name', 'garageName': 'stakeholders.garage.name',
-      'garage': 'stakeholders.garage.name', 'garage_phone': 'stakeholders.garage.phone',
-      'garagePhone': 'stakeholders.garage.phone', 'garage_email': 'stakeholders.garage.email',
-      'garageEmail': 'stakeholders.garage.email',
-      
-      // Insurance fields
-      'insurance_company': 'stakeholders.insurance.company', 'insuranceCompany': 'stakeholders.insurance.company',
-      'insurance_email': 'stakeholders.insurance.email', 'insuranceEmail': 'stakeholders.insurance.email',
-      'policy_number': 'stakeholders.insurance.policy_number', 'claim_number': 'stakeholders.insurance.claim_number',
-      'agent_name': 'stakeholders.insurance.agent.name', 'agentName': 'stakeholders.insurance.agent.name',
-      'agent_phone': 'stakeholders.insurance.agent.phone', 'agentPhone': 'stakeholders.insurance.agent.phone',
-      'agent_email': 'stakeholders.insurance.agent.email', 'agentEmail': 'stakeholders.insurance.agent.email',
-      
-      // Case info fields
-      'damage_date': 'case_info.damage_date', 'damageDate': 'case_info.damage_date',
-      'damage_type': 'case_info.damage_type', 'damageType': 'case_info.damage_type',
-      'inspection_date': 'case_info.inspection_date', 'location': 'case_info.inspection_location',
-      'inspection_location': 'case_info.inspection_location',
-      
-      // Valuation fields
-      'base_price': 'valuation.base_price', 'final_price': 'valuation.final_price',
-      'market_value': 'vehicle.market_value', 'report_date': 'valuation.report_date',
-      'owner_count': 'valuation.adjustments.ownership_history.owner_count'
-    };
-    
-    // Direct mapping first
-    if (pathMappings[fieldId]) {
-      return pathMappings[fieldId];
-    }
-    
-    // Pattern matching for similar fields
-    if (fieldId.includes('plate')) return 'vehicle.plate';
-    if (fieldId.includes('owner') && !fieldId.includes('phone') && !fieldId.includes('address')) return 'stakeholders.owner.name';
-    if (fieldId.includes('garage') && !fieldId.includes('phone') && !fieldId.includes('email')) return 'stakeholders.garage.name';
-    if (fieldId.includes('insurance') && !fieldId.includes('email')) return 'stakeholders.insurance.company';
-    
-    // Default fallback
-    return `general.${fieldId}`;
+  const fieldMappings = {
+    'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'manufacturer': ['vehicle.manufacturer'],
+    'model': ['vehicle.model'],
+    'year': ['vehicle.year'],
+    'owner': ['stakeholders.owner.name'],
+    'garage': ['stakeholders.garage.name'],
+    'insurance': ['stakeholders.insurance.company']
   };
   
-  const attachInputListener = (input) => {
-    if (input.dataset.helperCaptureAttached) return;
-    
-    const helperPath = getHelperPath(input);
-    console.log(`🔗 Attaching capture to: ${input.id || input.name} → ${helperPath}`);
-    
-    ['input', 'change', 'blur'].forEach(eventType => {
-      input.addEventListener(eventType, (e) => {
-        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        if (value !== '' && value !== null && value !== undefined) {
-          setNestedValue(window.helper, helperPath, value);
-          console.log(`📝 Captured: ${helperPath} = ${value}`);
-          
-          // Save to storage after input
-          saveHelperToAllStorageLocations();
-        }
-      });
-    });
-    
-    input.dataset.helperCaptureAttached = 'true';
-  };
-  
-  // Attach to existing inputs
-  document.querySelectorAll(inputSelector).forEach(attachInputListener);
-  
-  // Monitor for dynamic inputs
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          if (node.matches && node.matches(inputSelector)) {
-            attachInputListener(node);
-          }
-          const inputs = node.querySelectorAll ? node.querySelectorAll(inputSelector) : [];
-          inputs.forEach(attachInputListener);
-        }
-      });
-    });
+  const targets = fieldMappings[field] || [field];
+  targets.forEach(target => {
+    setNestedValue(window.helper, target, value);
   });
   
-  observer.observe(document.body, { childList: true, subtree: true });
-  console.log('✅ Universal input capture integration active');
-}
+  saveHelperToAllStorageLocations();
+  console.log(`Updated ${field}: ${value}`);
+};
 
-// Initialize universal input capture when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupUniversalInputCapture);
-} else {
-  setupUniversalInputCapture();
-}
+window.updateHelperAndSession = function(field, value) {
+  updateHelper(field, value);
+};
 
-// Auto-save every 30 seconds
-setInterval(() => {
-  if (window.helper && Object.keys(window.helper).length > 0) {
-    saveHelperToAllStorageLocations();
-  }
-}, 30000);
+window.broadcastHelperUpdate = function(sections, source) {
+  console.log(`Broadcasting helper update: ${sections.join(', ')} (source: ${source})`);
+  setTimeout(() => populateAllForms(), 100);
+};
 
-console.log('✅ COMPREHENSIVE HELPER SYSTEM LOADED - All system fields available!');
-console.log('📊 Helper object initialized:', window.helper);
+// Simple test functions
+window.testDataCapture = function() {
+  console.log('🧪 Testing basic data capture...');
+  console.log('Helper data:', window.helper);
+  populateAllForms();
+};
 
-// Export for testing
-if (typeof window !== 'undefined') {
-  // 🔧 PHASE 1 FIX: Enhanced Hebrew processing test function
-  window.testHebrewProcessing = function() {
-    console.log('🧪 Testing Hebrew processing improvements...');
-    
-    // Test 1: Clean Hebrew Levi report
-    console.log('Test 1: Clean Hebrew Levi report');
-    const cleanResult = processIncomingData({
-      Body: `פרטי רכב 5785269 להערכת נזק
-יצרן: הונדה
-דגם: סיוויק  
-שנת ייצור: 2019
-מס' ק"מ: 45000
-מחיר בסיס: 75,000
-מחיר סופי: 82,500
-עליה לכביש %: 2.5%
-בעלות %: -1.5%
-מס' בעלים %: -2%
-חברת ביטוח: מגדל
-מספר פוליסה: POL123456
-מספר תביעה: CLM789012`
-    }, 'test_clean_hebrew');
-    
-    // Test 2: Hebrew with corruption patterns
-    console.log('Test 2: Hebrew with common corruption');
-    const corruptedResult = processIncomingData({
-      Body: `פרטי רכב 7894561 
-יצרן: ×ž×–×"×
-דגם: 3
-שנת ייצור: 2020
-מס׳ ק״מ: 25000
-מחיר בסיס: 95,000`
-    }, 'test_corrupted_hebrew');
-    
-    // Test 3: Mixed Hebrew and English
-    console.log('Test 3: Mixed Hebrew-English');
-    const mixedResult = processIncomingData({
-      Body: `Vehicle Details 1234567
-יצרן: Toyota
-Model: Camry
-שנת ייצור: 2021
-Mileage: 15000
-מחיר בסיס: 120,000
-Insurance Company: הראל
-Policy Number: POL987654`
-    }, 'test_mixed_language');
-    
-    console.log('✅ Hebrew processing tests completed');
-    console.log('📊 Helper vehicle data after tests:', window.helper.vehicle);
-    console.log('📊 Helper valuation data after tests:', window.helper.valuation);
-    console.log('📊 Helper insurance data after tests:', window.helper.stakeholders.insurance);
-    
-    // Test form population
-    populateAllForms();
-    
-    return {
-      clean: cleanResult,
-      corrupted: corruptedResult,
-      mixed: mixedResult
-    };
-  };
-
-  window.testDataCapture = function() {
-    console.log('🧪 Testing comprehensive data capture with sample data...');
-    
-    // Test Hebrew Levi report data
-    processIncomingData({
-      Body: `פרטי רכב 5785269 להערכת נזק
-קוד דגם: 870170
-שם דגם מלא: ג'יפ ריינג'ד 150(1332) LATITUDE
-אוטומט: כן
-מאפייני הרכב: מזגן, רדיו
-עליה לכביש: 08/2021
-מספר בעלים: 2
-קטיגוריה: פנאי שטח
-מס' ק"מ: 11900
-מחיר בסיס: 85,000
-מחיר סופי לרכב: 92,670
-עליה לכביש %: 0%
-ערך כספי עליה לכביש: 3,500
-שווי מצטבר עליה לכביש: 88,500
-מס' ק"מ %: 7.95%
-ערך כספי מס' ק"מ: 7,036
-שווי מצטבר מס' ק"מ: 95,536
-סוג בעלות: פרטית
-בעלות %: -3%
-ערך כספי בעלות: 2,866
-שווי מצטבר בעלות: 92,670`
-    }, 'test_levi_comprehensive');
-    
-    // Test direct object data with parts
-    processIncomingData({
-      plate: '1234567',
-      manufacturer: 'Toyota',
-      model: 'Camry',
-      owner: 'Test Owner',
-      parts_search: {
-        selected_parts: [
-          { name: 'Front Bumper', price: 500, quantity: 1 },
-          { name: 'Headlight', price: 300, quantity: 2 }
-        ],
-        total_cost: 1100
-      }
-    }, 'test_comprehensive');
-    
-    console.log('📊 Comprehensive helper structure:');
-    console.log('  🚗 Vehicle:', window.helper.vehicle);
-    console.log('  💰 Valuation:', window.helper.valuation);
-    console.log('  📄 Case Info:', window.helper.case_info);
-    console.log('  🔧 Parts Search:', window.helper.parts_search);
-    console.log('  💰 Financials:', window.helper.financials);
-    console.log('  📋 Estimate:', window.helper.estimate);
-    populateAllForms();
-  };
-
-  // 🔧 FINAL: Comprehensive Data Capture Test Suite
-  window.testComprehensiveDataCapture = function() {
-    console.log('🧪 Running comprehensive data capture test suite...');
-    
-    const testResults = {
-      tests: [],
-      passed: 0,
-      failed: 0,
-      startTime: new Date().toISOString()
-    };
-    
-    // Test 1: Hebrew webhook processing
-    console.log('Test 1: Hebrew Levi webhook processing');
-    try {
-      const hebrewResult = processIncomingData({
-        Body: `פרטי רכב 5785269 להערכת נזק
-יצרן: הונדה  
-דגם: סיוויק
-שנת ייצור: 2019
-מס' ק"מ: 45000
-מחיר בסיס: 75,000
-מחיר סופי: 82,500
-עליה לכביש %: 2.5%
-בעלות %: -1.5%
-מס' בעלים %: -2%
-חברת ביטוח: מגדל
-מספר פוליסה: POL123456
-מספר תביעה: CLM789012`
-      }, 'test_comprehensive_hebrew');
-      
-      testResults.tests.push({
-        name: 'Hebrew Webhook Processing',
-        status: hebrewResult.success ? 'PASSED' : 'FAILED',
-        details: hebrewResult
-      });
-      
-      if (hebrewResult.success) testResults.passed++;
-      else testResults.failed++;
-      
-    } catch (error) {
-      testResults.tests.push({
-        name: 'Hebrew Webhook Processing',
-        status: 'FAILED',
-        error: error.message
-      });
-      testResults.failed++;
-    }
-    
-    // Test 2: Storage system integration
-    console.log('Test 2: Storage system integration');
-    try {
-      const originalHelper = JSON.parse(JSON.stringify(window.helper));
-      
-      // Test save
-      const saveSuccess = saveHelperToAllStorageLocations();
-      
-      // Test load (by reinitializing)
-      const loadedData = initializeHelper();
-      
-      const storageTest = {
-        name: 'Storage System Integration',
-        status: saveSuccess && loadedData ? 'PASSED' : 'FAILED',
-        details: {
-          saveSuccess,
-          loadedData: !!loadedData,
-          dataIntegrity: JSON.stringify(originalHelper) === JSON.stringify(loadedData)
-        }
-      };
-      
-      testResults.tests.push(storageTest);
-      if (storageTest.status === 'PASSED') testResults.passed++;
-      else testResults.failed++;
-      
-    } catch (error) {
-      testResults.tests.push({
-        name: 'Storage System Integration',
-        status: 'FAILED',
-        error: error.message
-      });
-      testResults.failed++;
-    }
-    
-    // Test 3: Form population
-    console.log('Test 3: Form population system');
-    try {
-      const populatedCount = populateAllForms();
-      const formTest = {
-        name: 'Form Population System',
-        status: populatedCount > 0 ? 'PASSED' : 'FAILED',
-        details: { fieldsPopulated: populatedCount }
-      };
-      
-      testResults.tests.push(formTest);
-      if (formTest.status === 'PASSED') testResults.passed++;
-      else testResults.failed++;
-      
-    } catch (error) {
-      testResults.tests.push({
-        name: 'Form Population System', 
-        status: 'FAILED',
-        error: error.message
-      });
-      testResults.failed++;
-    }
-    
-    // Test 4: Unicode normalization
-    console.log('Test 4: Unicode normalization');
-    try {
-      const testText = `מס' רכב: 1234567\nיצר×Ÿ: בי×ž×•\nמ×¡× ×–×§: תאונה`;
-      const normalizedText = normalizeHebrewText(testText);
-      
-      const unicodeTest = {
-        name: 'Unicode Normalization',
-        status: normalizedText !== testText ? 'PASSED' : 'FAILED',
-        details: {
-          original: testText,
-          normalized: normalizedText,
-          fixedCorruption: normalizedText.includes('יצרן') && normalizedText.includes('בימו')
-        }
-      };
-      
-      testResults.tests.push(unicodeTest);
-      if (unicodeTest.status === 'PASSED') testResults.passed++;
-      else testResults.failed++;
-      
-    } catch (error) {
-      testResults.tests.push({
-        name: 'Unicode Normalization',
-        status: 'FAILED',
-        error: error.message
-      });
-      testResults.failed++;
-    }
-    
-    // Test 5: Manual form integration (if upload-levi page)
-    if (window.location.pathname.includes('upload-levi')) {
-      console.log('Test 5: Manual form integration');
-      try {
-        // Set manual form values
-        const manualFields = {
-          'manual-base-price': '100000',
-          'manual-final-price': '105000', 
-          'manual-manufacturer': 'Toyota',
-          'manual-year': '2020'
-        };
-        
-        Object.entries(manualFields).forEach(([fieldId, value]) => {
-          const field = document.getElementById(fieldId);
-          if (field) {
-            field.value = value;
-            field.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        });
-        
-        // Test manual save
-        if (typeof window.saveManualDataToHelper === 'function') {
-          window.saveManualDataToHelper();
-        }
-        
-        const manualTest = {
-          name: 'Manual Form Integration',
-          status: 'PASSED',
-          details: { fieldsSet: Object.keys(manualFields).length }
-        };
-        
-        testResults.tests.push(manualTest);
-        testResults.passed++;
-        
-      } catch (error) {
-        testResults.tests.push({
-          name: 'Manual Form Integration',
-          status: 'FAILED',
-          error: error.message
-        });
-        testResults.failed++;
-      }
-    }
-    
-    // Storage manager test removed to prevent system conflicts
-    
-    // Calculate final results
-    testResults.endTime = new Date().toISOString();
-    testResults.duration = new Date(testResults.endTime) - new Date(testResults.startTime);
-    testResults.successRate = Math.round((testResults.passed / (testResults.passed + testResults.failed)) * 100);
-    
-    // Display results
-    console.log('🔥 COMPREHENSIVE DATA CAPTURE TEST RESULTS:');
-    console.table(testResults.tests.map(t => ({ 
-      Test: t.name, 
-      Status: t.status,
-      Details: JSON.stringify(t.details || t.error || {})
-    })));
-    
-    console.log(`📊 SUMMARY: ${testResults.passed} passed, ${testResults.failed} failed (${testResults.successRate}% success rate)`);
-    console.log(`⏱️ Duration: ${testResults.duration}ms`);
-    
-    // Show user notification
-    const message = `בדיקה מקיפה הושלמה: ${testResults.passed}/${testResults.passed + testResults.failed} עברו בהצלחה (${testResults.successRate}%)`;
-    
-    if (typeof window.showSystemNotification === 'function') {
-      window.showSystemNotification(message, testResults.successRate >= 80 ? 'success' : 'warning');
-    } else if (typeof createFallbackNotification === 'function') {
-      createFallbackNotification(message, testResults.successRate >= 80 ? 'success' : 'warning');
-    }
-    
-    return testResults;
-  };
-}
-
-// Helper functions that other files expect
+// Window-level helper functions
 window.getVehicleData = function() {
-  return window.helper.vehicle || {};
+  return window.helper?.vehicle || {};
 };
 
-window.getDamageData = function() {
-  return window.helper.damage_assessment || {};
+window.getOwnerData = function() {
+  return window.helper?.stakeholders?.owner || {};
 };
 
-window.getValuationData = function() {
-  return window.helper.valuation || {};
-};
+// Auto-populate on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => populateAllForms(), 500);
+  });
+} else {
+  setTimeout(() => populateAllForms(), 500);
+}
 
-window.getFinancialData = function() {
-  return window.helper.financials || {};
-};
-
-// Additional data getter functions for comprehensive system support
-window.getCaseInfo = function() {
-  return window.helper.case_info || {};
-};
-
-window.getPartsSearchData = function() {
-  return window.helper.parts_search || {};
-};
-
-window.getDocumentsData = function() {
-  return window.helper.documents || {};
-};
-
-window.getEstimateData = function() {
-  return window.helper.estimate || {};
-};
-
-window.getLeviData = function() {
-  return window.helper.levi_data || {};
-};
-
-window.getCalculationsData = function() {
-  return window.helper.calculations || {};
-};
-
-window.getSystemData = function() {
-  return window.helper.system || {};
-};
-
-window.syncDamageData = function(damageData) {
-  return window.updateHelper('damage_assessment', damageData, 'syncDamageData');
-};
-
-// Sync Levi data function for depreciation module
-window.syncLeviData = function(leviData) {
-  console.log('🔄 Syncing Levi data to helper:', leviData);
-  return window.updateHelper('levi_data', leviData, 'syncLeviData');
-};
-
-// Update calculations function for modules
-window.updateCalculations = function(calculationData) {
-  console.log('🧮 Updating calculations in helper:', calculationData);
-  return window.updateHelper('calculations', calculationData, 'updateCalculations');
-};
-
-// Sync vehicle data function for car details module
-window.syncVehicleData = function(vehicleData) {
-  console.log('🚗 Syncing vehicle data to helper:', vehicleData);
-  return window.updateHelper('vehicle', vehicleData, 'syncVehicleData');
-};
-
-// Initialize helper function for initial input module
-window.initHelper = function(initialData = {}) {
-  console.log('🔧 Initializing helper with data:', initialData);
-  if (initialData && Object.keys(initialData).length > 0) {
-    Object.keys(initialData).forEach(section => {
-      window.updateHelper(section, initialData[section], 'initHelper');
-    });
-  }
-  console.log('✅ Helper initialized successfully');
-  return true;
-};
-
-// Manual override tracking system for user input protection
-window.manualOverrides = window.manualOverrides || {};
-
-window.markFieldAsManuallyModified = function(fieldId, value, source = 'unknown') {
-  console.log(`🔒 Marking field ${fieldId} as manually modified:`, { value, source });
-  
-  if (!window.manualOverrides) {
-    window.manualOverrides = {};
-  }
-  
-  window.manualOverrides[fieldId] = {
-    value: value,
-    timestamp: new Date().toISOString(),
-    source: source,
-    manually_modified: true
-  };
-  
-  console.log(`✅ Field ${fieldId} marked as manually modified`);
-};
-
-window.isFieldManuallyModified = function(fieldId) {
-  const isModified = window.manualOverrides && window.manualOverrides[fieldId] && window.manualOverrides[fieldId].manually_modified;
-  console.log(`🔍 Checking if field ${fieldId} is manually modified:`, isModified);
-  return isModified;
-};
-
-window.clearFieldManualOverride = function(fieldId) {
-  if (window.manualOverrides && window.manualOverrides[fieldId]) {
-    delete window.manualOverrides[fieldId];
-    console.log(`🗑️ Cleared manual override for field: ${fieldId}`);
-  }
-};
-
-window.getAllManualOverrides = function() {
-  return window.manualOverrides || {};
-};
-
-// ES6 Module Exports for other files to import
-// Use function wrappers to ensure availability
-export const updateHelper = (...args) => window.updateHelper?.(...args);
-export const updateHelperAndSession = (...args) => window.updateHelperAndSession?.(...args);
-export const broadcastHelperUpdate = (...args) => window.broadcastHelperUpdate?.(...args);
-export const processIncomingData = (...args) => window.processIncomingData?.(...args);
-export const saveHelperToStorage = (...args) => window.saveHelperToStorage?.(...args);
-export const refreshAllModuleForms = (...args) => window.refreshAllModuleForms?.(...args);
-export const getVehicleData = (...args) => window.getVehicleData?.(...args);
-export const getDamageData = (...args) => window.getDamageData?.(...args);
-export const getValuationData = (...args) => window.getValuationData?.(...args);
-export const getFinancialData = (...args) => window.getFinancialData?.(...args);
-export const getCaseInfo = (...args) => window.getCaseInfo?.(...args);
-export const getPartsSearchData = (...args) => window.getPartsSearchData?.(...args);
-export const getDocumentsData = (...args) => window.getDocumentsData?.(...args);
-export const getEstimateData = (...args) => window.getEstimateData?.(...args);
-export const getLeviData = (...args) => window.getLeviData?.(...args);
-export const getCalculationsData = (...args) => window.getCalculationsData?.(...args);
-export const getSystemData = (...args) => window.getSystemData?.(...args);
-export const syncDamageData = (...args) => window.syncDamageData?.(...args);
-export const syncLeviData = (...args) => window.syncLeviData?.(...args);
-export const updateCalculations = (...args) => window.updateCalculations?.(...args);
-export const syncVehicleData = (...args) => window.syncVehicleData?.(...args);
-export const initHelper = (...args) => window.initHelper?.(...args);
-
-// Manual override functions
-export const markFieldAsManuallyModified = (...args) => window.markFieldAsManuallyModified?.(...args);
-export const isFieldManuallyModified = (...args) => window.isFieldManuallyModified?.(...args);
-export const clearFieldManualOverride = (...args) => window.clearFieldManualOverride?.(...args);
-export const getAllManualOverrides = (...args) => window.getAllManualOverrides?.(...args);
-
-// Helper object getter
-export const helper = typeof window !== 'undefined' ? window.helper : {};
+console.log('✅ Helper system loaded and ready');
