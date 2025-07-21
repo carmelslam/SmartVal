@@ -679,6 +679,15 @@ export function updateHelper(section, data, sourceModule = null) {
   }
 }
 
+export function updateHelperAndSession(section, data, sourceModule = null) {
+  const success = updateHelper(section, data, sourceModule);
+  if (success) {
+    broadcastHelperUpdate([section], sourceModule || "updateHelperAndSession");
+  }
+  return success;
+}
+
+
 export function saveHelperToStorage() {
   try {
     // HIDDEN DEBUG: Track save operation
