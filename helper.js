@@ -933,6 +933,23 @@ function setNestedValue(obj, path, value) {
   current[keys[keys.length - 1]] = value;
 }
 
+// Deep merge helper for merging objects without overwriting
+function deepMerge(target, source) {
+  if (!source || typeof source !== 'object') return target;
+  for (const key in source) {
+    const srcVal = source[key];
+    if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal)) {
+      if (!target[key] || typeof target[key] !== 'object') {
+        target[key] = {};
+      }
+      deepMerge(target[key], srcVal);
+    } else {
+      target[key] = srcVal;
+    }
+  }
+  return target;
+}
+
 // 🔧 PHASE 2 FIX: Use centralized storage manager
 // Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
@@ -1133,7 +1150,7 @@ function populateAllForms() {
 // Simple helper update functions
 window.updateHelper = function(field, value) {
   if (!window.helper) initializeHelper();
-  
+
   const fieldMappings = {
     'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'manufacturer': ['vehicle.manufacturer'],
@@ -1143,14 +1160,23 @@ window.updateHelper = function(field, value) {
     'garage': ['stakeholders.garage.name'],
     'insurance': ['stakeholders.insurance.company']
   };
-  
+
   const targets = fieldMappings[field] || [field];
   targets.forEach(target => {
-    setNestedValue(window.helper, target, value);
+    // If value is an object and target refers to a section, merge instead of overwrite
+    if (typeof value === 'object' && !Array.isArray(value) && target.split('.').length === 1) {
+      const section = target;
+      if (!window.helper[section] || typeof window.helper[section] !== 'object') {
+        window.helper[section] = {};
+      }
+      deepMerge(window.helper[section], value);
+    } else {
+      setNestedValue(window.helper, target, value);
+    }
   });
-  
+
   saveHelperToAllStorageLocations();
-  console.log(`Updated ${field}: ${value}`);
+  console.log(`Updated ${field}:`, value);
 };
 
 window.updateHelperAndSession = function(field, value) {
