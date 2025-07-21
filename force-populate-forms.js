@@ -1,10 +1,27 @@
-import { helper, getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
+// 🔄 Force Form Population - Ensures forms are populated from helper on page load
+// This addresses the issue where data is in helper but forms are empty
+
+// Wait for helper to be available
+function waitForHelper(callback, maxAttempts = 10) {
+  let attempts = 0;
+  const checkHelper = () => {
+    if (window.helper || attempts >= maxAttempts) {
+      callback();
+    } else {
+      attempts++;
+      setTimeout(checkHelper, 200);
+    }
+  };
+  checkHelper();
+}
 
 // Example: On load, populate all forms from helper
 window.forcePopulateFields = function() {
   // Use helper as single source of truth
-  const vehicle = getVehicleData();
-  // ...populate UI fields from vehicle, etc...
+  if (window.helper && window.helper.vehicle) {
+    const vehicle = window.helper.vehicle;
+    // ...populate UI fields from vehicle, etc...
+  }
 };
 
 // 🔄 Force Form Population - Ensures forms are populated from helper on page load
@@ -24,10 +41,16 @@ class ForceFormPopulator {
     // Wait for DOM and all scripts to load
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
-        this.startForcePopulation();
+        // Wait for helper to be available before starting
+        waitForHelper(() => {
+          this.startForcePopulation();
+        });
       });
     } else {
-      this.startForcePopulation();
+      // Wait for helper to be available before starting
+      waitForHelper(() => {
+        this.startForcePopulation();
+      });
     }
   }
 
@@ -55,8 +78,22 @@ class ForceFormPopulator {
         console.log(`🔄 Force populating forms (attempt ${this.retryCount + 1}/${this.maxRetries})`);
       }
       
-      // Get helper data
-      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      // Get helper data from multiple sources
+      let helperData = {};
+      
+      // First try to get from window.helper (live data)
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        helperData = window.helper;
+      } 
+      // Fallback to session storage
+      else {
+        try {
+          helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.warn('Failed to parse helper from sessionStorage:', e);
+          helperData = {};
+        }
+      }
       
       if (!helperData || Object.keys(helperData).length === 0) {
         if (!isPeriodicCheck) {
