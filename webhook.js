@@ -251,7 +251,36 @@ export async function sendToWebhook(id, payload) {
             'damageType': actualData.damage_type || actualData['סוג נזק'],
             'inspection_date': actualData.inspection_date || actualData['תאריך בדיקה'],
             'location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
-            'inspection_location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location
+            'inspection_location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
+            
+            // 🔧 LEVI FORM FIELD MAPPINGS - Manual adjustment form fields
+            'manual-registration': actualData['עליה לכביש'] || actualData['ערך עליה לכביש'],
+            'manual-registration-percent': actualData['עליה לכביש %'],
+            'manual-registration-value': actualData['ערך ש"ח עליה לכביש'],
+            'manual-registration-total': actualData['שווי מצטבר עליה לכביש'],
+            
+            'manual-ownership': actualData['בעלות'] || actualData['ערך בעלות'],
+            'manual-ownership-percent': actualData['בעלות %'],
+            'manual-ownership-value': actualData['ערך ש"ח בעלות'],
+            'manual-ownership-total': actualData['שווי מצטבר בעלות'],
+            
+            'manual-km': actualData['מס ק"מ'] || actualData['ערך מס ק"מ'],
+            'manual-km-percent': actualData['מס ק"מ %'],
+            'manual-km-value': actualData['ערך ש"ח מס ק"מ'],
+            'manual-km-total': actualData['שווי מצטבר מס ק"מ'],
+            
+            'manual-owners': actualData['מספר בעלים'] || actualData['ערך מספר בעלים'],
+            'manual-owners-percent': actualData['מספר בעלים %'],
+            'manual-owners-value': actualData['ערך ש"ח מספר בעלים'],
+            'manual-owners-total': actualData['שווי מצטבר מספר בעלים'],
+            
+            'manual-features': actualData['מאפיינים'],
+            'manual-features-percent': actualData['מחיר מאפיינים %'],
+            'manual-features-value': actualData['ערך ש"ח מאפיינים'],
+            'manual-features-total': actualData['שווי מצטבר  מאפיינים'],
+            
+            'base-price': actualData['מחיר בסיס'],
+            'final-price': actualData['מחיר סופי לרכב']
           };
           
           let populatedCount = 0;

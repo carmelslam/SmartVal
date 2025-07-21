@@ -466,7 +466,11 @@
     };
 
     const formatPercent = (value) => {
-      return value && value.toString().trim() ? `${value}%` : "0%";
+      if (!value || value.toString().trim() === '') return "0%";
+      const strValue = value.toString().trim();
+      // If already has %, don't add another one
+      if (strValue.endsWith('%')) return strValue;
+      return `${strValue}%`;
     };
 
     // Basic vehicle information - FIXED: Use exact JSON field mappings from valuation data
@@ -630,7 +634,16 @@
 
     // FIXED: Features adjustments - use nested structure
     const featAdj = valuation.adjustments?.features || {};
+    // FIXED: Handle features text properly - check multiple locations
+    console.log('🔧 FEATURES DEBUG:', {
+      'featAdj.value': featAdj.value,
+      'featAdj.description': featAdj.description,
+      'allData.features': allData.features,
+      'vehicle.features': vehicle.features
+    });
+    
     document.getElementById("levi-features").textContent = formatValue(
+      vehicle.features ||  // Try vehicle.features first 
       featAdj.value || 
       featAdj.description ||
       allData.features || 
