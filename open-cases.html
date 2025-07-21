@@ -372,14 +372,27 @@
           
           // Process the data through helper system
           if (typeof window.processIncomingData === 'function') {
-            console.log('🔄 Calling processIncomingData with carData');
-            console.log('📊 OPEN_CASE_UI Data being sent to processIncomingData:', carData);
-            console.log('📊 Helper before processing:', window.helper?.vehicle);
+            console.log('🔄 CRITICAL FIX: Processing Hebrew text from message field');
             
-            const result = window.processIncomingData(carData, 'OPEN_CASE_UI');
+            // FIRST: Process the Hebrew text from message/raw_response field
+            if (carData.message || carData.raw_response) {
+              const hebrewText = carData.message || carData.raw_response;
+              console.log('📝 Processing Hebrew text:', hebrewText);
+              console.log('📊 Helper before Hebrew processing:', window.helper?.vehicle);
+              
+              const hebrewResult = window.processIncomingData({ Body: hebrewText }, 'OPEN_CASE_UI_HEBREW');
+              console.log('📊 Hebrew processing result:', hebrewResult);
+              console.log('📊 Helper after Hebrew processing:', window.helper?.vehicle);
+            }
             
-            console.log('📊 processIncomingData result:', result);
-            console.log('📊 Helper after processing:', window.helper?.vehicle);
+            // THEN: Process the English mapped fields
+            console.log('🔄 Processing English mapped data');
+            console.log('📊 OPEN_CASE_UI English data:', carData);
+            
+            const result = window.processIncomingData(carData, 'OPEN_CASE_UI_ENGLISH');
+            
+            console.log('📊 English processing result:', result);
+            console.log('📊 Helper final state:', window.helper?.vehicle);
           }
           
           // Also trigger the floating screen directly
