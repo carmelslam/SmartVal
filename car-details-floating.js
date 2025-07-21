@@ -340,7 +340,8 @@
           persistedCarData.vehicle || {}, 
           persistedCarData.carDetails || {}, 
           persistedCarData.stakeholders || {}, 
-          persistedCarData.meta || {}
+          persistedCarData.meta || {},
+          persistedCarData.valuationData || persistedCarData.valuation || {}
         );
       } else {
         loadCarData();
@@ -586,26 +587,34 @@
       console.log('  - Owner:', stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || 'NOT FOUND');
       
       // Update UI and persist the data
-      updateCarDisplay(vehicle, carDetails, stakeholders, meta);
+      updateCarDisplay(vehicle, carDetails, stakeholders, meta, valuationData);
       
       // Persist the loaded data
       persistedCarData = {
         vehicle: vehicle,
         carDetails: carDetails,
         stakeholders: stakeholders,
-        meta: meta
+        meta: meta,
+        valuationData: valuationData
       };
       console.log('💾 Data persisted for future use');
 
     } catch (error) {
       console.error("❌ Error loading car data:", error);
-      updateCarDisplay({}, {}, {}, {});
+      updateCarDisplay({}, {}, {}, {}, {});
     }
   }
 
-  function updateCarDisplay(vehicle, carDetails, stakeholders, meta) {
+  function updateCarDisplay(vehicle, carDetails, stakeholders, meta, valuationData = {}) {
+    // Ensure all parameters are objects to prevent reference errors
+    vehicle = vehicle || {};
+    carDetails = carDetails || {};
+    stakeholders = stakeholders || {};
+    meta = meta || {};
+    valuationData = valuationData || {};
+    
     console.log('🔄 ENHANCED updateCarDisplay called with:', {
-      vehicle, carDetails, stakeholders, meta
+      vehicle, carDetails, stakeholders, meta, valuationData
     });
     
     // ENHANCED: Log what data we actually have
@@ -663,7 +672,7 @@
     // Levi code - mapped from Levi report webhook response
     document.getElementById("vehicle-levi-code").textContent = formatValue(
       vehicle.model_code || 
-      valuationData.model_code ||
+      (valuationData && valuationData.model_code) ||
       carDetails.model_code ||
       vehicle.levi_code || 
       carDetails.levi_code
@@ -709,7 +718,7 @@
     // Additional fields from general info
     // Base price - mapped from Levi report valuation data
     document.getElementById("car-base-price").textContent = formatValue(
-      valuationData.base_price || 
+      (valuationData && valuationData.base_price) || 
       carDetails.base_price || 
       vehicle.base_price ||
       "-"
