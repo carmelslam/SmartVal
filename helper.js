@@ -1646,12 +1646,13 @@ export const getOwnerData = window.getOwnerData;
 export const universalWebhookReceiver = window.universalWebhookReceiver;
 export const processWebhookData = window.processWebhookData;
 export const setupUniversalInputCapture = window.setupUniversalInputCapture;
-export const populateAllFormsWithRetry = populateAllFormsWithRetry;
+// populateAllFormsWithRetry is already declared as a function above
 export const testWithActualWebhookData = window.testWithActualWebhookData;
 
 // Additional exports that modules might need
 export const saveHelperToStorage = saveHelperToAllStorageLocations;
 export { saveHelperToAllStorageLocations };
+export { populateAllFormsWithRetry };
 
 // Data getter functions
 export function getDamageData() {
