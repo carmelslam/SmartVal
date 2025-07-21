@@ -1,4 +1,4 @@
-import { updateHelper, updateHelperAndSession, broadcastHelperUpdate, processIncomingData } from './helper.js';
+// Removed import to prevent module errors - functions accessed via window object
 
 // ✅ Centralized Webhook Handler – Clean + Unified with Enhanced Data Capture
 export const WEBHOOKS = {
@@ -324,12 +324,16 @@ export async function sendToWebhook(id, payload) {
         
         try {
           // Simple direct helper update - restore original working method
-          if (typeof updateHelperAndSession === 'function') {
+          if (typeof window.updateHelperAndSession === 'function') {
             // Update each field directly in helper
             Object.keys(actualData).forEach(key => {
-              updateHelperAndSession(key, actualData[key]);
+              window.updateHelperAndSession(key, actualData[key]);
             });
             console.log('✅ Data processed and helper updated');
+          } else if (typeof window.processIncomingData === 'function') {
+            // Use processIncomingData if available
+            await window.processIncomingData(actualData, id);
+            console.log('✅ Data processed via processIncomingData');
           } else {
             // Direct sessionStorage update as fallback
             sessionStorage.setItem('helper', JSON.stringify(actualData));
@@ -595,13 +599,15 @@ export function sendPartSearch(data) {
       alert('הבקשה נשלחה בהצלחה!');
 
       if (Array.isArray(response.results)) {
-        updateHelperAndSession("parts_search", {
-          summary: {
-            total_results: response.results.length,
-            recommended: response.recommended || ''
-          },
-          results: response.results
-        });
+        if (typeof window.updateHelperAndSession === 'function') {
+          window.updateHelperAndSession("parts_search", {
+            summary: {
+              total_results: response.results.length,
+              recommended: response.recommended || ''
+            },
+            results: response.results
+          });
+        }
       }
     })
     .catch(err => {
@@ -644,7 +650,9 @@ window.WEBHOOKS = WEBHOOKS;
 // Handle incoming webhook data from Make.com
 function handleWebhookData(data) {
   Object.entries(data).forEach(([key, value]) => {
-    updateHelperAndSession(key, value);
+    if (typeof window.updateHelperAndSession === 'function') {
+      window.updateHelperAndSession(key, value);
+    }
   });
 }
 
