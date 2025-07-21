@@ -893,6 +893,16 @@ function processDirectData(data, result) {
     'is_automatic': ['vehicle.is_automatic'],
     'אוטומט': ['vehicle.is_automatic'],
     
+    // Additional mappings for JSON webhook keys
+    'vehicle_type': ['vehicle.vehicle_type'],
+    'סוג_הרכב': ['vehicle.vehicle_type'],
+    'drive_type': ['vehicle.drive_type'], 
+    'הנעה': ['vehicle.drive_type'],
+    'engine_model': ['vehicle.engine_model'],
+    'דגם_מנוע': ['vehicle.engine_model'],
+    'מספר_דגם_הרכב': ['vehicle.model_code'],
+    'קוד_משרד_התחבורה': ['vehicle.office_code'],
+    
     // Owner fields
     'owner': ['stakeholders.owner.name'],
     'owner_name': ['stakeholders.owner.name'],
@@ -959,16 +969,32 @@ function processDirectData(data, result) {
     'features_amount': ['valuation.adjustments.features.amount']
   };
   
+  // 🔧 ENHANCED DEBUG: Log all incoming JSON data
+  console.log('📋 JSON Data received for processing:');
   Object.entries(data).forEach(([key, value]) => {
+    console.log(`  📝 ${key}: ${value} (type: ${typeof value})`);
+  });
+  
+  console.log('📋 Available field mappings:', Object.keys(fieldMappings));
+  
+  Object.entries(data).forEach(([key, value]) => {
+    const keyLower = key.toLowerCase();
+    console.log(`🔍 Processing key: "${key}" → "${keyLower}"`);
+    
     if (value && value !== '') {
-      const targets = fieldMappings[key.toLowerCase()];
+      const targets = fieldMappings[keyLower];
       if (targets) {
         targets.forEach(target => {
+          console.log(`📍 Setting ${target} = ${value}`);
           setNestedValue(window.helper, target, value);
         });
         console.log(`✅ Mapped ${key}: ${value}`);
         updated = true;
+      } else {
+        console.warn(`⚠️ No mapping found for key: "${key}" (${keyLower})`);
       }
+    } else {
+      console.log(`⏭️ Skipping empty value for key: "${key}"`);
     }
   });
   
@@ -1300,6 +1326,51 @@ window.broadcastHelperUpdate = function(sections, source) {
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
   console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
   setTimeout(() => populateAllForms(), 100);
+};
+
+// Test function for JSON webhook data processing
+window.testJSONWebhookData = function() {
+  console.log('🧪 Testing JSON webhook data processing...');
+  
+  // Sample JSON data from your webhook
+  const testData = {
+    "plate": "5785269",
+    "timestamp": "2025-07-21T18:06:03.613+02:00",
+    "manufacturer": "ביואיק",
+    "model": "LUCERNE",
+    "model_type": "סדאן",
+    "vehicle_type": "פרטי",
+    "trim": "CXL",
+    "chassis": "1G4HD57258U196450",
+    "year": "05/2009",
+    "owner": "כרמל כיוף",
+    "ownership_type": "פרטי",
+    "engine_volume": "3791",
+    "fuel_type": "בנזין",
+    "model_code": "HD572",
+    "engine_model": "428",
+    "drive_type": "4X2",
+    "garage": "UMI חיפה",
+    "office_code": "156-11"
+  };
+  
+  console.log('🧠 Helper before test:', window.helper?.vehicle);
+  
+  // Test processing
+  const result = window.processIncomingData(testData, 'TEST_JSON');
+  
+  console.log('📊 Processing result:', result);
+  console.log('🧠 Helper after test:', window.helper?.vehicle);
+  console.log('👤 Owner data:', window.helper?.stakeholders?.owner);
+  console.log('🔧 Garage data:', window.helper?.stakeholders?.garage);
+  
+  return {
+    success: result?.success || false,
+    helperData: window.helper,
+    vehicleData: window.helper?.vehicle,
+    ownerData: window.helper?.stakeholders?.owner,
+    garageData: window.helper?.stakeholders?.garage
+  };
 };
 
 // Simple test functions
