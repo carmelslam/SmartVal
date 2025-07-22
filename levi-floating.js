@@ -489,9 +489,21 @@
     
     // Get direct access to helper data including raw webhook data
     const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation, ...helperData };
-    console.log('🔍 LEVI DEBUG: Direct helper access:', helperData);
-    console.log('🔍 LEVI DEBUG: Merged data with helper:', allData);
+    
+    // Extract data from raw webhook data where the actual Hebrew fields are stored
+    let rawWebhookData = {};
+    if (helperData.raw_webhook_data) {
+      // Get the most recent webhook data
+      const webhookKeys = Object.keys(helperData.raw_webhook_data);
+      const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
+      if (latestWebhookKey && helperData.raw_webhook_data[latestWebhookKey]?.data) {
+        rawWebhookData = helperData.raw_webhook_data[latestWebhookKey].data;
+        console.log('🔍 LEVI DEBUG: Found raw webhook data:', rawWebhookData);
+      }
+    }
+    
+    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation, ...helperData, ...rawWebhookData };
+    console.log('🔍 LEVI DEBUG: Final merged data:', allData);
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       allData['סוג רכב'] ||
