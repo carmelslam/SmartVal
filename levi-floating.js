@@ -487,9 +487,11 @@
       valuation: Object.keys(valuation || {})
     });
     
-    // Use valuation data which contains the Levi JSON mappings
-    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation };
-    console.log('🔍 LEVI DEBUG: Merged helper data with valuation:', allData);
+    // Get direct access to helper data including raw webhook data
+    const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation, ...helperData };
+    console.log('🔍 LEVI DEBUG: Direct helper access:', helperData);
+    console.log('🔍 LEVI DEBUG: Merged data with helper:', allData);
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       allData['סוג רכב'] ||
