@@ -733,13 +733,22 @@
       vehicle.km || carDetails.odo || carDetails.km
     );
     // Inspection location - only from open case page
+    console.log('🔍 DEBUG Inspection location sources:', {
+      'meta.inspection_location': meta.inspection_location,
+      'meta.location': meta.location
+    });
     document.getElementById("car-inspection-location").textContent = formatValue(
-      meta.inspection_location || meta.location
+      meta.inspection_location || meta.location || "-"
     );
 
     // Garage name - only from general info page, separate from inspection location
+    console.log('🔍 DEBUG Garage name sources:', {
+      'stakeholders.garage?.name': stakeholders.garage?.name,
+      'carDetails.garage_name': carDetails.garage_name,
+      'carDetails.garageName': carDetails.garageName
+    });
     document.getElementById("garage-name").textContent = formatValue(
-      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName
+      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName || "-"
     );
     document.getElementById("garage-phone").textContent = formatValue(
       stakeholders.garage?.phone || carDetails.garage_phone || carDetails.garagePhone
