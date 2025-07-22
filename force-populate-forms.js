@@ -206,7 +206,12 @@ class ForceFormPopulator {
       }
       
       if (helperData.stakeholders.garage) {
-        mappings.garageName = helperData.stakeholders.garage.name;
+        // CRITICAL FIX: Only auto-populate garage fields if they're not derived from location
+        if (helperData.stakeholders.garage.name && 
+            helperData.stakeholders.garage.name !== helperData.meta?.location) {
+          mappings.garageName = helperData.stakeholders.garage.name;
+        }
+        // Phone and email are safe to auto-populate
         mappings.garagePhone = helperData.stakeholders.garage.phone;
         mappings.garageEmail = helperData.stakeholders.garage.email;
       }
@@ -225,7 +230,8 @@ class ForceFormPopulator {
 
     // Case info fields
     if (helperData.case_info) {
-      mappings.damageDate = helperData.case_info.damage_date;
+      // CRITICAL FIX: Never auto-populate damage_date - user must enter it manually in general info
+      // mappings.damageDate = helperData.case_info.damage_date; // REMOVED
       mappings.damageType = helperData.case_info.damage_type;
     }
 
