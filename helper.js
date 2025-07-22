@@ -1984,8 +1984,39 @@ export function updateCalculations() {
   saveHelperToAllStorageLocations();
 }
 
-export function initHelper() {
-  return initializeHelper();
+export function initHelper(newData = null) {
+  const helper = initializeHelper() || getDefaultHelper();
+  
+  // If new data is provided (like from initial case opening), merge it properly
+  if (newData) {
+    console.log('🔄 Merging new case data into helper:', newData);
+    
+    // Update case_info with the correct field mappings
+    if (newData.inspection_date) {
+      helper.case_info.inspection_date = newData.inspection_date;
+    }
+    if (newData.plate) {
+      helper.case_info.plate = newData.plate;
+      helper.vehicle.plate = newData.plate;
+      helper.meta.plate = newData.plate;
+    }
+    if (newData.location) {
+      helper.case_info.inspection_location = newData.location;
+      helper.meta.location = newData.location;
+    }
+    if (newData.client_name) {
+      helper.stakeholders.owner.name = newData.client_name;
+      helper.meta.owner_name = newData.client_name;
+    }
+    
+    // Set the global helper
+    window.helper = helper;
+    saveHelperToStorage();
+    
+    console.log('✅ Helper initialized with new case data:', helper);
+  }
+  
+  return helper;
 }
 
 // Missing function: markFieldAsManuallyModified

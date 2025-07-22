@@ -700,10 +700,12 @@
       vehicle.levi_code || 
       carDetails.levi_code
     );
-    // Inspection date - from car details page where user enters inspection date
+    // Inspection date - from case opening or car details page where user enters inspection date
+    const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
     document.getElementById("vehicle-inspection-date").textContent = formatDate(
-      meta.inspection_date ||           // From car details page input field
-      valuationData.inspection_date ||  // From valuation data
+      helperData.case_info?.inspection_date ||  // From case opening (correct field)
+      meta.inspection_date ||                   // From car details page input field
+      valuationData.inspection_date ||          // From valuation data
       "-"
     );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
