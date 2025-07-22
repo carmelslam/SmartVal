@@ -175,6 +175,16 @@
     .levi-btn.refresh {
       background: #28a745;
       color: white;
+      transition: all 0.3s ease;
+    }
+    .levi-btn.refresh:hover:not(:disabled) {
+      background: #218838;
+      transform: scale(1.05);
+    }
+    .levi-btn.refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
   `;
   document.head.appendChild(style);
@@ -346,7 +356,7 @@
 
     <div class="levi-buttons">
       <button class="levi-btn close" onclick="toggleLeviReport()">סגור</button>
-      <button class="levi-btn refresh" onclick="refreshLeviData()">רענן נתונים</button>
+      <button class="levi-btn refresh" onclick="console.log('🔄 Onclick triggered'); refreshLeviData();">רענן נתונים</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -358,6 +368,25 @@
       loadLeviData();
       modal.style.display = "block";
       makeDraggable(modal);
+      
+      // CRITICAL FIX: Add event listener for refresh button after modal is shown
+      setTimeout(() => {
+        const refreshBtn = modal.querySelector('.levi-btn.refresh');
+        if (refreshBtn) {
+          // Remove any existing listeners to prevent duplicates
+          refreshBtn.replaceWith(refreshBtn.cloneNode(true));
+          const newRefreshBtn = modal.querySelector('.levi-btn.refresh');
+          
+          // Add fresh event listener
+          newRefreshBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔄 Refresh button clicked via event listener');
+            window.refreshLeviData();
+          });
+          console.log('✅ Added event listener to refresh button');
+        }
+      }, 100);
     } else {
       modal.style.display = "none";
     }
@@ -367,25 +396,55 @@
   window.refreshLeviData = function () {
     console.log('🔄 Levi floating screen: refreshLeviData called');
     
-    // Debug: Check what data is in sessionStorage - SIMPLIFIED
-    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    console.log('🔍 DEBUG: Helper structures in Levi floating screen:', {
-      'vehicle': helper.vehicle,
-      'carDetails': helper.car_details,
-      'leviReport': helper.expertise?.levi_report,
-      'meta': helper.meta
-    });
+    // Get refresh button for feedback
+    const refreshBtn = document.querySelector('.levi-btn.refresh');
+    if (refreshBtn) {
+      refreshBtn.textContent = 'מרענן...';
+      refreshBtn.disabled = true;
+    }
     
-    // Debug: Check specific Hebrew adjustment keys
-    console.log('🔍 DEBUG: Hebrew adjustment keys in leviReport:', {
-      'עליה לכביש': helper.expertise?.levi_report?.['עליה לכביש'],
-      'בעלות': helper.expertise?.levi_report?.['בעלות'],
-      'מס ק״מ': helper.expertise?.levi_report?.['מס ק״מ'],
-      'מספר בעלים': helper.expertise?.levi_report?.['מספר בעלים'],
-      'מאפיינים': helper.expertise?.levi_report?.['מאפיינים']
-    });
-    
-    loadLeviData();
+    try {
+      // Debug: Check what data is in sessionStorage - SIMPLIFIED
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 DEBUG: Helper structures in Levi floating screen:', {
+        'vehicle': helper.vehicle,
+        'carDetails': helper.car_details,
+        'leviReport': helper.expertise?.levi_report,
+        'meta': helper.meta
+      });
+      
+      // Debug: Check specific Hebrew adjustment keys
+      console.log('🔍 DEBUG: Hebrew adjustment keys in leviReport:', {
+        'עליה לכביש': helper.expertise?.levi_report?.['עליה לכביש'],
+        'בעלות': helper.expertise?.levi_report?.['בעלות'],
+        'מס ק״מ': helper.expertise?.levi_report?.['מס ק״מ'],
+        'מספר בעלים': helper.expertise?.levi_report?.['מספר בעלים'],
+        'מאפיינים': helper.expertise?.levi_report?.['מאפיינים']
+      });
+      
+      loadLeviData();
+      
+      // Show success feedback
+      if (refreshBtn) {
+        refreshBtn.textContent = '✅ עודכן!';
+        refreshBtn.disabled = false;
+        
+        // Reset button text after 2 seconds
+        setTimeout(() => {
+          refreshBtn.textContent = 'רענן נתונים';
+        }, 2000);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error refreshing Levi data:', error);
+      if (refreshBtn) {
+        refreshBtn.textContent = '❌ שגיאה';
+        refreshBtn.disabled = false;
+        setTimeout(() => {
+          refreshBtn.textContent = 'רענן נתונים';
+        }, 2000);
+      }
+    }
   };
 
   // Make modal draggable
@@ -712,6 +771,35 @@
       }
     });
   }
+
+  // Listen for helper updates and refresh display
+  document.addEventListener('helperUpdate', function(event) {
+    console.log('📡 Levi floating detected helper update:', event.detail);
+    // Only refresh if the modal is visible
+    const modal = document.getElementById("leviModal");
+    if (modal && modal.style.display !== "none") {
+      console.log('🔄 Auto-refreshing Levi data due to helper update');
+      setTimeout(() => {
+        loadLeviData();
+      }, 100);
+    }
+  });
+
+  // Also listen for storage events from other tabs
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'helper' && e.newValue) {
+      console.log('📡 Levi floating detected helper update from another tab');
+      
+      // Only refresh if the modal is visible
+      const modal = document.getElementById("leviModal");
+      if (modal && modal.style.display !== "none") {
+        console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
+        setTimeout(() => {
+          loadLeviData();
+        }, 100);
+      }
+    }
+  });
 
   // Floating button removed - now controlled by top toggle squares
 
