@@ -951,6 +951,9 @@
       <button type="button" id="save-manual" class="btn btn-success" style="display: none;">
         💾 שמור נתונים ידניים
       </button>
+      <button type="button" id="upload-new-report" class="btn btn-warning" style="display: none;">
+        📤 העלה דו"ח חדש
+      </button>
       <button type="button" id="clear-form" class="btn btn-secondary">
         🗑️ נקה טופס
       </button>
@@ -1025,6 +1028,11 @@ class LeviProcessor {
     // Save results
     document.getElementById('save-results').addEventListener('click', () => {
       this.saveResults();
+    });
+    
+    // Upload new report
+    document.getElementById('upload-new-report').addEventListener('click', () => {
+      this.resetForNewUpload();
     });
 
     // Save manual data
@@ -1367,7 +1375,11 @@ class LeviProcessor {
   }
 
   async processLevi() {
-    if (this.processingInProgress) return;
+    // CRITICAL FIX: Only prevent concurrent processing, not multiple uploads per session
+    if (this.processingInProgress) {
+      this.showAlert('עיבוד בתהליך, אנא המתן...', 'warning');
+      return;
+    }
 
     if (!this.isManualMode && !this.uploadedFile) {
       this.showAlert('אנא בחר קובץ דו"ח לוי יצחק', 'error');
@@ -1439,7 +1451,22 @@ class LeviProcessor {
         }
       });
       
-      this.showAlert('❌ שגיאה בעיבוד דו"ח לוי יצחק: ' + error.message, 'error');
+      // CRITICAL FIX: Handle webhook/Make.com failures gracefully
+      let errorMessage = '❌ שגיאה בעיבוד דו"ח לוי יצחק: ' + error.message;
+      if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Make.com')) {
+        errorMessage += '\n\n🔄 ניתן לנסות שוב או להעלות דו"ח אחר';
+        // Don't block further attempts on network failures
+      }
+      
+      this.showAlert(errorMessage, 'error');
+      
+      // Show retry/new upload options for network failures
+      if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Make.com')) {
+        const uploadNewBtn = document.getElementById('upload-new-report');
+        if (uploadNewBtn) {
+          uploadNewBtn.style.display = 'inline-block';
+        }
+      }
     } finally {
       this.processingInProgress = false;
       this.showProcessingStatus(false);
@@ -2103,6 +2130,36 @@ class LeviProcessor {
     }
   }
 
+  clearResults() {
+    // Clear results display
+    const resultsSection = document.getElementById('levi-results');
+    if (resultsSection) {
+      resultsSection.style.display = 'none';
+      resultsSection.innerHTML = '';
+    }
+    
+    // Clear manual results if they exist
+    const manualResults = document.getElementById('manual-results');
+    if (manualResults) {
+      manualResults.style.display = 'none';
+      manualResults.innerHTML = '';
+    }
+    
+    // Clear OCR results
+    const ocrResults = document.getElementById('ocr-results');
+    if (ocrResults) {
+      ocrResults.classList.remove('show');
+      ocrResults.innerHTML = '';
+    }
+    
+    // Clear validation status
+    const validationStatus = document.getElementById('validation-status');
+    if (validationStatus) {
+      validationStatus.classList.remove('show');
+      validationStatus.innerHTML = '';
+    }
+  }
+
   clearForm() {
     if (confirm('האם לנקות את כל הנתונים?')) {
       // Clear form fields
@@ -2131,6 +2188,47 @@ class LeviProcessor {
     }
   }
 
+  resetForNewUpload() {
+    console.log('🔄 Resetting form for new upload...');
+    
+    // Clear previous results
+    this.clearResults();
+    
+    // Reset upload state
+    this.uploadedFile = null;
+    this.processingInProgress = false;
+    
+    // Clear file input
+    const fileInput = document.getElementById('levi-file');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    
+    // Reset upload area
+    const uploadArea = document.querySelector('.upload-area');
+    const uploadText = document.querySelector('.upload-text');
+    if (uploadArea && uploadText) {
+      uploadArea.classList.remove('file-uploaded');
+      uploadText.innerHTML = '📄 גרור קובץ דו"ח לוי יצחק לכאן או לחץ לבחירה<br><small>PDF, JPG, PNG, WEBP (עד 10MB)</small>';
+    }
+    
+    // Hide result buttons and show upload button
+    document.getElementById('save-results').style.display = 'none';
+    document.getElementById('save-manual').style.display = 'none';
+    document.getElementById('upload-new-report').style.display = 'none';
+    document.getElementById('continue-to-damage').style.display = 'none';
+    document.getElementById('process-levi').style.display = 'inline-block';
+    
+    // Clear alerts
+    const alertsContainer = document.getElementById('alerts-container');
+    if (alertsContainer) {
+      alertsContainer.innerHTML = '';
+    }
+    
+    this.showAlert('✅ מוכן להעלאת דו"ח חדש', 'success');
+    console.log('✅ Form reset completed - ready for new upload');
+  }
+
   showContinueButton() {
     const continueBtn = document.getElementById('continue-to-damage');
     if (continueBtn) {
@@ -2138,6 +2236,12 @@ class LeviProcessor {
       continueBtn.addEventListener('click', () => {
         window.location.href = 'damage-center-flow.html';
       });
+    }
+    
+    // CRITICAL FIX: Show "Upload New Report" button to allow multiple uploads
+    const uploadNewBtn = document.getElementById('upload-new-report');
+    if (uploadNewBtn) {
+      uploadNewBtn.style.display = 'inline-block';
     }
   }
 
