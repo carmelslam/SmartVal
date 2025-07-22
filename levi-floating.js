@@ -570,6 +570,16 @@
     
     const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation, ...helperData, ...rawWebhookData };
     console.log('🔍 LEVI DEBUG: Final merged data:', allData);
+    console.log('🔍 LEVI DEBUG: Raw webhook data keys:', Object.keys(rawWebhookData));
+    console.log('🔍 LEVI DEBUG: Helper data keys:', Object.keys(helperData));
+    console.log('🔍 LEVI DEBUG: Valuation data:', valuation);
+    
+    // DEBUG: Check for Hebrew fields directly
+    console.log('🔍 LEVI DEBUG: Hebrew price fields:', {
+      'מחיר בסיס': allData['מחיר בסיס'],
+      'מחיר סופי לרכב': allData['מחיר סופי לרכב'],
+      'עליה לכביש %': allData['עליה לכביש %']
+    });
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       allData['סוג רכב'] ||
@@ -603,16 +613,31 @@
       `${allData.manufacturer || ''} ${allData.model || ''}`.trim() || 
       '-'
     );
-    document.getElementById("levi-base-price").textContent = formatPrice(
-      allData['מחיר בסיס'] || 
-      valuation.base_price || 
-      0
-    );
-    document.getElementById("levi-final-price").textContent = formatPrice(
-      allData['מחיר סופי לרכב'] || 
-      valuation.final_price || 
-      0
-    );
+    // Enhanced price mapping with multiple fallback locations
+    const basePrice = allData['מחיר בסיס'] || 
+                     helperData['מחיר בסיס'] || 
+                     (helperData.valuation && helperData.valuation['מחיר בסיס']) ||
+                     (helperData.expertise?.levi_report?.['מחיר בסיס']) ||
+                     valuation.base_price || 
+                     0;
+    
+    const finalPrice = allData['מחיר סופי לרכב'] || 
+                      helperData['מחיר סופי לרכב'] || 
+                      (helperData.valuation && helperData.valuation['מחיר סופי לרכב']) ||
+                      (helperData.expertise?.levi_report?.['מחיר סופי לרכב']) ||
+                      valuation.final_price || 
+                      0;
+                      
+    console.log('🔍 LEVI PRICE DEBUG:', {
+      basePrice: basePrice,
+      finalPrice: finalPrice,
+      'allData_base': allData['מחיר בסיס'],
+      'helper_base': helperData['מחיר בסיס'],
+      'valuation_base': valuation.base_price
+    });
+    
+    document.getElementById("levi-base-price").textContent = formatPrice(basePrice);
+    document.getElementById("levi-final-price").textContent = formatPrice(finalPrice);
     
     // Levi report date - separate from inspection and damage dates
     document.getElementById("levi-report-date").textContent = formatValue(
@@ -622,24 +647,20 @@
       '-'
     );
 
-    // FIXED: Registration adjustments - use Hebrew webhook fields directly
-    document.getElementById("levi-registration").textContent = formatValue(
-      allData['ערך עליה לכביש'] ||
-      allData['עליה לכביש'] || 
-      "-"
-    );
-    document.getElementById("levi-registration-percent").textContent = formatPercent(
-      allData['עליה לכביש %'] || 
-      0
-    );
-    document.getElementById("levi-registration-value").textContent = formatPrice(
-      allData['ערך ש"ח עליה לכביש'] || 
-      0
-    );
-    document.getElementById("levi-registration-total").textContent = formatPrice(
-      allData['שווי מצטבר עליה לכביש'] || 
-      0
-    );
+    // FIXED: Registration adjustments with enhanced mapping
+    const regValue = allData['ערך עליה לכביש'] || helperData['ערך עליה לכביש'] || allData['עליה לכביש'] || helperData['עליה לכביש'] || "-";
+    const regPercent = allData['עליה לכביש %'] || helperData['עליה לכביש %'] || 0;
+    const regAmount = allData['ערך ש"ח עליה לכביש'] || helperData['ערך ש"ח עליה לכביש'] || 0;
+    const regTotal = allData['שווי מצטבר עליה לכביש'] || helperData['שווי מצטבר עליה לכביש'] || 0;
+    
+    console.log('🔍 LEVI REG DEBUG:', {
+      regValue, regPercent, regAmount, regTotal
+    });
+    
+    document.getElementById("levi-registration").textContent = formatValue(regValue);
+    document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent);
+    document.getElementById("levi-registration-value").textContent = formatPrice(regAmount);
+    document.getElementById("levi-registration-total").textContent = formatPrice(regTotal);
 
     // FIXED: Ownership adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-ownership").textContent = formatValue(
@@ -698,24 +719,20 @@
       0
     );
 
-    // FIXED: Features adjustments - use Hebrew webhook fields directly
-    document.getElementById("levi-features").textContent = formatValue(
-      allData['ערך מאפיינים'] ||
-      allData['מאפיינים'] || 
-      "-"
-    );
-    document.getElementById("levi-features-percent").textContent = formatPercent(
-      allData['מחיר מאפיינים %'] || 
-      0
-    );
-    document.getElementById("levi-features-value").textContent = formatPrice(
-      allData['ערך ש"ח מאפיינים'] || 
-      0
-    );
-    document.getElementById("levi-features-total").textContent = formatPrice(
-      allData['שווי מצטבר מאפיינים'] || 
-      0
-    );
+    // FIXED: Features adjustments with enhanced mapping
+    const featValue = allData['ערך מאפיינים'] || helperData['ערך מאפיינים'] || allData['מאפיינים'] || helperData['מאפיינים'] || "-";
+    const featPercent = allData['מחיר מאפיינים %'] || helperData['מחיר מאפיינים %'] || 0;
+    const featAmount = allData['ערך ש"ח מאפיינים'] || helperData['ערך ש"ח מאפיינים'] || 0;
+    const featTotal = allData['שווי מצטבר מאפיינים'] || helperData['שווי מצטבר מאפיינים'] || 0;
+    
+    console.log('🔍 LEVI FEAT DEBUG:', {
+      featValue, featPercent, featAmount, featTotal
+    });
+    
+    document.getElementById("levi-features").textContent = formatValue(featValue);
+    document.getElementById("levi-features-percent").textContent = formatPercent(featPercent);
+    document.getElementById("levi-features-value").textContent = formatPrice(featAmount);
+    document.getElementById("levi-features-total").textContent = formatPrice(featTotal);
 
     // Features description - use the actual features text from the main מאפיינים field
     document.getElementById("levi-features-description").textContent = formatValue(
