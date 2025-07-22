@@ -185,6 +185,9 @@ window.helper = existingHelper || {
     base_price: 0,
     final_price: 0,
     currency: 'ILS',
+    levi_code: '',             // CRITICAL: Store Levi code separately from vehicle model code
+    levi_model_code: '',       // Alternative Levi code field
+    code: '',                  // Generic code field from Levi
     market_conditions: '',
     comparable_vehicles: [],
     adjustments: {
@@ -747,8 +750,8 @@ function processHebrewText(bodyText, result) {
     { regex: /(?:שווי מצטבר מאפיינים|סך הכל מאפיינים)[:\s-]*([0-9,]+)/i, field: 'features_cumulative', target: ['valuation.adjustments.features.cumulative'] },
     
     // 🔧 MISSING PATTERNS - Added for specific webhook fields (handles both : and :\s formats)
-    { regex: /(?:מספר דגם הרכב):\s*([A-Z0-9]+)/i, field: 'vehicle_model_code', target: ['vehicle.model_code'] },
-    { regex: /(?:מספר דגם הרכב):([A-Z0-9]+)/i, field: 'vehicle_model_code_no_space', target: ['vehicle.model_code'] },
+    { regex: /(?:מספר דגם הרכב):\s*([A-Z0-9]+)/i, field: 'vehicle_model_code', target: ['vehicle.vehicle_model_code'] },
+    { regex: /(?:מספר דגם הרכב):([A-Z0-9]+)/i, field: 'vehicle_model_code_no_space', target: ['vehicle.vehicle_model_code'] },
     { regex: /(?:דגם מנוע):\s*([A-Z0-9]+)/i, field: 'engine_model', target: ['vehicle.engine_model'] },
     { regex: /(?:דגם מנוע):([A-Z0-9]+)/i, field: 'engine_model_no_space', target: ['vehicle.engine_model'] },
     { regex: /(?:הנעה)[:\s]*([^\n\r]+?)(?=\n|$)/i, field: 'drive_type', target: ['vehicle.drive_type'] },
@@ -937,7 +940,9 @@ function processDirectData(data, result) {
     'office_code': ['vehicle.office_code'],
     'קוד_משרד': ['vehicle.office_code'],
     'model_code': ['vehicle.model_code'],
-    'קוד_דגם': ['vehicle.model_code'],
+    'vehicle_model_code': ['vehicle.vehicle_model_code'],  // CRITICAL: From open case webhook "מספר דגם הרכב"
+    'קוד_דגם': ['valuation.levi_code'],                    // CRITICAL: From Levi webhook "קוד דגם" - separate storage
+    'levi_code': ['valuation.levi_code'],
     'features': ['vehicle.features'],
     'מאפיינים': ['vehicle.features'],
     'אבזור': ['vehicle.features'],
@@ -953,7 +958,7 @@ function processDirectData(data, result) {
     'הנעה': ['vehicle.drive_type'],
     'engine_model': ['vehicle.engine_model'],
     'דגם_מנוע': ['vehicle.engine_model'],
-    'מספר_דגם_הרכב': ['vehicle.model_code'],
+    'מספר_דגם_הרכב': ['vehicle.vehicle_model_code'],  // CRITICAL: From open case webhook "מספר דגם הרכב"
     'קוד_משרד_התחבורה': ['vehicle.office_code'],
     
     // 🔧 EXACT LEVI JSON MAPPINGS - Critical for system-wide data consistency

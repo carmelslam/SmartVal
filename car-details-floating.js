@@ -702,12 +702,18 @@
       'valuationData.model_code': valuationData?.model_code
     });
     
-    // Model code - ONLY from open case webhook "מספר דגם הרכב" (NOT from Levi)
+    // ENHANCED DEBUG: Show full data structures
+    console.log('🔍 Full carDetails object:', carDetails);
+    console.log('🔍 Full vehicle object:', vehicle);
+    console.log('🔍 Full meta object:', meta);
+    console.log('🔍 Full valuationData object:', valuationData);
+    
+    // Model code - ONLY from open case webhook "מספר דגם הרכב" (separate from Levi)
     const modelCodeValue = carDetails.vehicle_model_code ||  // Primary: from open case webhook "מספר דגם הרכב"
                           vehicle.vehicle_model_code ||       // Vehicle section model code (NOT Levi)
                           meta.vehicle_model_code ||          // Meta section model code (NOT Levi)
-                          (carDetails.model_code && !valuationData.levi_code ? carDetails.model_code : null) ||  // Only if NOT from Levi
-                          (vehicle.model_code && !valuationData.levi_code ? vehicle.model_code : null) ||       // Only if NOT from Levi
+                          carDetails.model_code ||            // General model code field (if not overridden by Levi)
+                          vehicle.model_code ||               // Vehicle model code field (if not overridden by Levi)
                           "-";
                           
     document.getElementById("vehicle-model-code").textContent = formatValue(modelCodeValue);
