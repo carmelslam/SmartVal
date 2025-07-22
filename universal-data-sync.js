@@ -28,7 +28,7 @@
           owner: helper.stakeholders?.owner?.name || '',
           ownerPhone: helper.stakeholders?.owner?.phone || '',
           ownerAddress: helper.stakeholders?.owner?.address || '',
-          garageName: helper.stakeholders?.garage?.name || helper.meta?.location || '',
+          garageName: helper.stakeholders?.garage?.name || '',
           garagePhone: helper.stakeholders?.garage?.phone || '',
           insuranceCompany: helper.stakeholders?.insurance?.company || '',
           agentName: helper.stakeholders?.insurance?.agent?.name || '',
@@ -60,7 +60,7 @@
         chassis: helper.vehicle?.chassis || '',
         engine_volume: helper.vehicle?.engine_volume || '',
         fuel_type: helper.vehicle?.fuel_type || '',
-        location: helper.meta?.location || helper.stakeholders?.garage?.name || '',
+        location: helper.meta?.location || '',
         date: helper.meta?.damage_date || '',
         // Add all other fields from vehicle
         ...helper.vehicle,
@@ -73,7 +73,7 @@
         'נפח מנוע': helper.vehicle?.engine_volume || '',
         'סוג דלק': helper.vehicle?.fuel_type || '',
         'בעל הרכב': helper.stakeholders?.owner?.name || '',
-        'מוסך': helper.meta?.location || helper.stakeholders?.garage?.name || ''
+        'מוסך': helper.stakeholders?.garage?.name || ''
       };
       
       sessionStorage.setItem('carData', JSON.stringify(carData));
