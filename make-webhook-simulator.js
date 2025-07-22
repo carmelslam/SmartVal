@@ -79,11 +79,9 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
   
   // Update helper if available
   if (typeof window.updateHelper === 'function') {
-    // CRITICAL FIX: Create clean car_details without damage_date or timestamp
+    // CRITICAL FIX: Create clean car_details without damage_date (keep timestamp for version tracking)
     const cleanCarDetails = { ...richCarData };
-    delete cleanCarDetails.damage_date;  // Remove any damage_date
-    delete cleanCarDetails.timestamp;    // Remove timestamp
-    delete cleanCarDetails.processing_timestamp; // Remove processing timestamp
+    delete cleanCarDetails.damage_date;  // Remove any damage_date - this should never be in car_details
     
     window.updateHelper('car_details', cleanCarDetails);
     window.updateHelper('vehicle', richCarData);

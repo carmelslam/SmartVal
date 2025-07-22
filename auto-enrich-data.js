@@ -53,7 +53,14 @@
     
     // If we need enrichment, use the simulator
     if (needsEnrichment && plateNumber) {
-      console.log('🚨 Data needs enrichment! Using simulator...');
+      console.log('🚨 Data needs enrichment! Checking if case opening in progress...');
+      
+      // CRITICAL FIX: Don't run simulator during case opening - it overrides our clean data
+      const isCaseOpening = sessionStorage.getItem('caseOpeningInProgress') === 'true';
+      if (isCaseOpening) {
+        console.log('⏭️ SKIPPING simulator during case opening to preserve clean data structure');
+        return; // Exit early to prevent contamination
+      }
       
       // Use the Make.com simulator to generate rich data
       if (window.simulateMakeWebhookResponse) {
@@ -154,11 +161,9 @@
       email: data.garage_email || ''
     };
     
-    // CRITICAL FIX: Clean data before setting car_details
+    // CRITICAL FIX: Clean data before setting car_details (keep timestamp for version tracking)
     const cleanData = { ...data };
-    delete cleanData.damage_date;    // Never set damage_date in car_details
-    delete cleanData.timestamp;      // Never set timestamp in car_details
-    delete cleanData.processing_timestamp; // Never set processing_timestamp
+    delete cleanData.damage_date;    // Never set damage_date in car_details - this belongs only in case_info
     
     window.helper.car_details = cleanData;
     

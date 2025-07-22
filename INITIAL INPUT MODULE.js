@@ -18,6 +18,10 @@ export function initialInput() {
   `;
 
   document.getElementById('start-case').onclick = async () => {
+    // CRITICAL FIX: Set flag to prevent simulator contamination
+    sessionStorage.setItem('caseOpeningInProgress', 'true');
+    console.log('🚩 Case opening in progress - simulator disabled');
+    
     const meta = {
       plate: document.getElementById('plate').value.trim(),
       client_name: document.getElementById('owner').value.trim(),
@@ -33,23 +37,35 @@ export function initialInput() {
     // 🔁 Trigger webhook centrally
     await sendToWebhook('OPEN_CASE_UI', { plate: meta.plate });
 
-    // CRITICAL FIX: Final cleanup after all processing
+    // CRITICAL FIX: Final cleanup after all processing - INCREASE DELAY
     setTimeout(() => {
-      console.log('🧹 Final cleanup: Ensuring correct field separation...');
+      console.log('🧹 FINAL CLEANUP RUNNING: Ensuring correct field separation...');
+      console.log('🔍 Helper before cleanup:', window.helper);
+      
       if (window.helper && window.helper.case_info) {
         // Force correct case_info structure
         const currentYear = new Date().getFullYear();
-        window.helper.case_info.case_id = `YC-${meta.plate}-${currentYear}`;
-        window.helper.case_info.damage_date = '';  // Must be empty
+        const correctCaseId = `YC-${meta.plate}-${currentYear}`;
+        
+        console.log('🔧 Setting case_id to:', correctCaseId);
+        window.helper.case_info.case_id = correctCaseId;
+        
+        // CRITICAL: damage_date must NEVER be set from timestamp or case opening date
+        window.helper.case_info.damage_date = '';  // Must be empty until general info page
+        
+        // CRITICAL: inspection_date gets the case opening date only
         window.helper.case_info.inspection_date = meta.inspection_date || new Date().toISOString().split('T')[0];
+        
         window.helper.case_info.report_type = '';
         window.helper.case_info.report_type_display = '';
         
-        // Clean car_details of contaminated fields
+        console.log('🔧 Forced damage_date to empty, inspection_date to:', window.helper.case_info.inspection_date);
+        
+        console.log('🔧 Cleaning car_details...');
+        // Clean car_details of contaminated fields (keep timestamp for version tracking)
         if (window.helper.car_details) {
-          delete window.helper.car_details.damage_date;
-          delete window.helper.car_details.timestamp;
-          delete window.helper.car_details.processing_timestamp;
+          delete window.helper.car_details.damage_date;  // Only remove damage_date
+          console.log('🧹 Removed damage_date from car_details (kept timestamp for version tracking)');
         }
         
         // Separate garage from location
@@ -57,13 +73,24 @@ export function initialInput() {
           // Don't let garage name inherit from location
           if (window.helper.stakeholders.garage.name === meta.location) {
             window.helper.stakeholders.garage.name = '';
+            console.log('🔧 Cleared garage name - was same as location');
           }
         }
         
         saveHelperToStorage();
-        console.log('✅ Final cleanup completed:', window.helper.case_info);
+        
+        // Clear the case opening flag
+        sessionStorage.removeItem('caseOpeningInProgress');
+        console.log('🚩 Case opening flag cleared - simulator re-enabled');
+        
+        console.log('✅ FINAL CLEANUP COMPLETED. Final helper:', window.helper);
+        console.log('✅ Case info after cleanup:', window.helper.case_info);
+      } else {
+        console.error('❌ Helper or case_info not found during cleanup!');
+        // Clear flag even if cleanup failed
+        sessionStorage.removeItem('caseOpeningInProgress');
       }
-    }, 500); // Wait for all async processes to complete
+    }, 2000); // Wait longer for all async processes to complete
 
     ROUTER.navigate('car-details');
   };
