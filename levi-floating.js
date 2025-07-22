@@ -570,32 +570,8 @@
     };
 
     
-    // DEBUG: Check for Hebrew fields directly in result
-    console.log('🔍 LEVI DEBUG: Hebrew price fields in result:', {
-      'מחיר בסיס': result['מחיר בסיס'],
-      'מחיר סופי לרכב': result['מחיר סופי לרכב'],
-      'עליה לכביש %': result['עליה לכביש %'],
-      'בעלות %': result['בעלות %']
-    });
-    
-    // DEBUG: Check all keys in result to find the correct field names
-    console.log('🔍 LEVI DEBUG: All result keys containing %:', Object.keys(result).filter(key => key.includes('%')));
-    console.log('🔍 LEVI DEBUG: All result keys containing עליה:', Object.keys(result).filter(key => key.includes('עליה')));
-    console.log('🔍 LEVI DEBUG: All result keys containing בעלות:', Object.keys(result).filter(key => key.includes('בעלות')));
-    
-    // Check if percentage values are in a nested structure
-    console.log('🔍 LEVI DEBUG: Looking for percentage values in all top-level result properties...');
-    Object.keys(result).forEach(key => {
-        if (typeof result[key] === 'object' && result[key] !== null) {
-            const nestedKeys = Object.keys(result[key]).filter(nKey => nKey.includes('%'));
-            if (nestedKeys.length > 0) {
-                console.log(`🔍 LEVI DEBUG: Found % keys in result.${key}:`, nestedKeys);
-                nestedKeys.forEach(nKey => {
-                    console.log(`🔍 LEVI DEBUG: result.${key}['${nKey}'] =`, result[key][nKey]);
-                });
-            }
-        }
-    });
+    // Use helper data structure like summary page - get percentage values from manual inputs or helper
+    const helper = JSON.parse(sessionStorage.getItem('helper')) || {};
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       result['סוג רכב'] ||
@@ -657,13 +633,11 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // DEBUG: Check registration percent value - enhanced debugging
-    console.log('🔍 LEVI DEBUG: Checking registration percent field access...');
-    console.log('🔍 LEVI DEBUG: result[\'עליה לכביש %\']:', result['עליה לכביש %']);
-    console.log('🔍 LEVI DEBUG: All keys with עליה:', Object.keys(result).filter(key => key.includes('עליה')));
-    
-    const regPercent = result['עליה לכביש %'];
-    console.log('🔍 LEVI DEBUG: Registration percent raw value:', regPercent, 'type:', typeof regPercent);
+    // Use helper data like summary page
+    const regPercent = helper.levi_adjustments?.registration_percent || 
+                       result['עליה לכביש %'] || 
+                       (document.getElementById('manual-registration-percent') ? 
+                        document.getElementById('manual-registration-percent').value : 0);
     document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent || 0);
     document.getElementById("levi-registration-value").textContent = formatPrice(
       result['ערך ש"ח עליה לכביש'] || 0
@@ -677,13 +651,11 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // DEBUG: Check ownership percent value - enhanced debugging
-    console.log('🔍 LEVI DEBUG: Checking ownership percent field access...');
-    console.log('🔍 LEVI DEBUG: result[\'בעלות %\']:', result['בעלות %']);
-    console.log('🔍 LEVI DEBUG: All keys with בעלות:', Object.keys(result).filter(key => key.includes('בעלות')));
-    
-    const ownPercent = result['בעלות %'];
-    console.log('🔍 LEVI DEBUG: Ownership percent raw value:', ownPercent, 'type:', typeof ownPercent);
+    // Use helper data like summary page
+    const ownPercent = helper.levi_adjustments?.ownership_percent || 
+                       result['בעלות %'] || 
+                       (document.getElementById('manual-ownership-percent') ? 
+                        document.getElementById('manual-ownership-percent').value : 0);
     document.getElementById("levi-ownership-percent").textContent = formatPercent(ownPercent || 0);
     document.getElementById("levi-ownership-value").textContent = formatPrice(
       result['ערך ש"ח בעלות'] || 0
