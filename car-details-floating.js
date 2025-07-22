@@ -670,10 +670,17 @@
     document.getElementById("vehicle-model-code").textContent = formatValue(
       vehicle.model_code || carDetails.model_code || meta.vehicle_code
     );
-    // Levi code - mapped specifically from Levi webhook response  
+    // Levi code - mapped specifically from Levi webhook response
+    console.log('🔍 DEBUG Levi code sources:', {
+      'valuationData.levi_code': valuationData && valuationData.levi_code,
+      'valuationData.model_code': valuationData && valuationData.model_code,
+      'valuationData keys': valuationData ? Object.keys(valuationData) : 'no valuationData',
+      'vehicle.levi_code': vehicle.levi_code,
+      'carDetails.levi_code': carDetails.levi_code
+    });
     document.getElementById("vehicle-levi-code").textContent = formatValue(
       (valuationData && valuationData.levi_code) ||
-      (valuationData && valuationData.model_code) ||
+      (valuationData && valuationData.levi_model_code) ||
       vehicle.levi_code || 
       carDetails.levi_code
     );
