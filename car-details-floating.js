@@ -708,6 +708,18 @@
     console.log('🔍 Full meta object:', meta);
     console.log('🔍 Full valuationData object:', valuationData);
     
+    // 🔒 PLATE PROTECTION: Show protection status
+    if (window.getPlateProtectionStatus) {
+      const protectionStatus = window.getPlateProtectionStatus();
+      console.log('🔒 Plate Protection Status:', protectionStatus);
+      if (protectionStatus.isProtected) {
+        console.log(`🔒 Protected plate: "${protectionStatus.originalPlate}" (source: ${protectionStatus.source})`);
+        if (protectionStatus.alertCount > 0) {
+          console.warn(`⚠️ Protection alerts: ${protectionStatus.alertCount} attempts blocked`);
+        }
+      }
+    }
+    
     // Model code - ONLY from open case webhook "מספר דגם הרכב" (separate from Levi)
     const modelCodeValue = carDetails.vehicle_model_code ||  // Primary: from open case webhook "מספר דגם הרכב"
                           vehicle.vehicle_model_code ||       // Vehicle section model code (NOT Levi)

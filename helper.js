@@ -58,6 +58,104 @@ function parseJSONWithDuplicates(jsonString) {
   return parsedData;
 }
 
+// ============================================================================
+// 🔒 PLATE NUMBER PROTECTION SYSTEM
+// ============================================================================
+
+/**
+ * Protects the original plate number from being overwritten by OCR or other modules
+ */
+window.protectPlateNumber = function(plateNumber, source = 'manual') {
+  console.log(`🔒 PROTECTION: Locking plate number "${plateNumber}" from source: ${source}`);
+  
+  window.helper.meta.original_plate = plateNumber;
+  window.helper.meta.plate_locked = true;
+  window.helper.meta.plate_protection_source = source;
+  
+  // Also set current plate
+  window.helper.meta.plate = plateNumber;
+  window.helper.vehicle.plate = plateNumber;
+  window.helper.case_info.plate = plateNumber;
+  
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ PROTECTION: Plate "${plateNumber}" is now protected from overwrites`);
+};
+
+/**
+ * Validates incoming plate number against protected original
+ */
+window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
+  if (!window.helper.meta.plate_locked || !window.helper.meta.original_plate) {
+    return { valid: true, action: 'accept' };
+  }
+  
+  const originalPlate = window.helper.meta.original_plate.toUpperCase().trim();
+  const newPlate = String(incomingPlate).toUpperCase().trim();
+  
+  console.log(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
+  
+  if (originalPlate === newPlate) {
+    console.log(`✅ VALIDATION: Plate numbers match - allowing update`);
+    return { valid: true, action: 'accept', message: 'Plate numbers match' };
+  } else {
+    console.warn(`⚠️ VALIDATION: Plate mismatch detected!`);
+    console.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
+    console.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
+    
+    return { 
+      valid: false, 
+      action: 'reject',
+      message: `Plate number mismatch detected!\n\nProtected plate: "${originalPlate}" (from ${window.helper.meta.plate_protection_source})\nIncoming plate: "${newPlate}" (from ${source})\n\nThe original plate number is protected and cannot be changed.`,
+      originalPlate: originalPlate,
+      incomingPlate: newPlate,
+      source: source
+    };
+  }
+};
+
+/**
+ * Gets current plate protection status
+ */
+window.getPlateProtectionStatus = function() {
+  return {
+    isProtected: window.helper?.meta?.plate_locked || false,
+    originalPlate: window.helper?.meta?.original_plate || '',
+    source: window.helper?.meta?.plate_protection_source || '',
+    currentPlate: window.helper?.meta?.plate || '',
+    alertCount: window.helper?.system?.protection_alerts?.length || 0
+  };
+};
+
+/**
+ * Shows plate protection alert to user
+ */
+window.showPlateProtectionAlert = function(validationResult) {
+  const alertMessage = `🚨 PLATE NUMBER PROTECTION ALERT 🚨\n\n${validationResult.message}`;
+  
+  // Show browser alert
+  alert(alertMessage);
+  
+  // Also log to console with styling
+  console.error('%c🚨 PLATE PROTECTION ALERT', 'color: red; font-size: 16px; font-weight: bold;');
+  console.error(validationResult.message);
+  
+  // Store alert in helper for debugging
+  if (!window.helper.system) window.helper.system = {};
+  if (!window.helper.system.protection_alerts) window.helper.system.protection_alerts = [];
+  
+  window.helper.system.protection_alerts.push({
+    timestamp: new Date().toISOString(),
+    type: 'plate_mismatch',
+    originalPlate: validationResult.originalPlate,
+    incomingPlate: validationResult.incomingPlate,
+    source: validationResult.source,
+    message: validationResult.message
+  });
+  
+  saveHelperToAllStorageLocations();
+};
+
 // Removed storage manager to prevent system conflicts
 
 // 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
@@ -100,6 +198,9 @@ window.helper = existingHelper || {
   meta: {
     plate: '',
     case_id: '',  // Will be generated dynamically as YC-PLATENUMBER-YEAR
+    original_plate: '',      // CRITICAL: Protected original plate from case opening
+    plate_locked: false,     // CRITICAL: Protection flag
+    plate_protection_source: '',  // Track where the original plate came from
     created_at: new Date().toISOString(),
     last_updated: '',
     last_webhook_update: ''
@@ -815,6 +916,17 @@ function processHebrewText(bodyText, result) {
       // Skip empty values
       if (!value) return;
       
+      // 🔒 CRITICAL: Validate plate numbers before processing
+      if (field === 'plate') {
+        const validation = validatePlateNumber(value, 'hebrew_text_ocr');
+        if (!validation.valid) {
+          showPlateProtectionAlert(validation);
+          console.warn(`🚫 BLOCKING Hebrew OCR plate extraction - validation failed`);
+          result.warnings.push(`Hebrew OCR plate "${value}" blocked due to mismatch`);
+          return; // Skip this pattern
+        }
+      }
+      
       // Enhanced value processing based on field type
       if (field === 'km' || field.includes('amount') || field.includes('cumulative') || field.includes('price') || field === 'engine_volume') {
         // Remove commas and spaces from numeric values
@@ -899,6 +1011,21 @@ function processHebrewText(bodyText, result) {
 function processDirectData(data, result) {
   console.log('🔍 Processing direct object data...');
   let updated = false;
+  
+  // 🔒 CRITICAL: Validate any plate number in incoming data before processing
+  const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב'];
+  for (const field of plateFields) {
+    if (data[field]) {
+      const validation = validatePlateNumber(data[field], 'webhook_direct_data');
+      if (!validation.valid) {
+        showPlateProtectionAlert(validation);
+        console.warn(`🚫 BLOCKING webhook data - plate validation failed for field: ${field}`);
+        // Remove the invalid plate from data to prevent processing
+        delete data[field];
+        result.warnings.push(`Plate field "${field}" removed due to mismatch: ${validation.incomingPlate}`);
+      }
+    }
+  }
   
   const fieldMappings = {
     // Vehicle fields - comprehensive mapping
@@ -1453,6 +1580,19 @@ window.updateHelper = function(field, value) {
       // Remove damage_date from the value object
       value = { ...value };
       delete value.damage_date;
+    }
+  }
+
+  // 🔒 CRITICAL: Validate plate number changes before processing
+  if (field === 'plate' || (typeof value === 'object' && value && value.plate)) {
+    const incomingPlate = typeof value === 'string' ? value : value.plate;
+    if (incomingPlate) {
+      const validation = validatePlateNumber(incomingPlate, 'updateHelper');
+      if (!validation.valid) {
+        showPlateProtectionAlert(validation);
+        console.error(`🚫 BLOCKING plate update from updateHelper - validation failed`);
+        return false; // Block the update
+      }
     }
   }
 
@@ -2040,6 +2180,13 @@ export function initHelper(newData = null) {
       helper.case_info.plate = newData.plate;
       helper.vehicle.plate = newData.plate;
       helper.meta.plate = newData.plate;
+      
+      // 🔒 CRITICAL: Protect the plate number from case opening
+      helper.meta.original_plate = newData.plate;
+      helper.meta.plate_locked = true;
+      helper.meta.plate_protection_source = 'open_case_ui';
+      console.log(`🔒 PROTECTION: Plate "${newData.plate}" is now protected from overwrites (source: open_case_ui)`);
+      
       console.log(`✅ Generated dynamic case_id: ${dynamicCaseId}`);
     }
     
@@ -2126,3 +2273,9 @@ export function refreshAllModuleForms() {
   console.log('🔄 Refreshing all module forms...');
   populateAllForms();
 }
+
+// Export plate protection functions
+export const protectPlateNumber = window.protectPlateNumber;
+export const validatePlateNumber = window.validatePlateNumber;
+export const showPlateProtectionAlert = window.showPlateProtectionAlert;
+export const getPlateProtectionStatus = window.getPlateProtectionStatus;
