@@ -1107,12 +1107,6 @@ function processDirectData(data, result) {
         finalTargets.forEach(target => {
           console.log(`📍 Setting ${target} = ${processedValue}`);
           setNestedValue(window.helper, target, processedValue);
-          
-          // Special debug for Levi code
-          if (key === 'קוד דגם' || target.includes('levi_code')) {
-            console.log(`🚨 LEVI CODE DEBUG: Set ${target} to ${processedValue}`);
-            console.log(`🚨 LEVI CODE DEBUG: valuation object:`, window.helper.valuation);
-          }
         });
         console.log(`✅ Mapped ${key}: ${processedValue}`);
         updated = true;

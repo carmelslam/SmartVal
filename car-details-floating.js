@@ -626,6 +626,29 @@
     const formatValue = (value) => {
       return value && value.toString().trim() ? value : "-";
     };
+    
+    // Format date to DD/MM/YYYY like inspection date
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "-";
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr; // Return original if invalid
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch (e) {
+        return dateStr; // Return original if parsing fails
+      }
+    };
+    
+    // Format price with thousand separator like market value
+    const formatPrice = (value) => {
+      if (!value) return "-";
+      const num = parseFloat(value.toString().replace(/,/g, ''));
+      if (isNaN(num)) return formatValue(value);
+      return num.toLocaleString();
+    };
 
     // ENHANCED: Vehicle fields - prioritize vehicle section, then car_details
     const plateValue = vehicle.plate || meta.plate || carDetails.plate;
@@ -671,13 +694,6 @@
       vehicle.model_code || carDetails.model_code || meta.vehicle_code
     );
     // Levi code - mapped specifically from Levi webhook response
-    console.log('🔍 DEBUG Levi code sources:', {
-      'valuationData.levi_code': valuationData && valuationData.levi_code,
-      'valuationData.model_code': valuationData && valuationData.model_code,
-      'valuationData keys': valuationData ? Object.keys(valuationData) : 'no valuationData',
-      'vehicle.levi_code': vehicle.levi_code,
-      'carDetails.levi_code': carDetails.levi_code
-    });
     document.getElementById("vehicle-levi-code").textContent = formatValue(
       (valuationData && valuationData.levi_code) ||
       (valuationData && valuationData.levi_model_code) ||
@@ -710,7 +726,7 @@
     const ownerName = stakeholders.owner?.name || carDetails.owner;
     document.getElementById("car-owner").textContent = formatValue(ownerName);
     
-    document.getElementById("car-damage-date").textContent = formatValue(
+    document.getElementById("car-damage-date").textContent = formatDate(
       meta.damage_date || carDetails.damageDate || carDetails.damage_date
     );
     
@@ -724,36 +740,26 @@
     
     // Additional fields from general info
     // Base price - mapped specifically from Levi webhook valuation data
-    document.getElementById("car-base-price").textContent = formatValue(
+    document.getElementById("car-base-price").textContent = formatPrice(
       (valuationData && valuationData.base_price) || 
       (valuationData && valuationData.price) ||
       (valuationData && valuationData.market_value) ||
       carDetails.base_price || 
-      vehicle.base_price ||
-      "-"
+      vehicle.base_price
     );
     // Market value - to be mapped from valuation/pricing module
-    document.getElementById("car-market-value").textContent = formatValue(
+    document.getElementById("car-market-value").textContent = formatPrice(
       carDetails.market_value || vehicle.market_value
     );
     document.getElementById("car-odometer").textContent = formatValue(
       vehicle.km || carDetails.odo || carDetails.km
     );
     // Inspection location - only from open case page
-    console.log('🔍 DEBUG Inspection location sources:', {
-      'meta.inspection_location': meta.inspection_location,
-      'meta.location': meta.location
-    });
     document.getElementById("car-inspection-location").textContent = formatValue(
       meta.inspection_location || meta.location || "-"
     );
 
     // Garage name - only from general info page, separate from inspection location
-    console.log('🔍 DEBUG Garage name sources:', {
-      'stakeholders.garage?.name': stakeholders.garage?.name,
-      'carDetails.garage_name': carDetails.garage_name,
-      'carDetails.garageName': carDetails.garageName
-    });
     document.getElementById("garage-name").textContent = formatValue(
       stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName || "-"
     );
