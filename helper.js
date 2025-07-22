@@ -966,10 +966,41 @@ function processDirectData(data, result) {
     'אוטומט': ['vehicle.is_automatic'],
     'שנת יצור': ['vehicle.year'],
     'מחיר בסיס': ['valuation.base_price'],
+    'מחיר סופי לרכב': ['valuation.final_price'],
     'שם דגם מלא': ['vehicle.full_model_name', 'vehicle.model'],
     'קוד לוי': ['valuation.levi_code'],
     'קוד דגם לוי': ['valuation.levi_model_code'],
-    'מאפיינים': ['vehicle.features'],
+    
+    // Additional Hebrew adjustment fields from webhook
+    'עליה לכביש': ['valuation.adjustments.registration.description'],
+    'עליה לכביש %': ['valuation.adjustments.registration.percent'],
+    'ערך עליה לכביש': ['valuation.adjustments.registration.value'],
+    'ערך ש"ח עליה לכביש': ['valuation.adjustments.registration.amount'],
+    'שווי מצטבר עליה לכביש': ['valuation.adjustments.registration.cumulative'],
+    
+    'בעלות': ['valuation.adjustments.ownership_type.description'],
+    'בעלות %': ['valuation.adjustments.ownership_type.percent'],
+    'ערך בעלות': ['valuation.adjustments.ownership_type.value'],
+    'ערך ש"ח בעלות': ['valuation.adjustments.ownership_type.amount'],
+    'שווי מצטבר בעלות': ['valuation.adjustments.ownership_type.cumulative'],
+    
+    'מס ק"מ': ['valuation.adjustments.mileage.description'],
+    'מס ק"מ %': ['valuation.adjustments.mileage.percent'],
+    'ערך מס ק"מ': ['valuation.adjustments.mileage.value'],
+    'ערך ש"ח מס ק"מ': ['valuation.adjustments.mileage.amount'],
+    'שווי מצטבר מס ק"מ': ['valuation.adjustments.mileage.cumulative'],
+    
+    'מספר בעלים': ['valuation.adjustments.ownership_history.description'],
+    'מספר בעלים %': ['valuation.adjustments.ownership_history.percent'],
+    'ערך מספר בעלים': ['valuation.adjustments.ownership_history.value'],
+    'ערך ש"ח מספר בעלים': ['valuation.adjustments.ownership_history.amount'],
+    'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
+    
+    'מאפיינים': ['valuation.adjustments.features.description'],
+    'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
+    'ערך מאפיינים ': ['valuation.adjustments.features.value'],
+    'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
+    'שווי מצטבר מאפיינים': ['valuation.adjustments.features.cumulative'],
     'מאפיינים_text': ['vehicle.features_text'],
     
     // 🔧 UNIVERSAL SOLUTION: Features text preservation from duplicate key parser

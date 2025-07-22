@@ -462,7 +462,10 @@
     });
     
     const formatPrice = (value) => {
-      const num = parseFloat(value) || 0;
+      if (!value) return "₪0";
+      // Remove existing commas before parsing, then add them back
+      const cleanValue = value.toString().replace(/,/g, '');
+      const num = parseFloat(cleanValue) || 0;
       return num > 0 ? `₪${num.toLocaleString()}` : "₪0";
     };
 
