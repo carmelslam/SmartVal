@@ -154,7 +154,13 @@
       email: data.garage_email || ''
     };
     
-    window.helper.car_details = data;
+    // CRITICAL FIX: Clean data before setting car_details
+    const cleanData = { ...data };
+    delete cleanData.damage_date;    // Never set damage_date in car_details
+    delete cleanData.timestamp;      // Never set timestamp in car_details
+    delete cleanData.processing_timestamp; // Never set processing_timestamp
+    
+    window.helper.car_details = cleanData;
     
     // Save to storage
     sessionStorage.setItem('helper', JSON.stringify(window.helper));

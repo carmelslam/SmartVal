@@ -95,17 +95,22 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
     });
     
     // CRITICAL FIX: Set proper case_info with correct field separation
+    // Check if case_info already exists and preserve existing values
     const currentYear = new Date().getFullYear();
+    const existingCaseInfo = window.helper?.case_info || {};
+    
     window.updateHelper('case_info', {
       case_id: `YC-${richCarData.plate}-${currentYear}`,  // Proper format: YC-PLATENUMBER-YEAR
       plate: richCarData.plate,
       inspection_location: richCarData.location,
-      inspection_date: richCarData.timestamp ? richCarData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
-      created_at: new Date().toISOString(),
+      // Preserve existing inspection_date if it exists, otherwise set to current date
+      inspection_date: existingCaseInfo.inspection_date || new Date().toISOString().split('T')[0],
+      created_at: existingCaseInfo.created_at || new Date().toISOString(),
       status: 'active',
       report_type: '',        // Empty for expertise stage
-      report_type_display: '' // Empty for expertise stage
-      // Do NOT set damage_date here - it should remain empty until general info page
+      report_type_display: '', // Empty for expertise stage
+      // CRITICAL: Never set damage_date - it should remain empty until general info page
+      damage_date: ''  // Explicitly set to empty to prevent contamination
       // Do NOT set garage_name here - it's separate from location
     });
     console.log('✅ Rich car data stored in helper');
