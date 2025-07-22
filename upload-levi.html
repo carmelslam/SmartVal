@@ -1800,7 +1800,7 @@ class LeviProcessor {
     valuationDetails.innerHTML = `
       <div class="data-item">
         <span class="data-label">תאריך הערכה:</span>
-        <span class="data-value">${result.valuation_date || new Date().toLocaleDateString('he-IL')}</span>
+        <span class="data-value">${result['תאריך'] || result.valuation_date || new Date().toLocaleDateString('he-IL')}</span>
       </div>
       <div class="data-item">
         <span class="data-label">קוד משרד התחבורה:</span>
@@ -1814,56 +1814,66 @@ class LeviProcessor {
 
     // Pricing Details - Updated to match new OCR structure
     const pricingDetails = document.getElementById('pricing-details');
-    const basePrice = result['מחיר בסיס'] || result.pricing?.base_price || 0;
-    const finalPrice = result['מחיר סופי לרכב'] || result.pricing?.final_price || 0;
+    
+    // Helper function to parse Hebrew currency format "₪ 118,000" to number
+    const parseCurrency = (value) => {
+      if (!value) return 0;
+      if (typeof value === 'number') return value;
+      // Remove currency symbols, spaces, commas and parse
+      const cleanValue = value.toString().replace(/[₪,\s]/g, '');
+      return parseFloat(cleanValue) || 0;
+    };
+    
+    const basePrice = parseCurrency(result['מחיר בסיס']) || parseCurrency(result.pricing?.base_price) || 0;
+    const finalPrice = parseCurrency(result['מחיר סופי לרכב']) || parseCurrency(result.pricing?.final_price) || 0;
     pricingDetails.innerHTML = `
       <div class="data-item">
         <span class="data-label">מחיר בסיס:</span>
-        <span class="data-value">₪${parseFloat(basePrice).toLocaleString()}</span>
+        <span class="data-value">₪${basePrice.toLocaleString()}</span>
       </div>
       <div class="data-item">
         <span class="data-label">מחיר סופי לרכב:</span>
-        <span class="data-value"><strong>₪${parseFloat(finalPrice).toLocaleString()}</strong></span>
+        <span class="data-value"><strong>₪${finalPrice.toLocaleString()}</strong></span>
       </div>
       <div class="data-item">
         <span class="data-label">הפרש:</span>
-        <span class="data-value">₪${(parseFloat(finalPrice) - parseFloat(basePrice)).toLocaleString()}</span>
+        <span class="data-value">₪${(finalPrice - basePrice).toLocaleString()}</span>
       </div>
     `;
 
-    // Adjustments Table
-    this.displayAdjustments(result.adjustments || {});
+    // Adjustments Table - pass the full result object to access Hebrew fields
+    this.displayAdjustments(result);
 
     // Update manual override fields
     document.getElementById('override-base-price').value = result.pricing?.base_price || '';
     document.getElementById('override-final-price').value = result.pricing?.final_price || '';
   }
 
-  displayAdjustments(adjustments) {
+  displayAdjustments(result) {
     const adjustmentsContainer = document.getElementById('adjustments-container');
     adjustmentsContainer.innerHTML = '';
 
-    // Define adjustment structure based on your OCR JSON example
+    // Define adjustment structure matching Hebrew webhook fields exactly
     const adjustmentSections = [
       {
         title: 'עליה לכביש',
-        fields: ['עליה לכביש', 'עליה לכביש %', 'ערך ש״ח עליה לכביש', 'שווי מצטבר עליה לכביש']
+        fields: ['ערך עליה לכביש', 'עליה לכביש %', 'ערך ש"ח עליה לכביש', 'שווי מצטבר עליה לכביש']
       },
       {
         title: 'סוג בעלות',
-        fields: ['בעלות', 'בעלות %', 'ערך ש״ח בעלות', 'שווי מצטבר בעלות']
+        fields: ['ערך בעלות', 'בעלות %', 'ערך ש"ח בעלות', 'שווי מצטבר בעלות']
       },
       {
         title: 'מספר ק״מ',
-        fields: ['מס ק״מ', 'מס ק״מ %', 'ערך ש״ח מס ק״מ', 'שווי מצטבר מס ק״מ']
+        fields: ['ערך מס ק"מ', 'מס ק"מ %', 'ערך ש"ח מס ק"מ', 'שווי מצטבר מס ק"מ']
       },
       {
         title: 'מספר בעלים',
-        fields: ['מספר בעלים', 'מספר בעלים %', 'ערך ש״ח מספר בעלים', 'שווי מצטבר מספר בעלים']
+        fields: ['ערך מספר בעלים', 'מספר בעלים %', 'ערך ש"ח מספר בעלים', 'שווי מצטבר מספר בעלים']
       },
       {
         title: 'מאפיינים',
-        fields: ['מאפיינים', 'מאפיינים %', 'ערך ש״ח מאפיינים', 'שווי מצטבר מאפיינים']
+        fields: ['ערך מאפיינים', 'מחיר מאפיינים %', 'ערך ש"ח מאפיינים', 'שווי מצטבר מאפיינים']
       }
     ];
 
@@ -1876,9 +1886,17 @@ class LeviProcessor {
       adjustmentRow.appendChild(label);
       
       section.fields.forEach(fieldKey => {
-        const value = adjustments[fieldKey] || 
-                     (adjustments[section.title] && adjustments[section.title][fieldKey]) || 
-                     '';
+        // Get value directly from Hebrew webhook fields in result object
+        let value = result[fieldKey] || '';
+        
+        // Format currency values if they contain ₪
+        if (value && value.toString().includes('₪')) {
+          const numericValue = value.toString().replace(/[₪,\s]/g, '');
+          const parsed = parseFloat(numericValue);
+          if (!isNaN(parsed)) {
+            value = `₪${parsed.toLocaleString()}`;
+          }
+        }
         
         const valueSpan = document.createElement('span');
         valueSpan.className = 'adjustment-value';
