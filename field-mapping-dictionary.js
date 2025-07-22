@@ -61,8 +61,8 @@ export const HEBREW_TO_ENGLISH = {
   'נפח': 'engine_volume',
   'סוג דלק': 'fuel_type',
   'דלק': 'fuel_type',
-  'מספר דגם הרכב': 'model_code',
-  'קוד דגם': 'model_code',
+  'מספר דגם הרכב': 'vehicle_model_code',  // CRITICAL: Open case webhook field - separate from Levi code
+  'קוד דגם': 'levi_code',               // CRITICAL: Levi webhook field - separate from vehicle model code
   'דגם מנוע': 'engine_model',
   'מנוע': 'engine_model',
   'הנעה': 'drive_type',
@@ -182,6 +182,8 @@ export const MAKECOM_TO_HELPER = {
   'trim': 'vehicle.trim',
   'model_type': 'vehicle.model_type',
   'model_code': 'vehicle.model_code',
+  'vehicle_model_code': 'vehicle.vehicle_model_code',  // From open case webhook "מספר דגם הרכב"
+  'levi_code': 'valuation.levi_code',                  // From Levi webhook "קוד דגם"
   'engine_volume': 'vehicle.engine_volume',
   'fuel_type': 'vehicle.fuel_type',
   'transmission': 'vehicle.transmission',

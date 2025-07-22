@@ -99,7 +99,7 @@ const existingHelper = initializeHelper();
 window.helper = existingHelper || {
   meta: {
     plate: '',
-    case_id: 'YC-UNKNOWN-2025',
+    case_id: '',  // Will be generated dynamically as YC-PLATENUMBER-YEAR
     created_at: new Date().toISOString(),
     last_updated: '',
     last_webhook_update: ''
@@ -1475,6 +1475,22 @@ window.updateHelper = function(field, value) {
     }
   });
 
+  // CRITICAL: Update case_id when plate number is updated
+  if (field === 'plate' || (field === 'vehicle' && value && value.plate) || 
+      (field === 'meta' && value && value.plate) || (field === 'case_info' && value && value.plate)) {
+    const plateValue = typeof value === 'string' ? value : 
+                      (value && value.plate) ? value.plate : 
+                      window.helper.vehicle.plate || window.helper.meta.plate;
+    
+    if (plateValue) {
+      const currentYear = new Date().getFullYear();
+      const dynamicCaseId = `YC-${plateValue}-${currentYear}`;
+      window.helper.meta.case_id = dynamicCaseId;
+      window.helper.case_info.case_id = dynamicCaseId;
+      console.log(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
+    }
+  }
+
   saveHelperToAllStorageLocations();
   console.log(`Updated ${field}:`, value);
 };
@@ -1998,17 +2014,28 @@ export function updateCalculations() {
 export function initHelper(newData = null) {
   const helper = initializeHelper() || getDefaultHelper();
   
+  // CRITICAL: Fix existing case_id if it's still YC-UNKNOWN-XXXX and we have plate data
+  const currentYear = new Date().getFullYear();
+  if (helper.meta.case_id && helper.meta.case_id.includes('UNKNOWN') && helper.meta.plate) {
+    const correctedCaseId = `YC-${helper.meta.plate}-${currentYear}`;
+    helper.meta.case_id = correctedCaseId;
+    helper.case_info.case_id = correctedCaseId;
+    console.log(`🔧 Fixed existing case_id: UNKNOWN → ${correctedCaseId}`);
+  }
+  
   // If new data is provided (like from initial case opening), merge it properly
   if (newData) {
     console.log('🔄 Merging new case data into helper:', newData);
     
     // Generate proper case_id: YC-PLATENUMBER-YEAR
-    const currentYear = new Date().getFullYear();
     if (newData.plate) {
-      helper.case_info.case_id = `YC-${newData.plate}-${currentYear}`;
+      const dynamicCaseId = `YC-${newData.plate}-${currentYear}`;
+      helper.case_info.case_id = dynamicCaseId;
+      helper.meta.case_id = dynamicCaseId;  // CRITICAL: Keep meta.case_id in sync
       helper.case_info.plate = newData.plate;
       helper.vehicle.plate = newData.plate;
       helper.meta.plate = newData.plate;
+      console.log(`✅ Generated dynamic case_id: ${dynamicCaseId}`);
     }
     
     // Set inspection date from case opening (NOT damage date)

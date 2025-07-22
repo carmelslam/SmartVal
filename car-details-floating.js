@@ -689,17 +689,39 @@
     document.getElementById("vehicle-fuel-type").textContent = formatValue(
       vehicle.fuel_type || carDetails.fuel_type
     );
-    // Model code - distinct code from open case webhook only
-    document.getElementById("vehicle-model-code").textContent = formatValue(
-      vehicle.model_code || carDetails.model_code || meta.vehicle_code
-    );
-    // Levi code - mapped specifically from Levi webhook response
-    document.getElementById("vehicle-levi-code").textContent = formatValue(
-      (valuationData && valuationData.levi_code) ||
-      (valuationData && valuationData.levi_model_code) ||
-      vehicle.levi_code || 
-      carDetails.levi_code
-    );
+    // CRITICAL: Debug model code vs levi code data sources
+    console.log('🔍 Model Code vs Levi Code Debug:', {
+      'carDetails.vehicle_model_code': carDetails.vehicle_model_code,
+      'vehicle.vehicle_model_code': vehicle.vehicle_model_code,
+      'meta.vehicle_model_code': meta.vehicle_model_code,
+      'carDetails.model_code': carDetails.model_code,
+      'vehicle.model_code': vehicle.model_code,
+      'valuationData.levi_code': valuationData?.levi_code,
+      'valuationData.levi_model_code': valuationData?.levi_model_code,
+      'valuationData.code': valuationData?.code,
+      'valuationData.model_code': valuationData?.model_code
+    });
+    
+    // Model code - ONLY from open case webhook "מספר דגם הרכב" (NOT from Levi)
+    const modelCodeValue = carDetails.vehicle_model_code ||  // Primary: from open case webhook "מספר דגם הרכב"
+                          vehicle.vehicle_model_code ||       // Vehicle section model code (NOT Levi)
+                          meta.vehicle_model_code ||          // Meta section model code (NOT Levi)
+                          (carDetails.model_code && !valuationData.levi_code ? carDetails.model_code : null) ||  // Only if NOT from Levi
+                          (vehicle.model_code && !valuationData.levi_code ? vehicle.model_code : null) ||       // Only if NOT from Levi
+                          "-";
+                          
+    document.getElementById("vehicle-model-code").textContent = formatValue(modelCodeValue);
+    console.log('🚗 Model Code final value:', modelCodeValue);
+    
+    // Levi code - ONLY from Levi webhook response "קוד דגם" (separate from model code)
+    const leviCodeValue = (valuationData && valuationData.levi_code) ||        // Primary: From Levi "קוד דגם"
+                         (valuationData && valuationData.levi_model_code) ||   // Levi code variations
+                         (valuationData && valuationData.code) ||              // Alternative Levi field
+                         (valuationData && valuationData.model_code) ||        // Levi specific model code
+                         "-";
+                         
+    document.getElementById("vehicle-levi-code").textContent = formatValue(leviCodeValue);
+    console.log('📊 Levi Code final value:', leviCodeValue);
     // Inspection date - from case opening or car details page where user enters inspection date
     const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
     document.getElementById("vehicle-inspection-date").textContent = formatDate(
