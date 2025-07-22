@@ -772,32 +772,34 @@
     });
   }
 
+  // DISABLED TO PREVENT LOOPS
   // Listen for helper updates and refresh display
-  document.addEventListener('helperUpdate', function(event) {
-    console.log('📡 Levi floating detected helper update:', event.detail);
-    // Only refresh if the modal is visible
-    const modal = document.getElementById("leviModal");
-    if (modal && modal.style.display !== "none") {
-      console.log('🔄 Auto-refreshing Levi data due to helper update');
-      loadLeviData();
-    }
-  });
+  // document.addEventListener('helperUpdate', function(event) {
+  //   console.log('📡 Levi floating detected helper update:', event.detail);
+  //   // Only refresh if the modal is visible
+  //   const modal = document.getElementById("leviModal");
+  //   if (modal && modal.style.display !== "none") {
+  //     console.log('🔄 Auto-refreshing Levi data due to helper update');
+  //     loadLeviData();
+  //   }
+  // });
 
+  // DISABLED TO PREVENT LOOPS
   // Also listen for storage events from other tabs
-  window.addEventListener('storage', function(e) {
-    if (e.key === 'helper' && e.newValue) {
-      console.log('📡 Levi floating detected helper update from another tab');
-      
-      // Only refresh if the modal is visible
-      const modal = document.getElementById("leviModal");
-      if (modal && modal.style.display !== "none") {
-        console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
-        setTimeout(() => {
-          loadLeviData();
-        }, 100);
-      }
-    }
-  });
+  // window.addEventListener('storage', function(e) {
+  //   if (e.key === 'helper' && e.newValue) {
+  //     console.log('📡 Levi floating detected helper update from another tab');
+  //     
+  //     // Only refresh if the modal is visible
+  //     const modal = document.getElementById("leviModal");
+  //     if (modal && modal.style.display !== "none") {
+  //       console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
+  //       setTimeout(() => {
+  //         loadLeviData();
+  //       }, 100);
+  //     }
+  //   }
+  // });
 
   // Floating button removed - now controlled by top toggle squares
 

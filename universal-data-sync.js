@@ -96,20 +96,22 @@
       window.refreshCarData();
     }
     
+    // DISABLED TO PREVENT LOOPS
     // Refresh floating levi
-    if (typeof window.refreshLeviData === 'function') {
-      window.refreshLeviData();
-    }
+    // if (typeof window.refreshLeviData === 'function') {
+    //   window.refreshLeviData();
+    // }
     
     // Populate form fields
     if (typeof window.forcePopulateFields === 'function') {
       window.forcePopulateFields();
     }
     
+    // DISABLED TO PREVENT LOOPS
     // Broadcast helper update event
-    document.dispatchEvent(new CustomEvent('helperUpdate', { 
-      detail: { source: 'universal-sync' } 
-    }));
+    // document.dispatchEvent(new CustomEvent('helperUpdate', { 
+    //   detail: { source: 'universal-sync' } 
+    // }));
   }
   
   // Function to manually trigger sync

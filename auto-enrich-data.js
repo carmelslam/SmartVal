@@ -180,10 +180,11 @@
       window.refreshCarData();
     }
     
+    // DISABLED TO PREVENT LOOPS
     // Dispatch event
-    document.dispatchEvent(new CustomEvent('helperUpdate', { 
-      detail: { source: 'auto-enrich' } 
-    }));
+    // document.dispatchEvent(new CustomEvent('helperUpdate', { 
+    //   detail: { source: 'auto-enrich' } 
+    // }));
   }
   
   // Check on page load
