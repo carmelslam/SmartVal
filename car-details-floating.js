@@ -700,13 +700,11 @@
       vehicle.levi_code || 
       carDetails.levi_code
     );
-    // Inspection date - mapped from open case data
+    // Inspection date - ONLY from open case page (not meta.date which gets contaminated by Levi)
     document.getElementById("vehicle-inspection-date").textContent = formatValue(
       meta.inspection_date || 
-      meta.date || 
-      meta.created_at || 
-      caseInfo.inspection_date ||
-      vehicle.inspection_date ||
+      meta.case_inspection_date ||
+      meta.open_case_date ||
       "-"
     );
     document.getElementById("vehicle-engine-model").textContent = formatValue(
@@ -726,8 +724,13 @@
     const ownerName = stakeholders.owner?.name || carDetails.owner;
     document.getElementById("car-owner").textContent = formatValue(ownerName);
     
+    // Damage date - ONLY from general info page (not meta.date which gets contaminated)
     document.getElementById("car-damage-date").textContent = formatDate(
-      meta.damage_date || carDetails.damageDate || carDetails.damage_date
+      meta.damage_date || 
+      meta.general_info_damage_date ||
+      carDetails.damageDate || 
+      carDetails.damage_date ||
+      "-"
     );
     
     // Owner contact info
