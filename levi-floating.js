@@ -574,8 +574,14 @@
     console.log('🔍 LEVI DEBUG: Hebrew price fields in result:', {
       'מחיר בסיס': result['מחיר בסיס'],
       'מחיר סופי לרכב': result['מחיר סופי לרכב'],
-      'עליה לכביש %': result['עליה לכביש %']
+      'עליה לכביש %': result['עליה לכביש %'],
+      'בעלות %': result['בעלות %']
     });
+    
+    // DEBUG: Check all keys in result to find the correct field names
+    console.log('🔍 LEVI DEBUG: All result keys containing %:', Object.keys(result).filter(key => key.includes('%')));
+    console.log('🔍 LEVI DEBUG: All result keys containing עליה:', Object.keys(result).filter(key => key.includes('עליה')));
+    console.log('🔍 LEVI DEBUG: All result keys containing בעלות:', Object.keys(result).filter(key => key.includes('בעלות')));
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       result['סוג רכב'] ||
@@ -636,9 +642,11 @@
     document.getElementById("levi-registration").textContent = formatValue(
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
-    document.getElementById("levi-registration-percent").textContent = formatPercent(
-      result['עליה לכביש %'] || 0
-    );
+    
+    // DEBUG: Check registration percent value
+    const regPercent = result['עליה לכביש %'];
+    console.log('🔍 LEVI DEBUG: Registration percent raw value:', regPercent, 'type:', typeof regPercent);
+    document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent || 0);
     document.getElementById("levi-registration-value").textContent = formatPrice(
       result['ערך ש"ח עליה לכביש'] || 0
     );
@@ -650,9 +658,11 @@
     document.getElementById("levi-ownership").textContent = formatValue(
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
-    document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      result['בעלות %'] || 0
-    );
+    
+    // DEBUG: Check ownership percent value
+    const ownPercent = result['בעלות %'];
+    console.log('🔍 LEVI DEBUG: Ownership percent raw value:', ownPercent, 'type:', typeof ownPercent);
+    document.getElementById("levi-ownership-percent").textContent = formatPercent(ownPercent || 0);
     document.getElementById("levi-ownership-value").textContent = formatPrice(
       result['ערך ש"ח בעלות'] || 0
     );
@@ -692,8 +702,13 @@
     document.getElementById("levi-features").textContent = formatValue(
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
+    
+    // DEBUG: Check features percent value
+    const featPercent = result['מחיר מאפיינים %'];
+    console.log('🔍 LEVI DEBUG: Features percent raw value:', featPercent, 'type:', typeof featPercent);
+    console.log('🔍 LEVI DEBUG: Trying alternative field name מאפיינים %:', result['מאפיינים %']);
     document.getElementById("levi-features-percent").textContent = formatPercent(
-      result['מחיר מאפיינים %'] || 0
+      result['מחיר מאפיינים %'] || result['מאפיינים %'] || 0
     );
     document.getElementById("levi-features-value").textContent = formatPrice(
       result['ערך ש"ח מאפיינים'] || 0
