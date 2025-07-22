@@ -777,57 +777,59 @@
   let lastRefreshTime = 0;
   const REFRESH_DEBOUNCE_MS = 2000; // Prevent refreshes within 2 seconds
 
+  // COMPLETELY DISABLED TO STOP INFINITE LOOP
   // Listen for helper updates and refresh display
-  document.addEventListener('helperUpdate', function(event) {
-    console.log('📡 Levi floating detected helper update:', event.detail);
-    
-    // CRITICAL: Prevent infinite refresh loops
-    const now = Date.now();
-    if (isRefreshing || (now - lastRefreshTime) < REFRESH_DEBOUNCE_MS) {
-      console.log('🚫 Skipping auto-refresh (debounce protection)');
-      return;
-    }
-    
-    // Only refresh if the modal is visible
-    const modal = document.getElementById("leviModal");
-    if (modal && modal.style.display !== "none") {
-      console.log('🔄 Auto-refreshing Levi data due to helper update');
-      isRefreshing = true;
-      lastRefreshTime = now;
-      
-      setTimeout(() => {
-        loadLeviData();
-        isRefreshing = false;
-      }, 100);
-    }
-  });
+  // document.addEventListener('helperUpdate', function(event) {
+  //   console.log('📡 Levi floating detected helper update:', event.detail);
+  //   
+  //   // CRITICAL: Prevent infinite refresh loops
+  //   const now = Date.now();
+  //   if (isRefreshing || (now - lastRefreshTime) < REFRESH_DEBOUNCE_MS) {
+  //     console.log('🚫 Skipping auto-refresh (debounce protection)');
+  //     return;
+  //   }
+  //   
+  //   // Only refresh if the modal is visible
+  //   const modal = document.getElementById("leviModal");
+  //   if (modal && modal.style.display !== "none") {
+  //     console.log('🔄 Auto-refreshing Levi data due to helper update');
+  //     isRefreshing = true;
+  //     lastRefreshTime = now;
+  //     
+  //     setTimeout(() => {
+  //       loadLeviData();
+  //       isRefreshing = false;
+  //     }, 100);
+  //   }
+  // });
 
+  // COMPLETELY DISABLED TO STOP INFINITE LOOP
   // Also listen for storage events from other tabs
-  window.addEventListener('storage', function(e) {
-    if (e.key === 'helper' && e.newValue) {
-      console.log('📡 Levi floating detected helper update from another tab');
-      
-      // CRITICAL: Prevent infinite refresh loops
-      const now = Date.now();
-      if (isRefreshing || (now - lastRefreshTime) < REFRESH_DEBOUNCE_MS) {
-        console.log('🚫 Skipping cross-tab refresh (debounce protection)');
-        return;
-      }
-      
-      // Only refresh if the modal is visible
-      const modal = document.getElementById("leviModal");
-      if (modal && modal.style.display !== "none") {
-        console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
-        isRefreshing = true;
-        lastRefreshTime = now;
-        
-        setTimeout(() => {
-          loadLeviData();
-          isRefreshing = false;
-        }, 100);
-      }
-    }
-  });
+  // window.addEventListener('storage', function(e) {
+  //   if (e.key === 'helper' && e.newValue) {
+  //     console.log('📡 Levi floating detected helper update from another tab');
+  //     
+  //     // CRITICAL: Prevent infinite refresh loops
+  //     const now = Date.now();
+  //     if (isRefreshing || (now - lastRefreshTime) < REFRESH_DEBOUNCE_MS) {
+  //       console.log('🚫 Skipping cross-tab refresh (debounce protection)');
+  //       return;
+  //     }
+  //     
+  //     // Only refresh if the modal is visible
+  //     const modal = document.getElementById("leviModal");
+  //     if (modal && modal.style.display !== "none") {
+  //       console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
+  //       isRefreshing = true;
+  //       lastRefreshTime = now;
+  //       
+  //       setTimeout(() => {
+  //         loadLeviData();
+  //         isRefreshing = false;
+  //       }, 100);
+  //     }
+  //   }
+  // });
 
   // Floating button removed - now controlled by top toggle squares
 
