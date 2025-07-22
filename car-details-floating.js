@@ -847,11 +847,34 @@
     console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
   }
 
+  // CRITICAL FIX: Add refresh prevention to stop infinite loops
+  let isCarRefreshing = false;
+  let lastCarRefreshTime = 0;
+  const CAR_REFRESH_DEBOUNCE_MS = 2000; // Prevent refreshes within 2 seconds
+
   // Listen for helper updates and always refresh display from helper
   document.addEventListener('helperUpdate', function(event) {
     console.log('📡 Car details floating detected helper update:', event.detail);
-    // Always reload from helper (sessionStorage)
-    loadCarData();
+    
+    // CRITICAL: Prevent infinite refresh loops
+    const now = Date.now();
+    if (isCarRefreshing || (now - lastCarRefreshTime) < CAR_REFRESH_DEBOUNCE_MS) {
+      console.log('🚫 Skipping car auto-refresh (debounce protection)');
+      return;
+    }
+    
+    // Only refresh if the modal is visible
+    const modal = document.getElementById("carDetailsModal");
+    if (modal && modal.style.display !== "none") {
+      console.log('🔄 Auto-refreshing car data due to helper update');
+      isCarRefreshing = true;
+      lastCarRefreshTime = now;
+      
+      setTimeout(() => {
+        loadCarData();
+        isCarRefreshing = false;
+      }, 100);
+    }
   });
 
   // Also listen for storage events from other tabs
@@ -859,12 +882,23 @@
     if (e.key === 'helper' && e.newValue) {
       console.log('📡 Car details floating detected helper update from another tab');
       
+      // CRITICAL: Prevent infinite refresh loops
+      const now = Date.now();
+      if (isCarRefreshing || (now - lastCarRefreshTime) < CAR_REFRESH_DEBOUNCE_MS) {
+        console.log('🚫 Skipping car cross-tab refresh (debounce protection)');
+        return;
+      }
+      
       // Only refresh if the modal is visible
       const modal = document.getElementById("carDetailsModal");
       if (modal && modal.style.display !== "none") {
         console.log('🔄 Auto-refreshing car details due to cross-tab update');
+        isCarRefreshing = true;
+        lastCarRefreshTime = now;
+        
         setTimeout(() => {
           window.refreshCarData();
+          isCarRefreshing = false;
         }, 100);
       }
     }
