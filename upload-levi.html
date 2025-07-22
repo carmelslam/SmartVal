@@ -1825,7 +1825,7 @@ class LeviProcessor {
       </div>
       <div class="data-item">
         <span class="data-label">קוד משרד התחבורה:</span>
-        <span class="data-value">${result.office_code || document.getElementById('office-code')?.value || 'לא זמין'}</span>
+        <span class="data-value">${this.getOfficeCode(result)}</span>
       </div>
       <div class="data-item">
         <span class="data-label">מקור הדו"ח:</span>
@@ -1956,6 +1956,37 @@ class LeviProcessor {
       'manual_entry': 'הזנה ידנית'
     };
     return sourceLabels[source] || source || 'לא זמין';
+  }
+
+  getOfficeCode(result) {
+    // Try to get office code from multiple sources
+    
+    // 1. Check result object directly
+    if (result.office_code) return result.office_code;
+    if (result['קוד משרד התחבורה']) return result['קוד משרד התחבורה'];
+    if (result['קוד משרד']) return result['קוד משרד'];
+    if (result.vehicle && result.vehicle.office_code) return result.vehicle.office_code;
+    
+    // 2. Check sessionStorage helper data
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.vehicle && helper.vehicle.office_code) return helper.vehicle.office_code;
+      if (helper['קוד משרד התחבורה']) return helper['קוד משרד התחבורה'];
+      if (helper['קוד משרד']) return helper['קוד משרד'];
+      if (helper.meta && helper.meta.office_code) return helper.meta.office_code;
+      
+      // Check car details
+      if (helper.car_details && helper.car_details.office_code) return helper.car_details.office_code;
+      if (helper.car_details && helper.car_details['קוד משרד התחבורה']) return helper.car_details['קוד משרד התחבורה'];
+    } catch (e) {
+      console.warn('Could not parse helper data for office code:', e);
+    }
+    
+    // 3. Check form input as fallback
+    const formOfficeCode = document.getElementById('office-code')?.value;
+    if (formOfficeCode && formOfficeCode.trim()) return formOfficeCode.trim();
+    
+    return 'לא זמין';
   }
 
   updatePrices() {
