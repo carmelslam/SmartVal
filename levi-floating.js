@@ -333,6 +333,10 @@
             <div class="value" id="levi-features-total">₪0</div>
           </div>
         </div>
+        <div class="levi-field" style="margin-top: 10px; grid-column: 1 / -1;">
+          <div class="label">תיאור מאפיינים:</div>
+          <div class="value" id="levi-features-description" style="font-size: 12px; text-align: right;">-</div>
+        </div>
       </div>
     </div>
 
@@ -494,25 +498,26 @@
       '-'
     );
     document.getElementById("levi-manufacturer").textContent = formatValue(
+      allData['יצרן'] ||
       allData.manufacturer || 
       allData['שם היצרן'] || 
-      allData.יצרן || 
       '-'
     );
     document.getElementById("levi-model-code").textContent = formatValue(
+      allData['קוד דגם'] ||
       allData.model_code || 
-      allData['קוד דגם'] || 
+      valuation.levi_code ||
       '-'
     );
     document.getElementById("levi-category").textContent = formatValue(
+      allData['קטגוריה'] ||
       allData.category || 
-      allData['קטגוריה'] || 
       '-'
     );
     document.getElementById("levi-year").textContent = formatValue(
+      allData['שנת יצור'] ||
       allData.year || 
       allData['שנת ייצור'] || 
-      allData['שנת יצור'] || 
       '-'
     );
     document.getElementById("levi-full-model").textContent = formatValue(
@@ -665,6 +670,15 @@
       featAdj.cumulative || 
       allData.features_cumulative || 
       0
+    );
+
+    // Features description - use the actual features text, not the field name
+    document.getElementById("levi-features-description").textContent = formatValue(
+      allData.features_text || 
+      allData['מאפיינים_text'] || 
+      vehicle.features_text || 
+      (allData['מאפיינים'] !== 'מאפיינים' ? allData['מאפיינים'] : '') ||
+      '-'
     );
 
     // Update value styling
