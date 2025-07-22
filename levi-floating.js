@@ -492,20 +492,17 @@
     console.log('🔍 LEVI DEBUG: Merged helper data with valuation:', allData);
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
-      allData.model_type || 
+      allData['סוג רכב'] ||
       allData.vehicle_type || 
-      allData['סוג הרכב'] || 
       '-'
     );
     document.getElementById("levi-manufacturer").textContent = formatValue(
       allData['יצרן'] ||
       allData.manufacturer || 
-      allData['שם היצרן'] || 
       '-'
     );
     document.getElementById("levi-model-code").textContent = formatValue(
       allData['קוד דגם'] ||
-      allData.model_code || 
       valuation.levi_code ||
       '-'
     );
@@ -517,7 +514,6 @@
     document.getElementById("levi-year").textContent = formatValue(
       allData['שנת יצור'] ||
       allData.year || 
-      allData['שנת ייצור'] || 
       '-'
     );
     document.getElementById("levi-full-model").textContent = formatValue(
@@ -528,16 +524,13 @@
       '-'
     );
     document.getElementById("levi-base-price").textContent = formatPrice(
-      valuation.base_price || 
-      allData.base_price || 
       allData['מחיר בסיס'] || 
+      valuation.base_price || 
       0
     );
     document.getElementById("levi-final-price").textContent = formatPrice(
-      valuation.final_price || 
-      allData.final_price || 
       allData['מחיר סופי לרכב'] || 
-      allData.market_value ||
+      valuation.final_price || 
       0
     );
 
