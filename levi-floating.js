@@ -583,6 +583,20 @@
     console.log('🔍 LEVI DEBUG: All result keys containing עליה:', Object.keys(result).filter(key => key.includes('עליה')));
     console.log('🔍 LEVI DEBUG: All result keys containing בעלות:', Object.keys(result).filter(key => key.includes('בעלות')));
     
+    // Check if percentage values are in a nested structure
+    console.log('🔍 LEVI DEBUG: Looking for percentage values in all top-level result properties...');
+    Object.keys(result).forEach(key => {
+        if (typeof result[key] === 'object' && result[key] !== null) {
+            const nestedKeys = Object.keys(result[key]).filter(nKey => nKey.includes('%'));
+            if (nestedKeys.length > 0) {
+                console.log(`🔍 LEVI DEBUG: Found % keys in result.${key}:`, nestedKeys);
+                nestedKeys.forEach(nKey => {
+                    console.log(`🔍 LEVI DEBUG: result.${key}['${nKey}'] =`, result[key][nKey]);
+                });
+            }
+        }
+    });
+    
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       result['סוג רכב'] ||
       result.vehicle_type || 
