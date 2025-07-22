@@ -501,34 +501,59 @@
         helper = window.helper;
       }
 
-      // Get Levi data using system structure - SIMPLIFIED
-      const vehicle = helper.vehicle || {};
-      const carDetails = helper.car_details || {};
-      const leviReport = helper.expertise?.levi_report || {};
-      const meta = helper.meta || {};
-      const valuation = helper.valuation || {};
+      // FIXED: Create a result object similar to summary page approach
+      // The summary page gets Hebrew fields directly from the result object
+      // We need to extract the Hebrew webhook data and create a similar result object
+      let result = {};
       
-      // Update UI with Levi data using proper helper structure
-      updateLeviDisplay(vehicle, carDetails, leviReport, meta, valuation);
+      // Try to get the Hebrew webhook data from raw_webhook_data
+      if (helper.raw_webhook_data) {
+        const webhookKeys = Object.keys(helper.raw_webhook_data);
+        const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
+        if (latestWebhookKey && helper.raw_webhook_data[latestWebhookKey]?.data) {
+          result = { ...helper.raw_webhook_data[latestWebhookKey].data };
+          console.log('🔍 LEVI: Found Hebrew webhook data:', result);
+        }
+      }
+      
+      // Also merge other helper data as fallback
+      result = {
+        ...helper.vehicle,
+        ...helper.car_details, 
+        ...helper.expertise?.levi_report,
+        ...helper.meta,
+        ...helper.valuation,
+        ...helper, // Include top-level helper fields
+        ...result  // Hebrew webhook data takes priority
+      };
+
+      console.log('🔍 LEVI: Final result object for display:', result);
+      
+      // Update UI using the result object (same approach as summary page)
+      updateLeviDisplay(result);
 
     } catch (error) {
       console.error("Error loading Levi data:", error);
-      updateLeviDisplay({}, {}, {}, {}, {});
+      updateLeviDisplay({});
     }
   }
 
   // Removed deepMerge function - no longer needed with simplified data loading
 
-  function updateLeviDisplay(vehicle, carDetails, leviReport, meta, valuation = {}) {
-    console.log('🔄 updateLeviDisplay called with:', {
-      vehicle, carDetails, leviReport, meta, valuation
-    });
+  function updateLeviDisplay(result) {
+    console.log('🔄 updateLeviDisplay called with result:', result);
     
+    // Use same currency parsing approach as summary page
+    const parseCurrency = (value) => {
+      if (!value) return 0;
+      if (typeof value === 'number') return value;
+      // Remove currency symbols, spaces, commas and parse
+      const cleanValue = value.toString().replace(/[₪,\s]/g, '');
+      return parseFloat(cleanValue) || 0;
+    };
+
     const formatPrice = (value) => {
-      if (!value) return "₪0";
-      // Remove existing commas before parsing, then add them back
-      const cleanValue = value.toString().replace(/,/g, '');
-      const num = parseFloat(cleanValue) || 0;
+      const num = parseCurrency(value);
       return num > 0 ? `₪${num.toLocaleString()}` : "₪0";
     };
 
@@ -553,191 +578,142 @@
       valuation: Object.keys(valuation || {})
     });
     
-    // Get direct access to helper data including raw webhook data
-    const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    
-    // Extract data from raw webhook data where the actual Hebrew fields are stored
-    let rawWebhookData = {};
-    if (helperData.raw_webhook_data) {
-      // Get the most recent webhook data
-      const webhookKeys = Object.keys(helperData.raw_webhook_data);
-      const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
-      if (latestWebhookKey && helperData.raw_webhook_data[latestWebhookKey]?.data) {
-        rawWebhookData = helperData.raw_webhook_data[latestWebhookKey].data;
-        console.log('🔍 LEVI DEBUG: Found raw webhook data:', rawWebhookData);
-      }
-    }
-    
-    const allData = { ...meta, ...vehicle, ...carDetails, ...leviReport, ...valuation, ...helperData, ...rawWebhookData };
-    console.log('🔍 LEVI DEBUG: Final merged data:', allData);
-    console.log('🔍 LEVI DEBUG: Raw webhook data keys:', Object.keys(rawWebhookData));
-    console.log('🔍 LEVI DEBUG: Helper data keys:', Object.keys(helperData));
-    console.log('🔍 LEVI DEBUG: Valuation data:', valuation);
-    
-    // DEBUG: Check for Hebrew fields directly
-    console.log('🔍 LEVI DEBUG: Hebrew price fields:', {
-      'מחיר בסיס': allData['מחיר בסיס'],
-      'מחיר סופי לרכב': allData['מחיר סופי לרכב'],
-      'עליה לכביש %': allData['עליה לכביש %']
+    // DEBUG: Check for Hebrew fields directly in result
+    console.log('🔍 LEVI DEBUG: Hebrew price fields in result:', {
+      'מחיר בסיס': result['מחיר בסיס'],
+      'מחיר סופי לרכב': result['מחיר סופי לרכב'],
+      'עליה לכביש %': result['עליה לכביש %']
     });
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
-      allData['סוג רכב'] ||
-      allData.vehicle_type || 
+      result['סוג רכב'] ||
+      result.vehicle_type || 
       '-'
     );
     document.getElementById("levi-manufacturer").textContent = formatValue(
-      allData['יצרן'] ||
-      allData.manufacturer || 
+      result['יצרן'] ||
+      result.manufacturer || 
       '-'
     );
     document.getElementById("levi-model-code").textContent = formatValue(
-      allData['קוד דגם'] ||
-      valuation.levi_code ||
+      result['קוד דגם'] ||
+      result.levi_code ||
       '-'
     );
     document.getElementById("levi-category").textContent = formatValue(
-      allData['קטגוריה'] ||
-      allData.category || 
+      result['קטגוריה'] ||
+      result.category || 
       '-'
     );
     document.getElementById("levi-year").textContent = formatValue(
-      allData['שנת יצור'] ||
-      allData.year || 
+      result['שנת יצור'] ||
+      result.year || 
       '-'
     );
     document.getElementById("levi-full-model").textContent = formatValue(
-      allData.full_model_name || 
-      allData.model ||
-      allData['דגם'] ||
-      `${allData.manufacturer || ''} ${allData.model || ''}`.trim() || 
+      result['שם דגם מלא'] ||
+      result.full_model_name || 
+      result.model ||
+      result['דגם'] ||
+      `${result.manufacturer || ''} ${result.model || ''}`.trim() || 
       '-'
     );
-    // Enhanced price mapping with multiple fallback locations
-    const basePrice = allData['מחיר בסיס'] || 
-                     helperData['מחיר בסיס'] || 
-                     (helperData.valuation && helperData.valuation['מחיר בסיס']) ||
-                     (helperData.expertise?.levi_report?.['מחיר בסיס']) ||
-                     valuation.base_price || 
-                     0;
-    
-    const finalPrice = allData['מחיר סופי לרכב'] || 
-                      helperData['מחיר סופי לרכב'] || 
-                      (helperData.valuation && helperData.valuation['מחיר סופי לרכב']) ||
-                      (helperData.expertise?.levi_report?.['מחיר סופי לרכב']) ||
-                      valuation.final_price || 
-                      0;
+    // FIXED: Use same approach as summary page - direct Hebrew field access
+    const basePrice = parseCurrency(result['מחיר בסיס']) || parseCurrency(result.base_price) || 0;
+    const finalPrice = parseCurrency(result['מחיר סופי לרכב']) || parseCurrency(result.final_price) || 0;
                       
     console.log('🔍 LEVI PRICE DEBUG:', {
       basePrice: basePrice,
       finalPrice: finalPrice,
-      'allData_base': allData['מחיר בסיס'],
-      'helper_base': helperData['מחיר בסיס'],
-      'valuation_base': valuation.base_price
+      'result_מחיר_בסיס': result['מחיר בסיס'],
+      'result_מחיר_סופי': result['מחיר סופי לרכב']
     });
     
     document.getElementById("levi-base-price").textContent = formatPrice(basePrice);
     document.getElementById("levi-final-price").textContent = formatPrice(finalPrice);
     
-    // Levi report date - separate from inspection and damage dates
+    // Levi report date - separate from inspection and damage dates  
     document.getElementById("levi-report-date").textContent = formatValue(
-      allData['תאריך'] ||
-      valuation.levi_report_date ||
-      allData.report_date ||
+      result['תאריך'] ||
+      result.levi_report_date ||
+      result.report_date ||
       '-'
     );
 
-    // FIXED: Registration adjustments with enhanced mapping
-    const regValue = allData['ערך עליה לכביש'] || helperData['ערך עליה לכביש'] || allData['עליה לכביש'] || helperData['עליה לכביש'] || "-";
-    const regPercent = allData['עליה לכביש %'] || helperData['עליה לכביש %'] || 0;
-    const regAmount = allData['ערך ש"ח עליה לכביש'] || helperData['ערך ש"ח עליה לכביש'] || 0;
-    const regTotal = allData['שווי מצטבר עליה לכביש'] || helperData['שווי מצטבר עליה לכביש'] || 0;
-    
-    console.log('🔍 LEVI REG DEBUG:', {
-      regValue, regPercent, regAmount, regTotal
-    });
-    
-    document.getElementById("levi-registration").textContent = formatValue(regValue);
-    document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent);
-    document.getElementById("levi-registration-value").textContent = formatPrice(regAmount);
-    document.getElementById("levi-registration-total").textContent = formatPrice(regTotal);
+    // FIXED: Registration adjustments - use same approach as summary
+    document.getElementById("levi-registration").textContent = formatValue(
+      result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
+    );
+    document.getElementById("levi-registration-percent").textContent = formatPercent(
+      result['עליה לכביש %'] || 0
+    );
+    document.getElementById("levi-registration-value").textContent = formatPrice(
+      result['ערך ש"ח עליה לכביש'] || 0
+    );
+    document.getElementById("levi-registration-total").textContent = formatPrice(
+      result['שווי מצטבר עליה לכביש'] || 0
+    );
 
-    // FIXED: Ownership adjustments - use Hebrew webhook fields directly
+    // FIXED: Ownership adjustments - use same approach as summary
     document.getElementById("levi-ownership").textContent = formatValue(
-      allData['ערך בעלות'] ||
-      allData['בעלות'] || 
-      "-"
+      result['ערך בעלות'] || result['בעלות'] || "-"
     );
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      allData['בעלות %'] || 
-      0
+      result['בעלות %'] || 0
     );
     document.getElementById("levi-ownership-value").textContent = formatPrice(
-      allData['ערך ש"ח בעלות'] || 
-      0
+      result['ערך ש"ח בעלות'] || 0
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
-      allData['שווי מצטבר בעלות'] || 
-      0
+      result['שווי מצטבר בעלות'] || 0
     );
 
-    // FIXED: KM adjustments - use Hebrew webhook fields directly
+    // FIXED: KM adjustments - use same approach as summary
     document.getElementById("levi-km").textContent = formatValue(
-      allData['ערך מס ק"מ'] ||
-      allData['מס ק"מ'] || 
-      "-"
+      result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
     document.getElementById("levi-km-percent").textContent = formatPercent(
-      allData['מס ק"מ %'] || 
-      0
+      result['מס ק"מ %'] || 0
     );
     document.getElementById("levi-km-value").textContent = formatPrice(
-      allData['ערך ש"ח מס ק"מ'] || 
-      0
+      result['ערך ש"ח מס ק"מ'] || 0
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
-      allData['שווי מצטבר מס ק"מ'] || 
-      0
+      result['שווי מצטבר מס ק"מ'] || 0
     );
 
-    // FIXED: Owners adjustments - use Hebrew webhook fields directly
+    // FIXED: Owners adjustments - use same approach as summary
     document.getElementById("levi-owners").textContent = formatValue(
-      allData['ערך מספר בעלים'] ||
-      allData['מספר בעלים'] || 
-      "-"
+      result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
     document.getElementById("levi-owners-percent").textContent = formatPercent(
-      allData['מספר בעלים %'] || 
-      0
+      result['מספר בעלים %'] || 0
     );
     document.getElementById("levi-owners-value").textContent = formatPrice(
-      allData['ערך ש"ח מספר בעלים'] || 
-      0
+      result['ערך ש"ח מספר בעלים'] || 0
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
-      allData['שווי מצטבר מספר בעלים'] || 
-      0
+      result['שווי מצטבר מספר בעלים'] || 0
     );
 
-    // FIXED: Features adjustments with enhanced mapping
-    const featValue = allData['ערך מאפיינים'] || helperData['ערך מאפיינים'] || allData['מאפיינים'] || helperData['מאפיינים'] || "-";
-    const featPercent = allData['מחיר מאפיינים %'] || helperData['מחיר מאפיינים %'] || 0;
-    const featAmount = allData['ערך ש"ח מאפיינים'] || helperData['ערך ש"ח מאפיינים'] || 0;
-    const featTotal = allData['שווי מצטבר מאפיינים'] || helperData['שווי מצטבר מאפיינים'] || 0;
-    
-    console.log('🔍 LEVI FEAT DEBUG:', {
-      featValue, featPercent, featAmount, featTotal
-    });
-    
-    document.getElementById("levi-features").textContent = formatValue(featValue);
-    document.getElementById("levi-features-percent").textContent = formatPercent(featPercent);
-    document.getElementById("levi-features-value").textContent = formatPrice(featAmount);
-    document.getElementById("levi-features-total").textContent = formatPrice(featTotal);
+    // FIXED: Features adjustments - use same approach as summary
+    document.getElementById("levi-features").textContent = formatValue(
+      result['ערך מאפיינים'] || result['מאפיינים'] || "-"
+    );
+    document.getElementById("levi-features-percent").textContent = formatPercent(
+      result['מחיר מאפיינים %'] || 0
+    );
+    document.getElementById("levi-features-value").textContent = formatPrice(
+      result['ערך ש"ח מאפיינים'] || 0
+    );
+    document.getElementById("levi-features-total").textContent = formatPrice(
+      result['שווי מצטבר מאפיינים'] || 0
+    );
 
-    // Features description - use the actual features text from the main מאפיינים field
+    // Features description - use the actual features text from the main מאפיינים field  
     document.getElementById("levi-features-description").textContent = formatValue(
-      allData['מאפיינים'] || // This contains the full features text in the webhook
-      allData['ערך מאפיינים'] || // Alternative field name
+      result['מאפיינים'] || // This contains the full features text in the webhook
+      result['ערך מאפיינים'] || // Alternative field name
       '-'
     );
 
