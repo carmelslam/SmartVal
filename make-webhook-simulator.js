@@ -79,7 +79,13 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
   
   // Update helper if available
   if (typeof window.updateHelper === 'function') {
-    window.updateHelper('car_details', richCarData);
+    // CRITICAL FIX: Create clean car_details without damage_date or timestamp
+    const cleanCarDetails = { ...richCarData };
+    delete cleanCarDetails.damage_date;  // Remove any damage_date
+    delete cleanCarDetails.timestamp;    // Remove timestamp
+    delete cleanCarDetails.processing_timestamp; // Remove processing timestamp
+    
+    window.updateHelper('car_details', cleanCarDetails);
     window.updateHelper('vehicle', richCarData);
     window.updateHelper('meta', {
       plate: richCarData.plate,
@@ -88,12 +94,19 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
       inspection_location: richCarData.location
     });
     
-    // CRITICAL FIX: Ensure case_info gets inspection_date, not damage_date  
+    // CRITICAL FIX: Set proper case_info with correct field separation
+    const currentYear = new Date().getFullYear();
     window.updateHelper('case_info', {
+      case_id: `YC-${richCarData.plate}-${currentYear}`,  // Proper format: YC-PLATENUMBER-YEAR
       plate: richCarData.plate,
       inspection_location: richCarData.location,
-      inspection_date: richCarData.timestamp ? richCarData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0]
+      inspection_date: richCarData.timestamp ? richCarData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+      status: 'active',
+      report_type: '',        // Empty for expertise stage
+      report_type_display: '' // Empty for expertise stage
       // Do NOT set damage_date here - it should remain empty until general info page
+      // Do NOT set garage_name here - it's separate from location
     });
     console.log('✅ Rich car data stored in helper');
   }

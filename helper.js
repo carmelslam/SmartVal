@@ -130,17 +130,17 @@ window.helper = existingHelper || {
     updated_at: ''
   },
   case_info: {
-    case_id: 'YC-UNKNOWN-2025',
+    case_id: '',  // Will be set dynamically as YC-PLATENUMBER-YEAR
     plate: '',
     status: 'active',
-    damage_date: '',
-    inspection_date: '',
+    damage_date: '',        // Should stay empty until general info page
+    inspection_date: '',    // Should get case opening date
     submission_date: '',
     created_at: '',
     inspection_location: '',
     damage_type: '',
-    report_type: 'final',
-    report_type_display: 'חוות דעת שמאי פרטית'
+    report_type: '',        // Dynamic based on current stage
+    report_type_display: '' // Dynamic based on report_type
   },
   stakeholders: {
     owner: {
@@ -1991,23 +1991,40 @@ export function initHelper(newData = null) {
   if (newData) {
     console.log('🔄 Merging new case data into helper:', newData);
     
-    // Update case_info with the correct field mappings
-    if (newData.inspection_date) {
-      helper.case_info.inspection_date = newData.inspection_date;
-    }
+    // Generate proper case_id: YC-PLATENUMBER-YEAR
+    const currentYear = new Date().getFullYear();
     if (newData.plate) {
+      helper.case_info.case_id = `YC-${newData.plate}-${currentYear}`;
       helper.case_info.plate = newData.plate;
       helper.vehicle.plate = newData.plate;
       helper.meta.plate = newData.plate;
     }
+    
+    // Set inspection date from case opening (NOT damage date)
+    if (newData.inspection_date) {
+      helper.case_info.inspection_date = newData.inspection_date;
+      // Do NOT set damage_date here - it stays empty until general info page
+    }
+    
+    // Set inspection location (NOT garage name)
     if (newData.location) {
       helper.case_info.inspection_location = newData.location;
       helper.meta.location = newData.location;
+      // Do NOT set garage name here - they are separate fields
     }
+    
+    // Set owner info
     if (newData.client_name) {
       helper.stakeholders.owner.name = newData.client_name;
       helper.meta.owner_name = newData.client_name;
     }
+    
+    // Set current stage report type (expertise stage)
+    helper.case_info.report_type = ''; // Empty for expertise stage
+    helper.case_info.report_type_display = ''; // Empty for expertise stage
+    
+    // Set creation timestamp
+    helper.case_info.created_at = new Date().toISOString();
     
     // Set the global helper
     window.helper = helper;

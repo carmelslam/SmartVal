@@ -149,7 +149,7 @@
     };
     
     window.helper.stakeholders.garage = {
-      name: data.garage_name || data.location || '',
+      name: data.garage_name || '',  // FIXED: Remove location fallback - garage and location are separate
       phone: data.garage_phone || '',
       email: data.garage_email || ''
     };
