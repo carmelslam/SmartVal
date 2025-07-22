@@ -58,9 +58,9 @@ export const UNIFIED_SCHEMAS = {
     inspection_location: '',
     damage_type: '',
     
-    // Report Configuration
-    report_type: 'final',
-    report_type_display: 'חוות דעת שמאי פרטית'
+    // Report Configuration - Dynamic based on current stage
+    report_type: '',           // Empty for expertise stage
+    report_type_display: ''    // Empty for expertise stage
   },
 
   // Client & Stakeholder Information
@@ -416,7 +416,8 @@ export class DataFlowStandardizer {
     caseInfo.status = meta.status || 'active';
     
     // Dates
-    caseInfo.damage_date = meta.damage_date || meta.damageDate || '';
+    // CRITICAL FIX: damage_date should NEVER be auto-populated from case opening
+    caseInfo.damage_date = '';  // Always empty until user enters in general info
     caseInfo.inspection_date = meta.inspection_date || '';
     caseInfo.submission_date = meta.submission_date || '';
     caseInfo.created_at = meta.created_at || new Date().toISOString();
@@ -426,8 +427,9 @@ export class DataFlowStandardizer {
     caseInfo.damage_type = meta.damage_type || meta.damageType || '';
     
     // Report configuration
-    caseInfo.report_type = meta.report_type || 'final';
-    caseInfo.report_type_display = meta.report_type_display || 'חוות דעת שמאי פרטית';
+    // CRITICAL FIX: report_type should be dynamic based on current stage
+    caseInfo.report_type = meta.report_type || '';        // Empty for expertise stage
+    caseInfo.report_type_display = meta.report_type_display || '';  // Empty for expertise stage
     
     this.log(`Case info migrated: ${caseInfo.case_id}`);
   }
