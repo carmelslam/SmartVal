@@ -51,6 +51,57 @@ After understanding all the issues and running a comprehensive audit combined wi
 
 ---
 
+# 🔤 HEBREW WEBHOOK TRANSLATION ISSUES FOUND
+
+## Problem Analysis
+
+Found Hebrew webhook response fields being incorrectly translated to English:
+
+1. **"תאריך הבדיקה" (inspection date)** - Currently being wrongly translated to **"damage_date"** instead of **"inspection_date"**
+2. **"מקום בדיקה" (inspection location)** - Currently being wrongly translated to **"garage_name"** instead of **"inspection_location"**
+
+## Issue Locations Identified
+
+### 1. Missing Mapping in field-mapping-dictionary.js
+- **File:** `/field-mapping-dictionary.js`
+- **Line:** Hebrew translations section (lines 17-162)
+- **Issue:** "תאריך הבדיקה" is completely missing from HEBREW_TO_ENGLISH mapping
+- **Current Incorrect Mapping:** Line 160: `'תאריך בדיקה': 'inspection_date'` (missing the ה)
+
+### 2. Disabled Hebrew Parser Issues
+- **File:** `/parse-hebrew-response.js.disabled` 
+- **Line 35:** `'מקום בדיקה': 'location'` - Should be `'inspection_location'`
+- **File:** `/test-parse-hebrew-response.js`
+- **Line 52:** Same incorrect mapping: `'מקום בדיקה': 'location'`
+
+### 3. Webhook.js Correct Implementation
+- **File:** `/webhook.js`
+- **Lines 270-272:** Correctly maps both fields:
+  ```javascript
+  'inspection_date': actualData.inspection_date || actualData['תאריך בדיקה'],
+  'location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
+  'inspection_location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
+  ```
+
+## Fix Plan
+
+### Task 1: Fix Primary Hebrew-to-English Mapping
+- Add missing `'תאריך הבדיקה': 'inspection_date'` to field-mapping-dictionary.js
+- Verify `'מקום בדיקה': 'inspection_location'` is correctly mapped
+
+### Task 2: Update Disabled Parser Files (for consistency)
+- Fix parse-hebrew-response.js.disabled mapping
+- Fix test-parse-hebrew-response.js mapping
+
+### Task 3: Verify Helper.js Regex Patterns
+- Confirm helper.js correctly handles both Hebrew forms
+- Test webhook processing with corrected mappings
+
+## Root Cause
+The field-mapping-dictionary.js is missing the exact Hebrew phrase "תאריך הבדיקה" and only has "תאריך בדיקה" (without the definite article "ה"). The webhook sends the full phrase with the definite article.
+
+---
+
 # 📊 DATA CAPTURE SYSTEM FIX - IMPLEMENTATION REPORT
 
 ## Project Overview

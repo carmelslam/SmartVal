@@ -87,6 +87,7 @@ export const HEBREW_TO_ENGLISH = {
   'מיקום': 'location',
   'מקום': 'location',
   'מקום בדיקה': 'inspection_location',
+  'מקום הבדיקה': 'inspection_location',  // CRITICAL FIX: Hebrew with definite article from Make.com
   'מוסך': 'garage_name',
   'שם מוסך': 'garage_name',
   'מוסך מטפל': 'garage_name',
@@ -158,6 +159,7 @@ export const HEBREW_TO_ENGLISH = {
   'נזק': 'damage_type',
   'תאריך נזק': 'damage_date',
   'תאריך בדיקה': 'inspection_date',
+  'תאריך הבדיקה': 'inspection_date',  // CRITICAL FIX: Hebrew with definite article from Make.com
   'תאריך': 'timestamp'
 };
 
