@@ -957,7 +957,7 @@ function processDirectData(data, result) {
     'קוד_משרד_התחבורה': ['vehicle.office_code'],
     
     // 🔧 EXACT LEVI JSON MAPPINGS - Critical for system-wide data consistency
-    'תאריך': ['case_info.date', 'meta.created_at'],
+    'תאריך': ['valuation.levi_report_date'],
     'סוג רכב': ['vehicle.vehicle_type'], 
     'יצרן': ['vehicle.manufacturer'],
     'קוד דגם': ['vehicle.model_code', 'valuation.levi_code'],

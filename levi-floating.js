@@ -219,6 +219,10 @@
           <div class="label">מחיר סופי לרכב</div>
           <div class="value price" id="levi-final-price">₪0</div>
         </div>
+        <div class="levi-field">
+          <div class="label">תאריך הוצאת דוח לוי</div>
+          <div class="value" id="levi-report-date">-</div>
+        </div>
       </div>
     </div>
 
@@ -549,6 +553,14 @@
       allData['מחיר סופי לרכב'] || 
       valuation.final_price || 
       0
+    );
+    
+    // Levi report date - separate from inspection and damage dates
+    document.getElementById("levi-report-date").textContent = formatValue(
+      allData['תאריך'] ||
+      valuation.levi_report_date ||
+      allData.report_date ||
+      '-'
     );
 
     // FIXED: Registration adjustments - use nested valuation.adjustments structure
