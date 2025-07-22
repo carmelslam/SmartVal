@@ -1440,6 +1440,17 @@ function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
 window.updateHelper = function(field, value) {
   if (!window.helper) initializeHelper();
 
+  // CRITICAL PROTECTION: Block damage_date from being set unless explicitly from general info page
+  if (field === 'case_info' && value && value.damage_date) {
+    const isFromGeneralInfo = sessionStorage.getItem('damageDate_manualEntry') === 'true';
+    if (!isFromGeneralInfo) {
+      console.log('🚫 BLOCKING case_info.damage_date update - not from manual entry. Value was:', value.damage_date);
+      // Remove damage_date from the value object
+      value = { ...value };
+      delete value.damage_date;
+    }
+  }
+
   const fieldMappings = {
     'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'manufacturer': ['vehicle.manufacturer'],

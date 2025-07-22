@@ -231,6 +231,7 @@ class ForceFormPopulator {
     // Case info fields
     if (helperData.case_info) {
       // CRITICAL FIX: Never auto-populate damage_date - user must enter it manually in general info
+      console.log('🚫 BLOCKING damage_date auto-fill. Helper damage_date value was:', helperData.case_info.damage_date);
       // mappings.damageDate = helperData.case_info.damage_date; // REMOVED
       mappings.damageType = helperData.case_info.damage_type;
     }
