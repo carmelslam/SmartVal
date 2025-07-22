@@ -491,33 +491,54 @@
       background: #f8f9fa;
     }
     
-    /* New compact adjustment display */
-    .adjustment-row {
-      display: flex;
-      align-items: center;
+    /* Adjustments table styling */
+    .adjustment-header-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.5fr 1.5fr;
       gap: 10px;
-      padding: 10px;
-      margin-bottom: 8px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #e1e8ed;
-      flex-wrap: wrap;
+      padding: 12px;
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px 8px 0 0;
+      border: 1px solid #2980b9;
     }
     
-    .adjustment-row label {
+    .adjustment-header {
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    .adjustment-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.5fr 1.5fr;
+      gap: 10px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-left: 1px solid #e1e8ed;
+      border-right: 1px solid #e1e8ed;
+      border-bottom: 1px solid #e1e8ed;
+      align-items: center;
+    }
+    
+    .adjustment-row:last-child {
+      border-radius: 0 0 8px 8px;
+    }
+    
+    .adjustment-title {
       font-weight: bold;
-      min-width: 120px;
       color: #2c3e50;
+      text-align: right;
     }
     
     .adjustment-value {
-      display: inline-block;
-      padding: 5px 10px;
+      text-align: center;
+      padding: 5px;
       background: white;
       border: 1px solid #ddd;
-      border-radius: 5px;
-      margin: 0 5px;
+      border-radius: 4px;
       font-family: monospace;
+      color: #2c3e50;
     }
 
     .adjustment-section {
@@ -1804,11 +1825,11 @@ class LeviProcessor {
       </div>
       <div class="data-item">
         <span class="data-label">קוד משרד התחבורה:</span>
-        <span class="data-value">${result.office_code || 'לא זמין'}</span>
+        <span class="data-value">${result.office_code || document.getElementById('office-code')?.value || 'לא זמין'}</span>
       </div>
       <div class="data-item">
         <span class="data-label">מקור הדו"ח:</span>
-        <span class="data-value">${this.getSourceLabel(result.source || result.report_source)}</span>
+        <span class="data-value">${this.getSourceLabel(result.source || result.report_source || document.getElementById('report-source')?.value)}</span>
       </div>
     `;
 
@@ -1853,6 +1874,18 @@ class LeviProcessor {
     const adjustmentsContainer = document.getElementById('adjustments-container');
     adjustmentsContainer.innerHTML = '';
 
+    // Add table headers
+    const headerRow = document.createElement('div');
+    headerRow.className = 'adjustment-header-row';
+    headerRow.innerHTML = `
+      <span class="adjustment-header">התאמת מחיר</span>
+      <span class="adjustment-header">ערך</span>
+      <span class="adjustment-header">אחוז %</span>
+      <span class="adjustment-header">סכום ש״ח</span>
+      <span class="adjustment-header">סכום מצטבר</span>
+    `;
+    adjustmentsContainer.appendChild(headerRow);
+
     // Define adjustment structure matching Hebrew webhook fields exactly
     const adjustmentSections = [
       {
@@ -1881,10 +1914,13 @@ class LeviProcessor {
       const adjustmentRow = document.createElement('div');
       adjustmentRow.className = 'adjustment-row';
       
-      const label = document.createElement('label');
-      label.textContent = section.title + ':';
-      adjustmentRow.appendChild(label);
+      // First column: title
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'adjustment-title';
+      titleSpan.textContent = section.title + ':';
+      adjustmentRow.appendChild(titleSpan);
       
+      // Following columns: field values
       section.fields.forEach(fieldKey => {
         // Get value directly from Hebrew webhook fields in result object
         let value = result[fieldKey] || '';
