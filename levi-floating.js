@@ -569,14 +569,6 @@
       return `${strValue}%`;
     };
 
-    // Basic vehicle information - FIXED: Use exact JSON field mappings from valuation data
-    console.log('🔍 LEVI DEBUG: Available data sources:', {
-      vehicle: Object.keys(vehicle),
-      carDetails: Object.keys(carDetails), 
-      leviReport: Object.keys(leviReport),
-      meta: Object.keys(meta),
-      valuation: Object.keys(valuation || {})
-    });
     
     // DEBUG: Check for Hebrew fields directly in result
     console.log('🔍 LEVI DEBUG: Hebrew price fields in result:', {
