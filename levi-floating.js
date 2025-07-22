@@ -633,12 +633,12 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // Use helper data like summary page
-    const regPercent = helper.levi_adjustments?.registration_percent || 
+    // Use same helper structure as helper.js
+    const regPercent = helper.valuation?.adjustments?.registration?.percent || 
                        result['עליה לכביש %'] || 
-                       (document.getElementById('manual-registration-percent') ? 
-                        document.getElementById('manual-registration-percent').value : 0);
-    document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent || 0);
+                       result['עליה לכביש'] || 
+                       0;
+    document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent);
     document.getElementById("levi-registration-value").textContent = formatPrice(
       result['ערך ש"ח עליה לכביש'] || 0
     );
@@ -651,12 +651,12 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // Use helper data like summary page
-    const ownPercent = helper.levi_adjustments?.ownership_percent || 
+    // Use same helper structure as helper.js
+    const ownPercent = helper.valuation?.adjustments?.ownership_type?.percent || 
                        result['בעלות %'] || 
-                       (document.getElementById('manual-ownership-percent') ? 
-                        document.getElementById('manual-ownership-percent').value : 0);
-    document.getElementById("levi-ownership-percent").textContent = formatPercent(ownPercent || 0);
+                       result['בעלות'] || 
+                       0;
+    document.getElementById("levi-ownership-percent").textContent = formatPercent(ownPercent);
     document.getElementById("levi-ownership-value").textContent = formatPrice(
       result['ערך ש"ח בעלות'] || 0
     );
@@ -682,11 +682,13 @@
     document.getElementById("levi-owners").textContent = formatValue(
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
-    document.getElementById("levi-owners-percent").textContent = formatPercent(
-      result['מספר בעלים %'] || 0
-    );
+    const ownersPercent = helper.valuation?.adjustments?.ownership_history?.percent || 
+                          result['מספר בעלים %'] || 
+                          result['מספר בעלים'] || 
+                          0;
+    document.getElementById("levi-owners-percent").textContent = formatPercent(ownersPercent);
     document.getElementById("levi-owners-value").textContent = formatPrice(
-      result['ערך ש"ח מספר בעלים'] || 0
+      result['ערך ש״ח מספר בעלים'] || result['ערך ש"ח מספר בעלים'] || 0
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
       result['שווי מצטבר מספר בעלים'] || 0
