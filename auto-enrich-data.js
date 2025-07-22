@@ -180,10 +180,10 @@
       window.refreshCarData();
     }
     
-    // TEMPORARILY DISABLED TO PREVENT INFINITE LOOP
-    // document.dispatchEvent(new CustomEvent('helperUpdate', { 
-    //   detail: { source: 'auto-enrich' } 
-    // }));
+    // Dispatch event
+    document.dispatchEvent(new CustomEvent('helperUpdate', { 
+      detail: { source: 'auto-enrich' } 
+    }));
   }
   
   // Check on page load
