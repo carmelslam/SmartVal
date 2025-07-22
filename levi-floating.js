@@ -622,143 +622,105 @@
       '-'
     );
 
-    // FIXED: Registration adjustments - use nested valuation.adjustments structure
-    const regAdj = valuation.adjustments?.registration || {};
+    // FIXED: Registration adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-registration").textContent = formatValue(
-      regAdj.value || 
-      regAdj.description ||
-      allData.registration_date || 
+      allData['ערך עליה לכביש'] ||
+      allData['עליה לכביש'] || 
       "-"
     );
     document.getElementById("levi-registration-percent").textContent = formatPercent(
-      regAdj.percent || 
-      allData.registration_percent || 
+      allData['עליה לכביש %'] || 
       0
     );
     document.getElementById("levi-registration-value").textContent = formatPrice(
-      regAdj.amount || 
-      allData.registration_amount || 
+      allData['ערך ש"ח עליה לכביש'] || 
       0
     );
     document.getElementById("levi-registration-total").textContent = formatPrice(
-      regAdj.cumulative || 
-      allData.registration_cumulative || 
+      allData['שווי מצטבר עליה לכביש'] || 
       0
     );
 
-    // FIXED: Ownership adjustments - use nested structure
-    const ownAdj = valuation.adjustments?.ownership_type || {};
+    // FIXED: Ownership adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-ownership").textContent = formatValue(
-      ownAdj.value || 
-      ownAdj.description ||
-      allData.ownership_type || 
+      allData['ערך בעלות'] ||
+      allData['בעלות'] || 
       "-"
     );
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      ownAdj.percent || 
-      allData.ownership_percent || 
+      allData['בעלות %'] || 
       0
     );
     document.getElementById("levi-ownership-value").textContent = formatPrice(
-      ownAdj.amount || 
-      allData.ownership_amount || 
+      allData['ערך ש"ח בעלות'] || 
       0
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
-      ownAdj.cumulative || 
-      allData.ownership_cumulative || 
+      allData['שווי מצטבר בעלות'] || 
       0
     );
 
-    // FIXED: KM adjustments - use nested structure
-    const kmAdj = valuation.adjustments?.mileage || {};
+    // FIXED: KM adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-km").textContent = formatValue(
-      kmAdj.value || 
-      kmAdj.description ||
-      allData.km || 
+      allData['ערך מס ק"מ'] ||
+      allData['מס ק"מ'] || 
       "-"
     );
     document.getElementById("levi-km-percent").textContent = formatPercent(
-      kmAdj.percent || 
-      allData.mileage_percent || 
+      allData['מס ק"מ %'] || 
       0
     );
     document.getElementById("levi-km-value").textContent = formatPrice(
-      kmAdj.amount || 
-      allData.mileage_amount || 
+      allData['ערך ש"ח מס ק"מ'] || 
       0
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
-      kmAdj.cumulative || 
-      allData.mileage_cumulative || 
+      allData['שווי מצטבר מס ק"מ'] || 
       0
     );
 
-    // FIXED: Owners adjustments - use nested structure
-    const ownerAdj = valuation.adjustments?.ownership_history || {};
+    // FIXED: Owners adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-owners").textContent = formatValue(
-      ownerAdj.value || 
-      ownerAdj.owner_count ||
-      allData.owner_count || 
+      allData['ערך מספר בעלים'] ||
+      allData['מספר בעלים'] || 
       "-"
     );
     document.getElementById("levi-owners-percent").textContent = formatPercent(
-      ownerAdj.percent || 
-      allData.owners_percent || 
+      allData['מספר בעלים %'] || 
       0
     );
     document.getElementById("levi-owners-value").textContent = formatPrice(
-      ownerAdj.amount || 
-      allData.owners_amount || 
+      allData['ערך ש"ח מספר בעלים'] || 
       0
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
-      ownerAdj.cumulative || 
-      allData.owners_cumulative || 
+      allData['שווי מצטבר מספר בעלים'] || 
       0
     );
 
-    // FIXED: Features adjustments - use nested structure
-    const featAdj = valuation.adjustments?.features || {};
-    // FIXED: Handle features text properly - check multiple locations
-    console.log('🔧 FEATURES DEBUG:', {
-      'vehicle.features_text': vehicle.features_text,
-      'featAdj.value': featAdj.value,
-      'featAdj.description': featAdj.description,
-      'allData.features': allData.features,
-      'vehicle.features': vehicle.features
-    });
-    
+    // FIXED: Features adjustments - use Hebrew webhook fields directly
     document.getElementById("levi-features").textContent = formatValue(
-      vehicle.features_text ||  // Try preserved features text first
-      vehicle.features ||  // Then vehicle.features 
-      featAdj.value || 
-      featAdj.description ||
-      allData.features || 
+      allData['ערך מאפיינים'] ||
+      allData['מאפיינים'] || 
       "-"
     );
     document.getElementById("levi-features-percent").textContent = formatPercent(
-      featAdj.percent || 
-      allData.features_percent || 
+      allData['מחיר מאפיינים %'] || 
       0
     );
     document.getElementById("levi-features-value").textContent = formatPrice(
-      featAdj.amount || 
-      allData.features_amount || 
+      allData['ערך ש"ח מאפיינים'] || 
       0
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
-      featAdj.cumulative || 
-      allData.features_cumulative || 
+      allData['שווי מצטבר מאפיינים'] || 
       0
     );
 
-    // Features description - use the actual features text, not the field name
+    // Features description - use the actual features text from the main מאפיינים field
     document.getElementById("levi-features-description").textContent = formatValue(
-      allData.features_text || 
-      allData['מאפיינים_text'] || 
-      vehicle.features_text || 
-      (allData['מאפיינים'] !== 'מאפיינים' ? allData['מאפיינים'] : '') ||
+      allData['מאפיינים'] || // This contains the full features text in the webhook
+      allData['ערך מאפיינים'] || // Alternative field name
       '-'
     );
 
