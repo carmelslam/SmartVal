@@ -87,6 +87,14 @@ window.simulateMakeWebhookResponse = function(plateNumber = '5785269') {
       owner_name: richCarData.owner,
       inspection_location: richCarData.location
     });
+    
+    // CRITICAL FIX: Ensure case_info gets inspection_date, not damage_date  
+    window.updateHelper('case_info', {
+      plate: richCarData.plate,
+      inspection_location: richCarData.location,
+      inspection_date: richCarData.timestamp ? richCarData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0]
+      // Do NOT set damage_date here - it should remain empty until general info page
+    });
     console.log('✅ Rich car data stored in helper');
   }
   
