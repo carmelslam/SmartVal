@@ -262,14 +262,16 @@ export async function sendToWebhook(id, payload) {
             'registration_date': actualData.registration_date || actualData['עליה לכביש'],
             'owner_count': actualData.owner_count || actualData['מספר בעלים'],
             
-            // Case info fields
-            'damage_date': actualData.damage_date || actualData['תאריך נזק'],
-            'damageDate': actualData.damage_date || actualData['תאריך נזק'],
+            // Case info fields  
+            'damage_date': actualData.damage_date || actualData['תאריך נזק'],  // Only from general info - won't exist in case opening webhook
+            'damageDate': actualData.damage_date || actualData['תאריך נזק'],   // Only from general info - won't exist in case opening webhook
             'damage_type': actualData.damage_type || actualData['סוג נזק'],
             'damageType': actualData.damage_type || actualData['סוג נזק'],
-            'inspection_date': actualData.inspection_date || actualData['תאריך בדיקה'],
+            // CRITICAL FIX: Map webhook "תאריך הבדיקה" to inspection_date (not damage_date)
+            'inspection_date': actualData.inspection_date || actualData['תאריך הבדיקה'] || actualData['תאריך בדיקה'],
+            // CRITICAL FIX: Map webhook "מקום בדיקה" to inspection_location (not garage_name) 
             'location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
-            'inspection_location': actualData.location || actualData['מקום בדיקה'] || actualData.inspection_location,
+            'inspection_location': actualData['מקום בדיקה'] || actualData.location || actualData.inspection_location,
             
             // 🔧 LEVI FORM FIELD MAPPINGS - Manual adjustment form fields
             'manual-registration': actualData['עליה לכביש'] || actualData['ערך עליה לכביש'],
