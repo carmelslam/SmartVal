@@ -666,14 +666,14 @@
     document.getElementById("vehicle-fuel-type").textContent = formatValue(
       vehicle.fuel_type || carDetails.fuel_type
     );
+    // Model code - distinct code from open case webhook only
     document.getElementById("vehicle-model-code").textContent = formatValue(
-      vehicle.model_code || carDetails.model_code
+      vehicle.model_code || carDetails.model_code || meta.vehicle_code
     );
-    // Levi code - mapped from Levi report webhook response
+    // Levi code - mapped specifically from Levi webhook response  
     document.getElementById("vehicle-levi-code").textContent = formatValue(
-      vehicle.model_code || 
+      (valuationData && valuationData.levi_code) ||
       (valuationData && valuationData.model_code) ||
-      carDetails.model_code ||
       vehicle.levi_code || 
       carDetails.levi_code
     );
@@ -716,9 +716,11 @@
     );
     
     // Additional fields from general info
-    // Base price - mapped from Levi report valuation data
+    // Base price - mapped specifically from Levi webhook valuation data
     document.getElementById("car-base-price").textContent = formatValue(
       (valuationData && valuationData.base_price) || 
+      (valuationData && valuationData.price) ||
+      (valuationData && valuationData.market_value) ||
       carDetails.base_price || 
       vehicle.base_price ||
       "-"
@@ -730,13 +732,14 @@
     document.getElementById("car-odometer").textContent = formatValue(
       vehicle.km || carDetails.odo || carDetails.km
     );
+    // Inspection location - only from open case page
     document.getElementById("car-inspection-location").textContent = formatValue(
-      meta.location || carDetails.location
+      meta.inspection_location || meta.location
     );
 
-    // Garage info - check stakeholders and car_details
+    // Garage name - only from general info page, separate from inspection location
     document.getElementById("garage-name").textContent = formatValue(
-      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName || meta.location
+      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName
     );
     document.getElementById("garage-phone").textContent = formatValue(
       stakeholders.garage?.phone || carDetails.garage_phone || carDetails.garagePhone
