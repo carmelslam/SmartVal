@@ -643,7 +643,11 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // DEBUG: Check registration percent value
+    // DEBUG: Check registration percent value - enhanced debugging
+    console.log('🔍 LEVI DEBUG: Checking registration percent field access...');
+    console.log('🔍 LEVI DEBUG: result[\'עליה לכביש %\']:', result['עליה לכביש %']);
+    console.log('🔍 LEVI DEBUG: All keys with עליה:', Object.keys(result).filter(key => key.includes('עליה')));
+    
     const regPercent = result['עליה לכביש %'];
     console.log('🔍 LEVI DEBUG: Registration percent raw value:', regPercent, 'type:', typeof regPercent);
     document.getElementById("levi-registration-percent").textContent = formatPercent(regPercent || 0);
@@ -659,7 +663,11 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // DEBUG: Check ownership percent value
+    // DEBUG: Check ownership percent value - enhanced debugging
+    console.log('🔍 LEVI DEBUG: Checking ownership percent field access...');
+    console.log('🔍 LEVI DEBUG: result[\'בעלות %\']:', result['בעלות %']);
+    console.log('🔍 LEVI DEBUG: All keys with בעלות:', Object.keys(result).filter(key => key.includes('בעלות')));
+    
     const ownPercent = result['בעלות %'];
     console.log('🔍 LEVI DEBUG: Ownership percent raw value:', ownPercent, 'type:', typeof ownPercent);
     document.getElementById("levi-ownership-percent").textContent = formatPercent(ownPercent || 0);
