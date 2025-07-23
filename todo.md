@@ -145,66 +145,90 @@ The findings provide a clear roadmap for enhancing each floating screen with app
 
 ---
 
-# 📋 ESTIMATE BUILDER FIELD MAPPING IMPLEMENTATION
+# 📋 ESTIMATE BUILDER FIELD MAPPING FIX IMPLEMENTATION
 
 ## Plan
 
-Map screenshot fields from estimate builder page to relevant helper keys in the field-mapping-dictionary.js system.
+Fix estimate builder field population to read FROM helper using proper standardized structure paths, with change handlers for user modifications.
 
 ### Implementation Tasks:
 
-1. **[COMPLETED]** Analyze screenshot fields from estimate builder form
-2. **[COMPLETED]** Map identified fields to existing helper structure paths
-3. **[COMPLETED]** Update field-mapping-dictionary.js with new Hebrew mappings
-4. **[COMPLETED]** Test the new field mappings with estimate builder
-5. **[COMPLETED]** Update todo.md with implementation details
+1. **[COMPLETED]** Fix estimate builder to populate FROM helper using proper structure paths
+2. **[COMPLETED]** Ensure all annotated fields read from standardized helper paths  
+3. **[COMPLETED]** Keep change handlers for user modifications
+4. **[COMPLETED]** Test field population works correctly
+5. **[COMPLETED]** Update todo.md with correct implementation
 
 ## Implementation Report
 
-### Fields Mapped from Screenshot:
+### Fixed Field Population Logic:
 
-**✅ Already Mapped Fields:**
-- מחיר בסיס (levi base price) → `base_price` → `valuation.base_price`
-- levi code → `levi_code` → `valuation.levi_code`
-- HD572 (קוד דגם) → `levi_code` → `valuation.levi_code`
-- ערך השוק של הרכב (Market Value) → `market_value` → `vehicle.market_value`
-- כתובת בעל הרכב → `address` → `stakeholders.owner.address`
-- שם בעל הרכב → `owner` → `stakeholders.owner.name`
-- חברת ביטוח → `insurance_company` → `stakeholders.insurance.company`
-- טלפון בעל הרכב → `phone` → `stakeholders.owner.phone`
-- סוכן ביטוח → `insurance_agent` → `stakeholders.insurance.agent.name`
+**✅ Primary Goal: Fields populate FROM helper (not TO helper)**
+All fields now correctly read from the standardized helper structure with legacy fallbacks.
 
-**🆕 New Mappings Added:**
-- תאריך הפקה (Issue Date) → `issue_date` → `case_info.issue_date`
-- אימייל חברת ביטוח → `insurance_email` → `stakeholders.insurance.email`
-- אימייל סוכן ביטוח → `insurance_agent_email` → `stakeholders.insurance.agent.email`
-- טלפון סוכן ביטוח → `insurance_agent_phone` → `stakeholders.insurance.agent.phone`
+**🔧 Fields Fixed from Screenshot:**
 
-### UI Field ID Mappings Added:
+1. **מחיר בסיס (Base Price)**
+   - Fixed: `helper.valuation.base_price` → `carBasePrice` field
+   - Fallback: `helper.car_details.base_price` → `helper.levi_report.base_price`
 
-**Estimate Builder Specific IDs:**
-- `insuranceEmail` → `stakeholders.insurance.email`
-- `agentPhone` → `stakeholders.insurance.agent.phone`
-- `agentEmail` → `stakeholders.insurance.agent.email`
-- `carReportDate` → `case_info.issue_date`
+2. **ערך השוק של הרכב (Market Value)**  
+   - Fixed: `helper.vehicle.market_value` → `carMarketValue` field
+   - Fallback: `helper.expertise.calculations.market_value` → `helper.valuation.market_value`
+
+3. **תאריך הפקה (Issue Date)**
+   - Fixed: `helper.case_info.issue_date` → `carReportDate` field
+   - Fallback: `helper.car_details.report_date` → `helper.levi_report.report_date`
+
+4. **שם בעל הרכב (Owner Name)**
+   - Fixed: `helper.stakeholders.owner.name` → `ownerName` field
+   - Fallback: `helper.client.name`
+
+5. **כתובת בעל הרכב (Owner Address)**
+   - Fixed: `helper.stakeholders.owner.address` → `ownerAddress` field
+   - Fallback: `helper.client.address`
+
+6. **טלפון בעל הרכב (Owner Phone)**
+   - Fixed: `helper.stakeholders.owner.phone` → `ownerPhone` field
+   - Fallback: `helper.client.phone`
+
+7. **חברת ביטוח (Insurance Company)**
+   - Fixed: `helper.stakeholders.insurance.company` → `insuranceCompany` field
+   - Fallback: `helper.client.insurance_company`
+
+8. **אימייל חברת ביטוח (Insurance Email)**
+   - Fixed: `helper.stakeholders.insurance.email` → `insuranceEmail` field
+   - Fallback: `helper.client.insurance_email`
+
+9. **סוכן ביטוח (Insurance Agent)**
+   - Fixed: `helper.stakeholders.insurance.agent.name` → `insuranceAgent` field
+   - Fallback: `helper.client.insurance_agent`
+
+10. **טלפון סוכן ביטוח (Agent Phone)**
+    - Fixed: `helper.stakeholders.insurance.agent.phone` → `agentPhone` field
+    - Fallback: `helper.client.insurance_agent_phone`
+
+11. **אימייל סוכן ביטוח (Agent Email)**
+    - Fixed: `helper.stakeholders.insurance.agent.email` → `agentEmail` field
+    - Fallback: `helper.client.insurance_agent_email`
 
 ### Changes Made:
 
-1. **HEBREW_TO_ENGLISH mapping**: Added 4 new Hebrew field translations
-2. **MAKECOM_TO_HELPER mapping**: Added `issue_date` mapping to `case_info.issue_date`
-3. **UI_FIELD_TO_HELPER mapping**: Added 4 estimate builder specific field IDs
+1. **Field Population Logic**: Updated all fields to read FROM standardized helper structure paths
+2. **Change Handlers**: Maintained `updateHelperFromContactField()` function for user modifications
+3. **Legacy Compatibility**: Kept fallbacks to legacy `helper.client` and `helper.car_details` structures
+4. **Console Logging**: Added logging to track field population from proper helper paths
 
 ### Integration Status:
 
-The new field mappings are now integrated into the comprehensive field mapping system and will automatically work with:
-- Helper data population from Make.com webhooks
-- UI form population from helper data
-- Hebrew field translation from OCR systems
-- Field validation and error handling
+**✅ CORRECT DATA FLOW:**
+- **Default**: Fields populate FROM helper → UI (using standardized paths)
+- **User Changes**: UI → helper (when user modifies fields manually)
+- **Compatibility**: Legacy structures maintained for backward compatibility
 
 ### Review Summary:
 
-Successfully mapped all visible fields from the estimate builder screenshot to the appropriate helper structure paths. The field mapping dictionary now contains complete coverage for the estimate builder form, ensuring proper 2-way data flow between UI, helper system, and external data sources.
+Successfully fixed the estimate builder field population logic to correctly read FROM the standardized helper structure paths. All fields from the screenshot now populate from the proper helper locations with appropriate fallbacks, while maintaining the ability for users to modify values and update the helper when needed.
 
 ---
 

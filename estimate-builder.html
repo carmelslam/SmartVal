@@ -949,14 +949,14 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('contactData')">נתוני התקשרות (הצג/הסתר)</button>
       <div id="contactData" style="display:none;">
         <div class="form-grid">
-          <div><label>שם בעל הרכב:</label><input type="text" id="ownerName" /></div>
-          <div><label>כתובת בעל הרכב:</label><input type="text" id="ownerAddress" /></div>
-          <div><label>טלפון בעל הרכב:</label><input type="text" id="ownerPhone" /></div>
-          <div><label>חברת ביטוח:</label><input type="text" id="insuranceCompany" /></div>
-          <div><label>אימייל חברת ביטוח:</label><input type="text" id="insuranceEmail" /></div>
-          <div><label>סוכן ביטוח:</label><input type="text" id="insuranceAgent" onchange="triggerFloatingScreenRefresh();" /></div>
-          <div><label>טלפון סוכן ביטוח:</label><input type="text" id="agentPhone" onchange="triggerFloatingScreenRefresh();" /></div>
-          <div><label>אימייל סוכן ביטוח:</label><input type="text" id="agentEmail" /></div>
+          <div><label>שם בעל הרכב:</label><input type="text" id="ownerName" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>כתובת בעל הרכב:</label><input type="text" id="ownerAddress" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>טלפון בעל הרכב:</label><input type="text" id="ownerPhone" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>חברת ביטוח:</label><input type="text" id="insuranceCompany" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>אימייל חברת ביטוח:</label><input type="text" id="insuranceEmail" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>סוכן ביטוח:</label><input type="text" id="insuranceAgent" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
+          <div><label>טלפון סוכן ביטוח:</label><input type="text" id="agentPhone" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
+          <div><label>אימייל סוכן ביטוח:</label><input type="text" id="agentEmail" onchange="updateHelperFromContactField(this);" /></div>
         </div>
       </div>
     </div>
@@ -1719,11 +1719,18 @@
           document.getElementById('carModel').value = helper.car_details?.model || '';
           document.getElementById('carYear').value = helper.car_details?.year || '';
           document.getElementById('carModelCode').value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
-          document.getElementById('carBasePrice').value = helper.car_details?.base_price ? `₪${helper.car_details.base_price}` : '';
-          document.getElementById('carMarketValue').value = helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '';
-          // Convert date to YYYY-MM-DD format for date input
-          const reportDate = helper.car_details?.report_date || helper.levi_report?.report_date || '';
-          document.getElementById('carReportDate').value = convertToDateInputFormat(reportDate);
+          // Base price from standardized valuation structure (with legacy fallback)
+          const basePrice = helper.valuation?.base_price || helper.car_details?.base_price || helper.levi_report?.base_price;
+          document.getElementById('carBasePrice').value = basePrice ? `₪${basePrice}` : '';
+          console.log('✅ Base price populated FROM helper.valuation.base_price:', basePrice);
+          // Market value from standardized vehicle structure (with legacy fallback) 
+          const marketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
+          document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+          console.log('✅ Market value populated FROM helper.vehicle.market_value:', marketValue);
+          // Issue date from standardized case_info structure (with legacy fallback)
+          const issueDate = helper.case_info?.issue_date || helper.car_details?.report_date || helper.levi_report?.report_date || '';
+          document.getElementById('carReportDate').value = convertToDateInputFormat(issueDate);
+          console.log('✅ Issue date populated FROM helper.case_info.issue_date:', issueDate);
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};
@@ -1766,26 +1773,41 @@
           loadGrossCalculationData(); // Load gross calculation data from helper
         }, 200);
         
-        // Load contact data (now editable) and sync to car_details
-        if (helper.client) {
-          document.getElementById('ownerName').value = helper.client.name || '';
-          document.getElementById('ownerAddress').value = helper.client.address || '';
-          document.getElementById('ownerPhone').value = helper.client.phone || '';
-          document.getElementById('insuranceCompany').value = helper.client.insurance_company || '';
-          document.getElementById('insuranceEmail').value = helper.client.insurance_email || '';
-          document.getElementById('insuranceAgent').value = helper.client.insurance_agent || '';
-          document.getElementById('agentPhone').value = helper.client.insurance_agent_phone || '';
-          document.getElementById('agentEmail').value = helper.client.insurance_agent_email || '';
+        // Load contact data using standardized helper structure
+        const getNestedValue = (obj, path, defaultValue = '') => {
+          const keys = path.split('.');
+          let current = obj;
+          for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+              current = current[key];
+            } else {
+              return defaultValue;
+            }
+          }
+          return current || defaultValue;
+        };
+        
+        // Populate ALL fields from standardized helper structure paths (with legacy fallback)
+        document.getElementById('ownerName').value = getNestedValue(helper, 'stakeholders.owner.name') || helper.client?.name || '';
+        document.getElementById('ownerAddress').value = getNestedValue(helper, 'stakeholders.owner.address') || helper.client?.address || '';  
+        document.getElementById('ownerPhone').value = getNestedValue(helper, 'stakeholders.owner.phone') || helper.client?.phone || '';
+        document.getElementById('insuranceCompany').value = getNestedValue(helper, 'stakeholders.insurance.company') || helper.client?.insurance_company || '';
+        document.getElementById('insuranceEmail').value = getNestedValue(helper, 'stakeholders.insurance.email') || helper.client?.insurance_email || '';
+        document.getElementById('insuranceAgent').value = getNestedValue(helper, 'stakeholders.insurance.agent.name') || helper.client?.insurance_agent || '';
+        document.getElementById('agentPhone').value = getNestedValue(helper, 'stakeholders.insurance.agent.phone') || helper.client?.insurance_agent_phone || '';
+        document.getElementById('agentEmail').value = getNestedValue(helper, 'stakeholders.insurance.agent.email') || helper.client?.insurance_agent_email || '';
+        
+        console.log('✅ All contact fields populated FROM helper structure');
           
-          // Sync client data to car_details structure for floating screen compatibility
-          helper.car_details = helper.car_details || {};
-          helper.car_details.owner = helper.client.name || '';
-          helper.car_details.ownerAddress = helper.client.address || '';
-          helper.car_details.ownerPhone = helper.client.phone || '';
-          helper.car_details.insuranceCompany = helper.client.insurance_company || '';
-          helper.car_details.agentName = helper.client.insurance_agent || '';
-          helper.car_details.insurance_agent_phone = helper.client.insurance_agent_phone || '';
-          helper.car_details.insurance_agent_email = helper.client.insurance_agent_email || '';
+        // Sync data to both standardized and legacy structures for compatibility
+        helper.car_details = helper.car_details || {};
+        helper.car_details.owner = getNestedValue(helper, 'stakeholders.owner.name') || helper.client?.name || '';
+        helper.car_details.ownerAddress = getNestedValue(helper, 'stakeholders.owner.address') || helper.client?.address || '';
+        helper.car_details.ownerPhone = getNestedValue(helper, 'stakeholders.owner.phone') || helper.client?.phone || '';
+        helper.car_details.insuranceCompany = getNestedValue(helper, 'stakeholders.insurance.company') || helper.client?.insurance_company || '';
+        helper.car_details.agentName = getNestedValue(helper, 'stakeholders.insurance.agent.name') || helper.client?.insurance_agent || '';
+        helper.car_details.insurance_agent_phone = getNestedValue(helper, 'stakeholders.insurance.agent.phone') || helper.client?.insurance_agent_phone || '';
+        helper.car_details.insurance_agent_email = getNestedValue(helper, 'stakeholders.insurance.agent.email') || helper.client?.insurance_agent_email || '';
           
           // Note: garageName and garagePhone are not in the builder, so they'll remain empty
           helper.car_details.garageName = helper.car_details.garageName || '';
@@ -7725,6 +7747,101 @@
     
     // Initialize builder state when page loads
     document.addEventListener('DOMContentLoaded', initializeBuilderState);
+    
+    // Update helper structure from contact field changes using field mapping dictionary
+    function updateHelperFromContactField(element) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const fieldId = element.id;
+        const value = element.value;
+        
+        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
+        
+        // Set nested value helper function
+        const setNestedValue = (obj, path, val) => {
+          const keys = path.split('.');
+          let current = obj;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object') {
+              current[key] = {};
+            }
+            current = current[key];
+          }
+          current[keys[keys.length - 1]] = val;
+        };
+        
+        // Map field IDs to helper structure paths using field mapping dictionary
+        const fieldMappings = {
+          'ownerName': 'stakeholders.owner.name',
+          'ownerAddress': 'stakeholders.owner.address', 
+          'ownerPhone': 'stakeholders.owner.phone',
+          'insuranceCompany': 'stakeholders.insurance.company',
+          'insuranceEmail': 'stakeholders.insurance.email',
+          'insuranceAgent': 'stakeholders.insurance.agent.name',
+          'agentPhone': 'stakeholders.insurance.agent.phone',
+          'agentEmail': 'stakeholders.insurance.agent.email',
+          'carReportDate': 'case_info.issue_date'
+        };
+        
+        // Update standardized helper structure
+        if (fieldMappings[fieldId]) {
+          setNestedValue(helper, fieldMappings[fieldId], value);
+          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
+        }
+        
+        // Also maintain legacy structure for backward compatibility
+        helper.client = helper.client || {};
+        helper.car_details = helper.car_details || {};
+        
+        const legacyMappings = {
+          'ownerName': () => {
+            helper.client.name = value;
+            helper.car_details.owner = value;
+          },
+          'ownerAddress': () => {
+            helper.client.address = value;
+            helper.car_details.ownerAddress = value;
+          },
+          'ownerPhone': () => {
+            helper.client.phone = value;
+            helper.car_details.ownerPhone = value;
+          },
+          'insuranceCompany': () => {
+            helper.client.insurance_company = value;
+            helper.car_details.insuranceCompany = value;
+          },
+          'insuranceEmail': () => {
+            helper.client.insurance_email = value;
+          },
+          'insuranceAgent': () => {
+            helper.client.insurance_agent = value;
+            helper.car_details.agentName = value;
+          },
+          'agentPhone': () => {
+            helper.client.insurance_agent_phone = value;
+            helper.car_details.insurance_agent_phone = value;
+          },
+          'agentEmail': () => {
+            helper.client.insurance_agent_email = value;
+            helper.car_details.insurance_agent_email = value;
+          }
+        };
+        
+        if (legacyMappings[fieldId]) {
+          legacyMappings[fieldId]();
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        localStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`💾 Helper updated for field: ${fieldId}`);
+        
+      } catch (error) {
+        console.error('❌ Error updating helper from contact field:', error);
+      }
+    }
     
   </script>
   
