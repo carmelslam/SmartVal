@@ -1702,14 +1702,20 @@ function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
 window.updateHelper = function(field, value) {
   if (!window.helper) initializeHelper();
 
-  // CRITICAL PROTECTION: Block damage_date from being set unless explicitly from general info page
+  // FIXED: Allow damage_date updates but respect manual entries
   if (field === 'case_info' && value && value.damage_date) {
     const isFromGeneralInfo = sessionStorage.getItem('damageDate_manualEntry') === 'true';
-    if (!isFromGeneralInfo) {
-      console.log('🚫 BLOCKING case_info.damage_date update - not from manual entry. Value was:', value.damage_date);
-      // Remove damage_date from the value object
+    const existingManualDate = window.helper?.case_info?.damage_date;
+    
+    if (isFromGeneralInfo) {
+      console.log('✅ ALLOWING case_info.damage_date update from manual entry:', value.damage_date);
+    } else if (existingManualDate && existingManualDate !== value.damage_date) {
+      console.log('🚫 PROTECTING existing manual damage_date entry. Rejecting value:', value.damage_date);
+      // Remove damage_date from the value object to protect manual entry
       value = { ...value };
       delete value.damage_date;
+    } else {
+      console.log('✅ ALLOWING case_info.damage_date update (no manual entry exists):', value.damage_date);
     }
   }
 

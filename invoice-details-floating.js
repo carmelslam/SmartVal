@@ -85,6 +85,25 @@
       font-weight: 600;
     }
     
+    .invoice-field .value.editable {
+      background: white;
+      border: 1px solid #f59e0b;
+      cursor: text;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    
+    .invoice-field input.edit-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      font-size: 14px;
+      direction: rtl;
+      box-sizing: border-box;
+      font-weight: 600;
+    }
+    
     .value.price {
       color: #059669;
       font-weight: bold;
@@ -191,6 +210,17 @@
   modal.id = "invoiceDetailsModal";
   modal.innerHTML = `
     <div class="invoice-modal-title">פרטי חשבוניות</div>
+    <div class="edit-mode-controls" style="text-align: center; margin-bottom: 15px;">
+      <button id="toggle-invoice-edit-mode" class="edit-toggle-btn" style="background: #f59e0b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+        ✏️ עריכת חשבוניות
+      </button>
+      <button id="save-invoice-changes" class="save-btn" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
+        💾 שמור
+      </button>
+      <button id="cancel-invoice-edit" class="cancel-btn" style="background: #6b7280; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
+        ❌ ביטול
+      </button>
+    </div>
     <div id="invoiceContent">
       <!-- Content will be loaded dynamically -->
     </div>
@@ -200,6 +230,187 @@
     </div>
   `;
   document.body.appendChild(modal);
+
+  // 🔧 Add invoice editing functionality
+  let isInvoiceEditMode = false;
+  let invoiceOriginalValues = {};
+
+  // Toggle edit mode
+  document.getElementById('toggle-invoice-edit-mode').addEventListener('click', function() {
+    isInvoiceEditMode = !isInvoiceEditMode;
+    
+    if (isInvoiceEditMode) {
+      enableInvoiceEditMode();
+    } else {
+      disableInvoiceEditMode();
+    }
+  });
+
+  // Save changes
+  document.getElementById('save-invoice-changes').addEventListener('click', function() {
+    saveInvoiceChangesToHelper();
+    disableInvoiceEditMode();
+  });
+
+  // Cancel edit
+  document.getElementById('cancel-invoice-edit').addEventListener('click', function() {
+    restoreInvoiceOriginalValues();
+    disableInvoiceEditMode();
+  });
+
+  function enableInvoiceEditMode() {
+    // Store original values
+    invoiceOriginalValues = {};
+    
+    // Find all editable invoice fields (amount, price, quantity fields)
+    const editableSelectors = [
+      '[id*="amount"]', '[id*="price"]', '[id*="total"]', 
+      '[id*="quantity"]', '[id*="cost"]', '[id*="sum"]',
+      '.value.price', '.invoice-field .value'
+    ];
+
+    const editableElements = [];
+    editableSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        // Only include elements that contain numeric/price content
+        if (el.textContent && (el.textContent.includes('₪') || /^\d+/.test(el.textContent.trim()))) {
+          editableElements.push(el);
+        }
+      });
+    });
+
+    // Remove duplicates and convert to editable fields
+    const uniqueElements = [...new Set(editableElements)];
+    uniqueElements.forEach(element => {
+      if (element.id) {
+        invoiceOriginalValues[element.id] = element.textContent;
+        convertToEditableInvoiceField(element, element.id);
+      }
+    });
+
+    // Update button visibility
+    document.getElementById('toggle-invoice-edit-mode').textContent = '❌ ביטול עריכה';
+    document.getElementById('toggle-invoice-edit-mode').style.background = '#dc2626';
+    document.getElementById('save-invoice-changes').style.display = 'inline-block';
+    document.getElementById('cancel-invoice-edit').style.display = 'inline-block';
+  }
+
+  function disableInvoiceEditMode() {
+    isInvoiceEditMode = false;
+    
+    // Convert input fields back to display divs
+    Object.keys(invoiceOriginalValues).forEach(fieldId => {
+      const element = document.getElementById(fieldId);
+      if (element && element.tagName === 'INPUT') {
+        convertToInvoiceDisplayField(element, element.value);
+      }
+    });
+
+    // Update button visibility
+    document.getElementById('toggle-invoice-edit-mode').textContent = '✏️ עריכת חשבוניות';
+    document.getElementById('toggle-invoice-edit-mode').style.background = '#f59e0b';
+    document.getElementById('save-invoice-changes').style.display = 'none';
+    document.getElementById('cancel-invoice-edit').style.display = 'none';
+  }
+
+  function convertToEditableInvoiceField(element, fieldId) {
+    const currentValue = element.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    // Clean currency symbols for editing
+    let cleanValue = currentValue === '-' ? '' : currentValue;
+    cleanValue = cleanValue.replace(/[₪,]/g, '').trim();
+    input.value = cleanValue;
+    input.id = fieldId;
+    input.className = 'edit-input';
+    
+    element.parentNode.replaceChild(input, element);
+  }
+
+  function convertToInvoiceDisplayField(inputElement, value) {
+    const div = document.createElement('div');
+    div.className = inputElement.classList.contains('price') ? 'value price' : 'value';
+    div.id = inputElement.id;
+    
+    // Re-apply formatting based on field type
+    let formattedValue = value || '-';
+    if (inputElement.className.includes('price') || inputElement.id.includes('price') || inputElement.id.includes('total') || inputElement.id.includes('amount')) {
+      const numValue = parseFloat(value) || 0;
+      formattedValue = numValue > 0 ? `₪${numValue.toLocaleString()}` : '₪0';
+    }
+    
+    div.textContent = formattedValue;
+    inputElement.parentNode.replaceChild(div, inputElement);
+  }
+
+  function restoreInvoiceOriginalValues() {
+    Object.keys(invoiceOriginalValues).forEach(fieldId => {
+      const element = document.getElementById(fieldId);
+      if (element) {
+        if (element.tagName === 'INPUT') {
+          // Clean the original value for input fields
+          let cleanValue = invoiceOriginalValues[fieldId].replace(/[₪,]/g, '').trim();
+          element.value = cleanValue === '-' ? '' : cleanValue;
+        } else {
+          element.textContent = invoiceOriginalValues[fieldId];
+        }
+      }
+    });
+  }
+
+  function saveInvoiceChangesToHelper() {
+    if (!window.helper) {
+      console.error('❌ Helper not available for saving invoice changes');
+      return;
+    }
+
+    // Collect all changed values
+    const changes = {};
+    Object.keys(invoiceOriginalValues).forEach(fieldId => {
+      const element = document.getElementById(fieldId);
+      if (element) {
+        const newValue = element.tagName === 'INPUT' ? element.value : element.textContent;
+        const originalClean = invoiceOriginalValues[fieldId].replace(/[₪,]/g, '').trim();
+        const newClean = newValue.replace(/[₪,]/g, '').trim();
+        
+        if (newClean !== originalClean && newClean !== '-' && newClean !== '') {
+          changes[fieldId] = parseFloat(newClean) || 0;
+        }
+      }
+    });
+
+    // Update helper invoice structure
+    if (!window.helper.invoice) window.helper.invoice = { items: [], totals: {} };
+    
+    // Map changes to helper structure
+    Object.keys(changes).forEach(fieldId => {
+      const value = changes[fieldId];
+      
+      // Update based on field ID patterns
+      if (fieldId.includes('total') || fieldId.includes('sum')) {
+        if (!window.helper.invoice.totals) window.helper.invoice.totals = {};
+        window.helper.invoice.totals[fieldId] = value;
+      } else if (fieldId.includes('vat') || fieldId.includes('tax')) {
+        if (!window.helper.invoice.tax) window.helper.invoice.tax = {};
+        window.helper.invoice.tax[fieldId] = value;
+      } else {
+        // Individual item costs
+        if (!window.helper.invoice.manual_adjustments) window.helper.invoice.manual_adjustments = {};
+        window.helper.invoice.manual_adjustments[fieldId] = value;
+      }
+    });
+
+    // Save to storage locations
+    try {
+      const helperString = JSON.stringify(window.helper);
+      sessionStorage.setItem('helper', helperString);
+      localStorage.setItem('helper_data', helperString);
+      console.log('✅ Invoice changes saved to helper and storage');
+    } catch (error) {
+      console.error('❌ Failed to save invoice changes:', error);
+    }
+  }
 
   // Global functions
   window.toggleInvoiceDetails = function () {

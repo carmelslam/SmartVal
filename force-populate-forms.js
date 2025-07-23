@@ -230,9 +230,16 @@ class ForceFormPopulator {
 
     // Case info fields
     if (helperData.case_info) {
-      // CRITICAL FIX: Never auto-populate damage_date - user must enter it manually in general info
-      console.log('🚫 BLOCKING damage_date auto-fill. Helper damage_date value was:', helperData.case_info.damage_date);
-      // mappings.damageDate = helperData.case_info.damage_date; // REMOVED
+      // FIXED: Allow damage_date auto-fill if it exists in helper and user hasn't manually entered one
+      if (helperData.case_info.damage_date) {
+        const manualEntry = sessionStorage.getItem('damageDate_manualEntry');
+        if (!manualEntry) {
+          console.log('✅ ALLOWING damage_date auto-fill from helper:', helperData.case_info.damage_date);
+          mappings.damageDate = helperData.case_info.damage_date;
+        } else {
+          console.log('🚫 RESPECTING manual damage_date entry, not overwriting helper value:', helperData.case_info.damage_date);
+        }
+      }
       mappings.damageType = helperData.case_info.damage_type;
     }
 
