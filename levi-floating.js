@@ -365,7 +365,7 @@
 
     <div class="levi-buttons">
       <button class="levi-btn close" onclick="toggleLeviReport()">סגור</button>
-      <button class="levi-btn refresh" onclick="console.log('🔄 Onclick triggered'); refreshLeviData();">רענן נתונים</button>
+      <button class="levi-btn refresh" onclick="console.log('🔄 Manual refresh triggered');">רענן נתונים</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -379,66 +379,16 @@
       modal.style.display = "block";
       makeDraggable(modal);
       
-      // CRITICAL FIX: Add event listener for refresh button after modal is shown
-      setTimeout(() => {
-        const refreshBtn = modal.querySelector('.levi-btn.refresh');
-        if (refreshBtn) {
-          // Remove any existing listeners to prevent duplicates
-          refreshBtn.replaceWith(refreshBtn.cloneNode(true));
-          const newRefreshBtn = modal.querySelector('.levi-btn.refresh');
-          
-          // Add fresh event listener
-          newRefreshBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🔄 Refresh button clicked via event listener');
-            window.refreshLeviData();
-          });
-          console.log('✅ Added event listener to refresh button');
-        }
-      }, 100);
+      // DISABLED: Refresh functionality temporarily disabled to prevent loops
+      console.log('🚫 Refresh functionality disabled to prevent loops');
     } else {
       modal.style.display = "none";
     }
   };
 
-  // Expose refresh function to global scope for automatic updates from builder
+  // DISABLED: Refresh function disabled to prevent loops
   window.refreshLeviData = function () {
-    console.log('🔄 Levi floating screen: refreshLeviData called');
-    
-    // Get refresh button for feedback
-    const refreshBtn = document.querySelector('.levi-btn.refresh');
-    if (refreshBtn) {
-      refreshBtn.textContent = 'מרענן...';
-      refreshBtn.disabled = true;
-    }
-    
-    try {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      
-      loadLeviData();
-      
-      // Show success feedback
-      if (refreshBtn) {
-        refreshBtn.textContent = '✅ עודכן!';
-        refreshBtn.disabled = false;
-        
-        // Reset button text after 2 seconds
-        setTimeout(() => {
-          refreshBtn.textContent = 'רענן נתונים';
-        }, 2000);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error refreshing Levi data:', error);
-      if (refreshBtn) {
-        refreshBtn.textContent = '❌ שגיאה';
-        refreshBtn.disabled = false;
-        setTimeout(() => {
-          refreshBtn.textContent = 'רענן נתונים';
-        }, 2000);
-      }
-    }
+    console.log('🚫 refreshLeviData: Disabled to prevent refresh loops');
   };
 
   // Make modal draggable
