@@ -368,6 +368,7 @@
 
   // Global functions
   window.toggleLeviReport = function () {
+    console.log('👆 toggleLeviReport clicked - function is working');
     const modal = document.getElementById("leviModal");
     if (modal.style.display === "none" || !modal.style.display) {
       loadLeviData();
