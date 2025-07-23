@@ -584,7 +584,7 @@
 
     
     // Use helper data structure like summary page - get percentage values from manual inputs or helper
-    const helper = JSON.parse(sessionStorage.getItem('helper')) || {};
+    // helper already declared above
     
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
