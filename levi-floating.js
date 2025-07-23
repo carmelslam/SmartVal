@@ -239,94 +239,7 @@
     <div class="levi-section">
       <h4>התאמות מחיר</h4>
       
-      <div class="levi-adjustment-group">
-        <h5>עליה לכביש:</h5>
-        <div class="levi-grid">
-          <div class="levi-field">
-            <div class="label">עליה לכביש</div>
-            <div class="value" id="levi-registration">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">עליה לכביש %</div>
-            <div class="value" id="levi-registration-percent">0%</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">ערך ש״ח עליה לכביש</div>
-            <div class="value" id="levi-registration-value">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">שווי מצטבר עליה לכביש</div>
-            <div class="value" id="levi-registration-total">₪0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="levi-adjustment-group">
-        <h5>סוג בעלות:</h5>
-        <div class="levi-grid">
-          <div class="levi-field">
-            <div class="label">בעלות</div>
-            <div class="value" id="levi-ownership">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">בעלות %</div>
-            <div class="value" id="levi-ownership-percent">0%</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">ערך ש״ח בעלות</div>
-            <div class="value" id="levi-ownership-value">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">שווי מצטבר בעלות</div>
-            <div class="value" id="levi-ownership-total">₪0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="levi-adjustment-group">
-        <h5>מספר ק״מ:</h5>
-        <div class="levi-grid">
-          <div class="levi-field">
-            <div class="label">מס ק״מ</div>
-            <div class="value" id="levi-km">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">מס ק״מ %</div>
-            <div class="value" id="levi-km-percent">0%</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">ערך ש״ח מס ק״מ</div>
-            <div class="value" id="levi-km-value">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">שווי מצטבר מס ק״מ</div>
-            <div class="value" id="levi-km-total">₪0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="levi-adjustment-group">
-        <h5>מספר בעלים:</h5>
-        <div class="levi-grid">
-          <div class="levi-field">
-            <div class="label">מספר בעלים</div>
-            <div class="value" id="levi-owners">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">מספר בעלים %</div>
-            <div class="value" id="levi-owners-percent">0%</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">ערך ש״ח מספר בעלים</div>
-            <div class="value" id="levi-owners-value">₪0</div>
-          </div>
-          <div class="levi-field">
-            <div class="label">שווי מצטבר מספר בעלים</div>
-            <div class="value" id="levi-owners-total">₪0</div>
-          </div>
-        </div>
-      </div>
-
+      <!-- REORDERED: 1. מאפיינים (Features) -->
       <div class="levi-adjustment-group">
         <h5>מאפיינים:</h5>
         <div class="levi-grid">
@@ -350,6 +263,98 @@
         <div class="levi-field" style="margin-top: 10px; grid-column: 1 / -1;">
           <div class="label">תיאור מאפיינים:</div>
           <div class="value" id="levi-features-description" style="font-size: 12px; text-align: right;">-</div>
+        </div>
+      </div>
+
+      <!-- REORDERED: 2. עליה לכביש (Registration) -->
+      <div class="levi-adjustment-group">
+        <h5>עליה לכביש:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">עליה לכביש</div>
+            <div class="value" id="levi-registration">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">עליה לכביש %</div>
+            <div class="value" id="levi-registration-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח עליה לכביש</div>
+            <div class="value" id="levi-registration-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר עליה לכביש</div>
+            <div class="value" id="levi-registration-total">₪0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REORDERED: 3. סוג בעלות (Ownership Type) -->
+      <div class="levi-adjustment-group">
+        <h5>סוג בעלות:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">בעלות</div>
+            <div class="value" id="levi-ownership">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">בעלות %</div>
+            <div class="value" id="levi-ownership-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח בעלות</div>
+            <div class="value" id="levi-ownership-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר בעלות</div>
+            <div class="value" id="levi-ownership-total">₪0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REORDERED: 4. מספר ק״מ (Mileage) -->
+      <div class="levi-adjustment-group">
+        <h5>מספר ק״מ:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">מס ק״מ</div>
+            <div class="value" id="levi-km">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">מס ק״מ %</div>
+            <div class="value" id="levi-km-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח מס ק״מ</div>
+            <div class="value" id="levi-km-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר מס ק״מ</div>
+            <div class="value" id="levi-km-total">₪0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REORDERED: 5. מספר בעלים (Number of Owners) -->
+      <div class="levi-adjustment-group">
+        <h5>מספר בעלים:</h5>
+        <div class="levi-grid">
+          <div class="levi-field">
+            <div class="label">מספר בעלים</div>
+            <div class="value" id="levi-owners">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">מספר בעלים %</div>
+            <div class="value" id="levi-owners-percent">0%</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">ערך ש״ח מספר בעלים</div>
+            <div class="value" id="levi-owners-value">₪0</div>
+          </div>
+          <div class="levi-field">
+            <div class="label">שווי מצטבר מספר בעלים</div>
+            <div class="value" id="levi-owners-total">₪0</div>
+          </div>
         </div>
       </div>
     </div>
@@ -630,8 +635,9 @@
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
       result['בעלות %'] || 0
     );
+    // FIXED MAPPING: ערך ש״ח בעלות from webhook data
     document.getElementById("levi-ownership-value").textContent = formatPrice(
-      result['ערך ש"ח בעלות'] || 0
+      result['ערך ש"ח בעלות'] || result['ערך ש״ח בעלות'] || 0
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
       result['שווי מצטבר בעלות'] || 0
@@ -644,8 +650,9 @@
     document.getElementById("levi-km-percent").textContent = formatPercent(
       result['מס ק"מ %'] || 0
     );
+    // FIXED MAPPING: ערך ש״ח מס ק״מ from webhook data
     document.getElementById("levi-km-value").textContent = formatPrice(
-      result['ערך ש"ח מס ק"מ'] || 0
+      result['ערך ש"ח מס ק"מ'] || result['ערך ש״ח מס ק״מ'] || 0
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
       result['שווי מצטבר מס ק"מ'] || 0
@@ -658,6 +665,7 @@
     document.getElementById("levi-owners-percent").textContent = formatPercent(
       result['מספר בעלים %'] || 0
     );
+    // FIXED MAPPING: ערך ש״ח מספר בעלים from webhook data
     document.getElementById("levi-owners-value").textContent = formatPrice(
       result['ערך ש״ח מספר בעלים'] || result['ערך ש"ח מספר בעלים'] || 0
     );
@@ -681,10 +689,11 @@
       result['שווי מצטבר מאפיינים'] || 0
     );
 
-    // Features description - use the actual features text from the main מאפיינים field  
+    // COMPLETED MAPPING: Features description - properly maps "תיאור מאפיינים" to "מאפיינים" field
     document.getElementById("levi-features-description").textContent = formatValue(
-      result['מאפיינים'] || // This contains the full features text in the webhook
-      result['ערך מאפיינים'] || // Alternative field name
+      result['מאפיינים'] || // Primary webhook field containing features description
+      result['תיאור מאפיינים'] || // Alternative mapping
+      result['ערך מאפיינים'] || // Fallback field name
       '-'
     );
 
