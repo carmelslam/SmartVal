@@ -1734,11 +1734,22 @@
           document.getElementById('carYear').value = helper.car_details?.year || '';
           document.getElementById('carModelCode').value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
           // Base price from standardized valuation structure (with legacy fallback)
-          const basePrice = helper.valuation?.base_price || helper.car_details?.base_price || helper.levi_report?.base_price;
-          document.getElementById('carBasePrice').value = basePrice ? `₪${basePrice}` : '';
+          const rawBasePrice = helper.valuation?.base_price || helper.car_details?.base_price || helper.levi_report?.base_price;
+          // Clean any existing currency symbols and parse as number
+          const basePrice = rawBasePrice ? parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) : null;
+          document.getElementById('carBasePrice').value = basePrice ? `₪${basePrice.toLocaleString()}` : '';
           console.log('✅ Base price populated FROM helper.valuation.base_price:', basePrice);
+          
+          // Also populate the basicPrice field (marked price field) with levi base price
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField && basePrice) {
+            basicPriceField.value = `₪${basePrice.toLocaleString()}`;
+            console.log('✅ Basic price field populated with levi base price:', basePrice);
+          }
           // Market value from standardized vehicle structure (with legacy fallback) 
-          const marketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
+          const rawMarketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
+          // Clean any existing currency symbols and parse as number
+          const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
           console.log('✅ Market value populated FROM helper.vehicle.market_value:', marketValue);
           // Issue date from standardized case_info structure (with legacy fallback)
