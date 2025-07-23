@@ -63,23 +63,103 @@ function parseJSONWithDuplicates(jsonString) {
 // ============================================================================
 
 /**
- * Protects the original plate number from being overwritten by OCR or other modules
+ * Centralized plate number management system - Single source of truth
  */
-window.protectPlateNumber = function(plateNumber, source = 'manual') {
-  console.log(`🔒 PROTECTION: Locking plate number "${plateNumber}" from source: ${source}`);
+window.setPlateNumber = function(plateNumber, source = 'manual', protect = false) {
+  console.log(`🔢 CENTRALIZED: Setting plate number "${plateNumber}" from source: ${source}`);
   
-  window.helper.meta.original_plate = plateNumber;
-  window.helper.meta.plate_locked = true;
-  window.helper.meta.plate_protection_source = source;
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set plate number');
+    return false;
+  }
   
-  // Also set current plate
-  window.helper.meta.plate = plateNumber;
-  window.helper.vehicle.plate = plateNumber;
-  window.helper.case_info.plate = plateNumber;
+  // Validate plate number format (Israeli 7-8 digits)
+  const plateMatch = String(plateNumber).match(/(\d{7,8})/);
+  if (!plateMatch) {
+    console.warn(`⚠️ Invalid plate format: "${plateNumber}" - keeping existing value`);
+    return false;
+  }
+  
+  const validatedPlate = plateMatch[1];
+  
+  // If protection is enabled, check if we should protect this plate
+  if (protect) {
+    window.helper.meta.original_plate = validatedPlate;
+    window.helper.meta.plate_locked = true;
+    window.helper.meta.plate_protection_source = source;
+    console.log(`🔒 PROTECTION: Plate "${validatedPlate}" is now protected from overwrites`);
+  }
+  
+  // SINGLE SOURCE OF TRUTH: Store plate only in meta.plate
+  window.helper.meta.plate = validatedPlate;
+  
+  // Remove duplicate storage - these will now reference meta.plate
+  delete window.helper.vehicle?.plate;
+  delete window.helper.case_info?.plate;
+  
+  // Update case_id dynamically
+  const currentYear = new Date().getFullYear();
+  const dynamicCaseId = `YC-${validatedPlate}-${currentYear}`;
+  window.helper.meta.case_id = dynamicCaseId;
+  window.helper.case_info.case_id = dynamicCaseId;
   
   saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Plate "${validatedPlate}" set as single source of truth`);
+  return true;
+};
+
+/**
+ * Get plate number from single source of truth
+ */
+window.getPlateNumber = function() {
+  return window.helper?.meta?.plate || '';
+};
+
+/**
+ * Centralized owner name management system - Single source of truth
+ */
+window.setOwnerName = function(ownerName, source = 'manual') {
+  console.log(`👤 CENTRALIZED: Setting owner name "${ownerName}" from source: ${source}`);
   
-  console.log(`✅ PROTECTION: Plate "${plateNumber}" is now protected from overwrites`);
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set owner name');
+    return false;
+  }
+  
+  if (!ownerName || ownerName.trim() === '') {
+    console.warn('⚠️ Empty owner name provided - keeping existing value');
+    return false;
+  }
+  
+  const cleanedName = ownerName.trim();
+  
+  // SINGLE SOURCE OF TRUTH: Store owner only in stakeholders.owner.name
+  if (!window.helper.stakeholders) window.helper.stakeholders = {};
+  if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
+  
+  window.helper.stakeholders.owner.name = cleanedName;
+  
+  // Remove duplicate storage - these will now reference stakeholders.owner.name
+  delete window.helper.meta?.owner_name;
+  delete window.helper.car_details?.owner;
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Owner "${cleanedName}" set as single source of truth`);
+  return true;
+};
+
+/**
+ * Get owner name from single source of truth
+ */
+window.getOwnerName = function() {
+  return window.helper?.stakeholders?.owner?.name || '';
+};
+
+/**
+ * Legacy protection function - now uses centralized system
+ */
+window.protectPlateNumber = function(plateNumber, source = 'manual') {
+  return window.setPlateNumber(plateNumber, source, true);
 };
 
 /**
@@ -1391,9 +1471,9 @@ function populateAllForms() {
   
   // Helper data mapping with comprehensive field coverage
   const dataMapping = {
-    // Basic vehicle info
-    'plate': window.helper.vehicle?.plate || window.helper.meta?.plate,
-    'plateNumber': window.helper.vehicle?.plate || window.helper.meta?.plate,
+    // Basic vehicle info - use centralized plate getter
+    'plate': window.getPlateNumber(),
+    'plateNumber': window.getPlateNumber(),
     'manufacturer': window.helper.vehicle?.manufacturer,
     'model': window.helper.vehicle?.model,
     'year': window.helper.vehicle?.year,
@@ -1419,10 +1499,10 @@ function populateAllForms() {
     'drive_type': window.helper.vehicle?.drive_type,
     'model_type': window.helper.vehicle?.model_type,
     
-    // Owner info
-    'owner': window.helper.stakeholders?.owner?.name,
-    'ownerName': window.helper.stakeholders?.owner?.name,
-    'client_name': window.helper.stakeholders?.owner?.name,
+    // Owner info - use centralized getter
+    'owner': window.getOwnerName(),
+    'ownerName': window.getOwnerName(),
+    'client_name': window.getOwnerName(),
     'ownerPhone': window.helper.stakeholders?.owner?.phone,
     'owner_phone': window.helper.stakeholders?.owner?.phone,
     'ownerAddress': window.helper.stakeholders?.owner?.address,
@@ -2114,6 +2194,13 @@ export const getOwnerData = window.getOwnerData;
 export const universalWebhookReceiver = window.universalWebhookReceiver;
 export const processWebhookData = window.processWebhookData;
 export const setupUniversalInputCapture = window.setupUniversalInputCapture;
+
+// Export new centralized data management functions
+export const setPlateNumber = window.setPlateNumber;
+export const getPlateNumber = window.getPlateNumber;
+export const setOwnerName = window.setOwnerName;
+export const getOwnerName = window.getOwnerName;
+export const protectPlateNumber = window.protectPlateNumber;
 // populateAllFormsWithRetry is already declared as a function above
 export const testWithActualWebhookData = window.testWithActualWebhookData;
 
@@ -2174,20 +2261,11 @@ export function initHelper(newData = null) {
     
     // Generate proper case_id: YC-PLATENUMBER-YEAR
     if (newData.plate) {
-      const dynamicCaseId = `YC-${newData.plate}-${currentYear}`;
-      helper.case_info.case_id = dynamicCaseId;
-      helper.meta.case_id = dynamicCaseId;  // CRITICAL: Keep meta.case_id in sync
-      helper.case_info.plate = newData.plate;
-      helper.vehicle.plate = newData.plate;
-      helper.meta.plate = newData.plate;
-      
-      // 🔒 CRITICAL: Protect the plate number from case opening
-      helper.meta.original_plate = newData.plate;
-      helper.meta.plate_locked = true;
-      helper.meta.plate_protection_source = 'open_case_ui';
-      console.log(`🔒 PROTECTION: Plate "${newData.plate}" is now protected from overwrites (source: open_case_ui)`);
-      
-      console.log(`✅ Generated dynamic case_id: ${dynamicCaseId}`);
+      // Use centralized plate management system
+      window.helper = helper; // Ensure global helper is available
+      window.setPlateNumber(newData.plate, 'open_case_ui', true);
+      const generatedCaseId = helper.meta.case_id;
+      console.log(`✅ Generated dynamic case_id: ${generatedCaseId}`);
     }
     
     // Set inspection date from case opening (NOT damage date)
@@ -2274,8 +2352,7 @@ export function refreshAllModuleForms() {
   populateAllForms();
 }
 
-// Export plate protection functions
-export const protectPlateNumber = window.protectPlateNumber;
+// Removed duplicate protectPlateNumber export - already exported above
 export const validatePlateNumber = window.validatePlateNumber;
 export const showPlateProtectionAlert = window.showPlateProtectionAlert;
 export const getPlateProtectionStatus = window.getPlateProtectionStatus;

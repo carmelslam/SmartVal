@@ -63,17 +63,17 @@
     <div class="subtitle">שמאי רכב והערכת נזקי רכוש</div>
     <h2 id="pageTitle">רכב מס. ...: פרטים כלליים</h2>
 
-    <input id="odo" placeholder="מד אוץ" type="text" />
-    <input id="damageDate" placeholder="תאריך נזק" type="date" />
-    <input id="ownerPhone" placeholder="טלפון בעל הרכב" type="text" />
-    <input id="ownerAddress" placeholder="כתובת בעל הרכב" type="text" />
-    <input id="garageName" placeholder="שם מוסך" type="text" />
-    <input id="garagePhone" placeholder="טלפון מוסך" type="text" />
-    <input id="garageEmail" placeholder="אימייל מוסך" type="email" autocomplete="off" />
+    <input id="km" placeholder="מד אוץ" type="text" />
+    <input id="damage_date" placeholder="תאריך נזק" type="date" />
+    <input id="owner_phone" placeholder="טלפון בעל הרכב" type="text" />
+    <input id="owner_address" placeholder="כתובת בעל הרכב" type="text" />
+    <input id="garage_name" placeholder="שם מוסך" type="text" />
+    <input id="garage_phone" placeholder="טלפון מוסך" type="text" />
+    <input id="garage_email" placeholder="אימייל מוסך" type="email" autocomplete="off" />
 
-    <input id="agentName" placeholder="שם סוכן ביטוח" type="text" />
-    <input id="agentPhone" placeholder="טלפון סוכן ביטוח" type="text" />
-    <input id="agentEmail" placeholder="אימייל סוכן ביטוח" type="email" />
+    <input id="agent_name" placeholder="שם סוכן ביטוח" type="text" />
+    <input id="agent_phone" placeholder="טלפון סוכן ביטוח" type="text" />
+    <input id="agent_email" placeholder="אימייל סוכן ביטוח" type="email" />
 
     <select id="insuranceCompany">
       <option value="">בחר חברת ביטוח</option>
@@ -207,7 +207,7 @@
     }, 500); // Small delay to ensure DOM is ready
 
     // Fix: Ensure garage email field is always editable
-    const garageEmailField = document.getElementById("garageEmail");
+    const garageEmailField = document.getElementById("garage_email");
     if (garageEmailField) {
       garageEmailField.removeAttribute('readonly');
       garageEmailField.removeAttribute('disabled');
@@ -228,25 +228,24 @@
         }
       }
       
-      // ✅ FIXED: Get plate and owner from helper system instead of old carData
-      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const plateFromHelper = helperData.meta?.plate || helperData.vehicle?.plate_number || '';
-      const ownerFromHelper = helperData.stakeholders?.owner?.name || helperData.stakeholders?.owner_name || '';
+      // ✅ CENTRALIZED: Get plate and owner from centralized helper functions
+      const plateFromHelper = window.getPlateNumber ? window.getPlateNumber() : '';
+      const ownerFromHelper = window.getOwnerName ? window.getOwnerName() : '';
       
       const data = {
         plate: plateFromHelper,
         owner: ownerFromHelper,
-        garageName: document.getElementById("garageName").value.trim(),
-        garagePhone: document.getElementById("garagePhone").value.trim(),
-        garageEmail: document.getElementById("garageEmail").value.trim(),
-        agentName: document.getElementById("agentName").value.trim(),
-        insurance_agent_phone: document.getElementById("agentPhone").value.trim(),
-        insurance_agent_email: document.getElementById("agentEmail").value.trim(),
+        garageName: document.getElementById("garage_name").value.trim(),
+        garagePhone: document.getElementById("garage_phone").value.trim(),
+        garageEmail: document.getElementById("garage_email").value.trim(),
+        agentName: document.getElementById("agent_name").value.trim(),
+        insurance_agent_phone: document.getElementById("agent_phone").value.trim(),
+        insurance_agent_email: document.getElementById("agent_email").value.trim(),
         insuranceCompany: (document.getElementById("insuranceCompany").value === "אחר" ? document.getElementById("otherInsuranceCompany").value.trim() : document.getElementById("insuranceCompany").value.trim()),
         insuranceEmail: document.getElementById("insuranceEmail").value.trim(),
-        odo: document.getElementById("odo").value.trim(),
+        odo: document.getElementById("km").value.trim(),
         damageDate: (() => {
-          const damageDate = document.getElementById("damageDate").value;
+          const damageDate = document.getElementById("damage_date").value;
           if (damageDate) {
             // Set flag to allow damage_date to be saved to helper
             sessionStorage.setItem('damageDate_manualEntry', 'true');
@@ -254,8 +253,8 @@
           }
           return damageDate;
         })(),
-        ownerPhone: document.getElementById("ownerPhone").value.trim(),
-        ownerAddress: document.getElementById("ownerAddress").value.trim(),
+        ownerPhone: document.getElementById("owner_phone").value.trim(),
+        ownerAddress: document.getElementById("owner_address").value.trim(),
         damageType: (document.getElementById("damageType").value === "אחר" ? document.getElementById("otherDamageType").value.trim() : document.getElementById("damageType").value.trim()),
         password: password
       };
@@ -531,9 +530,9 @@
       
       // List of all form fields that should be tracked for manual input
       const trackedFields = [
-        'odo', 'damageDate', 'ownerPhone', 'ownerAddress',
-        'garageName', 'garagePhone', 'garageEmail',
-        'agentName', 'agentPhone', 'agentEmail',
+        'km', 'damage_date', 'owner_phone', 'owner_address',
+        'garage_name', 'garage_phone', 'garage_email',
+        'agent_name', 'agent_phone', 'agent_email',
         'insuranceCompany', 'otherInsuranceCompany',
         'insuranceEmail', 'damageType', 'otherDamageType'
       ];
