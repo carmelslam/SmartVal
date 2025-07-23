@@ -637,7 +637,10 @@
       0
     );
     document.getElementById("levi-registration-value").textContent = formatPrice(
-      result['ערך ש"ח עליה לכביש'] || 0
+      helper.valuation?.adjustments?.registration?.amount ||
+      result['ערך ש"ח עליה לכביש'] || 
+      result['ערך ש״ח עליה לכביש'] || 
+      0
     );
     document.getElementById("levi-registration-total").textContent = formatPrice(
       result['שווי מצטבר עליה לכביש'] || 0
@@ -656,9 +659,12 @@
       result['ownership_type_percent'] || 
       0
     );
-    // FIXED MAPPING: ערך ש״ח בעלות from webhook data
+    // FIXED: Ownership value - from helper.valuation.adjustments
     document.getElementById("levi-ownership-value").textContent = formatPrice(
-      result['ערך ש"ח בעלות'] || result['ערך ש״ח בעלות'] || 0
+      helper.valuation?.adjustments?.ownership_type?.amount ||
+      result['ערך ש"ח בעלות'] || 
+      result['ערך ש״ח בעלות'] || 
+      0
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
       result['שווי מצטבר בעלות'] || 0
@@ -679,9 +685,12 @@
       result['mileage_percent'] || 
       0
     );
-    // FIXED MAPPING: ערך ש״ח מס ק״מ from webhook data
+    // FIXED: KM value - from helper.valuation.adjustments
     document.getElementById("levi-km-value").textContent = formatPrice(
-      result['ערך ש"ח מס ק"מ'] || result['ערך ש״ח מס ק״מ'] || 0
+      helper.valuation?.adjustments?.mileage?.amount ||
+      result['ערך ש"ח מס ק"מ'] || 
+      result['ערך ש״ח מס ק״מ'] || 
+      0
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
       result['שווי מצטבר מס ק"מ'] || 0
@@ -699,9 +708,12 @@
       result['ownership_history_percent'] || 
       0
     );
-    // FIXED MAPPING: ערך ש״ח מספר בעלים from webhook data
+    // FIXED: Owners value - from helper.valuation.adjustments
     document.getElementById("levi-owners-value").textContent = formatPrice(
-      result['ערך ש״ח מספר בעלים'] || result['ערך ש"ח מספר בעלים'] || 0
+      helper.valuation?.adjustments?.ownership_history?.amount ||
+      result['ערך ש״ח מספר בעלים'] || 
+      result['ערך ש"ח מספר בעלים'] || 
+      0
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
       result['שווי מצטבר מספר בעלים'] || 0
@@ -722,8 +734,12 @@
       result['features_percent'] || 
       0
     );
+    // FIXED: Features value - from helper.valuation.adjustments
     document.getElementById("levi-features-value").textContent = formatPrice(
-      result['ערך ש"ח מאפיינים'] || 0
+      helper.valuation?.adjustments?.features?.amount ||
+      result['ערך ש"ח מאפיינים'] || 
+      result['ערך ש״ח מאפיינים'] || 
+      0
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
       result['שווי מצטבר מאפיינים'] || 0
