@@ -404,23 +404,7 @@
     }
     
     try {
-      // Debug: Check what data is in sessionStorage - SIMPLIFIED
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('🔍 DEBUG: Helper structures in Levi floating screen:', {
-        'vehicle': helper.vehicle,
-        'carDetails': helper.car_details,
-        'leviReport': helper.expertise?.levi_report,
-        'meta': helper.meta
-      });
-      
-      // Debug: Check specific Hebrew adjustment keys
-      console.log('🔍 DEBUG: Hebrew adjustment keys in leviReport:', {
-        'עליה לכביש': helper.expertise?.levi_report?.['עליה לכביש'],
-        'בעלות': helper.expertise?.levi_report?.['בעלות'],
-        'מס ק״מ': helper.expertise?.levi_report?.['מס ק״מ'],
-        'מספר בעלים': helper.expertise?.levi_report?.['מספר בעלים'],
-        'מאפיינים': helper.expertise?.levi_report?.['מאפיינים']
-      });
       
       loadLeviData();
       
@@ -512,7 +496,6 @@
         const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
         if (latestWebhookKey && helper.raw_webhook_data[latestWebhookKey]?.data) {
           result = { ...helper.raw_webhook_data[latestWebhookKey].data };
-          console.log('🔍 LEVI: Found Hebrew webhook data:', result);
         }
       }
       
@@ -527,7 +510,6 @@
         ...result  // Hebrew webhook data takes priority
       };
 
-      console.log('🔍 LEVI: Final result object for display:', result);
       
       // Update UI using the result object (same approach as summary page)
       updateLeviDisplay(result);
@@ -573,10 +555,6 @@
     // Use helper data structure like summary page - get percentage values from manual inputs or helper
     const helper = JSON.parse(sessionStorage.getItem('helper')) || {};
     
-    // Quick debug to see what keys exist in result
-    console.log('🔍 RESULT KEYS:', Object.keys(result || {}).slice(0, 10));
-    console.log('🔍 RESULT מחיר בסיס:', result['מחיר בסיס']);
-    console.log('🔍 RESULT עליה לכביש %:', result['עליה לכביש %']);
     
     document.getElementById("levi-vehicle-type").textContent = formatValue(
       result['סוג רכב'] ||
@@ -615,12 +593,6 @@
     const basePrice = parseCurrency(result['מחיר בסיס']) || parseCurrency(result.base_price) || 0;
     const finalPrice = parseCurrency(result['מחיר סופי לרכב']) || parseCurrency(result.final_price) || 0;
                       
-    console.log('🔍 LEVI PRICE DEBUG:', {
-      basePrice: basePrice,
-      finalPrice: finalPrice,
-      'result_מחיר_בסיס': result['מחיר בסיס'],
-      'result_מחיר_סופי': result['מחיר סופי לרכב']
-    });
     
     document.getElementById("levi-base-price").textContent = formatPrice(basePrice);
     document.getElementById("levi-final-price").textContent = formatPrice(finalPrice);
@@ -698,10 +670,7 @@
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
-    // DEBUG: Check features percent value
-    const featPercent = result['מחיר מאפיינים %'];
-    console.log('🔍 LEVI DEBUG: Features percent raw value:', featPercent, 'type:', typeof featPercent);
-    console.log('🔍 LEVI DEBUG: Trying alternative field name מאפיינים %:', result['מאפיינים %']);
+    const featPercent = result['מחיר מאפיינים %'] || result['מאפיינים %'];
     document.getElementById("levi-features-percent").textContent = formatPercent(
       result['מחיר מאפיינים %'] || result['מאפיינים %'] || 0
     );
