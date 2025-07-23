@@ -530,6 +530,9 @@
   function updateLeviDisplay(result) {
     console.log('🔄 updateLeviDisplay called with result:', result);
     
+    // Get helper data safely
+    const helper = JSON.parse(sessionStorage.getItem('helper')) || {};
+    
     // DEBUG: Log all percentage fields found in the data
     const percentageFields = Object.keys(result).filter(key => key.includes('%'));
     if (percentageFields.length > 0) {
