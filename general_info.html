@@ -65,19 +65,6 @@
 
     <input id="odo" placeholder="מד אוץ" type="text" />
     <input id="damageDate" placeholder="תאריך נזק" type="date" />
-    
-    <!-- Location dropdown -->
-    <select id="inspectionLocation" onchange="handleLocationChange()">
-      <option value="">בחר מיקום הביקורת</option>
-      <option value="בית הלקוח">בית הלקוח</option>
-      <option value="מוסך">מוסך</option>
-      <option value="מקום האירוע">מקום האירוע</option>
-      <option value="אחר">אחר</option>
-    </select>
-    
-    <!-- Free text input for "other" location - hidden by default -->
-    <input id="customLocation" placeholder="פרט מיקום אחר" type="text" style="display: none;" />
-    
     <input id="ownerPhone" placeholder="טלפון בעל הרכב" type="text" />
     <input id="ownerAddress" placeholder="כתובת בעל הרכב" type="text" />
     <input id="garageName" placeholder="שם מוסך" type="text" />
@@ -151,20 +138,6 @@
       const otherInput = document.getElementById("otherDamageType");
       otherInput.style.display = this.value === "אחר" ? "block" : "none";
     });
-
-    // Location dropdown handler
-    window.handleLocationChange = function() {
-      const locationSelect = document.getElementById("inspectionLocation");
-      const customLocationInput = document.getElementById("customLocation");
-      
-      if (locationSelect.value === "אחר") {
-        customLocationInput.style.display = "block";
-        customLocationInput.focus();
-      } else {
-        customLocationInput.style.display = "none";
-        customLocationInput.value = ""; // Clear custom text when hiding
-      }
-    };
 
     const encryptedPassword = sessionStorage.getItem("auth");
     if (!encryptedPassword) {
@@ -283,11 +256,6 @@
         })(),
         ownerPhone: document.getElementById("ownerPhone").value.trim(),
         ownerAddress: document.getElementById("ownerAddress").value.trim(),
-        inspectionLocation: (() => {
-          const locationSelect = document.getElementById("inspectionLocation").value;
-          const customLocation = document.getElementById("customLocation").value.trim();
-          return locationSelect === "אחר" ? customLocation : locationSelect;
-        })(),
         damageType: (document.getElementById("damageType").value === "אחר" ? document.getElementById("otherDamageType").value.trim() : document.getElementById("damageType").value.trim()),
         password: password
       };
@@ -329,8 +297,7 @@
         
         const damageData = {
           damage_date: data.damageDate,
-          damage_type: data.damageType,
-          inspection_location: data.inspectionLocation
+          damage_type: data.damageType
         };
         
         // Update helper sections
@@ -424,7 +391,7 @@
         'manufacturer': ['manufacturer', 'make'],
         'model': ['model'],
         'owner': ['owner', 'owner_name', 'client_name'],
-        'location': ['location', 'inspectionLocation']  // FIXED: Removed garage fields - garage is separate from location
+        'location': ['location']  // FIXED: Removed garage fields - garage is separate from location
       };
       
       let filledCount = 0;
