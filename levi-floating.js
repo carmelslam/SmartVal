@@ -745,11 +745,10 @@
       result['שווי מצטבר מאפיינים'] || 0
     );
 
-    // COMPLETED MAPPING: Features description - properly maps "תיאור מאפיינים" to "מאפיינים" field
+    // Features description - use the actual features text from the main מאפיינים field  
     document.getElementById("levi-features-description").textContent = formatValue(
-      result['מאפיינים'] || // Primary webhook field containing features description
-      result['תיאור מאפיינים'] || // Alternative mapping
-      result['ערך מאפיינים'] || // Fallback field name
+      result['מאפיינים'] || // This contains the full features text in the webhook
+      result['ערך מאפיינים'] || // Alternative field name
       '-'
     );
 
