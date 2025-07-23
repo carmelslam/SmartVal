@@ -1,5 +1,9 @@
 (function () {
-  if (document.getElementById("leviModal")) return;
+  console.log('🚀 Levi floating script starting...');
+  if (document.getElementById("leviModal")) {
+    console.log('⚠️ leviModal already exists, exiting');
+    return;
+  }
 
   const style = document.createElement("style");
   style.innerHTML = `
@@ -367,6 +371,7 @@
   document.body.appendChild(modal);
 
   // Global functions
+  console.log('🔧 Defining toggleLeviReport function...');
   window.toggleLeviReport = function () {
     const modal = document.getElementById("leviModal");
     if (modal.style.display === "none" || !modal.style.display) {
