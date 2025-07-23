@@ -919,7 +919,7 @@
       'carDetails.plate': carDetails.plate,
       'final plateValue': plateValue
     });
-    // Apply plate standardization (remove dashes)
+    // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
     const standardizedPlate = plateValue ? String(plateValue).replace(/[-\s]/g, '') : plateValue;
     document.getElementById("vehicle-plate").textContent = formatValue(standardizedPlate);
     document.getElementById("vehicle-manufacturer").textContent = formatValue(
