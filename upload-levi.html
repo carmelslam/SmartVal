@@ -2440,11 +2440,17 @@ window.populateManualFormFromHelper = function() {
       'manual-features-value': helper.valuation?.adjustments?.features?.amount || sourceData['ערך ש"ח מאפיינים'] || ''
     };
     
-    // Populate form fields
+    // FIXED: Populate form fields without triggering change events (prevents loops)
     let populatedCount = 0;
     Object.entries(fieldMappings).forEach(([fieldId, value]) => {
       const field = document.getElementById(fieldId);
       if (field && value !== '' && value !== null && value !== undefined) {
+        // CRITICAL: Temporarily disable event listeners to prevent loops
+        const originalOnChange = field.onchange;
+        const originalOnInput = field.oninput;
+        field.onchange = null;
+        field.oninput = null;
+        
         // Clean percentage values
         if (fieldId.includes('percent') && typeof value === 'string') {
           field.value = value.replace('%', '').trim();
@@ -2460,6 +2466,12 @@ window.populateManualFormFromHelper = function() {
         field.style.backgroundColor = '#e8f5e8';
         field.title = 'שדה מולא אוטומטית מנתוני OCR/Webhook';
         populatedCount++;
+        
+        // CRITICAL: Restore event listeners after population
+        setTimeout(() => {
+          field.onchange = originalOnChange;
+          field.oninput = originalOnInput;
+        }, 100);
       }
     });
     
