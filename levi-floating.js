@@ -530,6 +530,17 @@
   function updateLeviDisplay(result) {
     console.log('🔄 updateLeviDisplay called with result:', result);
     
+    // DEBUG: Log all percentage fields found in the data
+    const percentageFields = Object.keys(result).filter(key => key.includes('%'));
+    if (percentageFields.length > 0) {
+      console.log('📊 DEBUG: Found percentage fields in webhook data:', percentageFields);
+      percentageFields.forEach(field => {
+        console.log(`   ${field}: ${result[field]}`);
+      });
+    } else {
+      console.log('⚠️ DEBUG: No percentage fields found in webhook data');
+    }
+    
     // Use same currency parsing approach as summary page
     const parseCurrency = (value) => {
       if (!value) return 0;
@@ -615,9 +626,12 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // Direct Hebrew field access like working fields
+    // FIXED: Registration percentage with all possible variations
     document.getElementById("levi-registration-percent").textContent = formatPercent(
-      result['עליה לכביש %'] || 0
+      result['עליה לכביש %'] || 
+      result['עליה לכביש%'] || 
+      result['registration_percent'] || 
+      0
     );
     document.getElementById("levi-registration-value").textContent = formatPrice(
       result['ערך ש"ח עליה לכביש'] || 0
@@ -631,9 +645,12 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // Direct Hebrew field access like working fields
+    // FIXED: Ownership percentage with all possible variations
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      result['בעלות %'] || 0
+      result['בעלות %'] || 
+      result['בעלות%'] || 
+      result['ownership_type_percent'] || 
+      0
     );
     // FIXED MAPPING: ערך ש״ח בעלות from webhook data
     document.getElementById("levi-ownership-value").textContent = formatPrice(
@@ -647,8 +664,15 @@
     document.getElementById("levi-km").textContent = formatValue(
       result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
+    // FIXED: KM percentage with all possible quotation mark variations  
     document.getElementById("levi-km-percent").textContent = formatPercent(
-      result['מס ק"מ %'] || 0
+      result['מס ק״מ %'] || 
+      result['מס ק"מ %'] || 
+      result['מס׳ ק"מ %'] || 
+      result['מס\' ק״מ %'] || 
+      result['מס ק״מ%'] || 
+      result['mileage_percent'] || 
+      0
     );
     // FIXED MAPPING: ערך ש״ח מס ק״מ from webhook data
     document.getElementById("levi-km-value").textContent = formatPrice(
@@ -662,8 +686,12 @@
     document.getElementById("levi-owners").textContent = formatValue(
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
+    // FIXED: Owners percentage with all possible variations
     document.getElementById("levi-owners-percent").textContent = formatPercent(
-      result['מספר בעלים %'] || 0
+      result['מספר בעלים %'] || 
+      result['מספר בעלים%'] || 
+      result['ownership_history_percent'] || 
+      0
     );
     // FIXED MAPPING: ערך ש״ח מספר בעלים from webhook data
     document.getElementById("levi-owners-value").textContent = formatPrice(
@@ -678,9 +706,14 @@
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
-    const featPercent = result['מחיר מאפיינים %'] || result['מאפיינים %'];
+    // FIXED: Features percentage with all possible variations
     document.getElementById("levi-features-percent").textContent = formatPercent(
-      result['מחיר מאפיינים %'] || result['מאפיינים %'] || 0
+      result['מחיר מאפיינים %'] || 
+      result['מאפיינים %'] || 
+      result['מחיר מאפיינים%'] || 
+      result['מאפיינים%'] || 
+      result['features_percent'] || 
+      0
     );
     document.getElementById("levi-features-value").textContent = formatPrice(
       result['ערך ש"ח מאפיינים'] || 0
