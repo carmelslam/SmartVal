@@ -1712,6 +1712,20 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // Helper function to get nested values
+        const getNestedValue = (obj, path, defaultValue = '') => {
+          const keys = path.split('.');
+          let current = obj;
+          for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+              current = current[key];
+            } else {
+              return defaultValue;
+            }
+          }
+          return current || defaultValue;
+        };
+        
         // Load car details (now editable) and sync vehicle structure
         if (helper.car_details || helper.meta) {
           document.getElementById('carPlate').value = helper.meta?.plate || helper.car_details?.plate || '';
@@ -1773,21 +1787,7 @@
           loadGrossCalculationData(); // Load gross calculation data from helper
         }, 200);
         
-        // Load contact data using standardized helper structure
-        const getNestedValue = (obj, path, defaultValue = '') => {
-          const keys = path.split('.');
-          let current = obj;
-          for (const key of keys) {
-            if (current && typeof current === 'object' && key in current) {
-              current = current[key];
-            } else {
-              return defaultValue;
-            }
-          }
-          return current || defaultValue;
-        };
-        
-        // Populate ALL fields from standardized helper structure paths (with legacy fallback)
+        // Load contact data using standardized helper structure - Populate ALL fields from standardized helper structure paths (with legacy fallback)
         document.getElementById('ownerName').value = getNestedValue(helper, 'stakeholders.owner.name') || helper.client?.name || '';
         document.getElementById('ownerAddress').value = getNestedValue(helper, 'stakeholders.owner.address') || helper.client?.address || '';  
         document.getElementById('ownerPhone').value = getNestedValue(helper, 'stakeholders.owner.phone') || helper.client?.phone || '';
@@ -7747,6 +7747,14 @@
     
     // Initialize builder state when page loads
     document.addEventListener('DOMContentLoaded', initializeBuilderState);
+    
+    // Toggle section visibility
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+      }
+    }
     
     // Update helper structure from contact field changes using field mapping dictionary
     function updateHelperFromContactField(element) {
