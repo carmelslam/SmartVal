@@ -541,6 +541,18 @@
       console.log('⚠️ DEBUG: No percentage fields found in webhook data');
     }
     
+    // DEBUG: Log helper valuation adjustments for comparison  
+    if (helper.valuation?.adjustments) {
+      console.log('🔧 DEBUG: Helper valuation adjustments:');
+      console.log('   Registration %:', helper.valuation.adjustments.registration?.percent);
+      console.log('   Ownership %:', helper.valuation.adjustments.ownership_type?.percent);
+      console.log('   Mileage %:', helper.valuation.adjustments.mileage?.percent);
+      console.log('   Owners %:', helper.valuation.adjustments.ownership_history?.percent);
+      console.log('   Features %:', helper.valuation.adjustments.features?.percent);
+    } else {
+      console.log('⚠️ DEBUG: No helper valuation adjustments found');
+    }
+    
     // Use same currency parsing approach as summary page
     const parseCurrency = (value) => {
       if (!value) return 0;
@@ -626,8 +638,9 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // FIXED: Registration percentage with all possible variations
+    // FIXED: Registration percentage - match upload-levi.html approach
     document.getElementById("levi-registration-percent").textContent = formatPercent(
+      helper.valuation?.adjustments?.registration?.percent ||
       result['עליה לכביש %'] || 
       result['עליה לכביש%'] || 
       result['registration_percent'] || 
@@ -645,8 +658,9 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // FIXED: Ownership percentage with all possible variations
+    // FIXED: Ownership percentage - match upload-levi.html approach
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
+      helper.valuation?.adjustments?.ownership_type?.percent ||
       result['בעלות %'] || 
       result['בעלות%'] || 
       result['ownership_type_percent'] || 
@@ -664,8 +678,9 @@
     document.getElementById("levi-km").textContent = formatValue(
       result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
-    // FIXED: KM percentage with all possible quotation mark variations  
+    // FIXED: KM percentage - match upload-levi.html approach
     document.getElementById("levi-km-percent").textContent = formatPercent(
+      helper.valuation?.adjustments?.mileage?.percent ||
       result['מס ק״מ %'] || 
       result['מס ק"מ %'] || 
       result['מס׳ ק"מ %'] || 
@@ -686,8 +701,9 @@
     document.getElementById("levi-owners").textContent = formatValue(
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
-    // FIXED: Owners percentage with all possible variations
+    // FIXED: Owners percentage - match upload-levi.html approach
     document.getElementById("levi-owners-percent").textContent = formatPercent(
+      helper.valuation?.adjustments?.ownership_history?.percent ||
       result['מספר בעלים %'] || 
       result['מספר בעלים%'] || 
       result['ownership_history_percent'] || 
@@ -706,8 +722,9 @@
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
-    // FIXED: Features percentage with all possible variations
+    // FIXED: Features percentage - match upload-levi.html approach
     document.getElementById("levi-features-percent").textContent = formatPercent(
+      helper.valuation?.adjustments?.features?.percent ||
       result['מחיר מאפיינים %'] || 
       result['מאפיינים %'] || 
       result['מחיר מאפיינים%'] || 
