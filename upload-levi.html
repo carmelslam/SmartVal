@@ -2371,6 +2371,9 @@ window.logout = function() {
 window.confirmManualEntry = function() {
   if (confirm('⚠️ אזהרה: הזנה ידנית משמשת רק לצרכים חריגים.\n\nהאם אתה בטוח שברצונך להמשיך עם הזנה ידנית במקום OCR?')) {
     document.getElementById('manual-form-content').style.display = 'block';
+    
+    // FIXED: Auto-populate manual form with existing data if available
+    populateManualFormFromHelper();
   }
 };
 
@@ -2381,6 +2384,118 @@ window.cancelManualEntry = function() {
   const manualSection = document.getElementById('manual-section');
   uploadSection.style.display = 'block';
   manualSection.style.display = 'none';
+};
+
+// FIXED: Auto-populate manual form with existing webhook/helper data
+window.populateManualFormFromHelper = function() {
+  try {
+    console.log('📋 Auto-populating manual form from existing data...');
+    
+    // Get helper data
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    
+    // Get webhook data from latest entry
+    let webhookData = {};
+    if (helper.raw_webhook_data) {
+      const webhookKeys = Object.keys(helper.raw_webhook_data);
+      const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
+      if (latestWebhookKey && helper.raw_webhook_data[latestWebhookKey]?.data) {
+        webhookData = helper.raw_webhook_data[latestWebhookKey].data;
+      }
+    }
+    
+    // Merge both sources (webhook data takes priority for Hebrew fields)
+    const sourceData = {
+      ...helper.vehicle,
+      ...helper.valuation,
+      ...webhookData
+    };
+    
+    console.log('📊 Source data for manual form:', sourceData);
+    
+    // Define field mappings from data to manual form fields
+    const fieldMappings = {
+      // Basic vehicle info
+      'manual-vehicle-type': sourceData['סוג רכב'] || sourceData.vehicle_type || '',
+      'manual-manufacturer': sourceData['יצרן'] || sourceData.manufacturer || '',
+      'manual-model-code': sourceData['קוד דגם'] || sourceData.model_code || sourceData.levi_code || '',
+      'manual-category': sourceData['קטגוריה'] || sourceData.category || '',
+      'manual-year': sourceData['שנת יצור'] || sourceData.year || '',
+      'manual-full-model': sourceData['שם דגם מלא'] || sourceData.full_model_name || sourceData.model || '',
+      'manual-base-price': sourceData['מחיר בסיס'] || sourceData.base_price || '',
+      'manual-final-price': sourceData['מחיר סופי לרכב'] || sourceData.final_price || '',
+      
+      // Adjustment percentages (from helper.valuation.adjustments)
+      'manual-registration-percent': helper.valuation?.adjustments?.registration?.percent || sourceData['עליה לכביש %'] || '',
+      'manual-ownership-percent': helper.valuation?.adjustments?.ownership_type?.percent || sourceData['בעלות %'] || '',
+      'manual-km-percent': helper.valuation?.adjustments?.mileage?.percent || sourceData['מס ק"מ %'] || sourceData['מס ק״מ %'] || '',
+      'manual-owners-percent': helper.valuation?.adjustments?.ownership_history?.percent || sourceData['מספר בעלים %'] || '',
+      'manual-features-percent': helper.valuation?.adjustments?.features?.percent || sourceData['מחיר מאפיינים %'] || sourceData['מאפיינים %'] || '',
+      
+      // Adjustment values  
+      'manual-registration-value': helper.valuation?.adjustments?.registration?.amount || sourceData['ערך ש"ח עליה לכביש'] || '',
+      'manual-ownership-value': helper.valuation?.adjustments?.ownership_type?.amount || sourceData['ערך ש"ח בעלות'] || '',
+      'manual-km-value': helper.valuation?.adjustments?.mileage?.amount || sourceData['ערך ש"ח מס ק"מ'] || '',
+      'manual-owners-value': helper.valuation?.adjustments?.ownership_history?.amount || sourceData['ערך ש"ח מספר בעלים'] || '',
+      'manual-features-value': helper.valuation?.adjustments?.features?.amount || sourceData['ערך ש"ח מאפיינים'] || ''
+    };
+    
+    // Populate form fields
+    let populatedCount = 0;
+    Object.entries(fieldMappings).forEach(([fieldId, value]) => {
+      const field = document.getElementById(fieldId);
+      if (field && value !== '' && value !== null && value !== undefined) {
+        // Clean percentage values
+        if (fieldId.includes('percent') && typeof value === 'string') {
+          field.value = value.replace('%', '').trim();
+        } else if (fieldId.includes('price') || fieldId.includes('value')) {
+          // Clean currency values
+          const cleanValue = typeof value === 'string' ? value.replace(/[₪,]/g, '').trim() : value;
+          field.value = cleanValue;
+        } else {
+          field.value = value;
+        }
+        
+        // Add visual indicator that field was auto-filled
+        field.style.backgroundColor = '#e8f5e8';
+        field.title = 'שדה מולא אוטומטית מנתוני OCR/Webhook';
+        populatedCount++;
+      }
+    });
+    
+    // Recalculate final price if base price was populated
+    if (fieldMappings['manual-base-price']) {
+      setTimeout(() => {
+        if (window.calculateFinalPrice) {
+          window.calculateFinalPrice();
+        }
+      }, 100);
+    }
+    
+    console.log(`✅ Auto-populated ${populatedCount} manual form fields from existing data`);
+    
+    // Show success message
+    if (populatedCount > 0) {
+      const successMsg = document.createElement('div');
+      successMsg.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 10000;
+        background: #d4edda; border: 1px solid #c3e6cb; color: #155724;
+        padding: 12px 16px; border-radius: 8px; font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      `;
+      successMsg.innerHTML = `✅ מולא אוטומטית: ${populatedCount} שדות<br><small>ניתן לערוך שדות שלא נקלטו נכון</small>`;
+      document.body.appendChild(successMsg);
+      
+      setTimeout(() => {
+        if (successMsg.parentNode) {
+          successMsg.parentNode.removeChild(successMsg);
+        }
+      }, 4000);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error auto-populating manual form:', error);
+  }
 };
 
 // Math engine calculation function
