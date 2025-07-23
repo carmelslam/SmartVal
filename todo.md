@@ -145,6 +145,69 @@ The findings provide a clear roadmap for enhancing each floating screen with app
 
 ---
 
+# 📋 ESTIMATE BUILDER FIELD MAPPING IMPLEMENTATION
+
+## Plan
+
+Map screenshot fields from estimate builder page to relevant helper keys in the field-mapping-dictionary.js system.
+
+### Implementation Tasks:
+
+1. **[COMPLETED]** Analyze screenshot fields from estimate builder form
+2. **[COMPLETED]** Map identified fields to existing helper structure paths
+3. **[COMPLETED]** Update field-mapping-dictionary.js with new Hebrew mappings
+4. **[COMPLETED]** Test the new field mappings with estimate builder
+5. **[COMPLETED]** Update todo.md with implementation details
+
+## Implementation Report
+
+### Fields Mapped from Screenshot:
+
+**✅ Already Mapped Fields:**
+- מחיר בסיס (levi base price) → `base_price` → `valuation.base_price`
+- levi code → `levi_code` → `valuation.levi_code`
+- HD572 (קוד דגם) → `levi_code` → `valuation.levi_code`
+- ערך השוק של הרכב (Market Value) → `market_value` → `vehicle.market_value`
+- כתובת בעל הרכב → `address` → `stakeholders.owner.address`
+- שם בעל הרכב → `owner` → `stakeholders.owner.name`
+- חברת ביטוח → `insurance_company` → `stakeholders.insurance.company`
+- טלפון בעל הרכב → `phone` → `stakeholders.owner.phone`
+- סוכן ביטוח → `insurance_agent` → `stakeholders.insurance.agent.name`
+
+**🆕 New Mappings Added:**
+- תאריך הפקה (Issue Date) → `issue_date` → `case_info.issue_date`
+- אימייל חברת ביטוח → `insurance_email` → `stakeholders.insurance.email`
+- אימייל סוכן ביטוח → `insurance_agent_email` → `stakeholders.insurance.agent.email`
+- טלפון סוכן ביטוח → `insurance_agent_phone` → `stakeholders.insurance.agent.phone`
+
+### UI Field ID Mappings Added:
+
+**Estimate Builder Specific IDs:**
+- `insuranceEmail` → `stakeholders.insurance.email`
+- `agentPhone` → `stakeholders.insurance.agent.phone`
+- `agentEmail` → `stakeholders.insurance.agent.email`
+- `carReportDate` → `case_info.issue_date`
+
+### Changes Made:
+
+1. **HEBREW_TO_ENGLISH mapping**: Added 4 new Hebrew field translations
+2. **MAKECOM_TO_HELPER mapping**: Added `issue_date` mapping to `case_info.issue_date`
+3. **UI_FIELD_TO_HELPER mapping**: Added 4 estimate builder specific field IDs
+
+### Integration Status:
+
+The new field mappings are now integrated into the comprehensive field mapping system and will automatically work with:
+- Helper data population from Make.com webhooks
+- UI form population from helper data
+- Hebrew field translation from OCR systems
+- Field validation and error handling
+
+### Review Summary:
+
+Successfully mapped all visible fields from the estimate builder screenshot to the appropriate helper structure paths. The field mapping dictionary now contains complete coverage for the estimate builder form, ensuring proper 2-way data flow between UI, helper system, and external data sources.
+
+---
+
 ## 🎯 CURRENT STATUS: FOUNDATION SOLID, READY FOR SMALL TASKS
 
 **Foundation Assessment**: The core data flow architecture is stable and ready for incremental improvements. All critical 2-way integrations are working. The helper system maintains data integrity across all implemented modules.

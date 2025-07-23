@@ -155,11 +155,15 @@ export const HEBREW_TO_ENGLISH = {
   'פוליסה': 'policy_number',
   'סוכן ביטוח': 'insurance_agent',
   'סוכן': 'insurance_agent',
+  'אימייל חברת ביטוח': 'insurance_email',
+  'אימייל סוכן ביטוח': 'insurance_agent_email',
+  'טלפון סוכן ביטוח': 'insurance_agent_phone',
   'סוג נזק': 'damage_type',
   'נזק': 'damage_type',
   'תאריך נזק': 'damage_date',
   'תאריך בדיקה': 'inspection_date',
   'תאריך הבדיקה': 'inspection_date',  // CRITICAL FIX: Hebrew with definite article from Make.com
+  'תאריך הפקה': 'issue_date',
   'תאריך': 'timestamp'
 };
 
@@ -232,6 +236,7 @@ export const MAKECOM_TO_HELPER = {
   'insurance_agent': 'stakeholders.insurance.agent.name',
   'insurance_agent_phone': 'stakeholders.insurance.agent.phone',
   'insurance_agent_email': 'stakeholders.insurance.agent.email',
+  'issue_date': 'case_info.issue_date',
   
   // === Valuation Data (from Levi) ===
   'base_price': 'valuation.base_price',
@@ -314,11 +319,16 @@ export const UI_FIELD_TO_HELPER = {
   // === Insurance Fields ===
   'insurance_company': 'stakeholders.insurance.company',
   'insurance_email': 'stakeholders.insurance.email',
+  'insuranceEmail': 'stakeholders.insurance.email', // Estimate builder specific ID
   'policy_number': 'stakeholders.insurance.policy_number',
   'claim_number': 'stakeholders.insurance.claim_number',
   'insurance_agent': 'stakeholders.insurance.agent.name',
   'insurance_agent_phone': 'stakeholders.insurance.agent.phone',
-  'insurance_agent_email': 'stakeholders.insurance.agent.email'
+  'agentPhone': 'stakeholders.insurance.agent.phone', // Estimate builder specific ID
+  'insurance_agent_email': 'stakeholders.insurance.agent.email',
+  'agentEmail': 'stakeholders.insurance.agent.email', // Estimate builder specific ID
+  'issue_date': 'case_info.issue_date',
+  'carReportDate': 'case_info.issue_date' // Estimate builder specific ID
 };
 
 // ============================================================================
