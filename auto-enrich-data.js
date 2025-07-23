@@ -125,9 +125,12 @@
       }
     }
     
+    // CRITICAL FIX: Standardize plate at helper level
+    const standardizedPlate = data.plate ? String(data.plate).replace(/[-\s]/g, '') : '';
+    
     // Update all sections
     window.helper.vehicle = {
-      plate: data.plate || '',
+      plate: standardizedPlate,
       manufacturer: data.manufacturer || '',
       model: data.model || '',
       model_type: data.model_type || '',
@@ -142,8 +145,8 @@
     };
     
     window.helper.meta = {
-      plate: data.plate || '',
-      case_id: data.case_id || `YC-${String(data.plate).replace(/[-\s]/g, '')}-${new Date().getFullYear()}`,
+      plate: standardizedPlate,
+      case_id: data.case_id || `YC-${standardizedPlate}-${new Date().getFullYear()}`,
       location: data.location || '',
       damage_date: data.date || '',
       office_code: data.office_code || ''

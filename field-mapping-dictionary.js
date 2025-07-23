@@ -465,7 +465,7 @@ export function validateField(fieldName, value) {
 }
 
 /**
- * CRITICAL FIX: Process incoming data with proper field mapping
+ * CRITICAL FIX: Process incoming data with proper field mapping and plate standardization
  */
 export function processIncomingDataWithMapping(data, source = 'unknown') {
   console.log(`🗺️ Processing incoming data with field mapping from ${source}:`, data);
@@ -480,6 +480,15 @@ export function processIncomingDataWithMapping(data, source = 'unknown') {
     if (HEBREW_TO_ENGLISH[key]) {
       mappedKey = HEBREW_TO_ENGLISH[key];
       console.log(`🔤 Hebrew translation: ${key} → ${mappedKey}`);
+    }
+    
+    // CRITICAL FIX: Standardize plate numbers at source level
+    if (mappedKey === 'plate' && value) {
+      const originalValue = value;
+      value = String(value).replace(/[-\s]/g, '');
+      if (originalValue !== value) {
+        console.log(`🔧 Plate standardized: ${originalValue} → ${value}`);
+      }
     }
     
     // Map to helper structure

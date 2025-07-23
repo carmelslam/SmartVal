@@ -372,7 +372,8 @@ export class DataFlowStandardizer {
     const vehicle = standardized.vehicle;
     
     // Basic vehicle info
-    vehicle.plate = this.getFirstValid(sources, ['plate', 'plate_number']) || '';
+    const rawPlate = this.getFirstValid(sources, ['plate', 'plate_number']) || '';
+    vehicle.plate = rawPlate ? String(rawPlate).replace(/[-\s]/g, '') : '';  // CRITICAL FIX: Standardize plate
     vehicle.manufacturer = this.getFirstValid(sources, ['manufacturer']) || '';
     vehicle.model = this.getFirstValid(sources, ['model']) || '';
     vehicle.model_code = this.getFirstValid(sources, ['model_code']) || '';
@@ -411,8 +412,10 @@ export class DataFlowStandardizer {
     const meta = oldHelper.meta || {};
     const caseInfo = standardized.case_info;
     
-    caseInfo.case_id = meta.case_id || `YC-${String(meta.plate || 'UNKNOWN').replace(/[-\s]/g, '')}-${new Date().getFullYear()}`;
-    caseInfo.plate = meta.plate || '';
+    const rawCasePlate = meta.plate || 'UNKNOWN';
+    const standardizedCasePlate = rawCasePlate ? String(rawCasePlate).replace(/[-\s]/g, '') : 'UNKNOWN';  // CRITICAL FIX: Standardize plate
+    caseInfo.case_id = meta.case_id || `YC-${standardizedCasePlate}-${new Date().getFullYear()}`;
+    caseInfo.plate = standardizedCasePlate;
     caseInfo.status = meta.status || 'active';
     
     // Dates

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plate Standardization Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Plate Standardization Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Field Mapping Dictionary Processing</h3>
+        <button onclick="testFieldMappingProcessing()">Test processIncomingDataWithMapping</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Helper setPlateNumber Function</h3>
+        <button onclick="testHelperPlateFunction()">Test setPlateNumber</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Auto Enrich Data Processing</h3>
+        <button onclick="testAutoEnrichProcessing()">Test Auto Enrich</button>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 4: Data Flow Standardizer</h3>
+        <button onclick="testDataFlowStandardizer()">Test Data Flow Standardizer</button>
+        <div id="result4"></div>
+    </div>
+
+    <!-- Load required modules -->
+    <script src="field-mapping-dictionary.js" type="module"></script>
+    <script src="data-flow-standardizer.js" type="module"></script>
+    <script src="helper.js"></script>
+
+    <script type="module">
+        import { processIncomingDataWithMapping } from './field-mapping-dictionary.js';
+        import { DataFlowStandardizer } from './data-flow-standardizer.js';
+
+        // Initialize helper
+        window.helper = {
+            meta: {},
+            vehicle: {},
+            car_details: {},
+            case_info: {},
+            stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } },
+            valuation: {},
+            system: {}
+        };
+
+        window.testFieldMappingProcessing = function() {
+            console.log('🧪 Testing Field Mapping Dictionary processing...');
+            
+            const testData = {
+                'מס\' רכב': '221-84-003',  // Hebrew plate with dashes
+                'יצרן': 'הונדה',
+                'דגם': 'סיביק'
+            };
+
+            try {
+                const result = processIncomingDataWithMapping(testData, 'test');
+                const plateValue = result.vehicle?.plate;
+                
+                const resultDiv = document.getElementById('result1');
+                if (plateValue === '22184003') {
+                    resultDiv.innerHTML = `<div class="success">✅ SUCCESS: Plate standardized correctly: ${testData['מס\' רכב']} → ${plateValue}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ FAILED: Expected '22184003', got '${plateValue}'</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result1').innerHTML = `<div class="error">❌ ERROR: ${error.message}</div>`;
+            }
+        };
+
+        window.testHelperPlateFunction = function() {
+            console.log('🧪 Testing Helper setPlateNumber function...');
+            
+            const testPlate = '221-84-003';
+            
+            try {
+                const success = window.setPlateNumber(testPlate, 'test');
+                const storedPlate = window.helper.meta.plate;
+                
+                const resultDiv = document.getElementById('result2');
+                if (success && storedPlate === '22184003') {
+                    resultDiv.innerHTML = `<div class="success">✅ SUCCESS: setPlateNumber standardized correctly: ${testPlate} → ${storedPlate}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ FAILED: Expected '22184003', got '${storedPlate}', success: ${success}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result2').innerHTML = `<div class="error">❌ ERROR: ${error.message}</div>`;
+            }
+        };
+
+        window.testAutoEnrichProcessing = function() {
+            console.log('🧪 Testing Auto Enrich Data processing...');
+            
+            // Simulate auto-enrich data processing
+            const testData = {
+                plate: '221-84-003',
+                manufacturer: 'Honda',
+                model: 'Civic'
+            };
+
+            try {
+                // Simulate the standardization logic from auto-enrich-data.js
+                const standardizedPlate = testData.plate ? String(testData.plate).replace(/[-\s]/g, '') : '';
+                
+                const resultDiv = document.getElementById('result3');
+                if (standardizedPlate === '22184003') {
+                    resultDiv.innerHTML = `<div class="success">✅ SUCCESS: Auto-enrich standardized correctly: ${testData.plate} → ${standardizedPlate}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ FAILED: Expected '22184003', got '${standardizedPlate}'</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result3').innerHTML = `<div class="error">❌ ERROR: ${error.message}</div>`;
+            }
+        };
+
+        window.testDataFlowStandardizer = function() {
+            console.log('🧪 Testing Data Flow Standardizer...');
+            
+            const oldHelper = {
+                meta: { plate: '221-84-003' },
+                vehicle: { plate_number: '221-84-003' },
+                car_details: { plate: '221-84-003' }
+            };
+
+            try {
+                const standardizer = new DataFlowStandardizer();
+                const result = standardizer.standardizeHelper(oldHelper);
+                const plateValue = result.vehicle?.plate;
+                
+                const resultDiv = document.getElementById('result4');
+                if (plateValue === '22184003') {
+                    resultDiv.innerHTML = `<div class="success">✅ SUCCESS: Data Flow Standardizer processed correctly: 221-84-003 → ${plateValue}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ FAILED: Expected '22184003', got '${plateValue}'</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result4').innerHTML = `<div class="error">❌ ERROR: ${error.message}</div>`;
+            }
+        };
+
+        console.log('🧪 Plate Standardization Test Page Ready');
+    </script>
+</body>
+</html>

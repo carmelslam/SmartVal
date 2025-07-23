@@ -3293,9 +3293,16 @@
             helper.vehicle.model_code = value;
             console.log('🚗 Updated vehicle model code:', value);
           } else if (fieldId === 'carPlate') {
-            helper.vehicle.plate_number = value;
-            helper.meta = helper.meta || {};
-            helper.meta.plate = value;
+            // CRITICAL FIX: Use centralized plate standardization function
+            if (window.setPlateNumber) {
+              window.setPlateNumber(value, 'estimate-builder');
+            } else {
+              // Fallback: standardize manually
+              const standardizedPlate = value ? String(value).replace(/[-\s]/g, '') : '';
+              helper.vehicle.plate_number = standardizedPlate;
+              helper.meta = helper.meta || {};
+              helper.meta.plate = standardizedPlate;
+            }
             console.log('🚗 Updated vehicle plate:', value);
           } else if (fieldId === 'basicPrice') {
             // Update levi_report structure for basic price
@@ -3307,11 +3314,7 @@
             console.log('🚗 Updated basic price:', value);
           }
           
-          // Also update meta for plate
-          if (fieldId === 'carPlate') {
-            helper.meta = helper.meta || {};
-            helper.meta.plate = value;
-          }
+          // Plate update is now handled above with centralized function
         } else if (['ownerName', 'ownerAddress', 'ownerPhone', 'insuranceCompany', 'insuranceEmail', 'insuranceAgent', 'agentPhone', 'agentEmail'].includes(fieldId)) {
           helper.client = helper.client || {};
           helper.car_details = helper.car_details || {};
