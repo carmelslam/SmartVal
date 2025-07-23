@@ -36,9 +36,27 @@ window.prefillUserPassword = function() {
     passwordSelectors.forEach(selector => {
       const input = document.querySelector(selector);
       if (input && !input.value) {
-        input.value = prefillPassword;
+        // Create masked display but store actual password
+        const maskedPassword = '*'.repeat(prefillPassword.length);
+        input.value = maskedPassword;
+        
+        // Store the actual password as a data attribute for form submission
+        input.setAttribute('data-actual-password', prefillPassword);
+        
+        // Handle form submission to use actual password
+        const form = input.closest('form');
+        if (form && !form.hasAttribute('data-password-handler-added')) {
+          form.setAttribute('data-password-handler-added', 'true');
+          form.addEventListener('submit', function(e) {
+            // Replace masked password with actual password before submission
+            if (input.value === maskedPassword) {
+              input.value = prefillPassword;
+            }
+          });
+        }
+        
         filledCount++;
-        console.log(`🔑 Password prefilled for selector: ${selector}`);
+        console.log(`🔑 Password prefilled (masked) for selector: ${selector}`);
       }
     });
     
@@ -132,7 +150,8 @@ window.testPasswordPrefill = function() {
   // Check if password field was filled
   const passwordInput = document.getElementById('passwordInput');
   if (passwordInput) {
-    console.log('🔑 Password field value:', passwordInput.value);
+    console.log('🔑 Password field value (should be masked):', passwordInput.value);
+    console.log('🔑 Actual password stored:', passwordInput.getAttribute('data-actual-password'));
     console.log('🔑 Password field found:', !!passwordInput);
   } else {
     console.log('🔑 Password field not found');
@@ -142,7 +161,7 @@ window.testPasswordPrefill = function() {
   const allPasswordFields = document.querySelectorAll('input[type="password"], input[type="text"][placeholder*="סיסמה"], input[type="text"][placeholder*="password"]');
   console.log('🔑 All password fields found:', allPasswordFields.length);
   allPasswordFields.forEach((field, index) => {
-    console.log(`🔑 Field ${index + 1}:`, field.id || field.name || field.placeholder, 'Value:', field.value);
+    console.log(`🔑 Field ${index + 1}:`, field.id || field.name || field.placeholder, 'Masked Value:', field.value, 'Actual:', field.getAttribute('data-actual-password'));
   });
 };
 
