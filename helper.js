@@ -73,14 +73,23 @@ window.setPlateNumber = function(plateNumber, source = 'manual', protect = false
     return false;
   }
   
-  // Validate plate number format (Israeli 7-8 digits)
-  const plateMatch = String(plateNumber).match(/(\d{7,8})/);
+  // Clean and validate plate number format (Israeli 7-8 digits)
+  // First, remove all dashes, spaces, and non-numeric characters
+  const cleanedPlate = String(plateNumber).replace(/[-\s]/g, '');
+  
+  // Then validate it's 7-8 digits
+  const plateMatch = cleanedPlate.match(/^(\d{7,8})$/);
   if (!plateMatch) {
-    console.warn(`⚠️ Invalid plate format: "${plateNumber}" - keeping existing value`);
+    console.warn(`⚠️ Invalid plate format: "${plateNumber}" → "${cleanedPlate}" - must be 7-8 digits only`);
     return false;
   }
   
   const validatedPlate = plateMatch[1];
+  
+  // Log the transformation if dashes were removed
+  if (plateNumber !== validatedPlate) {
+    console.log(`🔢 NORMALIZED: Plate "${plateNumber}" → "${validatedPlate}" (removed dashes/spaces)`);
+  }
   
   // If protection is enabled, check if we should protect this plate
   if (protect) {
@@ -156,6 +165,41 @@ window.getOwnerName = function() {
 };
 
 /**
+ * Test function to demonstrate plate normalization
+ */
+window.testPlateNormalization = function() {
+  console.log('🧪 Testing plate number normalization...');
+  
+  const testPlates = [
+    '221-84-003',
+    '221 84 003',
+    '22184003',
+    '12345678',
+    '123-45-678',
+    '1234567',
+    'invalid',
+    '221-84-003 ',
+    ' 221-84-003'
+  ];
+  
+  testPlates.forEach(testPlate => {
+    console.log(`Testing: "${testPlate}"`);
+    const result = window.setPlateNumber(testPlate, 'test_normalization');
+    if (result) {
+      console.log(`✅ Success: "${testPlate}" → "${window.getPlateNumber()}"`);
+    } else {
+      console.log(`❌ Failed: "${testPlate}" (invalid format)`);
+    }
+    console.log('---');
+  });
+  
+  return {
+    message: 'Plate normalization test completed - check console for results',
+    currentPlate: window.getPlateNumber()
+  };
+};
+
+/**
  * Legacy protection function - now uses centralized system
  */
 window.protectPlateNumber = function(plateNumber, source = 'manual') {
@@ -170,8 +214,9 @@ window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
     return { valid: true, action: 'accept' };
   }
   
-  const originalPlate = window.helper.meta.original_plate.toUpperCase().trim();
-  const newPlate = String(incomingPlate).toUpperCase().trim();
+  // Normalize both plates by removing dashes before comparison
+  const originalPlate = window.helper.meta.original_plate.replace(/[-\s]/g, '').toUpperCase().trim();
+  const newPlate = String(incomingPlate).replace(/[-\s]/g, '').toUpperCase().trim();
   
   console.log(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
   
@@ -1059,11 +1104,16 @@ function processHebrewText(bodyText, result) {
         value = value.replace(/[^\u0590-\u05FF\u200F\u200Ea-zA-Z0-9\s\-\.\/\(\)]/g, '');
       }
       
-      // Validate plate numbers (Israeli format: 7-8 digits)
+      // Validate and normalize plate numbers (Israeli format: 7-8 digits, remove dashes)
       if (field === 'plate') {
-        const plateMatch = value.match(/(\d{7,8})/);
+        const originalValue = value;
+        const cleanedPlate = String(value).replace(/[-\s]/g, '');
+        const plateMatch = cleanedPlate.match(/^(\d{7,8})$/);
         if (plateMatch) {
           value = plateMatch[1];
+          if (originalValue !== value) {
+            console.log(`🔢 NORMALIZED: Hebrew plate "${originalValue}" → "${value}" (removed dashes)`);
+          }
         }
       }
       
@@ -2201,6 +2251,7 @@ export const getPlateNumber = window.getPlateNumber;
 export const setOwnerName = window.setOwnerName;
 export const getOwnerName = window.getOwnerName;
 export const protectPlateNumber = window.protectPlateNumber;
+export const testPlateNormalization = window.testPlateNormalization;
 // populateAllFormsWithRetry is already declared as a function above
 export const testWithActualWebhookData = window.testWithActualWebhookData;
 
