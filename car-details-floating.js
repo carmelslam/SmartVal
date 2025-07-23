@@ -919,7 +919,9 @@
       'carDetails.plate': carDetails.plate,
       'final plateValue': plateValue
     });
-    document.getElementById("vehicle-plate").textContent = formatValue(plateValue);
+    // Apply plate standardization (remove dashes)
+    const standardizedPlate = plateValue ? String(plateValue).replace(/[-\s]/g, '') : plateValue;
+    document.getElementById("vehicle-plate").textContent = formatValue(standardizedPlate);
     document.getElementById("vehicle-manufacturer").textContent = formatValue(
       vehicle.manufacturer || carDetails.manufacturer
     );

@@ -411,7 +411,7 @@ export class DataFlowStandardizer {
     const meta = oldHelper.meta || {};
     const caseInfo = standardized.case_info;
     
-    caseInfo.case_id = meta.case_id || `YC-${meta.plate || 'UNKNOWN'}-${new Date().getFullYear()}`;
+    caseInfo.case_id = meta.case_id || `YC-${String(meta.plate || 'UNKNOWN').replace(/[-\s]/g, '')}-${new Date().getFullYear()}`;
     caseInfo.plate = meta.plate || '';
     caseInfo.status = meta.status || 'active';
     

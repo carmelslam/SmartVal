@@ -143,7 +143,7 @@
     
     window.helper.meta = {
       plate: data.plate || '',
-      case_id: data.case_id || `YC-${data.plate}-${new Date().getFullYear()}`,
+      case_id: data.case_id || `YC-${String(data.plate).replace(/[-\s]/g, '')}-${new Date().getFullYear()}`,
       location: data.location || '',
       damage_date: data.date || '',
       office_code: data.office_code || ''
