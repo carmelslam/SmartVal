@@ -558,6 +558,19 @@
       'car-damage-date': 'damage_date'
     };
 
+    // Special handling for damage date - also update general info page field
+    if (changes['car-damage-date']) {
+      // Update damage_date_new field in general info page if it exists
+      const generalInfoDamageDate = document.getElementById('damage_date_new');
+      if (generalInfoDamageDate) {
+        generalInfoDamageDate.value = changes['car-damage-date'];
+        generalInfoDamageDate.dispatchEvent(new Event('change', { bubbles: true }));
+        // Mark as manually entered to protect from auto-population
+        sessionStorage.setItem('damageDate_manualEntry', 'true');
+        console.log('✅ Updated damage_date_new in general info from car details floating:', changes['car-damage-date']);
+      }
+    }
+
     // Apply mappings
     Object.keys(changes).forEach(fieldId => {
       if (vehicleFieldMap[fieldId]) {

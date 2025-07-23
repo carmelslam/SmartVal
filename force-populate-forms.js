@@ -126,6 +126,12 @@ class ForceFormPopulator {
           fieldsFound++;
           
           // Only populate if field is empty and we have a value
+          // Special protection for damage_date_new - never override if user has manually set it
+          if (fieldId === 'damage_date_new' && sessionStorage.getItem('damageDate_manualEntry') === 'true') {
+            // Skip populating damage date if user has manually set it
+            return;
+          }
+          
           if (value && (!element.value || element.value.trim() === '')) {
             element.value = value;
             
@@ -230,12 +236,13 @@ class ForceFormPopulator {
 
     // Case info fields
     if (helperData.case_info) {
-      // FIXED: Allow damage_date auto-fill if it exists in helper and user hasn't manually entered one
+      // FIXED: Allow damage_date auto-fill with correct field mapping
       if (helperData.case_info.damage_date) {
         const manualEntry = sessionStorage.getItem('damageDate_manualEntry');
         if (!manualEntry) {
           console.log('✅ ALLOWING damage_date auto-fill from helper:', helperData.case_info.damage_date);
-          mappings.damageDate = helperData.case_info.damage_date;
+          // Map to actual HTML field ID
+          mappings.damage_date_new = helperData.case_info.damage_date;
         } else {
           console.log('🚫 RESPECTING manual damage_date entry, not overwriting helper value:', helperData.case_info.damage_date);
         }
