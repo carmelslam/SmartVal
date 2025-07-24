@@ -1850,7 +1850,10 @@
         loadAllAdjustments(helper);
         
         // CRITICAL FIX: Auto-populate features and registration adjustments from Levi summary
+        console.log('🚀 Page loaded, attempting auto-population...');
+        autoPopulateFromLeviSummary(); // Call immediately
         setTimeout(() => {
+          console.log('🚀 Delayed auto-population attempt...');
           autoPopulateFromLeviSummary();
           setupLeviDataListener(); // Setup listener for future Levi data updates
         }, 500);
@@ -3816,16 +3819,28 @@
      * Auto-populate features and registration adjustments from Levi summary data
      */
     function autoPopulateFromLeviSummary() {
+      console.log('🎯 Starting auto-population from Levi summary...');
+      console.log('📊 Helper data sources:', {
+        levisummary: !!helper.levisummary,
+        levi_report: !!helper.levi_report,
+        expertise_levi: !!helper.expertise?.levi_report
+      });
+      
       if (!helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
+        console.log('❌ No Levi data sources found');
         return;
       }
       
       // Get Levi data from multiple possible sources
       const leviData = helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
+      console.log('📋 Using Levi data source:', leviData);
+      console.log('🔍 Available keys:', Object.keys(leviData));
       
       // Auto-populate features adjustments (מאפיינים)
       const featuresPercent = leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || '';
       const featuresAmount = leviData['ערך ש"ח מאפיינים'] || leviData['ערך כספי מאפיינים'] || '';
+      
+      console.log('🎨 Features data found:', { featuresPercent, featuresAmount });
       
       if (featuresPercent || featuresAmount) {
         addFeatureAdjustment();
@@ -3849,6 +3864,8 @@
       // Auto-populate registration adjustments (עליה לכביש)
       const registrationPercent = leviData['עליה לכביש %'] || '';
       const registrationAmount = leviData['ערך ש"ח עליה לכביש'] || leviData['ערך כספי עליה לכביש'] || '';
+      
+      console.log('🚗 Registration data found:', { registrationPercent, registrationAmount });
       
       if (registrationPercent || registrationAmount) {
         addRegistrationAdjustment();
