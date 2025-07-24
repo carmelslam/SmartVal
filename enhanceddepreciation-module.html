@@ -1173,9 +1173,9 @@
         <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" />
       </div>
       <div>
-        <label>
+        <label style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="isAgreement" />
-          בהסדר
+          <span>בהסדר</span>
         </label>
     </div>
   </div>
@@ -1183,9 +1183,9 @@
      <!-- DIFFERENTIALS SECTION -->
      <div class="form-section" id="differentialsSection">
       <h3>הפרשים</h3>
-      <label>
+      <label style="display: flex; align-items: center; gap: 8px;">
         <input type="checkbox" id="hasDifferentials" />
-        האם קיימים הפרשים?
+        <span>האם קיימים הפרשים?</span>
       </label>
       
       <div id="differentialsTable" style="display:none; margin-top: 16px;">
@@ -2026,8 +2026,9 @@
           document.getElementById('sumMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
           document.getElementById('sumClaim').value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
           
-          // Calculate VAT (18%)
-          const vat = totalClaim * 0.18;
+          // Calculate VAT based on company selection
+          const vatRate = getVatRate();
+          const vat = totalClaim * vatRate;
           document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
           
           // Calculate total with VAT
@@ -8719,6 +8720,7 @@
           console.log('Report type changed to:', selectedType);
           updateSummaryVisibility();
           loadLegalText(); // Update legal text when report type changes
+          loadAttachmentsFromVault(); // Update attachments when report type changes
         });
         
         // Initialize with current selection
@@ -8733,6 +8735,15 @@
           if (differentialsTable) {
             differentialsTable.style.display = this.checked ? 'block' : 'none';
           }
+        });
+      }
+      
+      // Initialize company selection for VAT calculation
+      const companySelect = document.getElementById('isCompanyClient');
+      if (companySelect) {
+        companySelect.addEventListener('change', function() {
+          // Recalculate summary when company selection changes
+          loadDataFromHelper();
         });
       }
     });
@@ -8818,10 +8829,17 @@
     }
     
 
+    // Get VAT rate based on company selection
+    function getVatRate() {
+      const isCompanyClient = document.getElementById('isCompanyClient')?.value;
+      return (isCompanyClient === 'yes') ? 0 : 0.18; // 0% for companies, 18% for private
+    }
+
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
+    window.getVatRate = getVatRate;
 
     // Document Operations Functions
     window.returnToSelection = function() {
