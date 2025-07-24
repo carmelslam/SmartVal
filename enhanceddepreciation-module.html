@@ -8729,26 +8729,31 @@
       const differentialsCheckbox = document.getElementById('hasDifferentials');
       if (differentialsCheckbox) {
         differentialsCheckbox.addEventListener('change', function() {
-          const differentialsTable = document.getElementById('differentialsTable');
-          if (differentialsTable) {
-            differentialsTable.style.display = this.checked ? 'block' : 'none';
-            
-            // If unchecked, clear all differentials and recalculate
-            if (!this.checked) {
-              const rows = document.querySelectorAll('#differentialsRows .differential-row');
-              rows.forEach(row => row.remove());
-              updateDifferentialsSummary();
-            }
-          }
+          console.log('Differentials checkbox changed:', this.checked);
+          toggleDifferentials();
+          saveAndRefresh();
         });
       }
+      
+      // Initialize differentials display
+      toggleDifferentials();
+      
+      // Load existing differentials data
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const dep = helper.expertise?.depreciation || {};
+      if (dep.differentials && dep.differentials.length > 0) {
+        renderDifferentials(dep.differentials);
+      }
+      
+      // Initial summary setup
+      refreshSummary();
       
       // Initialize company selection for VAT calculation
       const companySelect = document.getElementById('isCompanyClient');
       if (companySelect) {
         companySelect.addEventListener('change', function() {
           // Recalculate summary when company selection changes
-          loadDataFromHelper();
+          refreshSummary();
         });
       }
     });
@@ -8958,12 +8963,146 @@
       return (isCompanyClient === 'yes') ? 0 : 0.18; // 0% for companies, 18% for private
     }
 
+    // Toggle differentials display
+    function toggleDifferentials() {
+      const checkbox = document.getElementById('hasDifferentials');
+      const table = document.getElementById('differentialsTable');
+      const summary = document.getElementById('differentialsSummary');
+      
+      if (!checkbox) return;
+      
+      const show = checkbox.checked;
+      console.log('Toggling differentials:', show);
+      
+      if (table) table.style.display = show ? 'block' : 'none';
+      if (summary) summary.style.display = show ? 'block' : 'none';
+      
+      // Add initial row if showing for first time
+      if (show && document.getElementById('differentialsRows') && document.getElementById('differentialsRows').children.length === 0) {
+        addDifferentialRow();
+      }
+      
+      // Update calculations
+      if (show) {
+        updateDifferentialsSummary();
+      } else {
+        // Clear all differentials when unchecked
+        const rows = document.querySelectorAll('#differentialsRows .differential-row');
+        rows.forEach(row => row.remove());
+        updateDifferentialsSummary();
+      }
+    }
+
+    // Save and refresh calculations
+    function saveAndRefresh() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Collect differentials data
+      const differentialsData = {
+        has_differentials: document.getElementById('hasDifferentials')?.checked || false,
+        differentials: collectDifferentials()
+      };
+      
+      // Update helper
+      if (!helper.expertise) helper.expertise = {};
+      if (!helper.expertise.depreciation) helper.expertise.depreciation = {};
+      
+      helper.expertise.depreciation.has_differentials = differentialsData.has_differentials;
+      helper.expertise.depreciation.differentials = differentialsData.differentials;
+      
+      // Save to storage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Refresh calculations
+      refreshSummary();
+    }
+
+    // Collect differentials data
+    function collectDifferentials() {
+      return Array.from(document.querySelectorAll('#differentialsRows .differential-row')).map(row => {
+        const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
+        const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
+        const total = parseFloat(row.querySelector('.diff-total').value) || 0;
+        const description = row.querySelector('.diff-desc').value.trim();
+        
+        return {
+          desc: description,
+          amount: amount,
+          vat: vat,
+          total_with_vat: total
+        };
+      });
+    }
+
+    // Refresh summary calculations
+    function refreshSummary() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const calc = helper.expertise?.calculations || {};
+      const levi = helper.expertise?.levi_report || {};
+      
+      // Get base values
+      const marketValue = parseFloat(levi.final_price) || 0;
+      const totalClaim = parseFloat(calc.total_damage) || 0;
+      
+      // Update market value field
+      const sumMarketValueField = document.getElementById('sumMarketValue');
+      if (sumMarketValueField) {
+        sumMarketValueField.value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+      }
+      
+      // Update claim field
+      const sumClaimField = document.getElementById('sumClaim');
+      if (sumClaimField) {
+        sumClaimField.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+      }
+      
+      // Calculate VAT and total
+      const vatRate = getVatRate();
+      const vat = totalClaim * vatRate;
+      const totalWithVAT = totalClaim + vat;
+      
+      // Update VAT field
+      const sumVATField = document.getElementById('sumVAT');
+      if (sumVATField) {
+        sumVATField.value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
+      }
+      
+      // Update total field
+      const sumTotalField = document.getElementById('sumTotalClaim');
+      if (sumTotalField) {
+        sumTotalField.value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
+      }
+      
+      // Update differentials summary
+      updateDifferentialsSummary();
+    }
+
+    // Render existing differentials from data
+    function renderDifferentials(list) {
+      const container = document.getElementById('differentialsRows');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      if (list && list.length > 0) {
+        list.forEach(item => {
+          const row = createDifferentialRow(item);
+          container.appendChild(row);
+        });
+      }
+      updateDifferentialsSummary();
+    }
+
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
     window.updateDifferentialsSummary = updateDifferentialsSummary;
+    window.toggleDifferentials = toggleDifferentials;
+    window.saveAndRefresh = saveAndRefresh;
+    window.refreshSummary = refreshSummary;
+    window.collectDifferentials = collectDifferentials;
     window.getVatRate = getVatRate;
+    window.renderDifferentials = renderDifferentials;
 
     // Document Operations Functions
     window.returnToSelection = function() {
