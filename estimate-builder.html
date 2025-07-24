@@ -4095,8 +4095,10 @@
         // If only one feature, show just its name/description
         const featuresArr = featuresList.split(',').map(f => f.trim()).filter(Boolean);
         featuresDescription = featuresArr.length === 1 ? featuresArr[0] : featuresArr.join(', ');
+      } else if (featuresData.description && featuresData.description !== 'תוספות מאפיינים') {
+        featuresDescription = featuresData.description;
       } else {
-        featuresDescription = featuresData.description || featuresData.reason || 'תוספות מאפיינים';
+        featuresDescription = '';
       }
 
       if (featuresPercent || featuresAmount) {
@@ -4106,7 +4108,8 @@
           const inputs = lastRow.querySelectorAll('input');
           const select = lastRow.querySelector('select');
           if (inputs.length >= 2 && select) {
-            inputs[0].value = featuresDescription || 'תוספות מאפיינים (מלוי יצחק)';
+            // Always use the real value if available, otherwise leave blank
+            inputs[0].value = featuresDescription || '';
             select.value = String(featuresPercent).includes('-') ? 'minus' : 'plus';
             inputs[1].value = Math.abs(parseFloat(String(featuresPercent).replace(/[%\s+-]/g, ''))) || '';
             lastRow.setAttribute('data-source', 'levi');
@@ -4129,7 +4132,14 @@
                                 helper.expertise?.levi_report?.['ערך ש"ח עליה לכביש'] || '';
       // Use actual registration date if available, and show only the value (no prefix)
       const registrationDate = registrationData.date || helper.car_details?.registration_date || helper.vehicle?.registration_date || '';
-      const registrationDescription = registrationDate ? registrationDate : (registrationData.description || registrationData.reason || 'עליה לכביש');
+      let registrationDescription = '';
+      if (registrationDate) {
+        registrationDescription = registrationDate;
+      } else if (registrationData.description && registrationData.description !== 'עליה לכביש') {
+        registrationDescription = registrationData.description;
+      } else {
+        registrationDescription = '';
+      }
 
       if (registrationPercent || registrationAmount) {
         addFullMarketAdjustment();
@@ -4138,7 +4148,8 @@
           const inputs = lastRow.querySelectorAll('input');
           const select = lastRow.querySelector('select');
           if (inputs.length >= 2 && select) {
-            inputs[0].value = registrationDescription || 'עליה לכביש (מלוי יצחק)';
+            // Always use the real value if available, otherwise leave blank
+            inputs[0].value = registrationDescription || '';
             select.value = String(registrationPercent).includes('-') ? 'minus' : 'plus';
             inputs[1].value = Math.abs(parseFloat(String(registrationPercent).replace(/[%\s+-]/g, ''))) || '';
             lastRow.setAttribute('data-source', 'levi');
