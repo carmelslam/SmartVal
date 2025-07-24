@@ -8734,6 +8734,13 @@
           const differentialsTable = document.getElementById('differentialsTable');
           if (differentialsTable) {
             differentialsTable.style.display = this.checked ? 'block' : 'none';
+            
+            // If unchecked, clear all differentials and recalculate
+            if (!this.checked) {
+              const rows = document.querySelectorAll('#differentialsRows .differential-row');
+              rows.forEach(row => row.remove());
+              updateDifferentialsSummary();
+            }
           }
         });
       }
@@ -8819,13 +8826,131 @@
       }
     }
     
-    // Placeholder functions for depreciation functionality
+    // Depreciation functionality 
     function addDepreciationRow() {
       alert('הוסף שורת ירידת ערך - יטען עם מודול depreciation_module.js');
     }
     
+    // Real differential row functionality
+    function createDifferentialRow(data = {}) {
+      const div = document.createElement('div');
+      div.className = 'differential-row';
+      div.style.display = 'grid';
+      div.style.gridTemplateColumns = '1fr 120px 120px 120px 80px';
+      div.style.gap = '14px';
+      div.style.marginBottom = '10px';
+      div.style.padding = '10px';
+      div.style.background = '#f8fafc';
+      div.style.borderRadius = '6px';
+      
+      // Get VAT rate based on company selection
+      const vatRate = getVatRate();
+      const amount = data.amount || 0;
+      const vat = Math.round(amount * vatRate);
+      const totalWithVat = amount + vat;
+      
+      div.innerHTML = `
+        <div>
+          <input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        </div>
+        <div>
+          <input type="number" class="diff-amount" placeholder="סכום" value="${amount}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        </div>
+        <div>
+          <input type="number" class="diff-vat" placeholder="מע״מ" value="${vat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
+        </div>
+        <div>
+          <input type="number" class="diff-total" placeholder="סה״כ" value="${totalWithVat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
+        </div>
+        <div>
+          <button type="button" class="btn-remove" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">✕</button>
+        </div>
+      `;
+      
+      // Add event listeners
+      const amountInput = div.querySelector('.diff-amount');
+      const vatInput = div.querySelector('.diff-vat');
+      const totalInput = div.querySelector('.diff-total');
+      const removeBtn = div.querySelector('.btn-remove');
+      
+      amountInput.addEventListener('input', function() {
+        const newAmount = parseFloat(this.value) || 0;
+        const newVat = Math.round(newAmount * vatRate);
+        const newTotal = newAmount + newVat;
+        
+        vatInput.value = newVat;
+        totalInput.value = newTotal;
+        
+        // Recalculate summary
+        updateDifferentialsSummary();
+      });
+      
+      removeBtn.addEventListener('click', function() {
+        div.remove();
+        updateDifferentialsSummary();
+      });
+      
+      return div;
+    }
+    
     function addDifferentialRow() {
-      alert('הוסף הפרש - יטען עם מודול depreciation_module.js');
+      const container = document.getElementById('differentialsRows');
+      if (container) {
+        const newRow = createDifferentialRow();
+        container.appendChild(newRow);
+        updateDifferentialsSummary();
+      }
+    }
+    
+    function updateDifferentialsSummary() {
+      const rows = document.querySelectorAll('#differentialsRows .differential-row');
+      let totalAmount = 0;
+      let totalVat = 0;
+      let totalWithVat = 0;
+      
+      rows.forEach(row => {
+        const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
+        const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
+        const total = parseFloat(row.querySelector('.diff-total').value) || 0;
+        
+        totalAmount += amount;
+        totalVat += vat;
+        totalWithVat += total;
+      });
+      
+      // Update summary display if it exists
+      const summarySection = document.getElementById('differentialsSummary');
+      if (summarySection) {
+        summarySection.style.display = rows.length > 0 ? 'block' : 'none';
+        
+        const totalDiffField = document.getElementById('totalDifferentials');
+        const totalVatField = document.getElementById('totalVAT');
+        const totalWithVatField = document.getElementById('totalDifferentialsWithVAT');
+        
+        if (totalDiffField) totalDiffField.textContent = `₪${totalAmount.toLocaleString()}`;
+        if (totalVatField) totalVatField.textContent = `₪${totalVat.toLocaleString()}`;
+        if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
+      }
+      
+      // Update main summary calculations
+      updateMainSummaryWithDifferentials(totalWithVat);
+    }
+    
+    function updateMainSummaryWithDifferentials(differencesTotal) {
+      // Get base total before differences
+      const sumTotalField = document.getElementById('sumTotalClaim');
+      const currentTotal = parseFloat(sumTotalField?.value?.replace(/[₪,]/g, '') || '0');
+      
+      // The differences reduce the total (they are deductions)
+      const finalTotal = currentTotal - differencesTotal;
+      
+      // Update the final total field if it exists
+      const finalTotalField = document.getElementById('sumFinalTotal');
+      if (finalTotalField) {
+        finalTotalField.value = finalTotal > 0 ? `₪${Math.round(finalTotal).toLocaleString()}` : '₪0';
+      }
+      
+      console.log(`Updated summary: Base: ₪${currentTotal.toLocaleString()}, Differences: ₪${differencesTotal.toLocaleString()}, Final: ₪${finalTotal.toLocaleString()}`);
     }
     
 
@@ -8839,6 +8964,7 @@
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
+    window.updateDifferentialsSummary = updateDifferentialsSummary;
     window.getVatRate = getVatRate;
 
     // Document Operations Functions
