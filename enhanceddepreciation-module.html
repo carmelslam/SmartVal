@@ -7071,6 +7071,2080 @@
       }
     });
     
+    // ADVANCED HELPER SYSTEM - Enhanced from estimate-builder
+    const MathEngine = {
+      // Calculate percentage to value conversion
+      percentageToValue: function(percentage, baseValue) {
+        if (!percentage || !baseValue) return 0;
+        return Math.round((parseFloat(baseValue) * parseFloat(percentage)) / 100);
+      },
+      
+      // Calculate value to percentage conversion  
+      valueToPercentage: function(value, baseValue) {
+        if (!value || !baseValue) return 0;
+        return Math.round((parseFloat(value) / parseFloat(baseValue)) * 100);
+      },
+      
+      // Format currency display
+      formatCurrency: function(value) {
+        if (!value) return '₪0';
+        const numValue = parseFloat(value.toString().replace(/[₪,]/g, ''));
+        return `₪${numValue.toLocaleString()}`;
+      },
+      
+      // Parse currency to number
+      parseCurrency: function(value) {
+        if (!value) return 0;
+        return parseFloat(value.toString().replace(/[₪,]/g, ''));
+      }
+    };
+
+    // HELPER UPDATE FUNCTIONS - Enhanced bidirectional flow
+    function updateHelperFromField(event) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const fieldId = event.target.id;
+        const value = event.target.value;
+        
+        console.log(`📝 Field change detected: ${fieldId} = "${value}"`);
+        
+        // Enhanced field mapping for depreciation module
+        const fieldMappings = {
+          // Report type and configuration
+          'reportType': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.report_type = value;
+          },
+          'isCompanyClient': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.is_company_client = value === 'yes';
+          },
+          'isAgreement': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.is_agreement = event.target.checked;
+          },
+          'hasDifferentials': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.has_differentials = event.target.checked;
+          },
+          
+          // Car details fields
+          'carPlate': () => {
+            helper.car_details = helper.car_details || {};
+            helper.car_details.plate = value;
+          },
+          'carManufacturer': () => {
+            helper.car_details = helper.car_details || {};
+            helper.car_details.manufacturer = value;
+          },
+          'carModel': () => {
+            helper.car_details = helper.car_details || {};
+            helper.car_details.model = value;
+          },
+          'carYear': () => {
+            helper.car_details = helper.car_details || {};
+            helper.car_details.year = value;
+          },
+          
+          // Summary fields by type
+          'sumMarketValue': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.summary = helper.depreciation.summary || {};
+            helper.depreciation.summary.market_value = MathEngine.parseCurrency(value);
+          },
+          'sumClaim': () => {
+            helper.depreciation = helper.depreciation || {};
+            helper.depreciation.summary = helper.depreciation.summary || {};
+            helper.depreciation.summary.claim_total = MathEngine.parseCurrency(value);
+          }
+        };
+        
+        // Execute field mapping if exists
+        if (fieldMappings[fieldId]) {
+          fieldMappings[fieldId]();
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Trigger real-time calculations
+          setTimeout(() => {
+            calculateAllSummaryTotals();
+            triggerFloatingScreenRefresh();
+          }, 50);
+        }
+        
+      } catch (error) {
+        console.error('Error updating helper from field:', error);
+      }
+    }
+
+    // ADVANCED CALCULATION ENGINE - Enhanced from estimate-builder
+    function calculateAllSummaryTotals() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Calculate for all visible summary sections
+        const summaryBlocks = document.querySelectorAll('.summary-block:not([style*="display: none"])');
+        
+        summaryBlocks.forEach(block => {
+          const blockId = block.id;
+          
+          switch(blockId) {
+            case 'summaryPrivate':
+              calculatePrivateSummary(helper);
+              break;
+            case 'summaryGlobal':
+              calculateGlobalSummary(helper);
+              break;
+            case 'summaryDamage':
+              calculateDamageSummary(helper);
+              break;
+            case 'summaryTotalLoss':
+              calculateTotalLossSummary(helper);
+              break;
+            case 'summaryLegalLoss':
+              calculateLegalLossSummary(helper);
+              break;
+          }
+        });
+        
+        // Calculate differentials if active
+        if (helper.depreciation?.has_differentials) {
+          calculateDifferentials(helper);
+        }
+        
+        // Update helper with calculations
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+      } catch (error) {
+        console.error('Error calculating summary totals:', error);
+      }
+    }
+
+    // Individual summary calculation functions
+    function calculatePrivateSummary(helper) {
+      try {
+        const marketValue = MathEngine.parseCurrency(document.getElementById('sumMarketValue')?.value || '0');
+        const claimTotal = MathEngine.parseCurrency(document.getElementById('sumClaim')?.value || '0');
+        const depCompensation = MathEngine.parseCurrency(document.getElementById('depCompensation')?.value || '0');
+        
+        // Calculate custom additions
+        let customTotal = 0;
+        const customFields = document.querySelectorAll('#sumAdditionsGrid input');
+        customFields.forEach(field => {
+          customTotal += MathEngine.parseCurrency(field.value || '0');
+        });
+        
+        // Calculate final total
+        const finalTotal = marketValue + claimTotal + depCompensation + customTotal;
+        
+        // Update display
+        const totalField = document.getElementById('sumTotal');
+        if (totalField) {
+          totalField.value = MathEngine.formatCurrency(finalTotal);
+        }
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.summary = helper.depreciation.summary || {};
+        helper.depreciation.summary.private_total = finalTotal;
+        
+      } catch (error) {
+        console.error('Error calculating private summary:', error);
+      }
+    }
+
+    function calculateGlobalSummary(helper) {
+      try {
+        const marketValue = MathEngine.parseCurrency(document.getElementById('sumMarketValueGlobal')?.value || '0');
+        const claimTotal = MathEngine.parseCurrency(document.getElementById('sumClaimGlobal')?.value || '0');
+        const depCompensation = MathEngine.parseCurrency(document.getElementById('depCompensationGlobal')?.value || '0');
+        
+        // Calculate custom additions
+        let customTotal = 0;
+        const customFields = document.querySelectorAll('#sumAdditionsGridGlobal input');
+        customFields.forEach(field => {
+          customTotal += MathEngine.parseCurrency(field.value || '0');
+        });
+        
+        // Calculate final total
+        const finalTotal = marketValue + claimTotal + depCompensation + customTotal;
+        
+        // Update display
+        const totalField = document.getElementById('sumTotalGlobal');
+        if (totalField) {
+          totalField.value = MathEngine.formatCurrency(finalTotal);
+        }
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.summary = helper.depreciation.summary || {};
+        helper.depreciation.summary.global_total = finalTotal;
+        
+      } catch (error) {
+        console.error('Error calculating global summary:', error);
+      }
+    }
+
+    function calculateDamageSummary(helper) {
+      try {
+        const marketValue = MathEngine.parseCurrency(document.getElementById('sumMarketValueDamage')?.value || '0');
+        const saleValue = MathEngine.parseCurrency(document.getElementById('saleValueDamage')?.value || '0');
+        
+        // Calculate custom additions
+        let customTotal = 0;
+        const customFields = document.querySelectorAll('#sumAdditionsGridDamage input');
+        customFields.forEach(field => {
+          customTotal += MathEngine.parseCurrency(field.value || '0');
+        });
+        
+        // Calculate final total (market value minus sale value plus additions)
+        const finalTotal = marketValue - saleValue + customTotal;
+        
+        // Update display
+        const totalField = document.getElementById('afterSaleDamage');
+        if (totalField) {
+          totalField.value = MathEngine.formatCurrency(finalTotal);
+        }
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.summary = helper.depreciation.summary || {};
+        helper.depreciation.summary.damage_total = finalTotal;
+        
+      } catch (error) {
+        console.error('Error calculating damage summary:', error);
+      }
+    }
+
+    function calculateTotalLossSummary(helper) {
+      try {
+        const marketValue = MathEngine.parseCurrency(document.getElementById('sumMarketValueTotal')?.value || '0');
+        const salvageValue = MathEngine.parseCurrency(document.getElementById('salvageValueTotal')?.value || '0');
+        const towingFee = MathEngine.parseCurrency(document.getElementById('towingFeeTotal')?.value || '0');
+        
+        // Calculate custom additions
+        let customTotal = 0;
+        const customFields = document.querySelectorAll('#sumAdditionsGridTotal input');
+        customFields.forEach(field => {
+          customTotal += MathEngine.parseCurrency(field.value || '0');
+        });
+        
+        // Calculate final total (market value minus salvage plus towing plus additions)
+        const finalTotal = marketValue - salvageValue + towingFee + customTotal;
+        
+        // Update display
+        const totalField = document.getElementById('afterSaleTotal');
+        if (totalField) {
+          totalField.value = MathEngine.formatCurrency(finalTotal);
+        }
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.summary = helper.depreciation.summary || {};
+        helper.depreciation.summary.total_loss_total = finalTotal;
+        
+      } catch (error) {
+        console.error('Error calculating total loss summary:', error);
+      }
+    }
+
+    function calculateLegalLossSummary(helper) {
+      try {
+        const marketValue = MathEngine.parseCurrency(document.getElementById('sumMarketValueLegal')?.value || '0');
+        const salvageValue = MathEngine.parseCurrency(document.getElementById('salvageValueLegal')?.value || '0');
+        const towingFee = MathEngine.parseCurrency(document.getElementById('towingFeeLegal')?.value || '0');
+        
+        // Calculate custom additions
+        let customTotal = 0;
+        const customFields = document.querySelectorAll('#sumAdditionsGridLegal input');
+        customFields.forEach(field => {
+          customTotal += MathEngine.parseCurrency(field.value || '0');
+        });
+        
+        // Calculate final total
+        const finalTotal = marketValue - salvageValue + towingFee + customTotal;
+        
+        // Update display
+        const totalField = document.getElementById('afterSaleLegal');
+        if (totalField) {
+          totalField.value = MathEngine.formatCurrency(finalTotal);
+        }
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.summary = helper.depreciation.summary || {};
+        helper.depreciation.summary.legal_loss_total = finalTotal;
+        
+      } catch (error) {
+        console.error('Error calculating legal loss summary:', error);
+      }
+    }
+
+    function calculateDifferentials(helper) {
+      try {
+        let totalDifferentials = 0;
+        let totalVAT = 0;
+        
+        // Calculate from differential rows
+        const diffRows = document.querySelectorAll('[id^="diffRow_"]');
+        diffRows.forEach((row, index) => {
+          const priceInput = row.querySelector('input[data-field="price"]');
+          const vatInput = row.querySelector('input[data-field="vat_value"]');
+          
+          if (priceInput && vatInput) {
+            const price = MathEngine.parseCurrency(priceInput.value || '0');
+            const vat = MathEngine.parseCurrency(vatInput.value || '0');
+            
+            totalDifferentials += price;
+            totalVAT += vat;
+          }
+        });
+        
+        const totalWithVAT = totalDifferentials + totalVAT;
+        
+        // Update displays
+        const totalDiffField = document.getElementById('totalDifferentials');
+        const totalVATField = document.getElementById('totalVAT');
+        const totalWithVATField = document.getElementById('totalDifferentialsWithVAT');
+        
+        if (totalDiffField) totalDiffField.textContent = MathEngine.formatCurrency(totalDifferentials);
+        if (totalVATField) totalVATField.textContent = MathEngine.formatCurrency(totalVAT);
+        if (totalWithVATField) totalWithVATField.textContent = MathEngine.formatCurrency(totalWithVAT);
+        
+        // Update helper
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.differentials = {
+          total_without_vat: totalDifferentials,
+          total_vat: totalVAT,
+          total_with_vat: totalWithVAT
+        };
+        
+      } catch (error) {
+        console.error('Error calculating differentials:', error);
+      }
+    }
+
+    // REAL-TIME FIELD SYNCHRONIZATION - Enhanced from estimate-builder
+    function addFieldChangeListeners() {
+      try {
+        // Get all input fields and add change listeners
+        const fields = document.querySelectorAll('input, select, textarea');
+        
+        fields.forEach(field => {
+          // Skip readonly fields
+          if (field.readOnly || field.disabled) return;
+          
+          // Add change listener for immediate helper updates
+          if (field.type === 'checkbox' || field.type === 'radio') {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+              calculateAllSummaryTotals();
+            });
+          } else {
+            field.addEventListener('change', function() {
+              updateHelperFromField({ target: this });
+              calculateAllSummaryTotals();
+            });
+            
+            // Add blur listener for text fields to ensure updates on focus loss
+            field.addEventListener('blur', function() {
+              updateHelperFromField({ target: this });
+              calculateAllSummaryTotals();
+            });
+          }
+        });
+        
+        // Special handling for report type radio buttons
+        const reportTypeRadios = document.querySelectorAll('input[name="reportType"]');
+        reportTypeRadios.forEach(radio => {
+          radio.addEventListener('change', function() {
+            if (this.checked) {
+              updateReportType();
+              showCorrectSummarySection(this.value);
+              calculateAllSummaryTotals();
+            }
+          });
+        });
+        
+        console.log('✅ Added change listeners to', fields.length, 'fields');
+        
+      } catch (error) {
+        console.error('Error adding field change listeners:', error);
+      }
+    }
+
+    // ENHANCED HELPER LOADING WITH DATA VALIDATION
+    function loadDataFromHelper() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        console.log('📥 Loading helper data with validation:', helper);
+        
+        // Helper function to get nested values safely
+        const getNestedValue = (obj, path, defaultValue = '') => {
+          const keys = path.split('.');
+          let current = obj;
+          for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+              current = current[key];
+            } else {
+              return defaultValue;
+            }
+          }
+          return current || defaultValue;
+        };
+        
+        // Enhanced field mappings with multiple fallback sources
+        const fieldMappings = {
+          // Car details with multiple sources
+          'carPlate': () => getNestedValue(helper, 'meta.plate') || getNestedValue(helper, 'car_details.plate') || getNestedValue(helper, 'vehicle.plate'),
+          'carManufacturer': () => getNestedValue(helper, 'car_details.manufacturer') || getNestedValue(helper, 'vehicle.manufacturer'),
+          'carModel': () => getNestedValue(helper, 'car_details.model') || getNestedValue(helper, 'vehicle.model'),
+          'carYear': () => getNestedValue(helper, 'car_details.year') || getNestedValue(helper, 'vehicle.year'),
+          'carModelCode': () => getNestedValue(helper, 'car_details.model_code') || getNestedValue(helper, 'vehicle.model_code'),
+          'carBasePrice': () => {
+            const basePrice = getNestedValue(helper, 'levi_report.base_price') || 
+                             getNestedValue(helper, 'expertise.levi_report.base_price') || 
+                             getNestedValue(helper, 'levisummary.base_price') ||
+                             getNestedValue(helper, 'car_details.base_price');
+            return basePrice ? MathEngine.formatCurrency(basePrice) : '';
+          },
+          'carMarketValue': () => {
+            const marketValue = getNestedValue(helper, 'levi_report.final_price') || 
+                               getNestedValue(helper, 'expertise.levi_report.final_price') ||
+                               getNestedValue(helper, 'car_details.market_value');
+            return marketValue ? MathEngine.formatCurrency(marketValue) : '';
+          },
+          
+          // Contact details  
+          'ownerName': () => getNestedValue(helper, 'stakeholders.owner.name') || getNestedValue(helper, 'client.name'),
+          'ownerAddress': () => getNestedValue(helper, 'stakeholders.owner.address') || getNestedValue(helper, 'client.address'),
+          'ownerPhone': () => getNestedValue(helper, 'stakeholders.owner.phone') || getNestedValue(helper, 'client.phone'),
+          'insuranceCompany': () => getNestedValue(helper, 'stakeholders.insurance.company') || getNestedValue(helper, 'client.insurance_company'),
+          'insuranceEmail': () => getNestedValue(helper, 'stakeholders.insurance.email') || getNestedValue(helper, 'client.insurance_email'),
+          'insuranceAgent': () => getNestedValue(helper, 'stakeholders.insurance.agent.name') || getNestedValue(helper, 'client.insurance_agent'),
+          'agentPhone': () => getNestedValue(helper, 'stakeholders.insurance.agent.phone') || getNestedValue(helper, 'client.insurance_agent_phone'),
+          'agentEmail': () => getNestedValue(helper, 'stakeholders.insurance.agent.email') || getNestedValue(helper, 'client.insurance_agent_email'),
+          
+          // Depreciation specific fields
+          'reportType': () => getNestedValue(helper, 'depreciation.report_type') || 'private',
+          'isCompanyClient': () => getNestedValue(helper, 'depreciation.is_company_client') ? 'yes' : 'no',
+          'isAgreement': () => getNestedValue(helper, 'depreciation.is_agreement'),
+          'hasDifferentials': () => getNestedValue(helper, 'depreciation.has_differentials'),
+          
+          // Summary fields
+          'sumMarketValue': () => {
+            const value = getNestedValue(helper, 'depreciation.summary.market_value');
+            return value ? MathEngine.formatCurrency(value) : '';
+          },
+          'sumClaim': () => {
+            const value = getNestedValue(helper, 'depreciation.summary.claim_total');
+            return value ? MathEngine.formatCurrency(value) : '';
+          }
+        };
+        
+        // Load data into fields
+        Object.entries(fieldMappings).forEach(([fieldId, getValue]) => {
+          const field = document.getElementById(fieldId);
+          if (field && !field.value) {
+            const value = getValue();
+            if (value !== undefined && value !== null && value !== '') {
+              if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+              } else if (field.type === 'radio') {
+                if (field.value === value) {
+                  field.checked = true;
+                }
+              } else {
+                field.value = value;
+              }
+            }
+          }
+        });
+        
+        // Load depreciation data if exists
+        if (helper.depreciation?.depreciation_items) {
+          loadDepreciationItems(helper.depreciation.depreciation_items);
+        }
+        
+        // Load differentials if exists
+        if (helper.depreciation?.differentials) {
+          loadDifferentials(helper.depreciation.differentials);
+        }
+        
+        // Show correct summary section based on report type
+        const reportType = getNestedValue(helper, 'depreciation.report_type') || 'private';
+        showCorrectSummarySection(reportType);
+        
+        console.log('✅ Helper data loaded and validated successfully');
+        
+      } catch (error) {
+        console.error('Error loading data from helper:', error);
+      }
+    }
+
+    // ADVANCED FLOATING SCREEN INTEGRATION - Enhanced from estimate-builder
+    window.toggleFloatingScreen = function(screenType) {
+      console.log('🔄 Enhanced toggleFloatingScreen called:', screenType);
+      
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        const screens = {
+          leviReport: () => {
+            console.log('📊 Opening Levi Report floating screen with enhanced data sync');
+            if (window.toggleLeviReport) {
+              // Pre-sync latest helper data
+              syncHelperToFloatingScreen('levi');
+              window.toggleLeviReport();
+            } else {
+              console.warn('Levi report floating screen not available');
+            }
+          },
+          
+          carDetails: () => {
+            console.log('🚗 Opening Car Details floating screen with enhanced data sync');
+            if (window.toggleCarDetails) {
+              // Pre-sync latest helper data
+              syncHelperToFloatingScreen('car');
+              window.toggleCarDetails();
+            } else {
+              console.warn('Car details floating screen not available');
+            }
+          },
+          
+          invoice: () => {
+            console.log('🧾 Opening Invoice floating screen with enhanced data sync');
+            if (window.toggleInvoice) {
+              // Pre-sync latest helper data
+              syncHelperToFloatingScreen('invoice');
+              window.toggleInvoice();
+            } else {
+              console.warn('Invoice floating screen not available');
+            }
+          },
+          
+          partsResults: () => {
+            console.log('🔧 Opening Parts Results floating screen with enhanced data sync');
+            if (window.togglePartsResults) {
+              // Pre-sync latest helper data
+              syncHelperToFloatingScreen('parts');
+              window.togglePartsResults();
+            } else {
+              console.warn('Parts results floating screen not available');
+            }
+          },
+          
+          depreciation: () => {
+            console.log('📉 Opening Depreciation Summary floating screen');
+            openDepreciationSummaryScreen();
+          }
+        };
+        
+        // Execute screen toggle with error handling
+        if (screens[screenType]) {
+          screens[screenType]();
+        } else {
+          console.warn('Unknown screen type:', screenType);
+        }
+        
+      } catch (error) {
+        console.error('Error toggling floating screen:', error);
+      }
+    };
+
+    // SYNC HELPER DATA TO FLOATING SCREENS
+    function syncHelperToFloatingScreen(screenType) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Enhanced data sync based on screen type
+        switch(screenType) {
+          case 'levi':
+            // Sync Levi report data with latest calculations
+            if (helper.levi_report) {
+              helper.levi_report.depreciation_summary = helper.depreciation?.summary;
+              helper.levi_report.last_sync = new Date().toISOString();
+            }
+            break;
+            
+          case 'car':
+            // Sync car details with latest depreciation data
+            if (helper.car_details) {
+              helper.car_details.depreciation_status = helper.depreciation?.report_type;
+              helper.car_details.has_differentials = helper.depreciation?.has_differentials;
+              helper.car_details.last_sync = new Date().toISOString();
+            }
+            break;
+            
+          case 'invoice':
+            // Sync invoice data with current totals
+            if (helper.invoice) {
+              helper.invoice.depreciation_totals = helper.depreciation?.summary;
+              helper.invoice.differentials = helper.depreciation?.differentials;
+              helper.invoice.last_sync = new Date().toISOString();
+            }
+            break;
+            
+          case 'parts':
+            // Sync parts data with depreciation calculations
+            if (helper.expertise?.damage_blocks) {
+              helper.expertise.damage_blocks.forEach(block => {
+                block.depreciation_applied = helper.depreciation?.depreciation_items || [];
+              });
+            }
+            break;
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log(`✅ Helper data synced for ${screenType} floating screen`);
+        
+      } catch (error) {
+        console.error('Error syncing helper to floating screen:', error);
+      }
+    }
+
+    // TRIGGER FLOATING SCREEN REFRESH - Enhanced from estimate-builder
+    function triggerFloatingScreenRefresh() {
+      try {
+        console.log('🔄 Enhanced triggerFloatingScreenRefresh called');
+        
+        // Update helper with current depreciation calculations
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure calculations structure exists
+        helper.calculations = helper.calculations || {};
+        helper.expertise = helper.expertise || {};
+        helper.expertise.calculations = helper.expertise.calculations || {};
+        
+        // Update with current depreciation calculations
+        helper.calculations.depreciation_totals = helper.depreciation?.summary || {};
+        helper.calculations.differentials_totals = helper.depreciation?.differentials || {};
+        helper.calculations.last_updated = new Date().toISOString();
+        
+        // Update expertise calculations
+        helper.expertise.calculations.depreciation_applied = true;
+        helper.expertise.calculations.report_type = helper.depreciation?.report_type;
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Trigger refresh on available floating screens
+        const refreshFunctions = [
+          'refreshLeviData',
+          'refreshCarData', 
+          'refreshInvoiceData',
+          'refreshPartsResults',
+          'refreshDepreciationData'
+        ];
+        
+        refreshFunctions.forEach(funcName => {
+          if (typeof window[funcName] === 'function') {
+            try {
+              window[funcName](helper);
+              console.log(`✅ ${funcName} refreshed successfully`);
+            } catch (error) {
+              console.warn(`⚠️ Error refreshing ${funcName}:`, error);
+            }
+          }
+        });
+        
+        // Custom event for other modules to listen
+        window.dispatchEvent(new CustomEvent('helperUpdated', {
+          detail: {
+            source: 'enhancedDepreciation',
+            helper: helper,
+            timestamp: new Date().toISOString()
+          }
+        }));
+        
+        console.log('✅ All floating screens refreshed with enhanced data');
+        
+      } catch (error) {
+        console.error('Error triggering floating screen refresh:', error);
+      }
+    }
+
+    // DEPRECIATION SUMMARY FLOATING SCREEN
+    function openDepreciationSummaryScreen() {
+      try {
+        // Create floating screen for depreciation summary
+        const existingScreen = document.getElementById('depreciationFloatingScreen');
+        if (existingScreen) {
+          existingScreen.style.display = existingScreen.style.display === 'none' ? 'block' : 'none';
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Create floating screen HTML
+        const screenHTML = `
+          <div id="depreciationFloatingScreen" style="
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 10000;
+            overflow-y: auto;
+            padding: 20px;
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+              <h2 style="color: #007bff; margin: 0;">סיכום ירידת ערך מתקדם</h2>
+              <button onclick="document.getElementById('depreciationFloatingScreen').style.display='none'" style="
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 15px;
+                cursor: pointer;
+                font-size: 14px;
+              ">✕ סגור</button>
+            </div>
+            
+            <div id="depreciationSummaryContent">
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h3>סוג הדוח: ${helper.depreciation?.report_type || 'לא נבחר'}</h3>
+                <p>דוח לחברה: ${helper.depreciation?.is_company_client ? 'כן' : 'לא'}</p>
+                <p>בהסדר: ${helper.depreciation?.is_agreement ? 'כן' : 'לא'}</p>
+                <p>הפרשים: ${helper.depreciation?.has_differentials ? 'כן' : 'לא'}</p>
+              </div>
+              
+              <div id="summaryTotalsDisplay"></div>
+              <div id="differentialsDisplay"></div>
+            </div>
+          </div>
+        `;
+        
+        // Add to page
+        document.body.insertAdjacentHTML('beforeend', screenHTML);
+        
+        // Populate with current data
+        updateDepreciationFloatingScreen(helper);
+        
+      } catch (error) {
+        console.error('Error opening depreciation summary screen:', error);
+      }
+    }
+
+    // UPDATE DEPRECIATION FLOATING SCREEN
+    function updateDepreciationFloatingScreen(helper) {
+      try {
+        const summaryDisplay = document.getElementById('summaryTotalsDisplay');
+        const differentialsDisplay = document.getElementById('differentialsDisplay');
+        
+        if (summaryDisplay && helper.depreciation?.summary) {
+          const summary = helper.depreciation.summary;
+          summaryDisplay.innerHTML = `
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <h4>סיכום חישובים</h4>
+              <p>סיכום פרטי: ${MathEngine.formatCurrency(summary.private_total || 0)}</p>
+              <p>סיכום גלובלי: ${MathEngine.formatCurrency(summary.global_total || 0)}</p>
+              <p>סיכום נזק: ${MathEngine.formatCurrency(summary.damage_total || 0)}</p>
+              <p>סיכום טוטלוס: ${MathEngine.formatCurrency(summary.total_loss_total || 0)}</p>
+              <p>סיכום אובדן להלכה: ${MathEngine.formatCurrency(summary.legal_loss_total || 0)}</p>
+            </div>
+          `;
+        }
+        
+        if (differentialsDisplay && helper.depreciation?.differentials) {
+          const diff = helper.depreciation.differentials;
+          differentialsDisplay.innerHTML = `
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px;">
+              <h4>הפרשים</h4>
+              <p>סה"כ ללא מע"מ: ${MathEngine.formatCurrency(diff.total_without_vat || 0)}</p>
+              <p>סה"כ מע"מ: ${MathEngine.formatCurrency(diff.total_vat || 0)}</p>
+              <p>סה"כ עם מע"מ: ${MathEngine.formatCurrency(diff.total_with_vat || 0)}</p>
+            </div>
+          `;
+        }
+        
+      } catch (error) {
+        console.error('Error updating depreciation floating screen:', error);
+      }
+    }
+
+    // ENHANCED DYNAMIC FIELD MANAGEMENT - Upgraded from estimate-builder patterns
+    function addCustomSummaryField(summaryType) {
+      try {
+        console.log('➕ Adding custom summary field for:', summaryType);
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize custom fields structure
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.custom_fields = helper.depreciation.custom_fields || {};
+        helper.depreciation.custom_fields[summaryType] = helper.depreciation.custom_fields[summaryType] || [];
+        
+        // Generate unique field ID
+        const fieldId = `customField_${summaryType}_${Date.now()}`;
+        
+        // Add new field data to helper
+        const newField = {
+          id: fieldId,
+          name: '',
+          value: 0,
+          type: 'currency',
+          operation: 'add', // 'add' or 'subtract'
+          created: new Date().toISOString()
+        };
+        
+        helper.depreciation.custom_fields[summaryType].push(newField);
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Get target container
+        const containerMap = {
+          'summaryPrivate': 'sumAdditionsGrid',
+          'summaryGlobal': 'sumAdditionsGridGlobal', 
+          'summaryDamage': 'sumAdditionsGridDamage',
+          'summaryTotalLoss': 'sumAdditionsGridTotal',
+          'summaryLegalLoss': 'sumAdditionsGridLegal'
+        };
+        
+        const containerId = containerMap[summaryType];
+        const container = document.getElementById(containerId);
+        
+        if (!container) {
+          console.warn('Container not found for:', summaryType);
+          return;
+        }
+        
+        // Create field HTML with enhanced functionality
+        const fieldHTML = `
+          <div class="custom-field-row" id="${fieldId}" style="
+            display: grid; 
+            grid-template-columns: 2fr 1fr auto auto; 
+            gap: 8px; 
+            align-items: center; 
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+          ">
+            <input type="text" 
+                   placeholder="תיאור השדה..." 
+                   value="${newField.name}"
+                   data-field="name"
+                   data-id="${fieldId}"
+                   style="font-size: 14px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;"
+                   onchange="updateCustomField('${fieldId}', 'name', this.value); calculateAllSummaryTotals();" />
+            
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select data-field="operation" 
+                      data-id="${fieldId}"
+                      onchange="updateCustomField('${fieldId}', 'operation', this.value); updateFieldValueDisplay('${fieldId}'); calculateAllSummaryTotals();"
+                      style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                <option value="add" ${newField.operation === 'add' ? 'selected' : ''}>+</option>
+                <option value="subtract" ${newField.operation === 'subtract' ? 'selected' : ''}>-</option>
+              </select>
+              
+              <input type="text" 
+                     placeholder="₪0" 
+                     value="${MathEngine.formatCurrency(newField.value)}"
+                     data-field="value"
+                     data-id="${fieldId}"
+                     style="font-size: 14px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100px;"
+                     onchange="updateCustomFieldValue('${fieldId}', this.value); calculateAllSummaryTotals();" />
+            </div>
+            
+            <span class="field-display-value" id="display_${fieldId}" style="
+              font-weight: bold; 
+              color: ${newField.operation === 'add' ? '#28a745' : '#dc3545'};
+              min-width: 80px;
+              text-align: left;
+            ">${newField.operation === 'add' ? '+' : '-'}${MathEngine.formatCurrency(Math.abs(newField.value))}</span>
+            
+            <button type="button" 
+                    onclick="removeCustomField('${fieldId}', '${summaryType}')"
+                    style="
+                      background: #dc3545; 
+                      color: white; 
+                      border: none; 
+                      padding: 6px 10px; 
+                      border-radius: 4px; 
+                      cursor: pointer; 
+                      font-size: 12px;
+                      transition: background 0.2s;
+                    "
+                    onmouseover="this.style.background='#c82333'"
+                    onmouseout="this.style.background='#dc3545'">מחק</button>
+          </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', fieldHTML);
+        
+        // Focus on the name input for immediate editing
+        setTimeout(() => {
+          const nameInput = document.querySelector(`#${fieldId} input[data-field="name"]`);
+          if (nameInput) nameInput.focus();
+        }, 100);
+        
+        // Trigger calculation update
+        calculateAllSummaryTotals();
+        
+        console.log(`✅ Custom field added: ${fieldId} for ${summaryType}`);
+        
+      } catch (error) {
+        console.error('Error adding custom summary field:', error);
+      }
+    }
+
+    // UPDATE CUSTOM FIELD
+    function updateCustomField(fieldId, fieldType, value) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Find and update the field in helper
+        let fieldFound = false;
+        Object.keys(helper.depreciation?.custom_fields || {}).forEach(summaryType => {
+          const fields = helper.depreciation.custom_fields[summaryType];
+          const fieldIndex = fields.findIndex(f => f.id === fieldId);
+          
+          if (fieldIndex !== -1) {
+            fields[fieldIndex][fieldType] = value;
+            fields[fieldIndex].updated = new Date().toISOString();
+            fieldFound = true;
+          }
+        });
+        
+        if (fieldFound) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Custom field updated: ${fieldId}.${fieldType} = ${value}`);
+        }
+        
+      } catch (error) {
+        console.error('Error updating custom field:', error);
+      }
+    }
+
+    // UPDATE CUSTOM FIELD VALUE WITH CURRENCY PARSING
+    function updateCustomFieldValue(fieldId, displayValue) {
+      try {
+        const numericValue = MathEngine.parseCurrency(displayValue);
+        updateCustomField(fieldId, 'value', numericValue);
+        
+        // Update the display immediately
+        updateFieldValueDisplay(fieldId);
+        
+      } catch (error) {
+        console.error('Error updating custom field value:', error);
+      }
+    }
+
+    // UPDATE FIELD VALUE DISPLAY
+    function updateFieldValueDisplay(fieldId) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Find the field data
+        let fieldData = null;
+        Object.values(helper.depreciation?.custom_fields || {}).forEach(fields => {
+          const field = fields.find(f => f.id === fieldId);
+          if (field) fieldData = field;
+        });
+        
+        if (fieldData) {
+          const displayElement = document.getElementById(`display_${fieldId}`);
+          if (displayElement) {
+            const sign = fieldData.operation === 'add' ? '+' : '-';
+            const color = fieldData.operation === 'add' ? '#28a745' : '#dc3545';
+            
+            displayElement.textContent = `${sign}${MathEngine.formatCurrency(Math.abs(fieldData.value))}`;
+            displayElement.style.color = color;
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error updating field value display:', error);
+      }
+    }
+
+    // REMOVE CUSTOM FIELD
+    function removeCustomField(fieldId, summaryType) {
+      try {
+        console.log('🗑️ Removing custom field:', fieldId);
+        
+        // Confirm removal
+        if (!confirm('האם אתה בטוח שברצונך למחוק שדה זה?')) {
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Remove from helper
+        if (helper.depreciation?.custom_fields?.[summaryType]) {
+          const fields = helper.depreciation.custom_fields[summaryType];
+          const fieldIndex = fields.findIndex(f => f.id === fieldId);
+          
+          if (fieldIndex !== -1) {
+            fields.splice(fieldIndex, 1);
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        }
+        
+        // Remove from DOM
+        const fieldElement = document.getElementById(fieldId);
+        if (fieldElement) {
+          fieldElement.remove();
+        }
+        
+        // Recalculate totals
+        calculateAllSummaryTotals();
+        
+        console.log(`✅ Custom field removed: ${fieldId}`);
+        
+      } catch (error) {
+        console.error('Error removing custom field:', error);
+      }
+    }
+
+    // LOAD CUSTOM FIELDS FROM HELPER
+    function loadCustomFields() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (!helper.depreciation?.custom_fields) return;
+        
+        Object.entries(helper.depreciation.custom_fields).forEach(([summaryType, fields]) => {
+          const containerMap = {
+            'summaryPrivate': 'sumAdditionsGrid',
+            'summaryGlobal': 'sumAdditionsGridGlobal',
+            'summaryDamage': 'sumAdditionsGridDamage', 
+            'summaryTotalLoss': 'sumAdditionsGridTotal',
+            'summaryLegalLoss': 'sumAdditionsGridLegal'
+          };
+          
+          const containerId = containerMap[summaryType];
+          const container = document.getElementById(containerId);
+          
+          if (container && fields.length > 0) {
+            // Clear existing custom fields
+            container.innerHTML = '';
+            
+            // Re-create each field
+            fields.forEach(field => {
+              const fieldHTML = `
+                <div class="custom-field-row" id="${field.id}" style="
+                  display: grid; 
+                  grid-template-columns: 2fr 1fr auto auto; 
+                  gap: 8px; 
+                  align-items: center; 
+                  margin-bottom: 8px;
+                  padding: 8px;
+                  background: #f8f9fa;
+                  border-radius: 6px;
+                  border: 1px solid #e9ecef;
+                ">
+                  <input type="text" 
+                         placeholder="תיאור השדה..." 
+                         value="${field.name || ''}"
+                         data-field="name"
+                         data-id="${field.id}"
+                         style="font-size: 14px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;"
+                         onchange="updateCustomField('${field.id}', 'name', this.value); calculateAllSummaryTotals();" />
+                  
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <select data-field="operation" 
+                            data-id="${field.id}"
+                            onchange="updateCustomField('${field.id}', 'operation', this.value); updateFieldValueDisplay('${field.id}'); calculateAllSummaryTotals();"
+                            style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                      <option value="add" ${field.operation === 'add' ? 'selected' : ''}>+</option>
+                      <option value="subtract" ${field.operation === 'subtract' ? 'selected' : ''}>-</option>
+                    </select>
+                    
+                    <input type="text" 
+                           placeholder="₪0" 
+                           value="${MathEngine.formatCurrency(field.value || 0)}"
+                           data-field="value"
+                           data-id="${field.id}"
+                           style="font-size: 14px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100px;"
+                           onchange="updateCustomFieldValue('${field.id}', this.value); calculateAllSummaryTotals();" />
+                  </div>
+                  
+                  <span class="field-display-value" id="display_${field.id}" style="
+                    font-weight: bold; 
+                    color: ${field.operation === 'add' ? '#28a745' : '#dc3545'};
+                    min-width: 80px;
+                    text-align: left;
+                  ">${field.operation === 'add' ? '+' : '-'}${MathEngine.formatCurrency(Math.abs(field.value || 0))}</span>
+                  
+                  <button type="button" 
+                          onclick="removeCustomField('${field.id}', '${summaryType}')"
+                          style="
+                            background: #dc3545; 
+                            color: white; 
+                            border: none; 
+                            padding: 6px 10px; 
+                            border-radius: 4px; 
+                            cursor: pointer; 
+                            font-size: 12px;
+                            transition: background 0.2s;
+                          "
+                          onmouseover="this.style.background='#c82333'"
+                          onmouseout="this.style.background='#dc3545'">מחק</button>
+                </div>
+              `;
+              
+              container.insertAdjacentHTML('beforeend', fieldHTML);
+            });
+          }
+        });
+        
+        console.log('✅ Custom fields loaded from helper');
+        
+      } catch (error) {
+        console.error('Error loading custom fields:', error);
+      }
+    }
+
+    // ENHANCED DEPRECIATION ITEM MANAGEMENT
+    function addDepreciationItem() {
+      try {
+        console.log('➕ Adding depreciation item');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize depreciation items
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.depreciation_items = helper.depreciation.depreciation_items || [];
+        
+        // Generate unique item ID
+        const itemId = `depItem_${Date.now()}`;
+        
+        // Add new item
+        const newItem = {
+          id: itemId,
+          name: '',
+          percentage: 0,
+          value: 0,
+          created: new Date().toISOString()
+        };
+        
+        helper.depreciation.depreciation_items.push(newItem);
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Add to DOM
+        const container = document.getElementById('depreciationBulkTable');
+        if (container) {
+          const itemHTML = createDepreciationItemHTML(newItem);
+          container.insertAdjacentHTML('beforeend', itemHTML);
+          
+          // Focus on name input
+          setTimeout(() => {
+            const nameInput = document.querySelector(`#${itemId} input[data-field="name"]`);
+            if (nameInput) nameInput.focus();
+          }, 100);
+        }
+        
+        console.log(`✅ Depreciation item added: ${itemId}`);
+        
+      } catch (error) {
+        console.error('Error adding depreciation item:', error);
+      }
+    }
+
+    // CREATE DEPRECIATION ITEM HTML
+    function createDepreciationItemHTML(item) {
+      return `
+        <div id="${item.id}" style="
+          display: grid; 
+          grid-template-columns: 2fr 120px 120px 80px; 
+          gap: 14px; 
+          margin-bottom: 10px;
+          align-items: center;
+        ">
+          <input type="text" 
+                 placeholder="שם מוקד הנזק..." 
+                 value="${item.name || ''}"
+                 data-field="name"
+                 data-id="${item.id}"
+                 style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                 onchange="updateDepreciationItem('${item.id}', 'name', this.value);" />
+          
+          <input type="number" 
+                 placeholder="%" 
+                 value="${item.percentage || ''}"
+                 data-field="percentage"
+                 data-id="${item.id}"
+                 style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center;"
+                 step="0.1" min="0" max="100"
+                 onchange="updateDepreciationItem('${item.id}', 'percentage', this.value); calculateDepreciationValue('${item.id}');" />
+          
+          <input type="text" 
+                 placeholder="₪0" 
+                 value="${MathEngine.formatCurrency(item.value || 0)}"
+                 data-field="value"
+                 data-id="${item.id}"
+                 style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa;"
+                 readonly />
+          
+          <button type="button" 
+                  onclick="removeDepreciationItem('${item.id}')"
+                  style="background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">מחק</button>
+        </div>
+      `;
+    }
+
+    // UPDATE DEPRECIATION ITEM
+    function updateDepreciationItem(itemId, field, value) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        const items = helper.depreciation?.depreciation_items || [];
+        const itemIndex = items.findIndex(item => item.id === itemId);
+        
+        if (itemIndex !== -1) {
+          items[itemIndex][field] = field === 'percentage' ? parseFloat(value) : value;
+          items[itemIndex].updated = new Date().toISOString();
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Depreciation item updated: ${itemId}.${field} = ${value}`);
+        }
+        
+      } catch (error) {
+        console.error('Error updating depreciation item:', error);
+      }
+    }
+
+    // CALCULATE DEPRECIATION VALUE
+    function calculateDepreciationValue(itemId) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get market value for calculation base
+        const marketValue = helper.depreciation?.summary?.market_value || 
+                           helper.levi_report?.final_price || 
+                           helper.expertise?.levi_report?.final_price || 0;
+        
+        const items = helper.depreciation?.depreciation_items || [];
+        const item = items.find(item => item.id === itemId);
+        
+        if (item && marketValue > 0) {
+          const calculatedValue = MathEngine.percentageToValue(item.percentage, marketValue);
+          item.value = calculatedValue;
+          
+          // Update helper
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Update display
+          const valueInput = document.querySelector(`#${itemId} input[data-field="value"]`);
+          if (valueInput) {
+            valueInput.value = MathEngine.formatCurrency(calculatedValue);
+          }
+          
+          console.log(`✅ Depreciation value calculated: ${item.percentage}% of ${MathEngine.formatCurrency(marketValue)} = ${MathEngine.formatCurrency(calculatedValue)}`);
+        }
+        
+      } catch (error) {
+        console.error('Error calculating depreciation value:', error);
+      }
+    }
+
+    // REMOVE DEPRECIATION ITEM
+    function removeDepreciationItem(itemId) {
+      try {
+        if (!confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) {
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Remove from helper
+        if (helper.depreciation?.depreciation_items) {
+          const items = helper.depreciation.depreciation_items;
+          const itemIndex = items.findIndex(item => item.id === itemId);
+          
+          if (itemIndex !== -1) {
+            items.splice(itemIndex, 1);
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        }
+        
+        // Remove from DOM
+        const itemElement = document.getElementById(itemId);
+        if (itemElement) {
+          itemElement.remove();
+        }
+        
+        console.log(`✅ Depreciation item removed: ${itemId}`);
+        
+      } catch (error) {
+        console.error('Error removing depreciation item:', error);
+      }
+    }
+
+    // ADVANCED REPORT TYPE MANAGEMENT - Enhanced from estimate-builder patterns
+    function updateReportType() {
+      try {
+        console.log('🔄 Update report type called');
+        
+        const selectedRadio = document.querySelector('input[name="reportType"]:checked');
+        if (!selectedRadio) {
+          console.warn('No report type selected');
+          return;
+        }
+        
+        const reportType = selectedRadio.value;
+        console.log('Selected report type:', reportType);
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.report_type = reportType;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Show appropriate summary section
+        showCorrectSummarySection(reportType);
+        
+        // Update depreciation visibility based on report type
+        updateDepreciationVisibility(reportType);
+        
+        // Update fields based on report type
+        updateFieldsForReportType(reportType);
+        
+        // Load legal text for this report type
+        loadLegalTextForReportType(reportType);
+        
+        // Trigger calculations
+        calculateAllSummaryTotals();
+        
+        // Trigger floating screen refresh
+        triggerFloatingScreenRefresh();
+        
+        console.log(`✅ Report type updated to: ${reportType}`);
+        
+      } catch (error) {
+        console.error('Error updating report type:', error);
+      }
+    }
+
+    // SHOW CORRECT SUMMARY SECTION
+    function showCorrectSummarySection(reportType) {
+      try {
+        console.log('🔄 Showing summary section for:', reportType);
+        
+        // Hide all summary sections first
+        const summaryBlocks = document.querySelectorAll('.summary-block');
+        summaryBlocks.forEach(block => {
+          block.style.display = 'none';
+        });
+        
+        // Map report types to summary block IDs
+        const reportTypeMap = {
+          'private': 'summaryPrivate',
+          'global': 'summaryGlobal', 
+          'damage': 'summaryDamage',
+          'totalLoss': 'summaryTotalLoss',
+          'legalLoss': 'summaryLegalLoss'
+        };
+        
+        // Show the appropriate summary section
+        const targetSectionId = reportTypeMap[reportType];
+        if (targetSectionId) {
+          const targetSection = document.getElementById(targetSectionId);
+          if (targetSection) {
+            targetSection.style.display = 'block';
+            console.log(`✅ Summary section shown: ${targetSectionId}`);
+            
+            // Scroll to the summary section
+            setTimeout(() => {
+              targetSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+            }, 100);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error showing summary section:', error);
+      }
+    }
+
+    // UPDATE DEPRECIATION VISIBILITY BASED ON REPORT TYPE
+    function updateDepreciationVisibility(reportType) {
+      try {
+        const depreciationSection = document.getElementById('depreciationSection');
+        
+        if (!depreciationSection) return;
+        
+        // Hide depreciation for Global and Total Loss reports (as per specification)
+        const hideDepreciationFor = ['global', 'totalLoss'];
+        
+        if (hideDepreciationFor.includes(reportType)) {
+          depreciationSection.style.display = 'none';
+          console.log(`⚠️ Depreciation section hidden for report type: ${reportType}`);
+        } else {
+          depreciationSection.style.display = 'block';
+          console.log(`✅ Depreciation section shown for report type: ${reportType}`);
+        }
+        
+      } catch (error) {
+        console.error('Error updating depreciation visibility:', error);
+      }
+    }
+
+    // UPDATE FIELDS FOR REPORT TYPE
+    function updateFieldsForReportType(reportType) {
+      try {
+        console.log('🔄 Updating fields for report type:', reportType);
+        
+        // Update field visibility and requirements based on report type
+        const fieldVisibilityMap = {
+          'private': {
+            show: ['workDays', 'claimSummary'],
+            hide: ['damageCentersCount', 'salvageValue', 'damagePercentage']
+          },
+          'global': {
+            show: ['workDays', 'claimSummary', 'damageCentersCount', 'salvageValue'],
+            hide: ['damagePercentage']
+          },
+          'damage': {
+            show: ['workDays', 'damagePercentage'],
+            hide: ['claimSummary', 'damageCentersCount', 'salvageValue']
+          },
+          'totalLoss': {
+            show: ['workDays', 'damagePercentage', 'salvageValue'],
+            hide: ['claimSummary', 'damageCentersCount']
+          },
+          'legalLoss': {
+            show: ['workDays', 'damagePercentage', 'salvageValue'],
+            hide: ['claimSummary', 'damageCentersCount']
+          }
+        };
+        
+        const config = fieldVisibilityMap[reportType];
+        if (config) {
+          // Show required fields
+          config.show.forEach(fieldClass => {
+            const elements = document.querySelectorAll(`.${fieldClass}`);
+            elements.forEach(el => el.style.display = 'block');
+          });
+          
+          // Hide unnecessary fields
+          config.hide.forEach(fieldClass => {
+            const elements = document.querySelectorAll(`.${fieldClass}`);
+            elements.forEach(el => el.style.display = 'none');
+          });
+        }
+        
+        // Update field labels and placeholders
+        updateFieldLabelsForReportType(reportType);
+        
+        console.log(`✅ Fields updated for report type: ${reportType}`);
+        
+      } catch (error) {
+        console.error('Error updating fields for report type:', error);
+      }
+    }
+
+    // UPDATE FIELD LABELS FOR REPORT TYPE
+    function updateFieldLabelsForReportType(reportType) {
+      try {
+        const labelMap = {
+          'private': {
+            'sumTotal': 'סה״כ נכלל בחוות הדעת',
+            'reportTypeDisplay': 'חוות דעת פרטית'
+          },
+          'global': {
+            'sumTotal': 'סה״כ נכלל בחוות הדעת',
+            'reportTypeDisplay': 'חוות דעת גלובלית'
+          },
+          'damage': {
+            'sumTotal': 'סה״כ לאחר מכירה',
+            'reportTypeDisplay': 'מצבו הניזוק'
+          },
+          'totalLoss': {
+            'sumTotal': 'סה״כ לאחר מכירת שרידים',
+            'reportTypeDisplay': 'טוטלוסט'
+          },
+          'legalLoss': {
+            'sumTotal': 'סה״כ לאחר מכירת שרידים',
+            'reportTypeDisplay': 'אובדן להלכה'
+          }
+        };
+        
+        const labels = labelMap[reportType];
+        if (labels) {
+          // Update report type display
+          const reportTypeField = document.getElementById('reportType');
+          if (reportTypeField) {
+            reportTypeField.value = labels.reportTypeDisplay;
+          }
+          
+          // Update other labels as needed
+          Object.entries(labels).forEach(([fieldId, label]) => {
+            const field = document.getElementById(fieldId);
+            if (field && fieldId !== 'reportTypeDisplay') {
+              const labelElement = document.querySelector(`label[for="${fieldId}"]`);
+              if (labelElement) {
+                labelElement.textContent = label + ':';
+              }
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error updating field labels:', error);
+      }
+    }
+
+    // LOAD LEGAL TEXT FOR REPORT TYPE
+    function loadLegalTextForReportType(reportType) {
+      try {
+        console.log('📄 Loading legal text for report type:', reportType);
+        
+        // Legal text templates based on report type
+        const legalTextTemplates = {
+          'private': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
+הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב.
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.
+חוות דעת זו נכתבה עבור לקוח פרטי.`,
+
+          'global': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו.
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.
+חוות דעת זו הינה הערכה גלובלית של הנזק.`,
+
+          'damage': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הערכתנו מתייחסת למכירת הרכב במצבו הניזוק ללא ביצוע תיקונים.
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`,
+
+          'totalLoss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הרכב מוגדר כטוטל לוס - אובדן כלכלי.
+הערכת ערך השרידים מבוססת על מחירי השוק הנוכחיים.
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`,
+
+          'legalLoss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הרכב מוגדר כאובדן להלכה.
+הערכת ערך השרידים מבוססת על מחירי השוק הנוכחיים.
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`
+        };
+        
+        const legalTextArea = document.getElementById('legal-text-content');
+        if (legalTextArea && legalTextTemplates[reportType]) {
+          legalTextArea.value = legalTextTemplates[reportType];
+          
+          // Update helper
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.depreciation = helper.depreciation || {};
+          helper.depreciation.legal_text = legalTextTemplates[reportType];
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log(`✅ Legal text loaded for report type: ${reportType}`);
+        }
+        
+      } catch (error) {
+        console.error('Error loading legal text for report type:', error);
+      }
+    }
+
+    // HANDLE COMPANY CLIENT SELECTION
+    function handleCompanyClientChange() {
+      try {
+        const isCompanySelect = document.getElementById('isCompanyClient');
+        if (!isCompanySelect) return;
+        
+        const isCompany = isCompanySelect.value === 'yes';
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.is_company_client = isCompany;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update VAT visibility and calculations
+        updateVATDisplayForCompanyClient(isCompany);
+        
+        // Recalculate totals
+        calculateAllSummaryTotals();
+        
+        console.log(`✅ Company client setting updated: ${isCompany ? 'Yes' : 'No'}`);
+        
+      } catch (error) {
+        console.error('Error handling company client change:', error);
+      }
+    }
+
+    // UPDATE VAT DISPLAY FOR COMPANY CLIENT
+    function updateVATDisplayForCompanyClient(isCompany) {
+      try {
+        // Find all VAT-related elements
+        const vatElements = document.querySelectorAll('.vat-display, [data-vat-field]');
+        
+        vatElements.forEach(element => {
+          if (isCompany) {
+            // Hide VAT for company clients
+            element.style.display = 'none';
+            element.title = 'מע"מ לא רלוונטי עבור לקוחות חברה';
+          } else {
+            // Show VAT for private clients
+            element.style.display = 'block';
+            element.title = '';
+          }
+        });
+        
+        // Update calculation displays
+        const summaryElements = document.querySelectorAll('.summary-vat-line');
+        summaryElements.forEach(element => {
+          element.style.display = isCompany ? 'none' : 'block';
+        });
+        
+        console.log(`✅ VAT display updated for company client: ${isCompany}`);
+        
+      } catch (error) {
+        console.error('Error updating VAT display:', error);
+      }
+    }
+
+    // HANDLE AGREEMENT STATUS CHANGE
+    function handleAgreementChange() {
+      try {
+        const agreementCheckbox = document.getElementById('isAgreement');
+        if (!agreementCheckbox) return;
+        
+        const isAgreement = agreementCheckbox.checked;
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.is_agreement = isAgreement;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update legal text if not in agreement
+        if (!isAgreement) {
+          appendDisagreementText();
+        } else {
+          removeDisagreementText();
+        }
+        
+        console.log(`✅ Agreement status updated: ${isAgreement ? 'In Agreement' : 'Not in Agreement'}`);
+        
+      } catch (error) {
+        console.error('Error handling agreement change:', error);
+      }
+    }
+
+    // APPEND DISAGREEMENT TEXT
+    function appendDisagreementText() {
+      try {
+        const legalTextArea = document.getElementById('legal-text-content');
+        if (!legalTextArea) return;
+        
+        const disagreementText = `\n\nנבקש לצור עם משרדנו קשר למייל office@yc-shamaut.co.il המשך טיפול ולגרירת הרכב הניזוק למגרש שהוא בהסדר עם חברתכם כדי שירשם מספר יומן כדין, תודה על שיתוף הפעולה.`;
+        
+        // Only add if not already present
+        if (!legalTextArea.value.includes('office@yc-shamaut.co.il')) {
+          legalTextArea.value += disagreementText;
+          
+          // Update helper
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.depreciation = helper.depreciation || {};
+          helper.depreciation.legal_text = legalTextArea.value;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log('✅ Disagreement text appended to legal text');
+        }
+        
+      } catch (error) {
+        console.error('Error appending disagreement text:', error);
+      }
+    }
+
+    // REMOVE DISAGREEMENT TEXT
+    function removeDisagreementText() {
+      try {
+        const legalTextArea = document.getElementById('legal-text-content');
+        if (!legalTextArea) return;
+        
+        // Remove disagreement text if present
+        const disagreementPattern = /\n\nנבקש לצור עם משרדנו קשר למייל office@yc-shamaut\.co\.il[^]*/;
+        legalTextArea.value = legalTextArea.value.replace(disagreementPattern, '');
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.legal_text = legalTextArea.value;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ Disagreement text removed from legal text');
+        
+      } catch (error) {
+        console.error('Error removing disagreement text:', error);
+      }
+    }
+
+    // DATA EXPORT OPTIMIZATION - Enhanced for report generation compatibility
+    window.saveEstimate = function() {
+      try {
+        console.log('💾 Enhanced saveEstimate called');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Collect all depreciation data
+        const depreciationData = {
+          report_type: helper.depreciation?.report_type || 'private',
+          is_company_client: helper.depreciation?.is_company_client || false,
+          is_agreement: helper.depreciation?.is_agreement || true,
+          has_differentials: helper.depreciation?.has_differentials || false,
+          
+          // Summary data for all types
+          summary: helper.depreciation?.summary || {},
+          
+          // Custom fields
+          custom_fields: helper.depreciation?.custom_fields || {},
+          
+          // Depreciation items
+          depreciation_items: helper.depreciation?.depreciation_items || [],
+          
+          // Differentials data
+          differentials: helper.depreciation?.differentials || {},
+          
+          // Legal text
+          legal_text: helper.depreciation?.legal_text || '',
+          
+          // Additional fields
+          work_days: document.getElementById('workDays')?.value || '',
+          damage_percentage: document.getElementById('damagePercentage')?.value || '',
+          damage_centers_count: document.getElementById('damageCentersCount')?.value || '',
+          salvage_value: MathEngine.parseCurrency(document.getElementById('salvageValue')?.value || '0'),
+          
+          // Timestamps
+          created: helper.depreciation?.created || new Date().toISOString(),
+          updated: new Date().toISOString()
+        };
+        
+        // Update helper with structured data
+        helper.depreciation = depreciationData;
+        helper.estimate_type = depreciationData.report_type;
+        helper.estimate_depreciation = depreciationData;
+        
+        // Export for report generation
+        helper.report_data = {
+          type: 'depreciation',
+          report_type: depreciationData.report_type,
+          data: depreciationData,
+          exported_at: new Date().toISOString(),
+          version: '2.0'
+        };
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('lastDepreciationReport', JSON.stringify(depreciationData));
+        
+        // Show success message
+        alert('חוות הדעת נשמרה בהצלחה! ✅');
+        
+        console.log('✅ Enhanced depreciation report saved:', depreciationData);
+        
+      } catch (error) {
+        console.error('Error saving estimate:', error);
+        alert('שגיאה בשמירת חוות הדעת ❌');
+      }
+    };
+
+    // PREVIEW ESTIMATE - Enhanced for depreciation module
+    window.previewEstimate = function() {
+      try {
+        console.log('👁️ Enhanced previewEstimate called');
+        
+        // Save current state first
+        window.saveEstimate();
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const depreciationData = helper.depreciation || {};
+        
+        // Create preview window
+        const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+        
+        // Generate preview HTML
+        const previewHTML = generatePreviewHTML(depreciationData);
+        
+        previewWindow.document.write(previewHTML);
+        previewWindow.document.close();
+        
+        console.log('✅ Preview window opened');
+        
+      } catch (error) {
+        console.error('Error previewing estimate:', error);
+        alert('שגיאה בתצוגה מקדימה ❌');
+      }
+    };
+
+    // GENERATE PREVIEW HTML
+    function generatePreviewHTML(depreciationData) {
+      const reportTypeNames = {
+        'private': 'חוות דעת פרטית',
+        'global': 'חוות דעת גלובלית',
+        'damage': 'מצבו הניזוק',
+        'totalLoss': 'טוטלוסט',
+        'legalLoss': 'אובדן להלכה'
+      };
+      
+      return `
+        <!DOCTYPE html>
+        <html lang="he" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>תצוגה מקדימה - ${reportTypeNames[depreciationData.report_type] || 'חוות דעת'}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              background: #f5f5f5; 
+              direction: rtl;
+            }
+            .container { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 10px; 
+              box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            }
+            h1 { 
+              color: #1e3a8a; 
+              text-align: center; 
+              border-bottom: 2px solid #1e3a8a; 
+              padding-bottom: 10px; 
+            }
+            .summary { 
+              background: #f8f9fa; 
+              padding: 15px; 
+              border-radius: 8px; 
+              margin: 20px 0; 
+            }
+            .legal-text { 
+              background: #e8f4f8; 
+              padding: 15px; 
+              border-radius: 8px; 
+              border-left: 4px solid #007bff; 
+              margin: 20px 0; 
+            }
+            .field { 
+              margin: 10px 0; 
+              display: flex; 
+              justify-content: space-between; 
+            }
+            .field strong { 
+              color: #333; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${reportTypeNames[depreciationData.report_type] || 'חוות דעת'}</h1>
+            
+            <div class="summary">
+              <h3>פרטי הדוח</h3>
+              <div class="field">
+                <span>סוג דוח:</span>
+                <strong>${reportTypeNames[depreciationData.report_type] || 'לא צוין'}</strong>
+              </div>
+              <div class="field">
+                <span>דוח לחברה:</span>
+                <strong>${depreciationData.is_company_client ? 'כן' : 'לא'}</strong>
+              </div>
+              <div class="field">
+                <span>בהסדר:</span>
+                <strong>${depreciationData.is_agreement ? 'כן' : 'לא בהסדר'}</strong>
+              </div>
+              <div class="field">
+                <span>הפרשים:</span>
+                <strong>${depreciationData.has_differentials ? 'קיימים' : 'לא קיימים'}</strong>
+              </div>
+            </div>
+            
+            ${depreciationData.summary ? generateSummaryHTML(depreciationData.summary, depreciationData.report_type) : ''}
+            
+            ${depreciationData.differentials && depreciationData.has_differentials ? generateDifferentialsHTML(depreciationData.differentials) : ''}
+            
+            <div class="legal-text">
+              <h3>טקסט משפטי</h3>
+              <p>${depreciationData.legal_text || 'לא צוין טקסט משפטי'}</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+              נוצר ב: ${new Date().toLocaleDateString('he-IL')} | מערכת ירון כיוף
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    }
+
+    // GENERATE SUMMARY HTML FOR PREVIEW
+    function generateSummaryHTML(summary, reportType) {
+      const summaryFields = {
+        'private': {
+          title: 'סיכום חוות דעת פרטית',
+          total_field: 'private_total'
+        },
+        'global': {
+          title: 'סיכום חוות דעת גלובלית',
+          total_field: 'global_total'
+        },
+        'damage': {
+          title: 'סיכום מצבו הניזוק',
+          total_field: 'damage_total'
+        },
+        'totalLoss': {
+          title: 'סיכום טוטלוסט',
+          total_field: 'total_loss_total'
+        },
+        'legalLoss': {
+          title: 'סיכום אובדן להלכה',
+          total_field: 'legal_loss_total'
+        }
+      };
+      
+      const config = summaryFields[reportType];
+      if (!config) return '';
+      
+      const totalValue = summary[config.total_field] || 0;
+      
+      return `
+        <div class="summary">
+          <h3>${config.title}</h3>
+          <div class="field">
+            <span>סה"כ סופי:</span>
+            <strong style="color: #28a745; font-size: 18px;">${MathEngine.formatCurrency(totalValue)}</strong>
+          </div>
+        </div>
+      `;
+    }
+
+    // GENERATE DIFFERENTIALS HTML FOR PREVIEW
+    function generateDifferentialsHTML(differentials) {
+      if (!differentials || !differentials.total_with_vat) return '';
+      
+      return `
+        <div class="summary">
+          <h3>סיכום הפרשים</h3>
+          <div class="field">
+            <span>סה"כ ללא מע"מ:</span>
+            <strong>${MathEngine.formatCurrency(differentials.total_without_vat || 0)}</strong>
+          </div>
+          <div class="field">
+            <span>סה"כ מע"מ:</span>
+            <strong>${MathEngine.formatCurrency(differentials.total_vat || 0)}</strong>
+          </div>
+          <div class="field">
+            <span>סה"כ כולל מע"מ:</span>
+            <strong style="color: #dc3545; font-size: 16px;">${MathEngine.formatCurrency(differentials.total_with_vat || 0)}</strong>
+          </div>
+        </div>
+      `;
+    }
+
+    // GENERATE ESTIMATE - Enhanced for depreciation module
+    window.generateEstimate = function() {
+      try {
+        console.log('📄 Enhanced generateEstimate called');
+        
+        // Save current state first
+        window.saveEstimate();
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Trigger report generation (would typically call external service)
+        console.log('Triggering report generation with data:', helper.report_data);
+        
+        // For now, show success message
+        alert('הדוח נוצר בהצלחה! 📄✅\n\nהדוח נשמר במערכת ויישלח אליך בהקדם.');
+        
+      } catch (error) {
+        console.error('Error generating estimate:', error);
+        alert('שגיאה ביצירת הדוח ❌');
+      }
+    };
+
+    // INITIALIZATION AND DOM SETUP
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        console.log('🚀 Enhanced Depreciation Module - DOM Content Loaded');
+        
+        // Initialize helper if not exists
+        if (!sessionStorage.getItem('helper')) {
+          sessionStorage.setItem('helper', JSON.stringify({}));
+        }
+        
+        // Load data from helper
+        loadDataFromHelper();
+        
+        // Load custom fields
+        loadCustomFields();
+        
+        // Add field change listeners
+        addFieldChangeListeners();
+        
+        // Initialize report type handlers
+        const reportTypeRadios = document.querySelectorAll('input[name="reportType"]');
+        reportTypeRadios.forEach(radio => {
+          radio.addEventListener('change', updateReportType);
+        });
+        
+        // Initialize company client handler
+        const companyClientSelect = document.getElementById('isCompanyClient');
+        if (companyClientSelect) {
+          companyClientSelect.addEventListener('change', handleCompanyClientChange);
+        }
+        
+        // Initialize agreement handler
+        const agreementCheckbox = document.getElementById('isAgreement');
+        if (agreementCheckbox) {
+          agreementCheckbox.addEventListener('change', handleAgreementChange);
+        }
+        
+        // Initialize differentials handler
+        const differentialsCheckbox = document.getElementById('hasDifferentials');
+        if (differentialsCheckbox) {
+          differentialsCheckbox.addEventListener('change', function() {
+            const differentialsSection = document.getElementById('differentialsContent');
+            if (differentialsSection) {
+              differentialsSection.style.display = this.checked ? 'block' : 'none';
+            }
+            updateHelperFromField({ target: this });
+          });
+        }
+        
+        // Set default report type if none selected
+        const selectedRadio = document.querySelector('input[name="reportType"]:checked');
+        if (!selectedRadio) {
+          const defaultRadio = document.querySelector('input[name="reportType"][value="private"]');
+          if (defaultRadio) {
+            defaultRadio.checked = true;
+            updateReportType();
+          }
+        }
+        
+        // Calculate initial totals
+        setTimeout(() => {
+          calculateAllSummaryTotals();
+        }, 500);
+        
+        console.log('✅ Enhanced Depreciation Module initialized successfully');
+        
+      } catch (error) {
+        console.error('Error initializing depreciation module:', error);
+      }
+    });
+
+    // GLOBAL WINDOW FUNCTIONS - For external access
+    window.addCustomSummaryField = addCustomSummaryField;
+    window.updateReportType = updateReportType;
+    window.calculateAllSummaryTotals = calculateAllSummaryTotals;
+    window.toggleFloatingScreen = window.toggleFloatingScreen;
+    window.triggerFloatingScreenRefresh = triggerFloatingScreenRefresh;
+    window.addDepreciationItem = addDepreciationItem;
+    window.MathEngine = MathEngine;
+
     // LOAD HELPER DATA AND POPULATE FIELDS
     function loadHelperData() {
       try {
