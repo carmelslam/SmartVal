@@ -3792,78 +3792,37 @@
     // LOAD GROSS ADJUSTMENTS (Features and Registration from Levi data)
     function loadGrossAdjustments(helper) {
       try {
-        console.log('🔄 Loading gross adjustments from helper data...');
-        
         // Clear existing adjustments first
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
         
-        // Use the exact helper data structure from helper.js  
-        const featuresData = helper.valuation?.adjustments?.features;
-        const registrationData = helper.valuation?.adjustments?.registration;
-        
-        console.log('🔍 Direct helper data paths:');
-        console.log('Features data:', featuresData);
-        console.log('Registration data:', registrationData);
-        
-        
-        // Load features adjustments if found
-        if (featuresData && (featuresData.percent || featuresData.amount || featuresData.description)) {
-          console.log('➕ Adding features adjustment row...');
-          addFeatureAdjustment();
-          const featuresRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-          if (featuresRow) {
-            const inputs = featuresRow.querySelectorAll('input, select');
-            
-            // Get actual features description from vehicle.features, not just the adjustment description
-            const description = helper.vehicle?.features || featuresData.description || featuresData.reason || 'תוספות מאפיינים';
-            const percent = featuresData.percent || '';
-            const amount = featuresData.amount || '';
-            
-            inputs[0].value = description; // Use actual vehicle features description
-            inputs[1].value = String(percent).includes('-') ? 'minus' : 'plus';
-            inputs[2].value = Math.abs(parseFloat(String(percent).replace(/[%\s+]/g, ''))) || '';
-            inputs[3].value = amount ? `₪${Math.abs(parseFloat(String(amount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
-            
-            featuresRow.setAttribute('data-source', 'levi');
-            featuresRow.style.background = '#f0f8ff';
-            console.log('✅ Features adjustment loaded successfully');
-          }
+        // FORCE FEATURES DATA
+        addFeatureAdjustment();
+        const featuresRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+        if (featuresRow) {
+          const inputs = featuresRow.querySelectorAll('input, select');
+          inputs[0].value = helper.vehicle?.features || 'מאפיינים';
+          inputs[1].value = 'plus';
+          inputs[2].value = helper.valuation?.adjustments?.features?.percent?.toString().replace('%', '') || '0';
+          inputs[3].value = helper.valuation?.adjustments?.features?.amount ? `₪${helper.valuation.adjustments.features.amount.toLocaleString()}` : '₪0';
+          featuresRow.style.background = '#f0f8ff';
         }
         
-        // Load registration adjustments if found  
-        if (registrationData && (registrationData.percent || registrationData.amount || registrationData.description)) {
-          console.log('➕ Adding registration adjustment row...');
-          addRegistrationAdjustment();
-          const registrationRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
-          if (registrationRow) {
-            const inputs = registrationRow.querySelectorAll('input, select');
-            
-            // Get actual registration date from vehicle.registration_date, not just the adjustment description
-            const description = helper.vehicle?.registration_date || registrationData.description || registrationData.reason || 'עליה לכביש';
-            const percent = registrationData.percent || '';
-            const amount = registrationData.amount || '';
-            
-            inputs[0].value = description; // Use actual registration date as description
-            inputs[1].value = String(percent).includes('-') ? 'minus' : 'plus';
-            inputs[2].value = Math.abs(parseFloat(String(percent).replace(/[%\s+]/g, ''))) || '';
-            inputs[3].value = amount ? `₪${Math.abs(parseFloat(String(amount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
-            
-            registrationRow.setAttribute('data-source', 'levi');
-            registrationRow.style.background = '#f0f8ff';
-            console.log('✅ Registration adjustment loaded successfully');
-          }
+        // FORCE REGISTRATION DATA  
+        addRegistrationAdjustment();
+        const registrationRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+        if (registrationRow) {
+          const inputs = registrationRow.querySelectorAll('input, select');
+          inputs[0].value = helper.vehicle?.registration_date || 'עליה לכביש';
+          inputs[1].value = 'plus';
+          inputs[2].value = helper.valuation?.adjustments?.registration?.percent?.toString().replace('%', '') || '0';
+          inputs[3].value = helper.valuation?.adjustments?.registration?.amount ? `₪${helper.valuation.adjustments.registration.amount.toLocaleString()}` : '₪0';
+          registrationRow.style.background = '#f0f8ff';
         }
         
-        // If no data found, log helpful debug info
-        if (!featuresData && !registrationData) {
-          console.warn('⚠️ No gross adjustment data found in helper.valuation.adjustments');
-          console.log('Available adjustment keys:', Object.keys(helper.valuation?.adjustments || {}));
-        }
-        
-        // Trigger calculations after loading
+        // Trigger calculations
         setTimeout(() => {
           if (typeof updateGrossMarketValueCalculation === 'function') {
             updateGrossMarketValueCalculation();
