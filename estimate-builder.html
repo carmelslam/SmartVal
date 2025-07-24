@@ -3452,6 +3452,17 @@
           console.log('Salvage value updated:', value);
         }
         
+        // ENHANCED: Trigger calculations if field affects calculations
+        const calculationFields = ['basicPrice', 'carBasePrice', 'carMarketValue', 'totalClaim'];
+        if (calculationFields.includes(fieldId)) {
+          setTimeout(() => {
+            if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
+              window.EstimateCalculations.refresh3BulkCalculations();
+              console.log(`✅ Calculations refreshed after ${fieldId} change`);
+            }
+          }, 100);
+        }
+        
       } catch (error) {
         console.error('Error updating helper from field:', error);
       }
@@ -3858,6 +3869,16 @@
       autoPopulationInProgress = true;
       console.log('🚀 Starting auto-population from Levi summary...');
       
+      // ENHANCED: Ensure EstimateCalculations is ready before proceeding
+      if (!window.EstimateCalculations) {
+        console.log('⏳ EstimateCalculations not ready, waiting...');
+        setTimeout(() => {
+          autoPopulationInProgress = false;
+          autoPopulateFromLeviSummary();
+        }, 200);
+        return;
+      }
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Check for valuation adjustments (primary source) and fallback sources
@@ -3894,9 +3915,14 @@
       console.log('📊 DEBUG: registrationData:', registrationData);
       
       // Auto-populate features adjustments (מאפיינים) - GROSS section only
-      const featuresPercent = featuresData.percent || featuresData.percentage || leviData['מחיר מאפיינים %'] || '';
-      const featuresAmount = featuresData.amount || leviData['ערך ש"ח מאפיינים'] || '';
-      const featuresDescription = featuresData.description || featuresData.value || 'תוספות מאפיינים';
+      // ENHANCED: Try multiple possible field locations for better data capture
+      const featuresPercent = featuresData.percent || featuresData.percentage || 
+                             leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || 
+                             helper['מחיר מאפיינים %'] || helper['מאפיינים %'] || '';
+      const featuresAmount = featuresData.amount || featuresData.value || 
+                            leviData['ערך ש"ח מאפיינים'] || leviData['ערך מאפיינים'] || 
+                            helper['ערך ש"ח מאפיינים'] || helper['ערך מאפיינים'] || '';
+      const featuresDescription = featuresData.description || featuresData.reason || 'תוספות מאפיינים';
       
       console.log('🎨 Features data found:', { featuresPercent, featuresAmount, featuresDescription });
       
@@ -3925,9 +3951,14 @@
       }
       
       // Auto-populate registration adjustments (עליה לכביש) - GROSS section only  
-      const registrationPercent = registrationData.percent || registrationData.percentage || leviData['עליה לכביש %'] || '';
-      const registrationAmount = registrationData.amount || leviData['ערך ש"ח עליה לכביש'] || '';
-      const registrationDescription = registrationData.description || registrationData.value || 'עליה לכביש';
+      // ENHANCED: Try multiple possible field locations for better data capture
+      const registrationPercent = registrationData.percent || registrationData.percentage || 
+                                 leviData['עליה לכביש %'] || leviData['עליה לכביש %'] ||
+                                 helper['עליה לכביש %'] || '';
+      const registrationAmount = registrationData.amount || registrationData.value ||
+                                leviData['ערך ש"ח עליה לכביש'] || leviData['ערך עליה לכביש'] ||
+                                helper['ערך ש"ח עליה לכביש'] || helper['ערך עליה לכביש'] || '';
+      const registrationDescription = registrationData.description || registrationData.reason || 'עליה לכביש';
       
       console.log('🚗 Registration data found:', { registrationPercent, registrationAmount, registrationDescription });
       
@@ -3959,13 +3990,27 @@
       // Note: Market adjustments (mileage, ownership, owners) belong in "Full Market Value" section,
       // not in the gross value section which is only for car properties (features + registration)
       
-      // Trigger calculations after auto-population
-      if (typeof updateGrossMarketValueCalculation === 'function') {
-        updateGrossMarketValueCalculation();
-      }
-      if (typeof updateHelperFromAdjustments === 'function') {
-        updateHelperFromAdjustments();
-      }
+      // ENHANCED: Trigger comprehensive calculations after auto-population
+      console.log('🔄 Triggering calculations after Levi auto-population...');
+      setTimeout(() => {
+        // Update gross market value calculations
+        if (typeof updateGrossMarketValueCalculation === 'function') {
+          updateGrossMarketValueCalculation();
+          console.log('✅ Updated gross market value calculation');
+        }
+        
+        // Update helper from adjustments
+        if (typeof updateHelperFromAdjustments === 'function') {
+          updateHelperFromAdjustments();
+          console.log('✅ Updated helper from adjustments');
+        }
+        
+        // Trigger comprehensive recalculation through EstimateCalculations
+        if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
+          window.EstimateCalculations.refresh3BulkCalculations();
+          console.log('✅ Refreshed 3-bulk calculations');
+        }
+      }, 100);
       
       console.log('✅ Gross value auto-population completed');
       autoPopulationInProgress = false;
@@ -3991,9 +4036,13 @@
       }
       
       // Auto-populate mileage adjustments (מס ק"מ) - MARKET section
-      const mileagePercent = leviData.mileage?.percent || '';
-      const mileageAmount = leviData.mileage?.amount || '';  
-      const mileageDescription = leviData.mileage?.description || leviData.mileage?.value || 'מס ק"מ';
+      // ENHANCED: Try multiple possible field locations for better data capture
+      const mileagePercent = leviData.mileage?.percent || leviData.mileage?.percentage ||
+                            leviData['מס ק"מ %'] || helper['מס ק"מ %'] || '';
+      const mileageAmount = leviData.mileage?.amount || leviData.mileage?.value ||
+                           leviData['ערך ש"ח מס ק"מ'] || leviData['ערך מס ק"מ'] ||
+                           helper['ערך ש"ח מס ק"מ'] || helper['ערך מס ק"מ'] || '';  
+      const mileageDescription = leviData.mileage?.description || leviData.mileage?.reason || 'מס ק"מ';
       
       if (mileagePercent || mileageAmount) {
         addFullMarketAdjustment();
@@ -4013,9 +4062,13 @@
       }
       
       // Auto-populate ownership type adjustments (בעלות) - MARKET section
-      const ownershipPercent = leviData.ownership_type?.percent || '';
-      const ownershipAmount = leviData.ownership_type?.amount || '';
-      const ownershipDescription = leviData.ownership_type?.description || leviData.ownership_type?.value || 'בעלות';
+      // ENHANCED: Try multiple possible field locations for better data capture
+      const ownershipPercent = leviData.ownership_type?.percent || leviData.ownership_type?.percentage ||
+                              leviData['בעלות %'] || helper['בעלות %'] || '';
+      const ownershipAmount = leviData.ownership_type?.amount || leviData.ownership_type?.value ||
+                             leviData['ערך ש"ח בעלות'] || leviData['ערך בעלות'] ||
+                             helper['ערך ש"ח בעלות'] || helper['ערך בעלות'] || '';
+      const ownershipDescription = leviData.ownership_type?.description || leviData.ownership_type?.reason || 'בעלות';
       
       if (ownershipPercent || ownershipAmount) {
         addFullMarketAdjustment();
@@ -4035,9 +4088,13 @@
       }
       
       // Auto-populate ownership history adjustments (מספר בעלים) - MARKET section
-      const ownersPercent = leviData.ownership_history?.percent || '';
-      const ownersAmount = leviData.ownership_history?.amount || '';
-      const ownersDescription = leviData.ownership_history?.description || leviData.ownership_history?.value || 'מספר בעלים';
+      // ENHANCED: Try multiple possible field locations for better data capture
+      const ownersPercent = leviData.ownership_history?.percent || leviData.ownership_history?.percentage ||
+                           leviData['מספר בעלים %'] || helper['מספר בעלים %'] || '';
+      const ownersAmount = leviData.ownership_history?.amount || leviData.ownership_history?.value ||
+                          leviData['ערך ש"ח מספר בעלים'] || leviData['ערך מספר בעלים'] ||
+                          helper['ערך ש"ח מספר בעלים'] || helper['ערך מספר בעלים'] || '';
+      const ownersDescription = leviData.ownership_history?.description || leviData.ownership_history?.reason || 'מספר בעלים';
       
       if (ownersPercent || ownersAmount) {
         addFullMarketAdjustment();
@@ -8264,6 +8321,58 @@
     
     // Initialize builder state when page loads
     document.addEventListener('DOMContentLoaded', initializeBuilderState);
+    
+    // ENHANCED: Validation function to test all fixes
+    window.validateEstimateBuilderFixes = function() {
+      console.log('🧪 Testing estimate builder fixes...');
+      
+      const results = {
+        leviAutoPopulation: false,
+        calculationSystem: false,
+        dataFlow: false,
+        buttonsFunctional: false
+      };
+      
+      try {
+        // Test 1: Check if Levi auto-population functions exist
+        if (typeof autoPopulateFromLeviSummary === 'function' && 
+            typeof autoPopulateMarketAdjustments === 'function') {
+          results.leviAutoPopulation = true;
+          console.log('✅ Levi auto-population functions available');
+        }
+        
+        // Test 2: Check if calculation system is working
+        if (window.EstimateCalculations && 
+            typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
+          results.calculationSystem = true;
+          console.log('✅ Calculation system ready');
+        }
+        
+        // Test 3: Check if data flow functions exist
+        if (typeof updateHelperFromField === 'function' && 
+            typeof loadDataFromHelper === 'function') {
+          results.dataFlow = true;
+          console.log('✅ Data flow functions available');
+        }
+        
+        // Test 4: Check if key buttons exist and are functional
+        const addFeatureBtn = document.querySelector('button[onclick="addFeatureAdjustment()"]');
+        const addRegistrationBtn = document.querySelector('button[onclick="addRegistrationAdjustment()"]');
+        if (addFeatureBtn && addRegistrationBtn && 
+            typeof addFeatureAdjustment === 'function' && 
+            typeof addRegistrationAdjustment === 'function') {
+          results.buttonsFunctional = true;
+          console.log('✅ Key buttons functional');
+        }
+        
+        console.log('🧪 Validation results:', results);
+        return results;
+        
+      } catch (error) {
+        console.error('❌ Validation error:', error);
+        return results;
+      }
+    };
     
     
     // Update helper structure from contact field changes using field mapping dictionary
