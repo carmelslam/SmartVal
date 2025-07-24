@@ -3746,47 +3746,35 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        const leviData = helper.valuation?.adjustments || {};
-        const featuresData = leviData.features || {};
-        const registrationData = leviData.registration || {};
+        const adjustments = helper.valuation?.adjustments || {};
+        const featuresData = adjustments.features || {};
+        const registrationData = adjustments.registration || {};
 
-        // ===== Features Adjustments =====
-        let featureItems = [];
-        const featuresDesc = Array.isArray(featuresData.feature_list) && featuresData.feature_list.length
+        // ===== Features Adjustment =====
+        const featureDesc = Array.isArray(featuresData.feature_list) && featuresData.feature_list.length
           ? featuresData.feature_list.join(', ')
-          : (featuresData.description || featuresData.reason || '');
+          : (featuresData.description || featuresData.reason || featuresData.value || '');
         const fAmount = parseFloat(String(featuresData.amount).replace(/[₪,]/g, '')) || 0;
         const fPercent = parseFloat(String(featuresData.percent).replace('%', '')) || 0;
 
-        if (featuresDesc || fAmount || fPercent) {
-          featureItems.push({
-            description: featuresDesc,
-            amount: fAmount,
-            percent: fPercent
-          });
-        }
-
-        featureItems.forEach(item => {
+        if (featureDesc || fAmount || fPercent) {
           if (typeof addFeatureAdjustment === 'function') {
             addFeatureAdjustment();
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent) || 0;
               if (inputs.length >= 4) {
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
-                inputs[0].value = desc;
-                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+                inputs[0].value = featureDesc;
+                inputs[1].value = (fAmount < 0 || fPercent < 0) ? 'minus' : 'plus';
+                inputs[2].value = fPercent ? Math.abs(fPercent) : '';
+                inputs[3].value = fAmount ? `₪${Math.abs(fAmount).toLocaleString()}` : '';
               }
             }
           }
-        });
+        }
 
         // ===== Registration Adjustment =====
-        const regDesc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || '';
+        const regDesc = registrationData.date || registrationData.description || registrationData.reason || registrationData.value || helper.vehicle?.registration_date || '';
         const rAmount = parseFloat(String(registrationData.amount).replace(/[₪,]/g, '')) || 0;
         const rPercent = parseFloat(String(registrationData.percent).replace('%', '')) || 0;
 
@@ -4434,9 +4422,9 @@
         }
       }
       
-      // Calculate and display value
-      if (marketValue > 0 && percent > 0) {
-        const calculatedValue = (marketValue * percent) / 100;
+      // Calculate and display value based on the absolute percentage
+      if (marketValue > 0 && percent !== 0) {
+        const calculatedValue = (marketValue * Math.abs(percent)) / 100;
         valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
       } else {
         valueInput.value = '';
