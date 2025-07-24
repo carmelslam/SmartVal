@@ -3448,13 +3448,12 @@
           console.log('Salvage value updated:', value);
         }
         
-        // ENHANCED: Trigger calculations if field affects calculations
+        // Trigger calculations if field affects calculations
         const calculationFields = ['basicPrice', 'carBasePrice', 'carMarketValue', 'totalClaim'];
         if (calculationFields.includes(fieldId)) {
           setTimeout(() => {
             if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
               window.EstimateCalculations.refresh3BulkCalculations();
-              console.log(`✅ Calculations refreshed after ${fieldId} change`);
             }
           }, 100);
         }
@@ -3964,29 +3963,19 @@
       // Note: Market adjustments (mileage, ownership, owners) belong in "Full Market Value" section,
       // not in the gross value section which is only for car properties (features + registration)
       
-      // ENHANCED: Trigger comprehensive calculations after auto-population
-      console.log('🔄 Triggering calculations after Levi auto-population...');
+      // Trigger calculations after auto-population
       setTimeout(() => {
-        // Update gross market value calculations
         if (typeof updateGrossMarketValueCalculation === 'function') {
           updateGrossMarketValueCalculation();
-          console.log('✅ Updated gross market value calculation');
         }
-        
-        // Update helper from adjustments
         if (typeof updateHelperFromAdjustments === 'function') {
           updateHelperFromAdjustments();
-          console.log('✅ Updated helper from adjustments');
         }
-        
-        // Trigger comprehensive recalculation through EstimateCalculations
         if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
           window.EstimateCalculations.refresh3BulkCalculations();
-          console.log('✅ Refreshed 3-bulk calculations');
         }
       }, 100);
       
-      console.log('✅ Gross value auto-population completed');
       autoPopulationInProgress = false;
       autoPopulationCompleted = true;
       sessionStorage.setItem('autoPopulationCompleted', 'true');
@@ -8296,87 +8285,6 @@
     // Initialize builder state when page loads
     document.addEventListener('DOMContentLoaded', initializeBuilderState);
     
-    // ENHANCED: Manual debug function to force data reload and population
-    window.debugEstimateBuilder = function() {
-      console.log('🐛 DEBUG: Manually triggering data reload and population...');
-      
-      // Force reload data from helper
-      console.log('1️⃣ Reloading data from helper...');
-      loadDataFromHelper();
-      
-      // Force reset auto-population flags
-      console.log('2️⃣ Resetting auto-population flags...');
-      autoPopulationCompleted = false;
-      sessionStorage.removeItem('autoPopulationCompleted');
-      
-      // Force auto-population
-      console.log('3️⃣ Forcing Levi auto-population...');
-      setTimeout(() => {
-        autoPopulateFromLeviSummary();
-      }, 500);
-      
-      // Force calculations refresh
-      console.log('4️⃣ Forcing calculations refresh...');
-      setTimeout(() => {
-        if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
-          window.EstimateCalculations.refresh3BulkCalculations();
-        }
-      }, 1000);
-      
-      console.log('🐛 DEBUG: Manual debug sequence initiated');
-    };
-    
-    // ENHANCED: Validation function to test all fixes
-    window.validateEstimateBuilderFixes = function() {
-      console.log('🧪 Testing estimate builder fixes...');
-      
-      const results = {
-        leviAutoPopulation: false,
-        calculationSystem: false,
-        dataFlow: false,
-        buttonsFunctional: false
-      };
-      
-      try {
-        // Test 1: Check if Levi auto-population functions exist
-        if (typeof autoPopulateFromLeviSummary === 'function' && 
-            typeof autoPopulateMarketAdjustments === 'function') {
-          results.leviAutoPopulation = true;
-          console.log('✅ Levi auto-population functions available');
-        }
-        
-        // Test 2: Check if calculation system is working
-        if (window.EstimateCalculations && 
-            typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
-          results.calculationSystem = true;
-          console.log('✅ Calculation system ready');
-        }
-        
-        // Test 3: Check if data flow functions exist
-        if (typeof updateHelperFromField === 'function' && 
-            typeof loadDataFromHelper === 'function') {
-          results.dataFlow = true;
-          console.log('✅ Data flow functions available');
-        }
-        
-        // Test 4: Check if key buttons exist and are functional
-        const addFeatureBtn = document.querySelector('button[onclick="addFeatureAdjustment()"]');
-        const addRegistrationBtn = document.querySelector('button[onclick="addRegistrationAdjustment()"]');
-        if (addFeatureBtn && addRegistrationBtn && 
-            typeof addFeatureAdjustment === 'function' && 
-            typeof addRegistrationAdjustment === 'function') {
-          results.buttonsFunctional = true;
-          console.log('✅ Key buttons functional');
-        }
-        
-        console.log('🧪 Validation results:', results);
-        return results;
-        
-      } catch (error) {
-        console.error('❌ Validation error:', error);
-        return results;
-      }
-    };
     
     
     // Update helper structure from contact field changes using field mapping dictionary
