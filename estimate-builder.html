@@ -3789,53 +3789,73 @@
       }
     }
 
-    // LOAD GROSS ADJUSTMENTS (Features and Registration from Levi data)
+    // LOAD GROSS ADJUSTMENTS FROM helper.valuation.adjustments
     function loadGrossAdjustments(helper) {
-      console.log('🚨 FORCING GROSS ADJUSTMENTS TO LOAD');
-      console.log('Helper data:', helper);
-      
-      // FORCE ADD FEATURES ROW
-      if (typeof addFeatureAdjustment === 'function') {
-        addFeatureAdjustment();
-        console.log('✅ Added features row');
-      } else {
-        console.error('❌ addFeatureAdjustment function not found');
-      }
-      
-      // FORCE ADD REGISTRATION ROW
-      if (typeof addRegistrationAdjustment === 'function') {
-        addRegistrationAdjustment();
-        console.log('✅ Added registration row');
-      } else {
-        console.error('❌ addRegistrationAdjustment function not found');
-      }
-      
-      // FORCE POPULATE WITH HARD VALUES
-      setTimeout(() => {
-        const featuresRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-        if (featuresRow) {
-          const inputs = featuresRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'TEST FEATURES';
-            inputs[1].value = 'plus';
-            inputs[2].value = '5';
-            inputs[3].value = '₪1,000';
-            console.log('✅ Populated features row');
+      try {
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+
+        if (featuresContainer) featuresContainer.innerHTML = '';
+        if (registrationContainer) registrationContainer.innerHTML = '';
+
+        const leviData = helper.valuation?.adjustments || {};
+        const featuresData = leviData.features || {};
+        const registrationData = leviData.registration || {};
+
+        // ===== Features Adjustments =====
+        const featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
+
+        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
+          featureItems.push({
+            description: featuresData.description || featuresData.reason || '',
+            amount: featuresData.amount,
+            percent: featuresData.percent
+          });
+        }
+
+        featureItems.forEach(item => {
+          if (typeof addFeatureAdjustment === 'function') {
+            addFeatureAdjustment();
+            const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(item.amount) || 0;
+              const percent = parseFloat(item.percent) || 0;
+              if (inputs.length >= 4) {
+                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
+                inputs[0].value = desc;
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+              }
+            }
+          }
+        });
+
+        // ===== Registration Adjustment =====
+        if (registrationData.amount || registrationData.percent || registrationData.date) {
+          if (typeof addRegistrationAdjustment === 'function') {
+            addRegistrationAdjustment();
+            const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(registrationData.amount) || 0;
+              const percent = parseFloat(registrationData.percent) || 0;
+              if (inputs.length >= 4) {
+                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                inputs[0].value = desc;
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+              }
+            }
           }
         }
-        
-        const registrationRow = document.querySelector('#registrationAdjustmentsList div:not(:first-child)');
-        if (registrationRow) {
-          const inputs = registrationRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'TEST REGISTRATION';  
-            inputs[1].value = 'plus';
-            inputs[2].value = '0';
-            inputs[3].value = '₪3,500';
-            console.log('✅ Populated registration row');
-          }
-        }
-      }, 500);
+
+        updateGrossMarketValueCalculation();
+      } catch (error) {
+        console.error('Error loading gross adjustments:', error);
+      }
     }
     
     // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
@@ -4809,19 +4829,20 @@
         // Collect features adjustments (car properties)
         const featuresAdjustments = [];
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        featuresRows.forEach((row, index) => {
+        featuresRows.forEach(row => {
           const type = row.querySelector('select').value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const description = inputs[0]?.value || '';
-          const percent = inputs[1]?.value || '';
-          const value = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
-          
-          if (value !== 0) {
+          const percent = parseFloat(inputs[1]?.value) || 0;
+          const rawValue = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
+          const signedValue = type === 'minus' ? -Math.abs(rawValue) : Math.abs(rawValue);
+
+          if (signedValue !== 0) {
             featuresAdjustments.push({
               description,
               type,
               percent,
-              value,
+              value: signedValue,
               category: 'features'
             });
           }
@@ -4830,27 +4851,28 @@
         // Collect registration adjustments (car properties)
         const registrationAdjustments = [];
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        registrationRows.forEach((row, index) => {
+        registrationRows.forEach(row => {
           const type = row.querySelector('select').value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const description = inputs[0]?.value || '';
-          const percent = inputs[1]?.value || '';
-          const value = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
-          
-          if (value !== 0) {
+          const percent = parseFloat(inputs[1]?.value) || 0;
+          const rawValue = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
+          const signedValue = type === 'minus' ? -Math.abs(rawValue) : Math.abs(rawValue);
+
+          if (signedValue !== 0) {
             registrationAdjustments.push({
               description,
               type,
               percent,
-              value,
+              value: signedValue,
               category: 'registration'
             });
           }
         });
         
         // Calculate GROSS price using the original math logic
-        const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
-        const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+        const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+        const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.value, 0);
         const grossPrice = basicPrice + featuresTotal + registrationTotal;
         
         // Update result field
