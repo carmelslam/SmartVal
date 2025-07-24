@@ -1849,6 +1849,12 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
+        // CRITICAL FIX: Auto-populate features and registration adjustments from Levi summary
+        setTimeout(() => {
+          autoPopulateFromLeviSummary();
+          setupLeviDataListener(); // Setup listener for future Levi data updates
+        }, 500);
+        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -3765,13 +3771,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3787,19 +3793,201 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
       
       container.insertAdjacentHTML('beforeend', newRow);
       updateGrossMarketValueCalculation();
+    }
+    
+    // ============================================================================
+    // AUTO-POPULATION FROM LEVI SUMMARY
+    // ============================================================================
+    
+    /**
+     * Auto-populate features and registration adjustments from Levi summary data
+     */
+    function autoPopulateFromLeviSummary() {
+      console.log('🔄 Auto-populating adjustments from Levi summary...');
+      
+      if (!helper.levisummary && !helper.levi_report) {
+        console.log('❌ No Levi summary data found');
+        return;
+      }
+      
+      // Get Levi data from multiple possible sources
+      const leviData = helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
+      console.log('📊 Found Levi data:', leviData);
+      
+      // Auto-populate features adjustments (מאפיינים)
+      if (leviData.features_percent || leviData.features_amount || leviData['מאפיינים %'] || leviData['ערך כספי מאפיינים']) {
+        const featuresPercent = leviData.features_percent || leviData['מאפיינים %'] || '';
+        const featuresAmount = leviData.features_amount || leviData['ערך כספי מאפיינים'] || '';
+        
+        if (featuresPercent || featuresAmount) {
+          console.log('🏗️ Auto-populating features adjustment:', { featuresPercent, featuresAmount });
+          addFeatureAdjustment();
+          
+          // Fill the last added row with Levi data
+          const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+          const lastRow = rows[rows.length - 1];
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = 'מאפיינים (מלוי יצחק)'; // Description
+              inputs[1].value = featuresPercent && parseFloat(featuresPercent) >= 0 ? 'plus' : 'minus'; // Type
+              inputs[2].value = Math.abs(parseFloat(featuresPercent)) || ''; // Percentage
+              inputs[3].value = featuresAmount ? `₪${Math.abs(parseFloat(featuresAmount)).toLocaleString()}` : ''; // Value
+              
+              // Mark as Levi data
+              lastRow.setAttribute('data-source', 'levi');
+              lastRow.style.background = '#f0f8ff';
+            }
+          }
+        }
+      }
+      
+      // Auto-populate registration adjustments (עליה לכביש)
+      if (leviData.registration_percent || leviData.registration_amount || leviData['עליה לכביש %'] || leviData['ערך כספי עליה לכביש']) {
+        const registrationPercent = leviData.registration_percent || leviData['עליה לכביש %'] || '';
+        const registrationAmount = leviData.registration_amount || leviData['ערך כספי עליה לכביש'] || '';
+        
+        if (registrationPercent || registrationAmount) {
+          console.log('📅 Auto-populating registration adjustment:', { registrationPercent, registrationAmount });
+          addRegistrationAdjustment();
+          
+          // Fill the last added row with Levi data
+          const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
+          const lastRow = rows[rows.length - 1];
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = 'עליה לכביש (מלוי יצחק)'; // Description
+              inputs[1].value = registrationPercent && parseFloat(registrationPercent) >= 0 ? 'plus' : 'minus'; // Type
+              inputs[2].value = Math.abs(parseFloat(registrationPercent)) || ''; // Percentage
+              inputs[3].value = registrationAmount ? `₪${Math.abs(parseFloat(registrationAmount)).toLocaleString()}` : ''; // Value
+              
+              // Mark as Levi data
+              lastRow.setAttribute('data-source', 'levi');
+              lastRow.style.background = '#f0f8ff';
+            }
+          }
+        }
+      }
+      
+      // Trigger calculations after auto-population
+      updateGrossMarketValueCalculation();
+      updateHelperFromAdjustments();
+      
+      console.log('✅ Auto-population from Levi summary completed');
+    }
+    
+    /**
+     * Clear existing auto-populated Levi adjustments before re-populating
+     */
+    function clearLeviAdjustments() {
+      // Clear features adjustments marked as Levi data
+      const featureRows = document.querySelectorAll('#featuresAdjustmentsList div[data-source="levi"]');
+      featureRows.forEach(row => row.remove());
+      
+      // Clear registration adjustments marked as Levi data
+      const registrationRows = document.querySelectorAll('#registrationAdjustmentsList div[data-source="levi"]');
+      registrationRows.forEach(row => row.remove());
+      
+      console.log('🧹 Cleared existing Levi adjustments');
+    }
+    
+    /**
+     * Enhanced two-way data binding: sync individual adjustment changes to helper
+     */
+    function syncAdjustmentToHelper(element, category) {
+      try {
+        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
+        if (!row) return;
+        
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length < 4) return;
+        
+        const adjustmentData = {
+          description: inputs[0].value || '',
+          type: inputs[1].value || 'plus',
+          percentage: parseFloat(inputs[2].value) || 0,
+          value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          category: category,
+          source: row.getAttribute('data-source') || 'manual',
+          timestamp: new Date().toISOString()
+        };
+        
+        // Initialize helper structure
+        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
+        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        
+        // Find existing adjustment by row ID or add new one
+        const rowId = row.id;
+        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        
+        adjustmentData.rowId = rowId;
+        
+        if (existingIndex >= 0) {
+          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
+        } else {
+          helper.estimate_adjustments[category].push(adjustmentData);
+          console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
+        }
+        
+        // Save to storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Trigger UI updates
+        if (window.forcePopulateFields) {
+          window.forcePopulateFields();
+        }
+        
+      } catch (error) {
+        console.error('❌ Error syncing adjustment to helper:', error);
+      }
+    }
+    
+    /**
+     * Listen for helper updates to trigger re-population when Levi data changes
+     */
+    function setupLeviDataListener() {
+      // Listen for storage events (when helper data changes)
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'helper' && event.newValue) {
+          try {
+            const newHelper = JSON.parse(event.newValue);
+            if (newHelper.levisummary || newHelper.levi_report) {
+              console.log('📡 Detected Levi data update, re-populating adjustments...');
+              clearLeviAdjustments();
+              helper = newHelper; // Update global helper
+              autoPopulateFromLeviSummary();
+            }
+          } catch (error) {
+            console.error('❌ Error processing helper update:', error);
+          }
+        }
+      });
+      
+      // Also listen for custom events
+      document.addEventListener('helperUpdate', (event) => {
+        if (event.detail && (event.detail.section === 'levisummary' || event.detail.section === 'levi_report')) {
+          console.log('📡 Detected Levi data event, re-populating adjustments...');
+          clearLeviAdjustments();
+          autoPopulateFromLeviSummary();
+        }
+      });
+      
+      console.log('📡 Levi data listener setup completed');
     }
     
     // Remove adjustment row
