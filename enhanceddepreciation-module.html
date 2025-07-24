@@ -9323,10 +9323,19 @@
     function calculateAdditionsTotal(summaryType) {
       let total = 0;
       
-      // Calculate additions from custom fields
-      const additionsContainer = document.querySelector(`#${summaryType} .additions-container`);
-      if (additionsContainer) {
-        const customRows = additionsContainer.querySelectorAll('.custom-field-row');
+      // Calculate additions from custom fields using exact container mapping
+      const gridMapping = {
+        'summaryPrivate': 'sumAdditionsGrid',
+        'summaryGlobal': 'sumAdditionsGridGlobal', 
+        'summaryDamage': 'sumAdditionsGridDamage',
+        'summaryTotalLoss': 'sumAdditionsGridTotalLoss',
+        'summaryLegalLoss': 'sumAdditionsGridLegalLoss'
+      };
+      
+      const gridId = gridMapping[summaryType];
+      const customGrid = document.getElementById(gridId);
+      if (customGrid) {
+        const customRows = customGrid.querySelectorAll('.custom-summary-row');
         customRows.forEach(row => {
           const value = parseFloat(row.querySelector('.custom-field-value')?.value?.replace(/[^\d.-]/g, '')) || 0;
           total += value;
@@ -9343,7 +9352,17 @@
     function calculateLeviAdjustmentsTotal(summaryType) {
       let total = 0;
       
-      const leviContainer = document.querySelector(`#${summaryType} .levi-adjustments-container`);
+      // Map summary types to Levi adjustment container IDs
+      const leviMapping = {
+        'summaryPrivate': 'leviAdjustmentsRows-private',
+        'summaryGlobal': 'leviAdjustmentsRows-global',
+        'summaryDamage': 'leviAdjustmentsRows-damage',
+        'summaryTotalLoss': 'leviAdjustmentsRows-totalLoss',
+        'summaryLegalLoss': 'leviAdjustmentsRows-legalLoss'
+      };
+      
+      const leviId = leviMapping[summaryType];
+      const leviContainer = document.getElementById(leviId);
       if (leviContainer) {
         const leviRows = leviContainer.querySelectorAll('.levi-adjustment-row');
         leviRows.forEach(row => {
@@ -9362,11 +9381,19 @@
       
       if (!levi.adjustments || !Array.isArray(levi.adjustments)) return;
       
-      // Populate for each summary type
-      const summaryTypes = ['summaryPrivate', 'summaryGlobal', 'summaryDamage', 'summaryTotalLoss', 'summaryLegalLoss'];
+      // Map summary types to Levi adjustment container IDs
+      const leviMapping = {
+        'summaryPrivate': 'leviAdjustmentsRows-private',
+        'summaryGlobal': 'leviAdjustmentsRows-global',
+        'summaryDamage': 'leviAdjustmentsRows-damage',
+        'summaryTotalLoss': 'leviAdjustmentsRows-totalLoss',
+        'summaryLegalLoss': 'leviAdjustmentsRows-legalLoss'
+      };
       
-      summaryTypes.forEach(summaryType => {
-        const container = document.querySelector(`#${summaryType} .levi-adjustments-container`);
+      // Populate for each summary type
+      Object.keys(leviMapping).forEach(summaryType => {
+        const containerId = leviMapping[summaryType];
+        const container = document.getElementById(containerId);
         if (!container) return;
         
         // Clear existing rows
@@ -9380,6 +9407,8 @@
           }
         });
       });
+      
+      console.log('✅ Levi adjustments populated across all summary types');
     }
 
     // Render existing differentials from data
@@ -9518,6 +9547,64 @@
       console.log('💾 Complete data saved and calculations refreshed');
     }
 
+    // Add custom summary field - EXACT COPY FROM WORKING DEPRECIATION MODULE
+    function addCustomSummaryField(summaryType) {
+      const gridMapping = {
+        'summaryPrivate': 'sumAdditionsGrid',
+        'summaryGlobal': 'sumAdditionsGridGlobal', 
+        'summaryDamage': 'sumAdditionsGridDamage',
+        'summaryTotalLoss': 'sumAdditionsGridTotalLoss',
+        'summaryLegalLoss': 'sumAdditionsGridLegalLoss'
+      };
+      
+      const gridId = gridMapping[summaryType];
+      const grid = document.getElementById(gridId);
+      
+      if (!grid) {
+        console.warn('Grid not found for summary type:', summaryType);
+        return;
+      }
+      
+      const row = document.createElement('div');
+      row.className = 'custom-summary-row';
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '1fr 1fr 80px';
+      row.style.gap = '10px';
+      row.style.marginBottom = '10px';
+      
+      row.innerHTML = `
+        <div>
+          <input type="text" class="custom-field-name" placeholder="שם השדה" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        </div>
+        <div>
+          <input type="text" class="custom-field-value" placeholder="ערך" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        </div>
+        <div>
+          <button type="button" class="btn remove" style="background:#dc3545; padding:8px 12px; margin-top:0; font-size: 14px;">✕</button>
+        </div>
+      `;
+      
+      // Add event listeners
+      row.querySelector('.remove').addEventListener('click', () => {
+        row.remove();
+        calculateSubtotals();
+        saveAndRefreshComplete();
+      });
+      
+      row.querySelector('.custom-field-name').addEventListener('input', () => {
+        calculateSubtotals();
+        saveAndRefreshComplete();
+      });
+      
+      row.querySelector('.custom-field-value').addEventListener('input', () => {
+        calculateSubtotals();
+        saveAndRefreshComplete();
+      });
+      
+      grid.appendChild(row);
+      console.log(`✅ Custom field added to ${summaryType}`);
+    }
+
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
@@ -9537,6 +9624,7 @@
     window.createLeviAdjustmentRow = createLeviAdjustmentRow;
     window.calculateGlobalDepreciationValue = calculateGlobalDepreciationValue;
     window.triggerMathCalculation = triggerMathCalculation;
+    window.addCustomSummaryField = addCustomSummaryField;
 
     // Document Operations Functions
     window.returnToSelection = function() {

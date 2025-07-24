@@ -4083,14 +4083,21 @@
                             helper['ערך ש"ח מאפיינים'] || helper['ערך מאפיינים'] ||
                             helper.levi?.['ערך ש"ח מאפיינים'] ||
                             helper.expertise?.levi_report?.['ערך ש"ח מאפיינים'] || '';
-      // Use actual feature list if available
+      // Use actual feature list if available, and show only the value (no prefix)
       let featuresList = '';
       if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
         featuresList = featuresData.feature_list.map(f => f.description || f.name || f).join(', ');
       } else if (helper.car_details?.features && Array.isArray(helper.car_details.features)) {
         featuresList = helper.car_details.features.map(f => f.description || f.name || f).join(', ');
       }
-      const featuresDescription = featuresList ? `מאפיינים: ${featuresList}` : (featuresData.description || featuresData.reason || 'תוספות מאפיינים');
+      let featuresDescription = '';
+      if (featuresList) {
+        // If only one feature, show just its name/description
+        const featuresArr = featuresList.split(',').map(f => f.trim()).filter(Boolean);
+        featuresDescription = featuresArr.length === 1 ? featuresArr[0] : featuresArr.join(', ');
+      } else {
+        featuresDescription = featuresData.description || featuresData.reason || 'תוספות מאפיינים';
+      }
 
       if (featuresPercent || featuresAmount) {
         addFullMarketAdjustment();
@@ -4120,9 +4127,9 @@
                                 helper['ערך ש"ח עליה לכביש'] || helper['ערך עליה לכביש'] ||
                                 helper.levi?.['ערך ש"ח עליה לכביש'] ||
                                 helper.expertise?.levi_report?.['ערך ש"ח עליה לכביש'] || '';
-      // Use actual registration date if available
+      // Use actual registration date if available, and show only the value (no prefix)
       const registrationDate = registrationData.date || helper.car_details?.registration_date || helper.vehicle?.registration_date || '';
-      const registrationDescription = registrationDate ? `תאריך רישום: ${registrationDate}` : (registrationData.description || registrationData.reason || 'עליה לכביש');
+      const registrationDescription = registrationDate ? registrationDate : (registrationData.description || registrationData.reason || 'עליה לכביש');
 
       if (registrationPercent || registrationAmount) {
         addFullMarketAdjustment();
