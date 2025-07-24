@@ -3981,112 +3981,20 @@
         console.error('❌ Error in updateHelperFromAdjustments:', error);
       }
     }
+    
+    // LOAD SUMMARY DATA AND CALCULATIONS
+    function loadSummaryData(helper) {
+      try {
+        // Set report type based on estimate type selection
+        const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
+        document.getElementById('reportType').value = reportTypeText;
         
-        // Fill the last added row with Levi data
-        const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow) {
-          const inputs = lastRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'עליה לכביש (מלוי יצחק)'; // Description
-            
-            // Parse percentage for sign determination
-            const percentStr = String(registrationPercent).replace('%', '');
-            const percentValue = parseFloat(percentStr) || 0;
-            inputs[1].value = percentValue >= 0 ? 'plus' : 'minus'; // Type
-            inputs[2].value = Math.abs(percentValue) || ''; // Percentage
-            
-            // Parse amount and format
-            const amountStr = String(registrationAmount).replace(/[₪,]/g, '');
-            const amountValue = parseFloat(amountStr) || 0;
-            inputs[3].value = amountValue ? `₪${Math.abs(amountValue).toLocaleString()}` : ''; // Value
-            
-            // Mark as Levi data
-            lastRow.setAttribute('data-source', 'levi');
-            lastRow.style.background = '#f0f8ff';
-            
-            console.log('✅ Registration adjustment populated:', { percentValue, amountValue });
-          }
-        }
-      }
-      
-      // Auto-populate mileage adjustments (מס ק"מ) - NEW
-      const mileagePercent = leviData['מס ק"מ %'] || leviData['mileage_percent'] || leviData['קילומטראז %'] || '';
-      const mileageAmount = leviData['ערך ש"ח מס ק"מ'] || leviData['mileage_amount'] || leviData['ערך כספי מס ק"מ'] || '';
-      
-      if (mileagePercent || mileageAmount) {
-        console.log('🛣️ Auto-populating mileage adjustment:', { mileagePercent, mileageAmount });
-        addFeatureAdjustment(); // Using features list for now
+        // Implementation continues...
         
-        // Fill the last added row with Levi data
-        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow) {
-          const inputs = lastRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'מס ק"מ (מלוי יצחק)'; // Description
-            
-            // Parse percentage for sign determination
-            const percentStr = String(mileagePercent).replace('%', '');
-            const percentValue = parseFloat(percentStr) || 0;
-            inputs[1].value = percentValue >= 0 ? 'plus' : 'minus'; // Type
-            inputs[2].value = Math.abs(percentValue) || ''; // Percentage
-            
-            // Parse amount and format
-            const amountStr = String(mileageAmount).replace(/[₪,]/g, '');
-            const amountValue = parseFloat(amountStr) || 0;
-            inputs[3].value = amountValue ? `₪${Math.abs(amountValue).toLocaleString()}` : ''; // Value
-            
-            // Mark as Levi data
-            lastRow.setAttribute('data-source', 'levi');
-            lastRow.style.background = '#f0f8ff';
-            
-            console.log('✅ Mileage adjustment populated:', { percentValue, amountValue });
-          }
-        }
+      } catch (error) {
+        console.error('Error loading summary data:', error);
       }
-      
-      // Auto-populate owners adjustments (מספר בעלים) - NEW
-      const ownersPercent = leviData['מספר בעלים %'] || leviData['owners_percent'] || leviData['מס בעלים %'] || '';
-      const ownersAmount = leviData['ערך ש"ח מספר בעלים'] || leviData['owners_amount'] || leviData['ערך כספי מספר בעלים'] || '';
-      
-      if (ownersPercent || ownersAmount) {
-        console.log('👥 Auto-populating owners adjustment:', { ownersPercent, ownersAmount });
-        addFeatureAdjustment(); // Using features list for now
-        
-        // Fill the last added row with Levi data
-        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow) {
-          const inputs = lastRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'מספר בעלים (מלוי יצחק)'; // Description
-            
-            // Parse percentage for sign determination
-            const percentStr = String(ownersPercent).replace('%', '');
-            const percentValue = parseFloat(percentStr) || 0;
-            inputs[1].value = percentValue >= 0 ? 'plus' : 'minus'; // Type
-            inputs[2].value = Math.abs(percentValue) || ''; // Percentage
-            
-            // Parse amount and format
-            const amountStr = String(ownersAmount).replace(/[₪,]/g, '');
-            const amountValue = parseFloat(amountStr) || 0;
-            inputs[3].value = amountValue ? `₪${Math.abs(amountValue).toLocaleString()}` : ''; // Value
-            
-            // Mark as Levi data
-            lastRow.setAttribute('data-source', 'levi');
-            lastRow.style.background = '#f0f8ff';
-            
-            console.log('✅ Owners adjustment populated:', { percentValue, amountValue });
-          }
-        }
-      }
-      
-      // Trigger calculations after auto-population
-      updateGrossMarketValueCalculation();
-      updateHelperFromAdjustments();
-      
-      console.log('✅ Auto-population from Levi summary completed');
     }
     
     /**
