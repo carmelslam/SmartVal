@@ -3839,6 +3839,7 @@
     
     // Flag to prevent multiple executions
     let autoPopulationInProgress = false;
+    let autoPopulationCompleted = sessionStorage.getItem('autoPopulationCompleted') === 'true';
     
     /**
      * Auto-populate features and registration adjustments from Levi summary data
@@ -3846,6 +3847,11 @@
     function autoPopulateFromLeviSummary() {
       if (autoPopulationInProgress) {
         console.log('⚠️ Auto-population already in progress, skipping...');
+        return;
+      }
+      
+      if (autoPopulationCompleted) {
+        console.log('⚠️ Auto-population already completed, skipping...');
         return;
       }
       
@@ -3963,6 +3969,8 @@
       
       console.log('✅ Gross value auto-population completed');
       autoPopulationInProgress = false;
+      autoPopulationCompleted = true;
+      sessionStorage.setItem('autoPopulationCompleted', 'true');
     }
     
     /**
@@ -4776,11 +4784,19 @@
         });
         
         // Use CalculationInterface to calculate GROSS price (car properties only)
-        const grossPrice = window.CalculationInterface.updateGrossCalculations(
-          basicPrice, 
-          featuresAdjustments, 
-          registrationAdjustments
-        );
+        let grossPrice = basicPrice;
+        if (window.CalculationInterface && typeof window.CalculationInterface.updateGrossCalculations === 'function') {
+          grossPrice = window.CalculationInterface.updateGrossCalculations(
+            basicPrice, 
+            featuresAdjustments, 
+            registrationAdjustments
+          );
+        } else {
+          console.warn('⚠️ CalculationInterface not available, using basic calculation');
+          // Simple fallback calculation
+          grossPrice = featuresAdjustments.reduce((sum, adj) => sum + adj.amount, basicPrice) +
+                      registrationAdjustments.reduce((sum, adj) => sum + adj.amount, basicPrice);
+        }
         
         // Update result field
         const resultField = document.getElementById('grossMarketValueResult');
