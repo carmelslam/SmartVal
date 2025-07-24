@@ -3751,12 +3751,18 @@
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
-        const featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
-        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
+        let featureItems = [];
+        const featuresDesc = Array.isArray(featuresData.feature_list) && featuresData.feature_list.length
+          ? featuresData.feature_list.join(', ')
+          : (featuresData.description || featuresData.reason || '');
+        const fAmount = parseFloat(String(featuresData.amount).replace(/[₪,]/g, '')) || 0;
+        const fPercent = parseFloat(String(featuresData.percent).replace('%', '')) || 0;
+
+        if (featuresDesc || fAmount || fPercent) {
           featureItems.push({
-            description: featuresData.description || featuresData.reason || '',
-            amount: featuresData.amount,
-            percent: featuresData.percent
+            description: featuresDesc,
+            amount: fAmount,
+            percent: fPercent
           });
         }
 
