@@ -1735,7 +1735,19 @@
     // LOAD DATA FROM HELPER
     function loadDataFromHelper() {
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const helperData = sessionStorage.getItem('helper');
+        console.log('🔍 DEBUG: Raw helper data from sessionStorage:', helperData ? 'EXISTS' : 'MISSING');
+        
+        if (!helperData) {
+          console.error('❌ No helper data found in sessionStorage');
+          return;
+        }
+        
+        const helper = JSON.parse(helperData);
+        console.log('📊 DEBUG: Parsed helper structure:', Object.keys(helper));
+        console.log('📊 DEBUG: Helper valuation:', helper.valuation);
+        console.log('📊 DEBUG: Helper car_details:', helper.car_details);
+        console.log('📊 DEBUG: Helper vehicle:', helper.vehicle);
         
         // Helper function to get nested values
         const getNestedValue = (obj, path, defaultValue = '') => {
@@ -1762,8 +1774,13 @@
           const rawBasePrice = helper.valuation?.base_price || helper.car_details?.base_price || helper.levi_report?.base_price;
           // Clean any existing currency symbols and parse as number
           const basePrice = rawBasePrice ? parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) : null;
-          document.getElementById('carBasePrice').value = basePrice ? `₪${basePrice.toLocaleString()}` : '';
-          console.log('✅ Base price populated FROM helper.valuation.base_price:', basePrice);
+          const carBasePriceField = document.getElementById('carBasePrice');
+          if (carBasePriceField) {
+            carBasePriceField.value = basePrice ? `₪${basePrice.toLocaleString()}` : '';
+            console.log('✅ Base price populated FROM helper.valuation.base_price:', basePrice);
+          } else {
+            console.error('❌ carBasePrice field not found!');
+          }
           
           // Also populate the basicPrice field (marked price field) with levi base price
           const basicPriceField = document.getElementById('basicPrice');
@@ -1775,8 +1792,13 @@
           const rawMarketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
-          document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          console.log('✅ Market value populated FROM helper.vehicle.market_value:', marketValue);
+          const carMarketValueField = document.getElementById('carMarketValue');
+          if (carMarketValueField) {
+            carMarketValueField.value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+            console.log('✅ Market value populated FROM helper.vehicle.market_value:', marketValue);
+          } else {
+            console.error('❌ carMarketValue field not found!');
+          }
           // Issue date from standardized case_info structure (with legacy fallback)
           const issueDate = helper.case_info?.issue_date || helper.car_details?.report_date || helper.levi_report?.report_date || '';
           document.getElementById('carReportDate').value = convertToDateInputFormat(issueDate);
@@ -3881,11 +3903,23 @@
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Check for valuation adjustments (primary source) and fallback sources
-      if (!helper.valuation?.adjustments && !helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
+      // ENHANCED DEBUG: Check all possible Levi data sources
+      console.log('🔍 DEBUG: Checking Levi data sources...');
+      console.log('📊 helper.valuation?.adjustments:', helper.valuation?.adjustments);
+      console.log('📊 helper.levisummary:', helper.levisummary);
+      console.log('📊 helper.levi_report:', helper.levi_report);
+      console.log('📊 helper.expertise?.levi_report:', helper.expertise?.levi_report);
+      
+      // Check for any Levi data sources
+      const hasLeviData = helper.valuation?.adjustments || helper.levisummary || helper.levi_report || helper.expertise?.levi_report;
+      
+      if (!hasLeviData) {
         console.log('❌ No Levi data sources found for auto-population');
+        console.log('🔍 Available helper keys:', Object.keys(helper));
         autoPopulationInProgress = false;
         return;
+      } else {
+        console.log('✅ Levi data source found, proceeding with auto-population');
       }
       
       // CRITICAL: Clear existing Levi adjustments first to prevent duplication
@@ -3918,10 +3952,14 @@
       // ENHANCED: Try multiple possible field locations for better data capture
       const featuresPercent = featuresData.percent || featuresData.percentage || 
                              leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || 
-                             helper['מחיר מאפיינים %'] || helper['מאפיינים %'] || '';
+                             helper['מחיר מאפיינים %'] || helper['מאפיינים %'] ||
+                             helper.levi?.['מחיר מאפיינים %'] ||
+                             helper.expertise?.levi_report?.['מחיר מאפיינים %'] || '';
       const featuresAmount = featuresData.amount || featuresData.value || 
                             leviData['ערך ש"ח מאפיינים'] || leviData['ערך מאפיינים'] || 
-                            helper['ערך ש"ח מאפיינים'] || helper['ערך מאפיינים'] || '';
+                            helper['ערך ש"ח מאפיינים'] || helper['ערך מאפיינים'] ||
+                            helper.levi?.['ערך ש"ח מאפיינים'] ||
+                            helper.expertise?.levi_report?.['ערך ש"ח מאפיינים'] || '';
       const featuresDescription = featuresData.description || featuresData.reason || 'תוספות מאפיינים';
       
       console.log('🎨 Features data found:', { featuresPercent, featuresAmount, featuresDescription });
@@ -3953,11 +3991,15 @@
       // Auto-populate registration adjustments (עליה לכביש) - GROSS section only  
       // ENHANCED: Try multiple possible field locations for better data capture
       const registrationPercent = registrationData.percent || registrationData.percentage || 
-                                 leviData['עליה לכביש %'] || leviData['עליה לכביש %'] ||
-                                 helper['עליה לכביש %'] || '';
+                                 leviData['עליה לכביש %'] || 
+                                 helper['עליה לכביש %'] ||
+                                 helper.levi?.['עליה לכביש %'] ||
+                                 helper.expertise?.levi_report?.['עליה לכביש %'] || '';
       const registrationAmount = registrationData.amount || registrationData.value ||
                                 leviData['ערך ש"ח עליה לכביש'] || leviData['ערך עליה לכביש'] ||
-                                helper['ערך ש"ח עליה לכביש'] || helper['ערך עליה לכביש'] || '';
+                                helper['ערך ש"ח עליה לכביש'] || helper['ערך עליה לכביש'] ||
+                                helper.levi?.['ערך ש"ח עליה לכביש'] ||
+                                helper.expertise?.levi_report?.['ערך ש"ח עליה לכביש'] || '';
       const registrationDescription = registrationData.description || registrationData.reason || 'עליה לכביש';
       
       console.log('🚗 Registration data found:', { registrationPercent, registrationAmount, registrationDescription });
@@ -8321,6 +8363,36 @@
     
     // Initialize builder state when page loads
     document.addEventListener('DOMContentLoaded', initializeBuilderState);
+    
+    // ENHANCED: Manual debug function to force data reload and population
+    window.debugEstimateBuilder = function() {
+      console.log('🐛 DEBUG: Manually triggering data reload and population...');
+      
+      // Force reload data from helper
+      console.log('1️⃣ Reloading data from helper...');
+      loadDataFromHelper();
+      
+      // Force reset auto-population flags
+      console.log('2️⃣ Resetting auto-population flags...');
+      autoPopulationCompleted = false;
+      sessionStorage.removeItem('autoPopulationCompleted');
+      
+      // Force auto-population
+      console.log('3️⃣ Forcing Levi auto-population...');
+      setTimeout(() => {
+        autoPopulateFromLeviSummary();
+      }, 500);
+      
+      // Force calculations refresh
+      console.log('4️⃣ Forcing calculations refresh...');
+      setTimeout(() => {
+        if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
+          window.EstimateCalculations.refresh3BulkCalculations();
+        }
+      }, 1000);
+      
+      console.log('🐛 DEBUG: Manual debug sequence initiated');
+    };
     
     // ENHANCED: Validation function to test all fixes
     window.validateEstimateBuilderFixes = function() {
