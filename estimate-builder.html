@@ -1850,10 +1850,8 @@
         loadAllAdjustments(helper);
         
         // CRITICAL FIX: Auto-populate features and registration adjustments from Levi summary
-        console.log('🚀 Page loaded, attempting auto-population...');
-        autoPopulateFromLeviSummary(); // Call immediately
+        autoPopulateFromLeviSummary();
         setTimeout(() => {
-          console.log('🚀 Delayed auto-population attempt...');
           autoPopulateFromLeviSummary();
           setupLeviDataListener(); // Setup listener for future Levi data updates
         }, 500);
@@ -2862,47 +2860,22 @@
       // Try multiple sources for base price
       let basePrice = 0;
       
-      console.log('🔍 DEBUG: Getting base price for calculation...');
-      
       // Priority 1: Car base price field
       const carBasePriceField = document.getElementById('carBasePrice');
-      console.log('🔍 DEBUG: carBasePrice field:', {
-        exists: !!carBasePriceField,
-        value: carBasePriceField?.value,
-        rawValue: carBasePriceField?.value
-      });
-      
       if (carBasePriceField && carBasePriceField.value) {
         const carBasePriceStr = carBasePriceField.value.replace(/[₪,]/g, '') || '0';
         basePrice = parseFloat(carBasePriceStr) || 0;
-        console.log('✅ DEBUG: Found base price from field:', basePrice);
       }
       
       // Priority 2: Helper data
       if (basePrice === 0) {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log('🔍 DEBUG: Checking helper data:', {
-          vehicle_value_base: helper?.vehicle_value_base,
-          car_details_base_price: helper?.car_details?.base_price,
-          levi_base_price: helper?.levi?.base_price,
-          levi_report_base_price: helper?.levi_report?.base_price
-        });
-        
         basePrice = helper?.vehicle_value_base || 
                    helper?.car_details?.base_price || 
                    helper?.levi?.base_price || 
                    helper?.levi_report?.base_price || 0;
-                   
-        if (basePrice > 0) {
-          console.log('✅ DEBUG: Found base price from helper:', basePrice);
-        }
       }
       
-      if (basePrice === 0) {
-        console.warn('⚠️ DEBUG: Base price not found for estimation - both field and helper returned 0');
-      }
-      
-      console.log('📊 DEBUG: Final base price for calculation:', basePrice);
       return basePrice;
     }
     
@@ -3843,28 +3816,16 @@
      * Auto-populate features and registration adjustments from Levi summary data
      */
     function autoPopulateFromLeviSummary() {
-      console.log('🎯 Starting auto-population from Levi summary...');
-      console.log('📊 Helper data sources:', {
-        levisummary: !!helper.levisummary,
-        levi_report: !!helper.levi_report,
-        expertise_levi: !!helper.expertise?.levi_report
-      });
-      
       if (!helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
-        console.log('❌ No Levi data sources found');
         return;
       }
       
       // Get Levi data from multiple possible sources
       const leviData = helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
-      console.log('📋 Using Levi data source:', leviData);
-      console.log('🔍 Available keys:', Object.keys(leviData));
       
       // Auto-populate features adjustments (מאפיינים)
       const featuresPercent = leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || '';
       const featuresAmount = leviData['ערך ש"ח מאפיינים'] || leviData['ערך כספי מאפיינים'] || '';
-      
-      console.log('🎨 Features data found:', { featuresPercent, featuresAmount });
       
       if (featuresPercent || featuresAmount) {
         addFeatureAdjustment();
@@ -3888,8 +3849,6 @@
       // Auto-populate registration adjustments (עליה לכביש)
       const registrationPercent = leviData['עליה לכביש %'] || '';
       const registrationAmount = leviData['ערך ש"ח עליה לכביש'] || leviData['ערך כספי עליה לכביש'] || '';
-      
-      console.log('🚗 Registration data found:', { registrationPercent, registrationAmount });
       
       if (registrationPercent || registrationAmount) {
         addRegistrationAdjustment();
@@ -4680,23 +4639,28 @@
         if (basicPriceField) {
           let basicPrice = 0;
           
-          // Try different sources for BASE PRICE (not market value) - FIXED PRIORITY
-          if (helper.levi_report?.base_price) {
-            basicPrice = parseFloat(helper.levi_report.base_price);
-          } else if (helper.expertise?.levi_report?.base_price) {
-            basicPrice = parseFloat(helper.expertise.levi_report.base_price);
-          } else if (helper.levisummary?.base_price) {
-            basicPrice = parseFloat(helper.levisummary.base_price);
-          } else if (helper.car_details?.base_price) {
-            basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
-          } else {
-            // REMOVED market_value fallback - we need BASE price only
-            console.warn('⚠️ No Levi BASE PRICE found for basic price field');
+          // Priority 1: Check carBasePrice field first
+          const carBasePriceField = document.getElementById('carBasePrice');
+          if (carBasePriceField && carBasePriceField.value) {
+            const carBasePriceStr = carBasePriceField.value.replace(/[₪,]/g, '') || '0';
+            basicPrice = parseFloat(carBasePriceStr) || 0;
+          }
+          
+          // Priority 2: Try helper data sources if field is empty
+          if (basicPrice === 0) {
+            if (helper.levi_report?.base_price) {
+              basicPrice = parseFloat(helper.levi_report.base_price);
+            } else if (helper.expertise?.levi_report?.base_price) {
+              basicPrice = parseFloat(helper.expertise.levi_report.base_price);
+            } else if (helper.levisummary?.base_price) {
+              basicPrice = parseFloat(helper.levisummary.base_price);
+            } else if (helper.car_details?.base_price) {
+              basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+            }
           }
           
           if (basicPrice > 0) {
             basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
-            console.log('🔧 Loading basic price from helper:', basicPrice);
           }
         }
         
