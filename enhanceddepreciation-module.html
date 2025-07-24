@@ -3530,13 +3530,12 @@
 
     // LOAD LEGAL TEXT FROM VAULT SYSTEM
     function loadLegalText() {
-      const reportTypeSelect = document.getElementById('reportType');
-      const selectedType = reportTypeSelect?.value || 'חוות דעת אובדן להלכה';
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Legal text vault from final report legal texts vault.md - EXACT COPY
       const legalTextsVault = {
-        'חוות דעת אובדן להלכה': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+        'אובדן_להלכה': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 
 הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
 
@@ -3556,7 +3555,7 @@
 
 להערכתינו זמן השהייה במוסך לצורך תיקון %ימי_מוסך% ימי עבודה.`,
         
-        'חוות דעת טוטלוסט': `חוות דעתינו מתבצעת בטרם תיקונים בפועל ואינה כוללת נזקים סמויים.
+        'טוטלוס': `חוות דעתינו מתבצעת בטרם תיקונים בפועל ואינה כוללת נזקים סמויים.
 
 בהתאם לבדיקה הנזק ברכב מוערך ביותר מ-60% מערך הרכב, ומשכך הרכב מסווג כטוטלוס.
 
@@ -3568,30 +3567,10 @@
 
 הערכת נזקים מבוססת על הנתונים שנמסרו ע״י בעל הרכב, אשר לדבריו.
 
-הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`,
-
-        'חוות דעת פרטית': `חוות דעת פרטית לרכב %מספר_רכב%.
-
-הרכב נבדק ונמצא שהנזק מוערך ב-%אחוז_נזק% מערך הרכב.
-
-ירידת ערך צפויה: %ירידת_ערך%
-
-הערכת נזקים מבוססת על בדיקה פרטית והערכות מקצועיות.`,
-
-        'חוות דעת גלובלית': `חוות דעת גלובלית לרכב %מספר_רכב%.
-
-ערכת הרכב באופן כללי מבוססת על מחירון ובדיקה מקיפה.
-
-ירידת ערך גלובלית מוערכת ב-%ירידת_ערך% מערך הרכב.`,
-
-        'חוות דעת מכירה מצבו הניזוק': `חוות דעת לערך הרכב במצבו הניזוק.
-
-הרכב יכול להימכר במצבו הנוכחי בהתחשב בנזקים הקיימים.
-
-הערכת ערך במצב ניזוק: %שווי_שרידים%`
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`
       };
       
-      let legalText = legalTextsVault[selectedType] || legalTextsVault['חוות דעת אובדן להלכה'];
+      let legalText = legalTextsVault[selectedType] || legalTextsVault['אובדן_להלכה'];
       
       // Enhanced placeholder mapping to actual field values - Fixed for exact vault text matching
       const placeholders = {
@@ -3642,10 +3621,10 @@
 
     // RESET LEGAL TEXT
     function resetLegalText() {
-      const reportTypeSelect = document.getElementById('reportType');
-      const selectedType = reportTypeSelect?.value || 'חוות דעת אובדן להלכה';
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      const typeText = selectedType === 'אובדן_להלכה' ? 'אובדן להלכה' : 'טוטלוס';
       
-      document.getElementById('legal-text-content').value = `טקסט משפטי ל${selectedType} - מוכן לעריכה`;
+      document.getElementById('legal-text-content').value = `טקסט משפטי לאומדן ${typeText} - מוכן לעריכה`;
       
       // Clear saved legal text from helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -8785,40 +8764,15 @@
       console.log('Updating summary visibility for type:', reportType);
       
       // Update the summary title dynamically
-      const summaryTitle = document.querySelector('.form-section h3[style*="color: white"]');
+      const summaryTitle = document.querySelector('#summaryPrivate h3');
       if (summaryTitle) {
-        summaryTitle.textContent = `סיכום ${reportType}`;
+        summaryTitle.textContent = `סיכום - ${reportType}`;
       }
       
-      // Update the report type field in the summary
-      const reportTypeField = document.getElementById('summaryReportType');
-      if (reportTypeField) {
-        reportTypeField.value = reportType;
-      }
-      
-      const summaryMap = {
-        'חוות דעת פרטית': 'summaryPrivate',
-        'חוות דעת גלובלית': 'summaryGlobal', 
-        'חוות דעת מכירה מצבו הניזוק': 'summaryDamage',
-        'חוות דעת טוטלוסט': 'summaryTotalLoss',
-        'חוות דעת אובדן להלכה': 'summaryLegalLoss'
-      };
-      
-      // Hide all summary blocks
-      Object.values(summaryMap).forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.style.display = 'none';
-        }
-      });
-      
-      // Show active summary
-      const activeSection = summaryMap[reportType];
-      if (activeSection) {
-        const activeElement = document.getElementById(activeSection);
-        if (activeElement) {
-          activeElement.style.display = 'block';
-        }
+      // Always show the single summary section
+      const summarySection = document.getElementById('summaryPrivate');
+      if (summarySection) {
+        summarySection.style.display = 'block';
       }
 
       // Control depreciation section visibility
