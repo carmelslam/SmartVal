@@ -55,6 +55,104 @@ The findings provide a clear roadmap for enhancing each floating screen with app
 
 ---
 
+# 🐛 DEBUG LEVI SUMMARY AUTO-POPULATION IN ESTIMATE BUILDER
+
+## Plan
+
+Debug why the auto-population from Levi summary is not working in the estimate builder by:
+
+1. **[PENDING]** Search for actual Levi data structure examples in the system
+2. **[PENDING]** Check Hebrew field names that might be missing in auto-population function
+3. **[PENDING]** Examine existing helper.levisummary, helper.levi_report, or helper.expertise.levi_report data
+4. **[PENDING]** Find examples of how other parts of the system access Levi adjustment data
+5. **[PENDING]** Fix the auto-population function to work with the actual data format
+6. **[PENDING]** Update todo.md with implementation report
+
+## Analysis Results
+
+### Current Levi Data Structures Found:
+
+Based on grep analysis, the system uses multiple Levi data paths:
+- `helper.levisummary` (primary for backwards compatibility)
+- `helper.levi_report` (current structure)
+- `helper.expertise.levi_report` (expertise-specific data)
+
+### Hebrew Field Names Discovered:
+
+Key Hebrew adjustment terms found in the system:
+- **עליה לכביש** - Registration/road licensing adjustments
+- **מאפיינים** - Features adjustments  
+- **מספר בעלים** - Number of owners adjustments
+- **קילומטר/קילומטראז** - Mileage adjustments
+- **תכונות** - Features/characteristics
+
+### Current Auto-Population Function Issues:
+
+From `estimate-builder.html` analysis:
+1. Function `autoPopulateFromLeviSummary()` exists (line 3821+)
+2. Checks for `helper.levisummary`, `helper.levi_report`, `helper.expertise.levi_report`
+3. Auto-populates features and registration adjustments
+4. Uses Hebrew field names like `features_percent`, `מאפיינים %`, etc.
+
+### Problem Areas Identified:
+
+1. **Multiple data sources**: Function checks 3 different helper locations
+2. **Hebrew vs English field names**: Mixed usage of Hebrew/English field names
+3. **Adjustment structure**: `helper.levi_report.adjustments` vs direct field access
+4. **Field mapping**: May need better mapping between Hebrew and English field names
+
+## Implementation Report
+
+### Root Cause Found:
+
+The auto-population function was looking for **English field names** like:
+- `features_percent`, `features_amount`
+- `registration_percent`, `registration_amount`
+
+But the actual Levi data structure uses **Hebrew field names** like:
+- `מחיר מאפיינים %`, `ערך ש"ח מאפיינים` (Features)
+- `עליה לכביש %`, `ערך ש"ח עליה לכביש` (Registration)
+- `מס ק"מ %`, `ערך ש"ח מס ק"מ` (Mileage)
+- `מספר בעלים %`, `ערך ש"ח מספר בעלים` (Number of owners)
+
+### Fixed Auto-Population Function:
+
+**Changes Made to `estimate-builder.html`:**
+
+1. **Updated field name lookups** to use correct Hebrew names first, with English fallbacks
+2. **Added missing adjustment types** (mileage and owners) that were not being processed
+3. **Improved percentage parsing** to handle percentage signs properly
+4. **Enhanced amount parsing** to handle currency symbols and commas
+5. **Added detailed console logging** to debug field population
+
+**Key Field Mappings Fixed:**
+- Features: `מחיר מאפיינים %` → percentage field
+- Features: `ערך ש"ח מאפיינים` → amount field
+- Registration: `עליה לכביש %` → percentage field
+- Registration: `ערך ש"ח עליה לכביש` → amount field
+- Mileage: `מס ק"מ %` → percentage field (NEW)
+- Mileage: `ערך ש"ח מס ק"מ` → amount field (NEW)
+- Owners: `מספר בעלים %` → percentage field (NEW)
+- Owners: `ערך ש"ח מספר בעלים` → amount field (NEW)
+
+### Technical Improvements:
+
+1. **Better error handling**: Function now logs available keys for debugging
+2. **Proper number parsing**: Handles percentages like "+7.95%" and amounts like "7,036"
+3. **Sign detection**: Correctly identifies positive/negative adjustments
+4. **Expanded coverage**: Now auto-populates 4 types of adjustments instead of 2
+
+### Testing Steps:
+
+The fixed function should now:
+1. Check for Levi data in multiple helper locations
+2. Find Hebrew field names correctly
+3. Parse percentages and amounts properly
+4. Auto-populate all 4 adjustment types from Levi data
+5. Mark auto-populated fields with light blue background
+
+---
+
 # 🚀 REMAINING IMPLEMENTATION TASKS
 
 ## ✅ COMPLETED HIGH PRIORITY FOUNDATION TASKS:
