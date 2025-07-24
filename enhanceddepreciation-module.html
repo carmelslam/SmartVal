@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>בניית אומדן - ירון כיוף</title>
+  <title>בניית חוו"ד - ירון כיוף</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
   <style>
@@ -1044,12 +1044,12 @@
 
     <!-- ESTIMATE ADJUSTMENTS SECTION -->
     <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('estimateAdjustments')">התאמות אומדן (הצג/הסתר)</button>
+      <button class="collapsible-btn" type="button" onclick="toggleSection('estimateAdjustments')">התאמות חוו"ד (הצג/הסתר)</button>
       <div id="estimateAdjustments" style="display:none;">
         <div style="margin-top: 20px;">
-          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות אומדן נוספות:</h4>
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות חוו"ד נוספות:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
-            📝 התאמות מותאמות אישית לאומדן זה
+            📝 התאמות מותאמות אישית לחוו"ד זה
           </div>
           <div>
             <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
@@ -1272,7 +1272,10 @@
       
           <div id="leviAdjustmentsRows-global"></div>
         </div>
-       
+        <div style="margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 14px;">תוספות נוספות:</div>
+        <div class="form-grid" id="sumAdditionsGridGlobal"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryGlobal')">הוסף שדה נוסף</button>
+      </div>
       <div class="form-grid" style="margin-top:16px;">
         <div>
           <label>סה״כ נכלל בחוות הדעת (לפני הפרשים):</label>
@@ -1300,7 +1303,10 @@
       <div style="margin:16px 0 0 0;">
           <div id="leviAdjustmentsRows-damage"></div>
         </div>
-        
+        <div style="margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 14px;">תוספות נוספות:</div>
+        <div class="form-grid" id="sumAdditionsGridDamage"></div>
+        <button class="btn add" type="button" onclick="addCustomSummaryField('summaryDamage')">הוסף שדה נוסף</button>
+      </div>
       <div class="form-grid" style="margin-top:16px;">
         <div>
           <label>סה״כ לאחר מכירה (לפני הפרשים):</label>
@@ -1376,7 +1382,7 @@
     </div>
   </div>
 </div>
-
+    </div>
 
     <!-- ADDITIONAL NOTES -->
     <div class="form-section">
@@ -1418,9 +1424,9 @@
     <!-- Navigation Buttons -->
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-        <button type="button" class="nav-btn save-btn" onclick="saveEstimate()">שמור אומדן</button>
+        <button type="button" class="nav-btn save-btn" onclick="saveEstimate()">שמור חוו"ד</button>
         <button type="button" class="nav-btn preview-btn" onclick="previewEstimate()">תצוגה מקדימה</button>
-        <button type="button" class="nav-btn generate-btn" onclick="generateEstimate()">צור דו"ח אומדן</button>
+        <button type="button" class="nav-btn generate-btn" onclick="generateEstimate()">צור דו"ח חוו"ד</button>
         <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
       </div>
     </div>
@@ -1703,7 +1709,7 @@
     window.saveEstimate = function() {
       const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
       if (!selectedTypeElement) {
-        alert('אנא בחר סוג אומדן');
+        alert('אנא בחר סוג חוו"ד');
         return;
       }
       
@@ -1778,7 +1784,7 @@
         }
       });
       
-      // Collect estimate adjustments (התאמות אומדן)
+      // Collect estimate adjustments (התאמות חוו"ד)
       const estimateRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
       estimateRows.forEach(row => {
         const inputs = row.querySelectorAll('input');
@@ -1831,7 +1837,7 @@
       updateBuilderCurrentState('estimate_adjustments', adjustmentsData);
       updateBuilderCurrentState('estimate_legal_text', legalText);
       
-      alert('אומדן נשמר בהצלחה');
+      alert('חוו"ד נשמר בהצלחה');
     };
 
     window.previewEstimate = function() {
@@ -2058,7 +2064,7 @@
       try {
         // Set report type based on estimate type selection
         const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
-        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
+        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'חוו"ד ראשוני - אובדן להלכה' : 'חוו"ד ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
         // Check if we have saved summary data first
@@ -2759,7 +2765,7 @@
           });
         }
         
-        // Load estimate adjustments (התאמות אומדן)
+        // Load estimate adjustments (התאמות חוו"ד)
         if (helper.estimate_adjustments.estimate) {
           helper.estimate_adjustments.estimate.forEach(adj => {
             addEstimateAdjustment();
@@ -3635,7 +3641,7 @@
     // UPDATE REPORT TYPE
     function updateReportType() {
       const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
-      const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
+      const reportTypeText = selectedType === 'אובדן_להלכה' ? 'חוו"ד ראשוני - אובדן להלכה' : 'חוו"ד ראשוני - טוטלוס';
       document.getElementById('reportType').value = reportTypeText;
     }
 
@@ -3736,7 +3742,7 @@
       const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
       const typeText = selectedType === 'אובדן_להלכה' ? 'אובדן להלכה' : 'טוטלוס';
       
-      document.getElementById('legal-text-content').value = `טקסט משפטי לאומדן ${typeText} - מוכן לעריכה`;
+      document.getElementById('legal-text-content').value = `טקסט משפטי לחוו"ד ${typeText} - מוכן לעריכה`;
       
       // Clear saved legal text from helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -3962,53 +3968,73 @@
       }
     }
 
-    // LOAD GROSS ADJUSTMENTS (Features and Registration from Levi data)
+    // LOAD GROSS ADJUSTMENTS FROM helper.valuation.adjustments
     function loadGrossAdjustments(helper) {
-      console.log('🚨 FORCING GROSS ADJUSTMENTS TO LOAD');
-      console.log('Helper data:', helper);
-      
-      // FORCE ADD FEATURES ROW
-      if (typeof addFeatureAdjustment === 'function') {
-        addFeatureAdjustment();
-        console.log('✅ Added features row');
-      } else {
-        console.error('❌ addFeatureAdjustment function not found');
-      }
-      
-      // FORCE ADD REGISTRATION ROW
-      if (typeof addRegistrationAdjustment === 'function') {
-        addRegistrationAdjustment();
-        console.log('✅ Added registration row');
-      } else {
-        console.error('❌ addRegistrationAdjustment function not found');
-      }
-      
-      // FORCE POPULATE WITH HARD VALUES
-      setTimeout(() => {
-        const featuresRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-        if (featuresRow) {
-          const inputs = featuresRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'TEST FEATURES';
-            inputs[1].value = 'plus';
-            inputs[2].value = '5';
-            inputs[3].value = '₪1,000';
-            console.log('✅ Populated features row');
+      try {
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+
+        if (featuresContainer) featuresContainer.innerHTML = '';
+        if (registrationContainer) registrationContainer.innerHTML = '';
+
+        const leviData = helper.valuation?.adjustments || {};
+        const featuresData = leviData.features || {};
+        const registrationData = leviData.registration || {};
+
+        // ===== Features Adjustments =====
+        const featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
+
+        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
+          featureItems.push({
+            description: featuresData.description || featuresData.reason || '',
+            amount: featuresData.amount,
+            percent: featuresData.percent
+          });
+        }
+
+        featureItems.forEach(item => {
+          if (typeof addFeatureAdjustment === 'function') {
+            addFeatureAdjustment();
+            const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(item.amount) || 0;
+              const percent = parseFloat(item.percent) || 0;
+              if (inputs.length >= 4) {
+                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
+                inputs[0].value = desc;
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+              }
+            }
+          }
+        });
+
+        // ===== Registration Adjustment =====
+        if (registrationData.amount || registrationData.percent || registrationData.date) {
+          if (typeof addRegistrationAdjustment === 'function') {
+            addRegistrationAdjustment();
+            const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(registrationData.amount) || 0;
+              const percent = parseFloat(registrationData.percent) || 0;
+              if (inputs.length >= 4) {
+                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                inputs[0].value = desc;
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+              }
+            }
           }
         }
-        
-        const registrationRow = document.querySelector('#registrationAdjustmentsList div:not(:first-child)');
-        if (registrationRow) {
-          const inputs = registrationRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = 'TEST REGISTRATION';  
-            inputs[1].value = 'plus';
-            inputs[2].value = '0';
-            inputs[3].value = '₪3,500';
-            console.log('✅ Populated registration row');
-          }
-        }
-      }, 500);
+
+        updateGrossMarketValueCalculation();
+      } catch (error) {
+        console.error('Error loading gross adjustments:', error);
+      }
     }
     
     // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
@@ -4419,7 +4445,7 @@
       try {
         // Set report type based on estimate type selection
         const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
-        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
+        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'חוו"ד ראשוני - אובדן להלכה' : 'חוו"ד ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
         // Implementation continues...
@@ -4982,19 +5008,20 @@
         // Collect features adjustments (car properties)
         const featuresAdjustments = [];
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        featuresRows.forEach((row, index) => {
+        featuresRows.forEach(row => {
           const type = row.querySelector('select').value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const description = inputs[0]?.value || '';
-          const percent = inputs[1]?.value || '';
-          const value = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
-          
-          if (value !== 0) {
+          const percent = parseFloat(inputs[1]?.value) || 0;
+          const rawValue = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
+          const signedValue = type === 'minus' ? -Math.abs(rawValue) : Math.abs(rawValue);
+
+          if (signedValue !== 0) {
             featuresAdjustments.push({
               description,
               type,
               percent,
-              value,
+              value: signedValue,
               category: 'features'
             });
           }
@@ -5003,27 +5030,28 @@
         // Collect registration adjustments (car properties)
         const registrationAdjustments = [];
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        registrationRows.forEach((row, index) => {
+        registrationRows.forEach(row => {
           const type = row.querySelector('select').value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const description = inputs[0]?.value || '';
-          const percent = inputs[1]?.value || '';
-          const value = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
-          
-          if (value !== 0) {
+          const percent = parseFloat(inputs[1]?.value) || 0;
+          const rawValue = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
+          const signedValue = type === 'minus' ? -Math.abs(rawValue) : Math.abs(rawValue);
+
+          if (signedValue !== 0) {
             registrationAdjustments.push({
               description,
               type,
               percent,
-              value,
+              value: signedValue,
               category: 'registration'
             });
           }
         });
         
         // Calculate GROSS price using the original math logic
-        const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
-        const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+        const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+        const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.value, 0);
         const grossPrice = basicPrice + featuresTotal + registrationTotal;
         
         // Update result field
@@ -7549,7 +7577,7 @@
         helperKey: 'manual_estimate_type',
         fields: ['estimate-type'],
         loadFunction: null,
-        name: 'סוג אומדן'
+        name: 'סוג חוו"ד'
       },
       'vehicle-data': {
         helperKey: 'manual_vehicle_data',
@@ -7601,7 +7629,7 @@
         helperKey: 'manual_summary',
         fields: ['sumMarketValue', 'sumClaim', 'sumGrossPercent', 'sumAuthorizedClaim', 'sumTotalVat', 'sumSalvageValue', 'sumNetClaim'],
         loadFunction: 'loadSummaryData',
-        name: 'סיכום האומדן'
+        name: 'סיכום החוו"ד'
       },
       'notes': {
         helperKey: 'manual_notes',
@@ -7992,7 +8020,7 @@
         { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true },
         { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true },
         { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך לפי מוקדי נזק', collapsible: false },
-        { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן', collapsible: false },
+        { id: 'summary', selector: '#sumMarketValue', name: 'סיכום החוו"ד', collapsible: false },
         { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות', collapsible: false },
         { id: 'legal-text', selector: '#legal-text-content', name: 'טקסט משפטי', collapsible: false }
       ];
@@ -8730,47 +8758,8 @@
     </div>
   </div>
   
-   // Make functions global
-    window.logout = logout;
-    window.saveData = saveData;
-  </script>
-  
-  <script type="module" src="./helper-events.js"></script>
-  <script type="module" src="./depreciation_module.js"></script>
   <script src="internal-browser.js"></script>
-  <script src="logout-sound.js"></script>
-  <script src="assistant-floating.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
-  <script src="invoice-details-floating.js"></script>
-  <script src="onesignal-integration.js"></script>
-</body>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Depreciation Module</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div id="depreciation-module-container">
-        <h1>Enhanced Depreciation Module</h1>
-        <form id="depreciation-form" autocomplete="off">
-            <label for="vehicle-age">Vehicle Age (years):</label>
-            <input type="number" id="vehicle-age" name="vehicle-age" min="0" required>
-            <br>
-            <label for="mileage">Mileage (km):</label>
-            <input type="number" id="mileage" name="mileage" min="0" required>
-            <br>
-            <label for="base-value">Base Value (₪):</label>
-            <input type="number" id="base-value" name="base-value" min="0" required>
-            <br>
-            <button type="submit">Calculate Depreciation</button>
-        </form>
-        <div id="depreciation-result"></div>
-    </div>
-    <script src="enhanced-damage-centers.js"></script>
-    <script src="enhanceddepreciation-module.js"></script>
 </body>
 </html>
