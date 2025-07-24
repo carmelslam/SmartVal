@@ -4071,8 +4071,76 @@
         leviRows.forEach(row => row.remove());
       }
       
-      // Auto-populate mileage adjustments (מס ק"מ) - MARKET section
-      // Use actual property value for description
+      // --- Features Adjustment (מאפיינים) ---
+      const featuresData = leviData.features || {};
+      const featuresPercent = featuresData.percent || featuresData.percentage ||
+                             leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] ||
+                             helper['מחיר מאפיינים %'] || helper['מאפיינים %'] ||
+                             helper.levi?.['מחיר מאפיינים %'] ||
+                             helper.expertise?.levi_report?.['מחיר מאפיינים %'] || '';
+      const featuresAmount = featuresData.amount || featuresData.value ||
+                            leviData['ערך ש"ח מאפיינים'] || leviData['ערך מאפיינים'] ||
+                            helper['ערך ש"ח מאפיינים'] || helper['ערך מאפיינים'] ||
+                            helper.levi?.['ערך ש"ח מאפיינים'] ||
+                            helper.expertise?.levi_report?.['ערך ש"ח מאפיינים'] || '';
+      // Use actual feature list if available
+      let featuresList = '';
+      if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
+        featuresList = featuresData.feature_list.map(f => f.description || f.name || f).join(', ');
+      } else if (helper.car_details?.features && Array.isArray(helper.car_details.features)) {
+        featuresList = helper.car_details.features.map(f => f.description || f.name || f).join(', ');
+      }
+      const featuresDescription = featuresList ? `מאפיינים: ${featuresList}` : (featuresData.description || featuresData.reason || 'תוספות מאפיינים');
+
+      if (featuresPercent || featuresAmount) {
+        addFullMarketAdjustment();
+        const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input');
+          const select = lastRow.querySelector('select');
+          if (inputs.length >= 2 && select) {
+            inputs[0].value = featuresDescription || 'תוספות מאפיינים (מלוי יצחק)';
+            select.value = String(featuresPercent).includes('-') ? 'minus' : 'plus';
+            inputs[1].value = Math.abs(parseFloat(String(featuresPercent).replace(/[%\s+-]/g, ''))) || '';
+            lastRow.setAttribute('data-source', 'levi');
+            lastRow.style.background = '#f0f8ff';
+          }
+        }
+      }
+
+      // --- Registration Adjustment (עליה לכביש) ---
+      const registrationData = leviData.registration || {};
+      const registrationPercent = registrationData.percent || registrationData.percentage ||
+                                 leviData['עליה לכביש %'] ||
+                                 helper['עליה לכביש %'] ||
+                                 helper.levi?.['עליה לכביש %'] ||
+                                 helper.expertise?.levi_report?.['עליה לכביש %'] || '';
+      const registrationAmount = registrationData.amount || registrationData.value ||
+                                leviData['ערך ש"ח עליה לכביש'] || leviData['ערך עליה לכביש'] ||
+                                helper['ערך ש"ח עליה לכביש'] || helper['ערך עליה לכביש'] ||
+                                helper.levi?.['ערך ש"ח עליה לכביש'] ||
+                                helper.expertise?.levi_report?.['ערך ש"ח עליה לכביש'] || '';
+      // Use actual registration date if available
+      const registrationDate = registrationData.date || helper.car_details?.registration_date || helper.vehicle?.registration_date || '';
+      const registrationDescription = registrationDate ? `תאריך רישום: ${registrationDate}` : (registrationData.description || registrationData.reason || 'עליה לכביש');
+
+      if (registrationPercent || registrationAmount) {
+        addFullMarketAdjustment();
+        const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input');
+          const select = lastRow.querySelector('select');
+          if (inputs.length >= 2 && select) {
+            inputs[0].value = registrationDescription || 'עליה לכביש (מלוי יצחק)';
+            select.value = String(registrationPercent).includes('-') ? 'minus' : 'plus';
+            inputs[1].value = Math.abs(parseFloat(String(registrationPercent).replace(/[%\s+-]/g, ''))) || '';
+            lastRow.setAttribute('data-source', 'levi');
+            lastRow.style.background = '#f0f8ff';
+          }
+        }
+      }
+
+      // --- Mileage Adjustment (מס ק"מ) ---
       const mileagePercent = leviData.mileage?.percent || leviData.mileage?.percentage ||
                             leviData['מס ק"מ %'] || helper['מס ק"מ %'] || '';
       const mileageAmount = leviData.mileage?.amount || leviData.mileage?.value ||
@@ -4098,8 +4166,7 @@
         }
       }
 
-      // Auto-populate ownership type adjustments (בעלות) - MARKET section
-      // Use actual property value for description
+      // --- Ownership Type Adjustment (בעלות) ---
       const ownershipPercent = leviData.ownership_type?.percent || leviData.ownership_type?.percentage ||
                               leviData['בעלות %'] || helper['בעלות %'] || '';
       const ownershipAmount = leviData.ownership_type?.amount || leviData.ownership_type?.value ||
@@ -4125,8 +4192,7 @@
         }
       }
 
-      // Auto-populate ownership history adjustments (מספר בעלים) - MARKET section
-      // Use actual property value for description
+      // --- Ownership History Adjustment (מספר בעלים) ---
       const ownersPercent = leviData.ownership_history?.percent || leviData.ownership_history?.percentage ||
                            leviData['מספר בעלים %'] || helper['מספר בעלים %'] || '';
       const ownersAmount = leviData.ownership_history?.amount || leviData.ownership_history?.value ||
