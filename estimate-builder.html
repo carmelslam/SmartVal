@@ -3801,27 +3801,33 @@
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
-        const featuresDesc = Array.isArray(featuresData.feature_list) && featuresData.feature_list.length
-          ? featuresData.feature_list.join(', ')
-          : (featuresData.description || featuresData.reason || '');
-        const fAmount = parseFloat(String(featuresData.amount).replace(/[₪,]/g, '')) || 0;
-        const fPercent = parseFloat(String(featuresData.percent).replace('%', '')) || 0;
+        let featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
+        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
+          featureItems.push({
+            description: featuresData.description || featuresData.reason || '',
+            amount: featuresData.amount,
+            percent: featuresData.percent
+          });
+        }
 
-        if (featuresDesc || fAmount || fPercent) {
+        featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
             addFeatureAdjustment();
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(item.amount) || 0;
+              const percent = parseFloat(item.percent) || 0;
               if (inputs.length >= 4) {
-                inputs[0].value = featuresDesc;
-                inputs[1].value = (fAmount < 0 || fPercent < 0) ? 'minus' : 'plus';
-                inputs[2].value = fPercent ? Math.abs(fPercent) : '';
-                inputs[3].value = fAmount ? `₪${Math.abs(fAmount).toLocaleString()}` : '';
+                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
+                inputs[0].value = desc;
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
               }
             }
           }
-        }
+        });
 
         // ===== Registration Adjustment =====
         const regDesc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || '';
