@@ -1,194 +1,244 @@
-# Enhanced Depreciation Module - Summary Dynamics Issues Analysis
+# Legal Text Loading Logic Extraction
 
-## Problem Analysis
+## Problem
+User is frustrated because the wrong legal text system was implemented. Need to extract the EXACT working legal text logic from estimate-builder.html to replace the current system.
 
-After deep code analysis of the JavaScript execution flow in enhanceddepreciation-module.html, here are the exact issues with the summary dynamics:
+## Plan
+1. ✅ Find and analyze estimate-builder.html legal text system
+2. Extract the exact legal text loading functions and logic  
+3. Document the complete working system components
+4. Provide implementation details for replacement
 
-### 1. Report Type Dropdown Changes - WORKING CORRECTLY ✅
-- **What happens**: The report type dropdown change handler IS properly implemented
-- **Code location**: Lines 8716-8724
-- **Functionality**: 
-  - Event listener properly attached to `reportType` dropdown
-  - Calls `updateSummaryVisibility()`, `loadLegalText()`, and `loadAttachmentsFromVault()` on change
-  - Summary sections DO show/hide correctly based on report type
+## Todo Items
+- [x] Locate estimate-builder.html file
+- [x] Extract legal text loading functions
+- [x] Identify HTML structure for legal text section
+- [x] Document placeholder replacement logic
+- [x] Map initialization and event handlers
+- [ ] Provide complete implementation report
 
-### 2. Summary Sections - WORKING CORRECTLY ✅
-- **What exists**: All 5 summary sections properly defined in HTML (lines 1210-1311)
-  - `summaryPrivate` (default visible)
-  - `summaryGlobal` (hidden by default)
-  - `summaryDamage` (hidden by default) 
-  - `summaryTotalLoss` (hidden by default)
-  - `summaryLegalLoss` (hidden by default)
-- **Show/Hide logic**: `updateSummaryVisibility()` function properly maps report types to summary sections and toggles visibility
+## Implementation Report
 
-### 3. Legal Text Loading - WORKING CORRECTLY ✅
-- **What happens**: Legal text DOES load from vault when report type changes
-- **Code location**: `loadLegalText()` function (lines 3593-3692)
-- **Functionality**: 
-  - Has comprehensive `legalTextsVault` object with text for each report type
-  - Properly updates legal text content when report type changes
-  - Includes placeholder substitution system
+### Extracted Legal Text System Components
 
-### 4. הפרשים (Differentials) Calculations - BROKEN ❌
+#### 1. HTML Structure
+```html
+<!-- LEGAL TEXT SECTION - EDITABLE -->
+<div class="form-section" id="legal-text">
+  <h3>טקסט משפטי לאומדן</h3>
+  <div style="margin-bottom: 10px;">
+    <button type="button" onclick="loadLegalTextFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
+    <button type="button" onclick="resetLegalText()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס טקסט</button>
+  </div>
+  <textarea id="legal-text-content" style="width: 100%; min-height: 200px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="הטקסט המשפטי יטען כאן עם הנתונים המעודכנים...">הטקסט המשפטי יטען כאן עם הנתונים המעודכנים...</textarea>
+  <div style="margin-top: 8px; font-size: 14px; color: #666;">
+    💡 הטקסט ניתן לעריכה לצורך התאמה לדוח הספציפי. השינויים לא ישפיעו על הכספת המקורית.
+  </div>
+</div>
+```
 
-**THIS IS THE MAIN ISSUE**: The הפרשים functionality is completely non-functional:
+#### 2. Core Functions
 
-#### Critical Problems:
-1. **Placeholder Functions Only**: 
-   - `addDifferentialRow()` function (line 8827) only shows an alert: "הוסף הפרש - יטען עם מודול depreciation_module.js"
-   - No actual functionality to add differential rows
+##### Main Legal Text Loading Function
+```javascript
+function loadLegalText() {
+  const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  
+  // Legal text vault from final report legal texts vault.md - EXACT COPY
+  const legalTextsVault = {
+    'אובדן_להלכה': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 
-2. **No Calculation Integration**:
-   - Differentials table exists in HTML (`differentialsTable`, `differentialsRows`)
-   - But there's NO JavaScript to:
-     - Add differential rows dynamically
-     - Calculate differential totals
-     - Update summary totals when differentials change
+הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
 
-3. **Missing Summary Updates**:
-   - `updateSummaryTotalsFromDamageCenters()` function (line 6611) calculates totals from damage centers
-   - But it does NOT include differentials in the calculations
-   - Summary totals do NOT reflect differential amounts
+הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב אשר לדבריו.
 
-4. **No VAT Calculation for Differentials**:
-   - VAT rate function exists (`getVatRate()`)
-   - But differentials don't use it for VAT calculations
+קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק ונמצא %קוד_דגם%.
 
-## Todo Items to Fix הפרשים Issues
+אחוז הנזק ברכב הנ"ל הוא %אחוז_נזק% מערך הרכב.
 
-### High Priority Tasks
+הצעה זו אינה כוללת נזקים בלתי נראים מראש העלולים להתגלות במהלך פירוק ו/או תיקון.
 
-- [ ] **Implement functional addDifferentialRow() function**
-  - Replace alert placeholder with actual row creation logic
-  - Create dynamic HTML rows with input fields for description, amount, VAT
-  - Add remove functionality for differential rows
+להערכתינו ירידת ערך צפויה כ %ירידת_ערך% מערך הרכב הנ"ל מאירוע הנדון.
 
-- [ ] **Create differential calculation system**
-  - Add event listeners to differential input fields
-  - Calculate VAT for each differential row based on company/private selection
-  - Calculate total differentials amount
+לטענת בעל הרכב %מוקדי_נזק% מוקדי הנזק מאירוע הנדון.
 
-- [ ] **Integrate differentials into summary totals**
-  - Modify `updateSummaryTotalsFromDamageCenters()` to include differentials
-  - Update all summary sections to show differential totals
-  - Ensure differentials are included in final total calculations
+לאור היקף הנזקים אנו ממלצים לסלק את התביעה הנ"ל על בסיס "אובדן להלכה" ללא תיקון בפועל.
 
-- [ ] **Add differential data persistence**
-  - Save differential data to sessionStorage helper object
-  - Load differential data on page refresh
-  - Include differentials in `loadDataFromHelper()` function
+להערכתינו זמן השהייה במוסך לצורך תיקון %ימי_מוסך% ימי עבודה.`,
+    
+    'טוטלוס': `חוות דעתינו מתבצעת בטרם תיקונים בפועל ואינה כוללת נזקים סמויים.
 
-### Medium Priority Tasks
+בהתאם לבדיקה הנזק ברכב מוערך ביותר מ-60% מערך הרכב, ומשכך הרכב מסווג כטוטלוס.
 
-- [ ] **Add validation for differential inputs**
-  - Ensure amounts are numeric
-  - Validate required fields before calculations
+ערך הרכב המחושב לפי מחירון לוי יצחק: %שווי_רכב%.
 
-- [ ] **Update EstimateCalculations global object**
-  - Add differential calculation functions to global interface
-  - Ensure other modules can access differential totals
+שווי השרידים: %שווי_שרידים%.
 
-## Implementation Strategy
+ניכוי ירידת ערך: %ירידת_ערך%
 
-The core issue is that הפרשים is designed but not implemented. The HTML structure exists, the visibility controls work, but the actual calculation and integration functionality is missing. All other summary dynamics (report type changes, section visibility, legal text loading) are working correctly.
+הערכת נזקים מבוססת על הנתונים שנמסרו ע״י בעל הרכב, אשר לדבריו.
+
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`
+  };
+  
+  let legalText = legalTextsVault[selectedType] || legalTextsVault['אובדן_להלכה'];
+  
+  // Enhanced placeholder mapping to actual field values
+  const placeholders = {
+    '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || '[מספר רכב]',
+    '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || '[תוצרת]',
+    '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || '[דגם]',
+    '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
+    '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
+    '%קוד_דגם%': document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
+    '%אחוז_נזק%': document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
+    '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
+    '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
+    '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
+    '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
+    '%שווי_שרידים%': (() => {
+      const salvageInput = document.getElementById('salvageValue')?.value;
+      const helperSalvage = helper.estimate_summary?.salvage_value || helper.estimate_salvage_value;
+      
+      if (salvageInput && salvageInput.trim() !== '' && salvageInput !== '₪0') {
+        return salvageInput;
+      } else if (helperSalvage && helperSalvage !== '₪0') {
+        return helperSalvage;
+      } else {
+        return '[שווי שרידים]';
+      }
+    })()
+  };
+  
+  // Replace placeholders
+  for (const [placeholder, value] of Object.entries(placeholders)) {
+    legalText = legalText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+  }
+  
+  document.getElementById('legal-text-content').value = legalText;
+}
+```
+
+##### Button Click Handler
+```javascript
+function loadLegalTextFromVault() {
+  loadLegalText();
+  
+  // Save the legal text to helper for the specific estimate
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  helper.estimate_legal_text = document.getElementById('legal-text-content').value;
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  
+  console.log('Legal text loaded from vault and saved to estimate');
+}
+```
+
+##### Reset Function
+```javascript
+function resetLegalText() {
+  const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+  const typeText = selectedType === 'אובדן_להלכה' ? 'אובדן להלכה' : 'טוטלוס';
+  
+  document.getElementById('legal-text-content').value = `טקסט משפטי לאומדן ${typeText} - מוכן לעריכה`;
+  
+  // Clear saved legal text from helper
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  delete helper.estimate_legal_text;
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  
+  console.log('Legal text reset');
+}
+```
+
+#### 3. Event Handlers and Initialization
+
+##### Auto-save on text change
+```javascript
+const legalTextArea = document.getElementById('legal-text-content');
+if (legalTextArea) {
+  legalTextArea.addEventListener('input', function() {
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    helper.estimate_legal_text = this.value;
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
+    updateBuilderCurrentState('estimate_legal_text', this.value);
+  });
+}
+```
+
+##### Load on estimate type change
+```javascript
+document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    updateReportType();
+    loadLegalText();
+  });
+});
+```
+
+##### Page initialization
+```javascript
+setTimeout(() => {
+  loadDataFromHelper();
+  loadAttachmentsData();
+  loadLegalText();  // Called on page load
+  updateGlobalDepreciationCalculation();
+}, 100);
+```
+
+##### Load from helper data
+```javascript
+// In loadDataFromHelper function
+if (helper.estimate_legal_text) {
+  const legalTextElement = document.getElementById('legal-text-content');
+  if (legalTextElement) {
+    legalTextElement.value = helper.estimate_legal_text;
+  }
+}
+```
+
+#### 4. Data Persistence
+
+##### Save to sessionStorage
+```javascript
+// In saveEstimate function
+const legalText = document.getElementById('legal-text-content')?.value || '';
+helper.estimate_legal_text = legalText;
+sessionStorage.setItem('helper', JSON.stringify(helper));
+```
+
+##### Integration with builder state
+```javascript
+updateBuilderCurrentState('estimate_legal_text', legalText);
+```
+
+## Key Features of This System
+
+1. **Vault-based Templates**: Two predefined legal text templates for different estimate types
+2. **Dynamic Placeholder Replacement**: 12 different placeholders that get replaced with actual form data
+3. **Auto-save**: Changes are automatically saved to sessionStorage
+4. **Event-driven Updates**: Legal text updates when estimate type changes
+5. **Manual Controls**: Load from vault and reset buttons
+6. **Data Integration**: Seamlessly integrates with the helper object and builder state
+7. **Fallback Values**: Comprehensive fallback system for missing data
 
 ## Review Section
 
-**Status**: Implementation Complete ✅
-**Main Issue Identified**: הפרשים (Differentials) calculation system is completely non-functional - **FIXED**
-**Root Cause**: Placeholder functions instead of actual implementation - **RESOLVED**
-**Impact**: Summary totals are incomplete when differentials should be included - **FIXED**
+### Changes Made
+- ✅ Successfully extracted complete legal text loading system from estimate-builder.html
+- ✅ Documented all functions, HTML structure, and event handlers
+- ✅ Identified the exact vault-based template system with placeholder replacement
+- ✅ Mapped all initialization and data persistence logic
 
-### Changes Made:
+### System Architecture
+The working legal text system uses:
+1. **Vault-based templates** stored directly in JavaScript
+2. **Placeholder replacement system** with comprehensive fallbacks
+3. **Event-driven updates** tied to form changes
+4. **SessionStorage persistence** for data continuity
+5. **Real-time auto-save** functionality
+6. **Manual control buttons** for user interaction
 
-1. **✅ Implemented toggleDifferentials() function**
-   - Added proper show/hide logic for differentials table and summary
-   - Added automatic first row creation when enabled
-   - Added cleanup logic when disabled
-
-2. **✅ Implemented saveAndRefresh() function**
-   - Added data collection from differential rows
-   - Added sessionStorage persistence to helper.expertise.depreciation
-   - Added automatic refresh of calculations
-
-3. **✅ Implemented refreshSummary() function**
-   - Added complete summary calculation system
-   - Added VAT calculation based on company/private selection
-   - Added proper integration with differentials totals
-
-4. **✅ Implemented renderDifferentials() function**
-   - Added function to load existing differential data from storage
-   - Added proper initialization of differential rows with existing data
-
-5. **✅ Added proper initialization system**
-   - Added checkbox event listener for הפרשים toggle
-   - Added data loading on page initialization
-   - Added initial summary refresh
-   - Added company selection VAT recalculation
-
-### Final Complete Implementation:
-
-6. **✅ Implemented Complete Dynamic Calculation Ecosystem**
-   - Added full `refreshSummary()` system that updates ALL report types
-   - Added `calculateSubtotals()` with complex calculation logic per report type
-   - Added `calculateAdditionsTotal()` and `calculateLeviAdjustmentsTotal()` functions
-   - Added automatic Levi adjustments population system
-
-7. **✅ Implemented Real-time MathEngine Integration**  
-   - Added `calculateGlobalDepreciationValue()` for dynamic depreciation calculations
-   - Added `triggerMathCalculation()` to integrate with MathEngine
-   - Added real-time calculation triggers on every field change
-
-8. **✅ Implemented Complete Cascading Update System**
-   - Added comprehensive event listeners for ALL form fields
-   - Added `saveAndRefreshComplete()` function for complete data persistence
-   - Added dynamic field monitoring for real-time calculation updates
-   - Added automatic data loading on page initialization
-
-9. **✅ Added Automatic Levi Adjustments Population**
-   - Added `populateAdditionsFromLevi()` function
-   - Added `createLeviAdjustmentRow()` for dynamic adjustment creation
-   - Added automatic integration with תוספות והורדות system
-
-**Final Status**: 
-- ✅ COMPLETE DYNAMIC SYSTEM IMPLEMENTED
-- ✅ All summary calculations work dynamically across all report types
-- ✅ Real-time updates on every form field change
-- ✅ MathEngine integration with automatic calculation triggers
-- ✅ Complete data persistence and loading system
-- ✅ Automatic Levi adjustments population
-- ✅ Cascading calculation updates throughout entire system
-- ✅ הפרשים fully integrated with main summary calculations
-
-The enhanced module now has the complete dynamic functionality matching the original depreciation module.
-
-### FINAL UPDATE - EXACT SUMMARY COPY COMPLETED:
-
-10. **✅ Copied Exact Summary HTML Structure from Original**
-    - Replaced ALL summary sections with exact copies from working depreciation-module.html
-    - Used proper `form-section summary-block` classes instead of orange gradients
-    - Preserved all exact field IDs and container structures
-    - Added proper Levi adjustments sections with correct styling
-
-11. **✅ Added Missing addCustomSummaryField Function**
-    - Implemented exact copy of `addCustomSummaryField()` from original module
-    - Added proper grid mappings for all summary types
-    - Added real-time event listeners for calculation updates
-    - Connected to global scope for button functionality
-
-12. **✅ Fixed All Dynamic Calculation Functions**
-    - Updated `calculateAdditionsTotal()` to use correct container IDs
-    - Updated `calculateLeviAdjustmentsTotal()` with proper ID mappings
-    - Updated `populateAdditionsFromLevi()` to work with new structure
-    - All calculations now integrate with the exact summary structure
-
-**FINAL STATUS - COMPLETE REPLICATION**: 
-- ✅ **EXACT SUMMARY STRUCTURE** copied from working depreciation module
-- ✅ **ALL STYLING AND CLASSES** match the original working version  
-- ✅ **COMPLETE DYNAMIC FUNCTIONALITY** with real-time calculations
-- ✅ **ALL FIELD IDS** preserved exactly as in working module
-- ✅ **LEVI ADJUSTMENTS** system fully functional
-- ✅ **CUSTOM FIELD ADDITIONS** working with proper event listeners
-- ✅ **הפרשים INTEGRATION** with complete summary calculations
-
-The enhanced module now has the EXACT same summary structure and functionality as the working depreciation module, with all dynamic calculations, Levi adjustments population, and custom field additions working properly.
+This is the EXACT working system that should replace any current legal text implementation.
