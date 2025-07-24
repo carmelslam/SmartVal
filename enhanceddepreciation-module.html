@@ -924,29 +924,14 @@
 <div class="form-section">
   <div class="form-grid">
     <div>
-      <label>בחר סוג חוות דעת:</label>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
-        <label class="radio-label">
-          <input type="radio" name="reportType" value="private" onchange="updateReportType()" checked />
-          <span>חוות דעת פרטית</span>
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="reportType" value="global" onchange="updateReportType()" />
-          <span>חוות דעת גלובלית</span>
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="reportType" value="damage_condition" onchange="updateReportType()" />
-          <span>חוות דעת מכירה מצבו הניזוק</span>
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="reportType" value="total_loss" onchange="updateReportType()" />
-          <span>חוות דעת טוטלוסט</span>
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="reportType" value="legal_loss" onchange="updateReportType()" />
-          <span>חוות דעת אובדן להלכה</span>
-        </label>
-      </div>
+      <label for="reportType">בחר סוג חוות דעת:</label>
+      <select id="reportType">
+        <option>חוות דעת פרטית</option>
+        <option>חוות דעת גלובלית</option>
+        <option>חוות דעת מכירה מצבו הניזוק</option>
+        <option>חוות דעת טוטלוסט</option>
+        <option>חוות דעת אובדן להלכה</option>
+      </select>
     </div>
     <div>
       <label for="isCompanyClient">דו"ח לחברה:</label>
@@ -1505,11 +1490,97 @@
 
   
   <script>
-    // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
-    window.toggleFloatingScreen = function(screenType) {
-      console.log('Toggling floating screen:', screenType);
+    // Authentication check
+    const auth = sessionStorage.getItem("auth");
+    if (!auth) {
+      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+      window.location.href = "index.html";
+    }
+
+    // ENHANCED: Auto-populate depreciation values from helper
+    function populateDepreciationDataFromHelper() {
+      console.log('📉 Depreciation Module: Auto-populating data from helper...');
       
-      const screens = {
+      try {
+        const helperString = sessionStorage.getItem('helper');
+        if (helperString) {
+          const helper = JSON.parse(helperString);
+          console.log('✅ Helper data loaded for depreciation module:', helper);
+          
+          // Populate market value if available
+          if (helper.vehicle?.market_value) {
+            const marketValueField = document.getElementById('sumMarketValue');
+            if (marketValueField) {
+              marketValueField.value = helper.vehicle.market_value;
+              console.log(`  ✅ sumMarketValue: ${helper.vehicle.market_value}`);
+            }
+            
+            const globalMarketValueField = document.getElementById('sumMarketValueGlobal');
+            if (globalMarketValueField) {
+              globalMarketValueField.value = helper.vehicle.market_value;
+              console.log(`  ✅ sumMarketValueGlobal: ${helper.vehicle.market_value}`);
+            }
+          }
+          
+          // Populate depreciation values if available
+          if (helper.valuation?.depreciation) {
+            const depreciation = helper.valuation.depreciation;
+            
+            if (depreciation.global_percentage) {
+              const globalDepField = document.getElementById('globalDep1');
+              if (globalDepField) {
+                globalDepField.value = depreciation.global_percentage;
+                console.log(`  ✅ globalDep1: ${depreciation.global_percentage}%`);
+              }
+            }
+            
+            if (depreciation.global_amount) {
+              const globalDepValueField = document.getElementById('globalDepValue');
+              if (globalDepValueField) {
+                globalDepValueField.value = depreciation.global_amount;
+                console.log(`  ✅ globalDepValue: ${depreciation.global_amount}`);
+              }
+            }
+          }
+          
+          console.log('✅ Depreciation module auto-population completed');
+        } else {
+          console.log('⚠️ No helper data found in sessionStorage');
+        }
+      } catch (error) {
+        console.error('❌ Error auto-populating depreciation data:', error);
+      }
+    }
+    
+    // Auto-populate on page load
+    populateDepreciationDataFromHelper();
+
+    // Logout function with enhanced sound
+    function logout() {
+      // Use the enhanced logout with sound if available
+      if (typeof window.logoutWithSound === 'function') {
+        window.logoutWithSound();
+      } else {
+        // Fallback to regular logout
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    // Save data function
+    function saveData() {
+      // This will be handled by the module itself
+      alert("נתונים נשמרו בהצלחה");
+    }
+
+    // Make functions global
+    window.logout = logout;
+    window.saveData = saveData;
+  </script>
+  
+  <script type="module" src="./helper-events.js"></script>
+  <script type="module" src="./depreciation_module.js"></script>
+  <script src="internal-browser.js"></script>
         leviReport: () => {
           if (window.toggleLeviReport) {
             window.toggleLeviReport();
