@@ -3880,15 +3880,27 @@
       console.log('🔍 DEBUG: leviData.features?.percent:', leviData.features?.percent);
       console.log('🔍 DEBUG: leviData["מחיר מאפיינים %"]:', leviData['מחיר מאפיינים %']);
       
+      // CRITICAL FIX: Use the correct nested structure from helper.valuation.adjustments
+      const featuresData = leviData.features || {};
+      const registrationData = leviData.registration || {};
+      
+      console.log('📊 DEBUG: featuresData:', featuresData);
+      console.log('📊 DEBUG: registrationData:', registrationData);
+      
       // Auto-populate features adjustments (מאפיינים) - GROSS section only
-      const featuresPercent = leviData.features?.percent || leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || '';
-      const featuresAmount = leviData.features?.amount || leviData['ערך ש"ח מאפיינים'] || leviData['ערך כספי מאפיינים'] || '';
-      const featuresDescription = leviData.features?.description || leviData.features?.value || 'תוספות מאפיינים';
+      const featuresPercent = featuresData.percent || featuresData.percentage || leviData['מחיר מאפיינים %'] || '';
+      const featuresAmount = featuresData.amount || leviData['ערך ש"ח מאפיינים'] || '';
+      const featuresDescription = featuresData.description || featuresData.value || 'תוספות מאפיינים';
       
       console.log('🎨 Features data found:', { featuresPercent, featuresAmount, featuresDescription });
       
       if (featuresPercent || featuresAmount) {
-        addFeatureAdjustment();
+        console.log('🔧 Attempting to add feature adjustment...');
+        if (typeof addFeatureAdjustment === 'function') {
+          addFeatureAdjustment();
+        } else {
+          console.error('❌ addFeatureAdjustment function not found!');
+        }
         
         const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
         const lastRow = rows[rows.length - 1];
@@ -3906,15 +3918,20 @@
         }
       }
       
-      // Auto-populate registration adjustments (עליה לכביש) - GROSS section only
-      const registrationPercent = leviData.registration?.percent || leviData['עליה לכביש %'] || '';
-      const registrationAmount = leviData.registration?.amount || leviData['ערך ש"ח עליה לכביש'] || leviData['ערך כספי עליה לכביש'] || '';
-      const registrationDescription = leviData.registration?.description || leviData.registration?.value || 'עליה לכביש';
+      // Auto-populate registration adjustments (עליה לכביש) - GROSS section only  
+      const registrationPercent = registrationData.percent || registrationData.percentage || leviData['עליה לכביש %'] || '';
+      const registrationAmount = registrationData.amount || leviData['ערך ש"ח עליה לכביש'] || '';
+      const registrationDescription = registrationData.description || registrationData.value || 'עליה לכביש';
       
       console.log('🚗 Registration data found:', { registrationPercent, registrationAmount, registrationDescription });
       
       if (registrationPercent || registrationAmount) {
-        addRegistrationAdjustment();
+        console.log('🔧 Attempting to add registration adjustment...');
+        if (typeof addRegistrationAdjustment === 'function') {
+          addRegistrationAdjustment();
+        } else {
+          console.error('❌ addRegistrationAdjustment function not found!');
+        }
         
         const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
         const lastRow = rows[rows.length - 1];
