@@ -871,18 +871,29 @@
       </div>
       
       <!-- Document Actions Section -->
-      <div class="document-actions-section">
-        <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
-          פעולות מסמכים
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <button class="nav-btn" id="builderFetchExpertiseBtn" onclick="fetchExpertisePDFForBuilder()" style="background: #8b5cf6; color: white;">
-            הצג אקספירטיזה PDF
-          </button>
-          <button class="nav-btn" id="builderRequestExpertiseBtn" onclick="requestExpertiseForBuilder()" style="background: #059669; color: white;">
-            בקש אקספירטיזה
-          </button>
-        </div>
+    <div id="documentActionsSection" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
+        פעולות מסמכים
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
+          הצג אקספירטיזה PDF
+        </button>
+        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #06b6d4; color: white;">
+          הצג אומדן PDF
+        </button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white;">
+          בקש אקספירטיזה
+        </button>
+        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #f59e0b; color: white;">
+          בקש אומדן
+        </button>
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 14px; text-align: center; color: #92400e;">
+        💡 הכנס מספר רכב וטען תיק כדי לראות את כל הפעולות הזמינות<br>
+        הכפתור מזהה אוטומטית אם המשתמש ממשיך עבודה או מתחיל מחדש
       </div>
     </div>
     
@@ -1216,31 +1227,6 @@
         </div>
       </div>
       
-      <!-- ADDITIONS AND REDUCTIONS SECTION -->
-      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-        <h4 style="color: #333; margin-bottom: 15px; text-align: center;">תוספות והורדות:</h4>
-        <div style="text-align: center; margin-bottom: 15px;">
-          <div style="margin-bottom: 8px;">
-            <span style="text-decoration: line-through; color: #999;">התאמות מדויקות לפי יצרן</span>
-          </div>
-          <div style="margin-bottom: 8px;">
-            <span style="text-decoration: line-through; color: #999;">מחיר התאמות</span>
-          </div>
-          <div style="margin-bottom: 8px;">
-            <span style="text-decoration: line-through; color: #999;">תוספות נוספות</span>
-          </div>
-          <div style="margin-top: 10px; font-size: 14px; color: #666;">
-            <span>או</span>
-          </div>
-          <div style="margin-top: 8px;">
-            <span>ערך (₪)</span>
-          </div>
-          <div style="margin-top: 8px; font-size: 12px; color: #888;">
-            לא נמצאו התאמות בדו"ח לוי יצחק
-          </div>
-        </div>
-      </div>
-
       <!-- VAT AND TOTAL CALCULATION SECTION -->
       <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
         <div class="form-grid">
@@ -1249,17 +1235,8 @@
             <input type="text" id="sumVAT" style="background: white; color: #333;" readonly />
           </div>
           <div>
-            <label style="color: #333;">סה״כ נכלל בחוות הדעת (לפני הפרשים):</label>
-            <input type="text" id="sumBeforeDifferences" style="background: white; color: #333; font-weight: bold;" readonly />
-          </div>
-        </div>
-        <div class="form-grid" style="margin-top: 15px;">
-          <div>
-            <label style="color: #333;">סה״כ סופי (לאחר הפרשים):</label>
-            <input type="text" id="sumFinalTotal" style="background: #dcfce7; border: 2px solid #16a34a; color: #333; font-weight: bold; font-size: 16px;" readonly />
-          </div>
-          <div style="display: flex; align-items: center; font-size: 14px; color: #16a34a; font-weight: 600;">
-            ✓ סכום סופי כולל הפרשים
+            <label style="color: #333;">סה״כ נכלל בחוות דעת</label>
+            <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" readonly />
           </div>
         </div>
       </div>
@@ -2149,8 +2126,7 @@
           document.getElementById('sumMarketValue').value = helper.estimate_summary.market_value || '';
           document.getElementById('sumClaim').value = helper.estimate_summary.total_claim || '';
           document.getElementById('sumVAT').value = helper.estimate_summary.vat || '';
-          document.getElementById('sumBeforeDifferences').value = helper.estimate_summary.total_before_differences || '';
-          document.getElementById('sumFinalTotal').value = helper.estimate_summary.final_total_with_differences || '';
+          document.getElementById('sumTotalClaim').value = helper.estimate_summary.total_with_vat || '';
           document.getElementById('depCompensation').value = helper.estimate_summary.dep_compensation || '';
           document.getElementById('salvageValue').value = helper.estimate_summary.salvage_value || '';
         } else {
@@ -2166,12 +2142,9 @@
           const vat = totalClaim * 0.18;
           document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
           
-          // Calculate total with VAT (before differences)
+          // Calculate total with VAT
           const totalWithVAT = totalClaim + vat;
-          document.getElementById('sumBeforeDifferences').value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
-          
-          // Calculate final total (after differences)
-          calculateFinalTotalWithDifferences();
+          document.getElementById('sumTotalClaim').value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
           
           // Set depreciation compensation
           const depCompensation = helper.expertise?.calculations?.depreciation_compensation || 0;
@@ -3665,7 +3638,7 @@
           }
           
           console.log(`💰 Updated claims data: ${fieldId} = "${value}"`);
-        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumBeforeDifferences', 'sumFinalTotal', 'depCompensation', 'salvageValue', 'garageDays'].includes(fieldId)) {
+        } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue', 'garageDays'].includes(fieldId)) {
           // Handle garage days separately
           if (fieldId === 'garageDays') {
             helper.estimate_work_days = value;
@@ -3675,8 +3648,7 @@
               'sumMarketValue': 'market_value',
               'sumClaim': 'total_claim',
               'sumVAT': 'vat',
-              'sumBeforeDifferences': 'total_before_differences',
-              'sumFinalTotal': 'final_total_with_differences',
+              'sumTotalClaim': 'total_with_vat',
               'depCompensation': 'dep_compensation',
               'salvageValue': 'salvage_value'
             };
@@ -7410,7 +7382,7 @@
         }
         
         // Summary data fields
-        const summaryFields = ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumBeforeDifferences', 'sumFinalTotal', 'depCompensation', 'salvageValue', 'garageDays'];
+        const summaryFields = ['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue', 'garageDays'];
         
         summaryFields.forEach(fieldId => {
           const field = document.getElementById(fieldId);
@@ -8872,20 +8844,8 @@
           const differentialsTable = document.getElementById('differentialsTable');
           if (differentialsTable) {
             differentialsTable.style.display = this.checked ? 'block' : 'none';
-            // Recalculate final total when differences are toggled
-            setTimeout(() => calculateFinalTotalWithDifferences(), 100);
           }
         });
-      }
-      
-      // Add observer for differences table changes
-      const differentialsTable = document.getElementById('differentialsTable');
-      if (differentialsTable) {
-        const observer = new MutationObserver(() => {
-          // Recalculate when differences are added or modified
-          setTimeout(() => calculateFinalTotalWithDifferences(), 100);
-        });
-        observer.observe(differentialsTable, { childList: true, subtree: true });
       }
     });
     
@@ -8969,47 +8929,11 @@
       alert('הוסף הפרש - יטען עם מודול depreciation_module.js');
     }
     
-    // Calculate final total including differences
-    function calculateFinalTotalWithDifferences() {
-      try {
-        // Get the base total (before differences)
-        const beforeDifferencesInput = document.getElementById('sumBeforeDifferences');
-        const beforeDifferencesValue = beforeDifferencesInput?.value?.replace(/[₪,]/g, '') || '0';
-        let baseTotal = parseFloat(beforeDifferencesValue) || 0;
-        
-        // Calculate total differences
-        let totalDifferences = 0;
-        const differentialsRows = document.querySelectorAll('#differentialsRows .differential-row');
-        
-        differentialsRows.forEach(row => {
-          const totalWithVatInput = row.querySelector('input[id$="TotalWithVat"]');
-          if (totalWithVatInput) {
-            const diffValue = parseFloat(totalWithVatInput.value?.replace(/[₪,]/g, '') || '0');
-            totalDifferences += diffValue;
-          }
-        });
-        
-        // Calculate final total
-        const finalTotal = baseTotal + totalDifferences;
-        
-        // Update the final total field
-        const finalTotalInput = document.getElementById('sumFinalTotal');
-        if (finalTotalInput) {
-          finalTotalInput.value = finalTotal > 0 ? `₪${Math.round(finalTotal).toLocaleString()}` : '₪0';
-        }
-        
-        console.log(`💰 Final total calculation: Base: ₪${baseTotal.toLocaleString()}, Differences: ₪${totalDifferences.toLocaleString()}, Final: ₪${finalTotal.toLocaleString()}`);
-        
-      } catch (error) {
-        console.error('Error calculating final total with differences:', error);
-      }
-    }
 
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
-    window.calculateFinalTotalWithDifferences = calculateFinalTotalWithDifferences;
 
     // Document Operations Functions
     window.returnToSelection = function() {
