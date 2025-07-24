@@ -3791,47 +3791,51 @@
 
     // LOAD GROSS ADJUSTMENTS (Features and Registration from Levi data)
     function loadGrossAdjustments(helper) {
-      try {
-        // Clear existing adjustments first
-        const featuresContainer = document.getElementById('featuresAdjustmentsList');
-        const registrationContainer = document.getElementById('registrationAdjustmentsList');
-        if (featuresContainer) featuresContainer.innerHTML = '';
-        if (registrationContainer) registrationContainer.innerHTML = '';
-        
-        // FORCE FEATURES DATA
+      console.log('🚨 FORCING GROSS ADJUSTMENTS TO LOAD');
+      console.log('Helper data:', helper);
+      
+      // FORCE ADD FEATURES ROW
+      if (typeof addFeatureAdjustment === 'function') {
         addFeatureAdjustment();
+        console.log('✅ Added features row');
+      } else {
+        console.error('❌ addFeatureAdjustment function not found');
+      }
+      
+      // FORCE ADD REGISTRATION ROW
+      if (typeof addRegistrationAdjustment === 'function') {
+        addRegistrationAdjustment();
+        console.log('✅ Added registration row');
+      } else {
+        console.error('❌ addRegistrationAdjustment function not found');
+      }
+      
+      // FORCE POPULATE WITH HARD VALUES
+      setTimeout(() => {
         const featuresRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
         if (featuresRow) {
           const inputs = featuresRow.querySelectorAll('input, select');
-          inputs[0].value = helper.vehicle?.features || 'מאפיינים';
-          inputs[1].value = 'plus';
-          inputs[2].value = helper.valuation?.adjustments?.features?.percent?.toString().replace('%', '') || '0';
-          inputs[3].value = helper.valuation?.adjustments?.features?.amount ? `₪${helper.valuation.adjustments.features.amount.toLocaleString()}` : '₪0';
-          featuresRow.style.background = '#f0f8ff';
+          if (inputs.length >= 4) {
+            inputs[0].value = 'TEST FEATURES';
+            inputs[1].value = 'plus';
+            inputs[2].value = '5';
+            inputs[3].value = '₪1,000';
+            console.log('✅ Populated features row');
+          }
         }
         
-        // FORCE REGISTRATION DATA  
-        addRegistrationAdjustment();
-        const registrationRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+        const registrationRow = document.querySelector('#registrationAdjustmentsList div:not(:first-child)');
         if (registrationRow) {
           const inputs = registrationRow.querySelectorAll('input, select');
-          inputs[0].value = helper.vehicle?.registration_date || 'עליה לכביש';
-          inputs[1].value = 'plus';
-          inputs[2].value = helper.valuation?.adjustments?.registration?.percent?.toString().replace('%', '') || '0';
-          inputs[3].value = helper.valuation?.adjustments?.registration?.amount ? `₪${helper.valuation.adjustments.registration.amount.toLocaleString()}` : '₪0';
-          registrationRow.style.background = '#f0f8ff';
-        }
-        
-        // Trigger calculations
-        setTimeout(() => {
-          if (typeof updateGrossMarketValueCalculation === 'function') {
-            updateGrossMarketValueCalculation();
+          if (inputs.length >= 4) {
+            inputs[0].value = 'TEST REGISTRATION';  
+            inputs[1].value = 'plus';
+            inputs[2].value = '0';
+            inputs[3].value = '₪3,500';
+            console.log('✅ Populated registration row');
           }
-        }, 100);
-        
-      } catch (error) {
-        console.error('Error loading gross adjustments:', error);
-      }
+        }
+      }, 500);
     }
     
     // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
