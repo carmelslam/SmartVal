@@ -8706,10 +8706,12 @@
       }
     }
     
-    // DEPRECIATION MODULE INTEGRATION
+    // DEPRECIATION MODULE INTEGRATION - COMPLETE DYNAMIC SYSTEM
     
     // Initialize depreciation functionality on page load
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Initializing complete dynamic depreciation system...');
+      
       // Initialize report type handler
       const reportTypeSelect = document.getElementById('reportType');
       if (reportTypeSelect) {
@@ -8719,10 +8721,49 @@
           updateSummaryVisibility();
           loadLegalText(); // Update legal text when report type changes
           loadAttachmentsFromVault(); // Update attachments when report type changes
+          saveAndRefreshComplete(); // Save and refresh calculations
         });
         
         // Initialize with current selection
         updateSummaryVisibility();
+      }
+      
+      // Initialize company selection for VAT calculation
+      const companySelect = document.getElementById('isCompanyClient');
+      if (companySelect) {
+        companySelect.addEventListener('change', function() {
+          console.log('Company selection changed:', this.value);
+          saveAndRefreshComplete();
+        });
+      }
+      
+      // Initialize global depreciation field
+      const globalDep1 = document.getElementById('globalDep1');
+      if (globalDep1) {
+        globalDep1.addEventListener('input', function() {
+          console.log('Global depreciation changed:', this.value);
+          calculateGlobalDepreciationValue();
+          triggerMathCalculation();
+          saveAndRefreshComplete();
+        });
+      }
+      
+      // Initialize work days field
+      const workDays = document.getElementById('workDays');
+      if (workDays) {
+        workDays.addEventListener('input', function() {
+          console.log('Work days changed:', this.value);
+          saveAndRefreshComplete();
+        });
+      }
+      
+      // Initialize agreement checkbox
+      const isAgreement = document.getElementById('isAgreement');
+      if (isAgreement) {
+        isAgreement.addEventListener('change', function() {
+          console.log('Agreement checkbox changed:', this.checked);
+          saveAndRefreshComplete();
+        });
       }
       
       // Initialize differentials checkbox
@@ -8731,31 +8772,69 @@
         differentialsCheckbox.addEventListener('change', function() {
           console.log('Differentials checkbox changed:', this.checked);
           toggleDifferentials();
-          saveAndRefresh();
+          saveAndRefreshComplete();
         });
       }
+      
+      // Add dynamic event listeners to all value fields that affect calculations
+      const dynamicFields = [
+        'saleValueDamage', 'salvageValueTotal', 'salvageValueLegal', 'storageValueTotal'
+      ];
+      
+      dynamicFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', function() {
+            console.log(`${fieldId} changed:`, this.value);
+            calculateSubtotals();
+            saveAndRefreshComplete();
+          });
+        }
+      });
       
       // Initialize differentials display
       toggleDifferentials();
       
-      // Load existing differentials data
+      // Load existing data from helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const dep = helper.expertise?.depreciation || {};
+      
+      // Load existing differentials data
       if (dep.differentials && dep.differentials.length > 0) {
         renderDifferentials(dep.differentials);
       }
       
-      // Initial summary setup
-      refreshSummary();
-      
-      // Initialize company selection for VAT calculation
-      const companySelect = document.getElementById('isCompanyClient');
-      if (companySelect) {
-        companySelect.addEventListener('change', function() {
-          // Recalculate summary when company selection changes
-          refreshSummary();
-        });
+      // Load existing form values
+      if (dep.global_percent && globalDep1) {
+        globalDep1.value = dep.global_percent;
       }
+      if (dep.work_days && workDays) {
+        workDays.value = dep.work_days;
+      }
+      if (dep.is_agreement !== undefined && isAgreement) {
+        isAgreement.checked = !!dep.is_agreement;
+      }
+      if (dep.has_differentials !== undefined && differentialsCheckbox) {
+        differentialsCheckbox.checked = !!dep.has_differentials;
+      }
+      
+      // Load company selection
+      if (helper.client?.is_company_client !== undefined && companySelect) {
+        companySelect.value = helper.client.is_company_client ? 'yes' : 'no';
+      }
+      
+      // Load report type
+      if (helper.meta?.report_type_display && reportTypeSelect) {
+        reportTypeSelect.value = helper.meta.report_type_display;
+      }
+      
+      // Initial complete calculation refresh
+      setTimeout(() => {
+        calculateGlobalDepreciationValue();
+        triggerMathCalculation();
+        refreshSummary();
+        console.log('✅ Complete dynamic system initialized');
+      }, 100);
     });
     
     // Update summary visibility based on report type
@@ -9034,47 +9113,180 @@
       });
     }
 
-    // Refresh summary calculations
+    // Refresh summary calculations - COMPLETE DYNAMIC SYSTEM
     function refreshSummary() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const calc = helper.expertise?.calculations || {};
+      const dep = helper.expertise?.depreciation || {};
       const levi = helper.expertise?.levi_report || {};
       
       // Get base values
       const marketValue = parseFloat(levi.final_price) || 0;
       const totalClaim = parseFloat(calc.total_damage) || 0;
+      const depCompensation = parseFloat(dep.global_amount) || 0;
       
-      // Update market value field
-      const sumMarketValueField = document.getElementById('sumMarketValue');
-      if (sumMarketValueField) {
-        sumMarketValueField.value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-      }
+      // Update all summary fields across all report types
+      const summaryFields = [
+        'sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 
+        'sumMarketValueTotal', 'sumMarketValueLegal'
+      ];
+      summaryFields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+      });
       
-      // Update claim field
-      const sumClaimField = document.getElementById('sumClaim');
-      if (sumClaimField) {
-        sumClaimField.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
-      }
+      const claimFields = [
+        'sumClaim', 'sumClaimGlobal'
+      ];
+      claimFields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+      });
       
-      // Calculate VAT and total
-      const vatRate = getVatRate();
-      const vat = totalClaim * vatRate;
-      const totalWithVAT = totalClaim + vat;
+      const depFields = [
+        'depCompensation', 'depCompensationGlobal'
+      ];
+      depFields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = depCompensation ? `₪${depCompensation.toLocaleString()}` : '';
+      });
       
-      // Update VAT field
-      const sumVATField = document.getElementById('sumVAT');
-      if (sumVATField) {
-        sumVATField.value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
-      }
+      // Calculate subtotals including תוספות והורדות for each report type
+      calculateSubtotals();
       
-      // Update total field
-      const sumTotalField = document.getElementById('sumTotalClaim');
-      if (sumTotalField) {
-        sumTotalField.value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
-      }
+      // Specific fields for different report types
+      const saleValueDamage = document.getElementById('saleValueDamage');
+      if (saleValueDamage) saleValueDamage.value = calc.sale_value_damaged || '';
+      
+      const salvageValueTotal = document.getElementById('salvageValueTotal');
+      if (salvageValueTotal) salvageValueTotal.value = calc.salvage_value || '';
+      
+      const salvageValueLegal = document.getElementById('salvageValueLegal');
+      if (salvageValueLegal) salvageValueLegal.value = calc.salvage_value || '';
+      
+      const storageValueTotal = document.getElementById('storageValueTotal');
+      if (storageValueTotal) storageValueTotal.value = calc.storage_value || '';
+      
+      // Populate תוספות והורדות from levi adjustments
+      populateAdditionsFromLevi();
       
       // Update differentials summary
       updateDifferentialsSummary();
+    }
+
+    // Calculate subtotals including תוספות והורדות for each report type
+    function calculateSubtotals() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const calc = helper.expertise?.calculations || {};
+      const dep = helper.expertise?.depreciation || {};
+      const levi = helper.expertise?.levi_report || {};
+      
+      // Get base values
+      const marketValue = parseFloat(levi.final_price) || 0;
+      const totalClaim = parseFloat(calc.total_damage) || 0;
+      const depCompensation = parseFloat(dep.global_amount) || 0;
+      
+      // Calculate additions/deductions for each report type
+      const reportTypes = [
+        { summaryType: 'summaryPrivate', totalField: 'sumTotal' },
+        { summaryType: 'summaryGlobal', totalField: 'sumTotalGlobal' },
+        { summaryType: 'summaryDamage', totalField: 'afterSaleDamage' },
+        { summaryType: 'summaryTotalLoss', totalField: 'afterSaleTotal' },
+        { summaryType: 'summaryLegalLoss', totalField: 'afterSaleLegal' }
+      ];
+      
+      reportTypes.forEach(({ summaryType, totalField }) => {
+        const additionsTotal = calculateAdditionsTotal(summaryType);
+        let subtotal = 0;
+        
+        // Different calculation logic for different report types
+        if (summaryType === 'summaryPrivate' || summaryType === 'summaryGlobal') {
+          // For private/global: market value + total claim + depreciation compensation + additions
+          subtotal = marketValue + totalClaim + depCompensation + additionsTotal;
+        } else if (summaryType === 'summaryDamage') {
+          // For damaged state: market value - sale value + additions
+          const saleValue = parseFloat(document.getElementById('saleValueDamage')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          subtotal = marketValue - saleValue + additionsTotal;
+        } else if (summaryType === 'summaryTotalLoss') {
+          // For total loss: market value - salvage value + storage + additions
+          const salvageValue = parseFloat(document.getElementById('salvageValueTotal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          const storageValue = parseFloat(document.getElementById('storageValueTotal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          subtotal = marketValue - salvageValue + storageValue + additionsTotal;
+        } else if (summaryType === 'summaryLegalLoss') {
+          // For legal loss: market value - salvage value + additions
+          const salvageValue = parseFloat(document.getElementById('salvageValueLegal')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          subtotal = marketValue - salvageValue + additionsTotal;
+        }
+        
+        // Update the total field
+        const totalFieldElement = document.getElementById(totalField);
+        if (totalFieldElement) {
+          totalFieldElement.value = `₪${Math.max(0, subtotal).toLocaleString()}`;
+        }
+      });
+    }
+
+    // Calculate total of additions/deductions for a specific report type
+    function calculateAdditionsTotal(summaryType) {
+      let total = 0;
+      
+      // Calculate additions from custom fields
+      const additionsContainer = document.querySelector(`#${summaryType} .additions-container`);
+      if (additionsContainer) {
+        const customRows = additionsContainer.querySelectorAll('.custom-field-row');
+        customRows.forEach(row => {
+          const value = parseFloat(row.querySelector('.custom-field-value')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          total += value;
+        });
+      }
+      
+      // Calculate Levi adjustments
+      total += calculateLeviAdjustmentsTotal(summaryType);
+      
+      return total;
+    }
+
+    // Calculate total of Levi adjustments for a specific report type
+    function calculateLeviAdjustmentsTotal(summaryType) {
+      let total = 0;
+      
+      const leviContainer = document.querySelector(`#${summaryType} .levi-adjustments-container`);
+      if (leviContainer) {
+        const leviRows = leviContainer.querySelectorAll('.levi-adjustment-row');
+        leviRows.forEach(row => {
+          const value = parseFloat(row.querySelector('.levi-adjustment-value')?.value?.replace(/[^\d.-]/g, '')) || 0;
+          total += value;
+        });
+      }
+      
+      return total;
+    }
+
+    // Populate תוספות והורדות from levi adjustments
+    function populateAdditionsFromLevi() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const levi = helper.expertise?.levi_report || {};
+      
+      if (!levi.adjustments || !Array.isArray(levi.adjustments)) return;
+      
+      // Populate for each summary type
+      const summaryTypes = ['summaryPrivate', 'summaryGlobal', 'summaryDamage', 'summaryTotalLoss', 'summaryLegalLoss'];
+      
+      summaryTypes.forEach(summaryType => {
+        const container = document.querySelector(`#${summaryType} .levi-adjustments-container`);
+        if (!container) return;
+        
+        // Clear existing rows
+        container.innerHTML = '';
+        
+        // Add Levi adjustments
+        levi.adjustments.forEach(adjustment => {
+          if (adjustment.name && adjustment.value) {
+            const row = createLeviAdjustmentRow(adjustment.name, adjustment.value);
+            container.appendChild(row);
+          }
+        });
+      });
     }
 
     // Render existing differentials from data
@@ -9092,6 +9304,127 @@
       updateDifferentialsSummary();
     }
 
+    // Create Levi adjustment row
+    function createLeviAdjustmentRow(name, value) {
+      const row = document.createElement('div');
+      row.className = 'levi-adjustment-row';
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '1fr 120px 80px';
+      row.style.gap = '10px';
+      row.style.marginBottom = '8px';
+      row.style.alignItems = 'center';
+      
+      row.innerHTML = `
+        <div>
+          <input type="text" class="levi-adjustment-name" value="${name}" readonly style="width:100%; padding:6px; border:1px solid #ccc; background:#f8f9fa; border-radius:4px;">
+        </div>
+        <div>
+          <input type="number" class="levi-adjustment-value" value="${value}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+        <div>
+          <button type="button" class="btn-remove" style="background:#dc3545; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">✕</button>
+        </div>
+      `;
+      
+      // Add event listeners
+      const valueInput = row.querySelector('.levi-adjustment-value');
+      const removeBtn = row.querySelector('.btn-remove');
+      
+      valueInput.addEventListener('input', function() {
+        calculateSubtotals();
+        saveAndRefresh();
+      });
+      
+      removeBtn.addEventListener('click', function() {
+        row.remove();
+        calculateSubtotals();
+        saveAndRefresh();
+      });
+      
+      return row;
+    }
+
+    // Global depreciation calculation
+    function calculateGlobalDepreciationValue() {
+      const globalDep1 = document.getElementById('globalDep1');
+      if (!globalDep1) return;
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const levi = helper.expertise?.levi_report || {};
+      const marketValue = parseFloat(levi.final_price) || 0;
+      const depPercent = parseFloat(globalDep1.value) || 0;
+      
+      const globalAmount = Math.round(marketValue * (depPercent / 100));
+      
+      // Update helper data
+      if (!helper.expertise) helper.expertise = {};
+      if (!helper.expertise.depreciation) helper.expertise.depreciation = {};
+      helper.expertise.depreciation.global_percent = depPercent;
+      helper.expertise.depreciation.global_amount = globalAmount;
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Update display
+      const globalAmountField = document.getElementById('globalAmount');
+      if (globalAmountField) {
+        globalAmountField.value = `₪${globalAmount.toLocaleString()}`;
+      }
+      
+      console.log(`Global depreciation calculated: ${depPercent}% of ₪${marketValue.toLocaleString()} = ₪${globalAmount.toLocaleString()}`);
+    }
+
+    // Trigger MathEngine calculation
+    function triggerMathCalculation() {
+      if (typeof MathEngine !== 'undefined' && MathEngine.calculateAll) {
+        try {
+          MathEngine.calculateAll();
+          console.log('✅ MathEngine calculation triggered');
+        } catch (error) {
+          console.error('❌ Error triggering MathEngine calculation:', error);
+        }
+      }
+    }
+
+    // Enhanced saveAndRefresh with complete data collection
+    function saveAndRefreshComplete() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Ensure structure exists
+      if (!helper.expertise) helper.expertise = {};
+      if (!helper.expertise.depreciation) helper.expertise.depreciation = {};
+      
+      // Collect all form data
+      const reportType = document.getElementById('reportType')?.value;
+      const isCompanyClient = document.getElementById('isCompanyClient')?.value;
+      const globalDep1 = document.getElementById('globalDep1')?.value;
+      const workDays = document.getElementById('workDays')?.value;
+      const isAgreement = document.getElementById('isAgreement')?.checked;
+      const hasDifferentials = document.getElementById('hasDifferentials')?.checked;
+      
+      // Update helper with form data
+      if (reportType) helper.meta = { ...helper.meta, report_type_display: reportType };
+      if (isCompanyClient) helper.client = { ...helper.client, is_company_client: isCompanyClient === 'yes' };
+      if (globalDep1) helper.expertise.depreciation.global_percent = parseFloat(globalDep1);
+      if (workDays) helper.expertise.depreciation.work_days = parseInt(workDays);
+      helper.expertise.depreciation.is_agreement = !!isAgreement;
+      helper.expertise.depreciation.has_differentials = !!hasDifferentials;
+      
+      // Collect differentials
+      if (hasDifferentials) {
+        helper.expertise.depreciation.differentials = collectDifferentials();
+      }
+      
+      // Save to storage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Trigger calculations
+      calculateGlobalDepreciationValue();
+      triggerMathCalculation();
+      refreshSummary();
+      
+      console.log('💾 Complete data saved and calculations refreshed');
+    }
+
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
@@ -9099,10 +9432,18 @@
     window.updateDifferentialsSummary = updateDifferentialsSummary;
     window.toggleDifferentials = toggleDifferentials;
     window.saveAndRefresh = saveAndRefresh;
+    window.saveAndRefreshComplete = saveAndRefreshComplete;
     window.refreshSummary = refreshSummary;
+    window.calculateSubtotals = calculateSubtotals;
+    window.calculateAdditionsTotal = calculateAdditionsTotal;
+    window.calculateLeviAdjustmentsTotal = calculateLeviAdjustmentsTotal;
+    window.populateAdditionsFromLevi = populateAdditionsFromLevi;
     window.collectDifferentials = collectDifferentials;
     window.getVatRate = getVatRate;
     window.renderDifferentials = renderDifferentials;
+    window.createLeviAdjustmentRow = createLeviAdjustmentRow;
+    window.calculateGlobalDepreciationValue = calculateGlobalDepreciationValue;
+    window.triggerMathCalculation = triggerMathCalculation;
 
     // Document Operations Functions
     window.returnToSelection = function() {
