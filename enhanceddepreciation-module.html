@@ -823,6 +823,33 @@
       font-weight: 600;
       color: white;
     }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: white;
+    }
+    .radio-label:hover {
+      border-color: #3b82f6;
+      background: #f8faff;
+    }
+    .radio-label input[type="radio"] {
+      margin: 0;
+      cursor: pointer;
+    }
+    .radio-label input[type="radio"]:checked + span {
+      color: #3b82f6;
+      font-weight: 600;
+    }
+    .radio-label:has(input[type="radio"]:checked) {
+      border-color: #3b82f6;
+      background: #f0f7ff;
+    }
   </style>
 </head>
 <body>
@@ -897,14 +924,29 @@
 <div class="form-section">
   <div class="form-grid">
     <div>
-      <label for="reportType">בחר סוג חוות דעת:</label>
-      <select id="reportType">
-        <option>חוות דעת פרטית</option>
-        <option>חוות דעת גלובלית</option>
-        <option>חוות דעת מכירה מצבו הניזוק</option>
-        <option>חוות דעת טוטלוסט</option>
-        <option>חוות דעת אובדן להלכה</option>
-      </select>
+      <label>בחר סוג חוות דעת:</label>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+        <label class="radio-label">
+          <input type="radio" name="reportType" value="private" onchange="updateReportType()" checked />
+          <span>חוות דעת פרטית</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="reportType" value="global" onchange="updateReportType()" />
+          <span>חוות דעת גלובלית</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="reportType" value="damage_condition" onchange="updateReportType()" />
+          <span>חוות דעת מכירה מצבו הניזוק</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="reportType" value="total_loss" onchange="updateReportType()" />
+          <span>חוות דעת טוטלוסט</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="reportType" value="legal_loss" onchange="updateReportType()" />
+          <span>חוות דעת אובדן להלכה</span>
+        </label>
+      </div>
     </div>
     <div>
       <label for="isCompanyClient">דו"ח לחברה:</label>
@@ -923,7 +965,7 @@
       <div class="form-grid" id="vehicleData">
         <div>
           <label>מספר רכב:</label>
-          <input type="text" id="carPlate" />
+          <input type="text" id="carPlate" onchange="updateHelperFromVehicleField(this);" />
         </div>
         <div>
           <label>תוצרת:</label>
@@ -1174,6 +1216,33 @@
       <label style="margin-bottom:5px;">האם קיימים הפרשים?
         <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;">
       </label>
+      <div id="differentialsTable" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 120px 120px 120px 80px; gap:14px; margin-top:15px; margin-bottom:10px;">
+          <div><label>תיאור הפרש:</label></div>
+          <div><label>סכום (ש"ח):</label></div>
+          <div><label>מע"מ:</label></div>
+          <div><label>סה"כ כולל מע"מ:</label></div>
+          <div><label>פעולות:</label></div>
+        </div>
+        <div id="differentialsRows"></div>
+        <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
+      </div>
+      <div id="differentialsSummary" style="display:none; margin-top:15px;">
+        <div class="form-grid">
+          <div>
+            <label>סה"כ הפרשים (ללא מע"מ):</label>
+            <div class="readonly-box" id="totalDifferentials">₪0</div>
+          </div>
+          <div>
+            <label>סה"כ מע"מ:</label>
+            <div class="readonly-box" id="totalVAT">₪0</div>
+          </div>
+          <div>
+            <label>סה"כ הפרשים כולל מע"מ:</label>
+            <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- SUMMARY SECTION WITH ORANGE STYLING -->
@@ -7539,6 +7608,16 @@
           'sumClaim': () => {
             const value = getNestedValue(helper, 'depreciation.summary.claim_total');
             return value ? MathEngine.formatCurrency(value) : '';
+          },
+          
+          // Basic price field - Enhanced from estimate-builder patterns
+          'basicPrice': () => {
+            const basePrice = getNestedValue(helper, 'valuation.base_price') || 
+                             getNestedValue(helper, 'car_details.base_price') || 
+                             getNestedValue(helper, 'levi_report.base_price') ||
+                             getNestedValue(helper, 'expertise.levi_report.base_price') || 
+                             getNestedValue(helper, 'levisummary.base_price');
+            return basePrice ? MathEngine.formatCurrency(basePrice) : '';
           }
         };
         
@@ -7574,6 +7653,14 @@
         // Show correct summary section based on report type
         const reportType = getNestedValue(helper, 'depreciation.report_type') || 'private';
         showCorrectSummarySection(reportType);
+        
+        // Update page title with plate number - Enhanced from estimate-builder patterns
+        const rawPlate = getNestedValue(helper, 'meta.plate') || getNestedValue(helper, 'car_details.plate') || getNestedValue(helper, 'vehicle.plate') || '...';
+        const standardizedPlate = rawPlate !== '...' ? String(rawPlate).replace(/[-\s]/g, '') : rawPlate;
+        const pageTitleElement = document.getElementById('pageTitle');
+        if (pageTitleElement) {
+          pageTitleElement.textContent = `רכב מס. ${standardizedPlate}`;
+        }
         
         console.log('✅ Helper data loaded and validated successfully');
         
@@ -8438,9 +8525,9 @@
         const reportTypeMap = {
           'private': 'summaryPrivate',
           'global': 'summaryGlobal', 
-          'damage': 'summaryDamage',
-          'totalLoss': 'summaryTotalLoss',
-          'legalLoss': 'summaryLegalLoss'
+          'damage_condition': 'summaryDamage',
+          'total_loss': 'summaryTotalLoss',
+          'legal_loss': 'summaryLegalLoss'
         };
         
         // Show the appropriate summary section
@@ -8474,7 +8561,7 @@
         if (!depreciationSection) return;
         
         // Hide depreciation for Global and Total Loss reports (as per specification)
-        const hideDepreciationFor = ['global', 'totalLoss'];
+        const hideDepreciationFor = ['global', 'total_loss'];
         
         if (hideDepreciationFor.includes(reportType)) {
           depreciationSection.style.display = 'none';
@@ -8555,15 +8642,15 @@
             'sumTotal': 'סה״כ נכלל בחוות הדעת',
             'reportTypeDisplay': 'חוות דעת גלובלית'
           },
-          'damage': {
+          'damage_condition': {
             'sumTotal': 'סה״כ לאחר מכירה',
             'reportTypeDisplay': 'מצבו הניזוק'
           },
-          'totalLoss': {
+          'total_loss': {
             'sumTotal': 'סה״כ לאחר מכירת שרידים',
             'reportTypeDisplay': 'טוטלוסט'
           },
-          'legalLoss': {
+          'legal_loss': {
             'sumTotal': 'סה״כ לאחר מכירת שרידים',
             'reportTypeDisplay': 'אובדן להלכה'
           }
@@ -8599,7 +8686,7 @@
       try {
         console.log('📄 Loading legal text for report type:', reportType);
         
-        // Legal text templates based on report type
+        // Legal text templates based on report type - Keys match radio button values
         const legalTextTemplates = {
           'private': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
@@ -8612,16 +8699,16 @@
 קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.
 חוות דעת זו הינה הערכה גלובלית של הנזק.`,
 
-          'damage': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+          'damage_condition': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 הערכתנו מתייחסת למכירת הרכב במצבו הניזוק ללא ביצוע תיקונים.
 קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`,
 
-          'totalLoss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+          'total_loss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 הרכב מוגדר כטוטל לוס - אובדן כלכלי.
 הערכת ערך השרידים מבוססת על מחירי השוק הנוכחיים.
 קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`,
 
-          'legalLoss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+          'legal_loss': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
 הרכב מוגדר כאובדן להלכה.
 הערכת ערך השרידים מבוססת על מחירי השוק הנוכחיים.
 קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק.`
@@ -9122,6 +9209,9 @@
             defaultRadio.checked = true;
             updateReportType();
           }
+        } else {
+          // Trigger update for already selected radio
+          updateReportType();
         }
         
         // Calculate initial totals
@@ -9136,6 +9226,319 @@
       }
     });
 
+    // DIFFERENTIALS FUNCTIONALITY - From original depreciation module
+    function addDifferentialRow() {
+      try {
+        console.log('➕ Adding differential row');
+        
+        const container = document.getElementById('differentialsRows');
+        if (!container) {
+          console.error('Differentials container not found');
+          return;
+        }
+        
+        const rowId = `diffRow_${Date.now()}`;
+        const vatRate = 0.18; // 18% VAT
+        
+        const rowHTML = `
+          <div id="${rowId}" class="diff-row" style="
+            display: grid; 
+            grid-template-columns: 1fr 120px 120px 120px 80px; 
+            gap: 14px; 
+            margin-bottom: 10px;
+            align-items: center;
+          ">
+            <div>
+              <input type="text" 
+                     placeholder="תיאור הפרש..." 
+                     data-field="description"
+                     style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                     onchange="updateDifferentialRow('${rowId}');" />
+            </div>
+            <div>
+              <input type="number" 
+                     placeholder="סכום"
+                     data-field="amount"
+                     style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center;"
+                     step="0.01" min="0"
+                     onchange="calculateDifferentialVAT('${rowId}'); updateDifferentialRow('${rowId}');" />
+            </div>
+            <div>
+              <input type="number" 
+                     placeholder="מע״מ"
+                     data-field="vat"
+                     style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center; background: #f8f9fa;"
+                     readonly />
+            </div>
+            <div>
+              <input type="number" 
+                     placeholder="סה״כ"
+                     data-field="total"
+                     style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center; background: #f8f9fa;"
+                     readonly />
+            </div>
+            <div>
+              <button type="button" 
+                      onclick="removeDifferentialRow('${rowId}')"
+                      style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">✕</button>
+            </div>
+          </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', rowHTML);
+        
+        console.log(`✅ Differential row added: ${rowId}`);
+        
+      } catch (error) {
+        console.error('Error adding differential row:', error);
+      }
+    }
+
+    // CALCULATE DIFFERENTIAL VAT
+    function calculateDifferentialVAT(rowId) {
+      try {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        
+        const amountInput = row.querySelector('input[data-field="amount"]');
+        const vatInput = row.querySelector('input[data-field="vat"]');
+        const totalInput = row.querySelector('input[data-field="total"]');
+        
+        if (!amountInput || !vatInput || !totalInput) return;
+        
+        const amount = parseFloat(amountInput.value) || 0;
+        const vatRate = 0.18; // 18% VAT
+        
+        const vat = Math.round(amount * vatRate);
+        const total = amount + vat;
+        
+        vatInput.value = vat;
+        totalInput.value = total;
+        
+        // Update totals
+        updateDifferentialsSummary();
+        
+      } catch (error) {
+        console.error('Error calculating differential VAT:', error);
+      }
+    }
+
+    // UPDATE DIFFERENTIAL ROW
+    function updateDifferentialRow(rowId) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize differentials structure
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.differentials_items = helper.depreciation.differentials_items || [];
+        
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        
+        const description = row.querySelector('input[data-field="description"]')?.value || '';
+        const amount = parseFloat(row.querySelector('input[data-field="amount"]')?.value) || 0;
+        const vat = parseFloat(row.querySelector('input[data-field="vat"]')?.value) || 0;
+        const total = parseFloat(row.querySelector('input[data-field="total"]')?.value) || 0;
+        
+        // Find or create differential item
+        let item = helper.depreciation.differentials_items.find(item => item.id === rowId);
+        if (!item) {
+          item = {
+            id: rowId,
+            description: '',
+            amount: 0,
+            vat: 0,
+            total: 0,
+            created: new Date().toISOString()
+          };
+          helper.depreciation.differentials_items.push(item);
+        }
+        
+        // Update item
+        item.description = description;
+        item.amount = amount;
+        item.vat = vat;
+        item.total = total;
+        item.updated = new Date().toISOString();
+        
+        // Save to helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ Differential row updated: ${rowId}`);
+        
+      } catch (error) {
+        console.error('Error updating differential row:', error);
+      }
+    }
+
+    // REMOVE DIFFERENTIAL ROW
+    function removeDifferentialRow(rowId) {
+      try {
+        if (!confirm('האם אתה בטוח שברצונך למחוק הפרש זה?')) {
+          return;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Remove from helper
+        if (helper.depreciation?.differentials_items) {
+          helper.depreciation.differentials_items = helper.depreciation.differentials_items.filter(item => item.id !== rowId);
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        
+        // Remove from DOM
+        const row = document.getElementById(rowId);
+        if (row) {
+          row.remove();
+        }
+        
+        // Update totals
+        updateDifferentialsSummary();
+        
+        console.log(`✅ Differential row removed: ${rowId}`);
+        
+      } catch (error) {
+        console.error('Error removing differential row:', error);
+      }
+    }
+
+    // UPDATE DIFFERENTIALS SUMMARY
+    function updateDifferentialsSummary() {
+      try {
+        let totalAmount = 0;
+        let totalVAT = 0;
+        let totalWithVAT = 0;
+        
+        // Calculate from DOM elements
+        const rows = document.querySelectorAll('#differentialsRows .diff-row');
+        rows.forEach(row => {
+          const amount = parseFloat(row.querySelector('input[data-field="amount"]')?.value) || 0;
+          const vat = parseFloat(row.querySelector('input[data-field="vat"]')?.value) || 0;
+          const total = parseFloat(row.querySelector('input[data-field="total"]')?.value) || 0;
+          
+          totalAmount += amount;
+          totalVAT += vat;
+          totalWithVAT += total;
+        });
+        
+        // Update display
+        const totalDiffElement = document.getElementById('totalDifferentials');
+        const totalVATElement = document.getElementById('totalVAT');
+        const totalWithVATElement = document.getElementById('totalDifferentialsWithVAT');
+        
+        if (totalDiffElement) totalDiffElement.textContent = MathEngine.formatCurrency(totalAmount);
+        if (totalVATElement) totalVATElement.textContent = MathEngine.formatCurrency(totalVAT);
+        if (totalWithVATElement) totalWithVATElement.textContent = MathEngine.formatCurrency(totalWithVAT);
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.differentials = {
+          total_without_vat: totalAmount,
+          total_vat: totalVAT,
+          total_with_vat: totalWithVAT,
+          updated: new Date().toISOString()
+        };
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Show/hide final totals in summary sections
+        updateFinalSubtotalsWithDifferentials();
+        
+        console.log('✅ Differentials summary updated');
+        
+      } catch (error) {
+        console.error('Error updating differentials summary:', error);
+      }
+    }
+
+    // TOGGLE DIFFERENTIALS VISIBILITY
+    function toggleDifferentials() {
+      try {
+        const checkbox = document.getElementById('hasDifferentials');
+        const table = document.getElementById('differentialsTable');
+        const summary = document.getElementById('differentialsSummary');
+        
+        if (!checkbox) return;
+        
+        const show = checkbox.checked;
+        console.log('🔄 Toggling differentials:', show);
+        
+        if (table) table.style.display = show ? 'block' : 'none';
+        if (summary) summary.style.display = show ? 'block' : 'none';
+        
+        // Show/hide final subtotal fields in all summary sections
+        const finalSubtotalFields = [
+          'sumTotalAfterDifferentials-private',
+          'sumTotalAfterDifferentials-global', 
+          'sumTotalAfterDifferentials-damage',
+          'sumTotalAfterDifferentials-totalLoss',
+          'sumTotalAfterDifferentials-legalLoss'
+        ];
+        
+        finalSubtotalFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.style.display = show ? 'block' : 'none';
+          }
+        });
+        
+        // Add initial row if showing for first time
+        if (show && document.getElementById('differentialsRows')?.children.length === 0) {
+          addDifferentialRow();
+        }
+        
+        // Update helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.depreciation = helper.depreciation || {};
+        helper.depreciation.has_differentials = show;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update calculations if showing
+        if (show) {
+          updateDifferentialsSummary();
+        }
+        
+      } catch (error) {
+        console.error('Error toggling differentials:', error);
+      }
+    }
+
+    // UPDATE FINAL SUBTOTALS WITH DIFFERENTIALS
+    function updateFinalSubtotalsWithDifferentials() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const differentials = helper.depreciation?.differentials;
+        
+        if (!differentials || !helper.depreciation?.has_differentials) return;
+        
+        const differentialsTotal = differentials.total_with_vat || 0;
+        
+        // Update final totals for each summary type
+        const summaryMappings = {
+          'sumTotal': 'sumTotalFinal',
+          'sumTotalGlobal': 'sumTotalFinalGlobal',
+          'afterSaleDamage': 'afterSaleDamageFinal',
+          'afterSaleTotal': 'afterSaleTotalFinal',
+          'afterSaleLegal': 'afterSaleLegalFinal'
+        };
+        
+        Object.entries(summaryMappings).forEach(([baseId, finalId]) => {
+          const baseField = document.getElementById(baseId);
+          const finalField = document.getElementById(finalId);
+          
+          if (baseField && finalField) {
+            const baseAmount = MathEngine.parseCurrency(baseField.value || '0');
+            const finalAmount = baseAmount - differentialsTotal; // Subtract differentials
+            
+            finalField.value = MathEngine.formatCurrency(finalAmount);
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating final subtotals with differentials:', error);
+      }
+    }
+
     // GLOBAL WINDOW FUNCTIONS - For external access
     window.addCustomSummaryField = addCustomSummaryField;
     window.updateReportType = updateReportType;
@@ -9143,6 +9546,7 @@
     window.toggleFloatingScreen = window.toggleFloatingScreen;
     window.triggerFloatingScreenRefresh = triggerFloatingScreenRefresh;
     window.addDepreciationItem = addDepreciationItem;
+    window.addDifferentialRow = addDifferentialRow;
     window.MathEngine = MathEngine;
 
     // LOAD HELPER DATA AND POPULATE FIELDS
@@ -10767,6 +11171,7 @@
         
         // Map field IDs to helper structure paths
         const fieldMappings = {
+          'carPlate': 'meta.plate',
           'carBasePrice': 'valuation.base_price',
           'carMarketValue': 'vehicle.market_value', 
           'carReportDate': 'case_info.issue_date'
@@ -10806,6 +11211,15 @@
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         localStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update page title if plate changed - Enhanced from estimate-builder patterns
+        if (fieldId === 'carPlate') {
+          const standardizedPlate = value ? String(value).replace(/[-\s]/g, '') : '...';
+          const pageTitleElement = document.getElementById('pageTitle');
+          if (pageTitleElement) {
+            pageTitleElement.textContent = `רכב מס. ${standardizedPlate}`;
+          }
+        }
         
         console.log(`💾 Helper updated for vehicle field: ${fieldId}`);
         
