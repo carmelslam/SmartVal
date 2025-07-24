@@ -5068,12 +5068,24 @@
     
     // Update gross percentage when gross market value changes
     function updateGrossPercentageFromGrossValue() {
-      // Get GROSS price (car properties only) from CalculationInterface
-      if (!window.CalculationInterface || typeof window.CalculationInterface.getGrossMarketValue !== 'function') {
-        console.warn('⚠️ CalculationInterface not available, skipping gross percentage update');
-        return;
+      // Get GROSS price (car properties only)
+      let grossPrice = 0;
+      
+      if (window.CalculationInterface && typeof window.CalculationInterface.getGrossMarketValue === 'function') {
+        grossPrice = window.CalculationInterface.getGrossMarketValue();
+      } else {
+        // Fallback: calculate gross price directly from fields
+        const grossResultField = document.getElementById('grossMarketValueResult');
+        if (grossResultField && grossResultField.value) {
+          grossPrice = parseFloat(grossResultField.value.replace(/[₪,]/g, '')) || 0;
+        } else {
+          // Further fallback: use basic price
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField && basicPriceField.value) {
+            grossPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+          }
+        }
       }
-      const grossPrice = window.CalculationInterface.getGrossMarketValue();
       
       // Get total claim from damage centers calculation
       const totalClaim = calculateTotalClaimFromDamageCenters();
@@ -5219,11 +5231,22 @@
     function updateFullMarketValueCalculation() {
       try {
         // Get GROSS price as starting point (car properties only)
-        if (!window.CalculationInterface || typeof window.CalculationInterface.getGrossMarketValue !== 'function') {
-          console.warn('⚠️ CalculationInterface not available, skipping full market value calculation');
-          return;
+        let grossPrice = 0;
+        
+        if (window.CalculationInterface && typeof window.CalculationInterface.getGrossMarketValue === 'function') {
+          grossPrice = window.CalculationInterface.getGrossMarketValue();
+        } else {
+          // Fallback: get gross price from results field or basic price
+          const grossResultField = document.getElementById('grossMarketValueResult');
+          if (grossResultField && grossResultField.value) {
+            grossPrice = parseFloat(grossResultField.value.replace(/[₪,]/g, '')) || 0;
+          } else {
+            const basicPriceField = document.getElementById('basicPrice');
+            if (basicPriceField && basicPriceField.value) {
+              grossPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+            }
+          }
         }
-        const grossPrice = window.CalculationInterface.getGrossMarketValue();
         
         // Set basic price field to match gross price for consistency
         const basicPriceField = document.getElementById('fullBasicPrice');
@@ -5262,8 +5285,16 @@
           }
         });
         
-        // Use CalculationInterface to calculate MARKET price (gross + usage factors)
-        const marketPrice = window.CalculationInterface.updateMarketCalculations(grossPrice, usageAdjustments);
+        // Calculate MARKET price (gross + usage factors)
+        let marketPrice = grossPrice;
+        
+        if (window.CalculationInterface && typeof window.CalculationInterface.updateMarketCalculations === 'function') {
+          marketPrice = window.CalculationInterface.updateMarketCalculations(grossPrice, usageAdjustments);
+        } else {
+          // Fallback: simple calculation of market price
+          const totalAdjustments = usageAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+          marketPrice = grossPrice + totalAdjustments;
+        }
         
         // Update result field
         const resultField = document.getElementById('fullMarketValueResult');
