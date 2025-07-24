@@ -3896,7 +3896,7 @@
       // Auto-populate features adjustments (מאפיינים) - GROSS section only
       const featuresPercent = featuresData.percent || featuresData.percentage || leviData['מחיר מאפיינים %'] || '';
       const featuresAmount = featuresData.amount || leviData['ערך ש"ח מאפיינים'] || '';
-      const featuresDescription = featuresData.description || featuresData.value || 'תוספות מאפיינים';
+      const featuresDescription = featuresData.property || featuresData.description || leviData['מאפיינים'] || 'תוספות מאפיינים';
       
       console.log('🎨 Features data found:', { featuresPercent, featuresAmount, featuresDescription });
       
@@ -3927,7 +3927,7 @@
       // Auto-populate registration adjustments (עליה לכביש) - GROSS section only  
       const registrationPercent = registrationData.percent || registrationData.percentage || leviData['עליה לכביש %'] || '';
       const registrationAmount = registrationData.amount || leviData['ערך ש"ח עליה לכביש'] || '';
-      const registrationDescription = registrationData.description || registrationData.value || 'עליה לכביש';
+      const registrationDescription = registrationData.property || registrationData.description || leviData['עליה לכביש'] || 'עליה לכביש';
       
       console.log('🚗 Registration data found:', { registrationPercent, registrationAmount, registrationDescription });
       
@@ -4793,9 +4793,10 @@
           );
         } else {
           console.warn('⚠️ CalculationInterface not available, using basic calculation');
-          // Simple fallback calculation
-          grossPrice = featuresAdjustments.reduce((sum, adj) => sum + adj.amount, basicPrice) +
-                      registrationAdjustments.reduce((sum, adj) => sum + adj.amount, basicPrice);
+          // Simple fallback calculation: basic price + all adjustments
+          const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+          const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+          grossPrice = basicPrice + featuresTotal + registrationTotal;
         }
         
         // Update result field
