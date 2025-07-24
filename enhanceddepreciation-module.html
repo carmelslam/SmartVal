@@ -9605,6 +9605,110 @@
       }
     };
     
+    // ENSURE DATA FLOW: Update dependent fields when source data changes
+    function refreshAllCalculations() {
+      try {
+        console.log('🔄 Starting calculation refresh...');
+        
+        // 0. Ensure basic price is populated from helper if empty
+        ensureBasicPriceFromHelper();
+        
+        // 1. Update total claim from damage centers
+        const totalClaim = calculateTotalClaimFromDamageCenters();
+        const totalClaimField = document.getElementById('totalClaim');
+        if (totalClaimField) {
+          totalClaimField.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '₪0';
+          console.log(`💰 Updated totalClaim: ${totalClaim}`);
+        }
+        
+        // 2. Update gross market value from basic price + adjustments
+        if (typeof updateGrossMarketValueCalculation === 'function') {
+          updateGrossMarketValueCalculation();
+          console.log('📊 Updated gross market value');
+        }
+        
+        // 3. Update damage percentage: totalClaim / grossMarketValue * 100
+        if (typeof updateGrossPercentageField === 'function') {
+          updateGrossPercentageField();
+          console.log('📈 Updated damage percentage');
+        }
+        
+        // 4. Update full market value from basic price + all adjustments
+        if (typeof calculateFullMarketValue === 'function') {
+          calculateFullMarketValue();
+          console.log('🏪 Updated full market value');
+        }
+        
+        console.log('✅ All calculations refreshed');
+      } catch (error) {
+        console.error('❌ Error refreshing calculations:', error);
+      }
+    }
+    
+    // Ensure basic price field is populated from helper data
+    function ensureBasicPriceFromHelper() {
+      try {
+        const basicPriceField = document.getElementById('basicPrice');
+        if (!basicPriceField) return;
+        
+        // Only update if field is empty
+        if (basicPriceField.value && basicPriceField.value.trim() !== '') return;
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let basePrice = 0;
+        
+        // Try multiple helper paths for base price
+        if (helper.valuation?.base_price) {
+          basePrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+        } else if (helper.levi_report?.base_price) {
+          basePrice = parseFloat(helper.levi_report.base_price);
+        } else if (helper.expertise?.levi_report?.base_price) {
+          basePrice = parseFloat(helper.expertise.levi_report.base_price);
+        } else if (helper.car_details?.base_price) {
+          basePrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+        }
+        
+        if (basePrice > 0) {
+          basicPriceField.value = `₪${basePrice.toLocaleString()}`;
+          console.log(`💵 Populated basicPrice from helper: ${basePrice}`);
+        }
+      } catch (error) {
+        console.error('❌ Error ensuring basic price from helper:', error);
+      }
+    }
+    
+    // Expose refresh function globally
+    window.refreshAllCalculations = refreshAllCalculations;
+    
+    // Auto-trigger calculation refresh when key data changes
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Setting up data flow observers...');
+      
+      // Refresh calculations when damage centers are updated
+      const damageCentersElement = document.getElementById('damageCentersContent');
+      if (damageCentersElement) {
+        const observer = new MutationObserver(function(mutations) {
+          console.log('👀 Damage centers changed, refreshing calculations...');
+          setTimeout(refreshAllCalculations, 300);
+        });
+        observer.observe(damageCentersElement, { childList: true, subtree: true });
+        console.log('👀 Damage centers observer set up');
+      }
+      
+      // Refresh calculations when basicPrice field changes
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField) {
+        basicPriceField.addEventListener('input', function() {
+          console.log('💵 Basic price changed, refreshing calculations...');
+          setTimeout(refreshAllCalculations, 100);
+        });
+        console.log('💵 BasicPrice observer set up');
+      }
+      
+      // Initial calculation refresh on page load
+      setTimeout(refreshAllCalculations, 1000);
+    });
+    
   </script>
   
   <script type="module" src="./helper-events.js"></script>
