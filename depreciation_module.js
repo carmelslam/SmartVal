@@ -1277,7 +1277,8 @@ window.generateAdditionalReport = () => {
 // Math engine integration for auto-calculation
 function triggerMathCalculation() {
   try {
-    const mathEngine = new MathEngine();
+    // MathEngine is an object, not a class - no need to instantiate
+    const mathEngine = MathEngine;
     
     // Get current depreciation values
     const depCenters = collectDepCenters();
