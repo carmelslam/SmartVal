@@ -3803,15 +3803,22 @@
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
-        const featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
+        let featureItems = [];
+
+        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
+          featureItems = featuresData.feature_list.map(f => ({ description: f }));
+        }
 
         if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
           featureItems.push({
-            description: featuresData.description || featuresData.reason || '',
+            description: featuresData.value || featuresData.description || featuresData.reason || '',
             amount: featuresData.amount,
             percent: featuresData.percent
           });
         }
+
+        const fAmount = parseFloat(String(featuresData.amount).replace(/[₪,]/g, '')) || 0;
+        const fPercent = parseFloat(String(featuresData.percent).replace('%', '')) || 0;
 
         featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
@@ -3819,34 +3826,32 @@
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent) || 0;
               if (inputs.length >= 4) {
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
-                inputs[0].value = desc;
-                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+                inputs[0].value = item.description || '';
+                inputs[1].value = (fAmount < 0 || fPercent < 0) ? 'minus' : 'plus';
+                inputs[2].value = fPercent ? Math.abs(fPercent) : '';
+                inputs[3].value = fAmount ? `₪${Math.abs(fAmount).toLocaleString()}` : '';
               }
             }
           }
         });
 
         // ===== Registration Adjustment =====
-        if (registrationData.amount || registrationData.percent || registrationData.date) {
+        const rAmount = parseFloat(String(registrationData.amount).replace(/[₪,]/g, '')) || 0;
+        const rPercent = parseFloat(String(registrationData.percent).replace('%', '')) || 0;
+
+        if (rAmount || rPercent || registrationData.date || registrationData.value) {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(registrationData.amount) || 0;
-              const percent = parseFloat(registrationData.percent) || 0;
               if (inputs.length >= 4) {
-                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                const desc = registrationData.value || registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
                 inputs[0].value = desc;
-                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+                inputs[1].value = (rAmount < 0 || rPercent < 0) ? 'minus' : 'plus';
+                inputs[2].value = rPercent ? Math.abs(rPercent) : '';
+                inputs[3].value = rAmount ? `₪${Math.abs(rAmount).toLocaleString()}` : '';
               }
             }
           }
