@@ -4072,14 +4072,16 @@
       }
       
       // Auto-populate mileage adjustments (מס ק"מ) - MARKET section
-      // ENHANCED: Try multiple possible field locations for better data capture
+      // Use actual property value for description
       const mileagePercent = leviData.mileage?.percent || leviData.mileage?.percentage ||
                             leviData['מס ק"מ %'] || helper['מס ק"מ %'] || '';
       const mileageAmount = leviData.mileage?.amount || leviData.mileage?.value ||
                            leviData['ערך ש"ח מס ק"מ'] || leviData['ערך מס ק"מ'] ||
-                           helper['ערך ש"ח מס ק"מ'] || helper['ערך מס ק"מ'] || '';  
-      const mileageDescription = leviData.mileage?.description || leviData.mileage?.reason || 'מס ק"מ';
-      
+                           helper['ערך ש"ח מס ק"מ'] || helper['ערך מס ק"מ'] || '';
+      // Use actual km value if available
+      const mileageValue = leviData.mileage?.km_value || helper.vehicle?.km || helper.car_details?.km || '';
+      const mileageDescription = mileageValue ? `ק"מ: ${mileageValue}` : (leviData.mileage?.description || leviData.mileage?.reason || 'מס ק"מ');
+
       if (mileagePercent || mileageAmount) {
         addFullMarketAdjustment();
         const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
@@ -4090,22 +4092,23 @@
             inputs[0].value = mileageDescription || 'מס ק"מ (מלוי יצחק)';
             select.value = String(mileagePercent).includes('-') ? 'minus' : 'plus';
             inputs[1].value = Math.abs(parseFloat(String(mileagePercent).replace(/[%\s+-]/g, ''))) || '';
-            
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
           }
         }
       }
-      
+
       // Auto-populate ownership type adjustments (בעלות) - MARKET section
-      // ENHANCED: Try multiple possible field locations for better data capture
+      // Use actual property value for description
       const ownershipPercent = leviData.ownership_type?.percent || leviData.ownership_type?.percentage ||
                               leviData['בעלות %'] || helper['בעלות %'] || '';
       const ownershipAmount = leviData.ownership_type?.amount || leviData.ownership_type?.value ||
                              leviData['ערך ש"ח בעלות'] || leviData['ערך בעלות'] ||
                              helper['ערך ש"ח בעלות'] || helper['ערך בעלות'] || '';
-      const ownershipDescription = leviData.ownership_type?.description || leviData.ownership_type?.reason || 'בעלות';
-      
+      // Use actual ownership type if available
+      const ownershipType = leviData.ownership_type?.type || helper.vehicle?.ownership_type || helper.car_details?.ownership_type || '';
+      const ownershipDescription = ownershipType ? `סוג בעלות: ${ownershipType}` : (leviData.ownership_type?.description || leviData.ownership_type?.reason || 'בעלות');
+
       if (ownershipPercent || ownershipAmount) {
         addFullMarketAdjustment();
         const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
@@ -4116,22 +4119,23 @@
             inputs[0].value = ownershipDescription || 'בעלות (מלוי יצחק)';
             select.value = String(ownershipPercent).includes('-') ? 'minus' : 'plus';
             inputs[1].value = Math.abs(parseFloat(String(ownershipPercent).replace(/[%\s+-]/g, ''))) || '';
-            
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
           }
         }
       }
-      
+
       // Auto-populate ownership history adjustments (מספר בעלים) - MARKET section
-      // ENHANCED: Try multiple possible field locations for better data capture
+      // Use actual property value for description
       const ownersPercent = leviData.ownership_history?.percent || leviData.ownership_history?.percentage ||
                            leviData['מספר בעלים %'] || helper['מספר בעלים %'] || '';
       const ownersAmount = leviData.ownership_history?.amount || leviData.ownership_history?.value ||
                           leviData['ערך ש"ח מספר בעלים'] || leviData['ערך מספר בעלים'] ||
                           helper['ערך ש"ח מספר בעלים'] || helper['ערך מספר בעלים'] || '';
-      const ownersDescription = leviData.ownership_history?.description || leviData.ownership_history?.reason || 'מספר בעלים';
-      
+      // Use actual owner count if available
+      const ownerCount = leviData.ownership_history?.owner_count || helper.vehicle?.owner_count || helper.car_details?.owner_count || '';
+      const ownersDescription = ownerCount ? `מספר בעלים: ${ownerCount}` : (leviData.ownership_history?.description || leviData.ownership_history?.reason || 'מספר בעלים');
+
       if (ownersPercent || ownersAmount) {
         addFullMarketAdjustment();
         const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
@@ -4142,7 +4146,6 @@
             inputs[0].value = ownersDescription || 'מספר בעלים (מלוי יצחק)';
             select.value = String(ownersPercent).includes('-') ? 'minus' : 'plus';
             inputs[1].value = Math.abs(parseFloat(String(ownersPercent).replace(/[%\s+-]/g, ''))) || '';
-            
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
           }
