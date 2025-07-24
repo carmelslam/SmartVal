@@ -3794,7 +3794,6 @@
       try {
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
-
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
@@ -3803,14 +3802,20 @@
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
-        const featureItems = Array.isArray(featuresData.feature_list) ? featuresData.feature_list : [];
-
-        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent)) {
-          featureItems.push({
+        let featureItems = [];
+        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
+          featureItems = featuresData.feature_list;
+        } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
+          featureItems = [{
             description: featuresData.description || featuresData.reason || '',
             amount: featuresData.amount,
             percent: featuresData.percent
-          });
+          }];
+        }
+
+        // Always show at least one row if any data exists
+        if (featureItems.length === 0) {
+          featureItems = [{}];
         }
 
         featureItems.forEach(item => {
@@ -3822,7 +3827,7 @@
               const amount = parseFloat(item.amount) || 0;
               const percent = parseFloat(item.percent) || 0;
               if (inputs.length >= 4) {
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || 'מאפיינים';
+                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
                 inputs[0].value = desc;
                 inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
                 inputs[2].value = percent ? Math.abs(percent) : '';
@@ -3833,21 +3838,24 @@
         });
 
         // ===== Registration Adjustment =====
-        if (registrationData.amount || registrationData.percent || registrationData.date) {
-          if (typeof addRegistrationAdjustment === 'function') {
-            addRegistrationAdjustment();
-            const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
-            if (row) {
-              const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(registrationData.amount) || 0;
-              const percent = parseFloat(registrationData.percent) || 0;
-              if (inputs.length >= 4) {
-                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
-                inputs[0].value = desc;
-                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
-              }
+        let showRegistration = registrationData.amount || registrationData.percent || registrationData.date || registrationData.description || registrationData.reason;
+        if (!showRegistration) {
+          // fallback: always show one row for user entry
+          showRegistration = true;
+        }
+        if (showRegistration && typeof addRegistrationAdjustment === 'function') {
+          addRegistrationAdjustment();
+          const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
+          if (row) {
+            const inputs = row.querySelectorAll('input, select');
+            const amount = parseFloat(registrationData.amount) || 0;
+            const percent = parseFloat(registrationData.percent) || 0;
+            if (inputs.length >= 4) {
+              const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || '';
+              inputs[0].value = desc;
+              inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+              inputs[2].value = percent ? Math.abs(percent) : '';
+              inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
             }
           }
         }
