@@ -3827,11 +3827,24 @@
               const inputs = row.querySelectorAll('input, select');
               const amount = parseFloat(item.amount) || 0;
               const percent = parseFloat(item.percent) || 0;
+              
+              console.log('🔍 Loading feature adjustment:', {
+                item: item,
+                amount: amount,
+                percent: percent,
+                isNegative: (amount < 0 || percent < 0)
+              });
+              
               if (inputs.length >= 4) {
                 // Use the real property value for the description if available
                 const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
                 inputs[0].value = desc;
-                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                
+                // Determine type based on negative values in helper data
+                const isNegative = (amount < 0 || percent < 0);
+                inputs[1].value = isNegative ? 'minus' : 'plus';
+                console.log(`📝 Set type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
+              
                 inputs[2].value = percent ? Math.abs(percent) : '';
                 
                 // If amount exists in helper, use it; otherwise calculate from percentage
@@ -3860,11 +3873,24 @@
             const inputs = row.querySelectorAll('input, select');
             const amount = parseFloat(registrationData.amount) || 0;
             const percent = parseFloat(registrationData.percent) || 0;
+            
+            console.log('🔍 Loading registration adjustment:', {
+              registrationData: registrationData,
+              amount: amount,
+              percent: percent,
+              isNegative: (amount < 0 || percent < 0)
+            });
+            
             if (inputs.length >= 4) {
               // Use the real property value for the description if available
               const desc = registrationData.description || registrationData.date || registrationData.reason || helper.vehicle?.registration_date || '';
               inputs[0].value = desc;
-              inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+              
+              // Determine type based on negative values in helper data
+              const isNegative = (amount < 0 || percent < 0);
+              inputs[1].value = isNegative ? 'minus' : 'plus';
+              console.log(`📝 Set registration type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
+            
               inputs[2].value = percent ? Math.abs(percent) : '';
               
               // If amount exists in helper, use it; otherwise calculate from percentage
