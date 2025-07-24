@@ -3837,24 +3837,40 @@
     // AUTO-POPULATION FROM LEVI SUMMARY
     // ============================================================================
     
+    // Flag to prevent multiple executions
+    let autoPopulationInProgress = false;
+    
     /**
      * Auto-populate features and registration adjustments from Levi summary data
      */
     function autoPopulateFromLeviSummary() {
+      if (autoPopulationInProgress) {
+        console.log('⚠️ Auto-population already in progress, skipping...');
+        return;
+      }
+      
+      autoPopulationInProgress = true;
+      console.log('🚀 Starting auto-population from Levi summary...');
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Check for valuation adjustments (primary source) and fallback sources
       if (!helper.valuation?.adjustments && !helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
         console.log('❌ No Levi data sources found for auto-population');
+        autoPopulationInProgress = false;
         return;
       }
       
       // CRITICAL: Clear existing Levi adjustments first to prevent duplication
+      console.log('🧹 Clearing existing Levi adjustments...');
       clearLeviAdjustments();
       
       // Get Levi data from valuation adjustments (primary) or fallback sources
       const leviData = helper.valuation?.adjustments || helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
       console.log('✅ Using Levi data from helper.valuation.adjustments:', leviData);
+      
+      // DEBUG: Check what's in the adjustments
+      console.log('🔍 Available adjustment types:', Object.keys(leviData));
       
       // ===== GROSS VALUE ADJUSTMENTS ONLY (Features + Registration) =====
       
@@ -3923,6 +3939,7 @@
       }
       
       console.log('✅ Gross value auto-population completed');
+      autoPopulationInProgress = false;
     }
     
     /**
@@ -4017,13 +4034,20 @@
     function clearLeviAdjustments() {
       // Clear features adjustments marked as Levi data
       const featureRows = document.querySelectorAll('#featuresAdjustmentsList div[data-source="levi"]');
+      console.log(`🧹 Clearing ${featureRows.length} Levi feature rows`);
       featureRows.forEach(row => row.remove());
       
       // Clear registration adjustments marked as Levi data
       const registrationRows = document.querySelectorAll('#registrationAdjustmentsList div[data-source="levi"]');
+      console.log(`🧹 Clearing ${registrationRows.length} Levi registration rows`);
       registrationRows.forEach(row => row.remove());
       
-      console.log('🧹 Cleared existing Levi adjustments');
+      // Clear market adjustments marked as Levi data 
+      const marketRows = document.querySelectorAll('#allAdjustmentsList div[data-source="levi"]');
+      console.log(`🧹 Clearing ${marketRows.length} Levi market rows`);
+      marketRows.forEach(row => row.remove());
+      
+      console.log('✅ Cleared all existing Levi adjustments');
     }
     
     /**
@@ -4132,21 +4156,6 @@
       } catch (error) {
         console.error('Error loading summary data:', error);
       }
-    }
-    
-    /**
-     * Clear existing auto-populated Levi adjustments before re-populating
-     */
-    function clearLeviAdjustments() {
-      // Clear features adjustments marked as Levi data
-      const featureRows = document.querySelectorAll('#featuresAdjustmentsList div[data-source="levi"]');
-      featureRows.forEach(row => row.remove());
-      
-      // Clear registration adjustments marked as Levi data
-      const registrationRows = document.querySelectorAll('#registrationAdjustmentsList div[data-source="levi"]');
-      registrationRows.forEach(row => row.remove());
-      
-      console.log('🧹 Cleared existing Levi adjustments');
     }
     
     /**
