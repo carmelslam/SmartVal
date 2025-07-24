@@ -3841,16 +3841,23 @@
      * Auto-populate features and registration adjustments from Levi summary data
      */
     function autoPopulateFromLeviSummary() {
-      if (!helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Check for valuation adjustments (primary source) and fallback sources
+      if (!helper.valuation?.adjustments && !helper.levisummary && !helper.levi_report && !helper.expertise?.levi_report) {
+        console.log('❌ No Levi data sources found for auto-population');
         return;
       }
       
-      // Get Levi data from multiple possible sources
-      const leviData = helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
+      // Get Levi data from valuation adjustments (primary) or fallback sources
+      const leviData = helper.valuation?.adjustments || helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
+      console.log('✅ Using Levi data from helper.valuation.adjustments:', leviData);
       
-      // Auto-populate features adjustments (מאפיינים)
-      const featuresPercent = leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || '';
-      const featuresAmount = leviData['ערך ש"ח מאפיינים'] || leviData['ערך כספי מאפיינים'] || '';
+      // Auto-populate features adjustments (מאפיינים) - Use valuation structure
+      const featuresPercent = leviData.features?.percent || leviData['מחיר מאפיינים %'] || leviData['מאפיינים %'] || '';
+      const featuresAmount = leviData.features?.amount || leviData['ערך ש"ח מאפיינים'] || leviData['ערך כספי מאפיינים'] || '';
+      
+      console.log('🎨 Features data found:', { featuresPercent, featuresAmount });
       
       if (featuresPercent || featuresAmount) {
         addFeatureAdjustment();
@@ -3871,9 +3878,11 @@
         }
       }
       
-      // Auto-populate registration adjustments (עליה לכביש)
-      const registrationPercent = leviData['עליה לכביש %'] || '';
-      const registrationAmount = leviData['ערך ש"ח עליה לכביש'] || leviData['ערך כספי עליה לכביש'] || '';
+      // Auto-populate registration adjustments (עליה לכביש) - Use valuation structure
+      const registrationPercent = leviData.registration?.percent || leviData['עליה לכביש %'] || '';
+      const registrationAmount = leviData.registration?.amount || leviData['ערך ש"ח עליה לכביש'] || leviData['ערך כספי עליה לכביש'] || '';
+      
+      console.log('🚗 Registration data found:', { registrationPercent, registrationAmount });
       
       if (registrationPercent || registrationAmount) {
         addRegistrationAdjustment();
@@ -3894,9 +3903,84 @@
         }
       }
       
-      // Trigger calculations
-      updateGrossMarketValueCalculation();
-      updateHelperFromAdjustments();
+      // Auto-populate mileage adjustments (מס ק"מ) - Use valuation structure  
+      const mileagePercent = leviData.mileage?.percent || leviData['מס ק"מ %'] || leviData['מס ק״מ %'] || '';
+      const mileageAmount = leviData.mileage?.amount || leviData['ערך ש"ח מס ק"מ'] || '';
+      
+      console.log('🛣️ Mileage data found:', { mileagePercent, mileageAmount });
+      
+      if (mileagePercent || mileageAmount) {
+        addFeatureAdjustment(); // Add to features list
+        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            inputs[0].value = 'מס ק"מ (מלוי יצחק)';
+            inputs[1].value = String(mileagePercent).includes('-') ? 'minus' : 'plus';
+            inputs[2].value = Math.abs(parseFloat(String(mileagePercent).replace(/[%\s+-]/g, ''))) || '';
+            inputs[3].value = mileageAmount ? `₪${Math.abs(parseFloat(String(mileageAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
+            lastRow.setAttribute('data-source', 'levi');
+            lastRow.style.background = '#f0f8ff';
+          }
+        }
+      }
+      
+      // Auto-populate ownership type adjustments (בעלות) - Use valuation structure
+      const ownershipPercent = leviData.ownership_type?.percent || leviData['בעלות %'] || '';
+      const ownershipAmount = leviData.ownership_type?.amount || leviData['ערך ש"ח בעלות'] || '';
+      
+      console.log('🏢 Ownership type data found:', { ownershipPercent, ownershipAmount });
+      
+      if (ownershipPercent || ownershipAmount) {
+        addFeatureAdjustment(); // Add to features list
+        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            inputs[0].value = 'בעלות (מלוי יצחק)';
+            inputs[1].value = String(ownershipPercent).includes('-') ? 'minus' : 'plus';
+            inputs[2].value = Math.abs(parseFloat(String(ownershipPercent).replace(/[%\s+-]/g, ''))) || '';
+            inputs[3].value = ownershipAmount ? `₪${Math.abs(parseFloat(String(ownershipAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
+            lastRow.setAttribute('data-source', 'levi');
+            lastRow.style.background = '#f0f8ff';
+          }
+        }
+      }
+      
+      // Auto-populate ownership history adjustments (מספר בעלים) - Use valuation structure
+      const ownersPercent = leviData.ownership_history?.percent || leviData['מספר בעלים %'] || '';
+      const ownersAmount = leviData.ownership_history?.amount || leviData['ערך ש"ח מספר בעלים'] || '';
+      
+      console.log('👥 Ownership history data found:', { ownersPercent, ownersAmount });
+      
+      if (ownersPercent || ownersAmount) {
+        addFeatureAdjustment(); // Add to features list
+        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+          const inputs = lastRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            inputs[0].value = 'מספר בעלים (מלוי יצחק)';
+            inputs[1].value = String(ownersPercent).includes('-') ? 'minus' : 'plus';
+            inputs[2].value = Math.abs(parseFloat(String(ownersPercent).replace(/[%\s+-]/g, ''))) || '';
+            inputs[3].value = ownersAmount ? `₪${Math.abs(parseFloat(String(ownersAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
+            lastRow.setAttribute('data-source', 'levi');
+            lastRow.style.background = '#f0f8ff';
+          }
+        }
+      }
+      
+      // Trigger calculations after auto-population
+      if (typeof updateGrossMarketValueCalculation === 'function') {
+        updateGrossMarketValueCalculation();
+      }
+      if (typeof updateHelperFromAdjustments === 'function') {
+        updateHelperFromAdjustments();
+      }
+      
+      console.log('✅ Auto-population from Levi summary completed');
     }
     
     /**
@@ -4673,7 +4757,9 @@
           
           // Priority 2: Try helper data sources if field is empty
           if (basicPrice === 0) {
-            if (helper.levi_report?.base_price) {
+            if (helper.valuation?.base_price) {
+              basicPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+            } else if (helper.levi_report?.base_price) {
               basicPrice = parseFloat(helper.levi_report.base_price);
             } else if (helper.expertise?.levi_report?.base_price) {
               basicPrice = parseFloat(helper.expertise.levi_report.base_price);
@@ -4799,9 +4885,10 @@
           }
         }
         
-        // Check for additional adjustments from levisummary (backup structure)
+        // Check for additional adjustments from levisummary (backup structure) - Handle object or array
         if (helper.levisummary?.adjustments) {
-          helper.levisummary.adjustments.forEach(adj => {
+          const adjustments = Array.isArray(helper.levisummary.adjustments) ? helper.levisummary.adjustments : Object.values(helper.levisummary.adjustments);
+          adjustments.forEach(adj => {
             const desc = adj.description?.toLowerCase() || '';
             const value = parseFloat(adj.value || 0);
             
@@ -4892,6 +4979,10 @@
     // Update gross percentage when gross market value changes
     function updateGrossPercentageFromGrossValue() {
       // Get GROSS price (car properties only) from CalculationInterface
+      if (!window.CalculationInterface || typeof window.CalculationInterface.getGrossMarketValue !== 'function') {
+        console.warn('⚠️ CalculationInterface not available, skipping gross percentage update');
+        return;
+      }
       const grossPrice = window.CalculationInterface.getGrossMarketValue();
       
       // Get total claim from damage centers calculation
@@ -5038,6 +5129,10 @@
     function updateFullMarketValueCalculation() {
       try {
         // Get GROSS price as starting point (car properties only)
+        if (!window.CalculationInterface || typeof window.CalculationInterface.getGrossMarketValue !== 'function') {
+          console.warn('⚠️ CalculationInterface not available, skipping full market value calculation');
+          return;
+        }
         const grossPrice = window.CalculationInterface.getGrossMarketValue();
         
         // Set basic price field to match gross price for consistency
