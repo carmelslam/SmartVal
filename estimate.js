@@ -500,8 +500,11 @@ const EstimateEngine = {
     this.calculateTotals();
 
     // Save to session and helper system
-    sessionStorage.setItem('helper', JSON.stringify(this.helper));
-    updateHelper(this.helper);
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(this.helper);
+    } else {
+      updateHelper(this.helper);
+    }
 
     // Send to webhook
     sendToWebhook('ESTIMATE_SAVED', this.helper);

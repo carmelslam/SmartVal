@@ -88,7 +88,18 @@ export const sessionEngine = {
       
       // If data was loaded from localStorage, sync to sessionStorage
       if (dataSource === 'localStorage') {
-        sessionStorage.setItem('helper', raw);
+        if (typeof updateHelperFromString === 'function') {
+          updateHelperFromString(raw);
+        } else if (typeof updateHelperAndSession === 'function') {
+          try {
+            const parsed = JSON.parse(raw);
+            Object.entries(parsed).forEach(([key, val]) => {
+              updateHelperAndSession(key, val);
+            });
+          } catch (e) {
+            console.warn('Failed to parse session raw data:', e);
+          }
+        }
         console.log('🔄 Session data synced to primary storage');
       }
       
@@ -287,8 +298,19 @@ export const sessionEngine = {
       // Ensure window.helper is in sync
       window.helper = this.helper;
       
-      // Save to primary storage
-      sessionStorage.setItem('helper', dataString);
+      // Save to primary storage using helper utilities
+      if (typeof updateHelperFromString === 'function') {
+        updateHelperFromString(dataString);
+      } else if (typeof updateHelperAndSession === 'function') {
+        try {
+          const parsed = JSON.parse(dataString);
+          Object.entries(parsed).forEach(([key, val]) => {
+            updateHelperAndSession(key, val);
+          });
+        } catch (e) {
+          console.warn('Failed to parse helper dataString:', e);
+        }
+      }
       
       // Save to backup storage locations
       localStorage.setItem('helper_data', dataString);

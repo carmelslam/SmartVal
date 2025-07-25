@@ -171,7 +171,13 @@
     window.helper.car_details = cleanData;
     
     // Save to storage
-    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(window.helper);
+    } else if (typeof updateHelperAndSession === 'function') {
+      Object.entries(window.helper).forEach(([key, value]) => {
+        updateHelperAndSession(key, value);
+      });
+    }
     console.log('✅ Helper updated:', window.helper);
     
     // Trigger UI updates

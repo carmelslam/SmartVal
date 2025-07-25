@@ -202,8 +202,14 @@ class DataCaptureEngine {
     if (window.helper) {
       window.helper.meta.last_updated = new Date().toISOString();
       
-      // Save to session storage
-      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      // Save to session storage using helper utilities
+      if (typeof updateHelperFromObject === 'function') {
+        updateHelperFromObject(window.helper);
+      } else if (typeof updateHelperAndSession === 'function') {
+        Object.entries(window.helper).forEach(([key, value]) => {
+          updateHelperAndSession(key, value);
+        });
+      }
       sessionStorage.setItem('helper_timestamp', new Date().toISOString());
       
       // Save to local storage  

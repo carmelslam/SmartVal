@@ -403,16 +403,48 @@ export async function sendToWebhook(id, payload) {
             });
             console.log('✅ Data processed and helper updated (fallback)');
           } else {
-            // Direct sessionStorage update as final fallback
-            sessionStorage.setItem('helper', JSON.stringify(actualData));
-            window.helper = actualData;
-            console.log('✅ Data stored in sessionStorage and window.helper (final fallback)');
+            if (typeof updateHelperFromObject === 'function') {
+              updateHelperFromObject(actualData);
+            } else if (typeof updateHelperAndSession === 'function') {
+              Object.keys(actualData).forEach(key => {
+                updateHelperAndSession(key, actualData[key]);
+              });
+              } else {
+                if (typeof updateHelperFromObject === 'function') {
+                  updateHelperFromObject(actualData);
+                } else if (typeof updateHelperAndSession === 'function') {
+                  Object.keys(actualData).forEach(key => {
+                    updateHelperAndSession(key, actualData[key]);
+                  });
+                } else if (typeof updateHelperFromObject === 'function') {
+                  updateHelperFromObject(actualData);
+                } else if (typeof updateHelperAndSession === 'function') {
+                  Object.keys(actualData).forEach(key => {
+                    updateHelperAndSession(key, actualData[key]);
+                  });
+                } else {
+                  sessionStorage.setItem('helper', JSON.stringify(actualData));
+                  window.helper = actualData;
+                }
+              }
+            console.log('✅ Data stored in helper (final fallback)');
           }
         } catch (error) {
           console.error('❌ Error updating helper:', error);
           // Simple fallback
-          sessionStorage.setItem('helper', JSON.stringify(actualData));
-          window.helper = actualData;
+          if (typeof updateHelperFromObject === 'function') {
+            updateHelperFromObject(actualData);
+            } else if (typeof updateHelperAndSession === 'function') {
+              Object.keys(actualData).forEach(key => {
+                updateHelperAndSession(key, actualData[key]);
+              });
+            } else if (typeof updateHelperFromObject === 'function') {
+              updateHelperFromObject(actualData);
+            } else {
+              sessionStorage.setItem('helper', JSON.stringify(actualData));
+              window.helper = actualData;
+            }
+          }
         }
       }
     } catch (jsonError) {

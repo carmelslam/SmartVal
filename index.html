@@ -354,7 +354,18 @@
           
           // Restore helper data if it existed
           if (helperData) {
-            sessionStorage.setItem('helper', helperData);
+            if (typeof updateHelperFromString === 'function') {
+              updateHelperFromString(helperData);
+            } else if (typeof updateHelperAndSession === 'function') {
+              try {
+                const parsed = JSON.parse(helperData);
+                Object.entries(parsed).forEach(([k, v]) => {
+                  updateHelperAndSession(k, v);
+                });
+              } catch (e) {
+                console.warn('Failed to parse preserved helperData:', e);
+              }
+            }
             console.log('✅ Preserved existing helper data during login');
           }
           

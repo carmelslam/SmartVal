@@ -892,7 +892,13 @@
           const caseData = response.data;
           
           // Store the data (mimicking main selection behavior)
-          sessionStorage.setItem('helper', JSON.stringify(caseData));
+          if (typeof updateHelperFromObject === 'function') {
+            updateHelperFromObject(caseData);
+          } else if (typeof updateHelperAndSession === 'function') {
+            Object.entries(caseData).forEach(([key, value]) => {
+              updateHelperAndSession(key, value);
+            });
+          }
           sessionStorage.setItem('plate', plateNumber);
           sessionStorage.setItem('caseLoaded', 'true');
           

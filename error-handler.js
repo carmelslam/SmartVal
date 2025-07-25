@@ -597,7 +597,13 @@ class ErrorHandler {
     if (backup) {
       try {
         const backupData = JSON.parse(backup);
-        sessionStorage.setItem('helper', JSON.stringify(backupData));
+        if (typeof updateHelperFromObject === 'function') {
+          updateHelperFromObject(backupData);
+        } else if (typeof updateHelperAndSession === 'function') {
+          Object.entries(backupData).forEach(([key, value]) => {
+            updateHelperAndSession(key, value);
+          });
+        }
         this.showNotification('נתונים שוחזרו מגיבוי', 'success');
       } catch (err) {
         console.error('Backup restore failed:', err);
