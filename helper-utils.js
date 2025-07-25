@@ -2,6 +2,7 @@ export function setNestedValue(obj, path, value) {
   const keys = path.split('.');
   let current = obj;
   for (let i = 0; i < keys.length - 1; i++) {
+    // Security check to prevent prototype pollution
     if (keys[i] === '__proto__' || keys[i] === 'constructor') {
       throw new Error('Unsafe property name detected: ' + keys[i]);
     }
@@ -10,6 +11,7 @@ export function setNestedValue(obj, path, value) {
     }
     current = current[keys[i]];
   }
+
   const lastKey = keys[keys.length - 1];
   if (lastKey === '__proto__' || lastKey === 'constructor') {
     throw new Error('Unsafe property name detected: ' + lastKey);
@@ -20,8 +22,10 @@ export function setNestedValue(obj, path, value) {
 export function deepMerge(target, source) {
   if (!source || typeof source !== 'object') return target;
   for (const key in source) {
+    // Security check for prototype pollution
     if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
     if (key === '__proto__' || key === 'constructor') continue;
+
     const srcVal = source[key];
     if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal)) {
       if (!target[key] || typeof target[key] !== 'object') {
@@ -44,10 +48,10 @@ export function saveHelperToAllStorageLocations() {
     sessionStorage.setItem('helper_timestamp', timestamp);
     localStorage.setItem('helper_data', helperString);
     localStorage.setItem('helper_last_save', timestamp);
-    console.log('✅ Helper saved to all storage locations (fallback method)');
+    logger.info('✅ Helper saved to all storage locations (fallback method)');
     return true;
   } catch (error) {
-    console.error('❌ Failed to save helper to storage:', error);
+    logger.error('❌ Failed to save helper to storage:', error);
     return false;
   }
 }
@@ -60,15 +64,15 @@ export function validatePlateNumber(incomingPlate, source = 'unknown') {
   const originalPlate = window.helper.meta.original_plate.replace(/[-\s]/g, '').toUpperCase().trim();
   const newPlate = String(incomingPlate).replace(/[-\s]/g, '').toUpperCase().trim();
 
-  console.log(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
+  logger.info(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
 
   if (originalPlate === newPlate) {
-    console.log('✅ VALIDATION: Plate numbers match - allowing update');
+    logger.info('✅ VALIDATION: Plate numbers match - allowing update');
     return { valid: true, action: 'accept', message: 'Plate numbers match' };
   } else {
-    console.warn('⚠️ VALIDATION: Plate mismatch detected!');
-    console.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
-    console.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
+    logger.warn('⚠️ VALIDATION: Plate mismatch detected!');
+    logger.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
+    logger.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
     return {
       valid: false,
       action: 'reject',
@@ -93,8 +97,8 @@ export function getPlateProtectionStatus() {
 export function showPlateProtectionAlert(validationResult) {
   const alertMessage = `🚨 PLATE NUMBER PROTECTION ALERT 🚨\n\n${validationResult.message}`;
   alert(alertMessage);
-  console.error('%c🚨 PLATE PROTECTION ALERT', 'color: red; font-size: 16px; font-weight: bold;');
-  console.error(validationResult.message);
+  logger.error('🚨 PLATE PROTECTION ALERT');
+  logger.error(validationResult.message);
   if (!window.helper.system) window.helper.system = {};
   if (!window.helper.system.protection_alerts) window.helper.system.protection_alerts = [];
   window.helper.system.protection_alerts.push({
@@ -117,13 +121,13 @@ export function updateHelper(field, value) {
     const isFromGeneralInfo = sessionStorage.getItem('damageDate_manualEntry') === 'true';
     const existingManualDate = window.helper?.case_info?.damage_date;
     if (isFromGeneralInfo) {
-      console.log('✅ ALLOWING case_info.damage_date update from manual entry:', value.damage_date);
+      logger.info('✅ ALLOWING case_info.damage_date update from manual entry:', value.damage_date);
     } else if (existingManualDate && existingManualDate !== value.damage_date) {
-      console.log('🚫 PROTECTING existing manual damage_date entry. Rejecting value:', value.damage_date);
+      logger.warn('🚫 PROTECTING existing manual damage_date entry. Rejecting value:', value.damage_date);
       value = { ...value };
       delete value.damage_date;
     } else {
-      console.log('✅ ALLOWING case_info.damage_date update (no manual entry exists):', value.damage_date);
+      logger.info('✅ ALLOWING case_info.damage_date update (no manual entry exists):', value.damage_date);
     }
   }
 
@@ -133,7 +137,7 @@ export function updateHelper(field, value) {
       const validation = validatePlateNumber(incomingPlate, 'updateHelper');
       if (!validation.valid) {
         showPlateProtectionAlert(validation);
-        console.error('🚫 BLOCKING plate update from updateHelper - validation failed');
+        logger.error('🚫 BLOCKING plate update from updateHelper - validation failed');
         return false;
       }
     }
@@ -172,12 +176,12 @@ export function updateHelper(field, value) {
       const dynamicCaseId = `YC-${plateValue}-${currentYear}`;
       window.helper.meta.case_id = dynamicCaseId;
       window.helper.case_info.case_id = dynamicCaseId;
-      console.log(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
+      logger.info(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
     }
   }
 
   saveHelperToAllStorageLocations();
-  console.log(`Updated ${field}:`, value);
+  logger.info(`Updated ${field}:`, value);
   return true;
 }
 
@@ -187,7 +191,7 @@ export function updateHelperAndSession(field, value) {
 
 export function broadcastHelperUpdate(sections, source) {
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
-  console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
+  logger.info(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
   setTimeout(() => {
     if (typeof window.populateAllForms === 'function') {
       window.populateAllForms();
@@ -195,6 +199,7 @@ export function broadcastHelperUpdate(sections, source) {
   }, 200);
 }
 
+// New utility for aggregating adjustments into helper.valuation
 export function saveAdjustmentsToHelper() {
   try {
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -255,9 +260,9 @@ export function saveAdjustmentsToHelper() {
     helper.valuation.adjustments = adjustments;
     sessionStorage.setItem('helper', JSON.stringify(helper));
   } catch (err) {
-    console.error('Error saving adjustments to helper:', err);
+    logger.error('❌ Error saving adjustments to helper:', err);
   }
 }
 
-// expose globally for inline handlers
+// Expose globally for inline handlers (legacy support)
 window.saveAdjustmentsToHelper = saveAdjustmentsToHelper;

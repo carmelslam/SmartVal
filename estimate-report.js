@@ -86,7 +86,13 @@ class EstimateReportCoordinator {
     // Update helper with estimate type
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
     helper.estimate_type = type;
-    sessionStorage.setItem('helper', JSON.stringify(helper));
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(helper);
+    } else if (typeof updateHelperAndSession === 'function') {
+      Object.entries(helper).forEach(([key, value]) => {
+        updateHelperAndSession(key, value);
+      });
+    }
     
     console.log('📝 Estimate type set to:', type);
     return this.estimateData;
@@ -221,7 +227,13 @@ class EstimateReportCoordinator {
     // Update helper with notes
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
     helper.estimate_notes = notes;
-    sessionStorage.setItem('helper', JSON.stringify(helper));
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(helper);
+    } else if (typeof updateHelperAndSession === 'function') {
+      Object.entries(helper).forEach(([key, value]) => {
+        updateHelperAndSession(key, value);
+      });
+    }
     
     console.log('📝 Estimate notes updated');
     return this.estimateData.notes;
@@ -242,7 +254,13 @@ class EstimateReportCoordinator {
       };
       
       // Store updated helper
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (typeof updateHelperFromObject === 'function') {
+        updateHelperFromObject(helper);
+      } else if (typeof updateHelperAndSession === 'function') {
+        Object.entries(helper).forEach(([key, value]) => {
+          updateHelperAndSession(key, value);
+        });
+      }
       
       console.log('📤 Estimate data exported to helper');
       return helper.estimate_data;
@@ -285,7 +303,13 @@ class EstimateReportCoordinator {
         helper.estimate_data = helper.estimate_data || {};
         helper.estimate_data.generated_at = new Date().toISOString();
         helper.estimate_data.report_url = response.report_url;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (typeof updateHelperFromObject === 'function') {
+          updateHelperFromObject(helper);
+        } else if (typeof updateHelperAndSession === 'function') {
+          Object.entries(helper).forEach(([key, value]) => {
+            updateHelperAndSession(key, value);
+          });
+        }
         
         return response;
       } else {

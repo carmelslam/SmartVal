@@ -1,5 +1,6 @@
 // Hidden system tracker - logs events to localStorage for debugging
 // No UI - just event tracking
+import logger from './logger.js';
 
 const SystemTracker = {
   events: [],
@@ -24,11 +25,11 @@ const SystemTracker = {
     try {
       localStorage.setItem('system_tracker_events', JSON.stringify(this.events));
     } catch (e) {
-      console.warn('Could not save tracking events:', e);
+      logger.warn('Could not save tracking events:', e);
     }
-    
+
     // Also log to console for immediate visibility
-    console.log(`📊 TRACKER: ${event}`, data);
+    logger.info(`📊 TRACKER: ${event}`, data);
   },
   
   getSessionId() {

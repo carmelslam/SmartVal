@@ -500,8 +500,11 @@ const EstimateEngine = {
     this.calculateTotals();
 
     // Save to session and helper system
-    sessionStorage.setItem('helper', JSON.stringify(this.helper));
-    updateHelper(this.helper);
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(this.helper);
+    } else {
+      updateHelper(this.helper);
+    }
 
     // Send to webhook
     sendToWebhook('ESTIMATE_SAVED', this.helper);
@@ -693,6 +696,8 @@ const EstimateEngine = {
 };
 
 window.estimateEngine = EstimateEngine;
-document.addEventListener('DOMContentLoaded', () => EstimateEngine.init());
+export function initializeEstimateEngine() {
+  EstimateEngine.init();
+}
 
 console.log('✅ Enhanced estimate.js loaded');

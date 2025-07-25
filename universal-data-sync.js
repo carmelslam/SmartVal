@@ -107,11 +107,10 @@
       window.forcePopulateFields();
     }
     
-    // DISABLED TO PREVENT LOOPS
     // Broadcast helper update event
-    // document.dispatchEvent(new CustomEvent('helperUpdate', { 
-    //   detail: { source: 'universal-sync' } 
-    // }));
+    document.dispatchEvent(new CustomEvent('helperUpdate', {
+      detail: { source: 'universal-sync' }
+    }));
   }
   
   // Function to manually trigger sync

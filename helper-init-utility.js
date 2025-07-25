@@ -49,7 +49,18 @@ window.safeGetHelper = async function(maxRetries = 5, retryDelay = 200) {
             if (parsedHelper && typeof parsedHelper === 'object' && Object.keys(parsedHelper).length > 0) {
               // Update both window.helper and sessionStorage
               window.helper = parsedHelper;
-              sessionStorage.setItem('helper', localData);
+              if (typeof updateHelperFromString === 'function') {
+                updateHelperFromString(localData);
+              } else if (typeof updateHelperAndSession === 'function') {
+                try {
+                  const parsed = JSON.parse(localData);
+                  Object.entries(parsed).forEach(([key, val]) => {
+                    updateHelperAndSession(key, val);
+                  });
+                } catch (e) {
+                  console.warn('Failed to parse local helper data:', e);
+                }
+              }
               console.log(`✅ Helper recovered from localStorage (attempt ${attempts})`);
               resolve(parsedHelper);
               return;
@@ -67,7 +78,13 @@ window.safeGetHelper = async function(maxRetries = 5, retryDelay = 200) {
           // Create minimal helper structure as fallback
           const minimalHelper = createMinimalHelper();
           window.helper = minimalHelper;
-          sessionStorage.setItem('helper', JSON.stringify(minimalHelper));
+          if (typeof updateHelperFromObject === 'function') {
+            updateHelperFromObject(minimalHelper);
+          } else if (typeof updateHelperAndSession === 'function') {
+            Object.entries(minimalHelper).forEach(([key, val]) => {
+              updateHelperAndSession(key, val);
+            });
+          }
           console.log('⚠️ Created minimal helper structure as fallback');
           resolve(minimalHelper);
         }
@@ -169,7 +186,13 @@ window.safeUpdateHelper = async function(section, data, source = 'unknown') {
     
     // Save to all storage locations
     window.helper = helper;
-    sessionStorage.setItem('helper', JSON.stringify(helper));
+    if (typeof updateHelperFromObject === 'function') {
+      updateHelperFromObject(helper);
+    } else if (typeof updateHelperAndSession === 'function') {
+      Object.entries(helper).forEach(([key, val]) => {
+        updateHelperAndSession(key, val);
+      });
+    }
     localStorage.setItem('helper_data', JSON.stringify(helper));
     
     console.log(`✅ Safe helper update completed: ${section}`);

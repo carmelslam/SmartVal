@@ -1,5 +1,7 @@
 // 📦 router.js — Central Smart Router with Lifecycle + Orchestration
 
+import logger from './logger.js';
+
 const ROUTER = (function () {
   const modules = {};
   let current = null;
@@ -7,31 +9,31 @@ const ROUTER = (function () {
   // 🧠 Register a module with optional rules
   function register(name, configOrFn, { force = false } = {}) {
     if (modules[name] && !force) {
-      console.warn(`⚠️ ROUTER: [${name}] already registered. Skipping.`);
+      logger.warn(`⚠️ ROUTER: [${name}] already registered. Skipping.`);
       return;
     }
     const config = typeof configOrFn === 'function' ? { init: configOrFn } : configOrFn;
     modules[name] = {
-      init: config.init || (() => console.warn(`⚠️ No init() for ${name}`)),
+      init: config.init || (() => logger.warn(`⚠️ No init() for ${name}`)),
       requires: config.requires || [],
       optional: config.optional || [],
       validate: config.validate || null,
       label: config.label || name
     };
-    console.log(`✅ ROUTER: registered [${name}]`);
+    logger.info(`✅ ROUTER: registered [${name}]`);
   }
 
   // 🚦 Initialize a module by name
   function init(name) {
     current = name;
     const mod = modules[name];
-    if (!mod) return console.warn(`❌ ROUTER: [${name}] not found.`);
+    if (!mod) return logger.warn(`❌ ROUTER: [${name}] not found.`);
 
-    console.log(`🚀 ROUTER: running [${name}]`);
+    logger.info(`🚀 ROUTER: running [${name}]`);
     // Optionally: enforce dependency validation before launching
     for (const dep of mod.requires) {
       if (!modules[dep]) {
-        console.error(`❌ Dependency [${dep}] missing for [${name}]`);
+        logger.error(`❌ Dependency [${dep}] missing for [${name}]`);
         return;
       }
     }
@@ -43,7 +45,7 @@ const ROUTER = (function () {
     if (modules[file]) {
       init(file);
     } else {
-      console.warn(`⚠️ ROUTER: no auto-match for [${file}]`);
+      logger.warn(`⚠️ ROUTER: no auto-match for [${file}]`);
     }
   }
 
@@ -52,30 +54,30 @@ const ROUTER = (function () {
   }
 
   function onSubmit(data) {
-    console.log(`📤 ROUTER: submitting from [${current}]`, data);
+    logger.info(`📤 ROUTER: submitting from [${current}]`, data);
     // Future: trigger auto-helper export
   }
 
   function onRestore(data) {
-    console.log(`♻️ ROUTER: restoring state to [${current}]`, data);
+    logger.info(`♻️ ROUTER: restoring state to [${current}]`, data);
     // Future: pull helper state from saved session
   }
 
   // 🌐 Navigate to another registered module
   function navigate(name) {
     if (!modules[name]) {
-      console.warn(`❌ ROUTER: cannot navigate to [${name}] - not registered.`);
+      logger.warn(`❌ ROUTER: cannot navigate to [${name}] - not registered.`);
       return;
     }
     if (current === name) {
-      console.log(`ℹ️ ROUTER: already at [${name}]`);
+      logger.info(`ℹ️ ROUTER: already at [${name}]`);
       return;
     }
     init(name);
   }
 
   function listRegisteredModules() {
-    console.table(Object.keys(modules));
+    logger.info('Registered modules:', Object.keys(modules));
   }
 
   return {
@@ -116,27 +118,27 @@ window.ROUTER = ROUTER;
 */
 
 // 🔌 Register all known modules (with metadata rules where needed)
-ROUTER.register('expertise-builder', { label: 'Expertise Builder', init: () => console.log('🧱 Expertise Builder started') });
+ROUTER.register('expertise-builder', { label: 'Expertise Builder', init: () => logger.info('🧱 Expertise Builder started') });
 ROUTER.register('estimate-builder', {
   label: 'Estimate Builder',
   requires: ['expertise-builder'],
-  init: () => console.log('📐 Estimate Builder started')
+  init: () => logger.info('📐 Estimate Builder started')
 });
 ROUTER.register('final-report', {
   label: 'Final Report',
   optional: ['estimate-builder'],
-  validate: () => console.log('✅ Final Report validation passed'),
-  init: () => console.log('📄 Final Report started')
+  validate: () => logger.info('✅ Final Report validation passed'),
+  init: () => logger.info('📄 Final Report started')
 });
 
 // 🔄 Submodules - ✅ UNIVERSAL MODULE INTEGRATION
 ROUTER.register('upload-images', async () => {
-  console.log('📷 Upload Images initialized');
+  logger.info('📷 Upload Images initialized');
   try {
     const mod = await import('./upload-images.js');
     if (mod.init) mod.init();
   } catch (err) {
-    console.warn('⚠️ upload-images.js not found');
+    logger.warn('⚠️ upload-images.js not found');
   }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -144,12 +146,12 @@ ROUTER.register('upload-images', async () => {
 });
 
 ROUTER.register('invoice-summary', async () => {
-  console.log('🧾 Invoice Summary initialized');
+  logger.info('🧾 Invoice Summary initialized');
   try {
     const mod = await import('./invoice-summary.js');
     if (mod.init) mod.init();
   } catch (err) {
-    console.warn('⚠️ invoice-summary.js not found');
+    logger.warn('⚠️ invoice-summary.js not found');
   }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -157,22 +159,22 @@ ROUTER.register('invoice-summary', async () => {
 });
 
 ROUTER.register('depreciation', () => {
-  console.log('📉 Depreciation module initialized');
+  logger.info('📉 Depreciation module initialized');
   // Depreciation module already has proper helper integration via depreciation_module.js
 });
 
 ROUTER.register('fee-module', () => {
-  console.log('💸 Fee Module initialized');
+  logger.info('💸 Fee Module initialized');
   // Fee module already has proper helper integration via fee-module.js
 });
 
 ROUTER.register('parts-search', async () => {
-  console.log('🔍 Parts search active');
+  logger.info('🔍 Parts search active');
   try {
     const mod = await import('./parts-search.js');
     if (mod.init) mod.init();
   } catch (err) {
-    console.warn('⚠️ parts-search.js not found');
+    logger.warn('⚠️ parts-search.js not found');
   }
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -180,19 +182,19 @@ ROUTER.register('parts-search', async () => {
 });
 
 ROUTER.register('general-info', () => {
-  console.log('📋 General Info loaded');
+  logger.info('📋 General Info loaded');
   // General info already has proper helper integration and manual override system
 });
 
 ROUTER.register('manual-details', () => {
-  console.log('📘 Manual Details consolidated - redirecting to general_info.html');
+  logger.info('📘 Manual Details consolidated - redirecting to general_info.html');
   // manual-details.html has been consolidated into general_info.html
   // Redirect to the unified general info module
   window.location.href = 'general_info.html';
 });
 
 ROUTER.register('report-type-selector', () => {
-  console.log('📊 Report type selection loaded');
+  logger.info('📊 Report type selection loaded');
   // Report selection functionality integration
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -201,7 +203,7 @@ ROUTER.register('report-type-selector', () => {
 
 // 🔐 Access Panels - ✅ FINALIZED IMPLEMENTATIONS
 ROUTER.register('admin-panel', () => {
-  console.log('🔐 Admin Panel opened');
+  logger.info('🔐 Admin Panel opened');
   // Initialize admin panel with helper data access
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -210,7 +212,7 @@ ROUTER.register('admin-panel', () => {
 });
 
 ROUTER.register('dev-panel', () => {
-  console.log('🛠️ Dev Panel initialized');
+  logger.info('🛠️ Dev Panel initialized');
   // Initialize dev panel with helper debugging tools
   if (typeof window.refreshAllModuleForms === 'function') {
     window.refreshAllModuleForms();
@@ -218,5 +220,7 @@ ROUTER.register('dev-panel', () => {
   // Dev panel provides helper debugging and system diagnostics
 });
 
-// ⚙️ Auto-start
-document.addEventListener('DOMContentLoaded', () => ROUTER.autoDetectAndInit());
+// ⚙️ Auto-start handled by bootstrap.js
+export function initializeRouter() {
+  ROUTER.autoDetectAndInit();
+}
