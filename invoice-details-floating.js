@@ -404,7 +404,13 @@
     // Save to storage locations
     try {
       const helperString = JSON.stringify(window.helper);
-      sessionStorage.setItem('helper', helperString);
+      if (typeof updateHelperFromObject === 'function') {
+        updateHelperFromObject(window.helper);
+      } else if (typeof updateHelperAndSession === 'function') {
+        Object.entries(window.helper).forEach(([key, value]) => {
+          updateHelperAndSession(key, value);
+        });
+      }
       localStorage.setItem('helper_data', helperString);
       console.log('✅ Invoice changes saved to helper and storage');
     } catch (error) {

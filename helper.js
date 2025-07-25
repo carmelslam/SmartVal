@@ -1793,6 +1793,25 @@ window.updateHelperAndSession = function(field, value) {
   updateHelper(field, value);
 };
 
+// Utility to update helper from an object using updateHelperAndSession
+window.updateHelperFromObject = function(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  Object.entries(obj).forEach(([key, value]) => {
+    updateHelperAndSession(key, value);
+  });
+};
+
+// Utility to update helper from a JSON string
+window.updateHelperFromString = function(str) {
+  if (typeof str !== 'string') return;
+  try {
+    const obj = JSON.parse(str);
+    window.updateHelperFromObject(obj);
+  } catch (e) {
+    console.warn('updateHelperFromString failed to parse JSON:', e);
+  }
+};
+
 window.broadcastHelperUpdate = function(sections, source) {
   // Handle case where sections might not be an array
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
@@ -2253,7 +2272,15 @@ if (document.readyState === 'loading') {
 
 // Export all the functions that other modules need
 export const helper = window.helper;
-// Expose imported utilities globally for legacy code
+
+// Exported utilities for module imports
+export const updateHelper = window.updateHelper;
+export const updateHelperAndSession = window.updateHelperAndSession;
+export const updateHelperFromObject = window.updateHelperFromObject;
+export const updateHelperFromString = window.updateHelperFromString;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+
+// Expose imported utilities globally for legacy code (still needed by older modules)
 window.updateHelper = updateHelper;
 window.updateHelperAndSession = updateHelperAndSession;
 window.broadcastHelperUpdate = broadcastHelperUpdate;
@@ -2264,7 +2291,15 @@ window.setNestedValue = setNestedValue;
 window.deepMerge = deepMerge;
 window.saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
 
-export { updateHelper, updateHelperAndSession, broadcastHelperUpdate };
+// Export for modern ES modules
+export {
+  updateHelper,
+  updateHelperAndSession,
+  updateHelperFromObject,
+  updateHelperFromString,
+  broadcastHelperUpdate
+};
+
 export const processIncomingData = window.processIncomingData;
 export const testDataCapture = window.testDataCapture;
 export const getVehicleData = window.getVehicleData;
@@ -2287,6 +2322,27 @@ export const testWithActualWebhookData = window.testWithActualWebhookData;
 export const saveHelperToStorage = saveHelperToAllStorageLocations;
 export { saveHelperToAllStorageLocations };
 export { populateAllFormsWithRetry };
+
+// Expose utilities globally for legacy code
+window.updateHelper = window.updateHelper;
+window.updateHelperAndSession = window.updateHelperAndSession;
+window.updateHelperFromObject = window.updateHelperFromObject;
+window.updateHelperFromString = window.updateHelperFromString;
+window.broadcastHelperUpdate = window.broadcastHelperUpdate;
+window.validatePlateNumber = window.validatePlateNumber;
+window.showPlateProtectionAlert = window.showPlateProtectionAlert;
+window.getPlateProtectionStatus = window.getPlateProtectionStatus;
+window.setNestedValue = setNestedValue;
+window.deepMerge = deepMerge;
+window.saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+
+export {
+  updateHelper,
+  updateHelperAndSession,
+  updateHelperFromObject,
+  updateHelperFromString,
+  broadcastHelperUpdate
+};
 
 // Data getter functions
 export function getDamageData() {
