@@ -2189,10 +2189,30 @@
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
+        // ✅ BIDIRECTIONAL SYNC: Try damage_blocks first, then damage_centers
+        let damageData = null;
         if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+          damageData = helper.expertise.damage_blocks;
+          console.log('🔍 Loading from helper.expertise.damage_blocks');
+        } else if (helper.damage_centers && helper.damage_centers.length > 0) {
+          damageData = helper.damage_centers.map(center => ({
+            damage_center_name: center.center_name,
+            area_name: center.area_name,
+            description: center.description,
+            parts: center.parts || [],
+            works: center.works || [],
+            repairs: center.repairs || [],
+            parts_cost: center.parts ? center.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0) : 0,
+            work_cost: center.works ? center.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0) : 0,
+            repairs_cost: center.repairs ? center.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0) : 0
+          }));
+          console.log('🔍 Loading from helper.damage_centers and converting to damage_blocks format');
+        }
+        
+        if (damageData && damageData.length > 0) {
           let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
           
-          helper.expertise.damage_blocks.forEach((block, index) => {
+          damageData.forEach((block, index) => {
             summaryHTML += createEditableDamageCenterCard(block, index);
           });
           
@@ -6360,6 +6380,19 @@
           // Update cost display for this card
           updateCostDisplay(card, partsCost, workCost, repairsCost);
         });
+        
+        // ✅ BIDIRECTIONAL SYNC: Update helper.damage_centers to match damage_blocks
+        if (!helper.damage_centers) helper.damage_centers = [];
+        helper.damage_centers = helper.expertise.damage_blocks.map((block, index) => ({
+          center_id: index + 1,
+          center_name: block.damage_center_name,
+          area_name: block.area_name,
+          description: block.description,
+          parts: block.parts,
+          works: block.works,
+          repairs: block.repairs,
+          total_cost: (block.parts_cost || 0) + (block.work_cost || 0) + (block.repairs_cost || 0)
+        }));
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
