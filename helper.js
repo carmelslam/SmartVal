@@ -607,6 +607,17 @@ if (existingHelper && typeof existingHelper === 'object') {
   // Apply the merge
   deepMerge(window.helper, existingHelper);
   console.log('✅ Helper data merged successfully:', window.helper);
+
+  // 🔄 Migrate legacy adjustment data if present
+  if (window.helper.estimate_adjustments) {
+    window.helper.valuation = window.helper.valuation || {};
+    if (!window.helper.valuation.adjustments) {
+      window.helper.valuation.adjustments = window.helper.estimate_adjustments;
+    }
+    delete window.helper.estimate_adjustments;
+    console.log('🔧 Migrated estimate_adjustments to valuation.adjustments');
+    saveHelperToAllStorageLocations();
+  }
   
   // Immediately trigger form population with restored data
   setTimeout(() => {
