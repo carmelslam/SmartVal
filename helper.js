@@ -1142,8 +1142,14 @@ function processDirectData(data, result) {
   console.log('🔍 Processing direct object data...');
   let updated = false;
   
+  // 🔧 COMPATIBILITY FIX: Handle plate_number from Make.com
+  if (data.plate_number && !data.plate) {
+    console.log('🔄 COMPATIBILITY: Converting plate_number to plate');
+    data.plate = data.plate_number;
+  }
+  
   // 🔒 CRITICAL: Validate any plate number in incoming data before processing
-  const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב'];
+  const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב', 'plate_number'];
   for (const field of plateFields) {
     if (data[field]) {
       const validation = validatePlateNumber(data[field], 'webhook_direct_data');
@@ -1160,6 +1166,7 @@ function processDirectData(data, result) {
   const fieldMappings = {
     // Vehicle fields - comprehensive mapping
     'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'plate_number': ['vehicle.plate', 'meta.plate', 'case_info.plate'],  // FIX: Map plate_number to plate
     'license_plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מספר_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מס_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
