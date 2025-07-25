@@ -1,7 +1,21 @@
 // 🧠 Centralized Helper System - Enhanced Data Capture Solution
 // Handles ALL data flow: Make.com webhooks, manual inputs, multilingual support
+import logger from './logger.js';
 
-console.log('🧠 Loading enhanced helper system...');
+logger.info('🧠 Loading enhanced helper system...');
+
+// Shared utilities moved to helper-utils.js to avoid circular imports
+import {
+  updateHelper,
+  updateHelperAndSession,
+  broadcastHelperUpdate,
+  validatePlateNumber,
+  getPlateProtectionStatus,
+  showPlateProtectionAlert,
+  setNestedValue,
+  deepMerge,
+  saveHelperToAllStorageLocations
+} from './helper-utils.js';
 
 // 🛠️ UNIVERSAL SOLUTION: Duplicate Key JSON Parser
 // Handles JSON objects with duplicate keys by preserving all values
@@ -25,7 +39,7 @@ function parseJSONWithDuplicates(jsonString) {
       // Choose the longer, more meaningful value
       if (value.length > existing.length && value !== key) {
         duplicateValues.set(key, value);
-        console.log(`🔄 Duplicate key "${key}": choosing longer value "${value}" over "${existing}"`);
+        logger.info(`🔄 Duplicate key "${key}": choosing longer value "${value}" over "${existing}"`);
       }
     } else {
       duplicateValues.set(key, value);
@@ -37,20 +51,20 @@ function parseJSONWithDuplicates(jsonString) {
   try {
     parsedData = JSON.parse(jsonString);
   } catch (e) {
-    console.error('❌ JSON parsing failed:', e);
+    logger.error('❌ JSON parsing failed:', e);
     return {};
   }
   
   // Restore the better values for duplicate keys
   for (const [key, value] of duplicateValues) {
     if (parsedData[key] && parsedData[key] !== value && value.length > parsedData[key].length) {
-      console.log(`🔧 Restoring duplicate key "${key}": "${parsedData[key]}" → "${value}"`);
+      logger.info(`🔧 Restoring duplicate key "${key}": "${parsedData[key]}" → "${value}"`);
       parsedData[key] = value;
       
       // For מאפיינים specifically, also store in features_text field
       if (key === 'מאפיינים' && value !== 'מאפיינים') {
         parsedData['מאפיינים_text'] = value;
-        console.log(`🚗 Preserved features text as מאפיינים_text: "${value}"`);
+        logger.info(`🚗 Preserved features text as מאפיינים_text: "${value}"`);
       }
     }
   }
@@ -66,10 +80,10 @@ function parseJSONWithDuplicates(jsonString) {
  * Centralized plate number management system - Single source of truth
  */
 window.setPlateNumber = function(plateNumber, source = 'manual', protect = false) {
-  console.log(`🔢 CENTRALIZED: Setting plate number "${plateNumber}" from source: ${source}`);
+  logger.info(`🔢 CENTRALIZED: Setting plate number "${plateNumber}" from source: ${source}`);
   
   if (!window.helper) {
-    console.error('❌ Helper not initialized - cannot set plate number');
+    logger.error('❌ Helper not initialized - cannot set plate number');
     return false;
   }
   
@@ -80,7 +94,7 @@ window.setPlateNumber = function(plateNumber, source = 'manual', protect = false
   // Then validate it's 7-8 digits
   const plateMatch = cleanedPlate.match(/^(\d{7,8})$/);
   if (!plateMatch) {
-    console.warn(`⚠️ Invalid plate format: "${plateNumber}" → "${cleanedPlate}" - must be 7-8 digits only`);
+    logger.warn(`⚠️ Invalid plate format: "${plateNumber}" → "${cleanedPlate}" - must be 7-8 digits only`);
     return false;
   }
   
@@ -88,7 +102,7 @@ window.setPlateNumber = function(plateNumber, source = 'manual', protect = false
   
   // Log the transformation if dashes were removed
   if (plateNumber !== validatedPlate) {
-    console.log(`🔢 NORMALIZED: Plate "${plateNumber}" → "${validatedPlate}" (removed dashes/spaces)`);
+    logger.info(`🔢 NORMALIZED: Plate "${plateNumber}" → "${validatedPlate}" (removed dashes/spaces)`);
   }
   
   // If protection is enabled, check if we should protect this plate
@@ -96,7 +110,7 @@ window.setPlateNumber = function(plateNumber, source = 'manual', protect = false
     window.helper.meta.original_plate = validatedPlate;
     window.helper.meta.plate_locked = true;
     window.helper.meta.plate_protection_source = source;
-    console.log(`🔒 PROTECTION: Plate "${validatedPlate}" is now protected from overwrites`);
+    logger.info(`🔒 PROTECTION: Plate "${validatedPlate}" is now protected from overwrites`);
   }
   
   // SINGLE SOURCE OF TRUTH: Store plate only in meta.plate
@@ -113,7 +127,7 @@ window.setPlateNumber = function(plateNumber, source = 'manual', protect = false
   window.helper.case_info.case_id = dynamicCaseId;
   
   saveHelperToAllStorageLocations();
-  console.log(`✅ CENTRALIZED: Plate "${validatedPlate}" set as single source of truth`);
+  logger.info(`✅ CENTRALIZED: Plate "${validatedPlate}" set as single source of truth`);
   return true;
 };
 
@@ -128,15 +142,15 @@ window.getPlateNumber = function() {
  * Centralized owner name management system - Single source of truth
  */
 window.setOwnerName = function(ownerName, source = 'manual') {
-  console.log(`👤 CENTRALIZED: Setting owner name "${ownerName}" from source: ${source}`);
+  logger.info(`👤 CENTRALIZED: Setting owner name "${ownerName}" from source: ${source}`);
   
   if (!window.helper) {
-    console.error('❌ Helper not initialized - cannot set owner name');
+    logger.error('❌ Helper not initialized - cannot set owner name');
     return false;
   }
   
   if (!ownerName || ownerName.trim() === '') {
-    console.warn('⚠️ Empty owner name provided - keeping existing value');
+    logger.warn('⚠️ Empty owner name provided - keeping existing value');
     return false;
   }
   
@@ -153,7 +167,7 @@ window.setOwnerName = function(ownerName, source = 'manual') {
   delete window.helper.car_details?.owner;
   
   saveHelperToAllStorageLocations();
-  console.log(`✅ CENTRALIZED: Owner "${cleanedName}" set as single source of truth`);
+  logger.info(`✅ CENTRALIZED: Owner "${cleanedName}" set as single source of truth`);
   return true;
 };
 
@@ -168,7 +182,7 @@ window.getOwnerName = function() {
  * Test function to demonstrate plate normalization
  */
 window.testPlateNormalization = function() {
-  console.log('🧪 Testing plate number normalization...');
+  logger.info('🧪 Testing plate number normalization...');
   
   const testPlates = [
     '221-84-003',
@@ -183,14 +197,14 @@ window.testPlateNormalization = function() {
   ];
   
   testPlates.forEach(testPlate => {
-    console.log(`Testing: "${testPlate}"`);
+    logger.info(`Testing: "${testPlate}"`);
     const result = window.setPlateNumber(testPlate, 'test_normalization');
     if (result) {
-      console.log(`✅ Success: "${testPlate}" → "${window.getPlateNumber()}"`);
+      logger.info(`✅ Success: "${testPlate}" → "${window.getPlateNumber()}"`);
     } else {
-      console.log(`❌ Failed: "${testPlate}" (invalid format)`);
+      logger.info(`❌ Failed: "${testPlate}" (invalid format)`);
     }
-    console.log('---');
+    logger.info('---');
   });
   
   return {
@@ -218,15 +232,15 @@ window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
   const originalPlate = window.helper.meta.original_plate.replace(/[-\s]/g, '').toUpperCase().trim();
   const newPlate = String(incomingPlate).replace(/[-\s]/g, '').toUpperCase().trim();
   
-  console.log(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
+  logger.info(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
   
   if (originalPlate === newPlate) {
-    console.log(`✅ VALIDATION: Plate numbers match - allowing update`);
+    logger.info(`✅ VALIDATION: Plate numbers match - allowing update`);
     return { valid: true, action: 'accept', message: 'Plate numbers match' };
   } else {
-    console.warn(`⚠️ VALIDATION: Plate mismatch detected!`);
-    console.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
-    console.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
+    logger.warn(`⚠️ VALIDATION: Plate mismatch detected!`);
+    logger.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
+    logger.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
     
     return { 
       valid: false, 
@@ -262,8 +276,8 @@ window.showPlateProtectionAlert = function(validationResult) {
   alert(alertMessage);
   
   // Also log to console with styling
-  console.error('%c🚨 PLATE PROTECTION ALERT', 'color: red; font-size: 16px; font-weight: bold;');
-  console.error(validationResult.message);
+  logger.error('%c🚨 PLATE PROTECTION ALERT', 'color: red; font-size: 16px; font-weight: bold;');
+  logger.error(validationResult.message);
   
   // Store alert in helper for debugging
   if (!window.helper.system) window.helper.system = {};
@@ -285,7 +299,7 @@ window.showPlateProtectionAlert = function(validationResult) {
 
 // 🔧 PHASE 2 FIX: Use centralized storage manager for initialization
 function initializeHelper() {
-  console.log('🔄 Initializing helper - checking for existing data...');
+  logger.info('🔄 Initializing helper - checking for existing data...');
   
   let existingData = null;
   
@@ -293,10 +307,10 @@ function initializeHelper() {
     const sessionData = sessionStorage.getItem('helper');
     if (sessionData && sessionData !== '{}') {
       existingData = JSON.parse(sessionData);
-      console.log('✅ Found existing helper data in sessionStorage (fallback):', existingData);
+      logger.info('✅ Found existing helper data in sessionStorage (fallback):', existingData);
     }
   } catch (e) {
-    console.warn('⚠️ Could not load from sessionStorage:', e);
+    logger.warn('⚠️ Could not load from sessionStorage:', e);
   }
   
   // Fallback to localStorage if sessionStorage is empty
@@ -305,10 +319,10 @@ function initializeHelper() {
       const localData = localStorage.getItem('helper_data');
       if (localData && localData !== '{}') {
         existingData = JSON.parse(localData);
-        console.log('✅ Found existing helper data in localStorage (fallback):', existingData);
+        logger.info('✅ Found existing helper data in localStorage (fallback):', existingData);
       }
     } catch (e) {
-      console.warn('⚠️ Could not load from localStorage:', e);
+      logger.warn('⚠️ Could not load from localStorage:', e);
     }
   }
   
@@ -590,7 +604,7 @@ window.helper = existingHelper || {
 
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
 if (existingHelper && typeof existingHelper === 'object') {
-  console.log('🔄 Merging existing helper data with default structure...');
+  logger.info('🔄 Merging existing helper data with default structure...');
   
   // Deep merge function to preserve existing data while ensuring all required fields exist
   function deepMerge(target, source) {
@@ -604,13 +618,12 @@ if (existingHelper && typeof existingHelper === 'object') {
     }
   }
   
-  // Apply the merge
-  deepMerge(window.helper, existingHelper);
-  console.log('✅ Helper data merged successfully:', window.helper);
+
+  logger.info('✅ Helper data merged successfully:', window.helper);
   
   // Immediately trigger form population with restored data
   setTimeout(() => {
-    console.log('🔄 Auto-populating forms with restored helper data...');
+    logger.info('🔄 Auto-populating forms with restored helper data...');
     if (typeof populateAllForms === 'function') {
       populateAllForms();
     }
@@ -621,23 +634,31 @@ if (existingHelper && typeof existingHelper === 'object') {
     }
   }, 500);
 }
-
 // 🔧 CRITICAL: Form population will be triggered by bootstrap.js
+
+// Expose a method that bootstrap.js can call after DOM is ready
+export function initializeFormPopulation() {
+  if (window.helper && Object.keys(window.helper).length > 0) {
+    logger.info('🔄 Initializing form population via bootstrap...');
+    populateAllForms();
+  }
+}
+
 
 // Enhanced processIncomingData function with comprehensive field mapping
 window.processIncomingData = async function(data, webhookId = 'unknown') {
-  console.log('🔄 ENHANCED: Processing incoming data from webhook:', webhookId);
-  console.log('📥 Raw data:', data);
-  console.log('📊 Data type:', typeof data);
-  console.log('📈 Data keys:', typeof data === 'object' ? Object.keys(data) : 'N/A');
+  logger.info('🔄 ENHANCED: Processing incoming data from webhook:', webhookId);
+  logger.info('📥 Raw data:', data);
+  logger.info('📊 Data type:', typeof data);
+  logger.info('📈 Data keys:', typeof data === 'object' ? Object.keys(data) : 'N/A');
   
   if (!data) {
-    console.warn('⚠️ No data received');
+    logger.warn('⚠️ No data received');
     return { success: false, error: 'No data provided' };
   }
   
   // 🔧 PHASE 2 FIX: Enhanced debugging and validation
-  console.log('🧠 Helper before processing:', {
+  logger.info('🧠 Helper before processing:', {
     plate: window.helper?.vehicle?.plate,
     manufacturer: window.helper?.vehicle?.manufacturer,
     owner: window.helper?.stakeholders?.owner?.name
@@ -655,19 +676,19 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
     
     // Handle Hebrew text in Body field (from Make.com)
     if (data.Body && typeof data.Body === 'string') {
-      console.log('📥 Processing Hebrew text from Body field');
+      logger.info('📥 Processing Hebrew text from Body field');
       result.helperUpdated = processHebrewText(data.Body, result);
     }
     
     // Handle array format with Body field
     else if (Array.isArray(data) && data[0] && data[0].Body) {
-      console.log('📥 Processing array format with Body field');
+      logger.info('📥 Processing array format with Body field');
       result.helperUpdated = processHebrewText(data[0].Body, result);
     }
     
     // Handle direct object data
     else if (typeof data === 'object' && !data.Body) {
-      console.log('📥 Processing direct object data');
+      logger.info('📥 Processing direct object data');
       result.helperUpdated = processDirectData(data, result);
     }
     
@@ -691,7 +712,7 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
     }
     
     // 🔧 PHASE 2 FIX: Show what was captured
-    console.log('🧠 Helper after processing:', {
+    logger.info('🧠 Helper after processing:', {
       plate: window.helper?.vehicle?.plate,
       manufacturer: window.helper?.vehicle?.manufacturer,
       model: window.helper?.vehicle?.model,
@@ -702,14 +723,14 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
       drive_type: window.helper?.vehicle?.drive_type
     });
     
-    console.log('✅ ENHANCED: Data processing completed:', result);
-    console.log('📊 Fields updated:', result.helperUpdated ? 'YES' : 'NO');
-    console.log('🎯 Sections processed:', result.updatedSections);
+    logger.info('✅ ENHANCED: Data processing completed:', result);
+    logger.info('📊 Fields updated:', result.helperUpdated ? 'YES' : 'NO');
+    logger.info('🎯 Sections processed:', result.updatedSections);
     
     return result;
     
   } catch (error) {
-    console.error('❌ ENHANCED: Error processing data:', error);
+    logger.error('❌ ENHANCED: Error processing data:', error);
     return {
       success: false,
       error: error.message,
@@ -725,7 +746,7 @@ function normalizeHebrewText(text) {
     return text;
   }
   
-  console.log('🔧 Starting Hebrew text normalization...');
+  logger.info('🔧 Starting Hebrew text normalization...');
   
   // Step 1: Detect and fix UTF-8 corruption patterns
   let normalizedText = text;
@@ -755,7 +776,7 @@ function normalizeHebrewText(text) {
     try {
       corruptionMap[corrupted] = correct;
     } catch (e) {
-      console.warn(`⚠️ Could not add corruption pattern: ${desc}`, e);
+      logger.warn(`⚠️ Could not add corruption pattern: ${desc}`, e);
     }
   });
   
@@ -764,7 +785,7 @@ function normalizeHebrewText(text) {
   for (const [corrupted, correct] of Object.entries(corruptionMap)) {
     if (normalizedText.includes(corrupted)) {
       normalizedText = normalizedText.replace(new RegExp(corrupted, 'g'), correct);
-      console.log(`✅ Fixed UTF-8 corruption: "${corrupted}" → "${correct}"`);
+      logger.info(`✅ Fixed UTF-8 corruption: "${corrupted}" → "${correct}"`);
       fixedCorruption = true;
     }
   }
@@ -773,7 +794,7 @@ function normalizeHebrewText(text) {
   try {
     normalizedText = normalizedText.normalize('NFC');
   } catch (e) {
-    console.warn('⚠️ Unicode normalization failed:', e);
+    logger.warn('⚠️ Unicode normalization failed:', e);
   }
   
   // Step 3: Standardize Hebrew punctuation marks - using safer character codes
@@ -801,7 +822,7 @@ function normalizeHebrewText(text) {
     try {
       punctuationMap[search] = replace;
     } catch (e) {
-      console.warn(`⚠️ Could not add punctuation pattern: ${desc}`, e);
+      logger.warn(`⚠️ Could not add punctuation pattern: ${desc}`, e);
     }
   });
   
@@ -809,7 +830,7 @@ function normalizeHebrewText(text) {
   for (const [nonStandard, standard] of Object.entries(punctuationMap)) {
     if (normalizedText.includes(nonStandard)) {
       normalizedText = normalizedText.replace(new RegExp(escapeRegExp(nonStandard), 'g'), standard);
-      console.log(`✅ Normalized punctuation: "${nonStandard}" → "${standard}"`);
+      logger.info(`✅ Normalized punctuation: "${nonStandard}" → "${standard}"`);
       fixedPunctuation = true;
     }
   }
@@ -823,7 +844,7 @@ function normalizeHebrewText(text) {
     .replace(/\s+:/g, ':');         // Remove space before colon
   
   if (fixedCorruption || fixedPunctuation || normalizedText !== text) {
-    console.log(`✅ Hebrew normalization completed:`, {
+    logger.info(`✅ Hebrew normalization completed:`, {
       original_length: text.length,
       normalized_length: normalizedText.length,
       corruption_fixed: fixedCorruption,
@@ -841,13 +862,13 @@ function escapeRegExp(string) {
 
 // Enhanced Hebrew Text Processing with Unicode Normalization and Corruption Detection
 function processHebrewText(bodyText, result) {
-  console.log('🔍 Extracting data from Hebrew text...');
+  logger.info('🔍 Extracting data from Hebrew text...');
   let updated = false;
   
   // 🔧 PHASE 1 FIX: Unicode normalization and UTF-8 corruption recovery
   bodyText = normalizeHebrewText(bodyText);
   
-  console.log('📝 Processed Hebrew text:', bodyText);
+  logger.info('📝 Processed Hebrew text:', bodyText);
   
   // Enhanced Hebrew patterns with comprehensive field variations and multiple encoding support
   const patterns = [
@@ -1025,7 +1046,7 @@ function processHebrewText(bodyText, result) {
         const validation = validatePlateNumber(value, 'hebrew_text_ocr');
         if (!validation.valid) {
           showPlateProtectionAlert(validation);
-          console.warn(`🚫 BLOCKING Hebrew OCR plate extraction - validation failed`);
+          logger.warn(`🚫 BLOCKING Hebrew OCR plate extraction - validation failed`);
           result.warnings.push(`Hebrew OCR plate "${value}" blocked due to mismatch`);
           return; // Skip this pattern
         }
@@ -1091,7 +1112,7 @@ function processHebrewText(bodyText, result) {
         if (plateMatch) {
           value = plateMatch[1];
           if (originalValue !== value) {
-            console.log(`🔢 NORMALIZED: Hebrew plate "${originalValue}" → "${value}" (removed dashes)`);
+            logger.info(`🔢 NORMALIZED: Hebrew plate "${originalValue}" → "${value}" (removed dashes)`);
           }
         }
       }
@@ -1104,7 +1125,7 @@ function processHebrewText(bodyText, result) {
         }
       });
       
-      console.log(`✅ Extracted ${field}: ${value} (type: ${typeof value})`);
+      logger.info(`✅ Extracted ${field}: ${value} (type: ${typeof value})`);
       updated = true;
     }
   });
@@ -1118,7 +1139,7 @@ function processHebrewText(bodyText, result) {
 
 // Process direct object data
 function processDirectData(data, result) {
-  console.log('🔍 Processing direct object data...');
+  logger.info('🔍 Processing direct object data...');
   let updated = false;
   
   // 🔒 CRITICAL: Validate any plate number in incoming data before processing
@@ -1128,7 +1149,7 @@ function processDirectData(data, result) {
       const validation = validatePlateNumber(data[field], 'webhook_direct_data');
       if (!validation.valid) {
         showPlateProtectionAlert(validation);
-        console.warn(`🚫 BLOCKING webhook data - plate validation failed for field: ${field}`);
+        logger.warn(`🚫 BLOCKING webhook data - plate validation failed for field: ${field}`);
         // Remove the invalid plate from data to prevent processing
         delete data[field];
         result.warnings.push(`Plate field "${field}" removed due to mismatch: ${validation.incomingPlate}`);
@@ -1351,16 +1372,16 @@ function processDirectData(data, result) {
   };
   
   // 🔧 ENHANCED DEBUG: Log all incoming JSON data
-  console.log('📋 JSON Data received for processing:');
+  logger.info('📋 JSON Data received for processing:');
   Object.entries(data).forEach(([key, value]) => {
-    console.log(`  📝 ${key}: ${value} (type: ${typeof value})`);
+    logger.info(`  📝 ${key}: ${value} (type: ${typeof value})`);
   });
   
-  console.log('📋 Available field mappings:', Object.keys(fieldMappings));
+  logger.info('📋 Available field mappings:', Object.keys(fieldMappings));
   
   Object.entries(data).forEach(([key, value]) => {
     const keyLower = key.toLowerCase();
-    console.log(`🔍 Processing key: "${key}" → "${keyLower}"`);
+    logger.info(`🔍 Processing key: "${key}" → "${keyLower}"`);
     
     if (value && value !== '') {
       const targets = fieldMappings[key]; // Try exact key first
@@ -1373,20 +1394,20 @@ function processDirectData(data, result) {
         if (typeof value === 'string' && /^[\d,]+$/.test(value)) {
           // Keep original string format for prices like "85,000"
           processedValue = value;
-          console.log(`💰 Preserving price format: ${value}`);
+          logger.info(`💰 Preserving price format: ${value}`);
         }
         
         finalTargets.forEach(target => {
-          console.log(`📍 Setting ${target} = ${processedValue}`);
+          logger.info(`📍 Setting ${target} = ${processedValue}`);
           setNestedValue(window.helper, target, processedValue);
         });
-        console.log(`✅ Mapped ${key}: ${processedValue}`);
+        logger.info(`✅ Mapped ${key}: ${processedValue}`);
         updated = true;
       } else {
-        console.warn(`⚠️ No mapping found for key: "${key}" (${keyLower})`);
+        logger.warn(`⚠️ No mapping found for key: "${key}" (${keyLower})`);
       }
     } else {
-      console.log(`⏭️ Skipping empty value for key: "${key}"`);
+      logger.info(`⏭️ Skipping empty value for key: "${key}"`);
     }
   });
   
@@ -1447,11 +1468,11 @@ function saveHelperToAllStorageLocations() {
     localStorage.setItem('helper_data', helperString);
     localStorage.setItem('helper_last_save', timestamp);
     
-    console.log('✅ Helper saved to all storage locations (fallback method)');
+    logger.info('✅ Helper saved to all storage locations (fallback method)');
     return true;
     
   } catch (error) {
-    console.error('❌ Failed to save helper to storage:', error);
+    logger.error('❌ Failed to save helper to storage:', error);
     return false;
   }
 }
@@ -1491,10 +1512,10 @@ function getModuleFields(module) {
 
 // Populate all forms from helper data
 function populateAllForms() {
-  console.log('🔄 Populating all forms from helper data');
+  logger.info('🔄 Populating all forms from helper data');
   
   const currentModule = detectCurrentModule();
-  console.log('📍 Detected current module:', currentModule);
+  logger.info('📍 Detected current module:', currentModule);
   
   let updated = 0;
   
@@ -1632,18 +1653,18 @@ function populateAllForms() {
           element.title = `Auto-populated by webhook (${fieldId})`;
           
           updated++;
-          console.log(`✅ Updated ${fieldId}: ${newValue} (element: ${element.tagName}#${element.id || element.name})`);
+          logger.info(`✅ Updated ${fieldId}: ${newValue} (element: ${element.tagName}#${element.id || element.name})`);
         }
       } else {
         // Debug: log missing elements
         if (['plate', 'manufacturer', 'model', 'year', 'owner', 'garage'].includes(fieldId)) {
-          console.log(`⚠️ Element not found for key field: ${fieldId} (value: ${value})`);
+          logger.info(`⚠️ Element not found for key field: ${fieldId} (value: ${value})`);
         }
       }
     }
   });
   
-  console.log(`✅ Form population completed: ${updated} fields updated`);
+  logger.info(`✅ Form population completed: ${updated} fields updated`);
   
   // Update helper timestamp
   window.helper.meta.last_updated = new Date().toISOString();
@@ -1655,22 +1676,22 @@ function populateAllForms() {
 
 // Enhanced form population with retry mechanism
 function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
-  console.log('🔄 Starting enhanced form population with retry...');
+  logger.info('🔄 Starting enhanced form population with retry...');
   
   let attempt = 0;
   
   const tryPopulate = () => {
     attempt++;
-    console.log(`📝 Form population attempt ${attempt}/${maxRetries}`);
+    logger.info(`📝 Form population attempt ${attempt}/${maxRetries}`);
     
     const result = populateAllForms();
     
     // If we updated few fields and have retries left, try again after delay
     if (result.updated < 3 && attempt < maxRetries) {
-      console.log(`⏳ Only ${result.updated} fields updated, retrying in ${delay}ms...`);
+      logger.info(`⏳ Only ${result.updated} fields updated, retrying in ${delay}ms...`);
       setTimeout(tryPopulate, delay);
     } else {
-      console.log(`🎯 Form population completed after ${attempt} attempts: ${result.updated} fields`);
+      logger.info(`🎯 Form population completed after ${attempt} attempts: ${result.updated} fields`);
     }
   };
   
@@ -1687,14 +1708,14 @@ window.updateHelper = function(field, value) {
     const existingManualDate = window.helper?.case_info?.damage_date;
     
     if (isFromGeneralInfo) {
-      console.log('✅ ALLOWING case_info.damage_date update from manual entry:', value.damage_date);
+      logger.info('✅ ALLOWING case_info.damage_date update from manual entry:', value.damage_date);
     } else if (existingManualDate && existingManualDate !== value.damage_date) {
-      console.log('🚫 PROTECTING existing manual damage_date entry. Rejecting value:', value.damage_date);
+      logger.info('🚫 PROTECTING existing manual damage_date entry. Rejecting value:', value.damage_date);
       // Remove damage_date from the value object to protect manual entry
       value = { ...value };
       delete value.damage_date;
     } else {
-      console.log('✅ ALLOWING case_info.damage_date update (no manual entry exists):', value.damage_date);
+      logger.info('✅ ALLOWING case_info.damage_date update (no manual entry exists):', value.damage_date);
     }
   }
 
@@ -1705,7 +1726,7 @@ window.updateHelper = function(field, value) {
       const validation = validatePlateNumber(incomingPlate, 'updateHelper');
       if (!validation.valid) {
         showPlateProtectionAlert(validation);
-        console.error(`🚫 BLOCKING plate update from updateHelper - validation failed`);
+        logger.error(`🚫 BLOCKING plate update from updateHelper - validation failed`);
         return false; // Block the update
       }
     }
@@ -1747,12 +1768,12 @@ window.updateHelper = function(field, value) {
       const dynamicCaseId = `YC-${plateValue}-${currentYear}`;
       window.helper.meta.case_id = dynamicCaseId;
       window.helper.case_info.case_id = dynamicCaseId;
-      console.log(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
+      logger.info(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
     }
   }
 
   saveHelperToAllStorageLocations();
-  console.log(`Updated ${field}:`, value);
+  logger.info(`Updated ${field}:`, value);
 };
 
 window.updateHelperAndSession = function(field, value) {
@@ -1762,13 +1783,13 @@ window.updateHelperAndSession = function(field, value) {
 window.broadcastHelperUpdate = function(sections, source) {
   // Handle case where sections might not be an array
   const sectionList = Array.isArray(sections) ? sections.join(', ') : String(sections || 'unknown');
-  console.log(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
+  logger.info(`Broadcasting helper update: ${sectionList} (source: ${source || 'unknown'})`);
   setTimeout(() => populateAllForms(), 200);
 };
 
 // Test function for Levi JSON webhook data processing
 window.testLeviJSONData = function() {
-  console.log('🧪 Testing Levi JSON webhook data processing...');
+  logger.info('🧪 Testing Levi JSON webhook data processing...');
   
   // Exact Levi JSON data from your webhook
   const leviData = {
@@ -1811,15 +1832,15 @@ window.testLeviJSONData = function() {
     "מחיר סופי לרכב": "92,670"
   };
   
-  console.log('🧠 Helper before Levi test:', window.helper?.valuation);
+  logger.info('🧠 Helper before Levi test:', window.helper?.valuation);
   
   // Test processing
   const result = window.processIncomingData(leviData, 'TEST_LEVI_JSON');
   
-  console.log('📊 Levi processing result:', result);
-  console.log('🧠 Helper vehicle after test:', window.helper?.vehicle);
-  console.log('💰 Helper valuation after test:', window.helper?.valuation);
-  console.log('🔧 Adjustment data:', window.helper?.valuation?.adjustments);
+  logger.info('📊 Levi processing result:', result);
+  logger.info('🧠 Helper vehicle after test:', window.helper?.vehicle);
+  logger.info('💰 Helper valuation after test:', window.helper?.valuation);
+  logger.info('🔧 Adjustment data:', window.helper?.valuation?.adjustments);
   
   return {
     success: result?.success || false,
@@ -1832,7 +1853,7 @@ window.testLeviJSONData = function() {
 
 // Test function for JSON webhook data processing
 window.testJSONWebhookData = function() {
-  console.log('🧪 Testing JSON webhook data processing...');
+  logger.info('🧪 Testing JSON webhook data processing...');
   
   // Sample JSON data from your webhook
   const testData = {
@@ -1856,15 +1877,15 @@ window.testJSONWebhookData = function() {
     "office_code": "156-11"
   };
   
-  console.log('🧠 Helper before test:', window.helper?.vehicle);
+  logger.info('🧠 Helper before test:', window.helper?.vehicle);
   
   // Test processing
   const result = window.processIncomingData(testData, 'TEST_JSON');
   
-  console.log('📊 Processing result:', result);
-  console.log('🧠 Helper after test:', window.helper?.vehicle);
-  console.log('👤 Owner data:', window.helper?.stakeholders?.owner);
-  console.log('🔧 Garage data:', window.helper?.stakeholders?.garage);
+  logger.info('📊 Processing result:', result);
+  logger.info('🧠 Helper after test:', window.helper?.vehicle);
+  logger.info('👤 Owner data:', window.helper?.stakeholders?.owner);
+  logger.info('🔧 Garage data:', window.helper?.stakeholders?.garage);
   
   return {
     success: result?.success || false,
@@ -1877,14 +1898,14 @@ window.testJSONWebhookData = function() {
 
 // Simple test functions
 window.testDataCapture = function() {
-  console.log('🧪 Testing basic data capture...');
-  console.log('Helper data:', window.helper);
+  logger.info('🧪 Testing basic data capture...');
+  logger.info('Helper data:', window.helper);
   populateAllForms();
 };
 
 // 🔧 COMPREHENSIVE TEST: Test with your actual webhook data
 window.testWithActualWebhookData = function() {
-  console.log('🧪 Testing with actual Hebrew webhook data...');
+  logger.info('🧪 Testing with actual Hebrew webhook data...');
   
   const actualWebhookData = `פרטי רכב: 5785269
 תאריך: 2025-07-21T15:26:07.129+02:00
@@ -1906,12 +1927,12 @@ window.testWithActualWebhookData = function() {
 מוסך: UMI חיפה
 קוד משרד התחבורה:156-11`;
 
-  console.log('🔄 Processing actual webhook data...');
+  logger.info('🔄 Processing actual webhook data...');
   const result = window.universalWebhookReceiver(actualWebhookData, 'TEST_ACTUAL_DATA');
   
-  console.log('📊 Test Results:');
-  console.log('Success:', result.success);
-  console.log('Sections updated:', result.updatedSections);
+  logger.info('📊 Test Results:');
+  logger.info('Success:', result.success);
+  logger.info('Sections updated:', result.updatedSections);
   
   // Check specific fields that should be captured
   const expectedFields = {
@@ -1932,7 +1953,7 @@ window.testWithActualWebhookData = function() {
     'office_code': '156-11'
   };
   
-  console.log('🎯 Field Capture Analysis:');
+  logger.info('🎯 Field Capture Analysis:');
   let captured = 0;
   let total = Object.keys(expectedFields).length;
   
@@ -1942,20 +1963,20 @@ window.testWithActualWebhookData = function() {
     
     if (isMatch) {
       captured++;
-      console.log(`✅ ${field}: "${actualValue}" (CAPTURED)`);
+      logger.info(`✅ ${field}: "${actualValue}" (CAPTURED)`);
     } else {
-      console.log(`❌ ${field}: Expected "${expectedValue}", Got "${actualValue}" (MISSED)`);
+      logger.info(`❌ ${field}: Expected "${expectedValue}", Got "${actualValue}" (MISSED)`);
     }
   }
   
   const captureRate = Math.round((captured / total) * 100);
-  console.log(`📈 CAPTURE RATE: ${captured}/${total} (${captureRate}%)`);
+  logger.info(`📈 CAPTURE RATE: ${captured}/${total} (${captureRate}%)`);
   
   // Test form population
   setTimeout(() => {
-    console.log('🔄 Testing form population...');
+    logger.info('🔄 Testing form population...');
     const populateResult = populateAllForms();
-    console.log(`📝 Forms populated: ${populateResult.updated} fields`);
+    logger.info(`📝 Forms populated: ${populateResult.updated} fields`);
   }, 1000);
   
   return { 
@@ -2005,38 +2026,38 @@ window.getOwnerData = function() {
 
 // Auto-population will be triggered by bootstrap.js
 
-console.log('✅ Helper system loaded and ready');
+logger.info('✅ Helper system loaded and ready');
 
 // 🔧 PHASE 2 FIX: Universal webhook receiver with Hebrew data auto-detection
 window.universalWebhookReceiver = function(data, source = 'unknown') {
-  console.log('🌐 Universal webhook receiver activated:', source);
-  console.log('📥 Raw incoming data:', data);
+  logger.info('🌐 Universal webhook receiver activated:', source);
+  logger.info('📥 Raw incoming data:', data);
   
   if (!data) {
-    console.warn('⚠️ No data received by universal webhook receiver');
+    logger.warn('⚠️ No data received by universal webhook receiver');
     return { success: false, error: 'No data provided' };
   }
   
   // Auto-detect Hebrew text in incoming data
   const hasHebrewText = detectHebrewText(data);
-  console.log('🔍 Hebrew text detected:', hasHebrewText);
+  logger.info('🔍 Hebrew text detected:', hasHebrewText);
   
   // Route to appropriate processor
   let result;
   if (hasHebrewText) {
-    console.log('🔄 Routing Hebrew data to processIncomingData...');
+    logger.info('🔄 Routing Hebrew data to processIncomingData...');
     result = window.processIncomingData(data, source);
   } else if (typeof data === 'object') {
-    console.log('🔄 Routing object data to processIncomingData...');
+    logger.info('🔄 Routing object data to processIncomingData...');
     result = window.processIncomingData(data, source);
   } else {
-    console.log('🔄 Routing string data to processIncomingData...');
+    logger.info('🔄 Routing string data to processIncomingData...');
     result = window.processIncomingData({ Body: data }, source);
   }
   
   // Force UI refresh regardless of result
   setTimeout(() => {
-    console.log('🔄 Force refreshing forms after webhook data...');
+    logger.info('🔄 Force refreshing forms after webhook data...');
     populateAllForms();
   }, 100);
   
@@ -2072,7 +2093,7 @@ function detectHebrewText(data) {
 
 // Enhanced event system for webhook processing
 window.addEventListener('makeWebhookData', (event) => {
-  console.log('📨 Webhook event received:', event.detail);
+  logger.info('📨 Webhook event received:', event.detail);
   window.universalWebhookReceiver(event.detail.data, event.detail.source || 'makeWebhookEvent');
 });
 
@@ -2083,7 +2104,7 @@ window.processWebhookData = function(data, source = 'manual') {
 
 // 🔧 PHASE 4 FIX: Universal manual input capture system
 window.setupUniversalInputCapture = function() {
-  console.log('🎯 Setting up universal input capture for all forms...');
+  logger.info('🎯 Setting up universal input capture for all forms...');
   
   // Field mapping for input capture (reverse of populateAllForms mapping)
   const fieldToHelperMapping = {
@@ -2142,12 +2163,12 @@ window.setupUniversalInputCapture = function() {
     const helperPath = fieldToHelperMapping[fieldId];
     
     if (helperPath) {
-      console.log(`🎯 Setting up capture for field: ${fieldId} → ${helperPath}`);
+      logger.info(`🎯 Setting up capture for field: ${fieldId} → ${helperPath}`);
       
       element.addEventListener('input', function() {
         const value = this.value?.trim();
         if (value && value !== '') {
-          console.log(`📝 Manual input captured: ${fieldId} = ${value}`);
+          logger.info(`📝 Manual input captured: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
           
           // Update meta info  
@@ -2163,7 +2184,7 @@ window.setupUniversalInputCapture = function() {
       element.addEventListener('change', function() {
         const value = this.value?.trim();
         if (value && value !== '') {
-          console.log(`✅ Manual input confirmed: ${fieldId} = ${value}`);
+          logger.info(`✅ Manual input confirmed: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
           window.helper.meta.last_updated = new Date().toISOString();
           saveHelperToAllStorageLocations();
@@ -2178,7 +2199,7 @@ window.setupUniversalInputCapture = function() {
   const allInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], select, textarea');
   allInputs.forEach(setupInputListener);
   
-  console.log(`🎯 Universal input capture setup complete: ${allInputs.length} elements monitored`);
+  logger.info(`🎯 Universal input capture setup complete: ${allInputs.length} elements monitored`);
   
   // Monitor for new form elements (dynamic forms)
   const observer = new MutationObserver((mutations) => {
@@ -2189,7 +2210,7 @@ window.setupUniversalInputCapture = function() {
           newInputs.forEach(setupInputListener);
           
           if (newInputs.length > 0) {
-            console.log(`🎯 Added capture to ${newInputs.length} new form elements`);
+            logger.info(`🎯 Added capture to ${newInputs.length} new form elements`);
           }
         }
       });
@@ -2205,9 +2226,18 @@ window.setupUniversalInputCapture = function() {
 
 // Export all the functions that other modules need
 export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const updateHelperAndSession = window.updateHelperAndSession;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// Expose imported utilities globally for legacy code
+window.updateHelper = updateHelper;
+window.updateHelperAndSession = updateHelperAndSession;
+window.broadcastHelperUpdate = broadcastHelperUpdate;
+window.validatePlateNumber = validatePlateNumber;
+window.showPlateProtectionAlert = showPlateProtectionAlert;
+window.getPlateProtectionStatus = getPlateProtectionStatus;
+window.setNestedValue = setNestedValue;
+window.deepMerge = deepMerge;
+window.saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+
+export { updateHelper, updateHelperAndSession, broadcastHelperUpdate };
 export const processIncomingData = window.processIncomingData;
 export const testDataCapture = window.testDataCapture;
 export const getVehicleData = window.getVehicleData;
@@ -2245,22 +2275,22 @@ export function getFinancialData() {
 }
 
 export function syncVehicleData() {
-  console.log('Syncing vehicle data...');
+  logger.info('Syncing vehicle data...');
   populateAllForms();
 }
 
 export function syncDamageData() {
-  console.log('Syncing damage data...');
+  logger.info('Syncing damage data...');
   populateAllForms();
 }
 
 export function syncLeviData() {
-  console.log('Syncing Levi data...');
+  logger.info('Syncing Levi data...');
   populateAllForms();
 }
 
 export function updateCalculations() {
-  console.log('Updating calculations...');
+  logger.info('Updating calculations...');
   window.helper.meta.last_updated = new Date().toISOString();
   saveHelperToAllStorageLocations();
 }
@@ -2274,12 +2304,12 @@ export function initHelper(newData = null) {
     const correctedCaseId = `YC-${helper.meta.plate}-${currentYear}`;
     helper.meta.case_id = correctedCaseId;
     helper.case_info.case_id = correctedCaseId;
-    console.log(`🔧 Fixed existing case_id: UNKNOWN → ${correctedCaseId}`);
+    logger.info(`🔧 Fixed existing case_id: UNKNOWN → ${correctedCaseId}`);
   }
   
   // If new data is provided (like from initial case opening), merge it properly
   if (newData) {
-    console.log('🔄 Merging new case data into helper:', newData);
+    logger.info('🔄 Merging new case data into helper:', newData);
     
     // Generate proper case_id: YC-PLATENUMBER-YEAR
     if (newData.plate) {
@@ -2287,7 +2317,7 @@ export function initHelper(newData = null) {
       window.helper = helper; // Ensure global helper is available
       window.setPlateNumber(newData.plate, 'open_case_ui', true);
       const generatedCaseId = helper.meta.case_id;
-      console.log(`✅ Generated dynamic case_id: ${generatedCaseId}`);
+      logger.info(`✅ Generated dynamic case_id: ${generatedCaseId}`);
     }
     
     // Set inspection date from case opening (NOT damage date)
@@ -2320,7 +2350,7 @@ export function initHelper(newData = null) {
     window.helper = helper;
     saveHelperToStorage();
     
-    console.log('✅ Helper initialized with new case data:', helper);
+    logger.info('✅ Helper initialized with new case data:', helper);
   }
   
   return helper;
@@ -2328,7 +2358,7 @@ export function initHelper(newData = null) {
 
 // Missing function: markFieldAsManuallyModified
 export function markFieldAsManuallyModified(fieldId, value, origin) {
-  console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
+  logger.info(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
   
   if (!window.helper) {
     initializeHelper();
@@ -2365,12 +2395,12 @@ export function markFieldAsManuallyModified(fieldId, value, origin) {
   // Save to storage
   saveHelperToAllStorageLocations();
   
-  console.log(`✅ Field ${fieldId} marked as manually modified`);
+  logger.info(`✅ Field ${fieldId} marked as manually modified`);
 }
 
 // Missing function: refreshAllModuleForms
 export function refreshAllModuleForms() {
-  console.log('🔄 Refreshing all module forms...');
+  logger.info('🔄 Refreshing all module forms...');
   populateAllForms();
 }
 
@@ -2381,6 +2411,4 @@ export function initializeHelperUI() {
 }
 
 // Removed duplicate protectPlateNumber export - already exported above
-export const validatePlateNumber = window.validatePlateNumber;
-export const showPlateProtectionAlert = window.showPlateProtectionAlert;
-export const getPlateProtectionStatus = window.getPlateProtectionStatus;
+export { validatePlateNumber, showPlateProtectionAlert, getPlateProtectionStatus };

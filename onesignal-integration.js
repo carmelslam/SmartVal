@@ -137,6 +137,17 @@
                 console.log('📱 OneSignal: Starting minimal initialization...');
                 await OneSignal.init(initConfig);
                 console.log('📱 OneSignal: Core SDK initialized successfully');
+
+                // Register OneSignal service worker for push notifications
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.register('OneSignalSDKWorker.js')
+                    .then(() => {
+                      console.log('📱 OneSignal: Service worker registered');
+                    })
+                    .catch(e => {
+                      console.error('📱 OneSignal: Service worker registration failed:', e);
+                    });
+                }
                 
                 // Mark as initialized immediately to prevent further init attempts
                 this.initialized = true;

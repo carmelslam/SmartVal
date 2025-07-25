@@ -1,5 +1,6 @@
 // 🔒 Security Manager - Comprehensive Security Layer
-import { helper, updateHelper } from './helper.js';
+import { helper } from './helper.js';
+import { updateHelper } from './helper-utils.js';
 import { WEBHOOKS } from './webhook.js';
 
 class SecurityManager {

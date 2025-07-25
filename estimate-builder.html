@@ -1645,7 +1645,9 @@
       helper.estimate_work_days = garageDays;
       helper.estimate_summary = summaryData;
       helper.estimate_depreciation = depreciationData;
-      helper.estimate_adjustments = adjustmentsData;
+      helper.valuation = helper.valuation || {};
+      helper.valuation.adjustments = adjustmentsData;
+      delete helper.estimate_adjustments;
       helper.estimate_legal_text = legalText;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
@@ -2182,20 +2184,22 @@
     function loadDamageCentersSummary(helper) {
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
-        
-        if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+
+        if (helper.damage_centers && helper.damage_centers.length > 0) {
           let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
-          
-          helper.expertise.damage_blocks.forEach((block, index) => {
-            summaryHTML += createEditableDamageCenterCard(block, index);
-          });
-          
+
+          helper.damage_centers
+            .sort((a, b) => (a.center_id || 0) - (b.center_id || 0))
+            .forEach((center, index) => {
+              summaryHTML += createEditableDamageCenterCard(center, index);
+            });
+
           summaryHTML += '</div>';
           damageCentersContent.innerHTML = summaryHTML;
-          
+
           // Add event listeners after HTML is created
           setTimeout(addDamageCenterEventListeners, 100);
-          
+
         } else {
           damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
         }
@@ -2538,8 +2542,8 @@
       }
       
       // Load saved adjustments data (תוספות והורדות) from Helper
-      if (helper.estimate_adjustments) {
-        console.log('📋 Loading saved adjustments from Helper:', helper.estimate_adjustments);
+      if (helper.valuation && helper.valuation.adjustments) {
+        console.log('📋 Loading saved adjustments from Helper:', helper.valuation.adjustments);
         
         // Clear existing rows to prevent duplication
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
@@ -2551,8 +2555,8 @@
         // Don't clear estimate container here as it might have Levi data
         
         // Load feature adjustments (תוספות מאפיינים)
-        if (helper.estimate_adjustments.features) {
-          helper.estimate_adjustments.features.forEach(adj => {
+        if (helper.valuation.adjustments.features) {
+          helper.valuation.adjustments.features.forEach(adj => {
             addFeatureAdjustment();
             const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2569,8 +2573,8 @@
         }
         
         // Load registration adjustments (עליה לכביש)
-        if (helper.estimate_adjustments.registration) {
-          helper.estimate_adjustments.registration.forEach(adj => {
+        if (helper.valuation.adjustments.registration) {
+          helper.valuation.adjustments.registration.forEach(adj => {
             addRegistrationAdjustment();
             const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2587,8 +2591,8 @@
         }
         
         // Load estimate adjustments (התאמות אומדן)
-        if (helper.estimate_adjustments.estimate) {
-          helper.estimate_adjustments.estimate.forEach(adj => {
+        if (helper.valuation.adjustments.estimate) {
+          helper.valuation.adjustments.estimate.forEach(adj => {
             addEstimateAdjustment();
             const rows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
             const lastRow = rows[rows.length - 1];
@@ -4314,19 +4318,20 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        helper.valuation = helper.valuation || {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.valuation.adjustments[category].push(adjustmentData);
         }
         
         // Save to storage
@@ -4424,20 +4429,21 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        helper.valuation = helper.valuation || {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
           console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.valuation.adjustments[category].push(adjustmentData);
           console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
         }
         
@@ -6278,12 +6284,14 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Initialize expertise.damage_blocks if not exists
+        // Initialize expertise.damage_blocks and damage_centers arrays if not exists
         if (!helper.expertise) helper.expertise = {};
         if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
-        
-        // Clear existing damage blocks
+        if (!helper.damage_centers) helper.damage_centers = [];
+
+        // Clear existing arrays
         helper.expertise.damage_blocks = [];
+        helper.damage_centers = [];
         
         // Store damage center names for depreciation section
         const damageCenterNames = [];
@@ -6344,7 +6352,8 @@
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
           
-          helper.expertise.damage_blocks.push({
+          const blockData = {
+            center_id: index + 1,
             damage_center_name: centerName,
             area_name: centerAreaName,
             description: centerDescription,
@@ -6354,7 +6363,10 @@
             parts_cost: partsCost,
             work_cost: workCost,
             repairs_cost: repairsCost
-          });
+          };
+
+          helper.expertise.damage_blocks.push(blockData);
+          helper.damage_centers.push(blockData);
           
           // Store damage center name for depreciation section
           if (centerName.trim()) {
