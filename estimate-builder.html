@@ -5398,6 +5398,56 @@
     }
     
     // SIMPLE CALCULATION FUNCTIONS FOR NEW SYSTEM
+    /**
+     * Calculate the final appraised vehicle value based on adjustments.
+     * Implements the correct calculation order from todo.md lines 337-391
+     *
+     * @param {number} basePrice - The anchor/base vehicle price.
+     * @param {object} adjustments - An object with optional adjustment parameters:
+     *   {
+     *     features: { percent?: number, fixed?: number },
+     *     registration: { percent?: number, fixed?: number },
+     *     ownershipType: { percent?: number, fixed?: number },
+     *     mileage: { percent?: number, fixed?: number },
+     *     numOwners: { percent?: number, fixed?: number }
+     *   }
+     * @returns {number} - The final appraised value.
+     */
+    function calculateVehicleValue(basePrice, adjustments) {
+      if (typeof basePrice !== 'number' || isNaN(basePrice)) {
+        throw new Error('Invalid base price');
+      }
+
+      const safeAdj = (adj, current) => {
+        if (!adj) return 0;
+        if (adj.percent && typeof adj.percent === 'number') {
+          return current * (adj.percent / 100);
+        }
+        if (adj.fixed && typeof adj.fixed === 'number') {
+          return adj.fixed;
+        }
+        return 0;
+      };
+
+      // Step 1: Independent adjustments (Features + Registration) using Base Price
+      const featuresAdj = safeAdj(adjustments.features, basePrice);
+      const registrationAdj = safeAdj(adjustments.registration, basePrice);
+
+      const grossValue = basePrice + featuresAdj + registrationAdj;
+
+      // Step 2: Sequential adjustments (Ownership → Mileage → Number of Owners)
+      let currentValue = grossValue;
+
+      for (const key of ['ownershipType', 'mileage', 'numOwners']) {
+        const adj = adjustments[key];
+        if (!adj) continue; // skip if missing or zero
+        const adjAmount = safeAdj(adj, currentValue);
+        currentValue += adjAmount; // apply sequentially
+      }
+
+      return Math.round(currentValue); // round to nearest whole currency unit
+    }
+
     function calculateGrossMarketValue() {
       updateGrossMarketValueCalculation();
     }
@@ -5470,8 +5520,13 @@
           basicPriceField.value = `₪${grossPrice.toLocaleString()}`;
         }
         
-        // Collect USAGE adjustments (factors that affect market value beyond car properties)
-        const usageAdjustments = [];
+        // ✅ NEW LOGIC: Collect and categorize market adjustments properly
+        const adjustments = {
+          ownershipType: null,
+          mileage: null,
+          numOwners: null
+        };
+        
         const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
         allAdjustmentRows.forEach((row, index) => {
           const type = row.querySelector('select').value;
@@ -5481,50 +5536,39 @@
           const value = parseFloat(inputs[2]?.value.replace(/[₪,]/g, '')) || 0;
           
           if (value !== 0 || percentage !== 0) {
-            // Categorize usage adjustments
-            let category = 'market_factors';
-            if (description.includes('ק"מ') || description.includes('קילומטר')) {
-              category = 'mileage';
-            } else if (description.includes('בעלות') || description.includes('בעלים')) {
-              category = 'ownership';
-            } else if (description.includes('מספר בעלים')) {
-              category = 'owner_count';
-            }
+            // ✅ Categorize adjustments by type for sequential calculation
+            const adjValue = percentage !== 0 ? { percent: type === 'minus' ? -percentage : percentage } : { fixed: type === 'minus' ? -value : value };
             
-            usageAdjustments.push({
-              description,
-              type,
-              percentage,
-              value: value || (grossPrice * percentage / 100),
-              category
-            });
+            if (description.includes('ק"מ') || description.includes('קילומטר') || description.includes('מספר ק')) {
+              adjustments.mileage = adjValue;
+            } else if (description.includes('בעלות') || description.includes('סוג בעלות')) {
+              adjustments.ownershipType = adjValue;
+            } else if (description.includes('מספר בעלים')) {
+              adjustments.numOwners = adjValue;
+            }
           }
         });
         
-        // Calculate MARKET price (gross + usage factors)
-        let marketPrice = grossPrice;
+        // ✅ Use the correct sequential calculation function
+        const finalMarketValue = calculateVehicleValue(grossPrice, adjustments);
+        console.log('✅ Sequential market value calculation:', {
+          grossPrice,
+          adjustments,
+          finalMarketValue
+        });
         
-        if (window.CalculationInterface && typeof window.CalculationInterface.updateMarketCalculations === 'function') {
-          marketPrice = window.CalculationInterface.updateMarketCalculations(grossPrice, usageAdjustments);
-        } else {
-          // Fallback: simple calculation of market price
-          const totalAdjustments = usageAdjustments.reduce((sum, adj) => sum + adj.value, 0);
-          marketPrice = grossPrice + totalAdjustments;
-        }
-        
-        // Update result field
+        // Update result field with correctly calculated value
         const resultField = document.getElementById('fullMarketValueResult');
         if (resultField) {
-          resultField.value = `₪${marketPrice.toLocaleString()}`;
+          resultField.value = `₪${finalMarketValue.toLocaleString()}`;
         }
         
-        console.log(`🏪 MARKET PRICE: Gross ${grossPrice.toLocaleString()} + usage adjustments = ${marketPrice.toLocaleString()}`);
-        console.log('📋 Usage adjustments:', usageAdjustments);
+        console.log(`🏪 MARKET PRICE (CORRECT): Gross ${grossPrice.toLocaleString()} → Final ${finalMarketValue.toLocaleString()}`);
         
         // Update summary section if needed
         const sumMarketValueField = document.getElementById('sumMarketValue');
         if (sumMarketValueField) {
-          sumMarketValueField.value = `₪${marketPrice.toLocaleString()}`;
+          sumMarketValueField.value = `₪${finalMarketValue.toLocaleString()}`;
         }
         
       } catch (error) {

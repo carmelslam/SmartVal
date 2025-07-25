@@ -5535,6 +5535,45 @@
     }
     
     // SIMPLE CALCULATION FUNCTIONS FOR NEW SYSTEM
+    /**
+     * Calculate the final appraised vehicle value based on adjustments.
+     * Implements the correct calculation order from todo.md lines 337-391
+     */
+    function calculateVehicleValue(basePrice, adjustments) {
+      if (typeof basePrice !== 'number' || isNaN(basePrice)) {
+        throw new Error('Invalid base price');
+      }
+
+      const safeAdj = (adj, current) => {
+        if (!adj) return 0;
+        if (adj.percent && typeof adj.percent === 'number') {
+          return current * (adj.percent / 100);
+        }
+        if (adj.fixed && typeof adj.fixed === 'number') {
+          return adj.fixed;
+        }
+        return 0;
+      };
+
+      // Step 1: Independent adjustments (Features + Registration) using Base Price
+      const featuresAdj = safeAdj(adjustments.features, basePrice);
+      const registrationAdj = safeAdj(adjustments.registration, basePrice);
+
+      const grossValue = basePrice + featuresAdj + registrationAdj;
+
+      // Step 2: Sequential adjustments (Ownership → Mileage → Number of Owners)
+      let currentValue = grossValue;
+
+      for (const key of ['ownershipType', 'mileage', 'numOwners']) {
+        const adj = adjustments[key];
+        if (!adj) continue; // skip if missing or zero
+        const adjAmount = safeAdj(adj, currentValue);
+        currentValue += adjAmount; // apply sequentially
+      }
+
+      return Math.round(currentValue); // round to nearest whole currency unit
+    }
+
     function calculateGrossMarketValue() {
       updateGrossMarketValueCalculation();
     }
