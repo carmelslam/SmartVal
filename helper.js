@@ -3,6 +3,19 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
+// Shared utilities moved to helper-utils.js to avoid circular imports
+import {
+  updateHelper,
+  updateHelperAndSession,
+  broadcastHelperUpdate,
+  validatePlateNumber,
+  getPlateProtectionStatus,
+  showPlateProtectionAlert,
+  setNestedValue,
+  deepMerge,
+  saveHelperToAllStorageLocations
+} from './helper-utils.js';
+
 // 🛠️ UNIVERSAL SOLUTION: Duplicate Key JSON Parser
 // Handles JSON objects with duplicate keys by preserving all values
 function parseJSONWithDuplicates(jsonString) {
@@ -2240,9 +2253,18 @@ if (document.readyState === 'loading') {
 
 // Export all the functions that other modules need
 export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const updateHelperAndSession = window.updateHelperAndSession;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// Expose imported utilities globally for legacy code
+window.updateHelper = updateHelper;
+window.updateHelperAndSession = updateHelperAndSession;
+window.broadcastHelperUpdate = broadcastHelperUpdate;
+window.validatePlateNumber = validatePlateNumber;
+window.showPlateProtectionAlert = showPlateProtectionAlert;
+window.getPlateProtectionStatus = getPlateProtectionStatus;
+window.setNestedValue = setNestedValue;
+window.deepMerge = deepMerge;
+window.saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+
+export { updateHelper, updateHelperAndSession, broadcastHelperUpdate };
 export const processIncomingData = window.processIncomingData;
 export const testDataCapture = window.testDataCapture;
 export const getVehicleData = window.getVehicleData;
@@ -2410,6 +2432,4 @@ export function refreshAllModuleForms() {
 }
 
 // Removed duplicate protectPlateNumber export - already exported above
-export const validatePlateNumber = window.validatePlateNumber;
-export const showPlateProtectionAlert = window.showPlateProtectionAlert;
-export const getPlateProtectionStatus = window.getPlateProtectionStatus;
+export { validatePlateNumber, showPlateProtectionAlert, getPlateProtectionStatus };
