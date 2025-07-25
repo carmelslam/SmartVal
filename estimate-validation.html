@@ -1232,7 +1232,7 @@
           estimate_legal_text: helper.estimate_legal_text,
           estimate_attachments: helper.estimate_attachments,
           estimate_depreciation: helper.estimate_depreciation,
-          estimate_adjustments: helper.estimate_adjustments,
+          estimate_adjustments: helper.valuation?.adjustments,
           
           // Levi data (if modified by builder)
           levi_report: helper.levi_report,
@@ -2260,7 +2260,13 @@
           break;
       }
       
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (typeof updateHelperFromObject === 'function') {
+        updateHelperFromObject(helper);
+      } else if (typeof updateHelperAndSession === 'function') {
+        Object.entries(helper).forEach(([key, value]) => {
+          updateHelperAndSession(key, value);
+        });
+      }
       
       // Update current validation data
       loadValidationData();
@@ -3212,7 +3218,13 @@
           validation_progress: validationProgress
         };
 
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (typeof updateHelperFromObject === 'function') {
+          updateHelperFromObject(helper);
+        } else if (typeof updateHelperAndSession === 'function') {
+          Object.entries(helper).forEach(([key, value]) => {
+            updateHelperAndSession(key, value);
+          });
+        }
         showAlert('נתוני האימות נשמרו בהצלחה', 'success');
         
       } catch (error) {

@@ -1,5 +1,6 @@
 // 🔒 Security Manager - Comprehensive Security Layer
-import { helper, updateHelper } from './helper.js';
+import { helper } from './helper.js';
+import { updateHelper } from './helper-utils.js';
 import { WEBHOOKS } from './webhook.js';
 
 class SecurityManager {
@@ -456,7 +457,18 @@ class SecurityManager {
       // Only restore if no current helper data exists
       const currentHelper = sessionStorage.getItem('helper');
       if (!currentHelper || currentHelper === '{}') {
-        sessionStorage.setItem('helper', lastCaseData);
+        if (typeof updateHelperFromString === 'function') {
+          updateHelperFromString(lastCaseData);
+        } else if (typeof updateHelperAndSession === 'function') {
+          try {
+            const parsed = JSON.parse(lastCaseData);
+            Object.entries(parsed).forEach(([key, value]) => {
+              updateHelperAndSession(key, value);
+            });
+          } catch (e) {
+            console.warn('Failed to parse lastCaseData:', e);
+          }
+        }
         console.log('✅ Restored last case data from', lastCaseTimestamp);
         return true;
       }

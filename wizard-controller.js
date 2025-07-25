@@ -51,7 +51,13 @@
           completedSteps: this.wizardData.completedSteps,
           timestamp: new Date().toISOString()
         };
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (typeof updateHelperFromObject === 'function') {
+          updateHelperFromObject(helper);
+        } else if (typeof updateHelperAndSession === 'function') {
+          Object.entries(helper).forEach(([key, value]) => {
+            updateHelperAndSession(key, value);
+          });
+        }
         return true;
       } catch (e) {
         console.error('Error saving wizard data:', e);
