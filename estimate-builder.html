@@ -977,7 +977,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד (הצג/הסתר)</button>
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
-          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); saveAdjustmentsToHelper();" /></div>
           <div></div>
         </div>
         
@@ -3919,13 +3919,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3941,13 +3941,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); saveAdjustmentsToHelper(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -4085,8 +4085,8 @@
         if (typeof updateGrossMarketValueCalculation === 'function') {
           updateGrossMarketValueCalculation();
         }
-        if (typeof updateHelperFromAdjustments === 'function') {
-          updateHelperFromAdjustments();
+        if (typeof saveAdjustmentsToHelper === 'function') {
+          saveAdjustmentsToHelper();
         }
         if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
           window.EstimateCalculations.refresh3BulkCalculations();
@@ -4348,7 +4348,7 @@
       if (row) {
         row.remove();
         updateGrossMarketValueCalculation();
-        updateHelperFromAdjustments();
+        saveAdjustmentsToHelper();
       }
     }
     
@@ -4493,7 +4493,7 @@
       if (row) {
         row.remove();
         updateGrossMarketValueCalculation();
-        updateHelperFromAdjustments();
+        saveAdjustmentsToHelper();
       }
     }
     
@@ -4664,7 +4664,7 @@
       }
       
       // Trigger the update
-      updateHelperFromAdjustments();
+      saveAdjustmentsToHelper();
     }
     
     // Expose test function globally
@@ -5816,7 +5816,7 @@
       console.log('Estimate adjustments updated:', adjustments);
       
       // Update Levi parameter mapping
-      updateHelperFromAdjustments();
+      saveAdjustmentsToHelper();
     }
     
     // REFRESH SECOND BULK FIELDS
@@ -7306,7 +7306,7 @@
         // REMOVED: Auto-call updateHelperFromAdjustments on page load to prevent duplication
         // updateHelperFromAdjustments should only be called when user makes actual changes
         // setTimeout(() => {
-        //   updateHelperFromAdjustments();
+        //   saveAdjustmentsToHelper();
         //   console.log('🔧 Initial helper update completed for Levi floating screen');
         // }, 500);
       }, 500);
@@ -8704,6 +8704,7 @@
   </div>
   
   <script src="internal-browser.js"></script>
+  <script type="module" src="./helper-utils.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
 </body>
