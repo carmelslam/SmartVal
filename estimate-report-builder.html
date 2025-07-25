@@ -635,6 +635,17 @@
 
     function loadEstimateData() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const encryptionKey = 'your-secure-key'; // Replace with a securely stored key
+      const crypto = require('crypto');
+
+      function decrypt(text, key) {
+          const decipher = crypto.createDecipher('aes-256-ctr', key);
+          return decipher.update(text, 'hex', 'utf8') + decipher.final('utf8');
+      }
+
+      if (helper.meta && helper.meta.phone_number) {
+          helper.meta.phone_number = decrypt(helper.meta.phone_number, encryptionKey);
+      }
       
       // Ensure basic structure exists
       helper.meta = helper.meta || {};

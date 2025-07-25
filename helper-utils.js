@@ -2,6 +2,22 @@ export function saveAdjustmentsToHelper() {
   try {
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
     helper.valuation = helper.valuation || {};
+    const encryptionKey = 'your-secure-key'; // Replace with a securely stored key
+    const crypto = require('crypto');
+
+    function encrypt(text, key) {
+        const cipher = crypto.createCipher('aes-256-ctr', key);
+       return cipher.update(text, 'utf8', 'hex') + cipher.final('hex');
+   }
+
+   function decrypt(text, key) {
+       const decipher = crypto.createDecipher('aes-256-ctr', key);
+       return decipher.update(text, 'hex', 'utf8') + decipher.final('utf8');
+   }
+
+   if (helper.meta && helper.meta.phone_number) {
+       helper.meta.phone_number = encrypt(helper.meta.phone_number, encryptionKey);
+   }
     const adjustments = { registration: {}, features: {} };
 
     const featureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
@@ -57,6 +73,9 @@ export function saveAdjustmentsToHelper() {
 
     helper.valuation.adjustments = adjustments;
     sessionStorage.setItem('helper', JSON.stringify(helper));
+    if (helper.meta && helper.meta.phone_number) {
+        helper.meta.phone_number = decrypt(helper.meta.phone_number, encryptionKey);
+    }
   } catch (err) {
     console.error('Error saving adjustments to helper:', err);
   }
