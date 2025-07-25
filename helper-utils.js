@@ -2,12 +2,19 @@ export function setNestedValue(obj, path, value) {
   const keys = path.split('.');
   let current = obj;
   for (let i = 0; i < keys.length - 1; i++) {
+    if (keys[i] === '__proto__' || keys[i] === 'constructor') {
+      throw new Error('Unsafe property name detected: ' + keys[i]);
+    }
     if (!current[keys[i]]) {
       current[keys[i]] = {};
     }
     current = current[keys[i]];
   }
-  current[keys[keys.length - 1]] = value;
+  const lastKey = keys[keys.length - 1];
+  if (lastKey === '__proto__' || lastKey === 'constructor') {
+    throw new Error('Unsafe property name detected: ' + lastKey);
+  }
+  current[lastKey] = value;
 }
 
 export function deepMerge(target, source) {
