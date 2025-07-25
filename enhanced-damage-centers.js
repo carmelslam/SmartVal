@@ -952,7 +952,7 @@ class EnhancedDamageCenters {
   }
 
   enableAutosave() {
-    setInterval(() => {
+    this.autosaveInterval = setInterval(() => {
       if (this.unsavedChanges) {
         this.saveAsDraft(false); // Silent save
       }
@@ -1169,6 +1169,15 @@ class EnhancedDamageCenters {
     link.click();
     document.body.removeChild(link);
   }
+
+  // Clean up intervals to prevent memory leaks
+  cleanup() {
+    console.log('🧹 Cleaning up EnhancedDamageCenters intervals');
+    if (this.autosaveInterval) {
+      clearInterval(this.autosaveInterval);
+      this.autosaveInterval = null;
+    }
+  }
 }
 
 // Global instance
@@ -1178,6 +1187,13 @@ window.damageCentersModule = null;
 function initEnhancedDamageCenters() {
   window.damageCentersModule = new EnhancedDamageCenters();
   window.damageCentersModule.init();
+  
+  // Clean up on page unload to prevent memory leaks
+  window.addEventListener('beforeunload', () => {
+    if (window.damageCentersModule) {
+      window.damageCentersModule.cleanup();
+    }
+  });
 }
 
 // Auto-initialize when DOM is ready

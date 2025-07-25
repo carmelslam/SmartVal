@@ -67,7 +67,7 @@ class ForceFormPopulator {
     setTimeout(() => this.populateFormsFromHelper(), 2000);
     
     // Set up periodic refresh every 10 seconds as safety net
-    setInterval(() => {
+    this.refreshInterval = setInterval(() => {
       this.populateFormsFromHelper(true);
     }, 10000);
   }
@@ -324,10 +324,24 @@ class ForceFormPopulator {
     console.log('🔄 Manual force populate triggered');
     this.populateFormsFromHelper();
   }
+
+  // Clean up intervals to prevent memory leaks
+  cleanup() {
+    console.log('🧹 Cleaning up ForceFormPopulator intervals');
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  }
 }
 
 // Create global instance
 const forcePopulator = new ForceFormPopulator();
+
+// Clean up on page unload to prevent memory leaks
+window.addEventListener('beforeunload', () => {
+  forcePopulator.cleanup();
+});
 
 // Make available globally
 window.forcePopulator = forcePopulator;

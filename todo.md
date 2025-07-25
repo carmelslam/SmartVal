@@ -242,3 +242,85 @@ The working legal text system uses:
 6. **Manual control buttons** for user interaction
 
 This is the EXACT working system that should replace any current legal text implementation.
+
+**AUDIT 25/07/20225**
+Here’s a consolidated audit report (merging all three audits: Overview, Estimate Builder, and Enhanced Depreciation) with prioritized issues, file-level references, and their fixes, focusing on functionality, integration, data flow, and system integrity:
+
+Critical Priority (Foundational – Impacts All Modules & Data Sync)
+1. Event Listener Conflicts & Race Conditions
+    * Files: helper-events.js (line ~434), helper.js (line ~1534), estimate.js (line ~696), admin.js (line ~127), math-preview.js, fee-module.js, router.js, password-prefill.js
+    * Problem: Multiple DOMContentLoaded listeners across modules cause unpredictable initialization, breaking the helper data flow and UI state.
+    * Fix:
+        * Consolidate all initialization into a single bootstrap.js.
+        * Remove individual DOMContentLoaded registrations and call all setup functions in controlled sequence from bootstrap.js.
+2. Circular Dependencies Breaking Helper Updates
+    * Files: helper.js, security-manager.js, webhook.js, error-handler.js
+    * Problem: Mutual imports (e.g., helper.js ↔ security-manager.js) cause loading order failures, leading to missed updateHelper() calls and broken cross-module sync.
+    * Fix:
+        * Extract shared utilities into a standalone helper-utils.js.
+        * Refactor imports so no module depends circularly on another.
+3. Inconsistent Helper Paths (Key Misalignment)
+    * Files:
+        * estimate-builder.html (gross & market sections)
+        * enhanceddepreciation-module.html (legal text)
+    * Problem:
+        * Estimate builder loads from helper.valuation.adjustments but writes edits to helper.estimate_adjustments (causing disappearing rows on refresh).
+        * Enhanced Depreciation saves legal text to helper.estimate_legal_text, but the final report expects helper.final_report.legal_text.
+    * Fix:
+        * Standardize keys:
+            * Estimate builder: read/write to helper.valuation.adjustments.
+            * Enhanced Depreciation: write legal text to helper.final_report.legal_text.
+        * Update all references in updateHelper() calls and related loaders.
+4. One-Way Sync in Damage Centers (No Center_ID Mapping)
+    * Files: estimate-builder.html (loadDamageCentersSummary, saveDamageCenterChanges)
+    * Problem: Edits overwrite helper.expertise.damage_blocks but never sync to helper.damage_centers or preserve center_id, causing other modules to lose updates.
+    * Fix:
+        * On load, populate from helper.damage_centers[] (by center_id).
+        * On save, update both helper.expertise.damage_blocks and helper.damage_centers[] arrays.
+
+High Priority (System Cleanup & Stability)
+1. Broken Test Setup
+    * Files: package.json (test script), missing tests/run-tests.js.
+    * Problem: npm test fails, blocking CI pipelines.
+    * Fix:
+        * Implement tests/run-tests.js OR remove the test script in package.json.
+2. Legacy / Backup / Duplicate Files
+    * Files: car-details-floating.js.backup, helper.js.backup, levi-floating.js.backup, /old version/ folder.
+    * Problem: Cluttered repo, risk of accidental inclusion.
+    * Fix: Archive outside repo or delete.
+3. Duplicate Documentation
+    * Files: DOCUMENTATION/ (e.g., Primary Specification Document in both .md and .txt).
+    * Fix: Keep a single canonical format (Markdown).
+4. Verbose Console Logging
+    * Files: estimate-report.js, final_report.js, others with debug logs like console.log('✅ final_report.js loaded...').
+    * Fix: Replace logs with a toggleable logging utility.
+5. Remote Asset Dependency
+    * Files: Many HTML files (e.g., general_info.html lines 5–8).
+    * Problem: Fonts/images loaded from carmelcayouf.com and Google Fonts; UI breaks if external links fail.
+    * Fix: Host assets locally or add fallbacks.
+
+Medium Priority
+1. Unregistered Service Worker
+    * Files: OneSignalSDKWorker.js.
+    * Problem: No registration in HTML, so push notifications don’t work.
+    * Fix: Register in index.html (or remove file if not needed).
+2. Stale Documentation Links & Comments
+    * Problem: References to non-existent modules and outdated instructions.
+    * Fix: Audit and update docs.
+
+Low Priority
+1. Disabled or Redundant Files
+    * Files: parse-hebrew-response.js.disabled and others.
+    * Fix: Move to /archive/ or delete.
+2. Inline/External Styling Issues
+    * Files: Multiple HTML files.
+    * Fix: Move styles to centralized CSS and self-host fonts.
+
+Why This Matters for Data Sync (Core Issue)
+* The helper synchronization system (via helper-events.js and universal-data-sync.js) relies on consistent keys and stable initialization.
+* The multiple event listeners and circular dependencies cause:
+    * Race conditions (fields initialized twice or skipped).
+    * Data written to the wrong helper path (disappearing on reload).
+    * One-way sync for damage_centers, so other modules get stale data.
+* Fixing Items 1–4 (Critical Priority) stabilizes the entire system, ensuring gross price, market value, damage centers, and legal text all auto-load from and persist to the correct helper keys and propagate across modules/tabs.
+

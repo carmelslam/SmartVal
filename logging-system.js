@@ -377,7 +377,12 @@ export function initializeLogging() {
   Logger.systemEvent('logging-system', 'initialize', 'Logging system initialized');
   
   // Set up periodic cleanup
-  setInterval(() => cleanupLogs(), 24 * 60 * 60 * 1000); // Daily cleanup
+  const cleanupInterval = setInterval(() => cleanupLogs(), 24 * 60 * 60 * 1000); // Daily cleanup
+  
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    clearInterval(cleanupInterval);
+  });
 }
 
 // Auto-initialize when module is loaded

@@ -145,9 +145,8 @@
   
   // Import proper encryption from auth.js
   import { encryptPassword } from './auth.js';
-  
-  // Use the hardcoded webhook temporarily to fix the issue
-  const PASSWORD_WEBHOOK = 'https://hook.eu2.make.com/7yjzw6g5p0p9nx4if96khsmipch7o1dk';
+  // Import webhook functionality
+  import { sendToWebhook } from './webhook.js';
   
   async function initPush() {
     try {
@@ -296,32 +295,29 @@
 
     try {
       console.log("📡 Sending webhook request to Make.com...");
-      console.log("📡 Webhook URL:", PASSWORD_WEBHOOK);
+      console.log("📡 Using PASSWORD_PAGE webhook");
       console.log("📡 Payload:", { password: pass.substring(0, 3) + "***" });
       
-      const response = await fetch(PASSWORD_WEBHOOK, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({ password: pass })
-      });
+      const webhookResponse = await sendToWebhook('PASSWORD_PAGE', { password: pass });
       
-      console.log("📨 Fetch completed, response object:", response);
+      console.log("📨 Webhook response:", webhookResponse);
       
-      console.log("📩 Response status:", response.status);
-      console.log("📩 Response headers:", Object.fromEntries(response.headers.entries()));
+      // sendToWebhook returns the parsed response data directly
+      // Check for success based on the response content
+      const responseText = typeof webhookResponse === 'string' ? webhookResponse : 
+                          webhookResponse?.message || 
+                          JSON.stringify(webhookResponse);
       
-      const text = await response.text();
-      console.log("📩 Response text:", text);
+      console.log("📩 Response data:", responseText);
       
       // Check for success in multiple ways
-      const isSuccess = response.status === 200 || 
-                       response.ok || 
-                       text.toLowerCase().includes("success") ||
-                       text.toLowerCase().includes("approved") ||
-                       text.toLowerCase().includes("valid");
+      const isSuccess = webhookResponse?.success === true ||
+                       webhookResponse?.status === 'success' ||
+                       (typeof responseText === 'string' && (
+                         responseText.toLowerCase().includes("success") ||
+                         responseText.toLowerCase().includes("approved") ||
+                         responseText.toLowerCase().includes("valid")
+                       ));
       
       console.log("✅ Login success check:", isSuccess);
 

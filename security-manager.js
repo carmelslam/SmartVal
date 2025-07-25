@@ -580,7 +580,8 @@ class SecurityManager {
       orientation: null
     };
     
-    setInterval(() => {
+    // Store interval ID for cleanup
+    this.devtoolsMonitorInterval = setInterval(() => {
       if (window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200) {
         if (!devtools.open) {
           devtools.open = true;
@@ -606,7 +607,8 @@ class SecurityManager {
 
   // Security Monitoring
   startSecurityMonitoring() {
-    setInterval(() => {
+    // Store interval ID for cleanup
+    this.securityMonitorInterval = setInterval(() => {
       this.performSecurityChecks();
     }, 60000); // Check every minute
   }
@@ -819,10 +821,30 @@ class SecurityManager {
     
     document.head.appendChild(cspMeta);
   }
+
+  // Clean up intervals to prevent memory leaks
+  cleanup() {
+    console.log('🧹 Cleaning up SecurityManager intervals');
+    
+    if (this.devtoolsMonitorInterval) {
+      clearInterval(this.devtoolsMonitorInterval);
+      this.devtoolsMonitorInterval = null;
+    }
+    
+    if (this.securityMonitorInterval) {
+      clearInterval(this.securityMonitorInterval);
+      this.securityMonitorInterval = null;
+    }
+  }
 }
 
 // Initialize security manager
 const securityManager = new SecurityManager();
+
+// Clean up on page unload to prevent memory leaks
+window.addEventListener('beforeunload', () => {
+  securityManager.cleanup();
+});
 
 // Export for global use
 window.SecurityManager = SecurityManager;

@@ -1843,7 +1843,13 @@
       helper.estimate_summary = summaryData;
       helper.estimate_depreciation = depreciationData;
       helper.estimate_adjustments = adjustmentsData;
-      helper.estimate_legal_text = legalText;
+      
+      // Initialize final_report object if it doesn't exist
+      if (!helper.final_report) {
+        helper.final_report = {};
+      }
+      helper.final_report.legal_text = legalText;
+      
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all estimate data
@@ -2804,11 +2810,11 @@
         }
       }
       
-      // Load saved legal text
-      if (helper.estimate_legal_text) {
+      // Load saved legal text from final_report
+      if (helper.final_report?.legal_text) {
         const legalTextElement = document.getElementById('legal-text-content');
         if (legalTextElement) {
-          legalTextElement.value = helper.estimate_legal_text;
+          legalTextElement.value = helper.final_report.legal_text;
         }
       }
       
@@ -3760,9 +3766,15 @@
     function loadLegalTextFromVault() {
       loadLegalText();
       
-      // Save the legal text to helper for the specific estimate
+      // Save the legal text to helper for the final report
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_legal_text = document.getElementById('legal-text-content').value;
+      
+      // Initialize final_report object if it doesn't exist
+      if (!helper.final_report) {
+        helper.final_report = {};
+      }
+      helper.final_report.legal_text = document.getElementById('legal-text-content').value;
+      
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Legal text loaded from vault and saved to estimate');
@@ -3779,7 +3791,9 @@
       
       // Clear saved legal text from helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      delete helper.estimate_legal_text;
+      if (helper.final_report) {
+        delete helper.final_report.legal_text;
+      }
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Legal text reset');
@@ -6207,7 +6221,13 @@
       if (legalTextArea) {
         legalTextArea.addEventListener('input', function() {
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.estimate_legal_text = this.value;
+          
+          // Initialize final_report object if it doesn't exist
+          if (!helper.final_report) {
+            helper.final_report = {};
+          }
+          helper.final_report.legal_text = this.value;
+          
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
@@ -8625,7 +8645,8 @@
           estimate_type: helper.estimate?.type || helper.estimate_type,
           estimate_notes: helper.estimate?.notes || helper.estimate_notes,
           estimate_work_days: helper.estimate?.work_days || helper.estimate_work_days,
-          estimate_legal_text: helper.estimate?.legal_text || helper.estimate_legal_text,
+          // Legal text for final report comes from final_report object
+          final_report_legal_text: helper.final_report?.legal_text || '',
           estimate_depreciation: helper.estimate_depreciation,
           
           // Calculations

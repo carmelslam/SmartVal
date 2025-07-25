@@ -249,7 +249,7 @@ class UniversalDataCapture {
 
   setupPeriodicSync() {
     // Sync data every 30 seconds to ensure persistence
-    setInterval(() => {
+    this.syncInterval = setInterval(() => {
       if (this.capturedFields.size > 0) {
         console.log(`🔄 Periodic sync: ${this.capturedFields.size} fields captured`);
         this.syncAllCapturedData();
@@ -262,6 +262,12 @@ class UniversalDataCapture {
     window.addEventListener('beforeunload', () => {
       this.syncAllCapturedData();
       console.log('💾 Data saved before page unload');
+      
+      // Clean up interval to prevent memory leak
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval);
+        this.syncInterval = null;
+      }
     });
     
     // Save data when page becomes hidden (mobile/tab switching)

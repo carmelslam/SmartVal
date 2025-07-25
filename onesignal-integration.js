@@ -1094,7 +1094,12 @@
 
     // Update indicator initially and every 5 seconds
     updateIndicator();
-    setInterval(updateIndicator, 5000);
+    const indicatorInterval = setInterval(updateIndicator, 5000);
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      clearInterval(indicatorInterval);
+    });
   }
 
   // Add status indicator after DOM is ready and with a longer delay to ensure OneSignal manager is ready
