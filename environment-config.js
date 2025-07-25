@@ -1,5 +1,6 @@
 // 🌍 Environment Configuration Manager
 // Secure configuration management with environment variable support
+import logger from './logger.js';
 
 class EnvironmentConfig {
   constructor() {
@@ -44,7 +45,8 @@ class EnvironmentConfig {
         RATE_LIMIT_WINDOW: 60000,
         ENABLE_ANALYTICS: false,
         ENABLE_ERROR_REPORTING: true,
-        LOG_LEVEL: 'debug'
+        LOG_LEVEL: 'debug',
+        SILENT_LOGS: false
       },
       staging: {
         API_BASE_URL: 'https://yaron-cayouf-portal.netlify.app/api',
@@ -58,7 +60,8 @@ class EnvironmentConfig {
         RATE_LIMIT_WINDOW: 60000,
         ENABLE_ANALYTICS: true,
         ENABLE_ERROR_REPORTING: true,
-        LOG_LEVEL: 'info'
+        LOG_LEVEL: 'info',
+        SILENT_LOGS: false
       },
       production: {
         API_BASE_URL: 'https://yaron-cayouf-portal.netlify.app/api',
@@ -72,7 +75,8 @@ class EnvironmentConfig {
         RATE_LIMIT_WINDOW: 60000,
         ENABLE_ANALYTICS: true,
         ENABLE_ERROR_REPORTING: true,
-        LOG_LEVEL: 'error'
+        LOG_LEVEL: 'error',
+        SILENT_LOGS: true
       }
     };
 
@@ -153,14 +157,20 @@ class EnvironmentConfig {
     // Set global configuration
     window.ENV = this.environment;
     window.CONFIG = this.getPublicConfig();
-    
+
     // Initialize webhooks object for backward compatibility
     window.webhooks = this.getWebhookConfig();
+
+    // Configure logger based on environment settings
+    if (logger) {
+      logger.setLevel(this.config.LOG_LEVEL || 'info');
+      logger.setSilent(!!this.config.SILENT_LOGS);
+    }
     
     // Log environment info (but not sensitive data)
     if (this.config.DEBUG_MODE) {
-      console.log('🌍 Environment:', this.environment);
-      console.log('🔧 Public Config:', this.getPublicConfig());
+      logger.info('🌍 Environment:', this.environment);
+      logger.info('🔧 Public Config:', this.getPublicConfig());
     }
     
     // Validate required configuration
@@ -234,7 +244,7 @@ class EnvironmentConfig {
     const missingKeys = requiredKeys.filter(key => !this.config[key]);
     
     if (missingKeys.length > 0) {
-      console.error('❌ Missing required configuration keys:', missingKeys);
+      logger.error('❌ Missing required configuration keys:', missingKeys);
       
       if (this.environment === 'production') {
         throw new Error(`Missing required configuration: ${missingKeys.join(', ')}`);
@@ -246,7 +256,7 @@ class EnvironmentConfig {
       if (key.startsWith('WEBHOOK_')) {
         const url = this.config[key];
         if (!this.isValidURL(url)) {
-          console.warn(`⚠️ Invalid webhook URL for ${key}: ${url}`);
+          logger.warn(`⚠️ Invalid webhook URL for ${key}: ${url}`);
         }
       }
     });
@@ -291,7 +301,7 @@ class EnvironmentConfig {
       clearStorage: () => {
         localStorage.clear();
         sessionStorage.clear();
-        console.log('🗑️ Storage cleared');
+        logger.info('🗑️ Storage cleared');
       },
       exportData: () => {
         const data = {
@@ -300,7 +310,7 @@ class EnvironmentConfig {
             Object.keys(sessionStorage).map(key => [key, sessionStorage.getItem(key)])
           )
         };
-        console.log('📊 Exported data:', data);
+        logger.info('📊 Exported data:', data);
         return data;
       },
       resetToDefaults: () => {
@@ -332,20 +342,12 @@ class EnvironmentConfig {
     `;
     document.head.appendChild(debugStyles);
     
-    console.log('🚧 Development mode enabled');
-    console.log('🔧 DEV_TOOLS available in window.DEV_TOOLS');
+    logger.info('🚧 Development mode enabled');
+    logger.info('🔧 DEV_TOOLS available in window.DEV_TOOLS');
   }
 
   setupProductionFeatures() {
-    // Disable console in production (optional)
-    if (!this.config.DEBUG_MODE) {
-      const noop = () => {};
-      console.log = noop;
-      console.warn = noop;
-      console.info = noop;
-      
-      // Keep console.error for critical issues
-    }
+    // Logging silence handled by logger configuration
     
     // Add production security headers
     const securityMeta = document.createElement('meta');
@@ -359,7 +361,7 @@ class EnvironmentConfig {
       return false;
     });
     
-    console.log('🚀 Production mode enabled');
+    logger.info('🚀 Production mode enabled');
   }
 
   setupErrorReporting() {
@@ -395,7 +397,7 @@ class EnvironmentConfig {
 
   sendErrorReport(errorInfo) {
     // Log error locally for all environments
-    console.error('💥 Error Report:', errorInfo);
+    logger.error('💥 Error Report:', errorInfo);
     
     // Note: Since this is a static site on Netlify, we don't have server-side API endpoints
     // Error reporting is handled locally through console logging
@@ -455,7 +457,7 @@ class EnvironmentConfig {
   resetConfiguration() {
     this.config = this.loadConfiguration();
     this.initializeEnvironment();
-    console.log('🔄 Configuration reset to defaults');
+    logger.info('🔄 Configuration reset to defaults');
   }
 
   exportConfiguration() {
@@ -486,7 +488,7 @@ class EnvironmentConfig {
     const expectedEnv = this.detectEnvironment();
     
     if (this.environment !== expectedEnv) {
-      console.warn('⚠️ Environment mismatch detected');
+      logger.warn('⚠️ Environment mismatch detected');
       return false;
     }
     
