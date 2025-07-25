@@ -634,29 +634,16 @@ if (existingHelper && typeof existingHelper === 'object') {
     }
   }, 500);
 }
+// 🔧 CRITICAL: Form population will be triggered by bootstrap.js
 
-// 🔧 CRITICAL: Also watch for DOM changes and ensure forms are populated
-if (typeof window !== 'undefined') {
-  // Set up immediate population when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        logger.info('🔄 DOM loaded - force populating forms...');
-        if (window.helper && Object.keys(window.helper).length > 0) {
-          populateAllForms();
-        }
-      }, 1000);
-    });
-  } else {
-    // DOM already ready, populate immediately
-    setTimeout(() => {
-      logger.info('🔄 DOM ready - force populating forms...');
-      if (window.helper && Object.keys(window.helper).length > 0) {
-        populateAllForms();
-      }
-    }, 1000);
+// Expose a method that bootstrap.js can call after DOM is ready
+export function initializeFormPopulation() {
+  if (window.helper && Object.keys(window.helper).length > 0) {
+    logger.info('🔄 Initializing form population via bootstrap...');
+    populateAllForms();
   }
 }
+
 
 // Enhanced processIncomingData function with comprehensive field mapping
 window.processIncomingData = async function(data, webhookId = 'unknown') {
@@ -2056,14 +2043,7 @@ window.getOwnerData = function() {
   return window.helper?.stakeholders?.owner || {};
 };
 
-// Auto-populate on load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => populateAllForms(), 300);
-  });
-} else {
-  setTimeout(() => populateAllForms(), 300);
-}
+// Auto-population will be triggered by bootstrap.js
 
 logger.info('✅ Helper system loaded and ready');
 
@@ -2261,14 +2241,7 @@ window.setupUniversalInputCapture = function() {
   return { monitored: allInputs.length, observer };
 };
 
-// Auto-setup when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => window.setupUniversalInputCapture(), 1000);
-  });
-} else {
-  setTimeout(() => window.setupUniversalInputCapture(), 1000);
-}
+// DOM setup will be triggered by bootstrap.js
 
 // Export all the functions that other modules need
 export const helper = window.helper;
@@ -2485,6 +2458,12 @@ export function markFieldAsManuallyModified(fieldId, value, origin) {
 export function refreshAllModuleForms() {
   logger.info('🔄 Refreshing all module forms...');
   populateAllForms();
+}
+
+// Initialize DOM-dependent helper features
+export function initializeHelperUI() {
+  populateAllFormsWithRetry();
+  window.setupUniversalInputCapture();
 }
 
 // Removed duplicate protectPlateNumber export - already exported above

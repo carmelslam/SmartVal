@@ -429,24 +429,17 @@ export const HelperUtils = {
 export function initializeHelperEvents() {
   setupCrossModuleSync();
   setupStorageSync();
-  
-  // Auto-bind forms on page load
-  document.addEventListener('DOMContentLoaded', () => {
-    // Look for forms with data-helper-section attribute
-    const forms = document.querySelectorAll('[data-helper-section]');
-    forms.forEach(form => {
-      const section = form.getAttribute('data-helper-section');
-      if (section) {
-        bindFormToHelper(form, section);
-      }
-    });
+
+  // Bind helper-enabled forms immediately (expects DOM to be ready)
+  const forms = document.querySelectorAll('[data-helper-section]');
+  forms.forEach(form => {
+    const section = form.getAttribute('data-helper-section');
+    if (section) {
+      bindFormToHelper(form, section);
+    }
   });
-  
+
   console.log('Helper event system initialized');
 }
 
-// Auto-initialize if not already done
-if (typeof window !== 'undefined' && !window.helperEventsInitialized) {
-  initializeHelperEvents();
-  window.helperEventsInitialized = true;
-}
+// Initialization is now delegated to bootstrap.js
