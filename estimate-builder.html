@@ -2564,8 +2564,17 @@
       }
       
       // Load saved adjustments data (תוספות והורדות) from Helper
+      // ✅ Initialize valuation structure if needed
+      if (!helper.valuation) helper.valuation = {};
+      if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+      
       if (helper.valuation.adjustments) {
         console.log('📋 Loading saved adjustments from Helper:', helper.valuation.adjustments);
+        
+        // ✅ Initialize structure to ensure arrays exist
+        if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = [];
+        if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = [];
+        if (!helper.valuation.adjustments.estimate) helper.valuation.adjustments.estimate = [];
         
         // Clear existing rows to prevent duplication
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
@@ -2577,7 +2586,7 @@
         // Don't clear estimate container here as it might have Levi data
         
         // Load feature adjustments (תוספות מאפיינים)
-        if (helper.valuation.adjustments.features) {
+        if (helper.valuation.adjustments.features && Array.isArray(helper.valuation.adjustments.features)) {
           helper.valuation.adjustments.features.forEach(adj => {
             addFeatureAdjustment();
             const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
@@ -2595,7 +2604,7 @@
         }
         
         // Load registration adjustments (עליה לכביש)
-        if (helper.valuation.adjustments.registration) {
+        if (helper.valuation.adjustments.registration && Array.isArray(helper.valuation.adjustments.registration)) {
           helper.valuation.adjustments.registration.forEach(adj => {
             addRegistrationAdjustment();
             const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
@@ -2613,7 +2622,7 @@
         }
         
         // Load estimate adjustments (התאמות אומדן)
-        if (helper.valuation.adjustments.estimate) {
+        if (helper.valuation.adjustments.estimate && Array.isArray(helper.valuation.adjustments.estimate)) {
           helper.valuation.adjustments.estimate.forEach(adj => {
             addEstimateAdjustment();
             const rows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
