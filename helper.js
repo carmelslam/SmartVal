@@ -618,8 +618,7 @@ if (existingHelper && typeof existingHelper === 'object') {
     }
   }
   
-  // Apply the merge
-  deepMerge(window.helper, existingHelper);
+
   logger.info('✅ Helper data merged successfully:', window.helper);
   
   // Immediately trigger form population with restored data

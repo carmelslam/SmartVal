@@ -1842,7 +1842,9 @@
       helper.estimate_work_days = garageDays;
       helper.estimate_summary = summaryData;
       helper.estimate_depreciation = depreciationData;
-      helper.estimate_adjustments = adjustmentsData;
+      helper.valuation = helper.valuation || {};
+      helper.valuation.adjustments = adjustmentsData;
+      delete helper.estimate_adjustments;
       helper.estimate_legal_text = legalText;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
@@ -2738,8 +2740,8 @@
       }
       
       // Load saved adjustments data (תוספות והורדות) from Helper
-      if (helper.estimate_adjustments) {
-        console.log('📋 Loading saved adjustments from Helper:', helper.estimate_adjustments);
+      if (helper.valuation && helper.valuation.adjustments) {
+        console.log('📋 Loading saved adjustments from Helper:', helper.valuation.adjustments);
         
         // Clear existing rows to prevent duplication
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
@@ -2751,8 +2753,8 @@
         // Don't clear estimate container here as it might have Levi data
         
         // Load feature adjustments (תוספות מאפיינים)
-        if (helper.estimate_adjustments.features) {
-          helper.estimate_adjustments.features.forEach(adj => {
+        if (helper.valuation.adjustments.features) {
+          helper.valuation.adjustments.features.forEach(adj => {
             addFeatureAdjustment();
             const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2769,8 +2771,8 @@
         }
         
         // Load registration adjustments (עליה לכביש)
-        if (helper.estimate_adjustments.registration) {
-          helper.estimate_adjustments.registration.forEach(adj => {
+        if (helper.valuation.adjustments.registration) {
+          helper.valuation.adjustments.registration.forEach(adj => {
             addRegistrationAdjustment();
             const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2787,8 +2789,8 @@
         }
         
         // Load estimate adjustments (התאמות אומדן)
-        if (helper.estimate_adjustments.estimate) {
-          helper.estimate_adjustments.estimate.forEach(adj => {
+        if (helper.valuation.adjustments.estimate) {
+          helper.valuation.adjustments.estimate.forEach(adj => {
             addEstimateAdjustment();
             const rows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
             const lastRow = rows[rows.length - 1];
@@ -4456,19 +4458,20 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        helper.valuation = helper.valuation || {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.valuation.adjustments[category].push(adjustmentData);
         }
         
         // Save to storage
@@ -4566,20 +4569,21 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        helper.valuation = helper.valuation || {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
           console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.valuation.adjustments[category].push(adjustmentData);
           console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
         }
         
