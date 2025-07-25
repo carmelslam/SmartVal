@@ -4229,10 +4229,20 @@
           if (inputs.length >= 2 && select) {
             // Always use the .description field from helper for registration
             inputs[0].value = registrationDescription || '';
-            select.value = String(registrationPercent).includes('-') ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(parseFloat(String(registrationPercent).replace(/[%\s+-]/g, ''))) || '';
+            const regPercent = parseFloat(String(registrationPercent).replace('%', '')) || 0;
+            select.value = regPercent < 0 ? 'minus' : 'plus';
+            inputs[1].value = Math.abs(regPercent) || '';
+            inputs[2].value = registrationAmount ? `₪${Math.abs(parseFloat(String(registrationAmount).replace(/[₪,]/g, ''))).toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
+            console.log('✅ Registration adjustment populated:', { 
+              description: inputs[0].value, 
+              type: select.value, 
+              percent: inputs[1].value, 
+              amount: inputs[2].value,
+              originalPercent: registrationPercent,
+              originalAmount: registrationAmount
+            });
           }
         }
       }
@@ -4345,10 +4355,20 @@
           const select = lastRow.querySelector('select');
           if (inputs.length >= 2 && select) {
             inputs[0].value = ownersDescription || 'מספר בעלים (מלוי יצחק)';
-            select.value = String(ownersPercent).includes('-') ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(parseFloat(String(ownersPercent).replace(/[%\s+-]/g, ''))) || '';
+            const ownerPercent = parseFloat(String(ownersPercent).replace('%', '')) || 0;
+            select.value = ownerPercent < 0 ? 'minus' : 'plus';
+            inputs[1].value = Math.abs(ownerPercent) || '';
+            inputs[2].value = ownersAmount ? `₪${Math.abs(parseFloat(String(ownersAmount).replace(/[₪,]/g, ''))).toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
+            console.log('✅ Previous owners adjustment populated:', { 
+              description: inputs[0].value, 
+              type: select.value, 
+              percent: inputs[1].value, 
+              amount: inputs[2].value,
+              originalPercent: ownersPercent,
+              originalAmount: ownersAmount
+            });
           }
         }
       }
@@ -5549,94 +5569,89 @@
     // Calculate and update full market value using CORRECT SEQUENTIAL LOGIC
     function updateFullMarketValueCalculation() {
       try {
-        console.log('🔥 Starting Full Market Value Calculation with sequential logic...');
+        console.log('🔥 Starting Full Market Value Calculation using UI field values...');
         
-        // ✅ CRITICAL: Use helper data directly for accurate calculation
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const leviAdjustments = helper.valuation?.adjustments || {};
-        
-        // ✅ Step 1: Get base price from helper (₪118,000)
+        // ✅ Step 1: Get base price from UI field (fallback to helper if empty)
+        const basicPriceField = document.getElementById('fullBasicPrice');
         let basePrice = 118000; // Default fallback
-        if (helper.valuation?.base_price) {
-          const cleanBasePrice = helper.valuation.base_price.replace(/[₪,]/g, '');
+        
+        if (basicPriceField && basicPriceField.value) {
+          const cleanBasePrice = basicPriceField.value.replace(/[₪,]/g, '');
           basePrice = parseFloat(cleanBasePrice) || 118000;
-        }
-        
-        console.log('📊 Base price from helper:', basePrice);
-        
-        // ✅ Step 2: Extract adjustment values with preserved signs
-        const adjustments = {
-          features: {
-            percent: 9,
-            amount: 10620
-          },
-          registration: {
-            percent: 0,
-            amount: 4000  
-          },
-          mileage: {
-            percent: -26.88,
-            amount: -29588
-          },
-          ownership_type: {
-            percent: -17,
-            amount: -22545
-          },
-          ownership_history: {
-            percent: -2,
-            amount: -1610
+        } else {
+          // Fallback to helper if UI field is empty
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.valuation?.base_price) {
+            const cleanBasePrice = helper.valuation.base_price.replace(/[₪,]/g, '');
+            basePrice = parseFloat(cleanBasePrice) || 118000;
           }
-        };
-        
-        // Extract actual values from helper if available
-        if (leviAdjustments.features) {
-          adjustments.features.percent = parseFloat((leviAdjustments.features.percent || '9').replace('%', '')) || 9;
-          adjustments.features.amount = parseFloat((leviAdjustments.features.amount || '₪ 10,620').replace(/[₪,]/g, '')) || 10620;
         }
         
-        if (leviAdjustments.mileage) {
-          adjustments.mileage.percent = parseFloat((leviAdjustments.mileage.percent || '-26.88').replace('%', '')) || -26.88;
-          adjustments.mileage.amount = parseFloat((leviAdjustments.mileage.amount || '₪ -29,588').replace(/[₪,]/g, '')) || -29588;
-        }
+        console.log('📊 Base price:', basePrice);
         
-        if (leviAdjustments.ownership_type) {
-          adjustments.ownership_type.percent = parseFloat((leviAdjustments.ownership_type.percent || '-17').replace('%', '')) || -17;
-          adjustments.ownership_type.amount = parseFloat((leviAdjustments.ownership_type.amount || '₪ -22,545').replace(/[₪,]/g, '')) || -22545;
-        }
+        // ✅ Step 2: Read ALL adjustment values from UI fields
+        const adjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
+        let featuresAmount = 0;
+        let registrationAmount = 0;
+        let totalAdjustments = 0;
         
-        if (leviAdjustments.ownership_history) {
-          adjustments.ownership_history.percent = parseFloat((leviAdjustments.ownership_history.percent || '-2').replace('%', '')) || -2;
-          adjustments.ownership_history.amount = parseFloat((leviAdjustments.ownership_history.amount || '₪ -1,610').replace(/[₪,]/g, '')) || -1610;
-        }
+        console.log('🔍 Found', adjustmentRows.length, 'adjustment rows');
+        
+        adjustmentRows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input');
+          const select = row.querySelector('select');
+          
+          if (inputs.length >= 3 && select) {
+            const description = inputs[0].value.toLowerCase();
+            const adjustmentType = select.value; // 'plus' or 'minus'
+            const percentage = parseFloat(inputs[1].value) || 0;
+            let amount = 0;
+            
+            // Parse amount field
+            if (inputs[2].value) {
+              amount = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+            }
+            
+            // Apply sign based on dropdown
+            if (adjustmentType === 'minus') {
+              amount = -Math.abs(amount);
+            } else {
+              amount = Math.abs(amount);
+            }
+            
+            console.log(`📋 Row ${index + 1}: ${description} = ${adjustmentType} ${percentage}% = ₪${amount}`);
+            
+            // Categorize adjustments for sequential calculation
+            if (description.includes('מאפיינים') || description.includes('features')) {
+              featuresAmount += amount;
+            } else if (description.includes('עליה לכביש') || description.includes('registration')) {
+              registrationAmount += amount;
+            } else {
+              // All other adjustments (mileage, ownership) are sequential
+              totalAdjustments += amount;
+            }
+          }
+        });
         
         // ✅ Step 3: Apply SEQUENTIAL CALCULATION (from todo.md)
         // Base + Features + Registration = Gross
-        const featuresAmount = adjustments.features.amount;
-        const registrationAmount = adjustments.registration.amount;
-        const grossValue = basePrice + featuresAmount + registrationAmount; // 118000 + 10620 + 4000 = 132620
-        
+        const grossValue = basePrice + featuresAmount + registrationAmount;
         console.log('📊 Gross Value calculation:', { basePrice, featuresAmount, registrationAmount, grossValue });
         
-        // Sequential adjustments using running total
-        let currentValue = grossValue;
-        currentValue += adjustments.ownership_type.amount;  // 132620 + (-22545) = 110075
-        currentValue += adjustments.mileage.amount;         // 110075 + (-29588) = 80487  
-        currentValue += adjustments.ownership_history.amount; // 80487 + (-1610) = 78877
-        
-        const finalValue = Math.max(0, currentValue);
+        // Apply remaining adjustments sequentially
+        let finalValue = grossValue + totalAdjustments;
+        finalValue = Math.max(0, finalValue);
         
         console.log('🎯 Sequential calculation:', {
           grossValue: grossValue,
-          afterOwnership: grossValue + adjustments.ownership_type.amount,
-          afterMileage: grossValue + adjustments.ownership_type.amount + adjustments.mileage.amount,
+          totalAdjustments: totalAdjustments,
           finalValue: finalValue
         });
         
-        console.log('✅ FINAL MARKET VALUE:', finalValue, '(should be 78877)');
+        console.log('✅ FINAL MARKET VALUE (from UI fields):', finalValue);
         
-        // ✅ Step 4: Update UI fields
-        const basicPriceField = document.getElementById('fullBasicPrice');
-        if (basicPriceField) {
+        // ✅ Step 4: Update the basic price field if it was empty
+        if (basicPriceField && !basicPriceField.value) {
           basicPriceField.value = `₪${basePrice.toLocaleString()}`;
         }
         
@@ -5654,10 +5669,10 @@
           console.log('✅ Updated sumMarketValue field with:', finalValue);
         }
         
-        console.log('🎯 Full Market Value Calculation completed successfully! Final value should be 78877.');
+        console.log('🎯 Full Market Value Calculation completed using UI field values!');
         
       } catch (error) {
-        console.error('Error calculating full market value:', error);
+        console.error('Error calculating full market value from UI fields:', error);
       }
     }
     
