@@ -324,3 +324,141 @@ Why This Matters for Data Sync (Core Issue)
     * One-way sync for damage_centers, so other modules get stale data.
 * Fixing Items 1–4 (Critical Priority) stabilizes the entire system, ensuring gross price, market value, damage centers, and legal text all auto-load from and persist to the correct helper keys and propagate across modules/tabs.
 
+
+
+**IMPORTANT**
+
+THIS NOTE IS IMPORTANT AND SHOULD NOT BE DELETED :
+THIS NOTE CONCERNS THE PROPER CALCULATION METHODE OF THE PRICE ADJUSTMENTS IN BOTHE ESTIMATE BUILDER AND FINAL REPORT BUILDER, ALSO IN ANY OTHER PLACE ITS NEEDED:
+INITIAL DATA ARRIVES TO THE SYSTEM VIA THE LEVI UPLOAD WEBHOOK RESPONSE, THEN ITS SAVED TO THE HELPER , THE LEVI FLOATING SCREEN , THE LEVI PAGE SUMMARYand  ALL THE MODULES . ALL MODULES EXTRACT THE SAME ADJUSTMENST DATA FROM THE HEPER 
+
+*Adjustments calculation logic :*
+
+1. Base Price (מחיר בסיס)Anchor (e.g., ₪118,000).
+2. Features Adjustment (מאפיינים)
+    * Percentage or fixed.
+    * Uses Base Price only (not chained).
+3. Registration Adjustment (עליה לכביש)
+    * Fixed (most common) or rarely percentage.
+    * Also uses Base Price only (not chained).
+4. Gross Value (עלות גולמית)iniCopyEditGross = Base Price + Features Adjustment + Registration Adjustment
+5. 
+6. Ownership Type Adjustment (סוג בעלות)
+    * Percentage or fixed.
+    * Sequential: starts from Gross Value.
+7. Mileage Adjustment (מספר ק״מ)
+    * Percentage or fixed.
+    * Sequential: calculated from the result after Ownership.
+8. Number of Owners Adjustment (מספר בעלים)
+    * Percentage or fixed.
+    * Sequential: calculated from the result after Mileage.
+9. Final Appraised Value (שווי סופי)
+    * The last total after all rows (in this order) are processed.
+    * Any row can be 0 or not appear — but the order must always be followed.
+
+Calculation Rules
+* Features and Registration are not compounded — each references the Base Price directly.
+* All rows after Gross Value are sequential: each one is applied to the previous running total.
+* Adjustments can be percentages or fixed values, positive or negative.
+* Row order cannot change, even if some are missing.
+
+Pseudocode (With Correct Row Order)
+javascript
+CopyEdit
+base_price = 118000
+
+// Step 1: Independent adjustments (Features + Registration)
+features_adj = (features_percent)
+    ? base_price * (features_percent / 100)
+    : (features_fixed || 0)
+
+registration_adj = (registration_percent)
+    ? base_price * (registration_percent / 100)
+    : (registration_fixed || 0)
+
+gross_value = base_price + features_adj + registration_adj
+
+// Step 2: Sequential adjustments (Ownership → Mileage → Owners)
+current_value = gross_value
+
+for adj in [ownership_type, mileage, num_owners]:
+    if (!adj) continue; // skip if 0 or missing
+    adj_amount = (adj.percent)
+        ? current_value * (adj.percent / 100)
+        : adj.fixed
+    current_value += adj_amount; // may be negative
+
+final_value = current_value
+
+In the market value section , we will need to give each adjustment a separate bulk like in the gross price. Each bulk will have its distinct title, in each bulk there gonna be an add field option , this will ensure that order is maintained .
+This setup is for both estimate builder and final report builder.
+Each field need to import the full data from the correspondent adjustment field in Levi helper.
+Each field by default has the math logic inside it , when data is imported the math engine doesn’t  override the import , the math engine will work just if the value field was not properly populated or it is a manual input
+
+Here is a suggestion fro the math engine javascript for this function : 
+
+/**
+ * Calculate the final appraised vehicle value based on adjustments.
+ *
+ * @param {number} basePrice - The anchor/base vehicle price.
+ * @param {object} adjustments - An object with optional adjustment parameters:
+ *   {
+ *     features: { percent?: number, fixed?: number },
+ *     registration: { percent?: number, fixed?: number },
+ *     ownershipType: { percent?: number, fixed?: number },
+ *     mileage: { percent?: number, fixed?: number },
+ *     numOwners: { percent?: number, fixed?: number }
+ *   }
+ * Each field can be missing, zero, or contain either a percentage or fixed value.
+ * Percentages should be expressed as numbers (e.g., 9 for 9%).
+ *
+ * @returns {number} - The final appraised value.
+ */
+function calculateVehicleValue(basePrice, adjustments) {
+  if (typeof basePrice !== 'number' || isNaN(basePrice)) {
+    throw new Error('Invalid base price');
+  }
+
+  const safeAdj = (adj, current) => {
+    if (!adj) return 0;
+    if (adj.percent && typeof adj.percent === 'number') {
+      return current * (adj.percent / 100);
+    }
+    if (adj.fixed && typeof adj.fixed === 'number') {
+      return adj.fixed;
+    }
+    return 0;
+  };
+
+  // Step 1: Independent adjustments (Features + Registration) using Base Price
+  const featuresAdj = safeAdj(adjustments.features, basePrice);
+  const registrationAdj = safeAdj(adjustments.registration, basePrice);
+
+  const grossValue = basePrice + featuresAdj + registrationAdj;
+
+  // Step 2: Sequential adjustments (Ownership → Mileage → Number of Owners)
+  let currentValue = grossValue;
+
+  for (const key of ['ownershipType', 'mileage', 'numOwners']) {
+    const adj = adjustments[key];
+    if (!adj) continue; // skip if missing or zero
+    const adjAmount = safeAdj(adj, currentValue);
+    currentValue += adjAmount; // apply sequentially
+  }
+
+  return Math.round(currentValue); // round to nearest whole currency unit
+}
+
+// Example usage:
+const finalValue = calculateVehicleValue(118000, {
+  features: { percent: 9 },        // +9% of base
+  registration: { fixed: 4000 },   // +₪4000
+  ownershipType: { percent: -17 }, // -17% sequentially
+  mileage: { percent: -26.88 },    // -26.88% sequentially
+  numOwners: { percent: -2 }       // -2% sequentially
+});
+
+console.log('Final Appraised Value:', finalValue); 
+// Should output: 78877 (matches your example)
+
+
