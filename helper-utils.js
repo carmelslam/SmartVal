@@ -20,6 +20,8 @@ export function setNestedValue(obj, path, value) {
 export function deepMerge(target, source) {
   if (!source || typeof source !== 'object') return target;
   for (const key in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+    if (key === '__proto__' || key === 'constructor') continue;
     const srcVal = source[key];
     if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal)) {
       if (!target[key] || typeof target[key] !== 'object') {
