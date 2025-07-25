@@ -2287,6 +2287,27 @@ export const saveHelperToStorage = saveHelperToAllStorageLocations;
 export { saveHelperToAllStorageLocations };
 export { populateAllFormsWithRetry };
 
+// Expose utilities globally for legacy code
+window.updateHelper = window.updateHelper;
+window.updateHelperAndSession = window.updateHelperAndSession;
+window.updateHelperFromObject = window.updateHelperFromObject;
+window.updateHelperFromString = window.updateHelperFromString;
+window.broadcastHelperUpdate = window.broadcastHelperUpdate;
+window.validatePlateNumber = window.validatePlateNumber;
+window.showPlateProtectionAlert = window.showPlateProtectionAlert;
+window.getPlateProtectionStatus = window.getPlateProtectionStatus;
+window.setNestedValue = setNestedValue;
+window.deepMerge = deepMerge;
+window.saveHelperToAllStorageLocations = saveHelperToAllStorageLocations;
+
+export {
+  updateHelper,
+  updateHelperAndSession,
+  updateHelperFromObject,
+  updateHelperFromString,
+  broadcastHelperUpdate
+};
+
 // Data getter functions
 export function getDamageData() {
   return window.helper?.damage_assessment || {};
