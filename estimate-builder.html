@@ -4188,8 +4188,8 @@
             // Always use the .description field from helper for features
             inputs[0].value = featuresDescription || 'מאפיינים';
             select.value = featuresPercent < 0 ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(featuresPercent) || '';
-            inputs[2].value = featuresAmount ? `₪${Math.abs(featuresAmount).toLocaleString()}` : '';
+            inputs[1].value = featuresPercent || '';
+            inputs[2].value = featuresAmount ? `₪${featuresAmount.toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
             console.log('✅ Features adjustment populated:', { 
@@ -4231,8 +4231,9 @@
             inputs[0].value = registrationDescription || '';
             const regPercent = parseFloat(String(registrationPercent).replace('%', '')) || 0;
             select.value = regPercent < 0 ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(regPercent) || '';
-            inputs[2].value = registrationAmount ? `₪${Math.abs(parseFloat(String(registrationAmount).replace(/[₪,]/g, ''))).toLocaleString()}` : '';
+            inputs[1].value = regPercent || '';
+            const regAmount = parseFloat(String(registrationAmount).replace(/[₪,]/g, '')) || 0;
+            inputs[2].value = regAmount ? `₪${regAmount.toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
             console.log('✅ Registration adjustment populated:', { 
@@ -4276,8 +4277,8 @@
           if (inputs.length >= 2 && select) {
             inputs[0].value = mileageDescription || 'מס ק"מ';
             select.value = mileagePercent < 0 ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(mileagePercent) || '';
-            inputs[2].value = mileageAmount ? `₪${Math.abs(mileageAmount).toLocaleString()}` : '';
+            inputs[1].value = mileagePercent || '';
+            inputs[2].value = mileageAmount ? `₪${mileageAmount.toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
             console.log('✅ Mileage adjustment populated:', { 
@@ -4321,8 +4322,8 @@
           if (inputs.length >= 2 && select) {
             inputs[0].value = ownershipDescription || 'בעלות';
             select.value = ownershipPercent < 0 ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(ownershipPercent) || '';
-            inputs[2].value = ownershipAmount ? `₪${Math.abs(ownershipAmount).toLocaleString()}` : '';
+            inputs[1].value = ownershipPercent || '';
+            inputs[2].value = ownershipAmount ? `₪${ownershipAmount.toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
             console.log('✅ Ownership adjustment populated:', { 
@@ -4357,8 +4358,9 @@
             inputs[0].value = ownersDescription || 'מספר בעלים (מלוי יצחק)';
             const ownerPercent = parseFloat(String(ownersPercent).replace('%', '')) || 0;
             select.value = ownerPercent < 0 ? 'minus' : 'plus';
-            inputs[1].value = Math.abs(ownerPercent) || '';
-            inputs[2].value = ownersAmount ? `₪${Math.abs(parseFloat(String(ownersAmount).replace(/[₪,]/g, ''))).toLocaleString()}` : '';
+            inputs[1].value = ownerPercent || '';
+            const ownerAmount = parseFloat(String(ownersAmount).replace(/[₪,]/g, '')) || 0;
+            inputs[2].value = ownerAmount ? `₪${ownerAmount.toLocaleString()}` : '';
             lastRow.setAttribute('data-source', 'levi');
             lastRow.style.background = '#f0f8ff';
             console.log('✅ Previous owners adjustment populated:', { 
@@ -5543,7 +5545,7 @@
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור ההתאמה" onchange="updateFullMarketValueCalculation()" /></div>
-          <div><select onchange="updateFullMarketValueCalculation()">
+          <div><select onchange="updateAdjustmentSigns(this); updateFullMarketValueCalculation()">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
@@ -5607,21 +5609,13 @@
             const percentage = parseFloat(inputs[1].value) || 0;
             let amount = 0;
             
-            // Parse amount field
+            // Parse amount field (now includes sign from visual display)
             if (inputs[2].value) {
               amount = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
             }
             
             console.log(`🔍 RAW values - Row ${index + 1}: desc="${inputs[0].value}", type="${adjustmentType}", percent="${inputs[1].value}", amount="${inputs[2].value}"`);
-            
-            // Apply sign based on dropdown
-            if (adjustmentType === 'minus') {
-              amount = -Math.abs(amount);
-              console.log(`➖ Applied MINUS sign: ${amount}`);
-            } else {
-              amount = Math.abs(amount);
-              console.log(`➕ Applied PLUS sign: ${amount}`);
-            }
+            console.log(`💰 Parsed amount with sign: ${amount}`);
             
             console.log(`📋 Row ${index + 1}: ${description} = ${adjustmentType} ${percentage}% = ₪${amount}`);
             
@@ -5677,6 +5671,52 @@
         
       } catch (error) {
         console.error('Error calculating full market value from UI fields:', error);
+      }
+    }
+    
+    /**
+     * Update visual signs in percentage and amount fields when dropdown changes
+     */
+    function updateAdjustmentSigns(selectElement) {
+      try {
+        const row = selectElement.closest('div[id^="fullMarketAdj_"]');
+        if (!row) return;
+        
+        const inputs = row.querySelectorAll('input');
+        const isReduction = selectElement.value === 'minus';
+        
+        if (inputs.length >= 3) {
+          const percentInput = inputs[1]; // percentage field
+          const amountInput = inputs[2];  // amount field
+          
+          // Update percentage field sign
+          if (percentInput.value) {
+            let percentValue = parseFloat(percentInput.value) || 0;
+            if (isReduction) {
+              percentInput.value = -Math.abs(percentValue);
+            } else {
+              percentInput.value = Math.abs(percentValue);
+            }
+          }
+          
+          // Update amount field sign
+          if (amountInput.value) {
+            const cleanAmount = amountInput.value.replace(/[₪,]/g, '');
+            let amountValue = parseFloat(cleanAmount) || 0;
+            if (isReduction) {
+              amountInput.value = `₪${(-Math.abs(amountValue)).toLocaleString()}`;
+            } else {
+              amountInput.value = `₪${Math.abs(amountValue).toLocaleString()}`;
+            }
+          }
+          
+          console.log(`🔄 Updated signs for ${isReduction ? 'reduction' : 'addition'}:`, {
+            percent: percentInput.value,
+            amount: amountInput.value
+          });
+        }
+      } catch (error) {
+        console.error('Error updating adjustment signs:', error);
       }
     }
     
