@@ -490,7 +490,7 @@
       }
       
       /* Mobile fixes for Estimate Adjustments section */
-      #allAdjustmentsRows-estimate .adjustment-row {
+      #allAdjustmentsRows-final-report .adjustment-row {
         display: grid !important;
         grid-template-columns: 1fr !important;
         gap: 8px !important;
@@ -501,13 +501,13 @@
         border: 1px solid #e9ecef;
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div {
+      #allAdjustmentsRows-final-report .adjustment-row > div {
         display: flex;
         flex-direction: column;
         gap: 4px;
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div::before {
         font-weight: bold;
         font-size: 12px;
         color: #495057;
@@ -515,23 +515,23 @@
         margin-bottom: 4px;
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(1)::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(1)::before {
         content: "תיאור:";
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(2)::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(2)::before {
         content: "סוג:";
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(3)::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(3)::before {
         content: "אחוז:";
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(4)::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(4)::before {
         content: "ערך:";
       }
       
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(5)::before {
+      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(5)::before {
         content: "פעולות:";
       }
       
@@ -1088,8 +1088,8 @@
 
     <!-- ESTIMATE ADJUSTMENTS SECTION -->
     <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('estimateAdjustments')">התאמות אומדן (הצג/הסתר)</button>
-      <div id="estimateAdjustments" style="display:none;">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('finalReportAdjustments')">התאמות דוח סופי (הצג/הסתר)</button>
+      <div id="finalReportAdjustments" style="display:none;">
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות אומדן נוספות:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
@@ -1103,7 +1103,7 @@
               <div><label>ערך:</label></div>
               <div><label>פעולות:</label></div>
             </div>
-            <div id="allAdjustmentsRows-estimate">
+            <div id="allAdjustmentsRows-final-report">
               <!-- This will be populated by JavaScript -->
             </div>
             <button class="btn add" type="button" onclick="addEstimateAdjustment()">הוסף התאמה נוספת</button>
@@ -1667,11 +1667,11 @@
         });
         
         // Save to helper
-        helper.estimate_depreciation = depreciationData;
+        helper.final_report.depreciation = depreciationData;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
         // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state
-        updateBuilderCurrentState('estimate_depreciation', depreciationData);
+        updateBuilderCurrentState('final_report.depreciation', depreciationData);
         
         console.log('💾 Depreciation data saved to helper:', depreciationData);
       } catch (error) {
@@ -1733,7 +1733,7 @@
 
     // BUTTON FUNCTIONS - NO DEBUG ALERTS
     window.saveEstimate = function() {
-      const selectedTypeElement = document.querySelector('input[name="estimate-type"]:checked');
+      const selectedTypeElement = document.querySelector('input[name="final-report-type"]:checked');
       if (!selectedTypeElement) {
         alert('אנא בחר סוג חוות דעת');
         return;
@@ -1778,7 +1778,7 @@
       const adjustmentsData = {
         features: [],
         registration: [],
-        estimate: [],
+        final_report: [],
         full_market: []
       };
       
@@ -1810,13 +1810,13 @@
         }
       });
       
-      // Collect estimate adjustments (התאמות אומדן)
-      const estimateRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
-      estimateRows.forEach(row => {
+      // Collect final report adjustments (התאמות דוח סופי)
+      const finalReportRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
+      finalReportRows.forEach(row => {
         const inputs = row.querySelectorAll('input');
         const select = row.querySelector('select');
         if (inputs.length >= 3) {
-          adjustmentsData.estimate.push({
+          adjustmentsData.final_report.push({
             description: inputs[0].value,
             type: select?.value || 'plus',
             percentage: parseFloat(inputs[1].value) || 0,
@@ -1845,12 +1845,12 @@
       
       // Save to helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_type = selectedType;
-      helper.estimate_notes = additionalNotes;
-      helper.estimate_work_days = garageDays;
-      helper.estimate_summary = summaryData;
-      helper.estimate_depreciation = depreciationData;
-      helper.estimate_adjustments = adjustmentsData;
+      helper.final_report.type = selectedType;
+      helper.final_report.notes = additionalNotes;
+      helper.final_report.work_days = garageDays;
+      helper.final_report.summary = summaryData;
+      helper.final_report.depreciation = depreciationData;
+      helper.final_report.adjustments = adjustmentsData;
       
       // Initialize final_report object if it doesn't exist
       if (!helper.final_report) {
@@ -1860,14 +1860,14 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all estimate data
-      updateBuilderCurrentState('estimate_type', selectedType);
-      updateBuilderCurrentState('estimate_notes', additionalNotes);
-      updateBuilderCurrentState('estimate_work_days', garageDays);
-      updateBuilderCurrentState('estimate_summary', summaryData);
-      updateBuilderCurrentState('estimate_depreciation', depreciationData);
-      updateBuilderCurrentState('estimate_adjustments', adjustmentsData);
-      updateBuilderCurrentState('estimate_legal_text', legalText);
+      // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all final report data
+      updateBuilderCurrentState('final_report.type', selectedType);
+      updateBuilderCurrentState('final_report.notes', additionalNotes);
+      updateBuilderCurrentState('final_report.work_days', garageDays);
+      updateBuilderCurrentState('final_report.summary', summaryData);
+      updateBuilderCurrentState('final_report.depreciation', depreciationData);
+      updateBuilderCurrentState('final_report.adjustments', adjustmentsData);
+      updateBuilderCurrentState('final_report.legal_text', legalText);
       
       alert('חוות דעת נשמרה בהצלחה');
     };
@@ -1877,8 +1877,8 @@
       window.saveEstimate();
       
       // Set report type and navigate
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      window.location.href = 'estimate-validation.html';
+      sessionStorage.setItem('selectedReportType', 'final-report');
+      window.location.href = 'final-report-validation.html';
     };
 
     window.generateEstimate = function() {
@@ -1886,8 +1886,8 @@
       window.saveEstimate();
       
       // Set report type and navigate to final report generation
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      window.location.href = 'estimate-report-builder.html';
+      sessionStorage.setItem('selectedReportType', 'final-report');
+      window.location.href = 'final-report-builder.html';
     };
 
     // Convert various date formats to YYYY-MM-DD for date input
@@ -2071,8 +2071,8 @@
         loadDepreciationData(helper);
         
         // Load garage days data
-        if (helper.estimate_work_days || helper.expertise?.depreciation?.work_days) {
-          document.getElementById('garageDays').value = helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '';
+        if (helper.final_report?.work_days || helper.expertise?.depreciation?.work_days) {
+          document.getElementById('garageDays').value = helper.final_report?.work_days || helper.expertise?.depreciation?.work_days || '';
         }
         
         // Load damage centers summary
@@ -2094,19 +2094,19 @@
     // LOAD SUMMARY DATA AND CALCULATIONS
     function loadSummaryData(helper) {
       try {
-        // Set report type based on estimate type selection
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+        // Set report type based on final report type selection
+        const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
         const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
         // Check if we have saved summary data first
-        if (helper.estimate_summary) {
-          document.getElementById('sumMarketValue').value = helper.estimate_summary.market_value || '';
-          document.getElementById('sumClaim').value = helper.estimate_summary.total_claim || '';
-          document.getElementById('sumVAT').value = helper.estimate_summary.vat || '';
-          document.getElementById('sumTotalClaim').value = helper.estimate_summary.total_with_vat || '';
-          document.getElementById('depCompensation').value = helper.estimate_summary.dep_compensation || '';
-          document.getElementById('salvageValue').value = helper.estimate_summary.salvage_value || '';
+        if (helper.final_report?.summary) {
+          document.getElementById('sumMarketValue').value = helper.final_report.summary.market_value || '';
+          document.getElementById('sumClaim').value = helper.final_report.summary.total_claim || '';
+          document.getElementById('sumVAT').value = helper.final_report.summary.vat || '';
+          document.getElementById('sumTotalClaim').value = helper.final_report.summary.total_with_vat || '';
+          document.getElementById('depCompensation').value = helper.final_report.summary.dep_compensation || '';
+          document.getElementById('salvageValue').value = helper.final_report.summary.salvage_value || '';
         } else {
           // Load from helper calculations if no saved summary
           const marketValue = helper.expertise?.calculations?.market_value || 0;
@@ -2130,9 +2130,9 @@
           document.getElementById('depCompensation').value = depCompensation ? `₪${depCompensation.toLocaleString()}` : '';
         }
         
-        // Load saved estimate notes if available
-        if (helper.estimate_notes) {
-          document.getElementById('additional-notes').value = helper.estimate_notes;
+        // Load saved final report notes if available
+        if (helper.final_report?.notes) {
+          document.getElementById('additional-notes').value = helper.final_report.notes;
         }
         
         // Add event listeners for real-time calculations
@@ -2293,24 +2293,24 @@
     function loadDepreciationData(helper) {
       try {
         console.log('🔄 loadDepreciationData called with helper:', helper);
-        console.log('🔄 helper.estimate_depreciation:', helper.estimate_depreciation);
+        console.log('🔄 helper.final_report.depreciation:', helper.final_report?.depreciation);
         
         // Load saved depreciation data if available
-        if (helper.estimate_depreciation) {
+        if (helper.final_report?.depreciation) {
           console.log('✅ Found saved depreciation data, loading it');
           // Load global depreciation
-          document.getElementById('globalDep1').value = helper.estimate_depreciation.global_percent || '';
-          document.getElementById('globalDepValue').value = helper.estimate_depreciation.global_value || '';
+          document.getElementById('globalDep1').value = helper.final_report.depreciation.global_percent || '';
+          document.getElementById('globalDepValue').value = helper.final_report.depreciation.global_value || '';
           
           // Load bulk depreciation table
-          if (helper.estimate_depreciation.bulk_items) {
+          if (helper.final_report.depreciation.bulk_items) {
             // Clear existing rows to prevent duplication
             const depreciationContainer = document.getElementById('depreciationBulkTable');
             if (depreciationContainer) {
               depreciationContainer.innerHTML = '';
             }
             
-            helper.estimate_depreciation.bulk_items.forEach(item => {
+            helper.final_report.depreciation.bulk_items.forEach(item => {
               console.log('🔄 Loading depreciation item:', item);
               addDepField(item);
             });
@@ -2658,11 +2658,11 @@
     function loadAllAdjustmentsImmediate(helper) {
       try {
         console.log('🔄 Loading all adjustments (immediate)');
-        const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
+        const adjustmentsContainer = document.getElementById('allAdjustmentsRows-final-report');
         
         // Add null check for DOM element
         if (!adjustmentsContainer) {
-          console.warn('DOM element allAdjustmentsRows-estimate not found, skipping adjustments load');
+          console.warn('DOM element allAdjustmentsRows-final-report not found, skipping adjustments load');
           return;
         }
         
@@ -2746,25 +2746,25 @@
         
       } catch (error) {
         console.error('Error loading all adjustments:', error);
-        document.getElementById('allAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות</div>';
+        document.getElementById('allAdjustmentsRows-final-report').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות</div>';
       }
       
       // Load saved adjustments data (תוספות והורדות) from Helper
-      if (helper.estimate_adjustments) {
-        console.log('📋 Loading saved adjustments from Helper:', helper.estimate_adjustments);
+      if (helper.final_report?.adjustments) {
+        console.log('📋 Loading saved adjustments from Helper:', helper.final_report.adjustments);
         
         // Clear existing rows to prevent duplication
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
-        const estimateContainer = document.getElementById('allAdjustmentsRows-estimate');
+        const finalReportContainer = document.getElementById('allAdjustmentsRows-final-report');
         
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
-        // Don't clear estimate container here as it might have Levi data
+        // Don't clear final report container here as it might have Levi data
         
         // Load feature adjustments (תוספות מאפיינים)
-        if (helper.estimate_adjustments.features) {
-          helper.estimate_adjustments.features.forEach(adj => {
+        if (helper.final_report.adjustments.features) {
+          helper.final_report.adjustments.features.forEach(adj => {
             addFeatureAdjustment();
             const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2781,8 +2781,8 @@
         }
         
         // Load registration adjustments (עליה לכביש)
-        if (helper.estimate_adjustments.registration) {
-          helper.estimate_adjustments.registration.forEach(adj => {
+        if (helper.final_report.adjustments.registration) {
+          helper.final_report.adjustments.registration.forEach(adj => {
             addRegistrationAdjustment();
             const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
@@ -2798,11 +2798,11 @@
           });
         }
         
-        // Load estimate adjustments (התאמות אומדן)
-        if (helper.estimate_adjustments.estimate) {
-          helper.estimate_adjustments.estimate.forEach(adj => {
+        // Load final report adjustments (התאמות דוח סופי)
+        if (helper.final_report.adjustments.final_report) {
+          helper.final_report.adjustments.final_report.forEach(adj => {
             addEstimateAdjustment();
-            const rows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+            const rows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
             const lastRow = rows[rows.length - 1];
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input');
@@ -2957,7 +2957,7 @@
     // ADD EVENT LISTENERS FOR ADJUSTMENT FIELDS
     function addAdjustmentEventListeners() {
       // Remove existing event listeners to prevent duplicates
-      const existingInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source], #allAdjustmentsRows-estimate select[data-source]');
+      const existingInputs = document.querySelectorAll('#allAdjustmentsRows-final-report input[data-source], #allAdjustmentsRows-final-report select[data-source]');
       existingInputs.forEach(element => {
         // Clone element to remove all event listeners
         const newElement = element.cloneNode(true);
@@ -2965,7 +2965,7 @@
       });
       
       // Add fresh event listeners to all adjustment inputs (both custom and levi)
-      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source], #allAdjustmentsRows-estimate select[data-source]');
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-final-report input[data-source], #allAdjustmentsRows-final-report select[data-source]');
       
       console.log(`🔗 Adding event listeners to ${adjustmentInputs.length} adjustment inputs`);
       
@@ -3394,7 +3394,7 @@
               try {
                 iframe.contentWindow.postMessage({
                   type: 'refreshData',
-                  source: 'estimate-builder',
+                  source: 'final-report-builder',
                   calculations: helper.calculations,
                   timestamp: new Date().toISOString()
                 }, '*');
@@ -3409,7 +3409,7 @@
         window.dispatchEvent(new CustomEvent('helperDataUpdated', {
           detail: { 
             timestamp: new Date().toISOString(),
-            source: 'estimate-builder',
+            source: 'final-report-builder',
             calculations: helper.calculations
           }
         }));
@@ -3462,7 +3462,7 @@
       
       // 5. Test manual adjustment input
       console.log('5️⃣ Testing manual adjustment input...');
-      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-estimate input[data-source="custom"]');
+      const adjustmentInputs = document.querySelectorAll('#allAdjustmentsRows-final-report input[data-source="custom"]');
       console.log('   Found adjustment inputs:', adjustmentInputs.length);
       
       if (adjustmentInputs.length > 0) {
@@ -3530,7 +3530,7 @@
           } else if (fieldId === 'carPlate') {
             // CRITICAL FIX: Use centralized plate standardization function
             if (window.setPlateNumber) {
-              window.setPlateNumber(value, 'estimate-builder');
+              window.setPlateNumber(value, 'final-report-builder');
             } else {
               // Fallback: standardize manually
               const standardizedPlate = value ? String(value).replace(/[-\s]/g, '') : '';
@@ -3620,9 +3620,9 @@
         } else if (['sumMarketValue', 'sumClaim', 'sumVAT', 'sumTotalClaim', 'depCompensation', 'salvageValue', 'garageDays'].includes(fieldId)) {
           // Handle garage days separately
           if (fieldId === 'garageDays') {
-            helper.estimate_work_days = value;
+            helper.final_report.work_days = value;
           } else {
-            helper.estimate_summary = helper.estimate_summary || {};
+            helper.final_report.summary = helper.final_report.summary || {};
             const mapping = {
               'sumMarketValue': 'market_value',
               'sumClaim': 'total_claim',
@@ -3631,7 +3631,7 @@
               'depCompensation': 'dep_compensation',
               'salvageValue': 'salvage_value'
             };
-            helper.estimate_summary[mapping[fieldId]] = value;
+            helper.final_report.summary[mapping[fieldId]] = value;
           }
         }
         
@@ -3673,7 +3673,7 @@
 
     // UPDATE REPORT TYPE
     function updateReportType() {
-      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
       const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
       document.getElementById('reportType').value = reportTypeText;
     }
@@ -3744,13 +3744,13 @@
         '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
         '%קוד_דגם%': document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
         '%אחוז_נזק%': document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
-        '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.estimate_depreciation?.global_percent || '[ירידת ערך]',
+        '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent || '[ירידת ערך]',
         '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
-        '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.estimate_work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
+        '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
         '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
         '%שווי_שרידים%': (() => {
           const salvageInput = document.getElementById('salvageValue')?.value;
-          const helperSalvage = helper.estimate_summary?.salvage_value || helper.estimate_salvage_value;
+          const helperSalvage = helper.final_report?.summary?.salvage_value || helper.final_report?.salvage_value;
           
           if (salvageInput && salvageInput.trim() !== '' && salvageInput !== '₪0') {
             return salvageInput;
@@ -3785,7 +3785,7 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      console.log('Legal text loaded from vault and saved to estimate');
+      console.log('Legal text loaded from vault and saved to final report');
     }
 
     // RESET LEGAL TEXT
@@ -3829,8 +3829,8 @@
       
       // Save to helper and LOCK the selection
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_attachments = attachmentsText;
-      helper.estimate_attachments_locked = true; // Lock the selection
+      helper.final_report.attachments = attachmentsText;
+      helper.final_report.attachments_locked = true; // Lock the selection
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('📎 Attachments loaded from vault for type:', reportType, 'and LOCKED');
@@ -3844,7 +3844,7 @@
       
       // Clear from helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      delete helper.estimate_attachments;
+      delete helper.final_report.attachments;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
       console.log('Attachments reset');
@@ -3855,16 +3855,16 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Load saved attachments if they exist and are locked
-      if (helper.estimate_attachments && helper.estimate_attachments_locked) {
+      if (helper.final_report?.attachments && helper.final_report?.attachments_locked) {
         const attachmentsElement = document.getElementById('attachments-content');
         if (attachmentsElement) {
-          attachmentsElement.value = helper.estimate_attachments;
+          attachmentsElement.value = helper.final_report.attachments;
           console.log('📎 Loaded LOCKED attachments from helper - will not revert to default');
         }
-      } else if (helper.estimate_attachments) {
+      } else if (helper.final_report?.attachments) {
         const attachmentsElement = document.getElementById('attachments-content');
         if (attachmentsElement) {
-          attachmentsElement.value = helper.estimate_attachments;
+          attachmentsElement.value = helper.final_report.attachments;
           console.log('📎 Loaded saved attachments from helper (not locked)');
         }
       } else {
@@ -4476,19 +4476,19 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        if (!helper.final_report.adjustments) helper.final_report.adjustments = {};
+        if (!helper.final_report.adjustments[category]) helper.final_report.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.final_report.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.final_report.adjustments[category][existingIndex] = adjustmentData;
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.final_report.adjustments[category].push(adjustmentData);
         }
         
         // Save to storage
@@ -4550,8 +4550,8 @@
     // LOAD SUMMARY DATA AND CALCULATIONS
     function loadSummaryData(helper) {
       try {
-        // Set report type based on estimate type selection
-        const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+        // Set report type based on final report type selection
+        const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
         const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
@@ -4586,20 +4586,20 @@
         };
         
         // Initialize helper structure
-        if (!helper.estimate_adjustments) helper.estimate_adjustments = {};
-        if (!helper.estimate_adjustments[category]) helper.estimate_adjustments[category] = [];
+        if (!helper.final_report.adjustments) helper.final_report.adjustments = {};
+        if (!helper.final_report.adjustments[category]) helper.final_report.adjustments[category] = [];
         
         // Find existing adjustment by row ID or add new one
         const rowId = row.id;
-        const existingIndex = helper.estimate_adjustments[category].findIndex(adj => adj.rowId === rowId);
+        const existingIndex = helper.final_report.adjustments[category].findIndex(adj => adj.rowId === rowId);
         
         adjustmentData.rowId = rowId;
         
         if (existingIndex >= 0) {
-          helper.estimate_adjustments[category][existingIndex] = adjustmentData;
+          helper.final_report.adjustments[category][existingIndex] = adjustmentData;
           console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
         } else {
-          helper.estimate_adjustments[category].push(adjustmentData);
+          helper.final_report.adjustments[category].push(adjustmentData);
           console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
         }
         
@@ -4847,7 +4847,7 @@
       }
       
       // Clear DOM
-      const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
+      const adjustmentsContainer = document.getElementById('allAdjustmentsRows-final-report');
       if (adjustmentsContainer) {
         adjustmentsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">נתוני התאמות נמחקו - השתמש בכפתור "הוסף התאמה נוספת"</div>';
       }
@@ -4868,7 +4868,7 @@
         
         // CRITICAL FIX: Check if there are any user-created adjustments
         // If not, don't process anything to prevent circular data creation
-        const userCreatedRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-user-created="true"]');
+        const userCreatedRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-user-created="true"]');
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         
@@ -4893,7 +4893,7 @@
         console.log('🔍 DEBUG: DOM elements check:', {
           featuresAdjustmentsList: !!document.getElementById('featuresAdjustmentsList'),
           registrationAdjustmentsList: !!document.getElementById('registrationAdjustmentsList'),
-          allAdjustmentsRows: !!document.getElementById('allAdjustmentsRows-estimate')
+          allAdjustmentsRows: !!document.getElementById('allAdjustmentsRows-final-report')
         });
         
         // Initialize structures
@@ -4987,9 +4987,9 @@
           }
         });
         
-        // Collect other adjustments from allAdjustmentsRows-estimate and map to parameters
+        // Collect other adjustments from allAdjustmentsRows-final-report and map to parameters
         // CRITICAL FIX: Only process manually added adjustments, not ones loaded from helper
-        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"][data-user-created="true"]');
+        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"][data-user-created="true"]');
         console.log('🔍 DEBUG: Found user-created adjustment rows:', allAdjustmentRows.length);
         allAdjustmentRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
@@ -5866,11 +5866,11 @@
     
     // ESTIMATE ADJUSTMENTS FUNCTIONS
     
-    // Add estimate adjustment row
+    // Add final report adjustment row
     function addEstimateAdjustment() {
-      const container = document.getElementById('allAdjustmentsRows-estimate');
+      const container = document.getElementById('allAdjustmentsRows-final-report');
       if (!container) {
-        console.error('Container allAdjustmentsRows-estimate not found');
+        console.error('Container allAdjustmentsRows-final-report not found');
         return;
       }
       
@@ -5893,7 +5893,7 @@
       updateEstimateAdjustments();
     }
     
-    // Remove estimate adjustment row
+    // Remove final report adjustment row
     function removeEstimateAdjustmentRow(rowId) {
       const row = document.getElementById(rowId);
       if (row) {
@@ -5902,7 +5902,7 @@
       }
     }
     
-    // Calculate estimate adjustment value from percentage
+    // Calculate final report adjustment value from percentage
     function calculateEstimateAdjustmentValue(percentageInput) {
       const row = percentageInput.closest('div');
       let basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 0;
@@ -5914,7 +5914,7 @@
         const grossMarketValue = parseFloat(document.getElementById('grossMarketValue')?.value.replace(/[₪,]/g, '')) || 0;
         if (grossMarketValue > 0) {
           basicPrice = grossMarketValue;
-          console.log('📊 Using grossMarketValue for estimate adjustment calculation:', basicPrice);
+          console.log('📊 Using grossMarketValue for final report adjustment calculation:', basicPrice);
         }
       }
       
@@ -5928,7 +5928,7 @@
         } else if (helper.car_details?.base_price) {
           basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
         }
-        console.log('📊 Using helper price for estimate adjustment calculation:', basicPrice);
+        console.log('📊 Using helper price for final report adjustment calculation:', basicPrice);
       }
       
       if (percentage && basicPrice) {
@@ -5937,25 +5937,25 @@
         if (inputs.length > 2) {
           const valueInput = inputs[2]; // value field is the third input
           valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-          console.log(`💰 Calculated estimate adjustment value: ${percentage}% × ₪${basicPrice.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+          console.log(`💰 Calculated final report adjustment value: ${percentage}% × ₪${basicPrice.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
           
           // Trigger change event to update other calculations
           valueInput.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
-          console.error('Cannot find value input field for estimate adjustment calculation');
+          console.error('Cannot find value input field for final report adjustment calculation');
         }
       } else {
-        console.warn(`⚠️ Cannot calculate estimate adjustment value - basicPrice: ${basicPrice}, percentage: ${percentage}`);
+        console.warn(`⚠️ Cannot calculate final report adjustment value - basicPrice: ${basicPrice}, percentage: ${percentage}`);
         if (basicPrice === 0) {
           console.warn('⚠️ No car price found. Please set the basic price first.');
         }
       }
     }
     
-    // Update estimate adjustments in helper
+    // Update final report adjustments in helper
     function updateEstimateAdjustments() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const adjustmentRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
+      const adjustmentRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
       const adjustments = [];
       
       adjustmentRows.forEach(row => {
@@ -6239,7 +6239,7 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
-          updateBuilderCurrentState('estimate_legal_text', this.value);
+          updateBuilderCurrentState('final_report.legal_text', this.value);
         });
       }
       
@@ -6248,11 +6248,11 @@
       if (attachmentsArea) {
         attachmentsArea.addEventListener('input', function() {
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.estimate_attachments = this.value;
+          helper.final_report.attachments = this.value;
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
-          updateBuilderCurrentState('estimate_attachments', this.value);
+          updateBuilderCurrentState('final_report.attachments', this.value);
         });
       }
       
@@ -7440,7 +7440,7 @@
         }
         
         // Estimate type change listener
-        document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
+        document.querySelectorAll('input[name="final-report-type"]').forEach(radio => {
           radio.addEventListener('change', function() {
             updateReportType();
             loadLegalText();
@@ -7687,9 +7687,9 @@
     
     // Section configuration mapping - Updated to include ALL sections with editable fields
     const sectionConfig = {
-      'estimate-type': {
-        helperKey: 'manual_estimate_type',
-        fields: ['estimate-type'],
+      'final-report-type': {
+        helperKey: 'manual_final_report_type',
+        fields: ['final-report-type'],
         loadFunction: null,
         name: 'סוג אומדן'
       },
@@ -7785,9 +7785,9 @@
         });
         
         // Handle special cases for dynamic content
-        if (sectionId === 'estimate-type') {
-          const checkedRadio = document.querySelector('input[name="estimate-type"]:checked');
-          sectionData.estimateType = checkedRadio ? checkedRadio.value : '';
+        if (sectionId === 'final-report-type') {
+          const checkedRadio = document.querySelector('input[name="final-report-type"]:checked');
+          sectionData.finalReportType = checkedRadio ? checkedRadio.value : '';
         } else if (sectionId === 'damage-centers') {
           sectionData.damageCenters = collectDamageCentersData();
         } else if (sectionId === 'gross-calculation') {
@@ -7871,8 +7871,8 @@
           });
           
           // Handle special cases for dynamic content
-          if (sectionId === 'estimate-type' && manualData.estimateType) {
-            const radioButton = document.querySelector(`input[name="estimate-type"][value="${manualData.estimateType}"]`);
+          if (sectionId === 'final-report-type' && manualData.finalReportType) {
+            const radioButton = document.querySelector(`input[name="final-report-type"][value="${manualData.finalReportType}"]`);
             if (radioButton) radioButton.checked = true;
           } else if (sectionId === 'damage-centers' && manualData.damageCenters) {
             restoreDamageCentersData(manualData.damageCenters);
@@ -8612,7 +8612,7 @@
         // Update the specific key
         builderState[key] = value;
         builderState.last_update = new Date().toISOString();
-        builderState.source = 'estimate-builder';
+        builderState.source = 'final-report-builder';
         
         // Save updated state
         sessionStorage.setItem('builderCurrentState', JSON.stringify(builderState));
@@ -8649,13 +8649,13 @@
           owner_phone: helper.stakeholders?.owner?.phone,
           insurance_company: helper.stakeholders?.insurance?.company || helper.client?.insurance_company || helper.insurance_company,
           
-          // Estimate data - use estimate section
-          estimate_type: helper.estimate?.type || helper.estimate_type,
-          estimate_notes: helper.estimate?.notes || helper.estimate_notes,
-          estimate_work_days: helper.estimate?.work_days || helper.estimate_work_days,
+          // Final report data - use final report section
+          final_report_type: helper.final_report?.type || helper.final_report_type,
+          final_report_notes: helper.final_report?.notes || helper.final_report_notes,
+          final_report_work_days: helper.final_report?.work_days || helper.final_report_work_days,
           // Legal text for final report comes from final_report object
           final_report_legal_text: helper.final_report?.legal_text || '',
-          estimate_depreciation: helper.estimate_depreciation,
+          final_report_depreciation: helper.final_report?.depreciation,
           
           // Calculations
           calculations: helper.calculations,
@@ -8663,7 +8663,7 @@
           
           // Metadata
           initialized_at: new Date().toISOString(),
-          source: 'estimate-builder',
+          source: 'final-report-builder',
           version: '1.0'
         };
         

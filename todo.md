@@ -391,7 +391,7 @@ for adj in [ownership_type, mileage, num_owners]:
 final_value = current_value
 
 In the market value section , we will need to give each adjustment a separate bulk like in the gross price. Each bulk will have its distinct title, in each bulk there gonna be an add field option , this will ensure that order is maintained .
-This setup is for both estimate builder and final report builder.
+This setup is for both estimate builder and final report builder also for the levi report manual option we have on the levi page 
 Each field need to import the full data from the correspondent adjustment field in Levi helper.
 Each field by default has the math logic inside it , when data is imported the math engine doesn’t  override the import , the math engine will work just if the value field was not properly populated or it is a manual input
 
