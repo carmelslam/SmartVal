@@ -218,5 +218,7 @@ ROUTER.register('dev-panel', () => {
   // Dev panel provides helper debugging and system diagnostics
 });
 
-// ⚙️ Auto-start
-document.addEventListener('DOMContentLoaded', () => ROUTER.autoDetectAndInit());
+// ⚙️ Auto-start handled by bootstrap.js
+export function initializeRouter() {
+  ROUTER.autoDetectAndInit();
+}

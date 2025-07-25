@@ -693,6 +693,8 @@ const EstimateEngine = {
 };
 
 window.estimateEngine = EstimateEngine;
-document.addEventListener('DOMContentLoaded', () => EstimateEngine.init());
+export function initializeEstimateEngine() {
+  EstimateEngine.init();
+}
 
 console.log('✅ Enhanced estimate.js loaded');

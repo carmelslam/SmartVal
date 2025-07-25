@@ -622,28 +622,7 @@ if (existingHelper && typeof existingHelper === 'object') {
   }, 500);
 }
 
-// 🔧 CRITICAL: Also watch for DOM changes and ensure forms are populated
-if (typeof window !== 'undefined') {
-  // Set up immediate population when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        console.log('🔄 DOM loaded - force populating forms...');
-        if (window.helper && Object.keys(window.helper).length > 0) {
-          populateAllForms();
-        }
-      }, 1000);
-    });
-  } else {
-    // DOM already ready, populate immediately
-    setTimeout(() => {
-      console.log('🔄 DOM ready - force populating forms...');
-      if (window.helper && Object.keys(window.helper).length > 0) {
-        populateAllForms();
-      }
-    }, 1000);
-  }
-}
+// 🔧 CRITICAL: Form population will be triggered by bootstrap.js
 
 // Enhanced processIncomingData function with comprehensive field mapping
 window.processIncomingData = async function(data, webhookId = 'unknown') {
@@ -2024,14 +2003,7 @@ window.getOwnerData = function() {
   return window.helper?.stakeholders?.owner || {};
 };
 
-// Auto-populate on load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => populateAllForms(), 300);
-  });
-} else {
-  setTimeout(() => populateAllForms(), 300);
-}
+// Auto-population will be triggered by bootstrap.js
 
 console.log('✅ Helper system loaded and ready');
 
@@ -2229,14 +2201,7 @@ window.setupUniversalInputCapture = function() {
   return { monitored: allInputs.length, observer };
 };
 
-// Auto-setup when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => window.setupUniversalInputCapture(), 1000);
-  });
-} else {
-  setTimeout(() => window.setupUniversalInputCapture(), 1000);
-}
+// DOM setup will be triggered by bootstrap.js
 
 // Export all the functions that other modules need
 export const helper = window.helper;
@@ -2407,6 +2372,12 @@ export function markFieldAsManuallyModified(fieldId, value, origin) {
 export function refreshAllModuleForms() {
   console.log('🔄 Refreshing all module forms...');
   populateAllForms();
+}
+
+// Initialize DOM-dependent helper features
+export function initializeHelperUI() {
+  populateAllFormsWithRetry();
+  window.setupUniversalInputCapture();
 }
 
 // Removed duplicate protectPlateNumber export - already exported above

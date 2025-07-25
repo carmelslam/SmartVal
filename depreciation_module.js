@@ -1332,4 +1332,6 @@ function triggerMathCalculation() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+export function initializeDepreciationModule() {
+  init();
+}
