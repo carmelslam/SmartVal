@@ -5568,14 +5568,64 @@
       }
     }
     
-    // Calculate and update full market value using CORRECT SEQUENTIAL LOGIC
+    /**
+     * Calculate the final appraised vehicle value based on adjustments.
+     * Uses the correct two-phase calculation method from todo.md documentation.
+     *
+     * @param {number} basePrice - The anchor/base vehicle price.
+     * @param {object} adjustments - An object with optional adjustment parameters
+     * @returns {number} - The final appraised value.
+     */
+    function calculateVehicleValue(basePrice, adjustments) {
+      if (typeof basePrice !== 'number' || isNaN(basePrice)) {
+        throw new Error('Invalid base price');
+      }
+      
+      const safeAdj = (adj, current) => {
+        if (!adj) return 0;
+        if (adj.percent && typeof adj.percent === 'number') {
+          return current * (adj.percent / 100);
+        }
+        if (adj.fixed && typeof adj.fixed === 'number') {
+          return adj.fixed;
+        }
+        return 0;
+      };
+      
+      // Step 1: Independent adjustments (Features + Registration) using Base Price
+      const featuresAdj = safeAdj(adjustments.features, basePrice);
+      const registrationAdj = safeAdj(adjustments.registration, basePrice);
+      const grossValue = basePrice + featuresAdj + registrationAdj;
+      
+      console.log('📊 Phase 1 - Independent adjustments:', {
+        basePrice,
+        featuresAdj,
+        registrationAdj,
+        grossValue
+      });
+      
+      // Step 2: Sequential adjustments (Ownership → Mileage → Number of Owners)
+      let currentValue = grossValue;
+      for (const key of ['ownershipType', 'mileage', 'numOwners']) {
+        const adj = adjustments[key];
+        if (!adj) continue; // skip if missing or zero
+        const adjAmount = safeAdj(adj, currentValue);
+        const previousValue = currentValue;
+        currentValue += adjAmount; // apply sequentially
+        console.log(`📊 Phase 2 - ${key}: ${previousValue.toLocaleString()} + ${adjAmount.toLocaleString()} = ${currentValue.toLocaleString()}`);
+      }
+      
+      return Math.round(currentValue); // round to nearest whole currency unit
+    }
+
+    // Calculate and update full market value using CORRECT TWO-PHASE LOGIC
     function updateFullMarketValueCalculation() {
       try {
-        console.log('🔥 Starting Full Market Value Calculation using UI field values...');
+        console.log('🔥 Starting Full Market Value Calculation using correct two-phase logic...');
         
-        // ✅ Step 1: Get base price from UI field (fallback to helper if empty)
+        // Step 1: Get base price from UI field (fallback to helper if empty)
         const basicPriceField = document.getElementById('fullBasicPrice');
-        let basePrice = 118000; // Default fallback
+        let basePrice = 118000; // Default fallback - the actual base price from price list
         
         if (basicPriceField && basicPriceField.value) {
           const cleanBasePrice = basicPriceField.value.replace(/[₪,]/g, '');
@@ -5591,11 +5641,15 @@
         
         console.log('📊 Base price:', basePrice);
         
-        // ✅ Step 2: Read ALL adjustment values from UI fields
+        // Step 2: Parse adjustments from UI fields and categorize them
         const adjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
-        let featuresAmount = 0;
-        let registrationAmount = 0;
-        let totalAdjustments = 0;
+        const adjustments = {
+          features: null,
+          registration: null,
+          ownershipType: null,
+          mileage: null,
+          numOwners: null
+        };
         
         console.log('🔍 Found', adjustmentRows.length, 'adjustment rows');
         
@@ -5607,70 +5661,67 @@
             const description = inputs[0].value.toLowerCase();
             const adjustmentType = select.value; // 'plus' or 'minus'
             const percentage = parseFloat(inputs[1].value) || 0;
-            let amount = 0;
+            const isNegative = adjustmentType === 'minus';
             
-            // Parse amount field (now includes sign from visual display)
-            if (inputs[2].value) {
-              amount = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+            // Determine adjustment category and type
+            let adjValue = null;
+            let category = null;
+            
+            if (percentage > 0) {
+              adjValue = { percent: isNegative ? -percentage : percentage };
+            } else if (inputs[2].value) {
+              const fixedAmount = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+              adjValue = { fixed: isNegative ? -fixedAmount : fixedAmount };
             }
             
-            console.log(`🔍 RAW values - Row ${index + 1}: desc="${inputs[0].value}", type="${adjustmentType}", percent="${inputs[1].value}", amount="${inputs[2].value}"`);
-            console.log(`💰 Parsed amount with sign: ${amount}`);
-            
-            console.log(`📋 Row ${index + 1}: ${description} = ${adjustmentType} ${percentage}% = ₪${amount}`);
-            
-            // Categorize adjustments for sequential calculation
+            // Categorize adjustments based on description
             if (description.includes('מאפיינים') || description.includes('features')) {
-              featuresAmount += amount;
+              category = 'features';
             } else if (description.includes('עליה לכביש') || description.includes('registration')) {
-              registrationAmount += amount;
-            } else {
-              // All other adjustments (mileage, ownership) are sequential
-              totalAdjustments += amount;
+              category = 'registration';
+            } else if (description.includes('בעלות') || description.includes('ownership')) {
+              category = 'ownershipType';
+            } else if (description.includes('ק"מ') || description.includes('mileage')) {
+              category = 'mileage';
+            } else if (description.includes('בעלים') || description.includes('owners')) {
+              category = 'numOwners';
+            }
+            
+            if (category && adjValue) {
+              adjustments[category] = adjValue;
+              console.log(`📋 Row ${index + 1}: ${category} = ${JSON.stringify(adjValue)}`);
             }
           }
         });
         
-        // ✅ Step 3: Apply SEQUENTIAL CALCULATION (from todo.md)
-        // Base + Features + Registration = Gross
-        const grossValue = basePrice + featuresAmount + registrationAmount;
-        console.log('📊 Gross Value calculation:', { basePrice, featuresAmount, registrationAmount, grossValue });
+        // Step 3: Calculate using the correct two-phase method
+        const finalValue = calculateVehicleValue(basePrice, adjustments);
         
-        // Apply remaining adjustments sequentially
-        let finalValue = grossValue + totalAdjustments;
-        finalValue = Math.max(0, finalValue);
+        console.log('✅ FINAL MARKET VALUE (two-phase calculation):', finalValue);
         
-        console.log('🎯 Sequential calculation:', {
-          grossValue: grossValue,
-          totalAdjustments: totalAdjustments,
-          finalValue: finalValue
-        });
-        
-        console.log('✅ FINAL MARKET VALUE (from UI fields):', finalValue);
-        
-        // ✅ Step 4: Update the basic price field if it was empty
+        // Step 4: Update the basic price field if it was empty
         if (basicPriceField && !basicPriceField.value) {
           basicPriceField.value = `₪${basePrice.toLocaleString()}`;
         }
         
-        // ✅ Step 5: Update the final result field
+        // Step 5: Update the final result field
         const fullMarketValueResult = document.getElementById('fullMarketValueResult');
         if (fullMarketValueResult) {
           fullMarketValueResult.value = `₪${finalValue.toLocaleString()}`;
           console.log('✅ Updated fullMarketValueResult field with:', finalValue);
         }
         
-        // ✅ Step 6: Also update summary field if it exists
+        // Step 6: Also update summary field if it exists
         const sumMarketValueField = document.getElementById('sumMarketValue');
         if (sumMarketValueField) {
           sumMarketValueField.value = `₪${finalValue.toLocaleString()}`;
           console.log('✅ Updated sumMarketValue field with:', finalValue);
         }
         
-        console.log('🎯 Full Market Value Calculation completed using UI field values!');
+        console.log('🎯 Full Market Value Calculation completed using correct two-phase logic!');
         
       } catch (error) {
-        console.error('Error calculating full market value from UI fields:', error);
+        console.error('Error calculating full market value:', error);
       }
     }
     
