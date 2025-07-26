@@ -5668,10 +5668,18 @@
             let category = null;
             
             if (percentage > 0) {
-              adjValue = { percent: isNegative ? -percentage : percentage };
+              // Check if percentage already has negative sign
+              const hasNegativeSign = inputs[1].value.includes('-');
+              const finalPercent = hasNegativeSign ? -Math.abs(percentage) : (isNegative ? -percentage : percentage);
+              adjValue = { percent: finalPercent };
             } else if (inputs[2].value) {
-              const fixedAmount = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
-              adjValue = { fixed: isNegative ? -fixedAmount : fixedAmount };
+              // Check if amount already has negative sign
+              const hasNegativeSign = inputs[2].value.includes('-');
+              let fixedAmount = parseFloat(inputs[2].value.replace(/[₪,-]/g, '')) || 0;
+              if (hasNegativeSign || isNegative) {
+                fixedAmount = -Math.abs(fixedAmount);
+              }
+              adjValue = { fixed: fixedAmount };
             }
             
             // Categorize adjustments based on description
