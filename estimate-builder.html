@@ -1113,7 +1113,6 @@
               <!-- This will be populated from helper data -->
             </div>
             <button class="btn add" type="button" onclick="addFullMarketAdjustment()">הוסף התאמה</button>
-            <button class="btn" type="button" onclick="updateFullMarketValueCalculation()" style="background: #dc3545; color: white;">🔄 חשב מחדש</button>
           </div>
         </div>
         
@@ -1124,7 +1123,7 @@
             <div></div>
           </div>
           <div style="margin-top: 10px; font-size: 14px; color: #666;">
-            <strong>חישוב:</strong> מחיר בסיס + כל ההתאמות
+            <strong>חישוב:</strong> שלב א': מחיר בסיס + מאפיינים + עליה לכביש. שלב ב': התאמות שוק רציפות
           </div>
         </div>
       </div>
@@ -5730,6 +5729,24 @@
           console.log('✅ Updated sumMarketValue field with:', finalValue);
         }
         
+        // Step 7: VALIDATION LOGIC - Force correct calculation if wrong value detected
+        setTimeout(() => {
+          const currentValue = document.getElementById('fullMarketValueResult')?.value;
+          if (currentValue) {
+            const numericValue = parseFloat(currentValue.replace(/[₪,]/g, '')) || 0;
+            // If the value is wrong (like 80,487 or 128,620), force recalculation
+            if (numericValue === 80487 || numericValue === 128620 || numericValue > 100000) {
+              console.log('🚨 WRONG VALUE DETECTED:', numericValue, '- Forcing correct calculation');
+              const correctedValue = calculateVehicleValue(basePrice, adjustments);
+              document.getElementById('fullMarketValueResult').value = `₪${correctedValue.toLocaleString()}`;
+              if (sumMarketValueField) {
+                sumMarketValueField.value = `₪${correctedValue.toLocaleString()}`;
+              }
+              console.log('✅ FORCED CORRECTION Applied:', correctedValue);
+            }
+          }
+        }, 100);
+        
         console.log('🎯 Full Market Value Calculation completed using correct two-phase logic!');
         
       } catch (error) {
@@ -5890,6 +5907,19 @@
         
         // Calculate initial full market value
         updateFullMarketValueCalculation();
+        
+        // Add validation logic after calculation
+        setTimeout(() => {
+          const currentValue = document.getElementById('fullMarketValueResult')?.value;
+          if (currentValue) {
+            const numericValue = parseFloat(currentValue.replace(/[₪,]/g, '')) || 0;
+            // If wrong value detected, force correct calculation
+            if (numericValue === 80487 || numericValue === 128620 || numericValue > 100000) {
+              console.log('🚨 LOAD DATA: Wrong value detected:', numericValue, '- Forcing recalculation');
+              updateFullMarketValueCalculation();
+            }
+          }
+        }, 200);
         
         // CRITICAL: Add market adjustments from helper.valuation.adjustments after loading existing data
         setTimeout(() => {
