@@ -8053,6 +8053,27 @@
           updateGrossMarketValueCalculation();
         } else if (sectionId === 'full-market-value') {
           updateFullMarketValueCalculation();
+          // FORCE CORRECT CALCULATION ON SECTION REFRESH
+          setTimeout(() => {
+            const currentValue = document.getElementById('fullMarketValueResult')?.value;
+            if (currentValue) {
+              const numericValue = parseFloat(currentValue.replace(/[₪,]/g, '')) || 0;
+              // If wrong value detected during section refresh, force recalculation
+              if (numericValue === 80487 || numericValue === 128620 || numericValue > 100000) {
+                console.log('🚨 SECTION REFRESH: Wrong value detected:', numericValue, '- Forcing recalculation');
+                updateFullMarketValueCalculation();
+                // Double-check and force again if needed
+                setTimeout(() => {
+                  const checkValue = document.getElementById('fullMarketValueResult')?.value;
+                  const checkNumeric = parseFloat(checkValue?.replace(/[₪,]/g, '') || '0') || 0;
+                  if (checkNumeric === 80487 || checkNumeric === 128620 || checkNumeric > 100000) {
+                    console.log('🚨 SECOND CHECK: Still wrong value:', checkNumeric, '- Final force');
+                    updateFullMarketValueCalculation();
+                  }
+                }, 50);
+              }
+            }
+          }, 150);
         } else if (sectionId === 'depreciation') {
           updateDepreciationCalculation();
         }
