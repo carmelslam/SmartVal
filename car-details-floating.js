@@ -771,228 +771,28 @@
     
     console.log('✅ HELPER ARCHITECTURE: Car details populated from helper structure');
   }
-    
-    // Format date to DD/MM/YYYY like inspection date
-    const formatDate = (dateStr) => {
-      if (!dateStr) return "-";
-      try {
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr; // Return original if invalid
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-      } catch (e) {
-        return dateStr; // Return original if parsing fails
-      }
-    };
-    
-    // Format price with thousand separator like market value
-    const formatPrice = (value) => {
-      if (!value) return "-";
-      const num = parseFloat(value.toString().replace(/,/g, ''));
-      if (isNaN(num)) return formatValue(value);
-      return num.toLocaleString();
-    };
 
-    // ENHANCED: Vehicle fields - prioritize vehicle section, then car_details
-    const plateValue = vehicle.plate || meta.plate || carDetails.plate;
-    console.log('🆔 Plate values check:', {
-      'vehicle.plate': vehicle.plate,
-      'meta.plate': meta.plate,
-      'carDetails.plate': carDetails.plate,
-      'final plateValue': plateValue
-    });
-    // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
-    const standardizedPlate = plateValue ? String(plateValue).replace(/[-\s]/g, '') : plateValue;
-    document.getElementById("vehicle-plate").textContent = formatValue(standardizedPlate);
-    document.getElementById("vehicle-manufacturer").textContent = formatValue(
-      vehicle.manufacturer || carDetails.manufacturer
-    );
-    document.getElementById("vehicle-model").textContent = formatValue(
-      vehicle.model || carDetails.model
-    );
-    document.getElementById("vehicle-model-type").textContent = formatValue(
-      vehicle.model_type || carDetails.model_type
-    );
-    document.getElementById("vehicle-type").textContent = formatValue(
-      vehicle.vehicle_type || carDetails.vehicle_type
-    );
-    document.getElementById("vehicle-trim").textContent = formatValue(
-      vehicle.trim || carDetails.trim
-    );
-    document.getElementById("vehicle-chassis").textContent = formatValue(
-      vehicle.chassis || carDetails.chassis
-    );
-    document.getElementById("vehicle-year").textContent = formatValue(
-      vehicle.year || carDetails.year
-    );
-    document.getElementById("vehicle-ownership-type").textContent = formatValue(
-      vehicle.ownership_type || carDetails.ownership_type
-    );
-    document.getElementById("vehicle-engine-volume").textContent = formatValue(
-      vehicle.engine_volume || carDetails.engine_volume
-    );
-    document.getElementById("vehicle-fuel-type").textContent = formatValue(
-      vehicle.fuel_type || carDetails.fuel_type
-    );
-    // CRITICAL: Debug model code vs levi code data sources
-    console.log('🔍 Model Code vs Levi Code Debug:', {
-      'carDetails.vehicle_model_code': carDetails.vehicle_model_code,
-      'vehicle.vehicle_model_code': vehicle.vehicle_model_code,
-      'meta.vehicle_model_code': meta.vehicle_model_code,
-      'carDetails.model_code': carDetails.model_code,
-      'vehicle.model_code': vehicle.model_code,
-      'valuationData.levi_code': valuationData?.levi_code,
-      'valuationData.levi_model_code': valuationData?.levi_model_code,
-      'valuationData.code': valuationData?.code,
-      'valuationData.model_code': valuationData?.model_code
-    });
-    
-    // ENHANCED DEBUG: Show full data structures
-    console.log('🔍 Full carDetails object:', carDetails);
-    console.log('🔍 Full vehicle object:', vehicle);
-    console.log('🔍 Full meta object:', meta);
-    console.log('🔍 Full valuationData object:', valuationData);
-    
-    // 🔒 PLATE PROTECTION: Show protection status
-    if (window.getPlateProtectionStatus) {
-      const protectionStatus = window.getPlateProtectionStatus();
-      console.log('🔒 Plate Protection Status:', protectionStatus);
-      if (protectionStatus.isProtected) {
-        console.log(`🔒 Protected plate: "${protectionStatus.originalPlate}" (source: ${protectionStatus.source})`);
-        if (protectionStatus.alertCount > 0) {
-          console.warn(`⚠️ Protection alerts: ${protectionStatus.alertCount} attempts blocked`);
-        }
-      }
+  // Helper functions for formatting
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return dateStr;
     }
-    
-    // Model code - ONLY from open case webhook "מספר דגם הרכב" (separate from Levi)
-    const modelCodeValue = carDetails.vehicle_model_code ||  // Primary: from open case webhook "מספר דגם הרכב"
-                          vehicle.vehicle_model_code ||       // Vehicle section model code (NOT Levi)
-                          meta.vehicle_model_code ||          // Meta section model code (NOT Levi)
-                          carDetails.model_code ||            // General model code field (if not overridden by Levi)
-                          vehicle.model_code ||               // Vehicle model code field (if not overridden by Levi)
-                          "-";
-                          
-    document.getElementById("vehicle-model-code").textContent = formatValue(modelCodeValue);
-    console.log('🚗 Model Code final value:', modelCodeValue);
-    
-    // Levi code - ONLY from Levi webhook response "קוד דגם" (separate from model code)
-    const leviCodeValue = (valuationData && valuationData.levi_code) ||        // Primary: From Levi "קוד דגם"
-                         (valuationData && valuationData.levi_model_code) ||   // Levi code variations
-                         (valuationData && valuationData.code) ||              // Alternative Levi field
-                         (valuationData && valuationData.model_code) ||        // Levi specific model code
-                         "-";
-                         
-    document.getElementById("vehicle-levi-code").textContent = formatValue(leviCodeValue);
-    console.log('📊 Levi Code final value:', leviCodeValue);
-    // Inspection date - from case opening or car details page where user enters inspection date
-    const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    document.getElementById("vehicle-inspection-date").textContent = formatDate(
-      helperData.case_info?.inspection_date ||  // From case opening (correct field)
-      meta.inspection_date ||                   // From car details page input field
-      valuationData.inspection_date ||          // From valuation data
-      "-"
-    );
-    document.getElementById("vehicle-engine-model").textContent = formatValue(
-      vehicle.engine_model || carDetails.engine_model
-    );
-    document.getElementById("vehicle-drive-type").textContent = formatValue(
-      vehicle.drive_type || carDetails.drive_type
-    );
-    document.getElementById("vehicle-office-code").textContent = formatValue(
-      vehicle.office_code || meta.office_code || carDetails.office_code
-    );
-    document.getElementById("vehicle-km").textContent = formatValue(
-      vehicle.km || carDetails.km || carDetails.odo
-    );
-
-    // Owner fields - prioritize stakeholders section
-    const ownerName = stakeholders.owner?.name || carDetails.owner;
-    document.getElementById("car-owner").textContent = formatValue(ownerName);
-    
-    // Damage date - from case opening or general info page (where user inputs damage date)
-    document.getElementById("car-damage-date").textContent = formatDate(
-      carDetails.damage_date ||  // From general info page where user enters damage date
-      carDetails.damageDate ||   // Legacy field
-      meta.damage_date ||        // From case_info on case opening 
-      "-"
-    );
-    
-    // Owner contact info
-    document.getElementById("car-owner-address").textContent = formatValue(
-      stakeholders.owner?.address || carDetails.ownerAddress
-    );
-    document.getElementById("car-owner-phone").textContent = formatValue(
-      stakeholders.owner?.phone || carDetails.ownerPhone
-    );
-    
-    // Additional fields from general info
-    // Base price - mapped specifically from Levi webhook valuation data
-    document.getElementById("car-base-price").textContent = formatPrice(
-      (valuationData && valuationData.base_price) || 
-      (valuationData && valuationData.price) ||
-      (valuationData && valuationData.market_value) ||
-      carDetails.base_price || 
-      vehicle.base_price
-    );
-    // Market value - to be mapped from valuation/pricing module
-    document.getElementById("car-market-value").textContent = formatPrice(
-      carDetails.market_value || vehicle.market_value
-    );
-    document.getElementById("car-odometer").textContent = formatValue(
-      vehicle.km || carDetails.odo || carDetails.km
-    );
-    // Inspection location - only from open case page
-    document.getElementById("car-inspection-location").textContent = formatValue(
-      meta.inspection_location || meta.location || "-"
-    );
-
-    // Garage name - only from general info page, separate from inspection location
-    document.getElementById("garage-name").textContent = formatValue(
-      stakeholders.garage?.name || carDetails.garage_name || carDetails.garageName || "-"
-    );
-    document.getElementById("garage-phone").textContent = formatValue(
-      stakeholders.garage?.phone || carDetails.garage_phone || carDetails.garagePhone
-    );
-    document.getElementById("garage-email").textContent = formatValue(
-      stakeholders.garage?.email || carDetails.garage_email || carDetails.garageEmail
-    );
-    
-    // Insurance info
-    document.getElementById("insurance-company").textContent = formatValue(
-      stakeholders.insurance?.company || carDetails.insuranceCompany
-    );
-    document.getElementById("insurance-email").textContent = formatValue(
-      stakeholders.insurance?.email || carDetails.insurance_email || carDetails.insuranceEmail
-    );
-    
-    // Insurance agent info
-    document.getElementById("agent-name").textContent = formatValue(
-      stakeholders.insurance?.agent?.name || carDetails.agentName
-    );
-    document.getElementById("agent-phone").textContent = formatValue(
-      stakeholders.insurance?.agent?.phone || carDetails.insurance_agent_phone || carDetails.agentPhone
-    );
-    document.getElementById("agent-email").textContent = formatValue(
-      stakeholders.insurance?.agent?.email || carDetails.insurance_agent_email || carDetails.agentEmail
-    );
-
-    // Update value styling
-    document.querySelectorAll('.value').forEach(el => {
-      if (el.textContent === "-") {
-        el.classList.add('empty');
-      } else {
-        el.classList.remove('empty');
-      }
-    });
-    
-    // Log populated fields count for debugging
-    const populatedFields = document.querySelectorAll('.value:not(.empty)').length;
-    const totalFields = document.querySelectorAll('.value').length;
-    console.log(`✅ Populated ${populatedFields} out of ${totalFields} fields`);
-  }
+  };
+  
+  const formatPrice = (value) => {
+    if (!value) return "-";
+    const num = parseFloat(value.toString().replace(/,/g, ''));
+    if (isNaN(num)) return formatValue(value);
+    return num.toLocaleString();
+  };
 
   // CRITICAL FIX: Add refresh prevention to stop infinite loops
   let isCarRefreshing = false;
