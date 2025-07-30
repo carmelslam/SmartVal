@@ -731,14 +731,26 @@
     try {
       console.log('🔄 HELPER ARCHITECTURE: Loading car data from helper only...');
       
-      // FOLLOW HELPER ARCHITECTURE: Single source of truth - window.helper
-      if (!window.helper) {
-        console.warn('⚠️ No helper data available');
+      // FOLLOW HELPER ARCHITECTURE: Load from sessionStorage first, then check window.helper
+      let helper = null;
+      
+      // Try sessionStorage first
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        helper = JSON.parse(helperString);
+        console.log('✅ Helper data loaded from sessionStorage');
+      } else if (window.helper) {
+        helper = window.helper;
+        console.log('✅ Helper data loaded from window.helper');
+      }
+      
+      if (!helper) {
+        console.warn('⚠️ No helper data available in sessionStorage or window.helper');
         return;
       }
       
       // HELPER IS GOD: Auto-populate from helper structure
-      updateCarDisplay(window.helper);
+      updateCarDisplay(helper);
     } catch (error) {
       console.error("❌ Error loading car data:", error);
     }
