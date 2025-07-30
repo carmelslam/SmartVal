@@ -1115,59 +1115,103 @@
   let lastCarRefreshTime = 0;
   const CAR_REFRESH_DEBOUNCE_MS = 2000; // Prevent refreshes within 2 seconds
 
-  // COMPLETELY DISABLED TO STOP INFINITE LOOP
-  // Listen for helper updates and always refresh display from helper
-  // document.addEventListener('helperUpdate', function(event) {
-  //   console.log('📡 Car details floating detected helper update:', event.detail);
-  //   
-  //   // CRITICAL: Prevent infinite refresh loops
-  //   const now = Date.now();
-  //   if (isCarRefreshing || (now - lastCarRefreshTime) < CAR_REFRESH_DEBOUNCE_MS) {
-  //     console.log('🚫 Skipping car auto-refresh (debounce protection)');
-  //     return;
-  //   }
-  //   
-  //   // Only refresh if the modal is visible
-  //   const modal = document.getElementById("carDetailsModal");
-  //   if (modal && modal.style.display !== "none") {
-  //     console.log('🔄 Auto-refreshing car data due to helper update');
-  //     isCarRefreshing = true;
-  //     lastCarRefreshTime = now;
-  //     
-  //     setTimeout(() => {
-  //       loadCarData();
-  //       isCarRefreshing = false;
-  //     }, 100);
-  //   }
-  // });
+  // ULTRA-SAFE CAR AUTO-REFRESH: Maximum protection against loops
+  let carRefreshTimeout = null;
+  let lastCarRefreshSource = null;
+  let carRefreshCount = 0;
+  let carRefreshDisabled = false;
+  const CAR_REFRESH_DEBOUNCE_MS = 5000; // 5 second debounce (very conservative)
+  const MAX_CAR_REFRESHES_PER_MINUTE = 3; // Very restrictive limit
+  const CAR_REFRESH_RESET_INTERVAL = 60000; // 1 minute
+  
+  // Reset car refresh counter every minute
+  setInterval(() => {
+    carRefreshCount = 0;
+    if (carRefreshDisabled) {
+      console.log('🔓 Car auto-refresh re-enabled after cooldown');
+      carRefreshDisabled = false;
+    }
+  }, CAR_REFRESH_RESET_INTERVAL);
+  
+  function safeRefreshCarData(source = 'auto') {
+    // SAFETY CHECK 1: Is refresh disabled?
+    if (carRefreshDisabled) {
+      console.log(`🚫 Car refresh disabled (${source}) - protection active`);
+      return;
+    }
+    
+    const now = Date.now();
+    
+    // SAFETY CHECK 2: Very strict debouncing
+    if (now - lastCarRefreshTime < CAR_REFRESH_DEBOUNCE_MS) {
+      console.log(`🚫 Car refresh debounced (${source}) - too soon`);
+      return;
+    }
+    
+    // SAFETY CHECK 3: Same source protection
+    if (lastCarRefreshSource === source && (now - lastCarRefreshTime) < (CAR_REFRESH_DEBOUNCE_MS * 2)) {
+      console.log(`🚫 Car refresh blocked (${source}) - same source recently refreshed`);
+      return;
+    }
+    
+    // SAFETY CHECK 4: Rate limiting
+    carRefreshCount++;
+    if (carRefreshCount > MAX_CAR_REFRESHES_PER_MINUTE) {
+      console.log(`🚫 Car refresh rate limit exceeded (${source}) - disabling`);
+      carRefreshDisabled = true;
+      return;
+    }
+    
+    // SAFETY CHECK 5: Modal visibility
+    const modal = document.getElementById("carDetailsModal");
+    if (!modal || modal.style.display === "none") {
+      console.log(`🚫 Car refresh skipped (${source}) - modal not visible`);
+      return;
+    }
+    
+    // Clear any pending refresh
+    if (carRefreshTimeout) {
+      clearTimeout(carRefreshTimeout);
+    }
+    
+    // Schedule ultra-safe refresh
+    carRefreshTimeout = setTimeout(() => {
+      try {
+        console.log(`🔄 Ultra-safe car data refresh (${source}) - attempt ${carRefreshCount}/${MAX_CAR_REFRESHES_PER_MINUTE}`);
+        lastCarRefreshTime = Date.now();
+        lastCarRefreshSource = source;
+        loadCarData();
+      } catch (error) {
+        console.error('❌ Error in car auto-refresh:', error);
+        carRefreshDisabled = true; // Disable on any error
+      }
+      carRefreshTimeout = null;
+    }, 1000); // 1 second delay for safety
+  }
+  
+  // HIGHLY SELECTIVE AUTO-REFRESH: Only for car-specific updates
+  document.addEventListener('helperUpdate', function(event) {
+    console.log('📡 Car details floating detected helper update:', event.detail);
+    
+    // Very selective - only refresh for direct car/vehicle updates
+    if (event.detail && 
+        (event.detail.includes('vehicle.') || 
+         event.detail.includes('car_details.') ||
+         event.detail.includes('stakeholders.owner') ||
+         event.detail === 'vehicle_data_updated')) {
+      safeRefreshCarData('helperUpdate');
+    } else {
+      console.log('📡 Car refresh skipped - update not car-related');
+    }
+  });
 
-  // COMPLETELY DISABLED TO STOP INFINITE LOOP
   // Also listen for storage events from other tabs
-  // window.addEventListener('storage', function(e) {
-  //   if (e.key === 'helper' && e.newValue) {
-  //     console.log('📡 Car details floating detected helper update from another tab');
-  //     
-  //     // CRITICAL: Prevent infinite refresh loops
-  //     const now = Date.now();
-  //     if (isCarRefreshing || (now - lastCarRefreshTime) < CAR_REFRESH_DEBOUNCE_MS) {
-  //       console.log('🚫 Skipping car cross-tab refresh (debounce protection)');
-  //       return;
-  //     }
-  //     
-  //     // Only refresh if the modal is visible
-  //     const modal = document.getElementById("carDetailsModal");
-  //     if (modal && modal.style.display !== "none") {
-  //       console.log('🔄 Auto-refreshing car details due to cross-tab update');
-  //       isCarRefreshing = true;
-  //       lastCarRefreshTime = now;
-  //       
-  //       setTimeout(() => {
-  //         window.refreshCarData();
-  //         isCarRefreshing = false;
-  //       }, 100);
-  //     }
-  //   }
-  // });
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'helper' && e.newValue) {
+      console.log('📡 Car details floating detected helper update from another tab');
+      safeRefreshCarData('storage');
+    }
+  });
 
   // Auto-persist data on page load (but don't auto-open the floating screen)
   setTimeout(() => {

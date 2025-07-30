@@ -440,10 +440,14 @@
 
     // Display results
     container.innerHTML = results.map((result, index) => `
-      <div class="search-result-item">
+      <div class="search-result-item unselected-part" data-part-index="${index}">
         <div class="result-header">
           <div class="result-name">${result.name || 'חלק ללא שם'}</div>
           <div class="result-price">₪${parseFloat(result.price || 0).toLocaleString('he-IL')}</div>
+        </div>
+        <div class="result-selection">
+          <input type="checkbox" id="part-${index}" onchange="togglePartSelection(${index})">
+          <label for="part-${index}">בחר חלק זה</label>
         </div>
         <div class="result-details">
           <div class="result-detail">
@@ -479,4 +483,175 @@
 
     console.log('✅ Parts search results loaded successfully');
   }
+  
+  // Parts selection functionality - INTEGRATION WITH HELPER.PARTS_SEARCH
+  let selectedParts = new Set();
+  let allParts = [];
+  
+  function updateSelectionSummary() {
+    const selectedCount = selectedParts.size;
+    const unselectedCount = allParts.length - selectedCount;
+    
+    const selectedCountEl = document.getElementById('selectedCount');
+    const unselectedCountEl = document.getElementById('unselectedCount');
+    const summaryEl = document.getElementById('selectionSummary');
+    
+    if (selectedCountEl) selectedCountEl.textContent = selectedCount;
+    if (unselectedCountEl) unselectedCountEl.textContent = unselectedCount;
+    
+    if (summaryEl && allParts.length > 0) {
+      summaryEl.style.display = 'block';
+    } else if (summaryEl) {
+      summaryEl.style.display = 'none';
+    }
+  }
+  
+  // Make togglePartSelection globally available
+  window.togglePartSelection = function(partIndex) {
+    if (selectedParts.has(partIndex)) {
+      selectedParts.delete(partIndex);
+    } else {
+      selectedParts.add(partIndex);
+    }
+    
+    // Update UI
+    const partElement = document.querySelector(`[data-part-index="${partIndex}"]`);
+    if (partElement) {
+      if (selectedParts.has(partIndex)) {
+        partElement.classList.add('selected-part');
+        partElement.classList.remove('unselected-part');
+      } else {
+        partElement.classList.remove('selected-part');
+        partElement.classList.add('unselected-part');
+      }
+    }
+    
+    updateSelectionSummary();
+  };
+  
+  // Global functions for parts selection
+  window.toggleSelectAllParts = function() {
+    const selectAllBtn = document.querySelector('.results-btn.select-all');
+    if (!selectAllBtn) return;
+    
+    if (selectedParts.size === allParts.length) {
+      // Unselect all
+      selectedParts.clear();
+      selectAllBtn.textContent = 'בחר הכל';
+      
+      // Update UI
+      document.querySelectorAll('.search-result-item').forEach(item => {
+        item.classList.remove('selected-part');
+        item.classList.add('unselected-part');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = false;
+      });
+    } else {
+      // Select all
+      selectedParts.clear();
+      allParts.forEach((_, index) => selectedParts.add(index));
+      selectAllBtn.textContent = 'בטל הכל';
+      
+      // Update UI
+      document.querySelectorAll('.search-result-item').forEach(item => {
+        item.classList.add('selected-part');
+        item.classList.remove('unselected-part');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = true;
+      });
+    }
+    
+    updateSelectionSummary();
+  };
+  
+  window.savePartsSelection = function() {
+    if (!window.helper) {
+      console.error('❌ Helper not available for saving parts selection');
+      alert('שגיאה: לא ניתן לשמור את הבחירה');
+      return;
+    }
+    
+    // Get current search results
+    const results = getPartsSearchResults();
+    if (!results || results.length === 0) {
+      alert('אין תוצאות חיפוש לשמירה');
+      return;
+    }
+    
+    // Prepare selected and unselected parts arrays
+    const selectedPartsArray = [];
+    const unselectedPartsArray = [];
+    
+    results.forEach((part, index) => {
+      const partData = {
+        ...part,
+        selection_date: new Date().toISOString(),
+        search_session: window.helper.parts_search?.summary?.last_search || new Date().toISOString()
+      };
+      
+      if (selectedParts.has(index)) {
+        selectedPartsArray.push(partData);
+      } else {
+        unselectedPartsArray.push(partData);
+      }
+    });
+    
+    // Initialize helper.parts_search if needed
+    if (!window.helper.parts_search) {
+      window.helper.parts_search = {
+        search_history: [],
+        all_results: [],
+        results: [],
+        summary: {
+          total_searches: 0,
+          total_results: 0,
+          selected_count: 0,
+          last_search: ''
+        }
+      };
+    }
+    
+    // Store the selection according to helper structure
+    window.helper.parts_search.selected_parts = selectedPartsArray;
+    window.helper.parts_search.unselected_parts = unselectedPartsArray;
+    window.helper.parts_search.summary.selected_count = selectedPartsArray.length;
+    window.helper.parts_search.last_selection_date = new Date().toISOString();
+    
+    // Also store all results for reference
+    window.helper.parts_search.all_results = results;
+    
+    // Save to storage
+    try {
+      const helperString = JSON.stringify(window.helper);
+      sessionStorage.setItem('helper', helperString);
+      localStorage.setItem('helper_data', helperString);
+      
+      console.log('✅ Parts selection saved to helper:');
+      console.log('Selected parts:', selectedPartsArray.length);
+      console.log('Unselected parts:', unselectedPartsArray.length);
+      
+      // Trigger helper update event
+      document.dispatchEvent(new CustomEvent('helperUpdate', {
+        detail: 'parts_selection_updated'
+      }));
+      
+      alert(`נשמר בהצלחה!\nנבחרו: ${selectedPartsArray.length} חלקים\nלא נבחרו: ${unselectedPartsArray.length} חלקים`);
+      
+    } catch (error) {
+      console.error('❌ Error saving parts selection:', error);
+      alert('שגיאה בשמירת הבחירה');
+    }
+  };
+  
+  // Initialize allParts when results are loaded
+  const originalLoadPartsSearchResults = loadPartsSearchResults;
+  loadPartsSearchResults = function() {
+    originalLoadPartsSearchResults();
+    
+    // Update allParts array for selection functionality
+    allParts = getPartsSearchResults() || [];
+    selectedParts.clear();
+    updateSelectionSummary();
+  };
+  
 })();

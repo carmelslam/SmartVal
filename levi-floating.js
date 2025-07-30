@@ -1,5 +1,25 @@
 (function () {
   console.log('🚀 Levi floating script starting...');
+  
+  // GLOBAL EMERGENCY SHUTDOWN: Monitor for system stress
+  window.emergencyDisableAutoRefresh = window.emergencyDisableAutoRefresh || false;
+  
+  // Check for emergency shutdown every 30 seconds
+  setInterval(() => {
+    if (window.emergencyDisableAutoRefresh) {
+      console.log('🆘 EMERGENCY: All auto-refresh disabled by global flag');
+      refreshDisabled = true;
+      return;
+    }
+    
+    // Monitor console errors - if too many, disable auto-refresh
+    const errorCount = window.consoleErrorCount || 0;
+    if (errorCount > 10) {
+      console.log('🆘 EMERGENCY: Too many console errors - disabling auto-refresh');
+      window.emergencyDisableAutoRefresh = true;
+      refreshDisabled = true;
+    }
+  }, 30000);
   if (document.getElementById("leviModal")) {
     console.log('⚠️ leviModal already exists, exiting');
     return;
@@ -1027,34 +1047,96 @@
     });
   }
 
-  // DISABLED TO PREVENT LOOPS
-  // Listen for helper updates and refresh display
-  // document.addEventListener('helperUpdate', function(event) {
-  //   console.log('📡 Levi floating detected helper update:', event.detail);
-  //   // Only refresh if the modal is visible
-  //   const modal = document.getElementById("leviModal");
-  //   if (modal && modal.style.display !== "none") {
-  //     console.log('🔄 Auto-refreshing Levi data due to helper update');
-  //     loadLeviData();
-  //   }
-  // });
+  // ULTRA-SAFE AUTO-REFRESH: Multiple safeguards to prevent loops
+  let refreshTimeout = null;
+  let lastRefreshTime = 0;
+  let refreshCount = 0;
+  let refreshDisabled = false;
+  const REFRESH_DEBOUNCE_MS = 3000; // 3 second debounce (increased)
+  const MAX_REFRESHES_PER_MINUTE = 5; // Hard limit
+  const REFRESH_RESET_INTERVAL = 60000; // 1 minute
+  
+  // Reset refresh counter every minute
+  setInterval(() => {
+    refreshCount = 0;
+    if (refreshDisabled) {
+      console.log('🔓 Levi auto-refresh re-enabled after cooldown');
+      refreshDisabled = false;
+    }
+  }, REFRESH_RESET_INTERVAL);
+  
+  function safeRefreshLeviData(source = 'auto') {
+    // SAFETY CHECK 1: Is refresh disabled due to too many attempts?
+    if (refreshDisabled) {
+      console.log(`🚫 Levi refresh disabled (${source}) - too many attempts`);
+      return;
+    }
+    
+    const now = Date.now();
+    
+    // SAFETY CHECK 2: Debounce protection
+    if (now - lastRefreshTime < REFRESH_DEBOUNCE_MS) {
+      console.log(`🚫 Levi refresh debounced (${source}) - too soon`);
+      return;
+    }
+    
+    // SAFETY CHECK 3: Rate limiting
+    refreshCount++;
+    if (refreshCount > MAX_REFRESHES_PER_MINUTE) {
+      console.log(`🚫 Levi refresh rate limit exceeded (${source}) - disabling for 1 minute`);
+      refreshDisabled = true;
+      return;
+    }
+    
+    // SAFETY CHECK 4: Modal must be visible
+    const modal = document.getElementById("leviModal");
+    if (!modal || modal.style.display === "none") {
+      console.log(`🚫 Levi refresh skipped (${source}) - modal not visible`);
+      return;
+    }
+    
+    // Clear any pending refresh
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+    }
+    
+    // Schedule debounced refresh with additional safety
+    refreshTimeout = setTimeout(() => {
+      try {
+        console.log(`🔄 Safe auto-refreshing Levi data (${source}) - attempt ${refreshCount}/${MAX_REFRESHES_PER_MINUTE}`);
+        lastRefreshTime = Date.now();
+        loadLeviData();
+      } catch (error) {
+        console.error('❌ Error in Levi auto-refresh:', error);
+        refreshDisabled = true; // Disable on error
+      }
+      refreshTimeout = null;
+    }, 500); // Longer delay for safety
+  }
+  
+  // CONDITIONAL AUTO-REFRESH: Only for relevant updates
+  document.addEventListener('helperUpdate', function(event) {
+    console.log('📡 Levi floating detected helper update:', event.detail);
+    
+    // Only refresh for Levi-related updates to prevent unnecessary refreshes
+    if (event.detail && 
+        (event.detail.includes('levi') || 
+         event.detail.includes('valuation') || 
+         event.detail.includes('adjustment') ||
+         event.detail.includes('vehicle'))) {
+      safeRefreshLeviData('helperUpdate');
+    } else {
+      console.log('📡 Levi refresh skipped - update not relevant');
+    }
+  });
 
-  // DISABLED TO PREVENT LOOPS
   // Also listen for storage events from other tabs
-  // window.addEventListener('storage', function(e) {
-  //   if (e.key === 'helper' && e.newValue) {
-  //     console.log('📡 Levi floating detected helper update from another tab');
-  //     
-  //     // Only refresh if the modal is visible
-  //     const modal = document.getElementById("leviModal");
-  //     if (modal && modal.style.display !== "none") {
-  //       console.log('🔄 Auto-refreshing Levi data due to cross-tab update');
-  //       setTimeout(() => {
-  //         loadLeviData();
-  //       }, 100);
-  //     }
-  //   }
-  // });
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'helper' && e.newValue) {
+      console.log('📡 Levi floating detected helper update from another tab');
+      safeRefreshLeviData('storage');
+    }
+  });
 
   // Floating button removed - now controlled by top toggle squares
 

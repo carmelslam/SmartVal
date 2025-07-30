@@ -462,3 +462,631 @@ console.log('Final Appraised Value:', finalValue);
 // Should output: 78877 (matches your example)
 
 
+
+**PARSED INVOICE TEST JSON:**
+
+{
+  "מספר רכב": "698-42-003",
+  "יצרן": "טויוטה (השלמת מערכת)",
+  "דגם": "C-HR LOUNGE S",
+  "שנת ייצור": "",
+  "מד אוץ": "34,970",
+  "בעל הרכב": "שרה חסון",
+  "מספר תיק": "",
+  "תאריך": "05/06/24",
+  "מס. חשבונית": "6",
+  "שם מוסך": "מוסך ש.מ קוסמטיקאר בע\"מ",
+  "דוא\"ל מוסך": "sh.m_kosmtekar@walla.com",
+  "טלפון מוסך": "053-2344434/04-840960",
+  "כתובת מוסך": "ניו יורק 1, דאלית אל כרמל",
+  "מוקד נזק": "מגן אחורי (השלמת מערכת)",
+  "סהכ חלקים": "7,082.00",
+  "סהכ עבודות": "אין מידע",
+  "סהכ תיקונים": "אין מידע",
+  "עלות כוללת ללא מע״מ": "18,724.00",
+  "מע\"מ": "4,111.92",
+  "עלות כוללת": "22,844.00",
+  "הערות": "ט.ל.ח – טעות לעולם חוזרת",
+  "לינק": "",
+  "חלקים": [
+    {
+      "מק\"ט חלק": "1-004-52159F913",
+      "שם חלק": "מגן אחורי עליון",
+      "תיאור": "מגן אחורי עליון",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "894.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-5253F4250",
+      "שם חלק": "מגן אחורי תחתון",
+      "תיאור": "מגן אחורי תחתון",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "153.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-52751F4010",
+      "שם חלק": "פס קישוט מרכזי במגן אחורי",
+      "תיאור": "פס קישוט מרכזי במגן אחורי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "808.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-PW15810200L6",
+      "שם חלק": "מגלש מגן אחורי",
+      "תיאור": "מגלש מגן אחורי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "202.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-521624060",
+      "שם חלק": "כיסוי וו גרירה אחורי L",
+      "תיאור": "כיסוי וו גרירה אחורי L",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,905.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-8934878120C2",
+      "שם חלק": "תושבות לחיישני חנייה אחוריים",
+      "תיאור": "תושבות לחיישני חנייה אחוריים",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,320.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-5203F4050",
+      "שם חלק": "מגן אחורי פנימי",
+      "תיאור": "מגן אחורי פנימי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,800.00"
+    }
+  ],
+  "עבודות": [
+    {
+      "סוג העבודה": "ניתוק זרם",
+      "תיאור עבודות": "ניתוק זרם רכב היברידי",
+      "עלות עבודות": "אין מידע"
+    },
+    {
+      "סוג העבודה": "העברת חיישנים",
+      "תיאור עבודות": "העברת חיישנים",
+      "עלות עבודות": "אין מידע"
+    },
+    {
+      "סוג העבודה": "חומרי עזר",
+      "תיאור עבודות": "חומרי עזר",
+      "עלות עבודות": "אין מידע"
+    }
+  ],
+  "תיקונים": [
+    {
+      "סוג תיקון": "אין מידע",
+      "תיאור התיקון": "אין מידע",
+      "עלות תיקונים": "אין מידע"
+    }
+  ],
+  "מפיק החשבונית": "שאדי מפלח",
+  "ח.פ": "517109013",
+  "מספר רישיון": "91329",
+  "טלפון נייד": "054-4888830",
+  "מס' כרטיס": "1028",
+  "פוליסה": "30056",
+  "מספר תביעה": "034088104",
+  "נהג": "שרה חסון",
+  "קילומטראז'": "34,970",
+  "תאריך פתיחת תיק": "13/04/25",
+  "תאריך קבלת רכב": "05/06/24",
+  "סה\"כ עבודות": "8,239.00",
+  "סה\"כ חלקים": "4,564.00"
+}
+
+
+**parts search JSON**
+
+{
+  "יצרן": "ביואיק",
+  "דגם": "לוסרן",
+  "רמת גימור": "CXL",
+  "קוד דגם": "",
+  "מספר דגם רכב": "HD572",
+  "שנת יצור": "2009",
+  "מנוע": "",
+  "נפח מנוע": "3800",
+  "דגם מנוע": "428",
+  "סוג מנוע": "בנזין",
+  "הנעה": "4X2",
+  "תיבת הילוכים": "אוטומטית",
+  "מספר שלדה": "1G4HD57258U196450",
+  "מספר רישוי": "5785269",
+  "חלק דרוש (מילת מפתח)": "מנגנון כיסא נהג",
+  "סוג מקור": “”,
+“free_query”: free text 
+“Image”:””
+}
+
+
+This is a general json of the parts search :
+תאריך החיפוש  2025-05-23T15:46:11.695Z 
+חלק נדרש : driver seat mechanism 
+תוצאות: 
+### תוצאות חיפוש למספר חלק 5785269 - מנגנון מושב נהג חשמלי לביואיק לוצרן 2009 
+ 
+#### פרטי החיפוש: 
+- **מספר לוחית:** 5785269 
+- **חלק מבוקש:** מנגנון מושב נהג חשמלי 
+ 
+#### תוצאות החיפוש: 
+ 
+1. **שם הספק:** יו.אמ.איי. חלפים (UMI) 
+   - **מיקום:** ישראל 
+   - **מקור החלק:** OEM (יצרן מקורי) 
+   - **מצב החלק:** חדש 
+   - **תיאור החלק:** מנגנון מושב נהג חשמלי מקורי לביואיק לוצרן 2009, מספר חלק 5785269 
+   - **זמינות:** זמין בהזמנה 
+   - **מחיר:** ₪2350 
+   - **מטבע:** ILS (שקלים) 
+   - **קוד OEM:** 5785269 
+   - **מקט קטלוגי:** UMI-5785269-LUC09 
+   - **הערות:** חלק מקורי חדש מהיבואן הרשמי של ביואיק. זמן אספקה משוער 7-14 ימי עסקים. 
+ 
+2. **שם הספק:** אוטו-פארטס ישראל 
+   - **מיקום:** ישראל 
+   - **מקור החלק:** Aftermarket (תחליפי) 
+   - **מצב החלק:** חדש 
+   - **תיאור החלק:** מנגנון מושב נהג חשמלי תחליפי חדש לביואיק לוצרן 2009, תואם למספר חלק 5785269 
+   - **זמינות:** במלאי 
+   - **מחיר:** ₪1150 
+   - **מטבע:** ILS (שקלים) 
+   - **קוד OEM:** תואם 5785269 
+   - **מקט קטלוגי:** AP-IL-BL09DSM-AFM 
+   - **הערות:** חלק תחליפי חדש באיכות גבוהה, כולל אחריות לשנה מהספק. 
+ 
+3. **שם הספק:** RockAuto Parts (משלוח בינלאומי) 
+   - **מיקום:** ארה"ב (משלוח לישראל) 
+   - **מקור החלק:** OEM (יצרן מקורי) 
+   - **מצב החלק:** חדש 
+   - **תיאור החלק:** מנגנון מושב נהג חשמלי מקורי GM לביואיק לוצרן 
+   - **זמינות:** לא ידוע 
+   - **מחיר:** לא ידוע 
+   - **מטבע:** לא ידוע 
+   - **קוד OEM:** 5785269 
+   - **מקט קטלוגי:** לא ידוע 
+   - **הערות:** משלוח משוער 14-21 ימי עסקים. 
+ 
+#### המלצות: 
+- אם התקציב הוא שיקול מרכזי, החלק התחליפי מ"אוטו-פארטס ישראל" מציע מחיר נמוך יותר והוא זמין במלאי, כולל אחריות לשנה. 
+- עבור מי שמחפש חלק מקורי בלבד, החלק מיו.אמ.איי. חלפים (UMI) מציע תנאים טובים למרות מחירו הגבוה יותר, עם אספקה בהזמנה. 
+- יש לקחת בחשבון את זמני האספקה המשוערים ואת העלויות הנוספות האפשריות במשלוח בינלאומי מ-RockAuto Parts. 
+
+The user selects the desired part from the suggestions shown in the field based on typing the first two letters. The helper then stores the selected parts as the case parts, BUT all unselected parts that came from the search result are also saved in the helper under unselected. 
+The work and repairs json is according to what the user inputs - examine the modules works.html and repairs required.html - basically it s:
+Name , description and cost 
+The repairs are pulled from a dropdown in the repairs module 
+5. Photo upload: the only thing that it gives the helper is an accumulative number of uploaded photos for a certain plate number throughout time and not just in one session. 6. The invoice module sends back the invoice OCRed details to the helper. Those details are stored Under invoice , but the thing is that they replace the initial damage Parys analysis of work , repairs and parts , this is relevant for 2 types of the final report : private, and global . Those are the 2 types that consider the invoice in the workflow,, estimate doesn’t  consider invoice since its done before starting the work .the invoice module is crucial - the invoice JSON is also documented in the system :
+{
+  "מספר רכב": "698-42-003",
+  "יצרן": "טויוטה (השלמת מערכת)",
+  "דגם": "C-HR LOUNGE S",
+  "שנת ייצור": "",
+  "מד אוץ": "34,970",
+  "בעל הרכב": "שרה חסון",
+  "מספר תיק": "",
+  "תאריך": "05/06/24",
+  "מס. חשבונית": "6",
+  "שם מוסך": "מוסך ש.מ קוסמטיקאר בע\"מ",
+  "דוא\"ל מוסך": "sh.m_kosmtekar@walla.com",
+  "טלפון מוסך": "053-2344434/04-840960",
+  "כתובת מוסך": "ניו יורק 1, דאלית אל כרמל",
+  "מוקד נזק": "מגן אחורי (השלמת מערכת)",
+  "סהכ חלקים": "7,082.00",
+  "סהכ עבודות": "אין מידע",
+  "סהכ תיקונים": "אין מידע",
+  "עלות כוללת ללא מע״מ": "18,724.00",
+  "מע\"מ": "4,111.92",
+  "עלות כוללת": "22,844.00",
+  "הערות": "ט.ל.ח – טעות לעולם חוזרת",
+  "לינק": "",
+  "חלקים": [
+    {
+      "מק\"ט חלק": "1-004-52159F913",
+      "שם חלק": "מגן אחורי עליון",
+      "תיאור": "מגן אחורי עליון",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "894.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-5253F4250",
+      "שם חלק": "מגן אחורי תחתון",
+      "תיאור": "מגן אחורי תחתון",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "153.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-52751F4010",
+      "שם חלק": "פס קישוט מרכזי במגן אחורי",
+      "תיאור": "פס קישוט מרכזי במגן אחורי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "808.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-PW15810200L6",
+      "שם חלק": "מגלש מגן אחורי",
+      "תיאור": "מגלש מגן אחורי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "202.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-521624060",
+      "שם חלק": "כיסוי וו גרירה אחורי L",
+      "תיאור": "כיסוי וו גרירה אחורי L",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,905.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-8934878120C2",
+      "שם חלק": "תושבות לחיישני חנייה אחוריים",
+      "תיאור": "תושבות לחיישני חנייה אחוריים",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,320.00"
+    },
+    {
+      "מק\"ט חלק": "1-004-5203F4050",
+      "שם חלק": "מגן אחורי פנימי",
+      "תיאור": "מגן אחורי פנימי",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "1,800.00"
+    }
+  ],
+  "עבודות": [
+    {
+      "סוג העבודה": "ניתוק זרם",
+      "תיאור עבודות": "ניתוק זרם רכב היברידי",
+      "עלות עבודות": "אין מידע"
+    },
+    {
+      "סוג העבודה": "העברת חיישנים",
+      "תיאור עבודות": "העברת חיישנים",
+      "עלות עבודות": "אין מידע"
+    },
+    {
+      "סוג העבודה": "חומרי עזר",
+      "תיאור עבודות": "חומרי עזר",
+      "עלות עבודות": "אין מידע"
+    }
+  ],
+  "תיקונים": [
+    {
+      "סוג תיקון": "אין מידע",
+      "תיאור התיקון": "אין מידע",
+      "עלות תיקונים": "אין מידע"
+    }
+  ],
+  "מפיק החשבונית": "שאדי מפלח",
+  "ח.פ": "517109013",
+  "מספר רישיון": "91329",
+  "טלפון נייד": "054-4888830",
+  "מס' כרטיס": "1028",
+  "פוליסה": "30056",
+  "מספר תביעה": "034088104",
+  "נהג": "שרה חסון",
+  "קילומטראז'": "34,970",
+  "תאריך פתיחת תיק": "13/04/25",
+  "תאריך קבלת רכב": "05/06/24",
+  "סה\"כ עבודות": "8,239.00",
+  "סה\"כ חלקים": "4,564.00"
+}
+
+7. The reports contribution : each report has its ow contribution to the helper , basically in the repot finalization flow, like the floe we made for the estimate, there are data that only can be input in the end of the process like : depreciation , garage days, differences, agreements , type of report and so on, those data need to populate the helper.
+8. What we gat fro this helper in the end is a structured modular process the each step adds information and that categories information and log it in easy to assign sections. I don’t know why the helper got fucked up , I have been working on tho for long time, its the core of the system, ii provided all json structures for all the modules outputs several times , all the sons need to in the documentation / files. Todo2.md and todo.md . You need to deep read and understand the documentation and analyze all modules to understand what outputs they have and how its structured  
+
+The initial helper structure I embedded in the system was :
+
+Full helper structure: 
+
+{
+  "vehicle": {
+    "plate": "",
+    "manufacturer": "",
+    "model": "",
+    "model_code": "",
+    "model_type": "",
+    "trim": "",
+    "year": "",
+    "chassis": "",
+    "engine_volume": "",
+    "fuel_type": "",
+    "transmission": "",
+    "is_automatic": false,
+    "drive_type": "",
+    "km": "",
+    "office_code": "",
+    "ownership_type": "",
+    "registration_date": "",
+    "category": "",
+    "features": "",
+    "condition": "",
+    "market_value": 0,
+    "created_at": "",
+    "updated_at": "2025-07-16T08:27:46.384Z"
+  },
+  "case_info": {
+    "case_id": "YC-UNKNOWN-2025",
+    "plate": "",
+    "status": "active",
+    "damage_date": "",
+    "inspection_date": "",
+    "submission_date": "",
+    "created_at": "2025-07-16T08:27:46.384Z",
+    "inspection_location": "",
+    "damage_type": "",
+    "report_type": "final",
+    "report_type_display": "חוות דעת שמאי פרטית"
+  },
+  "stakeholders": {
+    "owner": {
+      "name": "",
+      "address": "",
+      "phone": "",
+      "email": ""
+    },
+    "garage": {
+      "name": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": ""
+    },
+    "insurance": {
+      "company": "",
+      "email": "",
+      "policy_number": "",
+      "claim_number": "",
+      "agent": {
+        "name": "",
+        "phone": "",
+        "email": ""
+      }
+    }
+  },
+  "damage_assessment": {
+    "summary": {
+      "total_damage_amount": 0,
+      "damage_percentage": 0,
+      "is_total_loss": false,
+      "classification": "",
+      "assessment_notes": ""
+    },
+    "centers": []
+  },
+  "valuation": {
+    "source": "levi_yitzhak",
+    "report_date": "",
+    "valuation_date": "2025-07-16",
+    "base_price": 0,
+    "final_price": 0,
+    "currency": "ILS",
+    "market_conditions": "",
+    "comparable_vehicles": [],
+    "adjustments": {
+      "registration": {
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      },
+      "mileage": {
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      },
+      "condition": {.    ***I don’t know what condition is its needs to ownership type :private/ company *****
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      },
+      "ownership_history": {
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      },
+      "features": {
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      },
+      "market_factors": {
+        "percent": 0,
+        "amount": 0,
+        "reason": ""
+      }
+    },
+    "depreciation": {
+      "global_percentage": 0,
+      "global_amount": 0,
+      "work_days_impact": 0,
+      "total_depreciation": 0
+    }
+  },
+  "financials": {
+    "costs": {
+      "parts_total": 0,
+      "repairs_total": 0,
+      "works_total": 0,
+      "subtotal": 0
+    },
+    "fees": {
+      "photography": {
+        "count": 0,
+        "unit_price": 0,
+        "total": 0
+      },
+      "office": {
+        "fixed_fee": 0,
+        "percentage": 0,
+        "total": 0
+      },
+      "travel": {
+        "count": 0,
+        "unit_price": 0,
+        "total": 0
+      },
+      "assessment": {
+        "hours": 0,
+        "hourly_rate": 0,
+        "total": 0
+      },
+      "subtotal": 0
+    },
+    "taxes": {
+      "vat_percentage": 18,
+      "vat_amount": 0
+    },
+    "totals": {
+      "before_tax": 0,
+      "after_tax": 0,
+      "total_compensation": 0,
+      "salvage_value": 0,
+      "net_settlement": 0
+    },
+    "calculation_date": "2025-07-16T08:27:46.384Z",
+    "calculation_method": "",
+    "overrides": []
+  },
+  "parts_search": {
+    "search_history": [],
+    "all_results": [],
+    "results": [],
+    "summary": {
+      "total_searches": 0,
+      "total_results": 0,
+      "selected_count": 0,
+      "last_search": ""
+    }
+  },
+  "documents": {
+    "images": [],
+    "invoices": [],
+    "reports": [],
+    "pdfs": [],
+    "other_files": []
+  },
+  "system": {
+    "version": "1.0.0",
+    "last_updated": "2025-07-16T08:27:46.384Z",
+    "processing_history": [
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Starting data standardization process"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating vehicle data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Vehicle data migrated:   "
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating case information"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Case info migrated: YC-UNKNOWN-2025"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating stakeholder data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Stakeholder data migrated"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating damage assessment data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Damage assessment migrated: 0 centers"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating valuation data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Valuation data migrated: 0 -> 0"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating financial data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Financial data migrated"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating document data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Documents migrated: 0 images, 0 invoices"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Migrating parts search data"
+      },
+      {
+        "timestamp": "2025-07-16T08:27:46.384Z",
+        "type": "info",
+        "message": "Parts search data migrated: 0 total results, 0 selected"
+      }
+    ],
+    "validation_status": {
+      "vehicle": false,
+      "damage": false,
+      "valuation": false,
+      "financials": false
+    },
+    "integrations": {
+      "levi_processed": false,
+      "invoices_processed": false,
+      "images_uploaded": false,
+      "estimate_generated": false
+    }
+  }
+}
+
+EXAMAINE AND LERAN ALL THE DOCUMENTATION , SPECS AND FILES TO DETERMINE THE BEST CONFIGURATION OF THE HELPER .
+THE HELPER IS THE ONLY SOURCE OF DATA FOR THE THE SYSTEM, MODULES CAN UPDATE OR ADD TO IT BUT ITS ALWAYS THE SOURCE OF TRUTH .
+
+

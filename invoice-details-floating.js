@@ -426,11 +426,103 @@
 
   window.showInvoiceDetails = window.toggleInvoiceDetails;
 
+  // ULTRA-SAFE INVOICE AUTO-REFRESH: Conservative approach
+  let invoiceRefreshTimeout = null;
+  let lastInvoiceRefreshTime = 0;
+  let invoiceRefreshCount = 0;
+  let invoiceRefreshDisabled = false;
+  const INVOICE_REFRESH_DEBOUNCE_MS = 4000; // 4 second debounce
+  const MAX_INVOICE_REFRESHES_PER_MINUTE = 2; // Very conservative
+  
+  // Reset invoice refresh counter every minute
+  setInterval(() => {
+    invoiceRefreshCount = 0;
+    if (invoiceRefreshDisabled) {
+      console.log('🔓 Invoice auto-refresh re-enabled after cooldown');
+      invoiceRefreshDisabled = false;
+    }
+  }, 60000);
+  
+  function safeRefreshInvoiceData(source = 'manual') {
+    // SAFETY CHECK 1: Is refresh disabled?
+    if (invoiceRefreshDisabled) {
+      console.log(`🚫 Invoice refresh disabled (${source})`);
+      return;
+    }
+    
+    const now = Date.now();
+    
+    // SAFETY CHECK 2: Debouncing
+    if (source !== 'manual' && (now - lastInvoiceRefreshTime) < INVOICE_REFRESH_DEBOUNCE_MS) {
+      console.log(`🚫 Invoice refresh debounced (${source})`);
+      return;
+    }
+    
+    // SAFETY CHECK 3: Rate limiting (except manual)
+    if (source !== 'manual') {
+      invoiceRefreshCount++;
+      if (invoiceRefreshCount > MAX_INVOICE_REFRESHES_PER_MINUTE) {
+        console.log(`🚫 Invoice refresh rate limit exceeded (${source})`);
+        invoiceRefreshDisabled = true;
+        return;
+      }
+    }
+    
+    // SAFETY CHECK 4: Modal visibility (except manual)
+    const modal = document.getElementById("invoiceDetailsModal");
+    if (source !== 'manual' && (!modal || modal.style.display === "none")) {
+      console.log(`🚫 Invoice refresh skipped (${source}) - modal not visible`);
+      return;
+    }
+    
+    // Clear any pending refresh
+    if (invoiceRefreshTimeout) {
+      clearTimeout(invoiceRefreshTimeout);
+    }
+    
+    // Schedule safe refresh
+    const delay = source === 'manual' ? 0 : 800;
+    invoiceRefreshTimeout = setTimeout(() => {
+      try {
+        console.log(`🔄 Safe invoice refresh (${source})`);
+        lastInvoiceRefreshTime = Date.now();
+        loadInvoiceData();
+      } catch (error) {
+        console.error('❌ Error in invoice refresh:', error);
+        if (source !== 'manual') {
+          invoiceRefreshDisabled = true;
+        }
+      }
+      invoiceRefreshTimeout = null;
+    }, delay);
+  }
+  
   // Expose refresh function to global scope for automatic updates from builder
   window.refreshInvoiceData = function () {
     console.log('🔄 Invoice floating screen: refreshInvoiceData called');
-    loadInvoiceData();
+    safeRefreshInvoiceData('manual'); // Manual calls are always allowed
   };
+  
+  // VERY SELECTIVE AUTO-REFRESH: Only for invoice-specific updates
+  document.addEventListener('helperUpdate', function(event) {
+    if (event.detail && 
+        (event.detail.includes('invoice') || 
+         event.detail.includes('document') ||
+         event.detail === 'invoice_processed')) {
+      console.log('📡 Invoice refresh triggered by relevant update:', event.detail);
+      safeRefreshInvoiceData('helperUpdate');
+    }
+  });
+  
+  // Cross-tab updates for invoices
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'helper' && e.newValue) {
+      const modal = document.getElementById("invoiceDetailsModal");
+      if (modal && modal.style.display !== "none") {
+        safeRefreshInvoiceData('storage');
+      }
+    }
+  });
 
   // Make modal draggable
   function makeDraggable(modal) {
@@ -538,49 +630,97 @@
       return num > 0 ? `₪${num.toLocaleString()}` : "₪0";
     };
 
+    // Handle Hebrew field names from structured invoice format
+    const getInvoiceValue = (hebrewKey, englishKey) => {
+      return invoice[hebrewKey] || invoice[englishKey] || '-';
+    };
+
     return `
       <div class="invoice-section">
-        <h4>📋 נתוני חשבונית ראשית</h4>
+        <h4>📋 פרטי חשבונית כלליים</h4>
+        
+        <div class="invoice-field">
+          <div class="label">מספר רכב:</div>
+          <div class="value">${formatValue(getInvoiceValue('מספר רכב', 'car_number'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">יצרן:</div>
+          <div class="value">${formatValue(getInvoiceValue('יצרן', 'manufacturer'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">דגם:</div>
+          <div class="value">${formatValue(getInvoiceValue('דגם', 'model'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">בעל הרכב:</div>
+          <div class="value">${formatValue(getInvoiceValue('בעל הרכב', 'owner_name'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">תאריך:</div>
+          <div class="value">${formatValue(getInvoiceValue('תאריך', 'date'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">מס. חשבונית:</div>
+          <div class="value">${formatValue(getInvoiceValue('מס. חשבונית', 'invoice_number'))}</div>
+        </div>
+      </div>
+      
+      <div class="invoice-section">
+        <h4>🏢 פרטי מוסך</h4>
         
         <div class="invoice-field">
           <div class="label">שם מוסך:</div>
-          <div class="value">${formatValue(invoice.garage_name)}</div>
+          <div class="value">${formatValue(getInvoiceValue('שם מוסך', 'garage_name'))}</div>
         </div>
         <div class="invoice-field">
-          <div class="label">אימייל מוסך:</div>
-          <div class="value">${formatValue(invoice.garage_email)}</div>
+          <div class="label">דוא"ל מוסך:</div>
+          <div class="value">${formatValue(getInvoiceValue('דוא"ל מוסך', 'garage_email'))}</div>
         </div>
         <div class="invoice-field">
           <div class="label">טלפון מוסך:</div>
-          <div class="value">${formatValue(invoice.garage_phone)}</div>
+          <div class="value">${formatValue(getInvoiceValue('טלפון מוסך', 'garage_phone'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">כתובת מוסך:</div>
+          <div class="value">${formatValue(getInvoiceValue('כתובת מוסך', 'garage_address'))}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">מוקד נזק:</div>
+          <div class="value">${formatValue(getInvoiceValue('מוקד נזק', 'damage_center'))}</div>
         </div>
       </div>
 
       <div class="invoice-total-section">
         <div class="invoice-total-row">
           <span>סה"כ חלקים:</span>
-          <span class="value price">${formatPrice(invoice.total_parts)}</span>
+          <span class="value price">${formatPrice(getInvoiceValue('סהכ חלקים', 'total_parts') || getInvoiceValue('סה"כ חלקים', 'total_parts'))}</span>
         </div>
         <div class="invoice-total-row">
           <span>סה"כ עבודות:</span>
-          <span class="value price">${formatPrice(invoice.total_works)}</span>
+          <span class="value price">${formatPrice(getInvoiceValue('סהכ עבודות', 'total_works') || getInvoiceValue('סה"כ עבודות', 'total_works'))}</span>
         </div>
         <div class="invoice-total-row">
           <span>סה"כ תיקונים:</span>
-          <span class="value price">${formatPrice(invoice.total_repairs)}</span>
+          <span class="value price">${formatPrice(getInvoiceValue('סהכ תיקונים', 'total_repairs') || getInvoiceValue('סה"כ תיקונים', 'total_repairs'))}</span>
         </div>
         <div class="invoice-total-row">
-          <span>סכום ביניים:</span>
-          <span class="value price">${formatPrice(invoice.subtotal)}</span>
+          <span>עלות ללא מע"מ:</span>
+          <span class="value price">${formatPrice(getInvoiceValue('עלות כוללת ללא מע״מ', 'subtotal_before_vat'))}</span>
         </div>
         <div class="invoice-total-row">
           <span>מע"מ:</span>
-          <span class="value price">${formatPrice(invoice.vat)}</span>
+          <span class="value price">${formatPrice(getInvoiceValue('מע"מ', 'vat'))}</span>
         </div>
         <div class="invoice-total-final">
           <div class="invoice-total-row">
-            <span>סה"כ סופי:</span>
-            <span class="value price">${formatPrice(invoice.total)}</span>
+            <span>עלות כוללת:</span>
+            <span class="value price">${formatPrice(getInvoiceValue('עלות כוללת', 'total_cost'))}</span>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 6px;">
+          <div class="invoice-field">
+            <div class="label">הערות:</div>
+            <div class="value" style="font-size: 12px;">${formatValue(getInvoiceValue('הערות', 'notes'))}</div>
           </div>
         </div>
       </div>
@@ -592,56 +732,32 @@
   function generateInvoiceItemsSection(invoice) {
     let content = '';
 
-    // Parts table
-    if (invoice.parts && invoice.parts.length > 0) {
+    // Parts table - Handle Hebrew structure
+    const parts = invoice['חלקים'] || invoice.parts || [];
+    if (parts && parts.length > 0) {
       content += `
         <div class="invoice-section">
-          <h4>🔧 חלקים</h4>
+          <h4>🔧 חלקים (${parts.length})</h4>
           <table class="invoice-items-table">
             <thead>
               <tr>
-                <th>שם החלק</th>
+                <th>מק"ט חלק</th>
+                <th>שם חלק</th>
                 <th>תיאור</th>
+                <th>כמות</th>
                 <th>מקור</th>
-                <th>מחיר</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoice.parts.map(part => `
-                <tr>
-                  <td>${part.name || '-'}</td>
-                  <td>${part.description || '-'}</td>
-                  <td>${part.source || '-'}</td>
-                  <td>${part.price ? `₪${parseFloat(part.price).toLocaleString()}` : '₪0'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-
-    // Works table
-    if (invoice.works && invoice.works.length > 0) {
-      content += `
-        <div class="invoice-section">
-          <h4>⚒️ עבודות</h4>
-          <table class="invoice-items-table">
-            <thead>
-              <tr>
-                <th>סוג עבודה</th>
-                <th>תיאור</th>
-                <th>הערות</th>
                 <th>עלות</th>
               </tr>
             </thead>
             <tbody>
-              ${invoice.works.map(work => `
+              ${parts.map(part => `
                 <tr>
-                  <td>${work.type || '-'}</td>
-                  <td>${work.description || '-'}</td>
-                  <td>${work.note || '-'}</td>
-                  <td>${work.cost ? `₪${parseFloat(work.cost).toLocaleString()}` : '₪0'}</td>
+                  <td>${part['מק"ט חלק'] || part.part_code || '-'}</td>
+                  <td>${part['שם חלק'] || part.name || '-'}</td>
+                  <td>${part['תיאור'] || part.description || '-'}</td>
+                  <td>${part['כמות'] || part.quantity || '1'}</td>
+                  <td>${part['מקור'] || part.source || '-'}</td>
+                  <td>${part['עלות'] ? `₪${parseFloat(part['עלות']).toLocaleString()}` : (part.price ? `₪${parseFloat(part.price).toLocaleString()}` : '₪0')}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -650,25 +766,26 @@
       `;
     }
 
-    // Repairs table
-    if (invoice.repairs && invoice.repairs.length > 0) {
+    // Works table - Handle Hebrew structure
+    const works = invoice['עבודות'] || invoice.works || [];
+    if (works && works.length > 0) {
       content += `
         <div class="invoice-section">
-          <h4>🔨 תיקונים</h4>
+          <h4>⚒️ עבודות (${works.length})</h4>
           <table class="invoice-items-table">
             <thead>
               <tr>
-                <th>שם התיקון</th>
-                <th>תיאור</th>
-                <th>עלות</th>
+                <th>סוג העבודה</th>
+                <th>תיאור עבודות</th>
+                <th>עלות עבודות</th>
               </tr>
             </thead>
             <tbody>
-              ${invoice.repairs.map(repair => `
+              ${works.map(work => `
                 <tr>
-                  <td>${repair.name || '-'}</td>
-                  <td>${repair.description || '-'}</td>
-                  <td>${repair.cost ? `₪${parseFloat(repair.cost).toLocaleString()}` : '₪0'}</td>
+                  <td>${work['סוג העבודה'] || work.type || '-'}</td>
+                  <td>${work['תיאור עבודות'] || work.description || '-'}</td>
+                  <td>${work['עלות עבודות'] !== 'אין מידע' ? (work['עלות עבודות'] ? `₪${parseFloat(work['עלות עבודות']).toLocaleString()}` : '₪0') : 'אין מידע'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -677,7 +794,97 @@
       `;
     }
 
+    // Repairs table - Handle Hebrew structure
+    const repairs = invoice['תיקונים'] || invoice.repairs || [];
+    if (repairs && repairs.length > 0) {
+      content += `
+        <div class="invoice-section">
+          <h4>🔨 תיקונים (${repairs.length})</h4>
+          <table class="invoice-items-table">
+            <thead>
+              <tr>
+                <th>סוג תיקון</th>
+                <th>תיאור התיקון</th>
+                <th>עלות תיקונים</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${repairs.map(repair => `
+                <tr>
+                  <td>${repair['סוג תיקון'] || repair.type || repair.name || '-'}</td>
+                  <td>${repair['תיאור התיקון'] || repair.description || '-'}</td>
+                  <td>${repair['עלות תיקונים'] !== 'אין מידע' ? (repair['עלות תיקונים'] ? `₪${parseFloat(repair['עלות תיקונים']).toLocaleString()}` : '₪0') : 'אין מידע'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // Additional invoice information section
+    content += generateAdditionalInvoiceInfo(invoice);
+    
     return content;
+  }
+  
+  function generateAdditionalInvoiceInfo(invoice) {
+    const formatValue = (value) => {
+      return value && value.toString().trim() ? value : "-";
+    };
+    
+    const getInvoiceValue = (hebrewKey, englishKey) => {
+      return invoice[hebrewKey] || invoice[englishKey] || '-';
+    };
+    
+    return `
+      <div class="invoice-section">
+        <h4>📊 פרטים נוספים</h4>
+        
+        <div class="levi-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; text-align: right;">
+          <div class="invoice-field">
+            <div class="label">מפיק החשבונית:</div>
+            <div class="value">${formatValue(getInvoiceValue('מפיק החשבונית', 'invoice_issuer'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">ח.פ:</div>
+            <div class="value">${formatValue(getInvoiceValue('ח.פ', 'business_id'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">מספר רישיון:</div>
+            <div class="value">${formatValue(getInvoiceValue('מספר רישיון', 'license_number'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">טלפון נייד:</div>
+            <div class="value">${formatValue(getInvoiceValue('טלפון נייד', 'mobile_phone'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">מספר תיק:</div>
+            <div class="value">${formatValue(getInvoiceValue('מספר תיק', 'case_number'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">פוליסה:</div>
+            <div class="value">${formatValue(getInvoiceValue('פוליסה', 'policy_number'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">מספר תביעה:</div>
+            <div class="value">${formatValue(getInvoiceValue('מספר תביעה', 'claim_number'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">קילומטראז':</div>
+            <div class="value">${formatValue(getInvoiceValue('קילומטראז׳', 'mileage'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">תאריך פתיחת תיק:</div>
+            <div class="value">${formatValue(getInvoiceValue('תאריך פתיחת תיק', 'case_open_date'))}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">תאריך קבלת רכב:</div>
+            <div class="value">${formatValue(getInvoiceValue('תאריך קבלת רכב', 'vehicle_receive_date'))}</div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function generateDocumentInvoicesSection(invoices) {
