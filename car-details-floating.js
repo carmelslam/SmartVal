@@ -714,19 +714,6 @@
       console.error("❌ Error loading car data:", error);
     }
   }
-      // SIMPLE: No custom storage needed - helper is the only source
-        carDetails: carDetails,
-        stakeholders: stakeholders,
-        meta: meta,
-        valuationData: valuationData
-      };
-      console.log('💾 Data persisted for future use');
-
-    } catch (error) {
-      console.error("❌ Error loading car data:", error);
-      updateCarDisplay({}, {}, {}, {}, {});
-    }
-  }
 
   function updateCarDisplay(helper) {
     // FOLLOW HELPER ARCHITECTURE: Read ONLY from helper structure
