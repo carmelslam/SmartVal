@@ -2469,6 +2469,109 @@
       }
     }
     
+    // TRANSFORM LEVI DATA TO VALUATION STRUCTURE - Critical Data Flow Fix
+    function populateValuationAdjustmentsFromLevi(helper) {
+      try {
+        // Initialize valuation structure if needed
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        console.log('🔄 Transforming Levi data to valuation structure...');
+        console.log('Levi adjustments:', helper.levi_report?.adjustments);
+        console.log('Current valuation adjustments:', helper.valuation.adjustments);
+        
+        // If we already have valuation adjustments, don't override (user may have edited)
+        const hasExistingData = Object.keys(helper.valuation.adjustments).some(key => 
+          helper.valuation.adjustments[key]?.percent || helper.valuation.adjustments[key]?.amount
+        );
+        
+        if (hasExistingData) {
+          console.log('✅ Using existing valuation adjustments (user edited)');
+          return;
+        }
+        
+        // Transform Levi adjustments to valuation structure
+        if (helper.levi_report?.adjustments && Array.isArray(helper.levi_report.adjustments)) {
+          helper.levi_report.adjustments.forEach(adj => {
+            const desc = (adj.description || '').toLowerCase();
+            const percentage = adj.percentage || adj.percent || 0;
+            const value = adj.value || 0;
+            const reason = adj.description || '';
+            
+            console.log(`🔍 Processing Levi adjustment: "${reason}" (${percentage}%, ₪${value})`);
+            
+            // Map to market value categories based on description
+            if (desc.includes('בעל') || desc.includes('בעלות') || desc.includes('בעלים קודם')) {
+              helper.valuation.adjustments.condition = {
+                reason: reason,
+                percent: percentage,
+                amount: value,
+                description: reason
+              };
+              console.log('📊 Mapped to OWNERSHIP TYPE:', helper.valuation.adjustments.condition);
+              
+            } else if (desc.includes('ק"מ') || desc.includes('קילומטר') || desc.includes('מרחק') || desc.includes('נסיעה')) {
+              helper.valuation.adjustments.mileage = {
+                reason: reason,
+                percent: percentage,
+                amount: value,
+                description: reason
+              };
+              console.log('📊 Mapped to MILEAGE:', helper.valuation.adjustments.mileage);
+              
+            } else if (desc.includes('בעלים') && !desc.includes('בעלות')) {
+              helper.valuation.adjustments.ownership_history = {
+                reason: reason,
+                percent: percentage,
+                amount: value,
+                description: reason
+              };
+              console.log('📊 Mapped to NUMBER OF OWNERS:', helper.valuation.adjustments.ownership_history);
+              
+            } else if (desc.includes('מאפיין') || desc.includes('ציוד') || desc.includes('תוספת')) {
+              // Features go to GROSS section, not market value
+              helper.valuation.adjustments.features = {
+                reason: reason,
+                percent: percentage,
+                amount: value,
+                description: reason
+              };
+              console.log('📊 Mapped to FEATURES (gross section):', helper.valuation.adjustments.features);
+              
+            } else if (desc.includes('רישוי') || desc.includes('עליה לכביש') || desc.includes('רישום')) {
+              // Registration goes to GROSS section, not market value
+              helper.valuation.adjustments.registration = {
+                reason: reason,
+                percent: percentage,
+                amount: value,
+                description: reason
+              };
+              console.log('📊 Mapped to REGISTRATION (gross section):', helper.valuation.adjustments.registration);
+              
+            } else {
+              // Generic market adjustment - assign to condition if empty
+              if (!helper.valuation.adjustments.condition?.percent && !helper.valuation.adjustments.condition?.amount) {
+                helper.valuation.adjustments.condition = {
+                  reason: reason || 'התאמת שוק כללית',
+                  percent: percentage,
+                  amount: value,
+                  description: reason || 'התאמת שוק כללית'
+                };
+                console.log('📊 Mapped to GENERAL MARKET ADJUSTMENT:', helper.valuation.adjustments.condition);
+              }
+            }
+          });
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Levi data transformed to valuation structure:', helper.valuation.adjustments);
+        
+      } catch (error) {
+        console.error('❌ Error transforming Levi data to valuation structure:', error);
+      }
+    }
+    
     function loadAllAdjustmentsImmediate(helper) {
       try {
         console.log('🔄 Loading MARKET VALUE adjustments in sequential order');
@@ -2481,6 +2584,9 @@
         
         // Clear container
         adjustmentsContainer.innerHTML = '';
+        
+        // CRITICAL FIX: Transform Levi data to valuation structure if needed
+        populateValuationAdjustmentsFromLevi(helper);
         
         // Get adjustments from helper.valuation.adjustments (single source of truth)
         const adjustments = helper.valuation?.adjustments || {};
@@ -3886,14 +3992,13 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
+        // CRITICAL FIX: Transform Levi data to valuation structure if needed
+        populateValuationAdjustmentsFromLevi(helper);
+
         // Get data from helper.valuation.adjustments (single source of truth)
         const adjustments = helper.valuation?.adjustments || {};
-        const leviReportData = helper.levi_report?.adjustments || [];
         
-        console.log('🔍 Loading GROSS adjustments (Features + Registration only):', {
-          adjustments: adjustments,
-          leviReportData: leviReportData
-        });
+        console.log('🔍 Loading GROSS adjustments (Features + Registration only):', adjustments);
 
         // ===== Features Adjustments =====
 
@@ -4651,15 +4756,20 @@
           // CRITICAL FIX: When Levi data updates, refresh both estimate adjustments AND gross adjustments
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
+          // Transform Levi data to valuation structure first
+          populateValuationAdjustmentsFromLevi(helper);
+          
           // Refresh gross adjustments (features & registration) with new Levi data
           setTimeout(() => {
             console.log('🔄 Refreshing gross adjustments with updated Levi data...');
             loadGrossAdjustments(helper);
           }, 100);
           
-          // Refresh all estimate adjustments with new Levi data  
-          clearLeviAdjustments();
-          autoPopulateFromLeviSummary();
+          // Refresh market value adjustments with new Levi data  
+          setTimeout(() => {
+            console.log('🔄 Refreshing market adjustments with updated Levi data...');
+            loadAllAdjustments(helper);
+          }, 200);
         }
       });
       
@@ -7064,6 +7174,8 @@
     window.addCustomSummaryField = addCustomSummaryField;
     window.loadDamageCentersSummary = loadDamageCentersSummary;
     window.loadAllAdjustments = loadAllAdjustments;
+    window.populateValuationAdjustmentsFromLevi = populateValuationAdjustmentsFromLevi;
+    window.removeMarketAdjustment = removeMarketAdjustment;
     window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
     window.calculateDamagePercentage = calculateDamagePercentage;
     window.triggerGlobalDepreciationCalc = triggerGlobalDepreciationCalc;
