@@ -762,29 +762,39 @@
         helper = window.helper;
       }
 
-      // FIXED: Create a result object similar to summary page approach
-      // The summary page gets Hebrew fields directly from the result object
-      // We need to extract the Hebrew webhook data and create a similar result object
+      // Enhanced data loading with proper fallbacks
       let result = {};
-      
-      // Try to get the Hebrew webhook data from raw_webhook_data
+
+      // PRIORITY 1: Raw webhook data (Hebrew fields) - CRITICAL for floating display
       if (helper.raw_webhook_data) {
         const webhookKeys = Object.keys(helper.raw_webhook_data);
         const latestWebhookKey = webhookKeys[webhookKeys.length - 1];
         if (latestWebhookKey && helper.raw_webhook_data[latestWebhookKey]?.data) {
           result = { ...helper.raw_webhook_data[latestWebhookKey].data };
+          console.log('✅ Loading from raw webhook data:', latestWebhookKey);
         }
       }
+
+      // PRIORITY 2: Helper levisummary data
+      if (Object.keys(result).length === 0 && helper.levisummary) {
+        result = { ...helper.levisummary };
+        console.log('✅ Loading from helper.levisummary');
+      }
+
+      // PRIORITY 3: Helper expertise levi_report data  
+      if (Object.keys(result).length === 0 && helper.expertise?.levi_report) {
+        result = { ...helper.expertise.levi_report };
+        console.log('✅ Loading from helper.expertise.levi_report');
+      }
       
-      // Also merge other helper data as fallback
+      // FALLBACK: Merge other helper data for any missing fields
       result = {
         ...helper.vehicle,
         ...helper.car_details, 
         ...helper.expertise?.levi_report,
         ...helper.meta,
         ...helper.valuation,
-        ...helper, // Include top-level helper fields
-        ...result  // Hebrew webhook data takes priority
+        ...result  // Keep priority data on top
       };
 
       
@@ -913,11 +923,11 @@
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // FIXED: Registration percentage - match upload-levi.html approach
+    // FIXED: Registration percentage - prioritize Hebrew webhook fields
     document.getElementById("levi-registration-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.registration?.percent ||
       result['עליה לכביש %'] || 
       result['עליה לכביש%'] || 
+      helper.valuation?.adjustments?.registration?.percent ||
       result['registration_percent'] || 
       0
     );
@@ -936,11 +946,11 @@
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // FIXED: Ownership percentage - match upload-levi.html approach
+    // FIXED: Ownership percentage - prioritize Hebrew webhook fields
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.ownership_type?.percent ||
       result['בעלות %'] || 
       result['בעלות%'] || 
+      helper.valuation?.adjustments?.ownership_type?.percent ||
       result['ownership_type_percent'] || 
       0
     );
@@ -959,14 +969,14 @@
     document.getElementById("levi-km").textContent = formatValue(
       result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
-    // FIXED: KM percentage - match upload-levi.html approach
+    // FIXED: KM percentage - prioritize Hebrew webhook fields
     document.getElementById("levi-km-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.mileage?.percent ||
       result['מס ק״מ %'] || 
       result['מס ק"מ %'] || 
       result['מס׳ ק"מ %'] || 
       result['מס\' ק״מ %'] || 
       result['מס ק״מ%'] || 
+      helper.valuation?.adjustments?.mileage?.percent ||
       result['mileage_percent'] || 
       0
     );
@@ -985,11 +995,11 @@
     document.getElementById("levi-owners").textContent = formatValue(
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
-    // FIXED: Owners percentage - match upload-levi.html approach
+    // FIXED: Owners percentage - prioritize Hebrew webhook fields
     document.getElementById("levi-owners-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.ownership_history?.percent ||
       result['מספר בעלים %'] || 
       result['מספר בעלים%'] || 
+      helper.valuation?.adjustments?.ownership_history?.percent ||
       result['ownership_history_percent'] || 
       0
     );

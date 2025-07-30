@@ -2422,8 +2422,12 @@
         }
         
         // Transform Levi adjustments to valuation structure
-        if (helper.levi_report?.adjustments && Array.isArray(helper.levi_report.adjustments)) {
-          helper.levi_report.adjustments.forEach(adj => {
+        // CRITICAL FIX: Check both possible locations for Levi adjustments
+        const leviAdjustments = helper.expertise?.levi_report?.adjustments || helper.levi_report?.adjustments;
+        
+        if (leviAdjustments && Array.isArray(leviAdjustments)) {
+          console.log('🔍 Found Levi adjustments in:', helper.expertise?.levi_report?.adjustments ? 'helper.expertise.levi_report' : 'helper.levi_report');
+          leviAdjustments.forEach(adj => {
             const desc = (adj.description || '').toLowerCase();
             const percentage = adj.percentage || adj.percent || 0;
             const value = adj.value || 0;
@@ -5742,26 +5746,54 @@
         const allAdjustments = [];
         const seenAdjustments = new Set();
         
-        // Add Levi adjustments first (these are the main ones)
-        if (helper.levi_report?.adjustments) {
-          helper.levi_report.adjustments.forEach(adj => {
-            const adjustmentType = adj.value >= 0 ? 'plus' : 'minus';
-            const key = `${adj.description}-${adj.percentage || adj.percent || 0}-${adjustmentType}`;
-            if (!seenAdjustments.has(key)) {
-              allAdjustments.push({
-                description: adj.description || 'התאמה מלוי יצחק',
-                percentage: adj.percentage || adj.percent || 0,
-                value: adj.value || 0,
+        // CRITICAL FIX: Load Levi adjustments with enhanced descriptions from valuation structure
+        // Check both helper.levi_report.adjustments AND helper.valuation.adjustments
+        const leviAdjustments = [];
+        
+        // PRIORITY 1: Get actual detailed descriptions from helper.valuation.adjustments
+        if (helper.valuation?.adjustments) {
+          Object.entries(helper.valuation.adjustments).forEach(([category, adjData]) => {
+            if (adjData && (adjData.percent || adjData.amount)) {
+              const adjustmentType = (adjData.percent < 0 || adjData.amount < 0) ? 'minus' : 'plus';
+              leviAdjustments.push({
+                description: adjData.detailed_description || adjData.description || adjData.reason || `התאמה - ${category}`,
+                percentage: Math.abs(adjData.percent || 0),
+                value: Math.abs(adjData.amount || 0),
                 type: adjustmentType,
-                source: 'levi'
+                source: 'levi-enhanced',
+                category: category
               });
-              seenAdjustments.add(key);
-              console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
-            } else {
-              console.log('⚠️ Skipped duplicate Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
+              console.log('✅ Added enhanced Levi adjustment from valuation:', adjData.detailed_description || adjData.description);
             }
           });
         }
+        
+        // PRIORITY 2: Fallback to original levi_report.adjustments if no enhanced data
+        if (leviAdjustments.length === 0 && helper.levi_report?.adjustments) {
+          helper.levi_report.adjustments.forEach(adj => {
+            const adjustmentType = adj.value >= 0 ? 'plus' : 'minus';
+            leviAdjustments.push({
+              description: adj.description || 'התאמה מלוי יצחק',
+              percentage: adj.percentage || adj.percent || 0,
+              value: adj.value || 0,
+              type: adjustmentType,
+              source: 'levi-original'
+            });
+            console.log('✅ Added original Levi adjustment:', adj.description);
+          });
+        }
+        
+        // Add all Levi adjustments to the unified list
+        leviAdjustments.forEach(adj => {
+          const key = `${adj.description}-${adj.percentage}-${adj.type}`;
+          if (!seenAdjustments.has(key)) {
+            allAdjustments.push(adj);
+            seenAdjustments.add(key);
+            console.log('✅ Added Levi adjustment with actual description:', adj.description, adj.percentage, adj.type);
+          } else {
+            console.log('⚠️ Skipped duplicate Levi adjustment:', adj.description);
+          }
+        });
         
         // Add custom adjustments only if they're not duplicates
         if (helper.custom_adjustments?.full_market_adjustments) {

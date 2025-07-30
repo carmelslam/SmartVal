@@ -2141,6 +2141,39 @@ class LeviProcessor {
         - Gross Market Value (base+features+registration): ₪${Math.round(grossMarketValue).toLocaleString()}
         - Full Market Value (all adjustments): ₪${helper.calculations.market_value.toLocaleString()}`);
       
+      // CRITICAL FIX: Store raw webhook data for floating screen access
+      if (!helper.raw_webhook_data) helper.raw_webhook_data = {};
+      const webhookKey = `levi_upload_${Date.now()}`;
+      helper.raw_webhook_data[webhookKey] = {
+        data: result, // Store the full result object with Hebrew fields
+        timestamp: new Date().toISOString(),
+        processed: true
+      };
+      console.log('✅ Stored raw webhook data for floating window:', webhookKey);
+      
+      // Enhanced adjustment mapping to helper.valuation structure
+      if (!helper.valuation) helper.valuation = {};
+      if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+      
+      // Map Hebrew percentage fields to helper structure
+      const adjustmentMap = {
+        registration: result['עליה לכביש %'] || result['עליה לכביש%'],
+        ownership_type: result['בעלות %'] || result['בעלות%'], 
+        mileage: result['מס ק״מ %'] || result['מס׳ ק״מ %'],
+        ownership_history: result['מספר בעלים %'] || result['מספר בעלים%'],
+        features: result['מאפיינים %'] || result['מחיר מאפיינים %']
+      };
+      
+      Object.entries(adjustmentMap).forEach(([key, percentValue]) => {
+        if (percentValue) {
+          helper.valuation.adjustments[key] = {
+            ...helper.valuation.adjustments[key],
+            percent: parseFloat(percentValue.toString().replace('%', '')) || 0
+          };
+        }
+      });
+      console.log('✅ Enhanced valuation adjustments with Hebrew percentages:', helper.valuation.adjustments);
+      
       // Update meta information
       helper.meta = helper.meta || {};
       helper.meta.last_levi_processed = new Date().toISOString();
