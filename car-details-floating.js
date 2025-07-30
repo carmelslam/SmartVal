@@ -597,8 +597,10 @@
       if (generalInfoDamageDate) {
         generalInfoDamageDate.value = changes['car-damage-date'];
         generalInfoDamageDate.dispatchEvent(new Event('change', { bubbles: true }));
-        // Mark as manually entered to protect from auto-population
-        sessionStorage.setItem('damageDate_manualEntry', 'true');
+        // CORRECT PATTERN: Use helper system to mark manual entry
+        if (typeof updateHelper === 'function') {
+          updateHelper('system', { damageDate_manualEntry: true }, 'car_details_floating_sync');
+        }
         console.log('✅ Updated damage_date_new in general info from car details floating:', changes['car-damage-date']);
       }
     }
@@ -653,24 +655,22 @@
       refreshBtn.disabled = true;
     }
     
-    // Force reload from sessionStorage to get latest data
+    // CORRECT ARCHITECTURE: Use only window.helper as data source
     try {
       // Clear any cached data
       if (window.currentCaseData) {
         delete window.currentCaseData;
       }
       
-      // SIMPLE: No custom storage to clear
-      
-      // Get fresh data from sessionStorage
-      const helperString = sessionStorage.getItem('helper');
-      if (helperString) {
-        const helper = JSON.parse(helperString);
-        console.log('🔍 Fresh helper data loaded:', helper);
-        console.log('🔍 Helper.car_details:', helper.car_details);
-        console.log('🔍 Helper.vehicle:', helper.vehicle);
-        console.log('🔍 Helper.meta:', helper.meta);
-        console.log('🔍 Helper.stakeholders:', helper.stakeholders);
+      // HELPER ARCHITECTURE: Check if helper is available and up-to-date
+      if (window.helper) {
+        console.log('🔍 Fresh helper data from window.helper:', window.helper);
+        console.log('🔍 Helper.car_details:', window.helper.car_details);
+        console.log('🔍 Helper.vehicle:', window.helper.vehicle);
+        console.log('🔍 Helper.meta:', window.helper.meta);
+        console.log('🔍 Helper.stakeholders:', window.helper.stakeholders);
+      } else {
+        console.warn('⚠️ window.helper not available during refresh');
       }
       
       // Load the fresh data
@@ -960,39 +960,19 @@
   setTimeout(() => {
     console.log('🚀 Auto-persisting car data on page load (not opening screen)...');
     
-    // Check all data sources
-    const helperStr = sessionStorage.getItem('helper');
-    const carDataStr = sessionStorage.getItem('carData');
-    const localHelperStr = localStorage.getItem('helper_data');
-    
-    if (helperStr || carDataStr || localHelperStr || window.helper) {
-      console.log('✅ Found car data - persisting automatically (screen remains closed)');
+    // CORRECT ARCHITECTURE: Check ONLY window.helper as single source
+    if (window.helper) {
+      console.log('✅ Found helper data - persisting automatically (screen remains closed)');
       
-      // Only persist data, don't call loadCarData which might show the screen
-      if (window.helper && !persistedCarData) {
+      // Only persist data from window.helper, don't call loadCarData which might show the screen
+      if (!persistedCarData) {
         persistedCarData = {
           vehicle: window.helper.vehicle || {},
           carDetails: window.helper.car_details || {},
           stakeholders: window.helper.stakeholders || {},
           meta: window.helper.meta || {}
         };
-        console.log('💾 Persisted data from window.helper');
-      }
-      
-      // Parse and persist from sessionStorage if needed
-      try {
-        if (helperStr && helperStr !== '{}' && !persistedCarData) {
-          const helper = JSON.parse(helperStr);
-          persistedCarData = {
-            vehicle: helper.vehicle || {},
-            carDetails: helper.car_details || {},
-            stakeholders: helper.stakeholders || {},
-            meta: helper.meta || {}
-          };
-          console.log('💾 Persisted data from sessionStorage');
-        }
-      } catch (e) {
-        console.warn('Could not parse helper data for persistence:', e);
+        console.log('💾 Persisted data from window.helper (single source of truth)');
       }
     }
   }, 500);
