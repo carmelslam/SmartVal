@@ -5746,24 +5746,24 @@
         const allAdjustments = [];
         const seenAdjustments = new Set();
         
-        // FIXED: Only load from ONE source to prevent duplicates
-        // Use helper.levi_report.adjustments as the single source of truth
-        if (helper.levi_report?.adjustments) {
-          helper.levi_report.adjustments.forEach(adj => {
-            // Only add adjustments that have actual values
-            if (adj.description && (adj.percentage || adj.percent || adj.value)) {
-              const adjustmentType = adj.value >= 0 ? 'plus' : 'minus';
-              const key = `${adj.description}-${adj.percentage || adj.percent || 0}-${adjustmentType}`;
+        // FOLLOW HELPER ARCHITECTURE: Load ONLY from helper.valuation.adjustments
+        // The helper is god - everyone else adjusts to it
+        if (helper.valuation?.adjustments) {
+          Object.entries(helper.valuation.adjustments).forEach(([category, adjData]) => {
+            if (adjData && (adjData.percent || adjData.amount) && adjData.description) {
+              const adjustmentType = (adjData.percent < 0 || adjData.amount < 0) ? 'minus' : 'plus';
+              const key = `${category}-${adjData.description}`;
               if (!seenAdjustments.has(key)) {
                 allAdjustments.push({
-                  description: adj.description || 'התאמה מלוי יצחק',
-                  percentage: adj.percentage || adj.percent || 0,
-                  value: adj.value || 0,
+                  description: adjData.description || adjData.reason || `התאמה - ${category}`,
+                  percentage: Math.abs(adjData.percent || 0),
+                  value: Math.abs(adjData.amount || 0),
                   type: adjustmentType,
-                  source: 'levi'
+                  source: 'levi',
+                  category: category
                 });
                 seenAdjustments.add(key);
-                console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
+                console.log('✅ Added adjustment from helper.valuation:', adjData.description, adjData.percent);
               }
             }
           });
