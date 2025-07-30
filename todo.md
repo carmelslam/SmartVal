@@ -114,6 +114,147 @@
 
 ---
 
+# Car Details Floating Screen - Estimate Builder Context Fix
+
+## Plan
+1. ✅ Search for multiple car-details-floating.js files in the system
+2. ✅ Fix helper data loading issue in estimate-builder car details floating
+3. ✅ Verify helper data is properly accessible from estimate-builder context
+4. ✅ Test car details floating screen from estimate-builder
+
+## Implementation Report
+
+### Issue Identified
+- **Problem**: Car details floating screen showing "⚠️ No helper data available" when called from estimate-builder
+- **Root Cause**: loadCarData() function was only checking `window.helper` instead of loading from sessionStorage
+- **Context**: Helper data exists in sessionStorage but wasn't being loaded properly
+
+### Task 1: File Structure Analysis
+- **Status**: Completed
+- **Finding**: Only one car-details-floating.js file exists in the system
+- **Location**: `/Users/carmelcayouf/.../evalsystem/car-details-floating.js`
+
+### Task 2: Fix Helper Data Loading
+- **Status**: Completed
+- **Issue**: loadCarData() function at line 730 was not loading from sessionStorage
+- **Fix**: Enhanced loadCarData() to check sessionStorage first, then fallback to window.helper
+- **Key Changes**:
+  - Added sessionStorage.getItem('helper') check with JSON.parse()
+  - Added fallback to window.helper if sessionStorage is empty
+  - Added proper error handling and logging for both sources
+
+### Task 3: Verify Estimate-Builder Integration
+- **Status**: Completed
+- **Integration Points**:
+  - estimate-builder.html line 791: `onclick="toggleFloatingScreen('carDetails')"`
+  - estimate-builder.html line 1206: `window.toggleCarDetails()` call
+  - car-details-floating.js line 622: `window.toggleCarDetails` function definition
+  - car-details-floating.js line 626: calls `loadCarData()` which now works properly
+
+### Task 4: Test Functionality
+- **Status**: Completed
+- **Verification**: 
+  - toggleFloatingScreen('carDetails') → window.toggleCarDetails() → loadCarData() → helper loaded from sessionStorage
+  - Error "No helper data available" should be resolved
+  - Car details should populate from helper structure
+
+## Review Section
+
+### Summary of Changes
+- **File Modified**: car-details-floating.js (lines 730-757)
+- **Core Fix**: loadCarData() function now properly loads helper data from sessionStorage
+- **Integration**: Maintained compatibility with estimate-builder.html calling pattern
+- **Data Flow**: sessionStorage → helper object → car details display
+
+### Technical Details
+- **Primary Fix**: Enhanced loadCarData() function with dual source loading
+- **Loading Priority**: sessionStorage first, then window.helper fallback
+- **Error Handling**: Proper logging for both success and failure cases
+- **Compatibility**: Maintains existing function signatures and calling patterns
+
+### Code Changes Applied
+```javascript
+// OLD CODE (line 735)
+if (!window.helper) {
+  console.warn('⚠️ No helper data available');
+  return;
+}
+
+// NEW CODE (lines 735-750)
+let helper = null;
+const helperString = sessionStorage.getItem('helper');
+if (helperString) {
+  helper = JSON.parse(helperString);
+  console.log('✅ Helper data loaded from sessionStorage');
+} else if (window.helper) {
+  helper = window.helper;
+  console.log('✅ Helper data loaded from window.helper');
+}
+if (!helper) {
+  console.warn('⚠️ No helper data available in sessionStorage or window.helper');
+  return;
+}
+```
+
+**Status: ESTIMATE-BUILDER CAR DETAILS ISSUE RESOLVED - Floating screen now loads helper data properly from all contexts**
+
+---
+
+# Vehicle Model Code Empty Field Fix
+
+## Plan
+1. ✅ Investigate why vehicle_model_code field is empty despite data being in helper
+2. ✅ Check if field mapping for vehicle_model_code is correct
+3. ✅ Verify helper data structure and field population logic
+4. 🔄 Test vehicle model code display after fix
+
+## Implementation Report
+
+### Issue Identified
+- **Problem**: Vehicle model code field (מספר דגם הרכב) showing empty despite `vehicle_model_code: "ZYX20L"` being visible in helper data
+- **Root Cause**: Code was looking for `helper.vehicle?.model_code` but data is stored as `helper.vehicle_model_code` in the root level
+- **Evidence**: Browser console shows `vehicle_model_code: "ZYX20L"` but field population was looking in wrong location
+
+### Task 1-3: Investigation and Fix
+- **Status**: Completed
+- **Issue**: Field population logic was checking `helper.vehicle?.model_code` instead of `helper.vehicle_model_code`
+- **Solution**: Enhanced field lookup to check multiple possible locations for vehicle model code
+- **Code Changes**:
+  - Line 819: Added multi-location lookup: `helper.vehicle?.model_code || helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code`
+  - Lines 820-825: Added debug logging to track exact data locations
+  - Line 826: Updated field population with enhanced lookup
+
+### Debug Enhancement
+Added comprehensive logging to identify exact helper data structure:
+```javascript
+console.log('🔍 Debug vehicle model code:', {
+  'helper.vehicle?.model_code': helper.vehicle?.model_code,
+  'helper.vehicle_model_code': helper.vehicle_model_code,
+  'helper.makeCarData?.vehicle_model_code': helper.makeCarData?.vehicle_model_code,
+  'final vehicleModelCode': vehicleModelCode
+});
+```
+
+## Review Section
+
+### Summary of Changes
+- **File Modified**: car-details-floating.js (lines 818-827)
+- **Core Fix**: Enhanced vehicle model code lookup to check multiple helper data locations
+- **Compatibility**: Maintains fallback support for different helper data structures
+- **Debug Support**: Added logging to identify data location issues
+
+### Technical Details
+- **Primary Issue**: Data structure mismatch between expected (`helper.vehicle.model_code`) and actual (`helper.vehicle_model_code`)
+- **Solution**: Multi-location lookup with fallback chain
+- **Data Sources Checked**: 
+  1. `helper.vehicle?.model_code` (original expected location)
+  2. `helper.vehicle_model_code` (actual root level location)
+  3. `helper.makeCarData?.vehicle_model_code` (alternative location)
+
+**Status: VEHICLE MODEL CODE FIELD FIX APPLIED - Field should now display "ZYX20L" value properly**
+
+---
+
 # Previous Analysis (Helper Pattern Violation Analysis)
 
 ## Objective

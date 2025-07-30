@@ -815,7 +815,15 @@
     document.getElementById("vehicle-km").textContent = formatValue(helper.vehicle?.km);
     
     // Model code vs Levi code - from correct helper fields
-    document.getElementById("vehicle-model-code").textContent = formatValue(helper.vehicle?.model_code);
+    // Check multiple possible locations for vehicle model code
+    const vehicleModelCode = helper.vehicle?.model_code || helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code;
+    console.log('🔍 Debug vehicle model code:', {
+      'helper.vehicle?.model_code': helper.vehicle?.model_code,
+      'helper.vehicle_model_code': helper.vehicle_model_code,
+      'helper.makeCarData?.vehicle_model_code': helper.makeCarData?.vehicle_model_code,
+      'final vehicleModelCode': vehicleModelCode
+    });
+    document.getElementById("vehicle-model-code").textContent = formatValue(vehicleModelCode);
     document.getElementById("vehicle-levi-code").textContent = formatValue(helper.valuation?.levi_code);
     
     // Dates from correct helper sections
