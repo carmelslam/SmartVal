@@ -814,13 +814,13 @@
     document.getElementById("vehicle-km").textContent = formatValue(helper.vehicle?.km);
     
     // Model code vs Levi code - from correct helper fields
-    // Check multiple possible locations for vehicle model code
-    const vehicleModelCode = helper.vehicle?.model_code || helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code;
-    console.log('🔍 Debug vehicle model code:', {
-      'helper.vehicle?.model_code': helper.vehicle?.model_code,
-      'helper.vehicle_model_code': helper.vehicle_model_code,
-      'helper.makeCarData?.vehicle_model_code': helper.makeCarData?.vehicle_model_code,
-      'final vehicleModelCode': vehicleModelCode
+    // Check multiple possible locations for vehicle model code - prioritize vehicle_model_code over model_code
+    const vehicleModelCode = helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code || helper.vehicle?.model_code;
+    console.log('🔍 Debug vehicle model code (priority order):', {
+      '1st priority - helper.vehicle_model_code': helper.vehicle_model_code,
+      '2nd priority - helper.makeCarData?.vehicle_model_code': helper.makeCarData?.vehicle_model_code,
+      '3rd priority - helper.vehicle?.model_code': helper.vehicle?.model_code,
+      'FINAL vehicleModelCode': vehicleModelCode
     });
     document.getElementById("vehicle-model-code").textContent = formatValue(vehicleModelCode);
     document.getElementById("vehicle-levi-code").textContent = formatValue(helper.valuation?.levi_code);
