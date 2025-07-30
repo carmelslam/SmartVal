@@ -481,51 +481,7 @@
         content: "פעולות:";
       }
       
-      /* Mobile fixes for Estimate Adjustments section */
-      #allAdjustmentsRows-estimate .adjustment-row {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-        background: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        border: 1px solid #e9ecef;
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div::before {
-        font-weight: bold;
-        font-size: 12px;
-        color: #495057;
-        display: block;
-        margin-bottom: 4px;
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(1)::before {
-        content: "תיאור:";
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(2)::before {
-        content: "סוג:";
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(3)::before {
-        content: "אחוז:";
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(4)::before {
-        content: "ערך:";
-      }
-      
-      #allAdjustmentsRows-estimate .adjustment-row > div:nth-child(5)::before {
-        content: "פעולות:";
-      }
+      /* REMOVED: CSS for deleted "התאמות אומדן" section */
       
       /* Fix button spacing on mobile */
       .btn.add {
@@ -1029,31 +985,6 @@
       </div>
     </div>
 
-    <!-- ESTIMATE ADJUSTMENTS SECTION -->
-    <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('estimateAdjustments')">התאמות אומדן (הצג/הסתר)</button>
-      <div id="estimateAdjustments" style="display:none;">
-        <div style="margin-top: 20px;">
-          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות אומדן נוספות:</h4>
-          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
-            📝 התאמות מותאמות אישית לאומדן זה
-          </div>
-          <div>
-            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><label>תיאור:</label></div>
-              <div><label>סוג:</label></div>
-              <div><label>אחוז:</label></div>
-              <div><label>ערך:</label></div>
-              <div><label>פעולות:</label></div>
-            </div>
-            <div id="allAdjustmentsRows-estimate">
-              <!-- This will be populated by JavaScript -->
-            </div>
-            <button class="btn add" type="button" onclick="addEstimateAdjustment()">הוסף התאמה נוספת</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- GROSS DAMAGE PERCENTAGE RESULT -->
     <div class="form-section">
@@ -2573,244 +2504,18 @@
     }
     
     function loadAllAdjustmentsImmediate(helper) {
-      try {
-        console.log('🔄 Loading MARKET VALUE adjustments in sequential order');
-        const adjustmentsContainer = document.getElementById('allAdjustmentsRows-estimate');
-        
-        if (!adjustmentsContainer) {
-          console.warn('DOM element allAdjustmentsRows-estimate not found, skipping adjustments load');
-          return;
-        }
-        
-        // Clear container
-        adjustmentsContainer.innerHTML = '';
-        
-        // CRITICAL FIX: Transform Levi data to valuation structure if needed
-        populateValuationAdjustmentsFromLevi(helper);
-        
-        // Get adjustments from helper.valuation.adjustments (single source of truth)
-        const adjustments = helper.valuation?.adjustments || {};
-        
-        console.log('📈 Loading MARKET VALUE adjustments from helper.valuation.adjustments:', adjustments);
-        
-        let adjustmentsHTML = '';
-        
-        // MARKET VALUE SECTION - Sequential adjustments in mandatory order:
-        // 1. Ownership Type (condition → ownership_type)
-        // 2. Mileage 
-        // 3. Number of Owners (ownership_history → num_owners)
-        // 4. Any additional custom adjustments
-        
-        const adjustmentOrder = [
-          { key: 'condition', label: 'סוג בעלות', desc: 'ownership_type' },
-          { key: 'mileage', label: 'מספר ק״מ', desc: 'mileage' },
-          { key: 'ownership_history', label: 'מספר בעלים', desc: 'num_owners' }
-        ];
-        
-        adjustmentOrder.forEach((adjType, index) => {
-          const adjData = adjustments[adjType.key] || {};
-          const description = adjData.reason || adjData.description || adjType.label;
-          const percentage = adjData.percent || 0;
-          const value = adjData.amount || 0;
-          
-          console.log(`📊 Loading ${adjType.label}:`, adjData);
-          
-          adjustmentsHTML += createMarketAdjustmentRow({
-            description: description,
-            percentage: percentage,
-            value: value,
-            category: adjType.key,
-            index: index,
-            label: adjType.label
-          });
-        });
-        
-        // Add any additional Levi adjustments that aren't features/registration
-        if (helper.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
-          const excludedAdjustments = helper.levi_report.adjustments.filter(adj => {
-            const desc = (adj.description || '').toLowerCase();
-            // Exclude features and registration - they go to GROSS section
-            return !(desc.includes('מאפיין') || desc.includes('רישוי') || desc.includes('עליה לכביש'));
-          });
-          
-          excludedAdjustments.forEach((adj, index) => {
-            adjustmentsHTML += createMarketAdjustmentRow({
-              description: adj.description || 'התאמה מלוי יצחק',
-              percentage: adj.percentage || adj.percent || 0,
-              value: adj.value || 0,
-              category: 'levi_additional',
-              index: adjustmentOrder.length + index,
-              label: 'התאמות נוספות מלוי יצחק',
-              readonly: true
-            });
-          });
-        }
-        
-        if (!adjustmentsHTML) {
-          adjustmentsHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">לא נמצאו התאמות שוק - ערכים יטענו מנתוני לוי יצחק</div>';
-        }
-        
-        adjustmentsContainer.innerHTML = adjustmentsHTML;
-        
-        // Add event listeners
-        setTimeout(() => {
-          addMarketAdjustmentEventListeners();
-        }, 300);
-        
-      } catch (error) {
-        console.error('Error loading market adjustments:', error);
-        document.getElementById('allAdjustmentsRows-estimate').innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px; font-size: 13px;">שגיאה בטעינת התאמות שוק</div>';
-      }
-    }
-    
-    // CREATE MARKET ADJUSTMENT ROW - For Market Value section (sequential adjustments)
-    function createMarketAdjustmentRow({ description, percentage, value, category, index, label, readonly = false }) {
-      const rowId = `marketAdj_${category}_${index}`;
-      const typeColor = percentage >= 0 ? '#28a745' : '#dc3545';
-      const typeLabel = percentage >= 0 ? 'תוספת' : 'הפחתה';
+      // SECTION REMOVED: The "התאמות אומדן" section has been deleted from the UI
+      // This function is now a no-op but kept for compatibility with existing code
+      console.log('📝 Market value adjustments section has been removed from UI');
       
-      if (readonly) {
-        return `
-          <div class="market-adjustment-row" id="${rowId}" data-category="${category}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef; background: #f8f9fa;">
-            <div style="font-size: 13px; color: #495057;">${description}</div>
-            <div style="font-size: 12px; color: ${typeColor}; font-weight: bold;">${typeLabel}</div>
-            <div style="font-size: 13px; font-weight: bold;">${Math.abs(percentage)}%</div>
-            <div style="font-size: 13px; font-weight: bold;">₪${Math.abs(value).toLocaleString()}</div>
-            <div style="font-size: 11px; color: #6c757d;">לוי יצחק</div>
-          </div>
-        `;
-      } else {
-        return `
-          <div class="market-adjustment-row" id="${rowId}" data-category="${category}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #e9ecef;">
-            <div><input type="text" value="${description}" data-field="description" style="width: 100%; padding: 4px; font-size: 12px;" placeholder="${label}"></div>
-            <div><select data-field="type" style="width: 100%; padding: 4px; font-size: 12px;">
-              <option value="plus" ${percentage >= 0 ? 'selected' : ''}>תוספת (+)</option>
-              <option value="minus" ${percentage < 0 ? 'selected' : ''}>הפחתה (-)</option>
-            </select></div>
-            <div><input type="number" value="${Math.abs(percentage)}" data-field="percentage" style="width: 100%; padding: 4px; font-size: 12px;" placeholder="%" min="0" step="0.1"></div>
-            <div><input type="text" value="₪${Math.abs(value).toLocaleString()}" data-field="value" style="width: 100%; padding: 4px; font-size: 12px;" placeholder="₪" readonly></div>
-            <div><button onclick="removeMarketAdjustment('${category}', ${index})" style="padding: 2px 6px; font-size: 10px; background: #dc3545; color: white; border: none; border-radius: 3px;">מחק</button></div>
-          </div>
-        `;
-      }
+      // Still transform Levi data for other sections that might need it
+      populateValuationAdjustmentsFromLevi(helper);
     }
     
-    // ADD MARKET ADJUSTMENT EVENT LISTENERS
-    function addMarketAdjustmentEventListeners() {
-      const adjustmentRows = document.querySelectorAll('.market-adjustment-row');
-      
-      adjustmentRows.forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
-        
-        inputs.forEach(input => {
-          input.addEventListener('change', function() {
-            const category = row.dataset.category;
-            const field = this.dataset.field;
-            const value = this.value;
-            
-            console.log(`🔄 Market adjustment changed: ${category}.${field} = ${value}`);
-            
-            // Update helper.valuation.adjustments
-            updateMarketAdjustmentInHelper(category, field, value);
-            
-            // Auto-calculate value when percentage changes
-            if (field === 'percentage') {
-              calculateMarketAdjustmentValue(row, parseFloat(value) || 0);
-            }
-            
-            // Update market value calculation
-            updateFullMarketValueCalculation();
-          });
-        });
-      });
-    }
+    // REMOVED: Market adjustment functions no longer needed since section was deleted
+    // These functions were for the deleted "התאמות אומדן" section
     
-    // UPDATE MARKET ADJUSTMENT IN HELPER
-    function updateMarketAdjustmentInHelper(category, field, value) {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Initialize structure
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = {};
-        
-        // Update the specific field
-        if (field === 'description') {
-          helper.valuation.adjustments[category].reason = value;
-        } else if (field === 'percentage') {
-          helper.valuation.adjustments[category].percent = parseFloat(value) || 0;
-        } else if (field === 'value') {
-          helper.valuation.adjustments[category].amount = parseFloat(value.replace(/[₪,]/g, '')) || 0;
-        } else if (field === 'type') {
-          // Convert type to sign of percentage
-          const currentPercent = Math.abs(helper.valuation.adjustments[category].percent || 0);
-          helper.valuation.adjustments[category].percent = value === 'minus' ? -currentPercent : currentPercent;
-        }
-        
-        // Save to storage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        console.log(`✅ Updated helper.valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
-        
-        // Trigger floating screen refresh
-        triggerFloatingScreenRefresh();
-        
-      } catch (error) {
-        console.error('Error updating market adjustment in helper:', error);
-      }
-    }
-    
-    // CALCULATE MARKET ADJUSTMENT VALUE (Sequential calculation)
-    function calculateMarketAdjustmentValue(row, percentage) {
-      try {
-        // Get current gross value (or base price if no gross)
-        const grossValueField = document.getElementById('grossMarketValue');
-        const baseValueField = document.getElementById('carBasePrice');
-        
-        let baseValue = 0;
-        if (grossValueField && grossValueField.value) {
-          baseValue = parseFloat(grossValueField.value.replace(/[₪,]/g, '')) || 0;
-        } else if (baseValueField && baseValueField.value) {
-          baseValue = parseFloat(baseValueField.value.replace(/[₪,]/g, '')) || 0;
-        }
-        
-        const adjustmentValue = Math.round(baseValue * (Math.abs(percentage) / 100));
-        
-        // Update the value field
-        const valueField = row.querySelector('[data-field="value"]');
-        if (valueField) {
-          valueField.value = `₪${adjustmentValue.toLocaleString()}`;
-        }
-        
-        console.log(`💰 Calculated market adjustment: ${percentage}% of ₪${baseValue.toLocaleString()} = ₪${adjustmentValue.toLocaleString()}`);
-        
-      } catch (error) {
-        console.error('Error calculating market adjustment value:', error);
-      }
-    }
-    
-    // REMOVE MARKET ADJUSTMENT
-    function removeMarketAdjustment(category, index) {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Clear the adjustment data
-        if (helper.valuation?.adjustments?.[category]) {
-          delete helper.valuation.adjustments[category];
-        }
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        // Reload market adjustments
-        loadAllAdjustments(helper);
-        
-        console.log(`🗑️ Removed market adjustment: ${category}`);
-        
-      } catch (error) {
-        console.error('Error removing market adjustment:', error);
-      }
-    }
+    // REMOVED: All market adjustment functions since the section was deleted
     
     // Create unified adjustment row HTML
     function createAdjustmentRow(params) {
@@ -4764,12 +4469,6 @@
             console.log('🔄 Refreshing gross adjustments with updated Levi data...');
             loadGrossAdjustments(helper);
           }, 100);
-          
-          // Refresh market value adjustments with new Levi data  
-          setTimeout(() => {
-            console.log('🔄 Refreshing market adjustments with updated Levi data...');
-            loadAllAdjustments(helper);
-          }, 200);
         }
       });
       
@@ -7175,7 +6874,6 @@
     window.loadDamageCentersSummary = loadDamageCentersSummary;
     window.loadAllAdjustments = loadAllAdjustments;
     window.populateValuationAdjustmentsFromLevi = populateValuationAdjustmentsFromLevi;
-    window.removeMarketAdjustment = removeMarketAdjustment;
     window.updateGlobalDepreciationCalculation = updateGlobalDepreciationCalculation;
     window.calculateDamagePercentage = calculateDamagePercentage;
     window.triggerGlobalDepreciationCalc = triggerGlobalDepreciationCalc;
