@@ -715,6 +715,35 @@
     }
   }
 
+  // Helper functions for formatting display values
+  const formatValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+    return String(value);
+  };
+
+  const formatPrice = (value) => {
+    if (!value) return "-";
+    const num = parseFloat(value.toString().replace(/,/g, ''));
+    if (isNaN(num)) return formatValue(value);
+    return num.toLocaleString();
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   function updateCarDisplay(helper) {
     // FOLLOW HELPER ARCHITECTURE: Read ONLY from helper structure
     console.log('🔄 HELPER ARCHITECTURE: Auto-populating from helper structure');
@@ -772,27 +801,7 @@
     console.log('✅ HELPER ARCHITECTURE: Car details populated from helper structure');
   }
 
-  // Helper functions for formatting
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch (e) {
-      return dateStr;
-    }
-  };
-  
-  const formatPrice = (value) => {
-    if (!value) return "-";
-    const num = parseFloat(value.toString().replace(/,/g, ''));
-    if (isNaN(num)) return formatValue(value);
-    return num.toLocaleString();
-  };
+  // REMOVED: Duplicate formatDate - moved to top with other helper functions
 
   // CRITICAL FIX: Add refresh prevention to stop infinite loops
   let lastCarRefreshTime = 0;
