@@ -936,53 +936,35 @@
     }
   }, 500);
 
+  // FIXED: Declare persistedCarData variable
+  let persistedCarData = null;
+  
   // Also check periodically for data (in case it arrives later)
   let dataCheckCount = 0;
   const dataCheckInterval = setInterval(() => {
     dataCheckCount++;
     
-    if (!persistedCarData) {
-      const hasData = sessionStorage.getItem('helper') || 
-                     sessionStorage.getItem('carData') || 
-                     localStorage.getItem('helper_data') || 
-                     window.helper;
-                     
-      if (hasData) {
-        console.log('✅ Found car data on periodic check - persisting (not opening screen)');
-        
-        // Only persist the data, don't call loadCarData
-        try {
-          if (window.helper) {
-            persistedCarData = {
-              vehicle: window.helper.vehicle || {},
-              carDetails: window.helper.car_details || {},
-              stakeholders: window.helper.stakeholders || {},
-              meta: window.helper.meta || {}
-            };
-            console.log('💾 Persisted from window.helper on periodic check');
-          } else if (sessionStorage.getItem('helper')) {
-            const helper = JSON.parse(sessionStorage.getItem('helper'));
-            persistedCarData = {
-              vehicle: helper.vehicle || {},
-              carDetails: helper.car_details || {},
-              stakeholders: helper.stakeholders || {},
-              meta: helper.meta || {}
-            };
-            console.log('💾 Persisted from sessionStorage on periodic check');
-          }
-        } catch (e) {
-          console.warn('Could not persist data on periodic check:', e);
-        }
-        
+    // HELPER IS GOD: Check only helper data, no legacy storage
+    if (!persistedCarData && window.helper) {
+      console.log('✅ Found helper data on periodic check - persisting (not opening screen)');
+      
+      // Only persist the data from helper, don't call loadCarData
+      try {
+        persistedCarData = {
+          vehicle: window.helper.vehicle || {},
+          carDetails: window.helper.car_details || {},
+          stakeholders: window.helper.stakeholders || {},
+          meta: window.helper.meta || {}
+        };
+        console.log('💾 Persisted from window.helper on periodic check');
         clearInterval(dataCheckInterval);
+      } catch (e) {
+        console.warn('Could not persist data on periodic check:', e);
       }
-    } else {
-      console.log('📌 Data already persisted, stopping periodic checks');
-      clearInterval(dataCheckInterval);
     }
     
     // Stop checking after 10 attempts (20 seconds)
-    if (dataCheckCount >= 10) {
+    if (dataCheckCount >= 10 || persistedCarData) {
       console.log('⏹️ Stopping periodic data checks');
       clearInterval(dataCheckInterval);
     }
