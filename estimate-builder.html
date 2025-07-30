@@ -3824,7 +3824,7 @@
       }
     }
 
-    // LOAD GROSS ADJUSTMENTS FROM helper.valuation.adjustments
+    // LOAD GROSS ADJUSTMENTS FROM helper.valuation.adjustments AND helper.levi_report.adjustments
     function loadGrossAdjustments(helper) {
       try {
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
@@ -3832,13 +3832,26 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
+        // CRITICAL FIX: Get data from both standardized valuation AND original Levi data
         const leviData = helper.valuation?.adjustments || {};
+        const leviReportData = helper.levi_report?.adjustments || [];
+        
+        // Get structured features/registration data from valuation
         const featuresData = leviData.features || {};
         const registrationData = leviData.registration || {};
+        
+        console.log('🔍 Loading gross adjustments from:', {
+          leviData: leviData,
+          leviReportData: leviReportData,
+          featuresData: featuresData,
+          registrationData: registrationData
+        });
 
         // ===== Features Adjustments =====
 
         let featureItems = [];
+        
+        // First, load from structured valuation data
         if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
           featureItems = featuresData.feature_list;
         } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
@@ -3848,11 +3861,35 @@
             percent: featuresData.percent
           }];
         }
+        
+        // CRITICAL FIX: Also load from Levi report adjustments that could be features
+        if (Array.isArray(leviReportData) && leviReportData.length > 0) {
+          const leviFeatureAdjustments = leviReportData.filter(adj => {
+            const desc = (adj.description || '').toLowerCase();
+            // Check if adjustment seems to be a vehicle feature
+            return desc.includes('מאפיין') || desc.includes('תוספת') || desc.includes('ציוד') || 
+                   desc.includes('אקלים') || desc.includes('שמשה') || desc.includes('חישוקים') ||
+                   desc.includes('מנוע') || desc.includes('גלגלים') || desc.includes('מערכת');
+          });
+          
+          console.log('🚗 Found Levi feature adjustments:', leviFeatureAdjustments);
+          
+          leviFeatureAdjustments.forEach(adj => {
+            featureItems.push({
+              description: adj.description || 'מאפיין מלוי יצחק',
+              amount: adj.value || 0,
+              percent: adj.percentage || adj.percent || 0,
+              source: 'levi_report'
+            });
+          });
+        }
 
         // Always show at least one row if any data exists
         if (featureItems.length === 0) {
           featureItems = [{}];
         }
+        
+        console.log('🚗 Final feature items to load:', featureItems);
 
         featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
@@ -3897,6 +3934,29 @@
         // ===== Registration Adjustment =====
 
         let showRegistration = registrationData.amount || registrationData.percent || registrationData.date || registrationData.description || registrationData.reason;
+        
+        // CRITICAL FIX: Also check for registration-related Levi adjustments
+        let leviRegistrationData = {};
+        if (Array.isArray(leviReportData) && leviReportData.length > 0) {
+          const leviRegistrationAdjustment = leviReportData.find(adj => {
+            const desc = (adj.description || '').toLowerCase();
+            // Check if adjustment relates to registration/licensing 
+            return desc.includes('רישוי') || desc.includes('עליה לכביש') || desc.includes('רישום') || 
+                   desc.includes('לוחית') || desc.includes('מבחן') || desc.includes('תעודה');
+          });
+          
+          if (leviRegistrationAdjustment) {
+            console.log('🚙 Found Levi registration adjustment:', leviRegistrationAdjustment);
+            leviRegistrationData = {
+              description: leviRegistrationAdjustment.description,
+              amount: leviRegistrationAdjustment.value || 0,
+              percent: leviRegistrationAdjustment.percentage || leviRegistrationAdjustment.percent || 0,
+              source: 'levi_report'
+            };
+            showRegistration = true;
+          }
+        }
+        
         if (!showRegistration) {
           // fallback: always show one row for user entry
           showRegistration = true;
@@ -3906,11 +3966,16 @@
           const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
           if (row) {
             const inputs = row.querySelectorAll('input, select');
-            const amount = parseFloat(registrationData.amount) || 0;
-            const percent = parseFloat(registrationData.percent) || 0;
+            
+            // CRITICAL FIX: Use Levi data if available, otherwise use registration data
+            const dataToUse = (leviRegistrationData.source === 'levi_report') ? leviRegistrationData : registrationData;
+            const amount = parseFloat(dataToUse.amount) || 0;
+            const percent = parseFloat(dataToUse.percent) || 0;
             
             console.log('🔍 Loading registration adjustment:', {
               registrationData: registrationData,
+              leviRegistrationData: leviRegistrationData,
+              dataToUse: dataToUse,
               amount: amount,
               percent: percent,
               isNegative: (amount < 0 || percent < 0)
@@ -3918,13 +3983,15 @@
             
             if (inputs.length >= 4) {
               // Use the real property value for the description if available
-              const desc = registrationData.description || registrationData.date || registrationData.reason || helper.vehicle?.registration_date || '';
+              const desc = dataToUse.description || dataToUse.date || dataToUse.reason || 
+                          registrationData.description || registrationData.date || registrationData.reason || 
+                          helper.vehicle?.registration_date || '';
               inputs[0].value = desc;
               
               // Determine type based on negative values in helper data
               const isNegative = (amount < 0 || percent < 0);
               inputs[1].value = isNegative ? 'minus' : 'plus';
-              console.log(`📝 Set registration type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
+              console.log(`📝 Set registration type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'} (source: ${dataToUse.source || 'valuation'})`);
             
               inputs[2].value = percent ? Math.abs(percent) : '';
               
@@ -4579,6 +4646,17 @@
       document.addEventListener('helperUpdate', (event) => {
         if (event.detail && (event.detail.section === 'levisummary' || event.detail.section === 'levi_report')) {
           console.log('📡 Detected Levi data event, re-populating adjustments...');
+          
+          // CRITICAL FIX: When Levi data updates, refresh both estimate adjustments AND gross adjustments
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Refresh gross adjustments (features & registration) with new Levi data
+          setTimeout(() => {
+            console.log('🔄 Refreshing gross adjustments with updated Levi data...');
+            loadGrossAdjustments(helper);
+          }, 100);
+          
+          // Refresh all estimate adjustments with new Levi data  
           clearLeviAdjustments();
           autoPopulateFromLeviSummary();
         }
