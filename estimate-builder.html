@@ -2431,53 +2431,63 @@
             
             console.log(`🔍 Processing Levi adjustment: "${reason}" (${percentage}%, ₪${value})`);
             
-            // Map to market value categories based on description
+            // Map to market value categories based on description - PRESERVE ACTUAL DESCRIPTIONS
             if (desc.includes('בעל') || desc.includes('בעלות') || desc.includes('בעלים קודם')) {
               helper.valuation.adjustments.condition = {
-                reason: reason,
+                reason: reason, // ACTUAL description from Levi, not generic category
                 percent: percentage,
                 amount: value,
-                description: reason
+                description: reason, // Keep the full detailed description
+                detailed_description: reason,
+                category: 'ownership_type'
               };
-              console.log('📊 Mapped to OWNERSHIP TYPE:', helper.valuation.adjustments.condition);
+              console.log('📊 Mapped to OWNERSHIP TYPE with actual description:', helper.valuation.adjustments.condition);
               
             } else if (desc.includes('ק"מ') || desc.includes('קילומטר') || desc.includes('מרחק') || desc.includes('נסיעה')) {
               helper.valuation.adjustments.mileage = {
-                reason: reason,
+                reason: reason, // ACTUAL description from Levi
                 percent: percentage,
                 amount: value,
-                description: reason
+                description: reason, // Keep the full detailed description
+                detailed_description: reason,
+                category: 'mileage'
               };
-              console.log('📊 Mapped to MILEAGE:', helper.valuation.adjustments.mileage);
+              console.log('📊 Mapped to MILEAGE with actual description:', helper.valuation.adjustments.mileage);
               
             } else if (desc.includes('בעלים') && !desc.includes('בעלות')) {
               helper.valuation.adjustments.ownership_history = {
-                reason: reason,
+                reason: reason, // ACTUAL description from Levi
                 percent: percentage,
                 amount: value,
-                description: reason
+                description: reason, // Keep the full detailed description
+                detailed_description: reason,
+                category: 'num_owners'
               };
-              console.log('📊 Mapped to NUMBER OF OWNERS:', helper.valuation.adjustments.ownership_history);
+              console.log('📊 Mapped to NUMBER OF OWNERS with actual description:', helper.valuation.adjustments.ownership_history);
               
             } else if (desc.includes('מאפיין') || desc.includes('ציוד') || desc.includes('תוספת')) {
               // Features go to GROSS section, not market value
               helper.valuation.adjustments.features = {
-                reason: reason,
+                reason: reason, // ACTUAL description from Levi
                 percent: percentage,
                 amount: value,
-                description: reason
+                description: reason, // Keep the full detailed description
+                detailed_description: reason,
+                category: 'features'
               };
-              console.log('📊 Mapped to FEATURES (gross section):', helper.valuation.adjustments.features);
+              console.log('📊 Mapped to FEATURES (gross section) with actual description:', helper.valuation.adjustments.features);
               
             } else if (desc.includes('רישוי') || desc.includes('עליה לכביש') || desc.includes('רישום')) {
               // Registration goes to GROSS section, not market value
               helper.valuation.adjustments.registration = {
-                reason: reason,
+                reason: reason, // ACTUAL description from Levi
                 percent: percentage,
                 amount: value,
-                description: reason
+                description: reason, // Keep the full detailed description
+                detailed_description: reason,
+                category: 'registration'
               };
-              console.log('📊 Mapped to REGISTRATION (gross section):', helper.valuation.adjustments.registration);
+              console.log('📊 Mapped to REGISTRATION (gross section) with actual description:', helper.valuation.adjustments.registration);
               
             } else {
               // Generic market adjustment - assign to condition if empty
