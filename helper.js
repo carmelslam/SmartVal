@@ -1580,6 +1580,8 @@ function populateAllForms() {
     'insurance': window.helper.stakeholders?.insurance?.company,
     'insuranceCompany': window.helper.stakeholders?.insurance?.company,
     'insurance_company': window.helper.stakeholders?.insurance?.company,
+    'insuranceEmail': window.helper.stakeholders?.insurance?.email,
+    'insurance_email': window.helper.stakeholders?.insurance?.email,
     'agentName': window.helper.stakeholders?.insurance?.agent?.name,
     'agent_name': window.helper.stakeholders?.insurance?.agent?.name,
     'agentPhone': window.helper.stakeholders?.insurance?.agent?.phone,
@@ -1640,6 +1642,17 @@ function populateAllForms() {
       if (element) {
         const currentValue = element.value?.trim() || '';
         const newValue = String(value).trim();
+        
+        // PROTECTION: Don't override email fields with non-email values
+        const isEmailField = fieldId.includes('Email') || fieldId.includes('email');
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newValue);
+        const currentIsValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentValue);
+        
+        // Protect email fields: don't override valid email with invalid data
+        if (isEmailField && currentIsValidEmail && !isValidEmail) {
+          console.log(`🛡️ Protecting ${fieldId}: keeping valid email "${currentValue}" instead of "${newValue}"`);
+          return;
+        }
         
         // Only update if different and meaningful
         if (newValue && newValue !== currentValue && newValue !== '-' && newValue !== 'undefined') {
