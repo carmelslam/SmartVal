@@ -465,8 +465,11 @@
   }
 
   function saveChangesToHelper() {
-    if (!window.helper) {
-      console.error('❌ Helper not available for saving changes');
+    // CORRECT HELPER PATTERN: Use updateHelper() function instead of direct manipulation
+    console.log('🔄 HELPER ARCHITECTURE: Saving changes using proper updateHelper() pattern');
+    
+    if (typeof updateHelper !== 'function') {
+      console.error('❌ updateHelper function not available - helper system not properly loaded');
       return;
     }
 
@@ -482,34 +485,40 @@
       }
     });
 
-    // Map changes to helper structure while preserving integrity
+    // Map changes to helper structure
     const helperUpdates = mapFieldsToHelper(changes);
     
-    // Update helper using safe methods
-    if (helperUpdates.vehicle && Object.keys(helperUpdates.vehicle).length > 0) {
-      Object.assign(window.helper.vehicle, helperUpdates.vehicle);
-    }
-    if (helperUpdates.stakeholders && Object.keys(helperUpdates.stakeholders).length > 0) {
-      if (!window.helper.stakeholders) window.helper.stakeholders = {};
-      if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
-      if (!window.helper.stakeholders.garage) window.helper.stakeholders.garage = {};
-      
-      Object.assign(window.helper.stakeholders.owner, helperUpdates.stakeholders.owner || {});
-      Object.assign(window.helper.stakeholders.garage, helperUpdates.stakeholders.garage || {});
-    }
-    if (helperUpdates.case_info && Object.keys(helperUpdates.case_info).length > 0) {
-      if (!window.helper.case_info) window.helper.case_info = {};
-      Object.assign(window.helper.case_info, helperUpdates.case_info);
-    }
-
-    // Save to storage locations
+    // CORRECT PATTERN: Use updateHelper() for each section instead of direct manipulation
     try {
-      const helperString = JSON.stringify(window.helper);
-      sessionStorage.setItem('helper', helperString);
-      localStorage.setItem('helper_data', helperString);
-      console.log('✅ Changes saved to helper and storage');
+      if (helperUpdates.vehicle && Object.keys(helperUpdates.vehicle).length > 0) {
+        updateHelper('vehicle', helperUpdates.vehicle, 'car_details_floating');
+        console.log('✅ Vehicle data updated via updateHelper()');
+      }
+      
+      if (helperUpdates.stakeholders && Object.keys(helperUpdates.stakeholders).length > 0) {
+        updateHelper('stakeholders', helperUpdates.stakeholders, 'car_details_floating');
+        console.log('✅ Stakeholders data updated via updateHelper()');
+      }
+      
+      if (helperUpdates.case_info && Object.keys(helperUpdates.case_info).length > 0) {
+        updateHelper('case_info', helperUpdates.case_info, 'car_details_floating');
+        console.log('✅ Case info data updated via updateHelper()');
+      }
+      
+      if (helperUpdates.valuation && Object.keys(helperUpdates.valuation).length > 0) {
+        updateHelper('valuation', helperUpdates.valuation, 'car_details_floating');
+        console.log('✅ Valuation data updated via updateHelper()');
+      }
+      
+      // CORRECT PATTERN: Use broadcastHelperUpdate() to notify other modules
+      if (typeof broadcastHelperUpdate === 'function') {
+        broadcastHelperUpdate('car_details_floating', helperUpdates);
+        console.log('✅ Helper updates broadcasted to other modules');
+      }
+      
+      console.log('✅ All changes saved using proper helper architecture');
     } catch (error) {
-      console.error('❌ Failed to save changes:', error);
+      console.error('❌ Failed to save changes via updateHelper():', error);
     }
   }
 
@@ -729,28 +738,18 @@
 
   function loadCarData() {
     try {
-      console.log('🔄 HELPER ARCHITECTURE: Loading car data from helper only...');
+      console.log('🔄 HELPER ARCHITECTURE: Loading car data from window.helper ONLY...');
       
-      // FOLLOW HELPER ARCHITECTURE: Load from sessionStorage first, then check window.helper
-      let helper = null;
-      
-      // Try sessionStorage first
-      const helperString = sessionStorage.getItem('helper');
-      if (helperString) {
-        helper = JSON.parse(helperString);
-        console.log('✅ Helper data loaded from sessionStorage');
-      } else if (window.helper) {
-        helper = window.helper;
-        console.log('✅ Helper data loaded from window.helper');
-      }
-      
-      if (!helper) {
-        console.warn('⚠️ No helper data available in sessionStorage or window.helper');
+      // CORRECT ARCHITECTURE: window.helper is the SINGLE SOURCE OF TRUTH
+      if (!window.helper) {
+        console.warn('⚠️ window.helper not available - helper system not initialized');
         return;
       }
       
-      // HELPER IS GOD: Auto-populate from helper structure
-      updateCarDisplay(helper);
+      console.log('✅ Loading car data from window.helper (central hub)');
+      
+      // HELPER IS THE HUB: Auto-populate from helper structure ONLY
+      updateCarDisplay(window.helper);
     } catch (error) {
       console.error("❌ Error loading car data:", error);
     }
