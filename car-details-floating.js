@@ -795,7 +795,6 @@
   };
 
   // CRITICAL FIX: Add refresh prevention to stop infinite loops
-  let isCarRefreshing = false;
   let lastCarRefreshTime = 0;
 
   // ULTRA-SAFE CAR AUTO-REFRESH: Maximum protection against loops

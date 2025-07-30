@@ -5719,20 +5719,34 @@
       try {
         console.log('🔥🔥🔥 CLAUDE FIXED CALCULATION STARTING - Two-phase logic...');
         
-        // Step 1: Get base price from UI field (fallback to helper if empty)
-        const basicPriceField = document.getElementById('fullBasicPrice');
-        let basePrice = 118000; // Default fallback - the actual base price from price list
+        // Step 1: DYNAMIC - Get base price from current case helper data ONLY
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let basePrice = 0; // NO HARDCODED VALUES - must come from current case
         
+        // Priority 1: UI field for this case
+        const basicPriceField = document.getElementById('fullBasicPrice');
         if (basicPriceField && basicPriceField.value) {
           const cleanBasePrice = basicPriceField.value.replace(/[₪,]/g, '');
-          basePrice = parseFloat(cleanBasePrice) || 118000;
-        } else {
-          // Fallback to helper if UI field is empty
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          if (helper.valuation?.base_price) {
-            const cleanBasePrice = helper.valuation.base_price.replace(/[₪,]/g, '');
-            basePrice = parseFloat(cleanBasePrice) || 118000;
+          basePrice = parseFloat(cleanBasePrice) || 0;
+        }
+        
+        // Priority 2: Helper data from current case
+        if (basePrice === 0) {
+          basePrice = helper.valuation?.base_price || 
+                     helper.levi_report?.base_price || 
+                     helper.car_details?.base_price || 
+                     helper.vehicle?.base_price || 0;
+          
+          if (typeof basePrice === 'string') {
+            basePrice = parseFloat(basePrice.replace(/[₪,]/g, '')) || 0;
           }
+        }
+        
+        // CRITICAL: If no base price available, cannot calculate - must alert user
+        if (basePrice === 0) {
+          console.error('❌ CRITICAL: No base price available for calculation');
+          alert('שגיאה: לא נמצא מחיר בסיס לרכב. אנא וודא שהנתונים נטענו מ-Levi יצחק');
+          return;
         }
         
         console.log('📊 Base price:', basePrice);
@@ -8192,21 +8206,10 @@
             if (currentValue) {
               const numericValue = parseFloat(currentValue.replace(/[₪,]/g, '')) || 0;
               console.log('🔍 FINAL CHECK: Current value is:', numericValue);
-              if (numericValue === 80487 || numericValue === 128620 || numericValue > 100000) {
-                console.log('🚨 WRONG VALUE STILL DETECTED:', numericValue);
-                // Force direct calculation bypass
-                const result = calculateVehicleValue(118000, {
-                  features: { percent: 9 },
-                  registration: { fixed: 4000 },
-                  ownershipType: { percent: -26.88 },
-                  mileage: { percent: -17 },
-                  numOwners: { percent: -2 }
-                });
-                console.log('🚨 FORCING DIRECT RESULT:', result);
-                document.getElementById('fullMarketValueResult').value = `₪${result.toLocaleString()}`;
-                const sumField = document.getElementById('sumMarketValue');
-                if (sumField) sumField.value = `₪${result.toLocaleString()}`;
-              }
+              // REMOVED: No hardcoded values allowed - each case must use its own data
+              // All calculations must come from current case helper data only
+              console.log('✅ Using dynamic calculation from current case data only');
+              updateFullMarketValueCalculation(); // Re-run with proper dynamic data
             }
           }, 500);
         } else if (sectionId === 'depreciation') {
