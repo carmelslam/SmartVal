@@ -1113,7 +1113,6 @@
   // CRITICAL FIX: Add refresh prevention to stop infinite loops
   let isCarRefreshing = false;
   let lastCarRefreshTime = 0;
-  const CAR_REFRESH_DEBOUNCE_MS = 2000; // Prevent refreshes within 2 seconds
 
   // ULTRA-SAFE CAR AUTO-REFRESH: Maximum protection against loops
   let carRefreshTimeout = null;
