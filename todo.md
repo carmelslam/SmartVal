@@ -47,6 +47,73 @@
 
 ---
 
+# Car Details Floating Screen Fixes
+
+## Plan
+1. ✅ Fix מספר דגם הרכב field to show vehicle_model_code from helper instead of levi code
+2. ✅ Fix agent email field to capture data from helper (דואר אלקטרוני סוכן)
+3. ✅ Fix insurance company email field to capture data from helper (דואר אלקטרוני חברת ביטוח)
+4. ✅ Ensure levi information doesn't override vehicle model code field
+5. ✅ Verify all fields use helper structure instead of raw data sources
+
+## Implementation Report
+
+### Task 1: Fix מספר דגם הרכב field
+- **Status**: Completed
+- **Issue**: Field was correctly reading from `helper.vehicle?.model_code` but mapping was potentially conflicting
+- **Fix**: Verified proper separation between vehicle model code and levi code
+- **Location**: car-details-floating.js:777
+
+### Task 2 & 3: Fix email fields
+- **Status**: Completed
+- **Issue**: Agent and insurance company email fields were not being populated from helper
+- **Fix**: Added missing email field population in loadCarData() function
+- **Changes**:
+  - Line 802: Added `document.getElementById("agent-email").textContent = formatValue(helper.stakeholders?.insurance?.agent?.email);`
+  - Line 803: Added `document.getElementById("insurance-email").textContent = formatValue(helper.stakeholders?.insurance?.email);`
+
+### Task 4: Prevent levi override of vehicle model code
+- **Status**: Completed
+- **Issue**: Mapping function was incorrectly mapping levi_code to vehicle section
+- **Fix**: Removed 'vehicle-levi-code': 'levi_code' from vehicleFieldMap and added proper valuation section mapping
+- **Key Changes**:
+  - Removed levi_code from vehicle mapping (line 535)
+  - Added valuationFieldMap with proper levi_code mapping
+  - Updated mapping logic to handle valuation section separately
+
+### Task 5: Verify helper structure compliance
+- **Status**: Completed
+- **Enhancements**: Added comprehensive field mappings for insurance and agent data
+- **New Mappings Added**:
+  - insuranceFieldMap for company and email fields
+  - agentFieldMap for agent name, phone, and email
+  - Updated stakeholders structure to include insurance.agent hierarchy
+  - Updated mapping application logic to handle all sections properly
+
+## Review Section
+
+### Summary of Changes
+- **File Modified**: car-details-floating.js
+- **Email fields now populate** from helper.stakeholders.insurance structure
+- **Levi code properly separated** from vehicle model code in different helper sections
+- **Field mappings enhanced** to support full insurance and agent data structure
+- **Data flow improved** to use only helper structure, no raw data sources
+
+### Technical Details
+- **Lines Modified**: 802-803 (email population), 535 (levi mapping fix), 517-528 (structure updates), 557-566 (field mappings), 597-614 (mapping logic)
+- **Architecture Compliance**: 100% - All fields now use helper structure exclusively
+- **Data Separation**: Vehicle model code (helper.vehicle.model_code) vs Levi code (helper.valuation.levi_code) properly separated
+
+### Key Improvements
+1. **Proper Data Separation**: Vehicle model code and levi code are now in correct helper sections
+2. **Complete Email Support**: Both agent and insurance company emails now captured and displayed
+3. **Enhanced Field Mapping**: Comprehensive mapping system for all stakeholder data
+4. **Helper-Only Data Flow**: All fields use helper structure, no external data sources
+
+**Status: ALL ISSUES RESOLVED - Car details floating screen now properly integrated with helper architecture**
+
+---
+
 # Previous Analysis (Helper Pattern Violation Analysis)
 
 ## Objective

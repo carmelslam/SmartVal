@@ -516,8 +516,15 @@
   function mapFieldsToHelper(changes) {
     const updates = {
       vehicle: {},
-      stakeholders: { owner: {}, garage: {} },
-      case_info: {}
+      stakeholders: { 
+        owner: {}, 
+        garage: {},
+        insurance: {
+          agent: {}
+        }
+      },
+      case_info: {},
+      valuation: {}
     };
 
     // Map vehicle fields
@@ -532,7 +539,7 @@
       'vehicle-engine-volume': 'engine_volume',
       'vehicle-fuel-type': 'fuel_type',
       'vehicle-model-code': 'model_code',
-      'vehicle-levi-code': 'levi_code',
+      // REMOVED: 'vehicle-levi-code': 'levi_code' - this goes to valuation section, not vehicle
       'vehicle-engine-model': 'engine_model',
       'vehicle-drive-type': 'drive_type',
       'vehicle-office-code': 'office_code',
@@ -553,9 +560,25 @@
       'car-garage-address': 'address'
     };
 
+    const insuranceFieldMap = {
+      'insurance-company': 'company',
+      'insurance-email': 'email'
+    };
+
+    const agentFieldMap = {
+      'agent-name': 'name',
+      'agent-phone': 'phone',
+      'agent-email': 'email'
+    };
+
     // Map case info fields
     const caseFieldMap = {
       'car-damage-date': 'damage_date'
+    };
+
+    // Map valuation fields (separate from vehicle)
+    const valuationFieldMap = {
+      'vehicle-levi-code': 'levi_code'
     };
 
     // Special handling for damage date - also update general info page field
@@ -579,8 +602,14 @@
         updates.stakeholders.owner[ownerFieldMap[fieldId]] = changes[fieldId];
       } else if (garageFieldMap[fieldId]) {
         updates.stakeholders.garage[garageFieldMap[fieldId]] = changes[fieldId];
+      } else if (insuranceFieldMap[fieldId]) {
+        updates.stakeholders.insurance[insuranceFieldMap[fieldId]] = changes[fieldId];
+      } else if (agentFieldMap[fieldId]) {
+        updates.stakeholders.insurance.agent[agentFieldMap[fieldId]] = changes[fieldId];
       } else if (caseFieldMap[fieldId]) {
         updates.case_info[caseFieldMap[fieldId]] = changes[fieldId];
+      } else if (valuationFieldMap[fieldId]) {
+        updates.valuation[valuationFieldMap[fieldId]] = changes[fieldId];
       }
     });
 
@@ -797,6 +826,10 @@
     document.getElementById("insurance-company").textContent = formatValue(helper.stakeholders?.insurance?.company);
     document.getElementById("agent-name").textContent = formatValue(helper.stakeholders?.insurance?.agent?.name);
     document.getElementById("agent-phone").textContent = formatValue(helper.stakeholders?.insurance?.agent?.phone);
+    
+    // Add missing email fields from helper
+    document.getElementById("agent-email").textContent = formatValue(helper.stakeholders?.insurance?.agent?.email);
+    document.getElementById("insurance-email").textContent = formatValue(helper.stakeholders?.insurance?.email);
     
     console.log('✅ HELPER ARCHITECTURE: Car details populated from helper structure');
   }
