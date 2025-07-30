@@ -247,8 +247,8 @@
   });
 
   // Save changes
-  document.getElementById('save-invoice-changes').addEventListener('click', function() {
-    saveInvoiceChangesToHelper();
+  document.getElementById('save-invoice-changes').addEventListener('click', async function() {
+    await saveInvoiceChangesToHelper();
     disableInvoiceEditMode();
   });
 
@@ -359,7 +359,7 @@
     });
   }
 
-  function saveInvoiceChangesToHelper() {
+  async function saveInvoiceChangesToHelper() {
     if (!window.helper) {
       console.error('❌ Helper not available for saving invoice changes');
       return;
@@ -403,9 +403,9 @@
 
     // Save to storage locations
     try {
-      const helperString = JSON.stringify(window.helper);
-      sessionStorage.setItem('helper', helperString);
-      localStorage.setItem('helper_data', helperString);
+      // Use proper helper update function instead of direct storage
+      const { updateHelper } = await import('./helper.js');
+      await updateHelper(window.helper);
       console.log('✅ Invoice changes saved to helper and storage');
     } catch (error) {
       console.error('❌ Failed to save invoice changes:', error);
@@ -559,23 +559,25 @@
   // Remove old duplicate function that was causing issues  
   // window.refreshInvoiceData is now defined above with logging
 
-  function loadInvoiceData() {
+  async function loadInvoiceData() {
     try {
       let helper = {};
       
-      // Try to get data from sessionStorage helper
+      // Use proper helper data access instead of direct sessionStorage
       try {
-        const storedHelper = sessionStorage.getItem('helper');
-        if (storedHelper) {
-          helper = JSON.parse(storedHelper);
+        const { getCurrentHelper } = await import('./helper.js');
+        const currentHelper = getCurrentHelper();
+        if (currentHelper && Object.keys(currentHelper).length > 0) {
+          helper = currentHelper;
+        } else if (typeof window.helper !== 'undefined') {
+          helper = window.helper;
         }
-      } catch (parseError) {
-        console.warn('Could not parse helper from sessionStorage:', parseError);
-      }
-      
-      // Fallback to global helper variable
-      if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
-        helper = window.helper;
+      } catch (importError) {
+        console.warn('Could not import helper functions, using fallback:', importError);
+        // Fallback to global helper variable
+        if (typeof window.helper !== 'undefined') {
+          helper = window.helper;
+        }
       }
 
       // Get invoice data from helper

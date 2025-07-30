@@ -16,7 +16,7 @@ const valuationData = getValuationData();
 const financialData = getFinancialData();
 
 function buildFeeSummary() {
-  const fees = helper.fees || {};
+  const fees = financialData.fees || {};
   const vatRate = parseFloat(fees.vat_rate) || MathEngine.getVatRate();
   
   // Use MathEngine for consistent calculations
@@ -63,8 +63,8 @@ function buildVaultBlocks() {
 
 // --- Value Mapping Logic ---
 function getReplacementMap() {
-  // Use standardized data access
-  const m = isInvoiceOverride ? helper.invoice_calculations : helper.expertise?.calculations || {};
+  // Use standardized data access consistently
+  const m = isInvoiceOverride ? helper.invoice_calculations : financialData.calculations || {};
   const d = isInvoiceOverride ? helper.invoice_depreciation : valuationData.depreciation || {};
   const f = isInvoiceOverride ? helper.invoice_fees : financialData.fees || {};
 
@@ -131,7 +131,9 @@ function exportFinalReport() {
   helper.meta.final_type = reportType;
   helper.meta.final_timestamp = Date.now();
 
-  sessionStorage.setItem("helper", JSON.stringify(helper));
+  // Use proper helper update function instead of direct sessionStorage
+  const { updateHelper } = await import('./helper.js');
+  updateHelper(helper);
 
   sendToWebhook('SUBMIT_FINAL_REPORT', {
     html,

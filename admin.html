@@ -286,6 +286,7 @@
         <button onclick="loadSection('reminders')">רשימת תזכורות</button>
         <button onclick="loadSection('override')">שינוי נתונים</button>
         <button onclick="loadSection('logView')">יומן פעולות</button>
+        <button onclick="loadSection('clearSystem')" style="background: #dc3545; border-color: #dc3545;">🗑️ מחק נתוני מערכת</button>
         <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
         <button class="devButton" onclick="window.location.href='validation-dashboard.html'">לוח בקרת אימות</button>
         <div class="vat-config">
@@ -1294,6 +1295,48 @@
                 טוען יומן פעולות...
               </div>
             </div>`;
+          break;
+          
+        case 'clearSystem':
+          content.innerHTML = `
+            <h2 style="color: #dc3545; font-size: 18px; margin-bottom: 15px; text-align: center;">🗑️ מחיקת נתוני מערכת</h2>
+            
+            <div style="background: #2a2a2a; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #dc3545;">
+              <h3 style="color: #dc3545; margin-top: 0;">⚠️ אזהרה חמורה</h3>
+              <p style="margin-bottom: 15px;">פעולה זו תמחק את כל הנתונים הבאים מהמערכת:</p>
+              
+              <ul style="text-align: right; margin: 15px 0; color: #f8d7da;">
+                <li>כל פרטי הרכב והבעלים</li>
+                <li>נתוני הנזק והאקספרטיזות</li>
+                <li>אומדנים וחישובי פיצוי</li>
+                <li>חלקי חילוף ומחירונים</li>
+                <li>חשבוניות ומסמכים</li>
+                <li>דוחות סופיים ונתוני הערכת שווי</li>
+                <li>כל המידע השמור במערכת</li>
+              </ul>
+              
+              <div style="background: #450a0a; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #dc3545;">
+                <strong style="color: #dc3545;">שים לב:</strong> פעולה זו בלתי הפיכה ותמחק את כל הנתונים לצמיתות!
+              </div>
+              
+              <div style="text-align: center; margin-top: 25px;">
+                <button onclick="confirmSystemClear()" 
+                        style="padding: 12px 24px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
+                        onmouseover="this.style.background='#c82333'" 
+                        onmouseout="this.style.background='#dc3545'">
+                  🗑️ מחק את כל הנתונים
+                </button>
+                <button onclick="loadSection('caseStatus')" 
+                        style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
+                        onmouseover="this.style.background='#5a6268'" 
+                        onmouseout="this.style.background='#6c757d'">
+                  ביטול
+                </button>
+              </div>
+            </div>
+            
+            <div id="clearSystemStatus" style="margin-top: 15px; text-align: center; display: none;"></div>
+          `;
           break;
           
         default:
@@ -5383,6 +5426,93 @@ window.showContent = function(id) {
       renderLogEntries();
       updateLogStatistics();
     }, 50);
+  }
+};
+
+// Clear system data function
+window.confirmSystemClear = function() {
+  if (!confirm('⚠️ אתה בטוח שברצונך למחוק את כל הנתונים?\n\nפעולה זו תמחק לצמיתות:\n• כל פרטי הרכב\n• נתוני הנזק\n• אומדנים\n• חלקי חילוף\n• כל המידע השמור\n\nלחץ OK למחיקה או Cancel לביטול')) {
+    return;
+  }
+  
+  const statusDiv = document.getElementById('clearSystemStatus');
+  
+  try {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div style="color: #ffc107; padding: 10px;">🔄 מוחק נתונים...</div>';
+    
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Reset helper object if available
+    if (window.helper) {
+      // Reset all helper sections to empty state
+      window.helper = {
+        meta: {},
+        vehicle: {},
+        car_details: {},
+        stakeholders: {},
+        expertise: {
+          damage_blocks: [],
+          levi_report: {}
+        },
+        valuation: {
+          adjustments: {}
+        },
+        parts_search: {
+          results: [],
+          selected_parts: [],
+          unselected_parts: []
+        },
+        invoice: {},
+        estimate: {},
+        final_report: {}
+      };
+      
+      // Save the reset helper
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      
+      // Broadcast the reset to all modules
+      if (typeof window.broadcastHelperUpdate === 'function') {
+        window.broadcastHelperUpdate('all', 'data_cleared');
+      }
+    }
+    
+    // Clear any other system data
+    const keysToRemove = [
+    'formData', 'makeCarData', 'carData', 'carDataFromMake', 'auth',
+      'lastWebhookResponse', 'helper_data', 'damage_centers_data',
+      'parts_data', 'invoice_data', 'estimate_data', 'levi_data',
+      'floating_screen_data', 'validation_data', 'final_report_data',
+      'plate', 'caseLoaded', 'globalVAT'
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+    
+    // Show success message
+    statusDiv.innerHTML = `
+      <div style="color: #28a745; padding: 15px; background: #1a2e1a; border: 1px solid #28a745; border-radius: 6px;">
+        <strong>✅ כל הנתונים נמחקו בהצלחה!</strong><br>
+        המערכת איפסה וכעת ניתן להתחיל תיק חדש.<br><br>
+        <small style="color: #ffc107;">ℹ️ הינך עדיין מחובר למערכת. אין צורך להתחבר מחדש.</small>
+      </div>
+    `;
+    
+    console.log('🗑️ All stored data cleared successfully from admin panel');
+    
+  } catch (error) {
+    console.error('❌ Error clearing stored data:', error);
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה במחיקת הנתונים:</strong><br>
+        ${error.message}<br><br>
+        <small>נסה שוב או פנה לתמיכה טכנית.</small>
+      </div>
+    `;
   }
 };
 </script>

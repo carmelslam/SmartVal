@@ -37,6 +37,7 @@ export const WEBHOOKS = {
   ADMIN_FETCH_REMINDERS: 'https://hook.eu2.make.com/td9fb37c83dcn9h6zxyoy0vekmglj14a',
   AUTH_VERIFY_USER: 'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn',
   ADMIN_FETCH_FIELDS: 'https://hook.eu2.make.com/urzpd316748hb4m6c5qx4uf8trqlbyf9',
+  DELETE_CASE_IN_ONEDRIVE: 'https://hook.eu2.make.com/vf1wem86lba5nmjm6ipa3ugrcx3zljbs',
   // Used by Make automations to push notifications to user system
   PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
   

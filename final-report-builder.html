@@ -886,22 +886,24 @@
     
     <!-- Plate Input and Document Actions Section -->
     <div class="plate-actions-section">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
-        <div>
-          <label>מספר רכב:</label>
-          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב">
+      <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); loadExistingCaseForBuilder();">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+          <div>
+            <label>מספר רכב:</label>
+            <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required>
+          </div>
+          <div>
+            <label>סיסמה (אופציונלי):</label>
+            <input type="password" id="builderPasswordInput" placeholder="סיסמה לאימות נתונים" autocomplete="current-password">
+          </div>
         </div>
-        <div>
-          <label>סיסמה (אופציונלי):</label>
-          <input type="password" id="builderPasswordInput" placeholder="סיסמה לאימות נתונים" autocomplete="off">
+        
+        <div style="text-align:center; margin-bottom:15px;">
+          <button type="submit" id="builderLoadCaseBtn" class="load-case-btn">
+            טען תיק קיים
+          </button>
         </div>
-      </div>
-      
-      <div style="text-align:center; margin-bottom:15px;">
-        <button id="builderLoadCaseBtn" class="load-case-btn" onclick="loadExistingCaseForBuilder()">
-          טען תיק קיים
-        </button>
-      </div>
+      </form>
       
       <div id="builderPlateStatus" style="margin-top:10px; font-size:14px; color:#059669; display:none; text-align:right;">
         ✓ נתוני הרכב נטענו בהצלחה
@@ -8307,6 +8309,28 @@
         return;
       }
       
+      // Validate password against stored login credentials if password is provided
+      if (password) {
+        try {
+          const encryptedPassword = sessionStorage.getItem("auth");
+          if (encryptedPassword) {
+            const { decryptPassword } = await import('./auth.js');
+            const storedPassword = await decryptPassword(encryptedPassword);
+            if (password !== storedPassword) {
+              alert('סיסמה שגויה');
+              return;
+            }
+          } else {
+            alert('אין אימות נתונים זמין');
+            return;
+          }
+        } catch (error) {
+          console.error('Error validating password:', error);
+          alert('שגיאה באימות הסיסמה');
+          return;
+        }
+      }
+      
       const loadBtn = document.getElementById('builderLoadCaseBtn');
       const originalText = loadBtn.textContent;
       
@@ -9858,6 +9882,7 @@
     </div>
   </div>
   
+  <script type="module" src="auth.js"></script>
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
