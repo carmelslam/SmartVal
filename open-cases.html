@@ -271,6 +271,9 @@
 
     <button id="submitBtn">פתח תיק</button>
     
+    <!-- Clear all data button -->
+    <button onclick="clearAllStoredData()" style="background: #dc3545; color: white; width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold;">🗑️ מחק את כל הנתונים ותתחיל מחדש</button>
+    
     <!-- Return button -->
     <button onclick="window.location.href='selection.html'" style="background: #6c757d; color: white; width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">חזור לדף הבחירה</button>
     
@@ -525,6 +528,89 @@
         window.location.href = "general_info.html";
       });
     }
+
+    // Clear all stored data function
+    window.clearAllStoredData = function() {
+      if (!confirm('⚠️ אתה בטוח שברצונך למחוק את כל הנתונים?\nהפעולה הזו תמחק:\n• כל פרטי הרכב\n• נתוני הנזק\n• אומדנים\n• חלקי חילוף\n• כל המידע השמור\n\nלחץ OK למחיקה או Cancel לביטול')) {
+        return;
+      }
+
+      try {
+        // Clear all storage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Reset helper object if available
+        if (window.helper) {
+          // Reset all helper sections to empty state
+          window.helper = {
+            meta: {},
+            vehicle: {},
+            car_details: {},
+            stakeholders: {},
+            expertise: {
+              damage_blocks: [],
+              levi_report: {}
+            },
+            valuation: {
+              adjustments: {}
+            },
+            parts_search: {
+              results: [],
+              selected_parts: [],
+              unselected_parts: []
+            },
+            invoice: {},
+            estimate: {},
+            final_report: {}
+          };
+          
+          // Save the reset helper
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          
+          // Broadcast the reset to all modules
+          if (typeof window.broadcastHelperUpdate === 'function') {
+            window.broadcastHelperUpdate('all', 'data_cleared');
+          }
+        }
+        
+        // Clear any other system data
+        const keysToRemove = [
+          'auth', 'formData', 'makeCarData', 'carData', 'carDataFromMake',
+          'lastWebhookResponse', 'helper_data', 'damage_centers_data',
+          'parts_data', 'invoice_data', 'estimate_data', 'levi_data',
+          'floating_screen_data', 'validation_data', 'final_report_data'
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+        
+        // Show confirmation
+        alert('✅ כל הנתונים נמחקו בהצלחה!\nהמערכת איפסה וכעת ניתן להתחיל תיק חדש.');
+        
+        // Clear the form fields
+        document.getElementById('plate').value = '';
+        document.getElementById('owner').value = '';
+        document.getElementById('date').value = new Date().toISOString().split("T")[0];
+        document.getElementById('location').selectedIndex = 0;
+        document.getElementById('customLocation').value = '';
+        document.getElementById('customLocation').style.display = 'none';
+        
+        // Clear any error/success messages
+        document.getElementById('err').innerText = '';
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('successSection').style.display = 'none';
+        document.getElementById('submitBtn').style.display = 'block';
+        
+        console.log('🗑️ All stored data cleared successfully');
+        
+      } catch (error) {
+        console.error('❌ Error clearing stored data:', error);
+        alert('שגיאה במחיקת הנתונים: ' + error.message);
+      }
+    };
   </script>
   <script src="helper.js" type="module"></script>
   <script src="universal-data-sync.js"></script>
