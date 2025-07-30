@@ -167,11 +167,7 @@
       helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
       plateNumber = helperData.meta?.plate || helperData.vehicle?.plate_number || '';
       
-      // Fallback to old carData for backward compatibility
-      if (!plateNumber) {
-        const carData = JSON.parse(sessionStorage.getItem("carData") || '{}');
-        plateNumber = carData.plate || '';
-      }
+      // REMOVED: No fallback to legacy data - helper only
       
     } catch (e) {
       console.warn('Error loading helper data:', e);
@@ -247,8 +243,8 @@
         damageDate: (() => {
           const damageDate = document.getElementById("damage_date_new").value;
           if (damageDate) {
-            // Set flag to allow damage_date to be saved to helper
-            sessionStorage.setItem('damageDate_manualEntry', 'true');
+            // Store damage date flag in helper instead of sessionStorage
+            updateHelper('meta', { damage_date_manual: true }, 'general_info');
             console.log('✅ User manually entered damage date:', damageDate);
           }
           return damageDate;
@@ -547,7 +543,7 @@
               if (event.isTrusted && this.value !== this.defaultValue) {
                 // Special handling for damage_date_new field
                 if (fieldId === 'damage_date_new' && this.value) {
-                  sessionStorage.setItem('damageDate_manualEntry', 'true');
+                  updateHelper('meta', { damage_date_manual: true }, 'general_info');
                   console.log('✅ Damage date marked as manually entered:', this.value);
                 }
                 

@@ -116,9 +116,12 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
   <script>
-    const plate = sessionStorage.getItem("plate");
-    const owner = sessionStorage.getItem("owner");
-    const date = sessionStorage.getItem("date");
+    // Get data from helper instead of legacy storage
+    let globalHelper = {};
+    try { globalHelper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = globalHelper.meta?.plate || globalHelper.vehicle?.plate || '';
+    const owner = globalHelper.stakeholders?.owner?.name || '';
+    const date = globalHelper.case_info?.inspection_date || globalHelper.meta?.date || '';
 
     if (!plate || !owner || !date) {
       alert("שגיאה: חסר מידע קריטי. חזרה לעמוד הראשי.");
@@ -158,12 +161,21 @@
         .map(input => input.value.trim())
         .filter(val => val.length > 0);
 
-      // Save to helper as draft for this damage center
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      helper.damage_center_draft = helper.damage_center_draft || {};
-      helper.damage_center_draft.works = works;
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // Save to helper as draft using proper function
+      if (typeof updateHelper === 'function') {
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        const draft = helper.damage_center_draft || {};
+        draft.works = works;
+        updateHelper('damage_center_draft', draft, 'damage_center_works');
+      } else {
+        // Fallback to direct manipulation
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        helper.damage_center_draft = helper.damage_center_draft || {};
+        helper.damage_center_draft.works = works;
+        sessionStorage.setItem("helper", JSON.stringify(helper));
+      }
 
       // Go to next bulk (e.g., parts)
       window.location.href = "damage-center-parts.html";

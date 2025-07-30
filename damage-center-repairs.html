@@ -123,9 +123,12 @@
   </div>
 
   <script>
-    const plate = sessionStorage.getItem("plate");
-    const owner = sessionStorage.getItem("owner");
-    const date = sessionStorage.getItem("date");
+    // Get data from helper instead of legacy storage
+    let helper = {};
+    try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = helper.meta?.plate || helper.vehicle?.plate || '';
+    const owner = helper.stakeholders?.owner?.name || '';
+    const date = helper.case_info?.inspection_date || helper.meta?.date || '';
 
     if (!plate || !owner || !date) {
       alert("שגיאה: חסר מידע קריטי. חזרה לעמוד הראשי.");
@@ -152,16 +155,30 @@
         .map(el => el.value.trim())
         .filter(txt => txt.length > 0);
 
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      helper.damage_center_draft = helper.damage_center_draft || {};
-      helper.damage_center_draft.repairs = repairs;
-
-      // Now push the full draft to damage_sections
-      helper.damage_sections = helper.damage_sections || [];
-      helper.damage_sections.push(helper.damage_center_draft);
-      delete helper.damage_center_draft;
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // Use proper helper functions instead of direct manipulation
+      if (typeof updateHelper === 'function') {
+        // Get current draft
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        const draft = helper.damage_center_draft || {};
+        draft.repairs = repairs;
+        
+        // Update damage sections properly
+        const sections = helper.damage_sections || [];
+        sections.push(draft);
+        updateHelper('damage_sections', sections, 'damage_center_repairs');
+        updateHelper('damage_center_draft', null, 'damage_center_repairs'); // Clear draft
+      } else {
+        // Fallback to direct manipulation
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        helper.damage_center_draft = helper.damage_center_draft || {};
+        helper.damage_center_draft.repairs = repairs;
+        helper.damage_sections = helper.damage_sections || [];
+        helper.damage_sections.push(helper.damage_center_draft);
+        delete helper.damage_center_draft;
+        sessionStorage.setItem("helper", JSON.stringify(helper));
+      }
 
       // Offer to add another or finish
       if (confirm("להוסיף מוקד נזק נוסף?")) {

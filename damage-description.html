@@ -149,9 +149,12 @@
   </div>
 
   <script>
-    const plate = sessionStorage.getItem("plate");
-    const owner = sessionStorage.getItem("owner");
-    const date = sessionStorage.getItem("date");
+    // Get data from helper instead of legacy storage
+    let globalHelper = {};
+    try { globalHelper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = globalHelper.meta?.plate || globalHelper.vehicle?.plate || '';
+    const owner = globalHelper.stakeholders?.owner?.name || '';
+    const date = globalHelper.case_info?.inspection_date || globalHelper.meta?.date || '';
 
     if (!plate || !owner || !date) {
       alert("שגיאה: חסר מידע קריטי. חזרה לעמוד הראשי.");
@@ -204,11 +207,21 @@
         }
       }
 
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      helper.damage_center_draft = helper.damage_center_draft || {};
-      helper.damage_center_draft.description = [{ zone, desc }];
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // Save to helper using proper function
+      if (typeof updateHelper === 'function') {
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        const draft = helper.damage_center_draft || {};
+        draft.description = [{ zone, desc }];
+        updateHelper('damage_center_draft', draft, 'damage_description');
+      } else {
+        // Fallback
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        helper.damage_center_draft = helper.damage_center_draft || {};
+        helper.damage_center_draft.description = [{ zone, desc }];
+        sessionStorage.setItem("helper", JSON.stringify(helper));
+      }
 
       window.location.href = "damage-center-flow.html?bulk=description";
     });

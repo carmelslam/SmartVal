@@ -304,11 +304,21 @@ document.getElementById('finishBtn').onclick = function() {
     }
   }
   damageCenters.push(JSON.parse(JSON.stringify(currentCenter)));
-  // Save to helper
-  let helper = {};
-  try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-  helper.damage_sections = damageCenters;
-  sessionStorage.setItem("helper", JSON.stringify(helper));
+  // Save to helper using proper function
+  if (typeof updateHelper === 'function') {
+    updateHelper('damage_sections', damageCenters, 'damage_center_flow');
+  } else {
+    // Import and use updateHelper
+    import('./helper.js').then(module => {
+      module.updateHelper('damage_sections', damageCenters, 'damage_center_flow');
+    }).catch(() => {
+      // Final fallback
+      let helper = {};
+      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+      helper.damage_sections = damageCenters;
+      sessionStorage.setItem("helper", JSON.stringify(helper));
+    });
+  }
   if (confirm("להוסיף מוקד נזק נוסף?")) {
     currentCenter = { description: [], works: [], parts: [], repairs: [] };
     currentStep = 0;
@@ -386,8 +396,16 @@ window.suggestPart = function(input, idx) {
 
   function updatePart(index, field, value) {
     if (!helper.damage_parts[index]) return;
-    helper.damage_parts[index][field] = value;
-    sessionStorage.setItem("helper", JSON.stringify(helper));
+    // Update specific part using helper function
+    if (typeof updateHelper === 'function') {
+      const updatedParts = [...helper.damage_parts];
+      updatedParts[index][field] = value;
+      updateHelper('damage_parts', updatedParts, 'damage_center_flow');
+    } else {
+      // Fallback to direct manipulation
+      helper.damage_parts[index][field] = value;
+      sessionStorage.setItem("helper", JSON.stringify(helper));
+    }
   }
 
   function renderDamageParts() {

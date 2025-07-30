@@ -587,26 +587,14 @@
     return updates;
   }
 
-  // Store loaded data to persist between refreshes
-  let persistedCarData = null;
+  // REMOVED: No custom storage - helper is the only source
 
   // Global functions
   window.toggleCarDetails = function () {
     const modal = document.getElementById("carDetailsModal");
     if (modal.style.display === "none" || !modal.style.display) {
-      // If we have persisted data, use it; otherwise load fresh
-      if (persistedCarData) {
-        console.log('📌 Using persisted car data');
-        updateCarDisplay(
-          persistedCarData.vehicle || {}, 
-          persistedCarData.carDetails || {}, 
-          persistedCarData.stakeholders || {}, 
-          persistedCarData.meta || {},
-          persistedCarData.valuationData || persistedCarData.valuation || {}
-        );
-      } else {
-        loadCarData();
-      }
+      // SIMPLE: Load from helper only
+      loadCarData();
       modal.style.display = "block";
       makeDraggable(modal);
     } else {
@@ -634,9 +622,7 @@
         delete window.currentCaseData;
       }
       
-      // Clear persisted data to force fresh load
-      persistedCarData = null;
-      console.log('🧹 Cleared persisted data, forcing fresh load');
+      // SIMPLE: No custom storage to clear
       
       // Get fresh data from sessionStorage
       const helperString = sessionStorage.getItem('helper');
@@ -714,145 +700,21 @@
 
   function loadCarData() {
     try {
-      console.log('🔄 loadCarData: Starting to load car data...');
+      console.log('🔄 HELPER ARCHITECTURE: Loading car data from helper only...');
       
-      // CRITICAL: Primary data source should be the helper from sessionStorage
-      let helperData = null;
-      const helperString = sessionStorage.getItem('helper');
-      
-      if (helperString) {
-        try {
-          helperData = JSON.parse(helperString);
-          console.log('✅ Successfully loaded helper from sessionStorage');
-          console.log('📊 Full helper data:', helperData);
-          console.log('📊 Helper structure:', {
-            hasVehicle: !!helperData.vehicle,
-            hasMeta: !!helperData.meta,
-            hasCarDetails: !!helperData.car_details,
-            hasStakeholders: !!helperData.stakeholders
-          });
-          
-          // Log specific fields we're looking for
-          if (helperData.vehicle) {
-            console.log('🚗 Vehicle data:', helperData.vehicle);
-          }
-          if (helperData.car_details) {
-            console.log('📋 Car details:', helperData.car_details);
-          }
-          if (helperData.meta) {
-            console.log('📌 Meta data:', helperData.meta);
-          }
-          if (helperData.stakeholders) {
-            console.log('👥 Stakeholders:', helperData.stakeholders);
-          }
-        } catch (e) {
-          console.error('Failed to parse helper from sessionStorage:', e);
-        }
-      } else {
-        console.warn('⚠️ No helper data in sessionStorage!');
+      // FOLLOW HELPER ARCHITECTURE: Single source of truth - window.helper
+      if (!window.helper) {
+        console.warn('⚠️ No helper data available');
+        return;
       }
       
-      // Check window.helper first (since we set window.helper = helper in helper.js)
-      if (!helperData && window.helper) {
-        helperData = window.helper;
-        console.log('📋 Using window.helper as data source');
-        console.log('📊 window.helper contents:', window.helper);
-      }
-      
-      // Secondary: Check window.currentCaseData
-      if (!helperData && window.currentCaseData) {
-        helperData = window.currentCaseData;
-        console.log('📋 Using window.currentCaseData as fallback');
-      }
-      
-      // Tertiary: Check legacy carData
-      if (!helperData || (!helperData.vehicle && !helperData.meta)) {
-        const carDataString = sessionStorage.getItem('carData');
-        if (carDataString) {
-          try {
-            const legacyData = JSON.parse(carDataString);
-            console.log('🔍 Using legacy carData as fallback:', legacyData);
-            
-            // Convert legacy format to helper format
-            helperData = {
-              meta: { 
-                plate: legacyData.plate, 
-                location: legacyData.location, 
-                damage_date: legacyData.damageDate || legacyData.date 
-              },
-              vehicle: { 
-                plate: legacyData.plate,
-                manufacturer: legacyData.manufacturer, 
-                model: legacyData.model, 
-                year: legacyData.year,
-                chassis: legacyData.chassis,
-                km: legacyData.km,
-                model_code: legacyData.model_code,
-                fuel_type: legacyData.fuel_type
-              },
-              car_details: legacyData,
-              stakeholders: { 
-                owner: { name: legacyData.owner },
-                owner_name: legacyData.owner,
-                garage: { 
-                  name: legacyData.garageName,
-                  phone: legacyData.garagePhone
-                },
-                insurance: {
-                  company: legacyData.insuranceCompany,
-                  agent: {
-                    name: legacyData.agentName,
-                    phone: legacyData.insurance_agent_phone
-                  }
-                }
-              }
-            };
-          } catch (e) {
-            console.warn('Could not parse legacy carData:', e);
-          }
-        }
-      }
-      
-      // Default empty structure if no data found
-      if (!helperData) {
-        console.warn('⚠️ No data found in any source, using empty structure');
-        helperData = {
-          vehicle: {},
-          meta: {},
-          car_details: {},
-          stakeholders: { owner: {}, garage: {}, insurance: { agent: {} } }
-        };
-      }
-      
-      // Extract display data from helper structure
-      const vehicle = helperData.vehicle || {};
-      const carDetails = helperData.car_details || {};
-      const stakeholders = helperData.stakeholders || {};
-      const meta = helperData.meta || {};
-      const caseInfo = helperData.case_info || {};
-      const valuationData = helperData.valuation || {};
-      
-      console.log('📊 Extracted data for display:', { 
-        vehicle: Object.keys(vehicle).length ? vehicle : 'empty',
-        carDetails: Object.keys(carDetails).length ? carDetails : 'empty',
-        stakeholders: Object.keys(stakeholders).length ? stakeholders : 'empty',
-        meta: Object.keys(meta).length ? meta : 'empty'
-      });
-      
-      // Debug specific important fields
-      console.log('🔍 Key fields check:');
-      console.log('  - Plate:', meta.plate || vehicle.plate || carDetails.plate || 'NOT FOUND');
-      console.log('  - Manufacturer:', vehicle.manufacturer || carDetails.manufacturer || 'NOT FOUND');
-      console.log('  - Model:', vehicle.model || carDetails.model || 'NOT FOUND');
-      console.log('  - Year:', vehicle.year || carDetails.year || 'NOT FOUND');
-      console.log('  - Owner:', stakeholders.owner?.name || stakeholders.owner_name || carDetails.owner || 'NOT FOUND');
-      
-      // Update UI and persist the data
-      updateCarDisplay(vehicle, carDetails, stakeholders, meta, valuationData);
-      
-      // Persist the loaded data
-      persistedCarData = {
-        vehicle: vehicle,
+      // HELPER IS GOD: Auto-populate from helper structure
+      updateCarDisplay(window.helper);
+    } catch (error) {
+      console.error("❌ Error loading car data:", error);
+    }
+  }
+      // SIMPLE: No custom storage needed - helper is the only source
         carDetails: carDetails,
         stakeholders: stakeholders,
         meta: meta,
@@ -866,27 +728,62 @@
     }
   }
 
-  function updateCarDisplay(vehicle, carDetails, stakeholders, meta, valuationData = {}) {
-    // Ensure all parameters are objects to prevent reference errors
-    vehicle = vehicle || {};
-    carDetails = carDetails || {};
-    stakeholders = stakeholders || {};
-    meta = meta || {};
-    valuationData = valuationData || {};
+  function updateCarDisplay(helper) {
+    // FOLLOW HELPER ARCHITECTURE: Read ONLY from helper structure
+    console.log('🔄 HELPER ARCHITECTURE: Auto-populating from helper structure');
     
-    console.log('🔄 ENHANCED updateCarDisplay called with:', {
-      vehicle, carDetails, stakeholders, meta, valuationData
-    });
+    if (!helper) {
+      console.warn('⚠️ No helper data provided');
+      return;
+    }
+    // HELPER IS GOD: Auto-populate UI fields from helper structure
+    // Plate number
+    const plateValue = helper.meta?.plate || helper.vehicle?.plate || '-';
+    document.getElementById("vehicle-plate").textContent = formatValue(plateValue.replace(/[-\s]/g, ''));
     
-    // ENHANCED: Log what data we actually have
-    console.log('🔍 Vehicle data available:', vehicle ? Object.keys(vehicle) : 'null/undefined');
-    console.log('🔍 CarDetails data available:', carDetails ? Object.keys(carDetails) : 'null/undefined');
-    console.log('🔍 Stakeholders data available:', stakeholders ? Object.keys(stakeholders) : 'null/undefined');
-    console.log('🔍 Meta data available:', meta ? Object.keys(meta) : 'null/undefined');
+    // Vehicle basic info
+    document.getElementById("vehicle-manufacturer").textContent = formatValue(helper.vehicle?.manufacturer);
+    document.getElementById("vehicle-model").textContent = formatValue(helper.vehicle?.model);
+    document.getElementById("vehicle-model-type").textContent = formatValue(helper.vehicle?.model_type);
+    document.getElementById("vehicle-type").textContent = formatValue(helper.vehicle?.vehicle_type);
+    document.getElementById("vehicle-trim").textContent = formatValue(helper.vehicle?.trim);
+    document.getElementById("vehicle-chassis").textContent = formatValue(helper.vehicle?.chassis);
+    document.getElementById("vehicle-year").textContent = formatValue(helper.vehicle?.year);
+    document.getElementById("vehicle-ownership-type").textContent = formatValue(helper.vehicle?.ownership_type);
+    document.getElementById("vehicle-engine-volume").textContent = formatValue(helper.vehicle?.engine_volume);
+    document.getElementById("vehicle-fuel-type").textContent = formatValue(helper.vehicle?.fuel_type);
+    document.getElementById("vehicle-engine-model").textContent = formatValue(helper.vehicle?.engine_model);
+    document.getElementById("vehicle-drive-type").textContent = formatValue(helper.vehicle?.drive_type);
+    document.getElementById("vehicle-office-code").textContent = formatValue(helper.vehicle?.office_code);
+    document.getElementById("vehicle-km").textContent = formatValue(helper.vehicle?.km);
     
-    const formatValue = (value) => {
-      return value && value.toString().trim() ? value : "-";
-    };
+    // Model code vs Levi code - from correct helper fields
+    document.getElementById("vehicle-model-code").textContent = formatValue(helper.vehicle?.model_code);
+    document.getElementById("vehicle-levi-code").textContent = formatValue(helper.valuation?.levi_code);
+    
+    // Dates from correct helper sections
+    document.getElementById("vehicle-inspection-date").textContent = formatDate(helper.case_info?.inspection_date);
+    document.getElementById("car-damage-date").textContent = formatDate(helper.case_info?.damage_date);
+    
+    // Owner info from stakeholders section
+    document.getElementById("car-owner").textContent = formatValue(helper.stakeholders?.owner?.name);
+    document.getElementById("car-owner-address").textContent = formatValue(helper.stakeholders?.owner?.address);
+    document.getElementById("car-owner-phone").textContent = formatValue(helper.stakeholders?.owner?.phone);
+    
+    // Additional fields from helper structure
+    document.getElementById("car-base-price").textContent = formatPrice(helper.valuation?.base_price);
+    document.getElementById("car-market-value").textContent = formatPrice(helper.vehicle?.market_value);
+    document.getElementById("car-odometer").textContent = formatValue(helper.vehicle?.km);
+    document.getElementById("car-inspection-location").textContent = formatValue(helper.case_info?.inspection_location);
+    document.getElementById("garage-name").textContent = formatValue(helper.stakeholders?.garage?.name);
+    document.getElementById("garage-phone").textContent = formatValue(helper.stakeholders?.garage?.phone);
+    document.getElementById("garage-email").textContent = formatValue(helper.stakeholders?.garage?.email);
+    document.getElementById("insurance-company").textContent = formatValue(helper.stakeholders?.insurance?.company);
+    document.getElementById("agent-name").textContent = formatValue(helper.stakeholders?.insurance?.agent?.name);
+    document.getElementById("agent-phone").textContent = formatValue(helper.stakeholders?.insurance?.agent?.phone);
+    
+    console.log('✅ HELPER ARCHITECTURE: Car details populated from helper structure');
+  }
     
     // Format date to DD/MM/YYYY like inspection date
     const formatDate = (dateStr) => {

@@ -191,11 +191,14 @@
   </div>
 
   <script>
-    const plate = sessionStorage.getItem("plate");
-     document.getElementById("pageTitle").innerText = `רכב מס. ${plate}: עבודות נדרשות`;
-    const manufacturer = sessionStorage.getItem("manufacturer");
-    const model = sessionStorage.getItem("model");
-    const year = sessionStorage.getItem("year");
+    // Get data from helper instead of legacy storage
+    let globalHelper = {};
+    try { globalHelper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = globalHelper.meta?.plate || globalHelper.vehicle?.plate || '';
+    const manufacturer = globalHelper.vehicle?.manufacturer || '';
+    const model = globalHelper.vehicle?.model || '';
+    const year = globalHelper.vehicle?.year || '';
+    document.getElementById("pageTitle").innerText = `רכב מס. ${plate}: עבודות נדרשות`;
 
     if (!plate || !manufacturer || !model || !year) {
       alert("שגיאה: חסר מידע קריטי.");
@@ -279,8 +282,7 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
     // Save to session storage
     sessionStorage.setItem('helper', JSON.stringify(helper));
     
-    // Also maintain backward compatibility by keeping the legacy format
-    sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+    // REMOVED: No legacy fallback storage needed
     
     console.log('✅ Helper updated successfully with works data:', helper.damage_assessment.works);
     
@@ -291,8 +293,7 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
     
   } catch (error) {
     console.error('❌ Failed to update helper with works data:', error);
-    // Fallback to legacy storage to prevent data loss
-    sessionStorage.setItem(`phase2_${plate}_works`, JSON.stringify({ takana389: takana, works }));
+    // REMOVED: No legacy fallback needed
   }
   
   location.href = "general-comments.html";

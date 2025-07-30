@@ -291,10 +291,13 @@ form button {
       window.location.href = "index.html";
     }
 
-    const plate = sessionStorage.getItem("plate");
-    const manufacturer = sessionStorage.getItem("manufacturer");
-    const model = sessionStorage.getItem("model");
-    const year = sessionStorage.getItem("year");
+    // Get data from helper instead of legacy storage
+    let globalHelper = {};
+    try { globalHelper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = globalHelper.meta?.plate || globalHelper.vehicle?.plate || '';
+    const manufacturer = globalHelper.vehicle?.manufacturer || '';
+    const model = globalHelper.vehicle?.model || '';
+    const year = globalHelper.vehicle?.year || '';
 
     if (!plate || !manufacturer || !model || !year) {
       alert("שגיאה: חסר מידע קריטי.");
@@ -374,9 +377,19 @@ form button {
       }
 
       if (isStandalone) {
-        // Standalone: save to localStorage and show results
+        // Standalone: save to helper only (no custom localStorage)
         try {
-          const existingParts = JSON.parse(localStorage.getItem('saved_parts') || '[]');
+          // Use helper even in standalone mode
+          if (typeof updateHelper === 'function') {
+            updateHelper('parts_search', { results: validParts, last_updated: new Date().toISOString() }, 'parts_required_standalone');
+          } else {
+            let helper = {};
+            try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+            helper.parts_search = helper.parts_search || {};
+            helper.parts_search.results = validParts;
+            helper.parts_search.last_updated = new Date().toISOString();
+            sessionStorage.setItem("helper", JSON.stringify(helper));
+          }
           const partsData = {
             parts: validParts,
             vehicle: getCarDetails(),
@@ -384,7 +397,7 @@ form button {
             mode: 'standalone'
           };
           existingParts.push(partsData);
-          localStorage.setItem('saved_parts', JSON.stringify(existingParts));
+          // REMOVED: No custom localStorage - helper handles all storage
           
           alert(`✅ נשמרו ${validParts.length} חלקים בהצלחה (מצב עצמאי)\n` + 
                 validParts.map(p => `• ${p.part} - ${p.desc}`).join('\n'));
@@ -422,12 +435,7 @@ form button {
           sessionStorage.setItem("helper", JSON.stringify(helper));
         });
         
-        // Save to localStorage as well for persistence
-        try {
-          localStorage.setItem('helper_data', JSON.stringify(helper));
-        } catch (e) {
-          console.warn('Could not save to localStorage:', e);
-        }
+        // REMOVED: No localStorage needed - helper system handles persistence
         
         window.location.href = "damage-center-repairs.html";
       }
@@ -465,11 +473,12 @@ form button {
           };
         } catch(e) {
           console.error('Error reading helper data:', e);
+          // No fallback to legacy storage - return empty if helper fails
           return {
-            plate: sessionStorage.getItem("plate") || "",
-            manufacturer: sessionStorage.getItem("manufacturer") || "",
-            model: sessionStorage.getItem("model") || "",
-            year: sessionStorage.getItem("year") || ""
+            plate: "",
+            manufacturer: "",
+            model: "",
+            year: ""
           };
         }
       }
@@ -513,9 +522,10 @@ form button {
       }
       
       // Search in stored helper results
+      // REMOVED: No localStorage fallback - helper only
       let storedHelper = {};
       try {
-        storedHelper = JSON.parse(localStorage.getItem("helper_data") || '{}');
+        storedHelper = JSON.parse(sessionStorage.getItem("helper") || '{}');
       } catch (e) {
         storedHelper = {};
       }

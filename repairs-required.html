@@ -124,9 +124,12 @@
   </div>
 
   <script>
-    const plate = sessionStorage.getItem("plate");
-    const owner = sessionStorage.getItem("owner");
-    const date = sessionStorage.getItem("date");
+    // Get data from helper instead of legacy storage  
+    let globalHelper = {};
+    try { globalHelper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+    const plate = globalHelper.meta?.plate || globalHelper.vehicle?.plate || '';
+    const owner = globalHelper.stakeholders?.owner?.name || '';
+    const date = globalHelper.case_info?.inspection_date || globalHelper.meta?.date || '';
 
     if (!plate || !owner || !date) {
       alert("שגיאה: חסר מידע קריטי. חזרה לעמוד הראשי.");
@@ -152,7 +155,16 @@
         .map(el => el.value.trim())
         .filter(txt => txt.length > 0);
 
-      sessionStorage.setItem("phase2_fixes", JSON.stringify(allFixes));
+      // Save to helper instead of custom sessionStorage
+      if (typeof updateHelper === 'function') {
+        updateHelper('phase2_fixes', allFixes, 'repairs_required');
+      } else {
+        // Fallback
+        let helper = {};
+        try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+        helper.phase2_fixes = allFixes;
+        sessionStorage.setItem("helper", JSON.stringify(helper));
+      }
       window.location.href = "next-module.html"; // Change when next module is ready
     });
   </script>
