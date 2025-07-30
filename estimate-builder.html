@@ -1363,8 +1363,6 @@
     // SAVE DEPRECIATION DATA TO HELPER
     function saveDepreciationData() {
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
         // Get global depreciation values
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
@@ -1392,9 +1390,15 @@
           }
         });
         
-        // Save to helper
-        helper.estimate_depreciation = depreciationData;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save to helper using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('estimate_depreciation', depreciationData, 'estimate_builder_depreciation');
+        } else {
+          // Fallback for cases where updateHelper is not available
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.estimate_depreciation = depreciationData;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state
         updateBuilderCurrentState('estimate_depreciation', depreciationData);
@@ -1569,22 +1573,33 @@
       // Collect legal text
       const legalText = document.getElementById('legal-text-content')?.value || '';
       
-      // Save to helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_type = selectedType;
-      helper.estimate_notes = additionalNotes;
-      helper.estimate_work_days = garageDays;
-      helper.estimate_summary = summaryData;
-      helper.estimate_depreciation = depreciationData;
-      
-      // Initialize valuation object if it doesn't exist
-      if (!helper.valuation) {
-        helper.valuation = {};
+      // Save to helper using proper functions
+      if (typeof updateHelper === 'function') {
+        updateHelper('estimate_type', selectedType, 'estimate_builder_save');
+        updateHelper('estimate_notes', additionalNotes, 'estimate_builder_save');
+        updateHelper('estimate_work_days', garageDays, 'estimate_builder_save');
+        updateHelper('estimate_summary', summaryData, 'estimate_builder_save');
+        updateHelper('estimate_depreciation', depreciationData, 'estimate_builder_save');
+        updateHelper('valuation', { adjustments: adjustmentsData }, 'estimate_builder_save');
+        updateHelper('estimate_legal_text', legalText, 'estimate_builder_save');
+      } else {
+        // Fallback for cases where updateHelper is not available
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_type = selectedType;
+        helper.estimate_notes = additionalNotes;
+        helper.estimate_work_days = garageDays;
+        helper.estimate_summary = summaryData;
+        helper.estimate_depreciation = depreciationData;
+        
+        // Initialize valuation object if it doesn't exist
+        if (!helper.valuation) {
+          helper.valuation = {};
+        }
+        helper.valuation.adjustments = adjustmentsData;
+        
+        helper.estimate_legal_text = legalText;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
       }
-      helper.valuation.adjustments = adjustmentsData;
-      
-      helper.estimate_legal_text = legalText;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
       
       // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all estimate data
       updateBuilderCurrentState('estimate_type', selectedType);
@@ -1716,13 +1731,26 @@
           document.getElementById('carReportDate').value = convertToDateInputFormat(issueDate);
           
           // Ensure vehicle structure is populated on load
-          helper.vehicle = helper.vehicle || {};
-          helper.vehicle.manufacturer = helper.car_details?.manufacturer || helper.vehicle.manufacturer || '';
-          helper.vehicle.model = helper.car_details?.model || helper.vehicle.model || '';
-          helper.vehicle.year = helper.car_details?.year || helper.vehicle.year || '';
-          helper.vehicle.model_code = helper.car_details?.model_code || helper.vehicle.model_code || '';
-          helper.vehicle.plate_number = helper.meta?.plate || helper.car_details?.plate || helper.vehicle.plate_number || '';
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          const vehicleData = {
+            manufacturer: helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '',
+            model: helper.car_details?.model || helper.vehicle?.model || '',
+            year: helper.car_details?.year || helper.vehicle?.year || '',
+            model_code: helper.car_details?.model_code || helper.vehicle?.model_code || '',
+            plate_number: helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || ''
+          };
+          
+          if (typeof updateHelper === 'function') {
+            updateHelper('vehicle', vehicleData, 'estimate_builder_vehicle_load');
+          } else {
+            // Fallback for compatibility
+            helper.vehicle = helper.vehicle || {};
+            helper.vehicle.manufacturer = vehicleData.manufacturer;
+            helper.vehicle.model = vehicleData.model;
+            helper.vehicle.year = vehicleData.year;
+            helper.vehicle.model_code = vehicleData.model_code;
+            helper.vehicle.plate_number = vehicleData.plate_number;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
         }
         
         // Load claims data (now editable) - with fallback to manual input data
@@ -1769,20 +1797,27 @@
         console.log('✅ All contact fields populated FROM helper structure');
           
         // Sync data to both standardized and legacy structures for compatibility
-        helper.car_details = helper.car_details || {};
-        helper.car_details.owner = getNestedValue(helper, 'stakeholders.owner.name') || helper.client?.name || '';
-        helper.car_details.ownerAddress = getNestedValue(helper, 'stakeholders.owner.address') || helper.client?.address || '';
-        helper.car_details.ownerPhone = getNestedValue(helper, 'stakeholders.owner.phone') || helper.client?.phone || '';
-        helper.car_details.insuranceCompany = getNestedValue(helper, 'stakeholders.insurance.company') || helper.client?.insurance_company || '';
-        helper.car_details.agentName = getNestedValue(helper, 'stakeholders.insurance.agent.name') || helper.client?.insurance_agent || '';
-        helper.car_details.insurance_agent_phone = getNestedValue(helper, 'stakeholders.insurance.agent.phone') || helper.client?.insurance_agent_phone || '';
-        helper.car_details.insurance_agent_email = getNestedValue(helper, 'stakeholders.insurance.agent.email') || helper.client?.insurance_agent_email || '';
-          
+        const carDetailsData = {
+          owner: getNestedValue(helper, 'stakeholders.owner.name') || helper.client?.name || '',
+          ownerAddress: getNestedValue(helper, 'stakeholders.owner.address') || helper.client?.address || '',
+          ownerPhone: getNestedValue(helper, 'stakeholders.owner.phone') || helper.client?.phone || '',
+          insuranceCompany: getNestedValue(helper, 'stakeholders.insurance.company') || helper.client?.insurance_company || '',
+          agentName: getNestedValue(helper, 'stakeholders.insurance.agent.name') || helper.client?.insurance_agent || '',
+          insurance_agent_phone: getNestedValue(helper, 'stakeholders.insurance.agent.phone') || helper.client?.insurance_agent_phone || '',
+          insurance_agent_email: getNestedValue(helper, 'stakeholders.insurance.agent.email') || helper.client?.insurance_agent_email || '',
           // Note: garageName and garagePhone are not in the builder, so they'll remain empty
-          helper.car_details.garageName = helper.car_details.garageName || '';
-          helper.car_details.garagePhone = helper.car_details.garagePhone || '';
-          
+          garageName: helper.car_details?.garageName || '',
+          garagePhone: helper.car_details?.garagePhone || ''
+        };
+        
+        if (typeof updateHelper === 'function') {
+          updateHelper('car_details', carDetailsData, 'estimate_builder_contact_sync');
+        } else {
+          // Fallback for compatibility
+          helper.car_details = helper.car_details || {};
+          Object.assign(helper.car_details, carDetailsData);
           sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Update page title with plate
         // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
@@ -2509,7 +2544,12 @@
         }
         
         // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (typeof updateHelper === 'function') {
+          updateHelper('valuation', { adjustments: helper.valuation.adjustments }, 'estimate_builder_levi_transform');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         console.log('✅ Levi data transformed to valuation structure:', helper.valuation.adjustments);
         
       } catch (error) {
@@ -2593,8 +2633,8 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Initialize custom adjustments array if it doesn't exist
-      if (!helper.levi) helper.levi = {};
-      if (!helper.levi.custom_adjustments) helper.levi.custom_adjustments = [];
+      const leviData = helper.levi || {};
+      const customAdjustments = leviData.custom_adjustments || [];
       
       // Add new empty adjustment with default type
       const newAdjustment = {
@@ -2604,10 +2644,17 @@
         adjustmentType: 'addition'
       };
       
-      helper.levi.custom_adjustments.push(newAdjustment);
+      customAdjustments.push(newAdjustment);
+      const updatedLeviData = { ...leviData, custom_adjustments: customAdjustments };
       
-      // Save to sessionStorage
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      // Save to helper using proper function
+      if (typeof updateHelper === 'function') {
+        updateHelper('levi', updatedLeviData, 'estimate_builder_custom_adjustment_add');
+      } else {
+        // Fallback for compatibility
+        helper.levi = updatedLeviData;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       // Reload all adjustments to show the new one
       loadAllAdjustments(helper);
@@ -2641,8 +2688,18 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       if (helper.levi?.custom_adjustments && helper.levi.custom_adjustments[index]) {
-        helper.levi.custom_adjustments.splice(index, 1);
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        const leviData = { ...helper.levi };
+        leviData.custom_adjustments = [...leviData.custom_adjustments];
+        leviData.custom_adjustments.splice(index, 1);
+        
+        // Save using proper helper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('levi', leviData, 'estimate_builder_custom_adjustment_remove');
+        } else {
+          // Fallback for compatibility
+          helper.levi.custom_adjustments.splice(index, 1);
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Reload all adjustments
         loadAllAdjustments(helper);
@@ -2777,8 +2834,13 @@
         if (helper.levi_report.adjustments[index]) {
           helper.levi_report.adjustments[index][field] = value;
           
-          // Save back to helper
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          // Save back to helper using proper function
+          if (typeof updateHelper === 'function') {
+            updateHelper('levi_report', helper.levi_report, 'estimate_builder_levi_adjustment_update');
+          } else {
+            // Fallback for compatibility
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
           console.log(`✅ Updated Levi adjustment ${index}.${field} = ${value}`);
         }
       } catch (error) {
@@ -2849,7 +2911,13 @@
           }
         }
         
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save using proper helper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('levi', helper.levi, 'estimate_builder_custom_adjustment_update');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         console.log(`Updated custom adjustment ${index}.${field} to:`, adjustment[field]);
         console.log('Full adjustment object:', adjustment);
@@ -2947,8 +3015,13 @@
           });
         }
         
-        // Update helper in sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Update helper using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('levi', helper.levi, 'estimate_builder_adjustment_recalculate');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         console.log('📊 Updated Levi data structure for floating screen compatibility');
         
@@ -2980,7 +3053,7 @@
         }
         
         // Update helper with calculated totals
-        helper.summary_totals = {
+        const summaryTotals = {
           levi_total: leviTotal,
           damage_total: damageTotal,
           total_before_vat: leviTotal + damageTotal,
@@ -2988,7 +3061,14 @@
           calculated_at: new Date().toISOString()
         };
         
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save using proper helper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('summary_totals', summaryTotals, 'estimate_builder_summary_calculation');
+        } else {
+          // Fallback for compatibility
+          helper.summary_totals = summaryTotals;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         console.log('✅ Summary totals calculated and updated in helper:', helper.summary_totals);
         
         // Trigger floating screen updates when helper changes
@@ -3045,13 +3125,23 @@
         helper.expertise.calculations.damage_percent = grossPercentage;
         
         // Update claims_data for UI consistency
-        helper.claims_data = helper.claims_data || {};
-        helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
-        helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
-        helper.claims_data.gross_percent = `${grossPercentage.toFixed(2)}%`;
+        const claimsData = {
+          levi_price_list: `₪${grossMarketValue.toLocaleString()}`,
+          total_claim: `₪${totalClaim.toLocaleString()}`,
+          gross_percent: `${grossPercentage.toFixed(2)}%`
+        };
         
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save updated helper using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('calculations', helper.calculations, 'estimate_builder_calculation_refresh');
+          updateHelper('expertise', helper.expertise, 'estimate_builder_expertise_refresh'); 
+          updateHelper('claims_data', claimsData, 'estimate_builder_claims_refresh');
+        } else {
+          // Fallback for compatibility
+          helper.claims_data = helper.claims_data || {};
+          Object.assign(helper.claims_data, claimsData);
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Debug: Check which refresh functions are available
         console.log('Debug: Available refresh functions:', {
@@ -3145,10 +3235,25 @@
       
       // 2. Test manual helper update
       console.log('2️⃣ Testing manual helper update...');
-      helper.test_field = 'test_value_' + Date.now();
-      helper.car_details = helper.car_details || {};
-      helper.car_details.manufacturer = 'TEST_MANUFACTURER';
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      const testData = {
+        test_field: 'test_value_' + Date.now(),
+        car_details: {
+          ...helper.car_details,
+          manufacturer: 'TEST_MANUFACTURER'
+        }
+      };
+      
+      // Use proper helper update function
+      if (typeof updateHelper === 'function') {
+        updateHelper('test_field', testData.test_field, 'estimate_builder_debug_test');
+        updateHelper('car_details', testData.car_details, 'estimate_builder_debug_test');
+      } else {
+        // Fallback for compatibility
+        helper.test_field = testData.test_field;
+        helper.car_details = helper.car_details || {};
+        helper.car_details.manufacturer = 'TEST_MANUFACTURER';
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       console.log('   Helper updated with test data');
       
       // 3. Test floating screen refresh
@@ -3337,8 +3442,15 @@
           }
         }
         
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save updated helper using proper function  
+        if (typeof updateHelper === 'function') {
+          updateHelper('car_details', helper.car_details, 'estimate_builder_field_update');
+          updateHelper('vehicle', helper.vehicle, 'estimate_builder_field_update');
+          updateHelper('estimate_summary', helper.estimate_summary, 'estimate_builder_field_update');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Trigger floating screen updates when helper changes
         triggerFloatingScreenRefresh();
@@ -3465,9 +3577,16 @@
       loadLegalText();
       
       // Save the legal text to helper for the specific estimate
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_legal_text = document.getElementById('legal-text-content').value;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      const legalTextContent = document.getElementById('legal-text-content').value;
+      
+      if (typeof updateHelper === 'function') {
+        updateHelper('estimate_legal_text', legalTextContent, 'estimate_builder_legal_text_load');
+      } else {
+        // Fallback for compatibility
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_legal_text = legalTextContent;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       console.log('Legal text loaded from vault and saved to estimate');
     }
@@ -3480,9 +3599,14 @@
       document.getElementById('legal-text-content').value = `טקסט משפטי לאומדן ${typeText} - מוכן לעריכה`;
       
       // Clear saved legal text from helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      delete helper.estimate_legal_text;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (typeof updateHelper === 'function') {
+        updateHelper('estimate_legal_text', null, 'estimate_builder_legal_text_reset');
+      } else {
+        // Fallback for compatibility
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        delete helper.estimate_legal_text;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       console.log('Legal text reset');
     }
@@ -3504,10 +3628,21 @@
       document.getElementById('attachments-content').value = attachmentsText;
       
       // Save to helper and LOCK the selection
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.estimate_attachments = attachmentsText;
-      helper.estimate_attachments_locked = true; // Lock the selection
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      const attachmentsData = {
+        estimate_attachments: attachmentsText,
+        estimate_attachments_locked: true
+      };
+      
+      if (typeof updateHelper === 'function') {
+        updateHelper('estimate_attachments', attachmentsText, 'estimate_builder_attachments_load');
+        updateHelper('estimate_attachments_locked', true, 'estimate_builder_attachments_lock');
+      } else {
+        // Fallback for compatibility
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.estimate_attachments = attachmentsText;
+        helper.estimate_attachments_locked = true;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       console.log('📎 Attachments loaded from vault for type:', selectedType, 'and LOCKED');
     }
@@ -3519,9 +3654,16 @@
       document.getElementById('attachments-content').value = defaultAttachments;
       
       // Clear from helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      delete helper.estimate_attachments;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (typeof updateHelper === 'function') {
+        updateHelper('estimate_attachments', null, 'estimate_builder_attachments_reset');
+        updateHelper('estimate_attachments_locked', null, 'estimate_builder_attachments_unlock');
+      } else {
+        // Fallback for compatibility
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        delete helper.estimate_attachments;
+        delete helper.estimate_attachments_locked;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       console.log('Attachments reset');
     }
@@ -3656,9 +3798,19 @@
             console.log(`🔧 Calculated vehicle_value_gross from Levi data: ${basePrice} + ${featuresValue} + ${registrationValue} = ${vehicleValueGross}`);
             
             // Update helper with calculated value
-            helper.calculations = helper.calculations || {};
-            helper.calculations.vehicle_value_gross = vehicleValueGross;
-            sessionStorage.setItem('helper', JSON.stringify(helper));
+            const calculationsData = {
+              ...helper.calculations,
+              vehicle_value_gross: vehicleValueGross
+            };
+            
+            if (typeof updateHelper === 'function') {
+              updateHelper('calculations', calculationsData, 'estimate_builder_gross_value_calculation');
+            } else {
+              // Fallback for compatibility
+              helper.calculations = helper.calculations || {};
+              helper.calculations.vehicle_value_gross = vehicleValueGross;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+            }
           }
         }
         
@@ -3687,9 +3839,19 @@
             leviPriceListField.value = `₪${vehicleValueGross.toLocaleString()}`;
             
             // Update helper claims data to maintain consistency
-            helper.claims_data = helper.claims_data || {};
-            helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
-            sessionStorage.setItem('helper', JSON.stringify(helper));
+            const claimsData = {
+              ...helper.claims_data,
+              levi_price_list: `₪${vehicleValueGross.toLocaleString()}`
+            };
+            
+            if (typeof updateHelper === 'function') {
+              updateHelper('claims_data', claimsData, 'estimate_builder_claims_consistency');
+            } else {
+              // Fallback for compatibility
+              helper.claims_data = helper.claims_data || {};
+              helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+            }
             
             console.log(`💰 Updated gross market value field: ₪${vehicleValueGross.toLocaleString()}`);
           }
@@ -4332,8 +4494,13 @@
           helper.valuation.adjustments[category].push(adjustmentData);
         }
         
-        // Save to storage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save to storage using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('valuation', helper.valuation, 'estimate_builder_adjustment_sync');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Trigger UI updates
         if (window.forcePopulateFields) {
@@ -4433,8 +4600,13 @@
           console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
         }
         
-        // Save to storage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save to storage using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('valuation', helper.valuation, 'estimate_builder_adjustment_sync_2');
+        } else {
+          // Fallback for compatibility
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Trigger UI updates
         if (window.forcePopulateFields) {
@@ -4692,8 +4864,14 @@
         adjustmentsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 10px; font-size: 13px;">נתוני התאמות נמחקו - השתמש בכפתור "הוסף התאמה נוספת"</div>';
       }
       
-      // Save cleaned helper
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      // Save cleaned helper using proper function
+      if (typeof updateHelper === 'function') {
+        updateHelper('levi_report', helper.levi_report, 'estimate_builder_reset_adjustments');
+        updateHelper('levi', helper.levi, 'estimate_builder_reset_adjustments');
+      } else {
+        // Fallback for compatibility
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
       
       console.log('✅ RESET: All adjustment data cleared');
     }
@@ -5310,17 +5488,33 @@
           
           // Update helper with GROSS damage percentage (separate from market damage percentage)
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.calculations = helper.calculations || {};
-          helper.calculations.damage_percent_gross = grossDamagePercentage;
-          helper.calculations.total_damage = totalClaim;
           
-          // Update claims data for backward compatibility
-          helper.claims_data = helper.claims_data || {};
-          helper.claims_data.gross_percent = formattedPercentage;
-          helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
-          helper.claims_data.gross_value = `₪${grossPrice.toLocaleString()}`;
+          const calculationsData = {
+            ...helper.calculations,
+            damage_percent_gross: grossDamagePercentage,
+            total_damage: totalClaim
+          };
           
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          const claimsData = {
+            ...helper.claims_data,
+            gross_percent: formattedPercentage,
+            total_claim: `₪${totalClaim.toLocaleString()}`,
+            gross_value: `₪${grossPrice.toLocaleString()}`
+          };
+          
+          // Save using proper helper function
+          if (typeof updateHelper === 'function') {
+            updateHelper('calculations', calculationsData, 'estimate_builder_gross_damage_calculation');
+            updateHelper('claims_data', claimsData, 'estimate_builder_claims_damage_update');
+          } else {
+            // Fallback for compatibility
+            helper.calculations = helper.calculations || {};
+            helper.calculations.damage_percent_gross = grossDamagePercentage;
+            helper.calculations.total_damage = totalClaim;
+            helper.claims_data = helper.claims_data || {};
+            Object.assign(helper.claims_data, claimsData);
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
           
           console.log(`📊 GROSS DAMAGE %: ${totalClaim.toLocaleString()} ÷ ${grossPrice.toLocaleString()} = ${formattedPercentage}`);
           console.log(`🏠 This uses GROSS PRICE (car properties only), not market price`);
@@ -6287,9 +6481,15 @@
       const legalTextArea = document.getElementById('legal-text-content');
       if (legalTextArea) {
         legalTextArea.addEventListener('input', function() {
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.estimate_legal_text = this.value;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          // Save using proper helper function
+          if (typeof updateHelper === 'function') {
+            updateHelper('estimate_legal_text', this.value, 'estimate_builder_legal_text_autosave');
+          } else {
+            // Fallback for compatibility
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            helper.estimate_legal_text = this.value;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
           updateBuilderCurrentState('estimate_legal_text', this.value);
@@ -6300,9 +6500,15 @@
       const attachmentsArea = document.getElementById('attachments-content');
       if (attachmentsArea) {
         attachmentsArea.addEventListener('input', function() {
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.estimate_attachments = this.value;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          // Save using proper helper function
+          if (typeof updateHelper === 'function') {
+            updateHelper('estimate_attachments', this.value, 'estimate_builder_attachments_autosave');
+          } else {
+            // Fallback for compatibility
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            helper.estimate_attachments = this.value;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
           updateBuilderCurrentState('estimate_attachments', this.value);

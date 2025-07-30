@@ -1666,9 +1666,14 @@
           }
         });
         
-        // Save to helper
-        helper.final_report.depreciation = depreciationData;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Save to helper using proper function
+        if (typeof updateHelper === 'function') {
+          updateHelper('final_report', { depreciation: depreciationData }, 'final_report_builder_depreciation');
+        } else {
+          // Fallback for compatibility
+          helper.final_report.depreciation = depreciationData;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state
         updateBuilderCurrentState('final_report.depreciation', depreciationData);
@@ -1843,22 +1848,26 @@
       // Collect legal text
       const legalText = document.getElementById('legal-text-content')?.value || '';
       
-      // Save to helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.final_report.type = selectedType;
-      helper.final_report.notes = additionalNotes;
-      helper.final_report.work_days = garageDays;
-      helper.final_report.summary = summaryData;
-      helper.final_report.depreciation = depreciationData;
-      helper.final_report.adjustments = adjustmentsData;
+      // Save to helper using proper function
+      const finalReportData = {
+        type: selectedType,
+        notes: additionalNotes,
+        work_days: garageDays,
+        summary: summaryData,
+        depreciation: depreciationData,
+        adjustments: adjustmentsData,
+        legal_text: legalText
+      };
       
-      // Initialize final_report object if it doesn't exist
-      if (!helper.final_report) {
-        helper.final_report = {};
+      if (typeof updateHelper === 'function') {
+        updateHelper('final_report', finalReportData, 'final_report_builder_save');
+      } else {
+        // Fallback for compatibility
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.final_report = helper.final_report || {};
+        Object.assign(helper.final_report, finalReportData);
+        sessionStorage.setItem('helper', JSON.stringify(helper));
       }
-      helper.final_report.legal_text = legalText;
-      
-      sessionStorage.setItem('helper', JSON.stringify(helper));
       
       // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all final report data
       updateBuilderCurrentState('final_report.type', selectedType);
