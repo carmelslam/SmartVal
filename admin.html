@@ -287,6 +287,7 @@
         <button onclick="loadSection('override')">שינוי נתונים</button>
         <button onclick="loadSection('logView')">יומן פעולות</button>
         <button onclick="loadSection('clearSystem')" style="background: #dc3545; border-color: #dc3545;">🗑️ מחק נתוני מערכת</button>
+        <button onclick="loadSection('deleteCase')" style="background: #e74c3c; border-color: #e74c3c;">🗂️ מחק תיק מ-OneDrive</button>
         <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
         <button class="devButton" onclick="window.location.href='validation-dashboard.html'">לוח בקרת אימות</button>
         <div class="vat-config">
@@ -1336,6 +1337,56 @@
             </div>
             
             <div id="clearSystemStatus" style="margin-top: 15px; text-align: center; display: none;"></div>
+          `;
+          break;
+          
+        case 'deleteCase':
+          content.innerHTML = `
+            <h2 style="color: #e74c3c; font-size: 18px; margin-bottom: 15px; text-align: center;">🗂️ מחיקת תיק מ-OneDrive</h2>
+            
+            <div style="background: #2a2a2a; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e74c3c;">
+              <h3 style="color: #e74c3c; margin-top: 0;">⚠️ מחיקת תיק קבועה</h3>
+              <p style="margin-bottom: 15px;">פעולה זו תמחק לצמיתות את התיק הנבחר מתיקיית OneDrive.</p>
+              
+              <div style="background: #450a0a; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #e74c3c;">
+                <strong style="color: #e74c3c;">זהירות:</strong> פעולה זו בלתי הפיכה ותמחק את כל קבצי התיק כולל מסמכים, תמונות ודוחות!
+              </div>
+              
+              <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">מספר רכב למחיקה:</label>
+                <input type="text" id="deleteCasePlate" placeholder="הכנס מספר רכב" 
+                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
+              </div>
+              
+              <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות ראשון - סיסמת מנהל:</label>
+                <input type="password" id="deleteAuth1" placeholder="הכנס סיסמת מנהל" 
+                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
+              </div>
+              
+              <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות שני - הקלד "DELETE" באנגלית:</label>
+                <input type="text" id="deleteAuth2" placeholder="הקלד DELETE באנגלית" 
+                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
+              </div>
+              
+              <div style="text-align: center; margin-top: 25px;">
+                <button onclick="performCaseDeletion()" 
+                        style="padding: 12px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
+                        onmouseover="this.style.background='#c0392b'" 
+                        onmouseout="this.style.background='#e74c3c'">
+                  🗂️ מחק תיק מ-OneDrive
+                </button>
+                <button onclick="loadSection('caseStatus')" 
+                        style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
+                        onmouseover="this.style.background='#5a6268'" 
+                        onmouseout="this.style.background='#6c757d'">
+                  ביטול
+                </button>
+              </div>
+            </div>
+            
+            <div id="deleteCaseStatus" style="margin-top: 15px; text-align: center; display: none;"></div>
           `;
           break;
           
@@ -5513,6 +5564,136 @@ window.confirmSystemClear = function() {
         <small>נסה שוב או פנה לתמיכה טכנית.</small>
       </div>
     `;
+  }
+};
+
+// Delete case from OneDrive function with double authentication
+window.performCaseDeletion = async function() {
+  const plateNumber = document.getElementById('deleteCasePlate').value.trim();
+  const auth1 = document.getElementById('deleteAuth1').value.trim();
+  const auth2 = document.getElementById('deleteAuth2').value.trim();
+  const statusDiv = document.getElementById('deleteCaseStatus');
+  
+  // Validation
+  if (!plateNumber) {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה:</strong> יש להכניס מספר רכב למחיקה
+      </div>
+    `;
+    return;
+  }
+  
+  if (!auth1) {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה:</strong> יש להכניס סיסמת מנהל
+      </div>
+    `;
+    return;
+  }
+  
+  if (auth2 !== 'DELETE') {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה:</strong> יש להקליד "DELETE" באנגלית בדיוק
+      </div>
+    `;
+    return;
+  }
+  
+  // Validate admin password against stored credentials
+  try {
+    const encryptedPassword = sessionStorage.getItem("auth");
+    if (encryptedPassword) {
+      const { decryptPassword } = await import('./auth.js');
+      const storedPassword = await decryptPassword(encryptedPassword);
+      if (auth1 !== storedPassword) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `
+          <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+            <strong>❌ שגיאה:</strong> סיסמת מנהל שגויה
+          </div>
+        `;
+        return;
+      }
+    } else {
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = `
+        <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+          <strong>❌ שגיאה:</strong> אין אימות זמין במערכת
+        </div>
+      `;
+      return;
+    }
+  } catch (error) {
+    console.error('Error validating admin password:', error);
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה:</strong> שגיאה באימות סיסמה
+      </div>
+    `;
+    return;
+  }
+  
+  // Final confirmation
+  if (!confirm(\`⚠️ האם אתה בטוח לחלוטין שברצונך למחוק את התיק של רכב \${plateNumber} מ-OneDrive?\\n\\nפעולה זו בלתי הפיכה ותמחק את כל הקבצים הקשורים לתיק זה!\\n\\nלחץ OK למחיקה סופית או Cancel לביטול\`)) {
+    return;
+  }
+  
+  // Show loading
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<div style="color: #ffc107; padding: 10px;">🔄 מוחק תיק מ-OneDrive...</div>';
+  
+  try {
+    // Call the DELETE_CASE_IN_ONEDRIVE webhook
+    const response = await window.sendToWebhook('DELETE_CASE_IN_ONEDRIVE', {
+      plate: plateNumber,
+      admin_password: auth1,
+      confirmation: 'DELETE',
+      timestamp: Date.now(),
+      action: 'permanent_delete'
+    });
+    
+    if (response && response.success) {
+      statusDiv.innerHTML = \`
+        <div style="color: #28a745; padding: 15px; background: #1a2e1a; border: 1px solid #28a745; border-radius: 6px;">
+          <strong>✅ תיק נמחק בהצלחה!</strong><br>
+          התיק של רכב \${plateNumber} נמחק לצמיתות מ-OneDrive.<br><br>
+          <small style="color: #ffc107;">ℹ️ ייתכן שהמחיקה תיקח מספר דקות להסתיים במלואה.</small>
+        </div>
+      \`;
+      
+      // Clear form fields
+      document.getElementById('deleteCasePlate').value = '';
+      document.getElementById('deleteAuth1').value = '';
+      document.getElementById('deleteAuth2').value = '';
+      
+      console.log(\`🗂️ Case \${plateNumber} deleted from OneDrive successfully\`);
+      
+    } else {
+      statusDiv.innerHTML = \`
+        <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+          <strong>❌ שגיאה במחיקת התיק:</strong><br>
+          \${response?.message || 'תיק לא נמצא או שגיאה במערכת'}<br><br>
+          <small>ודא שמספר הרכב נכון ונסה שוב.</small>
+        </div>
+      \`;
+    }
+    
+  } catch (error) {
+    console.error('Error deleting case from OneDrive:', error);
+    statusDiv.innerHTML = \`
+      <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה בחיבור למערכת:</strong><br>
+        \${error.message}<br><br>
+        <small>נסה שוב או פנה לתמיכה טכנית.</small>
+      </div>
+    \`;
   }
 };
 </script>
