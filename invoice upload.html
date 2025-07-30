@@ -561,15 +561,25 @@ class InvoiceProcessor {
 
   setupEventListeners() {
     // File input change
-    document.getElementById('file-input').addEventListener('change', (e) => {
-      this.handleFileSelection(e.target.files[0]);
-    });
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        this.handleFileSelection(e.target.files[0]);
+      });
+    } else {
+      console.error('❌ File input element not found - file-input missing');
+    }
 
     // Form submission
-    document.getElementById('invoice-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.processInvoice();
-    });
+    const invoiceForm = document.getElementById('invoice-form');
+    if (invoiceForm) {
+      invoiceForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.processInvoice();
+      });
+    } else {
+      console.error('❌ Invoice form element not found - invoice-form missing');
+    }
 
     // Manual item addition
     document.getElementById('add-manual-item').addEventListener('click', () => {
@@ -699,6 +709,12 @@ class InvoiceProcessor {
   showPreview(file) {
     const previewContainer = document.getElementById('preview-container');
     const previewImage = document.getElementById('preview-image');
+    
+    // Add null checks to prevent errors
+    if (!previewContainer || !previewImage) {
+      console.error('❌ Preview elements not found - preview-container or preview-image missing');
+      return;
+    }
     
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
