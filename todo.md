@@ -200,6 +200,263 @@ if (!helper) {
 
 ---
 
+**# 🔄 DATA FLOW COMPLIANCE AUDIT & FIX PLAN 31/07-25**
+
+## 📋 OBJECTIVE
+Fix all data flow violations to achieve 100% helper integration compliance without changing system structures or module logic. Focus purely on ensuring proper bidirectional data flow between modules and the helper hub.
+
+## 🎯 CRITICAL SUCCESS METRICS
+- **100% Helper Integration**: All modules read from and write to helper correctly
+- **Perfect Floating Screen Mirrors**: 4 floating screens show exact helper data with edit capability
+- **Complete Expertise Workflow**: Foundation data flow (80% of data) works flawlessly
+- **No Competing Data Sources**: Helper is the single source of truth
+- **Zero Data Loss**: All manual inputs and calculations preserved in helper
+
+---
+
+## 📊 PHASE 1: COMPREHENSIVE SYSTEM AUDIT
+
+### Task 1.1: Expertise Workflow Audit (Foundation - 80% of Data)
+**Status**: Pending  
+**Priority**: Critical  
+**Scope**: Examine all foundation modules that set the core data
+
+**Modules to Audit**:
+- [ ] `open-cases.html` - Case opening and plate entry
+- [ ] `general_info.html` - Manual vehicle/owner/damage details  
+- [ ] `upload-levi.html` + `levi-floating.js` - Levi OCR processing
+- [ ] `upload-images.html` - Image upload integration
+- [ ] `damage-center-flow.html` - Primary damage assessment
+- [ ] `enhanced-damage-centers.html` - Advanced damage input
+- [ ] `damage-center-repairs.html` - Repair items input
+- [ ] `damage-center-works.html` - Work items input  
+- [ ] `damage-description.html` - Damage descriptions
+- [ ] `work.html` - Work details input
+- [ ] `repairs-required.html` - Required repairs input
+- [ ] `parts-required.html` - Required parts input
+- [ ] `parts search.html` + `parts-module.html` - Parts search/selection
+- [ ] `expertise-summary.html` - Manual summary inputs
+
+**Expected Violations to Find**:
+- Manual inputs not updating helper immediately
+- Missing updateHelper() calls after user input
+- Data not auto-populating from helper on page load
+- Competing storage mechanisms (sessionStorage, localStorage)
+
+---
+
+### Task 1.2: Floating Screens Mirror Accuracy Audit
+**Status**: Pending  
+**Priority**: Critical  
+**Scope**: Ensure 4 floating screens are perfect helper mirrors with edit capability
+
+**Floating Screens to Audit**:
+- [ ] `car-details-floating.js` - Vehicle details mirror + edit
+- [ ] `levi-floating.js` - Levi adjustments mirror + edit  
+- [ ] `invoice-details-floating.js` - Invoice details mirror + edit
+- [ ] `parts-search-results-floating.js` - Parts results mirror + edit
+
+**Expected Violations to Find**:
+- Floating screens showing different data than helper contains
+- Edit functions not calling updateHelper() and broadcastHelperUpdate()
+- Data loading from sources other than helper
+- Save/update buttons bypassing helper system
+- Missing real-time sync when helper data changes
+
+---
+
+### Task 1.3: Builder/Calculator Systems Audit  
+**Status**: Pending  
+**Priority**: High  
+**Scope**: Ensure calculation systems properly integrate with helper
+
+**Modules to Audit**:
+- [ ] `estimate-builder.html` + `estimate-generator.js`
+- [ ] `final-report-builder.html` + `final_report.js`  
+- [ ] `estimate-report-builder.html`
+- [ ] `final-report-template-builder.html`
+
+**Expected Violations to Find**:
+- Calculations not being saved back to helper
+- Direct sessionStorage manipulation bypassing helper functions
+- Multiple data sources competing with helper
+- Results not feeding back for other modules to consume
+
+---
+
+### Task 1.4: Core System Integration Audit
+**Status**: Pending  
+**Priority**: High  
+**Scope**: Examine supporting systems for helper compliance
+
+**Core Systems to Audit**:
+- [ ] `helper.js` - Core helper functions compliance
+- [ ] `session.js` - Session management integration  
+- [ ] `universal-data-capture.js` - Auto-capture system
+- [ ] `field-mapping-dictionary.js` - Field mapping accuracy
+
+**Expected Violations to Find**:
+- Missing or incorrect updateHelper() implementations
+- Session management bypassing helper system
+- Auto-capture not feeding helper correctly
+- Field mappings not aligned with helper structure
+
+---
+
+## 🔧 PHASE 2: DETAILED FIX SPECIFICATIONS
+
+### Task 2.1: Expertise Workflow Integration Fixes
+**Status**: Pending  
+**Priority**: Critical
+
+**Small, Controllable Tasks**:
+1. **Open Cases Helper Flow** - Ensure plate/owner data goes to helper.meta
+2. **General Info Bidirectional Sync** - Fix manual inputs → helper integration
+3. **Levi OCR Helper Population** - Ensure OCR results populate helper.valuation
+4. **Image Upload Helper Metadata** - Fix image data → helper.documents
+5. **Damage Centers Helper Feed** - Ensure damage data → helper.damage_assessment  
+6. **Work/Repairs Helper Integration** - Fix manual inputs → helper sections
+7. **Parts Search Helper Sync** - Ensure selected parts → helper.parts_search
+8. **Expertise Summary Helper Update** - Fix manual summary → helper updates
+
+**Fix Method**: Add missing updateHelper() calls, ensure auto-population on load
+
+---
+
+### Task 2.2: Floating Screens Mirror Accuracy Fixes
+**Status**: Pending  
+**Priority**: Critical
+
+**Small, Controllable Tasks**:
+1. **Car Details Mirror Fix** - Ensure loadCarData() reads only from helper
+2. **Levi Adjustments Mirror Fix** - Display exact helper.valuation data
+3. **Invoice Details Mirror Fix** - Show exact helper.invoice data  
+4. **Parts Results Mirror Fix** - Display exact helper.parts_search results
+5. **Edit Function Integration** - All edit saves call updateHelper()
+6. **Real-time Sync Addition** - Listen for helper changes and refresh display
+
+**Fix Method**: Replace data loading with helper-only sources, add helper update calls
+
+---
+
+### Task 2.3: Builder Systems Helper Integration
+**Status**: Pending  
+**Priority**: High
+
+**Small, Controllable Tasks**:
+1. **Estimate Builder Helper Feed** - Ensure calculations → helper.calculations
+2. **Final Report Helper Consumption** - Read only from helper for report data
+3. **Report Generation Helper Source** - Use helper as single data source
+4. **Calculation Results Storage** - Save all results back to helper
+
+**Fix Method**: Replace direct sessionStorage with helper functions
+
+---
+
+## 🎯 PHASE 3: IMPLEMENTATION TASKS
+
+### Task 3.1: Add Missing Helper Integration Points
+**Status**: Pending  
+**Priority**: Critical
+
+**Specific Actions**:
+- Add updateHelper() calls after all manual inputs
+- Add broadcastHelperUpdate() calls after data changes  
+- Add helper auto-population on page/modal load
+- Replace direct storage access with helper functions
+
+---
+
+### Task 3.2: Fix Floating Screen Data Sources
+**Status**: Pending  
+**Priority**: Critical  
+
+**Specific Actions**:
+- Change loadData() functions to read only from helper
+- Add helper change listeners for real-time updates
+- Ensure edit functions call updateHelper()
+- Remove competing data sources
+
+---
+
+### Task 3.3: Eliminate Competing Data Storage
+**Status**: Pending  
+**Priority**: High
+
+**Specific Actions**:
+- Remove direct sessionStorage.setItem() calls
+- Replace localStorage usage with helper system
+- Consolidate multiple data sources to helper-only
+- Add helper validation and consistency checks
+
+---
+
+## 🧪 PHASE 4: TESTING & VALIDATION
+
+### Task 4.1: End-to-End Data Flow Testing
+**Status**: Pending  
+**Priority**: Critical
+
+**Test Scenarios**:
+- Complete expertise workflow data preservation
+- Floating screen edit functions update helper correctly  
+- Builder calculations feed back to helper
+- Cross-module data consistency maintained
+
+---
+
+### Task 4.2: Helper Integration Validation
+**Status**: Pending  
+**Priority**: Critical
+
+**Validation Checks**:
+- All manual inputs trigger updateHelper()
+- All auto-population reads from helper first
+- No competing data sources remain active
+- 100% data accuracy between modules and helper
+
+---
+
+## 📋 CONSTRAINTS & GUIDELINES
+
+### What NOT to Change:
+- ❌ Module structures or layouts
+- ❌ Existing function logic or algorithms  
+- ❌ UI designs or user workflows
+- ❌ Business logic or calculation methods
+
+### What TO Change:
+- ✅ Data loading sources (make helper-first)
+- ✅ Data saving destinations (add helper calls)
+- ✅ Missing integration points (add updateHelper calls)
+- ✅ Competing storage systems (consolidate to helper)
+
+---
+
+## 🎯 SUCCESS CRITERIA
+
+### Complete Success Indicators:
+1. **Expertise Workflow**: All 14+ modules properly feed/consume helper data
+2. **Floating Screens**: Perfect mirror accuracy with bidirectional sync
+3. **Builder Systems**: All calculations and results stored in helper
+4. **Zero Data Loss**: No manual input or calculation lost
+5. **Single Source Truth**: Helper is authoritative for all data
+
+### Testing Verification:
+- User can complete full expertise workflow with data preserved
+- Floating screens show identical data to helper contents
+- Builders generate reports using only helper data
+- Cross-module data remains consistent throughout session
+
+---
+
+**📍 PLAN LOCATION**: Search for "DATA FLOW COMPLIANCE AUDIT" to find this section  
+**📅 STATUS**: Plan Created - Ready for Implementation  
+**⏰ ESTIMATED EFFORT**: 2-3 days for complete compliance fix  
+**🎯 TARGET**: 100% Helper Integration Compliance
+
+---
+
 # Vehicle Model Code Empty Field Fix
 
 ## Plan
