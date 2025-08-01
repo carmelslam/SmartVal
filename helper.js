@@ -3009,7 +3009,7 @@ window.updateHelper = function(field, value) {
   } else if (targets === 'centralized_owner_email') {
     window.setOwnerEmail(value, 'updateHelper');
     return true;
-  } else if (targets.startsWith('centralized_vehicle_')) {
+  } else if (typeof targets === 'string' && targets.startsWith('centralized_vehicle_')) {
     // Extract field name from centralized_vehicle_fieldname
     const vehicleField = targets.replace('centralized_vehicle_', '');
     window.setVehicleField(vehicleField, value, 'updateHelper');
@@ -3578,9 +3578,17 @@ window.initializeFinancialsSection = function() {
  */
 window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata = {}) {
   console.log(`🔍 RAW WEBHOOK CAPTURE: ${webhookType}`);
+  console.log(`🔍 RAW DATA BEING CAPTURED:`, rawResponse);
+  
+  // FORCE initialize helper if not exists
+  if (!window.helper) {
+    console.log('⚠️ Helper not initialized - initializing now');
+    window.helper = {};
+  }
   
   // Initialize debug section if not exists
   if (!window.helper.debug) {
+    console.log('🔧 Initializing debug section for webhook capture');
     window.helper.debug = {
       raw_webhook_responses: [],
       metadata: {
@@ -3635,6 +3643,71 @@ window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata =
   window.saveHelperToAllStorageLocations();
   
   return captureEntry.metadata.capture_sequence;
+};
+
+/**
+ * Initialize debug section immediately (for testing)
+ */
+window.initializeDebugSection = function() {
+  console.log('🔧 Force initializing debug section...');
+  
+  if (!window.helper) {
+    window.helper = {};
+  }
+  
+  if (!window.helper.debug) {
+    window.helper.debug = {
+      raw_webhook_responses: [],
+      metadata: {
+        total_webhooks_captured: 0,
+        last_capture: null,
+        capture_enabled: true
+      }
+    };
+    console.log('✅ Debug section initialized');
+  } else {
+    console.log('✅ Debug section already exists');
+  }
+  
+  // Test the capture function
+  window.captureRawWebhookResponse('INITIALIZATION_TEST', {
+    test_data: 'This is a test webhook capture',
+    timestamp: new Date().toISOString(),
+    source: 'manual_initialization'
+  }, {
+    test: true,
+    initialization: true
+  });
+  
+  window.saveHelperToAllStorageLocations();
+  
+  return window.helper.debug;
+};
+
+/**
+ * Enhanced error handling wrapper for critical functions
+ */
+window.safeHelperOperation = function(operation, fallbackValue = null) {
+  try {
+    return operation();
+  } catch (error) {
+    console.error('🚨 SAFE HELPER OPERATION ERROR:', error);
+    console.error('🚨 Stack trace:', error.stack);
+    
+    // Capture error for debugging
+    if (window.captureRawWebhookResponse) {
+      window.captureRawWebhookResponse('ERROR_CAPTURE', {
+        error_message: error.message,
+        error_stack: error.stack,
+        timestamp: new Date().toISOString()
+      }, {
+        error_type: 'safe_operation_error',
+        critical: true
+      });
+    }
+    
+    return fallbackValue;
+  }
 };
 
 /**
@@ -3803,6 +3876,7 @@ export const testPlateNormalization = window.testPlateNormalization;
 export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
 export const initializeFinancialsSection = window.initializeFinancialsSection;
 export const captureRawWebhookResponse = window.captureRawWebhookResponse;
+export const initializeDebugSection = window.initializeDebugSection;
 // populateAllFormsWithRetry is already declared as a function above
 export const testWithActualWebhookData = window.testWithActualWebhookData;
 

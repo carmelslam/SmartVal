@@ -336,7 +336,11 @@ class FieldMapper {
       'parts_delivery_time': ['parts_search', 'delivery_time'],
       'parts_warranty': ['parts_search', 'warranty'],
       'parts_compatibility': ['parts_search', 'compatibility'],
-      'parts_alternative_options': ['parts_search', 'alternative_options']
+      'parts_alternative_options': ['parts_search', 'alternative_options'],
+      
+      // 🚨 CRITICAL FIX: Missing inspection_location mapping
+      'inspection_location': ['case_info', 'inspection_location'],
+      'location': ['case_info', 'inspection_location']
     };
 
     // Reverse mapping - helper path -> standardized field names
