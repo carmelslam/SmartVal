@@ -1396,10 +1396,17 @@
         if (typeof updateHelper === 'function') {
           updateHelper('estimate_depreciation', depreciationData, 'estimate_builder_depreciation');
         } else {
-          // Fallback for cases where updateHelper is not available
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.estimate_depreciation = depreciationData;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          // 🔧 PHASE 2.4: Fallback - use window.helper (single source)
+          if (typeof window.helper === 'object') {
+            window.helper.estimate_depreciation = depreciationData;
+            // Save to primary storage only
+            try {
+              sessionStorage.setItem('helper', JSON.stringify(window.helper));
+              console.log('⚠️ PHASE 2.4: Estimate depreciation saved via emergency fallback');
+            } catch(e) {
+              console.error('❌ PHASE 2.4: Failed to save estimate depreciation:', e);
+            }
+          }
         }
         
         // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state
@@ -1585,22 +1592,30 @@
         updateHelper('valuation', { adjustments: adjustmentsData }, 'estimate_builder_save');
         updateHelper('estimate_legal_text', legalText, 'estimate_builder_save');
       } else {
-        // Fallback for cases where updateHelper is not available
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.estimate_type = selectedType;
-        helper.estimate_notes = additionalNotes;
-        helper.estimate_work_days = garageDays;
-        helper.estimate_summary = summaryData;
-        helper.estimate_depreciation = depreciationData;
-        
-        // Initialize valuation object if it doesn't exist
-        if (!helper.valuation) {
-          helper.valuation = {};
+        // 🔧 PHASE 2.4: Fallback - use window.helper (single source)
+        if (typeof window.helper === 'object') {
+          window.helper.estimate_type = selectedType;
+          window.helper.estimate_notes = additionalNotes;
+          window.helper.estimate_work_days = garageDays;
+          window.helper.estimate_summary = summaryData;
+          window.helper.estimate_depreciation = depreciationData;
+          
+          // Initialize valuation object if it doesn't exist
+          if (!window.helper.valuation) {
+            window.helper.valuation = {};
+          }
+          window.helper.valuation.adjustments = adjustmentsData;
+          
+          window.helper.estimate_legal_text = legalText;
+          
+          // Save to primary storage only
+          try {
+            sessionStorage.setItem('helper', JSON.stringify(window.helper));
+            console.log('⚠️ PHASE 2.4: Estimate data saved via emergency fallback');
+          } catch(e) {
+            console.error('❌ PHASE 2.4: Failed to save estimate data:', e);
+          }
         }
-        helper.valuation.adjustments = adjustmentsData;
-        
-        helper.estimate_legal_text = legalText;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
       }
       
       // ✅ BIDIRECTIONAL INTEGRATION: Update builder current state with all estimate data
@@ -1689,7 +1704,10 @@
     // LOAD DATA FROM HELPER
     function loadDataFromHelper() {
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔄 PHASE 2.4: Loading estimate builder data from helper ONLY (single source)...');
+        
+        // 🔧 PHASE 2.4: SINGLE SOURCE LOADING - window.helper is authoritative
+        const helper = window.helper || {};
         
         // Helper function to get nested values
         const getNestedValue = (obj, path, defaultValue = '') => {

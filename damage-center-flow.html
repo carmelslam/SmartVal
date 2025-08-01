@@ -312,11 +312,19 @@ document.getElementById('finishBtn').onclick = function() {
     import('./helper.js').then(module => {
       module.updateHelper('damage_sections', damageCenters, 'damage_center_flow');
     }).catch(() => {
-      // Final fallback
-      let helper = {};
-      try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-      helper.damage_sections = damageCenters;
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // 🔧 PHASE 2.3: Final fallback - use window.helper (single source)
+      if (typeof window.helper === 'object') {
+        window.helper.damage_sections = damageCenters;
+        // Try to save through sessionStorage as emergency fallback
+        try {
+          sessionStorage.setItem("helper", JSON.stringify(window.helper));
+          console.log('⚠️ PHASE 2.3: Emergency fallback - saved damage sections to primary storage');
+        } catch(e) {
+          console.error('❌ PHASE 2.3: Emergency fallback failed:', e);
+        }
+      } else {
+        console.error('❌ PHASE 2.3: No helper system available - data may be lost');
+      }
     });
   }
   if (confirm("להוסיף מוקד נזק נוסף?")) {
@@ -348,8 +356,8 @@ window.onload = stepInit;
 /// --- Parts Suggestion Integration ---
 window.suggestPart = function(input, idx) {
   const query = input.value.trim();
-  let helper = {};
-  try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
+  // 🔧 PHASE 2.3: Get helper data from single source (window.helper)
+  const helper = window.helper || {};
   const car = helper.car_details || {};
   const plate = car.plate || '';
   const manufacturer = car.manufacturer || '';
@@ -387,7 +395,8 @@ window.suggestPart = function(input, idx) {
 </script>
 <script>
   const partTable = document.getElementById("selected-parts-list");
-  const helper = JSON.parse(sessionStorage.getItem("helper") || "{}");
+  // 🔧 PHASE 2.3: Get helper data from single source (window.helper)
+  const helper = window.helper || {};
 
   const SOURCE_OPTIONS = [
     "מקורי", "תחליפי", "משומש", "חדש מקורי", "חליפי", "שופץ", "יבוא",
@@ -402,9 +411,17 @@ window.suggestPart = function(input, idx) {
       updatedParts[index][field] = value;
       updateHelper('damage_parts', updatedParts, 'damage_center_flow');
     } else {
-      // Fallback to direct manipulation
-      helper.damage_parts[index][field] = value;
-      sessionStorage.setItem("helper", JSON.stringify(helper));
+      // 🔧 PHASE 2.3: Fallback - use window.helper and primary storage only
+      if (typeof window.helper === 'object' && window.helper.damage_parts) {
+        window.helper.damage_parts[index][field] = value;
+        // Save to primary storage only (no competing localStorage)
+        try {
+          sessionStorage.setItem("helper", JSON.stringify(window.helper));
+          console.log('⚠️ PHASE 2.3: Damage part updated via emergency fallback');
+        } catch(e) {
+          console.error('❌ PHASE 2.3: Failed to save damage part update:', e);
+        }
+      }
     }
   }
 

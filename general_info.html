@@ -163,14 +163,25 @@
     let plateNumber = '';
     
     try {
-      // Get data from helper system (primary source)
-      helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
+      console.log('🔄 PHASE 2.2: Loading general info data from helper ONLY (single source)...');
+      
+      // 🔧 PHASE 2.2: SINGLE SOURCE LOADING - window.helper is authoritative
+      if (typeof window.helper === 'object' && window.helper !== null) {
+        helperData = window.helper;
+        console.log('✅ PHASE 2.2: Loaded general info from window.helper (authoritative source)');
+      } else {
+        // Emergency fallback: sessionStorage only if window.helper unavailable
+        helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
+        if (Object.keys(helperData).length > 0) {
+          window.helper = helperData; // Sync to window.helper
+          console.log('⚠️ PHASE 2.2: Emergency fallback - loaded from sessionStorage, synced to window.helper');
+        }
+      }
+      
       plateNumber = helperData.meta?.plate || helperData.vehicle?.plate_number || '';
       
-      // REMOVED: No fallback to legacy data - helper only
-      
     } catch (e) {
-      console.warn('Error loading helper data:', e);
+      console.error('❌ PHASE 2.2: Error loading helper data:', e);
     }
     
     if (!plateNumber) {
@@ -184,9 +195,9 @@
     setTimeout(() => {
       console.log('🔍 Attempting to auto-populate general info fields...');
       
-      // First check if helper data exists
-      const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('📊 Current helper data:', helperData);
+      // 🔧 PHASE 2.2: Get helper data from single source (window.helper)
+      const helperData = window.helper || {};
+      console.log('📊 PHASE 2.2: Current helper data (from window.helper):', helperData);
       
       // Import helper module and populate fields
       import('./helper.js').then(helperModule => {
@@ -355,8 +366,8 @@
       try {
         console.log('🔄 Auto-filling form from helper system...');
         
-        // Get data from helper system
-        const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        // 🔧 PHASE 2.2: Get data from helper system (single source)
+        const helperData = window.helper || {};
         
         if (helperData && (helperData.meta?.plate || helperData.vehicle?.plate_number)) {
           console.log('📋 Helper data found for auto-fill:', helperData);
