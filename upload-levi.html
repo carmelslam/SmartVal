@@ -2188,21 +2188,109 @@ class LeviProcessor {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('📊 Current helper before Levi update:', helper);
       
-      // Update levi summary data
+      // 🚨 CRITICAL FIX: Update levi summary data using Hebrew webhook fields (EXACT same data as upload page)
       helper.levisummary = {
-        model_code: result.vehicle_details?.model_code || '',
-        full_model: result.vehicle_details?.full_model || '',
-        is_automatic: result.vehicle_details?.is_automatic || false,
-        features: result.vehicle_details?.features || '',
-        report_date: result.valuation_date || new Date().toISOString().split('T')[0],
-        registration_date: result.vehicle_details?.registration_date || '',
-        owner_count: result.vehicle_details?.owner_count || '',
-        category: result.vehicle_details?.category || '',
-        km: result.vehicle_details?.km || '',
-        base_price: result.pricing?.base_price || 0,
-        final_price: result.pricing?.final_price || 0,
-        adjustments: result.adjustments || {}
+        model_code: result['קוד דגם'] || '',
+        full_model: result['שם דגם מלא'] || '',
+        is_automatic: result['אוטומט'] === 'כן' || false,
+        features: result['מאפיינים'] || '', // The FULL features description
+        report_date: result['תאריך'] || new Date().toISOString().split('T')[0],
+        registration_date: result['ערך עליה לכביש'] || '', // "11/2022"
+        owner_count: result['ערך מספר בעלים'] || '', // "02 (מס' אחוזים: 2)"
+        category: result['קטגוריה'] || '',
+        km: result['ערך מס ק״מ'] || '', // "ק"מ 137719 (ק"מ + 18700), מס ק"מ: 1.1"
+        base_price: result['מחיר בסיס'] || 0,
+        final_price: result['מחיר סופי לרכב'] || 0,
+        
+        // Store adjustment data EXACTLY as upload page shows it
+        adjustments: {
+          features: {
+            description: result['ערך מאפיינים'] || '', // "adventure"
+            percent: result['מחיר מאפיינים %'] || '0%', // "9%"
+            amount: result['ערך ש״ח מאפיינים'] || '₪0', // "₪ 10,620"
+            cumulative: result['שווי מצטבר מאפיינים'] || '₪0' // "₪ 128,620"
+          },
+          registration: {
+            description: result['ערך עליה לכביש'] || '', // "11/2022"
+            percent: result['עליה לכביש %'] || '0%', // "0"
+            amount: result['ערך ש״ח עליה לכביש'] || '₪0', // "₪ 4,000"
+            cumulative: result['שווי מצטבר עליה לכביש'] || '₪0' // "₪ 132,620"
+          },
+          ownership_type: {
+            description: result['ערך בעלות'] || '', // "חברה, עמותות ואגודות שיתופיות למיניהן או לשעבר"
+            percent: result['בעלות %'] || '0%', // "-17%"
+            amount: result['ערך ש״ח בעלות'] || '₪0', // "₪ -22,545"
+            cumulative: result['שווי מצטבר בעלות'] || '₪0' // "₪ 110,075"
+          },
+          mileage: {
+            description: result['ערך מס ק״מ'] || '', // "ק"מ 137719 (ק"מ + 18700), מס ק"מ: 1.1"
+            percent: result['מס ק״מ %'] || '0%', // "-26.88%"
+            amount: result['ערך ש״ח מס ק״מ'] || '₪0', // "₪ -29,588"
+            cumulative: result['שווי מצטבר מס ק״מ'] || '₪0' // "₪ 80,487"
+          },
+          ownership_history: {
+            description: result['ערך מספר בעלים'] || '', // "02 (מס' אחוזים: 2)"
+            percent: result['מספר בעלים %'] || '0%', // "-2%"
+            amount: result['ערך ש״ח מספר בעלים'] || '₪0', // "₪ -1,610"
+            cumulative: result['שווי מצטבר מספר בעלים'] || '₪0' // "₪ 78,877"
+          }
+        }
       };
+      
+      console.log('✅ FIXED: leviSummary populated with exact webhook data:', helper.levisummary);
+
+      // 🚨 CRITICAL FIX: Also populate helper.valuation.adjustments for FLOATING PAGE
+      if (!helper.valuation) helper.valuation = {};
+      
+      // Update base pricing for valuation
+      helper.valuation.base_price = result['מחיר בסיס'] || 0;
+      helper.valuation.final_price = result['מחיר סופי לרכב'] || 0;
+      helper.valuation.levi_code = result['קוד דגם'] || '';
+      helper.valuation.levi_report_date = result['תאריך'] || new Date().toISOString().split('T')[0];
+      
+      // Create adjustments structure with EXACT same data as leviSummary (for floating page)
+      helper.valuation.adjustments = {
+        features: {
+          description: result['ערך מאפיינים'] || '', // "adventure" 
+          reason: result['ערך מאפיינים'] || '',
+          percent: parseFloat((result['מחיר מאפיינים %'] || '0').replace('%', '')) || 0,
+          amount: parseFloat((result['ערך ש״ח מאפיינים'] || '0').replace(/[₪,\s]/g, '')) || 0,
+          cumulative: parseFloat((result['שווי מצטבר מאפיינים'] || '0').replace(/[₪,\s]/g, '')) || 0
+        },
+        registration: {
+          description: result['ערך עליה לכביש'] || '', // "11/2022"
+          reason: result['ערך עליה לכביש'] || '',
+          percent: parseFloat((result['עליה לכביש %'] || '0').replace('%', '')) || 0,
+          amount: parseFloat((result['ערך ש״ח עליה לכביש'] || '0').replace(/[₪,\s]/g, '')) || 0,
+          cumulative: parseFloat((result['שווי מצטבר עליה לכביש'] || '0').replace(/[₪,\s]/g, '')) || 0
+        },
+        ownership_type: {
+          description: result['ערך בעלות'] || '', // "חברה, עמותות ואגודות שיתופיות למיניהן או לשעבר"
+          reason: result['ערך בעלות'] || '',
+          type: result['ערך בעלות'] || '',
+          percent: parseFloat((result['בעלות %'] || '0').replace('%', '')) || 0,
+          amount: parseFloat((result['ערך ש״ח בעלות'] || '0').replace(/[₪,\s]/g, '')) || 0,
+          cumulative: parseFloat((result['שווי מצטבר בעלות'] || '0').replace(/[₪,\s]/g, '')) || 0
+        },
+        mileage: {
+          description: result['ערך מס ק״מ'] || '', // "ק"מ 137719 (ק"μ + 18700), מס ק"μ: 1.1"
+          reason: result['ערך מס ק״מ'] || '',
+          km_value: result['ערך מס ק״מ'] || '',
+          percent: parseFloat((result['מס ק״μ %'] || '0').replace('%', '')) || 0,
+          amount: parseFloat((result['ערך ש״ח מס ק״μ'] || '0').replace(/[₪,\s]/g, '')) || 0,
+          cumulative: parseFloat((result['שווי מצטבר מס ק״μ'] || '0').replace(/[₪,\s]/g, '')) || 0
+        },
+        ownership_history: {
+          description: result['ערך מספר בעלים'] || '', // "02 (מס' אחוזים: 2)"
+          reason: result['ערך מספר בעלים'] || '',
+          owner_count: result['ערך מספר בעלים'] || '1',
+          percent: parseFloat((result['מספר בעלים %'] || '0').replace('%', '')) || 0,
+          amount: parseFloat((result['ערך ש״ח מספר בעלים'] || '0').replace(/[₪,\s]/g, '')) || 0,
+          cumulative: parseFloat((result['שווי מצטבר מספר בעלים'] || '0').replace(/[₪,\s]/g, '')) || 0
+        }
+      };
+      
+      console.log('✅ FIXED: helper.valuation.adjustments populated for floating page:', helper.valuation.adjustments);
 
       // Update expertise section
       if (!helper.expertise) helper.expertise = {};
