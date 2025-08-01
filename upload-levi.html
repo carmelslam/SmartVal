@@ -1944,6 +1944,116 @@ class LeviProcessor {
     }
   }
 
+  // 🚨 NEW FUNCTION: Display adjustments directly from helper valuation data
+  window.displayAdjustmentsFromHelper = function(adjustments) {
+    console.log('🎯 displayAdjustmentsFromHelper called with:', adjustments);
+    
+    const adjustmentsContainer = document.getElementById('adjustments-container');
+    if (!adjustmentsContainer) {
+      console.error('❌ adjustments-container not found');
+      return;
+    }
+    
+    adjustmentsContainer.innerHTML = '';
+
+    // Add table headers
+    const headerRow = document.createElement('div');
+    headerRow.className = 'adjustment-header-row';
+    headerRow.innerHTML = `
+      <span class="adjustment-header">התאמת מחיר</span>
+      <span class="adjustment-header">ערך</span>
+      <span class="adjustment-header">אחוז %</span>
+      <span class="adjustment-header">סכום ש״ח</span>
+      <span class="adjustment-header">סכום מצטבר</span>
+    `;
+    adjustmentsContainer.appendChild(headerRow);
+
+    // Define adjustment sections mapping to helper structure  
+    const adjustmentSections = [
+      {
+        title: 'מאפיינים',
+        helperKey: 'features',
+        defaultReason: 'מאפיינים נוספים'
+      },
+      {
+        title: 'עליה לכביש', 
+        helperKey: 'registration',
+        defaultReason: 'תאריך עליה לכביש'
+      },
+      {
+        title: 'סוג בעלות',
+        helperKey: 'ownership_type', 
+        defaultReason: 'סוג בעלות'
+      },
+      {
+        title: 'מספר ק״מ',
+        helperKey: 'mileage',
+        defaultReason: 'מספר ק״מ'
+      },
+      {
+        title: 'מספר בעלים',
+        helperKey: 'ownership_history',
+        defaultReason: 'מספר בעלים קודמים'
+      }
+    ];
+
+    let hasAnyData = false;
+
+    adjustmentSections.forEach(section => {
+      const adjustmentData = adjustments[section.helperKey];
+      
+      if (adjustmentData) {
+        hasAnyData = true;
+        const adjustmentRow = document.createElement('div');
+        adjustmentRow.className = 'adjustment-row';
+        
+        // First column: title
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'adjustment-title';
+        titleSpan.textContent = section.title + ':';
+        adjustmentRow.appendChild(titleSpan);
+        
+        // Second column: reason/value description
+        const reasonSpan = document.createElement('span');
+        reasonSpan.className = 'adjustment-value';
+        reasonSpan.textContent = adjustmentData.reason || adjustmentData.type || section.defaultReason;
+        adjustmentRow.appendChild(reasonSpan);
+        
+        // Third column: percentage
+        const percentSpan = document.createElement('span');
+        percentSpan.className = 'adjustment-value';
+        const percent = adjustmentData.percent || 0;
+        percentSpan.textContent = percent ? `${percent}%` : '-';
+        adjustmentRow.appendChild(percentSpan);
+        
+        // Fourth column: amount in ₪
+        const amountSpan = document.createElement('span');
+        amountSpan.className = 'adjustment-value';
+        const amount = adjustmentData.amount || 0;
+        amountSpan.textContent = amount ? `₪${amount.toLocaleString()}` : '-';
+        adjustmentRow.appendChild(amountSpan);
+        
+        // Fifth column: cumulative total
+        const cumulativeSpan = document.createElement('span');
+        cumulativeSpan.className = 'adjustment-value';
+        const cumulative = adjustmentData.cumulative || 0;
+        cumulativeSpan.textContent = cumulative ? `₪${cumulative.toLocaleString()}` : '-';
+        adjustmentRow.appendChild(cumulativeSpan);
+        
+        adjustmentsContainer.appendChild(adjustmentRow);
+        
+        console.log(`  ✅ ${section.title}: ${percent}% = ₪${amount} (total: ₪${cumulative})`);
+      }
+    });
+
+    if (!hasAnyData) {
+      adjustmentsContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">אין נתוני התאמות זמינים בעת זו</p>';
+      console.log('⚠️ No adjustment data found in helper.valuation.adjustments');
+    } else {
+      console.log('✅ Successfully populated adjustments display from helper data');
+    }
+  }
+
   getSourceLabel(source) {
     const sourceLabels = {
       'screenshot': 'צילום מסך מתמחבר',
@@ -2762,6 +2872,39 @@ document.addEventListener('DOMContentLoaded', () => {
           if (helper.valuation.adjustments?.features) {
             basicFieldMappings['manual-features-percent'] = helper.valuation.adjustments.features.percent;
           }
+          
+          // 🚨 POPULATE ALL ADJUSTMENT VALUES AND AMOUNTS
+          const adjustments = helper.valuation.adjustments || {};
+          
+          // Registration amounts
+          if (adjustments.registration) {
+            basicFieldMappings['manual-registration-value'] = adjustments.registration.amount;
+            basicFieldMappings['manual-registration-total'] = adjustments.registration.cumulative;
+          }
+          
+          // Ownership amounts
+          if (adjustments.ownership_type) {
+            basicFieldMappings['manual-ownership-value'] = adjustments.ownership_type.amount;
+            basicFieldMappings['manual-ownership-total'] = adjustments.ownership_type.cumulative;
+          }
+          
+          // Mileage amounts
+          if (adjustments.mileage) { 
+            basicFieldMappings['manual-km-value'] = adjustments.mileage.amount;
+            basicFieldMappings['manual-km-total'] = adjustments.mileage.cumulative;
+          }
+          
+          // Ownership history amounts
+          if (adjustments.ownership_history) {
+            basicFieldMappings['manual-owners-value'] = adjustments.ownership_history.amount;
+            basicFieldMappings['manual-owners-total'] = adjustments.ownership_history.cumulative;
+          }
+          
+          // Features amounts
+          if (adjustments.features) {
+            basicFieldMappings['manual-features-value'] = adjustments.features.amount;
+            basicFieldMappings['manual-features-total'] = adjustments.features.cumulative;
+          }
         }
         
         // Apply the mappings
@@ -2780,6 +2923,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log('✅ Levi upload auto-population completed');
+        
+        // 🚨 CRITICAL FIX: Trigger adjustment calculations and display after population
+        setTimeout(() => {
+          console.log('🔄 Triggering adjustment recalculation...');
+          
+          // Recalculate adjustments to populate all amounts and cumulative values
+          if (typeof window.calculateAdjustmentsFromFields === 'function') {
+            window.calculateAdjustmentsFromFields();
+          } else {
+            // Manual trigger of the calculation logic
+            const basePrice = parseFloat(document.getElementById('manual-base-price')?.value) || 0;
+            if (basePrice > 0) {
+              console.log('📊 Base price found, triggering manual calculations...');
+              
+              // Trigger any existing calculation listeners
+              const basePriceElement = document.getElementById('manual-base-price');
+              if (basePriceElement) {
+                basePriceElement.dispatchEvent(new Event('input', { bubbles: true }));
+                basePriceElement.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+          }
+          
+          // Force refresh of adjustment display using valuation data
+          if (helper.valuation?.adjustments) {
+            console.log('🎯 Found valuation adjustments, populating display...');
+            window.displayAdjustmentsFromHelper(helper.valuation.adjustments);
+          }
+        }, 500);
+        
       } else {
         console.log('⚠️ No helper data found in sessionStorage');
       }
