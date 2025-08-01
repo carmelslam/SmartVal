@@ -574,6 +574,379 @@ window.setVehicleField = function(fieldName, value, source = 'manual') {
 };
 
 /**
+ * Fix helper structure - removes misplaced sections and ensures proper organization
+ */
+window.fixHelperStructure = function() {
+  console.log('🏗️ STRUCTURE FIX: Reorganizing helper sections to match specification...');
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot fix structure');
+    return false;
+  }
+  
+  let fixedCount = 0;
+  
+  // Fix misplaced estimate section (should be top-level, not under car_details)
+  if (window.helper.car_details?.estimate) {
+    console.log('🔧 Moving estimate from car_details to top-level');
+    
+    // Ensure top-level estimate exists
+    if (!window.helper.estimate) {
+      window.helper.estimate = {};
+    }
+    
+    // Merge any existing data
+    Object.assign(window.helper.estimate, window.helper.car_details.estimate);
+    
+    // Remove misplaced section
+    delete window.helper.car_details.estimate;
+    fixedCount++;
+  }
+  
+  // Fix misplaced final_report section (should be top-level, not under expertise)
+  if (window.helper.expertise?.final_report) {
+    console.log('🔧 Moving final_report from expertise to top-level');
+    
+    // Ensure top-level final_report exists
+    if (!window.helper.final_report) {
+      window.helper.final_report = {
+        type: '',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      };
+    }
+    
+    // Merge any existing data
+    Object.assign(window.helper.final_report, window.helper.expertise.final_report);
+    
+    // Remove misplaced section
+    delete window.helper.expertise.final_report;
+    fixedCount++;
+  }
+  
+  // Ensure expertise section only contains appropriate data
+  if (window.helper.expertise) {
+    // Keep only valid expertise fields
+    const validExpertiseFields = ['damage_blocks', 'levi_report', 'field_inspection', 'photos'];
+    const currentFields = Object.keys(window.helper.expertise);
+    
+    currentFields.forEach(field => {
+      if (!validExpertiseFields.includes(field)) {
+        console.log(`🧹 Removing invalid field from expertise: ${field}`);
+        delete window.helper.expertise[field];
+        fixedCount++;
+      }
+    });
+  }
+  
+  // Ensure car_details section only contains appropriate data
+  if (window.helper.car_details) {
+    // Keep only valid car_details fields - most should be moved to vehicle section
+    const validCarDetailsFields = ['inspection_notes', 'damage_notes'];
+    const currentFields = Object.keys(window.helper.car_details);
+    
+    currentFields.forEach(field => {
+      if (!validCarDetailsFields.includes(field)) {
+        console.log(`🧹 Removing field from car_details (should be in vehicle section): ${field}`);
+        delete window.helper.car_details[field];
+        fixedCount++;
+      }
+    });
+  }
+  
+  // Ensure all required top-level sections exist
+  const requiredSections = ['estimate', 'final_report', 'expertise'];
+  requiredSections.forEach(section => {
+    if (!window.helper[section]) {
+      console.log(`🔧 Creating missing section: ${section}`);
+      
+      if (section === 'estimate') {
+        window.helper[section] = {
+          type: '',
+          legal_text: '',
+          attachments: '',
+          report_title: '',
+          generated: false,
+          generated_date: ''
+        };
+      } else if (section === 'final_report') {
+        window.helper[section] = {
+          type: '',
+          legal_text: '',
+          attachments: '',
+          report_title: '',
+          generated: false,
+          generated_date: '',
+          report_sections: {
+            vehicle_details: {},
+            damage_assessment: {},
+            valuation_calculations: {},
+            depreciation: {},
+            legal_disclaimer: {}
+          }
+        };
+      } else if (section === 'expertise') {
+        window.helper[section] = {
+          damage_blocks: [],
+          levi_report: {}
+        };
+      }
+      
+      fixedCount++;
+    }
+  });
+  
+  if (fixedCount > 0) {
+    saveHelperToAllStorageLocations();
+    console.log(`✅ STRUCTURE FIXED: Made ${fixedCount} structural corrections`);
+  } else {
+    console.log('✅ Helper structure is already correct');
+  }
+  
+  return fixedCount;
+};
+
+/**
+ * Enhanced helper structure for estimate and final report sections
+ */
+window.enhanceEstimateSections = function() {
+  console.log('📊 ENHANCE: Setting up proper estimate and final report structures...');
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot enhance sections');
+    return false;
+  }
+  
+  let enhancedCount = 0;
+  
+  // Enhanced estimate section with 2 types
+  if (!window.helper.estimate.estimate_types) {
+    window.helper.estimate.estimate_types = {
+      // Type 1: Pre-work estimate
+      pre_work: {
+        type: 'אובדן_חלקי',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        calculations: {}
+      },
+      // Type 2: Post-work estimate  
+      post_work: {
+        type: 'אובדן_להלכה',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        calculations: {}
+      }
+    };
+    enhancedCount++;
+  }
+  
+  // Enhanced final report section with 5 types
+  if (!window.helper.final_report.report_types) {
+    window.helper.final_report.report_types = {
+      // Type 1: Private opinion
+      private_opinion: {
+        type: 'חוות דעת פרטית',
+        status: 'draft', 
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      },
+      // Type 2: Global opinion
+      global_opinion: {
+        type: 'חוות דעת גלובלית',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      },
+      // Type 3: Damaged condition sale opinion
+      damaged_sale_opinion: {
+        type: 'חוות דעת מכירה מצבו הניזוק',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      },
+      // Type 4: Total loss opinion
+      total_loss_opinion: {
+        type: 'חוות דעת טוטלוסט',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      },
+      // Type 5: Legal total loss opinion
+      legal_total_loss: {
+        type: 'חוות דעת אובדן להלכה',
+        status: 'draft',
+        legal_text: '',
+        attachments: '',
+        report_title: '',
+        generated: false,
+        generated_date: '',
+        report_sections: {
+          vehicle_details: {},
+          damage_assessment: {},
+          valuation_calculations: {},
+          depreciation: {},
+          legal_disclaimer: {}
+        }
+      }
+    };
+    enhancedCount++;
+  }
+  
+  // Add report type selector mechanism
+  if (!window.helper.system.active_report_types) {
+    window.helper.system.active_report_types = {
+      estimate: '',      // Will be set by UI selection: 'pre_work' or 'post_work'
+      final_report: ''   // Will be set by UI selection: 'private_opinion', 'global_opinion', etc.
+    };
+    enhancedCount++;
+  }
+  
+  if (enhancedCount > 0) {
+    saveHelperToAllStorageLocations();
+    console.log(`✅ ENHANCED: Added ${enhancedCount} structural enhancements`);
+  } else {
+    console.log('✅ Estimate sections are already enhanced');
+  }
+  
+  return enhancedCount;
+};
+
+/**
+ * Set active report type - determines where data should be written
+ */
+window.setActiveReportType = function(section, reportType) {
+  console.log(`📋 REPORT TYPE: Setting ${section} active type to: ${reportType}`);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set report type');
+    return false;
+  }
+  
+  if (!window.helper.system.active_report_types) {
+    window.helper.system.active_report_types = {
+      estimate: '',
+      final_report: ''
+    };
+  }
+  
+  // Validate section
+  if (!['estimate', 'final_report'].includes(section)) {
+    console.error(`❌ Invalid section: ${section}. Must be 'estimate' or 'final_report'`);
+    return false;
+  }
+  
+  // Validate report type for estimate (2 types)
+  if (section === 'estimate') {
+    const validEstimateTypes = ['pre_work', 'post_work'];
+    if (!validEstimateTypes.includes(reportType)) {
+      console.error(`❌ Invalid estimate type: ${reportType}. Must be one of: ${validEstimateTypes.join(', ')}`);
+      return false;
+    }
+  }
+  
+  // Validate report type for final_report (5 types)
+  if (section === 'final_report') {
+    const validFinalReportTypes = ['private_opinion', 'global_opinion', 'damaged_sale_opinion', 'total_loss_opinion', 'legal_total_loss'];
+    if (!validFinalReportTypes.includes(reportType)) {
+      console.error(`❌ Invalid final report type: ${reportType}. Must be one of: ${validFinalReportTypes.join(', ')}`);
+      return false;
+    }
+  }
+  
+  // Set the active type
+  window.helper.system.active_report_types[section] = reportType;
+  
+  // Update metadata
+  window.helper.system.last_updated = new Date().toISOString();
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ REPORT TYPE: ${section} active type set to: ${reportType}`);
+  return true;
+};
+
+/**
+ * Get current active report type data location
+ */
+window.getActiveReportData = function(section) {
+  if (!window.helper?.system?.active_report_types) {
+    return null;
+  }
+  
+  const activeType = window.helper.system.active_report_types[section];
+  if (!activeType) {
+    return null;
+  }
+  
+  if (section === 'estimate' && window.helper.estimate?.estimate_types?.[activeType]) {
+    return window.helper.estimate.estimate_types[activeType];
+  }
+  
+  if (section === 'final_report' && window.helper.final_report?.report_types?.[activeType]) {
+    return window.helper.final_report.report_types[activeType];
+  }
+  
+  return null;
+};
+
+/**
  * Test function to demonstrate plate normalization
  */
 window.testPlateNormalization = function() {
@@ -962,6 +1335,21 @@ window.helper = existingHelper || {
     report_title: '',
     generated: false,
     generated_date: ''
+  },
+  final_report: {
+    type: '',  // One of the 5 types: חוות דעת פרטית, חוות דעת גלובלית, etc.
+    legal_text: '',
+    attachments: '',
+    report_title: '',
+    generated: false,
+    generated_date: '',
+    report_sections: {
+      vehicle_details: {},
+      damage_assessment: {},
+      valuation_calculations: {},
+      depreciation: {},
+      legal_disclaimer: {}
+    }
   },
   levi_data: {
     base_value: 0,
@@ -2751,6 +3139,10 @@ export const getOwnerEmail = window.getOwnerEmail;
 export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
 export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
 export const setVehicleField = window.setVehicleField;
+export const fixHelperStructure = window.fixHelperStructure;
+export const enhanceEstimateSections = window.enhanceEstimateSections;
+export const setActiveReportType = window.setActiveReportType;
+export const getActiveReportData = window.getActiveReportData;
 export const protectPlateNumber = window.protectPlateNumber;
 export const testPlateNormalization = window.testPlateNormalization;
 // populateAllFormsWithRetry is already declared as a function above

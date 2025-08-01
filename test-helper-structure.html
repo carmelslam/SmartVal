@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏗️ Test Helper Structure Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .status-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .good { color: #28a745; }
+        .bad { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ בדיקת תיקון מבנה Helper</h1>
+        
+        <div class="test-section">
+            <h3>📊 מצב נוכחי</h3>
+            <div id="current-status" class="status-display">Loading...</div>
+            <button class="btn btn-info" onclick="checkCurrentStructure()">בדוק מבנה נוכחי</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 פעולות תיקון</h3>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="fixHelperStructure()">תקן מבנה Helper</button>
+                <button class="btn btn-success" onclick="enhanceEstimateSections()">שדרג חלקי אומדן ודו״ח</button>
+                <button class="btn btn-warning" onclick="cleanupDuplicates()">נקה כפילויות</button>
+                <button class="btn btn-danger" onclick="resetHelper()">איפוס מלא</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 בדיקת סוגי דו״חות</h3>
+            <div class="btn-row">
+                <button class="btn btn-info" onclick="testEstimateTypes()">בדוק סוגי אומדן (2)</button>
+                <button class="btn btn-info" onclick="testFinalReportTypes()">בדוק סוגי דו״ח סופי (5)</button>
+            </div>
+            
+            <h4>הגדרת סוג דו״ח פעיל:</h4>
+            <select id="estimate-type-select">
+                <option value="">בחר סוג אומדן</option>
+                <option value="pre_work">אומדן מקדים (אובדן חלקי)</option>
+                <option value="post_work">אומדן לאחר עבודה (אובדן להלכה)</option>
+            </select>
+            <button class="btn btn-primary" onclick="setEstimateType()">הגדר סוג אומדן</button>
+            
+            <br><br>
+            
+            <select id="final-report-type-select">
+                <option value="">בחר סוג דו״ח סופי</option>
+                <option value="private_opinion">חוות דעת פרטית</option>
+                <option value="global_opinion">חוות דעת גלובלית</option>
+                <option value="damaged_sale_opinion">חוות דעת מכירה מצבו הניזוק</option>
+                <option value="total_loss_opinion">חוות דעת טוטלוסט</option>
+                <option value="legal_total_loss">חוות דעת אובדן להלכה</option>
+            </select>
+            <button class="btn btn-primary" onclick="setFinalReportType()">הגדר סוג דו״ח סופי</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 תוצאות בדיקה</h3>
+            <div id="test-results" class="status-display">לחץ על כפתור בדיקה כדי לראות תוצאות...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 מבנה Helper המלא</h3>
+            <button class="btn btn-info" onclick="showFullHelper()">הצג Helper מלא</button>
+            <button class="btn btn-warning" onclick="showHelperSummary()">הצג סיכום מבנה</button>
+            <div id="helper-display" class="status-display">לחץ כדי להציג...</div>
+        </div>
+    </div>
+
+    <!-- Load helper.js -->
+    <script src="helper.js"></script>
+
+    <script>
+        function checkCurrentStructure() {
+            const results = [];
+            results.push('🔍 בדיקת מבנה Helper נוכחי:\n');
+            
+            if (!window.helper) {
+                results.push('❌ Helper לא מאותחל');
+                document.getElementById('current-status').textContent = results.join('\n');
+                return;
+            }
+            
+            // Check for misplaced sections
+            let issues = 0;
+            
+            if (window.helper.car_details?.estimate) {
+                results.push('🔴 estimate נמצא תחת car_details (צריך להיות ברמה עליונה)');
+                issues++;
+            }
+            
+            if (window.helper.expertise?.final_report) {
+                results.push('🔴 final_report נמצא תחת expertise (צריך להיות ברמה עליונה)');
+                issues++;
+            }
+            
+            // Check for correct top-level sections
+            const requiredSections = ['estimate', 'final_report', 'expertise'];
+            requiredSections.forEach(section => {
+                if (window.helper[section]) {
+                    results.push(`✅ ${section} נמצא ברמה עליונה - נכון`);
+                } else {
+                    results.push(`🔴 ${section} חסר מהרמה העליונה`);
+                    issues++;
+                }
+            });
+            
+            // Check enhanced structures
+            if (window.helper.estimate?.estimate_types) {
+                results.push('✅ estimate.estimate_types קיים (2 סוגי אומדן)');
+            } else {
+                results.push('🟡 estimate.estimate_types חסר (צריך שדרוג)');
+            }
+            
+            if (window.helper.final_report?.report_types) {
+                results.push('✅ final_report.report_types קיים (5 סוגי דו״ח)');
+            } else {
+                results.push('🟡 final_report.report_types חסר (צריך שדרוג)');
+            }
+            
+            if (window.helper.system?.active_report_types) {
+                results.push('✅ system.active_report_types קיים (מנגנון בחירת סוג)');
+            } else {
+                results.push('🟡 system.active_report_types חסר (צריך שדרוג)');
+            }
+            
+            results.push(`\n📊 סיכום: ${issues > 0 ? '🔴' : '✅'} ${issues} בעיות נמצאו`);
+            
+            document.getElementById('current-status').textContent = results.join('\n');
+        }
+        
+        function fixHelperStructure() {
+            if (window.fixHelperStructure) {
+                const fixed = window.fixHelperStructure();
+                document.getElementById('test-results').textContent = 
+                    `✅ תיקון מבנה הושלם: ${fixed} תיקונים בוצעו\n\nרענן את הבדיקה לראות את התוצאות.`;
+            } else {
+                document.getElementById('test-results').textContent = '❌ פונקציית fixHelperStructure לא זמינה';
+            }
+        }
+        
+        function enhanceEstimateSections() {
+            if (window.enhanceEstimateSections) {
+                const enhanced = window.enhanceEstimateSections();
+                document.getElementById('test-results').textContent = 
+                    `✅ שדרוג חלקי אומדן ודו״ח הושלם: ${enhanced} שדרוגים בוצעו\n\nרענן את הבדיקה לראות את התוצאות.`;
+            } else {
+                document.getElementById('test-results').textContent = '❌ פונקציית enhanceEstimateSections לא זמינה';
+            }
+        }
+        
+        function cleanupDuplicates() {
+            let results = [];
+            let totalCleaned = 0;
+            
+            if (window.cleanupDuplicateOwnerData) {
+                const ownerCleaned = window.cleanupDuplicateOwnerData();
+                results.push(`🧹 נוקו ${ownerCleaned} כפילויות בנתוני בעלים`);
+                totalCleaned += ownerCleaned;
+            }
+            
+            if (window.cleanupDuplicateVehicleData) {
+                const vehicleCleaned = window.cleanupDuplicateVehicleData();
+                results.push(`🧹 נוקו ${vehicleCleaned} כפילויות בנתוני רכב`);
+                totalCleaned += vehicleCleaned;
+            }
+            
+            results.push(`\n✅ סך הכל נוקו ${totalCleaned} כפילויות`);
+            document.getElementById('test-results').textContent = results.join('\n');
+        }
+        
+        function resetHelper() {
+            if (confirm('האם אתה בטוח שברצונך לאפס את כל נתוני Helper?')) {
+                localStorage.removeItem('helper_data');
+                sessionStorage.removeItem('helper');
+                location.reload();
+            }
+        }
+        
+        function testEstimateTypes() {
+            const results = [];
+            results.push('📋 בדיקת סוגי אומדן (2 סוגים):\n');
+            
+            if (window.helper?.estimate?.estimate_types) {
+                const types = window.helper.estimate.estimate_types;
+                
+                if (types.pre_work) {
+                    results.push(`✅ סוג 1: ${types.pre_work.type} (${types.pre_work.status})`);
+                } else {
+                    results.push('❌ סוג 1: אומדן מקדים - חסר');
+                }
+                
+                if (types.post_work) {
+                    results.push(`✅ סוג 2: ${types.post_work.type} (${types.post_work.status})`);
+                } else {
+                    results.push('❌ סוג 2: אומדן לאחר עבודה - חסר');
+                }
+            } else {
+                results.push('❌ estimate_types לא קיים - יש לבצע שדרוג');
+            }
+            
+            document.getElementById('test-results').textContent = results.join('\n');
+        }
+        
+        function testFinalReportTypes() {
+            const results = [];
+            results.push('📋 בדיקת סוגי דו״ח סופי (5 סוגים):\n');
+            
+            if (window.helper?.final_report?.report_types) {
+                const types = window.helper.final_report.report_types;
+                const expectedTypes = [
+                    ['private_opinion', 'חוות דעת פרטית'],
+                    ['global_opinion', 'חוות דעת גלובלית'],
+                    ['damaged_sale_opinion', 'חוות דעת מכירה מצבו הניזוק'],
+                    ['total_loss_opinion', 'חוות דעת טוטלוסט'],
+                    ['legal_total_loss', 'חוות דעת אובדן להלכה']
+                ];
+                
+                expectedTypes.forEach(([key, title], index) => {
+                    if (types[key]) {
+                        results.push(`✅ סוג ${index + 1}: ${types[key].type} (${types[key].status})`);
+                    } else {
+                        results.push(`❌ סוג ${index + 1}: ${title} - חסר`);
+                    }
+                });
+            } else {
+                results.push('❌ report_types לא קיים - יש לבצע שדרוג');
+            }
+            
+            document.getElementById('test-results').textContent = results.join('\n');
+        }
+        
+        function setEstimateType() {
+            const selectedType = document.getElementById('estimate-type-select').value;
+            if (!selectedType) {
+                alert('יש לבחור סוג אומדן');
+                return;
+            }
+            
+            if (window.setActiveReportType) {
+                const success = window.setActiveReportType('estimate', selectedType);
+                if (success) {
+                    document.getElementById('test-results').textContent = 
+                        `✅ סוג אומדן פעיל הוגדר ל: ${selectedType}\n\nכעת כל נתוני האומדן יישמרו ב:\nhelper.estimate.estimate_types.${selectedType}`;
+                } else {
+                    document.getElementById('test-results').textContent = '❌ שגיאה בהגדרת סוג אומדן';
+                }
+            } else {
+                document.getElementById('test-results').textContent = '❌ פונקציית setActiveReportType לא זמינה';
+            }
+        }
+        
+        function setFinalReportType() {
+            const selectedType = document.getElementById('final-report-type-select').value;
+            if (!selectedType) {
+                alert('יש לבחור סוג דו״ח סופי');
+                return;
+            }
+            
+            if (window.setActiveReportType) {
+                const success = window.setActiveReportType('final_report', selectedType);
+                if (success) {
+                    document.getElementById('test-results').textContent = 
+                        `✅ סוג דו״ח סופי פעיל הוגדר ל: ${selectedType}\n\nכעת כל נתוני הדו״ח הסופי יישמרו ב:\nhelper.final_report.report_types.${selectedType}`;
+                } else {
+                    document.getElementById('test-results').textContent = '❌ שגיאה בהגדרת סוג דו״ח סופי';
+                }
+            } else {
+                document.getElementById('test-results').textContent = '❌ פונקציית setActiveReportType לא זמינה';
+            }
+        }
+        
+        function showFullHelper() {
+            if (window.helper) {
+                document.getElementById('helper-display').textContent = JSON.stringify(window.helper, null, 2);
+            } else {
+                document.getElementById('helper-display').textContent = '❌ Helper לא מאותחל';
+            }
+        }
+        
+        function showHelperSummary() {
+            if (!window.helper) {
+                document.getElementById('helper-display').textContent = '❌ Helper לא מאותחל';
+                return;
+            }
+            
+            const summary = [];
+            summary.push('📊 סיכום מבנה Helper:\n');
+            
+            // Top-level sections
+            const sections = Object.keys(window.helper);
+            summary.push(`🔷 חלקים ברמה עליונה (${sections.length}):`);
+            sections.forEach(section => {
+                const sectionData = window.helper[section];
+                const type = Array.isArray(sectionData) ? 'array' : typeof sectionData;
+                const size = Array.isArray(sectionData) ? sectionData.length : 
+                           (type === 'object' ? Object.keys(sectionData).length : 1);
+                summary.push(`  • ${section}: ${type} (${size} items)`);
+            });
+            
+            // Active report types
+            if (window.helper.system?.active_report_types) {
+                summary.push('\n📋 סוגי דו״חות פעילים:');
+                const activeTypes = window.helper.system.active_report_types;
+                summary.push(`  • אומדן: ${activeTypes.estimate || 'לא הוגדר'}`);
+                summary.push(`  • דו״ח סופי: ${activeTypes.final_report || 'לא הוגדר'}`);
+            }
+            
+            // Enhanced structures
+            if (window.helper.estimate?.estimate_types) {
+                summary.push('\n📈 סוגי אומדן זמינים:');
+                Object.keys(window.helper.estimate.estimate_types).forEach(type => {
+                    summary.push(`  • ${type}: ${window.helper.estimate.estimate_types[type].type}`);
+                });
+            }
+            
+            if (window.helper.final_report?.report_types) {
+                summary.push('\n📋 סוגי דו״ח סופי זמינים:');
+                Object.keys(window.helper.final_report.report_types).forEach(type => {
+                    summary.push(`  • ${type}: ${window.helper.final_report.report_types[type].type}`);
+                });
+            }
+            
+            document.getElementById('helper-display').textContent = summary.join('\n');
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                checkCurrentStructure();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
