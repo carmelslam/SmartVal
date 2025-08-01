@@ -165,6 +165,415 @@ window.getOwnerName = function() {
 };
 
 /**
+ * Centralized owner phone management system - Single source of truth
+ */
+window.setOwnerPhone = function(ownerPhone, source = 'manual') {
+  console.log(`📞 CENTRALIZED: Setting owner phone "${ownerPhone}" from source: ${source}`);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set owner phone');
+    return false;
+  }
+  
+  if (!ownerPhone || ownerPhone.trim() === '') {
+    console.warn('⚠️ Empty owner phone provided - keeping existing value');
+    return false;
+  }
+  
+  const cleanedPhone = ownerPhone.trim();
+  
+  // SINGLE SOURCE OF TRUTH: Store owner phone only in stakeholders.owner.phone
+  if (!window.helper.stakeholders) window.helper.stakeholders = {};
+  if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
+  
+  window.helper.stakeholders.owner.phone = cleanedPhone;
+  
+  // Remove duplicate storage - these will now reference stakeholders.owner.phone
+  delete window.helper.meta?.owner_phone;
+  delete window.helper.car_details?.owner_phone;
+  delete window.helper.general_info?.owner_phone;
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Owner phone "${cleanedPhone}" set as single source of truth`);
+  return true;
+};
+
+/**
+ * Get owner phone from single source of truth
+ */
+window.getOwnerPhone = function() {
+  return window.helper?.stakeholders?.owner?.phone || '';
+};
+
+/**
+ * Centralized owner address management system - Single source of truth
+ */
+window.setOwnerAddress = function(ownerAddress, source = 'manual') {
+  console.log(`🏠 CENTRALIZED: Setting owner address "${ownerAddress}" from source: ${source}`);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set owner address');
+    return false;
+  }
+  
+  if (!ownerAddress || ownerAddress.trim() === '') {
+    console.warn('⚠️ Empty owner address provided - keeping existing value');
+    return false;
+  }
+  
+  const cleanedAddress = ownerAddress.trim();
+  
+  // SINGLE SOURCE OF TRUTH: Store owner address only in stakeholders.owner.address
+  if (!window.helper.stakeholders) window.helper.stakeholders = {};
+  if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
+  
+  window.helper.stakeholders.owner.address = cleanedAddress;
+  
+  // Remove duplicate storage - these will now reference stakeholders.owner.address
+  delete window.helper.meta?.owner_address;
+  delete window.helper.car_details?.owner_address;
+  delete window.helper.general_info?.owner_address;
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Owner address "${cleanedAddress}" set as single source of truth`);
+  return true;
+};
+
+/**
+ * Get owner address from single source of truth
+ */
+window.getOwnerAddress = function() {
+  return window.helper?.stakeholders?.owner?.address || '';
+};
+
+/**
+ * Centralized owner email management system - Single source of truth
+ */
+window.setOwnerEmail = function(ownerEmail, source = 'manual') {
+  console.log(`📧 CENTRALIZED: Setting owner email "${ownerEmail}" from source: ${source}`);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set owner email');
+    return false;
+  }
+  
+  if (!ownerEmail || ownerEmail.trim() === '') {
+    console.warn('⚠️ Empty owner email provided - keeping existing value');
+    return false;
+  }
+  
+  const cleanedEmail = ownerEmail.trim();
+  
+  // SINGLE SOURCE OF TRUTH: Store owner email only in stakeholders.owner.email
+  if (!window.helper.stakeholders) window.helper.stakeholders = {};
+  if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
+  
+  window.helper.stakeholders.owner.email = cleanedEmail;
+  
+  // Remove duplicate storage - these will now reference stakeholders.owner.email
+  delete window.helper.meta?.owner_email;
+  delete window.helper.car_details?.owner_email;
+  delete window.helper.general_info?.owner_email;
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Owner email "${cleanedEmail}" set as single source of truth`);
+  return true;
+};
+
+/**
+ * Get owner email from single source of truth
+ */
+window.getOwnerEmail = function() {
+  return window.helper?.stakeholders?.owner?.email || '';
+};
+
+/**
+ * Complete owner data cleanup - removes all duplicate owner references
+ */
+window.cleanupDuplicateOwnerData = function() {
+  console.log('🧹 CLEANUP: Removing all duplicate owner data references...');
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot cleanup owner data');
+    return false;
+  }
+  
+  let cleanedCount = 0;
+  
+  // Remove from meta section
+  if (window.helper.meta?.owner_name) {
+    delete window.helper.meta.owner_name;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.owner_phone) {
+    delete window.helper.meta.owner_phone;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.owner_address) {
+    delete window.helper.meta.owner_address;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.owner_email) {
+    delete window.helper.meta.owner_email;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.client_name) {
+    delete window.helper.meta.client_name;
+    cleanedCount++;
+  }
+  
+  // Remove from car_details section
+  if (window.helper.car_details?.owner) {
+    delete window.helper.car_details.owner;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.owner_name) {
+    delete window.helper.car_details.owner_name;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.owner_phone) {
+    delete window.helper.car_details.owner_phone;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.owner_address) {
+    delete window.helper.car_details.owner_address;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.owner_email) {
+    delete window.helper.car_details.owner_email;
+    cleanedCount++;
+  }
+  
+  // Remove from general_info section
+  if (window.helper.general_info?.owner_name) {
+    delete window.helper.general_info.owner_name;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.owner_phone) {
+    delete window.helper.general_info.owner_phone;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.owner_address) {
+    delete window.helper.general_info.owner_address;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.owner_email) {
+    delete window.helper.general_info.owner_email;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.client_name) {
+    delete window.helper.general_info.client_name;
+    cleanedCount++;
+  }
+  
+  // Remove from any other potential sections
+  if (window.helper.expertise?.owner) {
+    delete window.helper.expertise.owner;
+    cleanedCount++;
+  }
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CLEANUP: Removed ${cleanedCount} duplicate owner data references`);
+  return cleanedCount;
+};
+
+/**
+ * Complete vehicle data cleanup - removes all duplicate vehicle references
+ */
+window.cleanupDuplicateVehicleData = function() {
+  console.log('🧹 CLEANUP: Removing all duplicate vehicle data references...');
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot cleanup vehicle data');
+    return false;
+  }
+  
+  let cleanedCount = 0;
+  
+  // Remove from meta section (keep only meta.plate as authoritative)
+  if (window.helper.meta?.manufacturer) {
+    delete window.helper.meta.manufacturer;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.model) {
+    delete window.helper.meta.model;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.year) {
+    delete window.helper.meta.year;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.chassis) {
+    delete window.helper.meta.chassis;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.km) {
+    delete window.helper.meta.km;
+    cleanedCount++;
+  }
+  if (window.helper.meta?.ownership_type) {
+    delete window.helper.meta.ownership_type;
+    cleanedCount++;
+  }
+  
+  // Remove from car_details section
+  if (window.helper.car_details?.plate) {
+    delete window.helper.car_details.plate;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.manufacturer) {
+    delete window.helper.car_details.manufacturer;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.model) {
+    delete window.helper.car_details.model;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.year) {
+    delete window.helper.car_details.year;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.chassis) {
+    delete window.helper.car_details.chassis;
+    cleanedCount++;
+  }
+  if (window.helper.car_details?.km) {
+    delete window.helper.car_details.km;
+    cleanedCount++;
+  }
+  
+  // Remove from case_info section (keep only case_info.plate reference)
+  if (window.helper.case_info?.manufacturer) {
+    delete window.helper.case_info.manufacturer;
+    cleanedCount++;
+  }
+  if (window.helper.case_info?.model) {
+    delete window.helper.case_info.model;
+    cleanedCount++;
+  }
+  if (window.helper.case_info?.year) {
+    delete window.helper.case_info.year;
+    cleanedCount++;
+  }
+  
+  // Remove from general_info section
+  if (window.helper.general_info?.plate) {
+    delete window.helper.general_info.plate;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.manufacturer) {
+    delete window.helper.general_info.manufacturer;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.model) {
+    delete window.helper.general_info.model;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.year) {
+    delete window.helper.general_info.year;
+    cleanedCount++;
+  }
+  if (window.helper.general_info?.km) {
+    delete window.helper.general_info.km;
+    cleanedCount++;
+  }
+  
+  // Remove from expertise section
+  if (window.helper.expertise?.plate) {
+    delete window.helper.expertise.plate;
+    cleanedCount++;
+  }
+  if (window.helper.expertise?.manufacturer) {
+    delete window.helper.expertise.manufacturer;
+    cleanedCount++;
+  }
+  if (window.helper.expertise?.model) {
+    delete window.helper.expertise.model;
+    cleanedCount++;
+  }
+  if (window.helper.expertise?.year) {
+    delete window.helper.expertise.year;
+    cleanedCount++;
+  }
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CLEANUP: Removed ${cleanedCount} duplicate vehicle data references`);
+  return cleanedCount;
+};
+
+/**
+ * Get vehicle data from single source of truth
+ */
+window.getVehicleData = function() {
+  if (!window.helper?.vehicle) {
+    return {};
+  }
+  
+  return {
+    plate: window.helper.meta?.plate || '', // Plate stays in meta as exception
+    manufacturer: window.helper.vehicle.manufacturer || '',
+    model: window.helper.vehicle.model || '',
+    model_code: window.helper.vehicle.model_code || '',
+    model_type: window.helper.vehicle.model_type || '',
+    trim: window.helper.vehicle.trim || '',
+    year: window.helper.vehicle.year || '',
+    chassis: window.helper.vehicle.chassis || '',
+    engine_volume: window.helper.vehicle.engine_volume || '',
+    fuel_type: window.helper.vehicle.fuel_type || '',
+    transmission: window.helper.vehicle.transmission || '',
+    is_automatic: window.helper.vehicle.is_automatic || false,
+    drive_type: window.helper.vehicle.drive_type || '',
+    km: window.helper.vehicle.km || '',
+    office_code: window.helper.vehicle.office_code || '',
+    ownership_type: window.helper.vehicle.ownership_type || '',
+    registration_date: window.helper.vehicle.registration_date || '',
+    category: window.helper.vehicle.category || '',
+    features: window.helper.vehicle.features || '',
+    condition: window.helper.vehicle.condition || '',
+    market_value: window.helper.vehicle.market_value || 0
+  };
+};
+
+/**
+ * Centralized vehicle field setter - routes all vehicle fields to helper.vehicle.*
+ */
+window.setVehicleField = function(fieldName, value, source = 'manual') {
+  console.log(`🚗 CENTRALIZED: Setting vehicle.${fieldName} = "${value}" from source: ${source}`);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized - cannot set vehicle field');
+    return false;
+  }
+  
+  // Initialize vehicle section if needed
+  if (!window.helper.vehicle) {
+    window.helper.vehicle = {};
+  }
+  
+  // Set the field in the vehicle section
+  window.helper.vehicle[fieldName] = value;
+  
+  // Remove any duplicate references to this field in other sections
+  const sectionsToClean = ['meta', 'car_details', 'case_info', 'general_info', 'expertise'];
+  let cleanedCount = 0;
+  
+  sectionsToClean.forEach(section => {
+    if (window.helper[section] && window.helper[section][fieldName]) {
+      delete window.helper[section][fieldName];
+      cleanedCount++;
+    }
+  });
+  
+  if (cleanedCount > 0) {
+    console.log(`🧹 Cleaned ${cleanedCount} duplicate references to ${fieldName}`);
+  }
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ CENTRALIZED: Vehicle field ${fieldName} set in helper.vehicle.*`);
+  return true;
+};
+
+/**
  * Test function to demonstrate plate normalization
  */
 window.testPlateNormalization = function() {
@@ -1759,17 +2168,68 @@ window.updateHelper = function(field, value) {
   }
 
   const fieldMappings = {
-    'plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
-    'manufacturer': ['vehicle.manufacturer'],
-    'model': ['vehicle.model'],
-    'year': ['vehicle.year'],
-    'owner': ['stakeholders.owner.name'],
+    'plate': 'centralized_plate',
+    'manufacturer': 'centralized_vehicle_manufacturer',
+    'model': 'centralized_vehicle_model',
+    'year': 'centralized_vehicle_year',
+    'chassis': 'centralized_vehicle_chassis',
+    'km': 'centralized_vehicle_km',
+    'ownership_type': 'centralized_vehicle_ownership_type',
+    'category': 'centralized_vehicle_category',
+    'features': 'centralized_vehicle_features',
+    'condition': 'centralized_vehicle_condition',
+    'engine_volume': 'centralized_vehicle_engine_volume',
+    'fuel_type': 'centralized_vehicle_fuel_type',
+    'transmission': 'centralized_vehicle_transmission',
+    'drive_type': 'centralized_vehicle_drive_type',
+    'model_code': 'centralized_vehicle_model_code',
+    'model_type': 'centralized_vehicle_model_type',
+    'trim': 'centralized_vehicle_trim',
+    'registration_date': 'centralized_vehicle_registration_date',
+    'market_value': 'centralized_vehicle_market_value',
+    'office_code': 'centralized_vehicle_office_code',
+    'is_automatic': 'centralized_vehicle_is_automatic',
+    'owner': 'centralized_owner_name',
+    'owner_name': 'centralized_owner_name',
+    'client_name': 'centralized_owner_name',
+    'owner_phone': 'centralized_owner_phone',
+    'client_phone': 'centralized_owner_phone',
+    'owner_address': 'centralized_owner_address',
+    'client_address': 'centralized_owner_address',
+    'owner_email': 'centralized_owner_email',
+    'client_email': 'centralized_owner_email',
     'garage': ['stakeholders.garage.name'],
     'insurance': ['stakeholders.insurance.company']
   };
 
   const targets = fieldMappings[field] || [field];
-  targets.forEach(target => {
+  
+  // Handle centralized functions
+  if (targets === 'centralized_plate') {
+    window.setPlateNumber(value, 'updateHelper');
+    return true;
+  } else if (targets === 'centralized_owner_name') {
+    window.setOwnerName(value, 'updateHelper');
+    return true;
+  } else if (targets === 'centralized_owner_phone') {
+    window.setOwnerPhone(value, 'updateHelper');
+    return true;
+  } else if (targets === 'centralized_owner_address') {
+    window.setOwnerAddress(value, 'updateHelper');
+    return true;
+  } else if (targets === 'centralized_owner_email') {
+    window.setOwnerEmail(value, 'updateHelper');
+    return true;
+  } else if (targets.startsWith('centralized_vehicle_')) {
+    // Extract field name from centralized_vehicle_fieldname
+    const vehicleField = targets.replace('centralized_vehicle_', '');
+    window.setVehicleField(vehicleField, value, 'updateHelper');
+    return true;
+  }
+  
+  // Handle array targets (legacy approach)
+  const targetArray = Array.isArray(targets) ? targets : [targets];
+  targetArray.forEach(target => {
     // If value is an object and target refers to a section, merge instead of overwrite
     if (typeof value === 'object' && !Array.isArray(value) && target.split('.').length === 1) {
       const section = target;
@@ -2282,6 +2742,15 @@ export const setPlateNumber = window.setPlateNumber;
 export const getPlateNumber = window.getPlateNumber;
 export const setOwnerName = window.setOwnerName;
 export const getOwnerName = window.getOwnerName;
+export const setOwnerPhone = window.setOwnerPhone;
+export const getOwnerPhone = window.getOwnerPhone;
+export const setOwnerAddress = window.setOwnerAddress;
+export const getOwnerAddress = window.getOwnerAddress;
+export const setOwnerEmail = window.setOwnerEmail;
+export const getOwnerEmail = window.getOwnerEmail;
+export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
+export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
+export const setVehicleField = window.setVehicleField;
 export const protectPlateNumber = window.protectPlateNumber;
 export const testPlateNormalization = window.testPlateNormalization;
 // populateAllFormsWithRetry is already declared as a function above

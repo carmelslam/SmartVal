@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Standardized Field Mapping</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-info { background: #17a2b8; color: white; }
+        .status-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .sync-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .sync-active { background: #28a745; }
+        .sync-inactive { background: #dc3545; }
+        .sync-warning { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 בדיקת מערכת מיפוי שדות מתוקננת</h1>
+        
+        <div class="test-section">
+            <h3>📊 מצב המערכת</h3>
+            <div id="system-status" class="status-display">Loading...</div>
+            <button class="btn btn-info" onclick="updateSystemStatus()">רענן מצב</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🚗 פרטי רכב</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>מספר רישוי <span id="plate-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="vehicle_plate" placeholder="12345678">
+                </div>
+                <div class="form-group">
+                    <label>יצרן <span id="manufacturer-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="vehicle_manufacturer" placeholder="טויוטה">
+                </div>
+                <div class="form-group">
+                    <label>דגם <span id="model-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="vehicle_model" placeholder="קמרי">
+                </div>
+                <div class="form-group">
+                    <label>שנה <span id="year-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="vehicle_year" placeholder="2020">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ק"מ <span id="km-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="vehicle_km" placeholder="50000">
+                </div>
+                <div class="form-group">
+                    <label>סוג בעלות <span id="ownership-sync" class="sync-indicator"></span></label>
+                    <select id="vehicle_ownership_type">
+                        <option value="">בחר</option>
+                        <option value="פרטי">פרטי</option>
+                        <option value="חברה">חברה</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>👤 פרטי בעל הרכב</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>שם <span id="owner-name-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="owner_name" placeholder="ישראל ישראלי">
+                </div>
+                <div class="form-group">
+                    <label>טלפון <span id="owner-phone-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="owner_phone" placeholder="050-1234567">
+                </div>
+                <div class="form-group">
+                    <label>כתובת <span id="owner-address-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="owner_address" placeholder="רחוב הדמוקרטיה 1, תל אביב">
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 פרטי מוסך</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>שם מוסך <span id="garage-name-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="garage_name" placeholder="מוסך אמיר">
+                </div>
+                <div class="form-group">
+                    <label>טלפון מוסך <span id="garage-phone-sync" class="sync-indicator"></span></label>
+                    <input type="text" id="garage_phone" placeholder="03-1234567">
+                </div>
+                <div class="form-group">
+                    <label>אימייל מוסך <span id="garage-email-sync" class="sync-indicator"></span></label>
+                    <input type="email" id="garage_email" placeholder="info@garage.co.il">
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📅 פרטי מקרה</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>תאריך נזק <span id="damage-date-sync" class="sync-indicator"></span></label>
+                    <input type="date" id="damage_date">
+                </div>
+                <div class="form-group">
+                    <label>תאריך בדיקה <span id="inspection-date-sync" class="sync-indicator"></span></label>
+                    <input type="date" id="inspection_date">
+                </div>
+                <div class="form-group">
+                    <label>סוג נזק <span id="damage-type-sync" class="sync-indicator"></span></label>
+                    <select id="damage_type">
+                        <option value="">בחר</option>
+                        <option value="תאונה">תאונה</option>
+                        <option value="ונדליזם">ונדליזם</option>
+                        <option value="פריצה">פריצה</option>
+                        <option value="אחר">אחר</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 פעולות בדיקה</h3>
+            <div class="form-row">
+                <button class="btn btn-primary" onclick="testFieldMapping()">בדוק מיפוי שדות</button>
+                <button class="btn btn-success" onclick="testBidirectionalSync()">בדוק סנכרון דו-כיווני</button>
+                <button class="btn btn-warning" onclick="populateTestData()">מלא נתוני בדיקה</button>
+                <button class="btn btn-info" onclick="viewHelperData()">הצג נתוני Helper</button>
+            </div>
+            <div class="form-row">
+                <button class="btn btn-primary" onclick="testManualProtection()">בדוק הגנה על קלט ידני</button>
+                <button class="btn btn-success" onclick="forceSyncAll()">סנכרן הכל בכוח</button>
+                <button class="btn btn-warning" onclick="clearAllData()">נקה הכל</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 תוצאות בדיקה</h3>
+            <div id="test-results" class="status-display">לחץ על כפתור בדיקה כדי לראות תוצאות...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 היסטוריית סנכרון</h3>
+            <div id="sync-history" class="status-display">אין היסטוריה עדיין...</div>
+            <button class="btn btn-info" onclick="updateSyncHistory()">רענן היסטוריה</button>
+        </div>
+    </div>
+
+    <!-- Load our modules -->
+    <script src="helper.js"></script>
+    <script src="field-mapper.js"></script>
+    <script src="field-standardizer.js"></script>
+    <script src="bidirectional-sync.js"></script>
+
+    <script>
+        // Test functions
+        function updateSystemStatus() {
+            const status = {
+                helper: !!window.helper,
+                fieldMapper: !!window.fieldMapper,
+                fieldStandardizer: !!window.fieldStandardizer,
+                bidirectionalSync: !!window.bidirectionalSync,
+                helperInitialized: !!window.helper?.meta?.plate,
+                activeListeners: window.bidirectionalSync?.activeListeners?.size || 0,
+                standardizedFields: window.fieldMapper?.getAllFieldNames()?.length || 0
+            };
+
+            document.getElementById('system-status').textContent = JSON.stringify(status, null, 2);
+            
+            // Update sync indicators
+            updateSyncIndicators();
+        }
+
+        function updateSyncIndicators() {
+            const indicators = document.querySelectorAll('.sync-indicator');
+            indicators.forEach(indicator => {
+                const fieldId = indicator.id.replace('-sync', '').replace(/-/g, '_');
+                const isActive = window.bidirectionalSync?.activeListeners?.has(fieldId);
+                
+                indicator.className = 'sync-indicator ' + (isActive ? 'sync-active' : 'sync-inactive');
+                indicator.title = isActive ? 'Sync active' : 'Sync inactive';
+            });
+        }
+
+        function testFieldMapping() {
+            const results = [];
+            const testFields = [
+                'vehicle_plate', 'vehicle_manufacturer', 'vehicle_model', 'vehicle_year', 'vehicle_km',
+                'owner_name', 'owner_phone', 'owner_address',
+                'garage_name', 'garage_phone', 'garage_email',
+                'damage_date', 'inspection_date', 'damage_type'
+            ];
+
+            results.push('🧪 Testing Field Mapping...\n');
+
+            testFields.forEach(field => {
+                const helperPath = window.fieldMapper?.getHelperPath(field);
+                const isStandardized = window.fieldMapper?.isStandardizedField(field);
+                const isProtected = window.fieldMapper?.isManualEntryField(field);
+
+                results.push(`${field}:`);
+                results.push(`  Helper Path: ${helperPath ? helperPath.join('.') : 'NOT MAPPED'}`);
+                results.push(`  Standardized: ${isStandardized ? '✅' : '❌'}`);
+                results.push(`  Protected: ${isProtected ? '🔒' : '🔓'}`);
+                results.push('');
+            });
+
+            document.getElementById('test-results').textContent = results.join('\n');
+        }
+
+        function testBidirectionalSync() {
+            const results = [];
+            results.push('🔄 Testing Bidirectional Sync...\n');
+
+            // Test UI to Helper sync
+            results.push('1. Testing UI → Helper sync:');
+            
+            const testValue = 'TEST_' + Date.now();
+            const plateField = document.getElementById('vehicle_plate');
+            if (plateField) {
+                plateField.value = testValue;
+                plateField.dispatchEvent(new Event('input'));
+                
+                setTimeout(() => {
+                    const helperValue = window.getStandardizedValue('vehicle_plate');
+                    results.push(`   Set plate to: ${testValue}`);
+                    results.push(`   Helper value: ${helperValue}`);
+                    results.push(`   Sync success: ${helperValue === testValue ? '✅' : '❌'}\n`);
+                    
+                    // Test Helper to UI sync
+                    results.push('2. Testing Helper → UI sync:');
+                    const newTestValue = 'HELPER_' + Date.now();
+                    window.setStandardizedValue('vehicle_manufacturer', newTestValue);
+                    
+                    setTimeout(() => {
+                        const manufacturerField = document.getElementById('vehicle_manufacturer');
+                        const uiValue = manufacturerField?.value;
+                        results.push(`   Set helper manufacturer to: ${newTestValue}`);
+                        results.push(`   UI value: ${uiValue}`);
+                        results.push(`   Sync success: ${uiValue === newTestValue ? '✅' : '❌'}`);
+                        
+                        document.getElementById('test-results').textContent = results.join('\n');
+                    }, 100);
+                }, 100);
+            }
+        }
+
+        function populateTestData() {
+            const testData = {
+                vehicle_plate: '12345678',
+                vehicle_manufacturer: 'טויוטה',
+                vehicle_model: 'קמרי',
+                vehicle_year: '2020',
+                vehicle_km: '50000',
+                vehicle_ownership_type: 'פרטי',
+                owner_name: 'ישראל ישראלי',
+                owner_phone: '050-1234567',
+                owner_address: 'רחוב הדמוקרטיה 1, תל אביב',
+                garage_name: 'מוסך אמיר',
+                garage_phone: '03-1234567',
+                garage_email: 'info@garage.co.il',
+                damage_date: '2025-01-15',
+                inspection_date: '2025-01-20',
+                damage_type: 'תאונה'
+            };
+
+            Object.entries(testData).forEach(([field, value]) => {
+                const element = document.getElementById(field);
+                if (element) {
+                    element.value = value;
+                    element.dispatchEvent(new Event('input'));
+                }
+            });
+
+            document.getElementById('test-results').textContent = '✅ Test data populated to all fields';
+        }
+
+        function viewHelperData() {
+            if (window.helper) {
+                document.getElementById('test-results').textContent = JSON.stringify(window.helper, null, 2);
+            } else {
+                document.getElementById('test-results').textContent = '❌ Helper not initialized';
+            }
+        }
+
+        function testManualProtection() {
+            const results = [];
+            results.push('🔒 Testing Manual Entry Protection...\n');
+
+            // Set a manual value
+            const plateField = document.getElementById('vehicle_plate');
+            if (plateField) {
+                plateField.value = 'MANUAL123';
+                plateField.dispatchEvent(new Event('input'));
+
+                setTimeout(() => {
+                    // Try to override with auto value
+                    const overrideResult = window.updateHelperWithStandardizedFields('vehicle_plate', 'AUTO456', 'auto');
+                    
+                    results.push(`Manual value set: MANUAL123`);
+                    results.push(`Override attempt: AUTO456`);
+                    results.push(`Override blocked: ${!overrideResult ? '✅' : '❌'}`);
+                    results.push(`Current helper value: ${window.getStandardizedValue('vehicle_plate')}`);
+                    results.push(`Current UI value: ${plateField.value}`);
+                    
+                    document.getElementById('test-results').textContent = results.join('\n');
+                }, 100);
+            }
+        }
+
+        function forceSyncAll() {
+            if (window.forceSyncAllFields) {
+                window.forceSyncAllFields();
+                document.getElementById('test-results').textContent = '✅ Force sync completed for all fields';
+            } else {
+                document.getElementById('test-results').textContent = '❌ Force sync function not available';
+            }
+        }
+
+        function clearAllData() {
+            // Clear UI fields
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+            });
+
+            // Clear helper
+            if (window.helper) {
+                window.helper = {};
+                if (window.saveHelperToAllStorageLocations) {
+                    window.saveHelperToAllStorageLocations();
+                }
+            }
+
+            document.getElementById('test-results').textContent = '✅ All data cleared';
+        }
+
+        function updateSyncHistory() {
+            if (window.getSyncHistory) {
+                const history = window.getSyncHistory();
+                const formatted = history.map(entry => 
+                    `${new Date(entry.timestamp).toLocaleTimeString()} - ${entry.direction} - ${entry.field}: ${entry.value}`
+                ).join('\n');
+                
+                document.getElementById('sync-history').textContent = formatted || 'No sync history available';
+            } else {
+                document.getElementById('sync-history').textContent = 'Sync history function not available';
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                updateSystemStatus();
+                updateSyncHistory();
+            }, 1000);
+        });
+
+        // Update indicators periodically
+        setInterval(updateSyncIndicators, 2000);
+    </script>
+</body>
+</html>

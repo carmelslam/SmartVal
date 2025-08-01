@@ -1,3 +1,79 @@
+# HELPER STRUCTURE STANDARDIZATION & DATA ARCHITECTURE REBUILD
+**Created: 01/08/2025**
+
+## 🎯 OBJECTIVE
+Eliminate all data duplication in helper structure and create single source of truth architecture. Fix critical issues where same data appears in multiple locations with conflicting values.
+
+## 📋 CRITICAL ISSUES IDENTIFIED
+From helper data screenshots analysis:
+- **Damage date appears in 7+ locations** with different values:
+  - `case_info.damage_date: "2025-07-01"` (inspection date - wrong)
+  - `damage_info.damage_date: "2025-07-27"` (correct user input)
+  - `car_details.damage_date: "2025-08-01"` (wrong)
+  - `vehicle.damage_date: "2025-08-01"` (shouldn't exist)  
+  - `meta.damage_date: "2025-08-01"` (corrupted)
+  - `general.damage_date_independent: "2025-07-01"`
+  - `general.damage_date_new: "2025-08-01"`
+
+- **Owner information scattered across multiple sections**
+- **Vehicle data duplicated in various places**
+
+## 🔧 IMPLEMENTATION PLAN
+
+### **Phase 1: Data Deduplication (Priority 1)**
+1. **Remove ALL duplicate damage_date fields**:
+   - Delete from: `car_details`, `vehicle`, `meta`, `general`, `damage_info`
+   - Keep ONLY in: `case_info.damage_date`
+   
+2. **Remove ALL duplicate owner fields**:
+   - Delete from: `general`, `car_details`, `meta`
+   - Keep ONLY in: `stakeholders.owner.*`
+
+3. **Remove ALL duplicate vehicle fields**:
+   - Delete from: `car_details`, `general`, `meta`
+   - Keep ONLY in: `vehicle.*`
+
+### **Phase 2: Update All Field Mappings**
+1. **Update UI components** to reference single sources only
+2. **Fix all form population functions** (helper.js, force-populate-forms.js)
+3. **Update floating screens** to read from correct locations
+4. **Fix all builder modules** to use single sources
+
+### **Phase 3: Workflow Data Enhancement**
+Following exact workflow order:
+1. Car Details (webhook) → `vehicle.*`
+2. General Info (stakeholders) → `stakeholders.*`
+3. Levi (valuation) → `valuation.*` (with proper JSON structure)
+4. Damage Centers → `damage_assessment.*`
+5. Parts Search → `parts_search.*` (expanded JSON)
+6. Parts Selection → `parts_search.selected_parts`
+7. Work & Repairs → `damage_assessment.centers`
+8. Directives (Expertise Summary) → `expertise.*`
+9. Estimate Workflow → `estimate.*`
+10. Invoice OCR → `invoice_ocr.*`
+11. Final Report → `final_report.*` (5 types)
+
+### **Phase 4: Missing Data Fields**
+After core cleanup, add missing fields identified:
+- `vehicle.category` and `vehicle.model_type`
+- Expanded `parts_search` JSON structure
+- Proper Levi adjustment fields per actual JSON spec
+
+## 🎯 SUCCESS CRITERIA
+- ✅ Damage date appears in ONLY ONE location (`case_info.damage_date`)
+- ✅ Owner info appears in ONLY ONE location (`stakeholders.owner.*`)
+- ✅ Vehicle info appears in ONLY ONE location (`vehicle.*`)
+- ✅ No conflicting values anywhere in helper structure
+- ✅ All UI components read from single sources
+- ✅ Progressive workflow enhancement (no new sections for existing data)
+
+## 📁 DELIVERABLES
+1. Updated todo.md with complete implementation plan
+2. New helper instructions file detailing learned architecture
+3. Phase-by-phase implementation with validation at each step
+
+---
+
 # Admin Hub JavaScript Fixes
 
 ## Plan
