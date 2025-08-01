@@ -3640,7 +3640,18 @@ window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata =
     total_captured: window.helper.debug.metadata.total_webhooks_captured
   });
   
-  window.saveHelperToAllStorageLocations();
+  // Safe save to storage (handle missing function)
+  if (window.saveHelperToAllStorageLocations) {
+    window.saveHelperToAllStorageLocations();
+  } else {
+    // Fallback: save to sessionStorage directly
+    try {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      console.log('💾 Saved to sessionStorage (fallback)');
+    } catch (e) {
+      console.warn('⚠️ Could not save to storage:', e);
+    }
+  }
   
   return captureEntry.metadata.capture_sequence;
 };
@@ -3679,7 +3690,18 @@ window.initializeDebugSection = function() {
     initialization: true
   });
   
-  window.saveHelperToAllStorageLocations();
+  // Safe save to storage (handle missing function)
+  if (window.saveHelperToAllStorageLocations) {
+    window.saveHelperToAllStorageLocations();
+  } else {
+    // Fallback: save to sessionStorage directly
+    try {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      console.log('💾 Saved to sessionStorage (fallback)');
+    } catch (e) {
+      console.warn('⚠️ Could not save to storage:', e);
+    }
+  }
   
   return window.helper.debug;
 };
