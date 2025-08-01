@@ -1593,16 +1593,16 @@ function populateAllForms() {
     'claimNumber': window.helper.stakeholders?.insurance?.claim_number,
     'claim_number': window.helper.stakeholders?.insurance?.claim_number,
     
-    // Case info
-    'damageDate': window.helper.case_info?.damage_date,
-    'damage_date': window.helper.case_info?.damage_date,
+    // Case info (including independent damage date - separate from inspection date)
+    'damage_date_independent': window.helper.case_info?.damage_date,
     'damageType': window.helper.case_info?.damage_type,
     'damage_type': window.helper.case_info?.damage_type,
+    
+    // Case info (inspection details only - NOT damage date)
     'inspectionDate': window.helper.case_info?.inspection_date,
     'inspection_date': window.helper.case_info?.inspection_date,
     'location': window.helper.case_info?.inspection_location,
     'inspection_location': window.helper.case_info?.inspection_location,
-    'date': window.helper.case_info?.damage_date || window.helper.case_info?.inspection_date,
     
     // Valuation fields
     'base_price': window.helper.valuation?.base_price,
@@ -1651,6 +1651,12 @@ function populateAllForms() {
         // Protect email fields: don't override valid email with invalid data
         if (isEmailField && currentIsValidEmail && !isValidEmail) {
           console.log(`🛡️ Protecting ${fieldId}: keeping valid email "${currentValue}" instead of "${newValue}"`);
+          return;
+        }
+        
+        // 🔧 CRITICAL PROTECTION: Don't override damage_date_independent if manually entered
+        if (fieldId === 'damage_date_independent' && window.helper?.meta?.damage_date_manual) {
+          console.log(`🛡️ Protecting ${fieldId}: respecting manual entry "${currentValue}" - not overriding with "${newValue}"`);
           return;
         }
         

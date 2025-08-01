@@ -199,16 +199,16 @@
       const helperData = window.helper || {};
       console.log('📊 PHASE 2.2: Current helper data (from window.helper):', helperData);
       
-      // 🔧 CLEAN DAMAGE DATE FIELD: Initialize independently (NOT from any date field)
+      // 🔧 CLEAN DAMAGE DATE FIELD: Initialize independently from case_info.damage_date
       const damageDateField = document.getElementById('damage_date_independent');
       
       if (damageDateField) {
-        // Check for existing damage date in helper (only from damage_info section)
-        const existingDamageDate = helperData.damage_info?.damage_date || '';
+        // Check for existing damage date in helper (from case_info.damage_date - NOT inspection_date)
+        const existingDamageDate = helperData.case_info?.damage_date || '';
         
         if (existingDamageDate && !helperData.meta?.damage_date_manual) {
           damageDateField.value = existingDamageDate;
-          console.log('🔧 CLEAN FIELD: Populated damage date from helper.damage_info:', existingDamageDate);
+          console.log('🔧 CLEAN FIELD: Populated damage date from helper.case_info.damage_date:', existingDamageDate);
         } else {
           // Keep field empty and independent
           damageDateField.value = '';
@@ -227,12 +227,12 @@
           const damageDateField = document.getElementById('damage_date_independent');
           if (damageDateField) {
             const currentValue = damageDateField.value;
-            const helperDamageDate = helperData.damage_info?.damage_date || '';
+            const helperDamageDate = helperData.case_info?.damage_date || '';
             
             // Only restore if we have a stored damage date and field wasn't manually changed
             if (helperDamageDate && !helperData.meta?.damage_date_manual && !currentValue) {
               damageDateField.value = helperDamageDate;
-              console.log('🔧 CLEAN FIELD: Restored damage date from helper.damage_info only:', helperDamageDate);
+              console.log('🔧 CLEAN FIELD: Restored damage date from helper.case_info.damage_date only:', helperDamageDate);
             }
           }
         } else {
@@ -331,7 +331,7 @@
           km: data.odo
         };
         
-        const damageData = {
+        const caseData = {
           damage_date: data.damageDate,
           damage_type: data.damageType
         };
@@ -339,7 +339,7 @@
         // Update helper sections
         updateHelper('stakeholders', stakeholdersData, 'general_info');
         updateHelper('vehicle', vehicleData, 'general_info');
-        updateHelper('damage_info', damageData, 'general_info');
+        updateHelper('case_info', caseData, 'general_info');
         
         // Also update meta for completeness
         updateHelper('meta', {
@@ -357,7 +357,7 @@
         if (window.broadcastHelperUpdate) {
           window.broadcastHelperUpdate('stakeholders', stakeholdersData);
           window.broadcastHelperUpdate('vehicle', vehicleData);
-          window.broadcastHelperUpdate('damage_info', damageData);
+          window.broadcastHelperUpdate('case_info', caseData);
         }
         
         await sendToWebhook('FILL_FINAL_REPORT', data);
@@ -585,8 +585,8 @@
                 // Special handling for damage_date_independent field
                 if (fieldId === 'damage_date_independent' && this.value) {
                   updateHelper('meta', { damage_date_manual: true }, 'general_info');
-                  updateHelper('damage_info', { damage_date: this.value }, 'general_info');
-                  console.log('✅ Independent damage date saved to helper.damage_info:', this.value);
+                  updateHelper('case_info', { damage_date: this.value }, 'general_info');
+                  console.log('✅ Independent damage date saved to helper.case_info.damage_date:', this.value);
                 }
                 
                 import('./helper.js').then(module => {

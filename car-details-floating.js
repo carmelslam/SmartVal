@@ -500,9 +500,9 @@
         console.log('✅ Stakeholders data updated via updateHelper()');
       }
       
-      if (helperUpdates.damage_info && Object.keys(helperUpdates.damage_info).length > 0) {
-        updateHelper('damage_info', helperUpdates.damage_info, 'car_details_floating');
-        console.log('✅ Damage info data updated via updateHelper()');
+      if (helperUpdates.case_info && Object.keys(helperUpdates.case_info).length > 0) {
+        updateHelper('case_info', helperUpdates.case_info, 'car_details_floating');
+        console.log('✅ Case info data updated via updateHelper()');
       }
       
       if (helperUpdates.valuation && Object.keys(helperUpdates.valuation).length > 0) {
@@ -532,7 +532,7 @@
           agent: {}
         }
       },
-      damage_info: {},
+      case_info: {},
       valuation: {}
     };
 
@@ -580,8 +580,8 @@
       'agent-email': 'email'
     };
 
-    // Map damage info fields (damage date goes to damage_info section, NOT case_info)
-    const damageInfoFieldMap = {
+    // Map case info fields (damage date stays in case_info section)
+    const caseInfoFieldMap = {
       'car-damage-date': 'damage_date'
     };
 
@@ -617,8 +617,8 @@
         updates.stakeholders.insurance[insuranceFieldMap[fieldId]] = changes[fieldId];
       } else if (agentFieldMap[fieldId]) {
         updates.stakeholders.insurance.agent[agentFieldMap[fieldId]] = changes[fieldId];
-      } else if (damageInfoFieldMap[fieldId]) {
-        updates.damage_info[damageInfoFieldMap[fieldId]] = changes[fieldId];
+      } else if (caseInfoFieldMap[fieldId]) {
+        updates.case_info[caseInfoFieldMap[fieldId]] = changes[fieldId];
       } else if (valuationFieldMap[fieldId]) {
         updates.valuation[valuationFieldMap[fieldId]] = changes[fieldId];
       }
@@ -845,8 +845,8 @@
     
     // Dates from correct helper sections
     document.getElementById("vehicle-inspection-date").textContent = formatDate(helper.case_info?.inspection_date);
-    // 🔧 FIX: Show damage date from damage_info section (NOT inspection_date)
-    document.getElementById("car-damage-date").textContent = formatDate(helper.damage_info?.damage_date);
+    // 🔧 FIX: Show damage date from case_info.damage_date (separate from inspection_date)
+    document.getElementById("car-damage-date").textContent = formatDate(helper.case_info?.damage_date);
     
     // Owner info from stakeholders section
     document.getElementById("car-owner").textContent = formatValue(helper.stakeholders?.owner?.name);

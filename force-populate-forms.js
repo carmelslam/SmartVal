@@ -234,20 +234,24 @@ class ForceFormPopulator {
       }
     }
 
-    // Case info fields
+    // Case info fields (including damage date - separate from inspection date)
     if (helperData.case_info) {
-      // FIXED: Allow damage_date auto-fill with correct field mapping
+      // FIXED: Check for independent damage date field and respect manual entry
       if (helperData.case_info.damage_date) {
-        const manualEntry = sessionStorage.getItem('damageDate_manualEntry');
+        // Check helper meta flag instead of sessionStorage
+        const manualEntry = helperData.meta?.damage_date_manual;
         if (!manualEntry) {
-          console.log('✅ ALLOWING damage_date auto-fill from helper:', helperData.case_info.damage_date);
-          // Map to actual HTML field ID
-          mappings.damage_date_new = helperData.case_info.damage_date;
+          console.log('✅ ALLOWING damage_date auto-fill from helper.case_info.damage_date:', helperData.case_info.damage_date);
+          // Map to correct field ID
+          mappings.damage_date_independent = helperData.case_info.damage_date;
         } else {
           console.log('🚫 RESPECTING manual damage_date entry, not overwriting helper value:', helperData.case_info.damage_date);
         }
       }
       mappings.damageType = helperData.case_info.damage_type;
+      // Also include inspection details
+      mappings.inspectionDate = helperData.case_info.inspection_date;
+      mappings.inspectionLocation = helperData.case_info.inspection_location;
     }
 
     // Remove empty values
