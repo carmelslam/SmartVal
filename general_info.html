@@ -199,12 +199,47 @@
       const helperData = window.helper || {};
       console.log('📊 PHASE 2.2: Current helper data (from window.helper):', helperData);
       
-      // Import helper module and populate fields
+      // 🔧 FIELD FIX: Initialize damage_date_new independently (NOT from inspection_date)
+      // Check correct helper locations where damage date is stored
+      const damageDate = helperData.damage_info?.damage_date || helperData.case_info?.damage_date || helperData.meta?.damage_date || '';
+      const damageDateField = document.getElementById('damage_date_new');
+      
+      console.log('🔍 FIELD FIX: Searching for damage date in helper:', {
+        'damage_info.damage_date': helperData.damage_info?.damage_date,
+        'case_info.damage_date': helperData.case_info?.damage_date,
+        'meta.damage_date': helperData.meta?.damage_date,
+        'meta.damage_date_manual': helperData.meta?.damage_date_manual,
+        'FINAL damageDate': damageDate
+      });
+      
+      if (damageDateField && damageDate) {
+        // Only populate if not manually entered before
+        if (!helperData.meta?.damage_date_manual) {
+          damageDateField.value = damageDate;
+          console.log('🔧 FIELD FIX: Populated damage_date_new with actual damage date:', damageDate);
+        } else {
+          console.log('🔧 FIELD FIX: Damage date manually entered, preserving user input');
+        }
+      } else if (damageDateField) {
+        // Ensure field is empty and editable (not mirroring inspection date)
+        damageDateField.value = '';
+        console.log('🔧 FIELD FIX: damage_date_new field ready for independent input (not mirroring inspection_date)');
+      }
+      
+      // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
       import('./helper.js').then(helperModule => {
         if (typeof helperModule.refreshAllModuleForms === 'function') {
           console.log('🔄 Calling refreshAllModuleForms...');
           helperModule.refreshAllModuleForms();
           console.log('✅ General info fields auto-populated from helper');
+          
+          // 🔧 FIELD FIX: Ensure damage_date_new remains independent after auto-population
+          const currentDamageDate = damageDateField?.value || '';
+          const actualDamageDate = helperData.damage_info?.damage_date || helperData.case_info?.damage_date || helperData.meta?.damage_date || '';
+          if (damageDateField && actualDamageDate && !helperData.meta?.damage_date_manual) {
+            damageDateField.value = actualDamageDate;
+            console.log('🔧 FIELD FIX: Restored independent damage date after auto-population:', actualDamageDate);
+          }
         } else {
           console.error('❌ refreshAllModuleForms function not found!');
         }
