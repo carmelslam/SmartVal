@@ -813,13 +813,13 @@
     document.getElementById("vehicle-office-code").textContent = formatValue(helper.vehicle?.office_code);
     document.getElementById("vehicle-km").textContent = formatValue(helper.vehicle?.km);
     
-    // Model code vs Levi code - from correct helper fields
-    // Check multiple possible locations for vehicle model code - prioritize vehicle_model_code over model_code
-    const vehicleModelCode = helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code || helper.vehicle?.model_code;
-    console.log('🔍 Debug vehicle model code (priority order):', {
-      '1st priority - helper.vehicle_model_code': helper.vehicle_model_code,
-      '2nd priority - helper.makeCarData?.vehicle_model_code': helper.makeCarData?.vehicle_model_code,
-      '3rd priority - helper.vehicle?.model_code': helper.vehicle?.model_code,
+    // 🔧 FIELD MAPPING FIX: Model code from correct helper structure
+    // Priority: helper.vehicle.model_code (main) > legacy locations for backward compatibility
+    const vehicleModelCode = helper.vehicle?.model_code || helper.vehicle_model_code || helper.makeCarData?.vehicle_model_code;
+    console.log('🔍 PHASE 2.4: Fixed vehicle model code mapping (priority order):', {
+      '1st priority - helper.vehicle.model_code': helper.vehicle?.model_code,
+      '2nd priority - helper.vehicle_model_code (legacy)': helper.vehicle_model_code,
+      '3rd priority - helper.makeCarData?.vehicle_model_code (legacy)': helper.makeCarData?.vehicle_model_code,
       'FINAL vehicleModelCode': vehicleModelCode
     });
     document.getElementById("vehicle-model-code").textContent = formatValue(vehicleModelCode);
