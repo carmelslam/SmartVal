@@ -203,18 +203,9 @@
       const damageDateField = document.getElementById('damage_date_independent');
       
       if (damageDateField) {
-        // Only populate if user has manually entered a damage date before (not from corrupted data)
-        const existingDamageDate = helperData.case_info?.damage_date || '';
-        const isManuallyEntered = helperData.meta?.damage_date_manual;
-        
-        if (existingDamageDate && isManuallyEntered) {
-          damageDateField.value = existingDamageDate;
-          console.log('🔧 CLEAN FIELD: Restored manually entered damage date:', existingDamageDate);
-        } else {
-          // Keep field empty until user manually enters damage date
-          damageDateField.value = '';
-          console.log('🔧 CLEAN FIELD: Damage date field ready for manual input (no auto-population)');
-        }
+        // SIMPLE: Always start empty - no auto-population at all
+        damageDateField.value = '';
+        console.log('🔧 SIMPLE: Damage date field starts empty - user must enter manually');
       }
       
       // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
@@ -585,9 +576,11 @@
               if (event.isTrusted && this.value !== this.defaultValue) {
                 // Special handling for damage_date_independent field
                 if (fieldId === 'damage_date_independent' && this.value) {
+                  console.log('🔥 SIMPLE: User entered damage date:', this.value);
                   updateHelper('meta', { damage_date_manual: true }, 'general_info');
                   updateHelper('case_info', { damage_date: this.value }, 'general_info');
-                  console.log('✅ Independent damage date saved to helper.case_info.damage_date:', this.value);
+                  console.log('🔥 SIMPLE: Damage date saved to helper.case_info.damage_date:', this.value);
+                  console.log('🔥 SIMPLE: Current helper.case_info:', window.helper?.case_info);
                 }
                 
                 import('./helper.js').then(module => {

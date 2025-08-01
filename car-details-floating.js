@@ -845,7 +845,9 @@
     
     // Dates from correct helper sections
     document.getElementById("vehicle-inspection-date").textContent = formatDate(helper.case_info?.inspection_date);
-    // 🔧 FIX: Show damage date from case_info.damage_date (separate from inspection_date)
+    // 🔧 SIMPLE: Show damage date from case_info.damage_date
+    console.log('🔥 SIMPLE FLOATING: helper.case_info?.damage_date =', helper.case_info?.damage_date);
+    console.log('🔥 SIMPLE FLOATING: helper.case_info?.inspection_date =', helper.case_info?.inspection_date);
     document.getElementById("car-damage-date").textContent = formatDate(helper.case_info?.damage_date);
     
     // Owner info from stakeholders section

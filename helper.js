@@ -1593,8 +1593,8 @@ function populateAllForms() {
     'claimNumber': window.helper.stakeholders?.insurance?.claim_number,
     'claim_number': window.helper.stakeholders?.insurance?.claim_number,
     
-    // Case info (including independent damage date - separate from inspection date)
-    'damage_date_independent': window.helper.case_info?.damage_date,
+    // SIMPLE: Exclude damage_date_independent from auto-population - user must enter manually
+    // 'damage_date_independent': window.helper.case_info?.damage_date, // DISABLED
     'damageType': window.helper.case_info?.damage_type,
     'damage_type': window.helper.case_info?.damage_type,
     
