@@ -60,6 +60,243 @@ class BidirectionalSync {
     this.setupMutationObserver();
 
     console.log(`🔄 Set up bidirectional sync for ${elements.length} elements`);
+    
+    // 🚨 ENHANCED: Set up advanced monitoring for dynamic elements
+    this.setupAdvancedInputMonitoring();
+  }
+
+  // 🚨 NEW: Advanced input monitoring for dynamic elements
+  setupAdvancedInputMonitoring() {
+    console.log('🔍 Setting up advanced input monitoring for dynamic elements...');
+    
+    // Monitor floating screens, modals, and dynamic forms
+    this.monitorDynamicElements();
+    
+    // Monitor file upload interfaces  
+    this.monitorFileUploads();
+    
+    // Monitor calculation result fields
+    this.monitorCalculationFields();
+    
+    // Monitor drag-and-drop interfaces
+    this.monitorDragAndDrop();
+  }
+
+  monitorDynamicElements() {
+    const dynamicSelectors = [
+      '.floating-screen', '.modal', '.popup', '.overlay', '.dialog',
+      '.floating-form', '.sidebar-form', '.panel-form', '.dynamic-form',
+      '.modal-dialog', '.modal-content', '.modal-body', '.popup-modal'
+    ];
+    
+    dynamicSelectors.forEach(selector => {
+      // Monitor existing elements
+      const existing = document.querySelectorAll(selector);
+      existing.forEach(element => this.attachDynamicElementListeners(element));
+      
+      // Monitor for new elements
+      this.observeSelector(selector);
+    });
+  }
+
+  monitorFileUploads() {
+    const uploadSelectors = [
+      'input[type="file"]', '.file-upload', '.drag-drop-zone',
+      '.upload-area', '.file-input-wrapper'
+    ];
+    
+    uploadSelectors.forEach(selector => {
+      const existing = document.querySelectorAll(selector);
+      existing.forEach(upload => this.attachFileUploadListeners(upload));
+      this.observeSelector(selector);
+    });
+  }
+
+  monitorCalculationFields() {
+    const calcSelectors = [
+      '.calculation-result', '.computed-value', '.auto-calculated',
+      '[data-calculation]', '.total-field', '.sum-field'
+    ];
+    
+    calcSelectors.forEach(selector => {
+      const existing = document.querySelectorAll(selector);
+      existing.forEach(field => this.attachCalculationListener(field));
+      this.observeSelector(selector);
+    });
+  }
+
+  monitorDragAndDrop() {
+    const dndSelectors = [
+      '.drag-drop-zone', '.dropzone', '.drag-area',
+      '[draggable="true"]', '.sortable-list'
+    ];
+    
+    dndSelectors.forEach(selector => {
+      const existing = document.querySelectorAll(selector);
+      existing.forEach(zone => this.attachDragDropListeners(zone));
+      this.observeSelector(selector);
+    });
+  }
+
+  attachDynamicElementListeners(element) {
+    const inputs = element.querySelectorAll('input, select, textarea');
+    console.log(`🔍 Found ${inputs.length} inputs in dynamic element`);
+    
+    inputs.forEach(input => {
+      if (input.id && !input.dataset.syncSetup) {
+        this.setupElementSync(input);
+      }
+    });
+  }
+
+  attachFileUploadListeners(upload) {
+    if (upload.tagName === 'INPUT' && upload.type === 'file') {
+      upload.addEventListener('change', (e) => {
+        this.handleFileUpload(e, upload);
+      });
+    }
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      upload.addEventListener(eventName, (e) => {
+        this.handleDragDropUpload(e, upload);
+      });
+    });
+  }
+
+  attachCalculationListener(field) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+          this.handleCalculationChange(field);
+        }
+      });
+    });
+    
+    observer.observe(field, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  }
+
+  attachDragDropListeners(zone) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      zone.addEventListener(eventName, (e) => {
+        this.handleDragDropEvent(e, zone);
+      });
+    });
+  }
+
+  observeSelector(selector) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.matches && node.matches(selector)) {
+              this.handleNewDynamicElement(node, selector);
+            }
+            
+            const matches = node.querySelectorAll && node.querySelectorAll(selector);
+            if (matches) {
+              matches.forEach(match => this.handleNewDynamicElement(match, selector));
+            }
+          }
+        });
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  handleNewDynamicElement(element, selector) {
+    console.log(`🆕 New dynamic element detected: ${selector}`);
+    
+    if (selector.includes('upload') || selector.includes('file')) {
+      this.attachFileUploadListeners(element);
+    } else if (selector.includes('calculation')) {
+      this.attachCalculationListener(element);
+    } else if (selector.includes('drag') || selector.includes('drop')) {
+      this.attachDragDropListeners(element);
+    } else {
+      // Dynamic forms, modals, etc.
+      this.attachDynamicElementListeners(element);
+    }
+  }
+
+  handleFileUpload(event, upload) {
+    const files = event.target.files;
+    if (files.length > 0) {
+      const fileData = {
+        file_count: files.length,
+        files: Array.from(files).map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          last_modified: file.lastModified
+        })),
+        upload_timestamp: new Date().toISOString(),
+        upload_element_id: upload.id || 'unknown'
+      };
+      
+      this.syncToHelper('document_metadata', fileData, 'file_upload');
+      console.log(`📁 File upload detected: ${files.length} files`);
+    }
+  }
+
+  handleDragDropUpload(event, zone) {
+    if (event.type === 'drop') {
+      event.preventDefault();
+      const files = event.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const dropData = {
+          file_count: files.length,
+          files: Array.from(files).map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type
+          })),
+          drop_timestamp: new Date().toISOString(),
+          drop_zone_id: zone.id || 'unknown'
+        };
+        
+        this.syncToHelper('document_metadata', dropData, 'drag_drop');
+        console.log(`🎯 Drag-drop upload detected: ${files.length} files`);
+      }
+    }
+  }
+
+  handleCalculationChange(field) {
+    const value = field.textContent || field.value;
+    const fieldId = field.id || field.dataset.field || 'unknown_calculation';
+    
+    const numericValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+    
+    if (!isNaN(numericValue)) {
+      this.syncToHelper(fieldId, numericValue, 'calculation');
+      console.log(`🧮 Calculation change detected: ${fieldId} = ${numericValue}`);
+    }
+  }
+
+  handleDragDropEvent(event, zone) {
+    const eventData = {
+      event_type: event.type,
+      timestamp: new Date().toISOString(),
+      zone_id: zone.id || 'unknown',
+      zone_class: zone.className
+    };
+    
+    this.syncToHelper('drag_drop_interactions', eventData, 'drag_drop_event');
+  }
+
+  syncToHelper(fieldName, value, source) {
+    if (window.updateHelperWithStandardizedFields) {
+      window.updateHelperWithStandardizedFields(fieldName, value, source);
+    } else if (window.updateHelper) {
+      window.updateHelper(fieldName, value);
+    }
   }
 
   findSyncableElements() {

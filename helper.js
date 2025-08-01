@@ -947,6 +947,268 @@ window.getActiveReportData = function(section) {
 };
 
 /**
+ * Enhanced parts search management - creates comprehensive parts bank
+ */
+window.addToPartsBank = function(partData, source = 'manual') {
+  console.log(`🔧 PARTS BANK: Adding part to global bank from source: ${source}`);
+  
+  if (!window.helper?.parts_search?.global_parts_bank) {
+    console.error('❌ Parts bank not initialized');
+    return false;
+  }
+  
+  const timestamp = new Date().toISOString();
+  const enhancedPartData = {
+    ...partData,
+    id: partData.id || `part_${Date.now()}`,
+    added_date: timestamp,
+    source: source,
+    vehicle_context: window.getVehicleData(),
+    case_context: {
+      plate: window.getPlateNumber(),
+      case_id: window.helper.meta?.case_id
+    }
+  };
+  
+  // Add to global parts bank
+  window.helper.parts_search.global_parts_bank.all_parts.push(enhancedPartData);
+  
+  // Update supplier tracking
+  if (partData.supplier && !window.helper.parts_search.global_parts_bank.suppliers.find(s => s.name === partData.supplier)) {
+    window.helper.parts_search.global_parts_bank.suppliers.push({
+      name: partData.supplier,
+      contact_info: partData.supplier_contact || {},
+      parts_supplied: [enhancedPartData.id],
+      first_seen: timestamp,
+      total_parts: 1
+    });
+  }
+  
+  // Update price history
+  if (partData.price) {
+    window.helper.parts_search.global_parts_bank.price_history.push({
+      part_name: partData.name,
+      price: partData.price,
+      supplier: partData.supplier,
+      date: timestamp,
+      vehicle_context: enhancedPartData.vehicle_context
+    });
+  }
+  
+  // Update statistics
+  window.helper.parts_search.search_history.statistics.unique_parts++;
+  
+  saveHelperToAllStorageLocations();
+  return true;
+};
+
+/**
+ * Enhanced invoice OCR processing - captures complete JSON data
+ */
+window.processInvoiceOCR = function(invoiceFile, ocrResults) {
+  console.log(`📄 INVOICE OCR: Processing invoice file: ${invoiceFile.name}`);
+  
+  // Initialize financials section first
+  window.initializeFinancialsSection();
+  
+  if (!window.helper?.financials?.invoices) {
+    console.error('❌ Invoice structure not initialized');
+    return false;
+  }
+  
+  const timestamp = new Date().toISOString();
+  
+  // Set current invoice data
+  const currentInvoice = {
+    file_info: {
+      filename: invoiceFile.name,
+      file_size: invoiceFile.size,
+      file_type: invoiceFile.type,
+      upload_date: timestamp,
+      processing_status: 'processing'
+    },
+    ocr_results: {
+      raw_text: ocrResults.raw_text || '',
+      structured_data: ocrResults.structured_data || {},
+      confidence_score: ocrResults.confidence || 0,
+      language_detected: ocrResults.language || 'he',
+      processing_method: ocrResults.method || 'unknown'
+    },
+    invoice_data: {
+      invoice_number: ocrResults.invoice_number || '',
+      date: ocrResults.date || '',
+      supplier: ocrResults.supplier || {},
+      items: ocrResults.items || [],
+      subtotal: ocrResults.subtotal || 0,
+      vat_amount: ocrResults.vat_amount || 0,
+      total_amount: ocrResults.total_amount || 0,
+      currency: ocrResults.currency || 'ILS',
+      payment_terms: ocrResults.payment_terms || '',
+      due_date: ocrResults.due_date || ''
+    },
+    classification: {
+      category: ocrResults.category || '',
+      subcategory: ocrResults.subcategory || '',
+      damage_center_assignment: ocrResults.damage_center || '',
+      approval_status: 'pending',
+      notes: ocrResults.notes || ''
+    },
+    validation: {
+      is_valid: false,
+      validation_errors: [],
+      manual_corrections: [],
+      reviewed_by: '',
+      review_date: ''
+    }
+  };
+  
+  window.helper.financials.invoices.current_invoice = currentInvoice;
+  
+  // Update processing status
+  currentInvoice.file_info.processing_status = 'completed';
+  
+  // Add to processed invoices array (complete capture)
+  window.helper.financials.invoices.processed_invoices.push({
+    ...currentInvoice,
+    processing_id: `inv_${Date.now()}`,
+    case_context: {
+      plate: window.getPlateNumber(),
+      case_id: window.helper.meta?.case_id
+    }
+  });
+  
+  // Update statistics
+  const stats = window.helper.financials.invoices.statistics;
+  stats.total_invoices++;
+  stats.total_amount += currentInvoice.invoice_data.total_amount;
+  
+  // Group by supplier
+  const supplierName = currentInvoice.invoice_data.supplier.name;
+  if (supplierName) {
+    if (!stats.by_supplier[supplierName]) {
+      stats.by_supplier[supplierName] = { count: 0, total_amount: 0 };
+    }
+    stats.by_supplier[supplierName].count++;
+    stats.by_supplier[supplierName].total_amount += currentInvoice.invoice_data.total_amount;
+  }
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ INVOICE OCR: Successfully processed and stored invoice data`);
+  return true;
+};
+
+/**
+ * Enhanced fee module data capture - stores complete UI JSON
+ */
+window.captureFeeModuleData = function(feeUIData) {
+  console.log(`💰 FEE MODULE: Capturing complete UI data`);
+  
+  // Initialize financials section first
+  window.initializeFinancialsSection();
+  
+  if (!window.helper?.financials?.fees) {
+    console.error('❌ Fee structure not initialized');
+    return false;
+  }
+  
+  // Store complete UI data
+  window.helper.financials.fees.ui_data = {
+    ...feeUIData,
+    captured_at: new Date().toISOString(),
+    case_context: {
+      plate: window.getPlateNumber(),
+      case_id: window.helper.meta?.case_id
+    }
+  };
+  
+  // Extract and store structured data
+  if (feeUIData.assessment) {
+    Object.assign(window.helper.financials.fees.assessment, feeUIData.assessment);
+  }
+  
+  if (feeUIData.travel) {
+    Object.assign(window.helper.financials.fees.travel, feeUIData.travel);
+  }
+  
+  if (feeUIData.photography) {
+    Object.assign(window.helper.financials.fees.photography, feeUIData.photography);
+  }
+  
+  if (feeUIData.office) {
+    Object.assign(window.helper.financials.fees.office, feeUIData.office);
+  }
+  
+  // Store any additional fees
+  if (feeUIData.additional_fees) {
+    window.helper.financials.fees.additional_fees = feeUIData.additional_fees;
+  }
+  
+  // Calculate subtotal
+  const subtotal = (window.helper.financials.fees.assessment.total || 0) +
+                  (window.helper.financials.fees.travel.total || 0) +
+                  (window.helper.financials.fees.photography.total || 0) +
+                  (window.helper.financials.fees.office.total || 0);
+  
+  window.helper.financials.fees.subtotal = subtotal;
+  
+  saveHelperToAllStorageLocations();
+  console.log(`✅ FEE MODULE: Successfully captured fee data, subtotal: ₪${subtotal}`);
+  return true;
+};
+
+/**
+ * Search parts in global bank - provides comprehensive search across all cases
+ */
+window.searchPartsBank = function(searchQuery, filters = {}) {
+  console.log(`🔍 PARTS BANK SEARCH: Searching for "${searchQuery}"`);
+  
+  if (!window.helper?.parts_search?.global_parts_bank?.all_parts) {
+    return [];
+  }
+  
+  const allParts = window.helper.parts_search.global_parts_bank.all_parts;
+  const query = searchQuery.toLowerCase();
+  
+  let results = allParts.filter(part => {
+    const nameMatch = (part.name || '').toLowerCase().includes(query);
+    const descMatch = (part.description || '').toLowerCase().includes(query);
+    const supplierMatch = (part.supplier || '').toLowerCase().includes(query);
+    
+    return nameMatch || descMatch || supplierMatch;
+  });
+  
+  // Apply filters
+  if (filters.supplier) {
+    results = results.filter(part => part.supplier === filters.supplier);
+  }
+  
+  if (filters.price_min) {
+    results = results.filter(part => (part.price || 0) >= filters.price_min);
+  }
+  
+  if (filters.price_max) {
+    results = results.filter(part => (part.price || 0) <= filters.price_max);
+  }
+  
+  if (filters.source) {
+    results = results.filter(part => part.source === filters.source);
+  }
+  
+  // Sort by relevance and date
+  results.sort((a, b) => {
+    // Prioritize exact name matches
+    if (a.name && a.name.toLowerCase() === query) return -1;
+    if (b.name && b.name.toLowerCase() === query) return 1;
+    
+    // Then by most recent
+    return new Date(b.added_date) - new Date(a.added_date);
+  });
+  
+  console.log(`✅ PARTS BANK SEARCH: Found ${results.length} results`);
+  return results;
+};
+
+/**
  * Test function to demonstrate plate normalization
  */
 window.testPlateNormalization = function() {
@@ -1264,60 +1526,199 @@ window.helper = existingHelper || {
     }
   },
   financials: {
+    // Case costs (aggregated)
     costs: {
       parts_total: 0,
       repairs_total: 0,
       works_total: 0,
       subtotal: 0
     },
+    
+    // Fee module data (enhanced for full UI capture)
     fees: {
-      photography: {
-        count: 0,
-        unit_price: 0,
-        total: 0
-      },
-      office: {
-        fixed_fee: 0,
-        percentage: 0,
-        total: 0
+      assessment: {
+        hours: 0,                    // Assessment hours
+        hourly_rate: 0,              // Rate per hour (₪280 default)
+        total: 0,                    // Calculated total
+        description: '',             // Work description
+        date: '',                    // Assessment date
+        location: ''                 // Assessment location
       },
       travel: {
-        count: 0,
-        unit_price: 0,
-        total: 0
+        count: 0,                    // Number of trips
+        unit_price: 0,               // Price per trip
+        total: 0,                    // Calculated total 
+        distance_km: 0,              // Distance traveled
+        fuel_cost: 0,                // Fuel expenses
+        tolls: 0,                    // Toll expenses
+        description: ''              // Travel details
       },
-      assessment: {
-        hours: 0,
-        hourly_rate: 0,
-        total: 0
+      photography: {
+        count: 0,                    // Number of photos
+        unit_price: 0,               // Price per photo
+        total: 0,                    // Calculated total
+        equipment_cost: 0,           // Equipment expenses
+        processing_time: 0,          // Time spent processing
+        description: ''              // Photo session details
       },
-      subtotal: 0
+      office: {
+        fixed_fee: 0,                // Fixed office fee
+        percentage: 0,               // Percentage-based fee
+        total: 0,                    // Calculated total
+        overhead_cost: 0,            // Office overhead
+        administrative_time: 0,      // Admin time spent
+        description: ''              // Office work details
+      },
+      additional_fees: [],           // Any additional custom fees
+      subtotal: 0,                   // Total of all fees
+      ui_data: {}                    // Complete fee module UI JSON capture
     },
+    
+    // Invoice OCR (comprehensive capture)
+    invoices: {
+      // All processed invoices
+      processed_invoices: [],        // Array of all invoice OCR results
+      
+      // Current invoice being processed
+      current_invoice: {
+        file_info: {
+          filename: '',
+          file_size: 0,
+          file_type: '',
+          upload_date: '',
+          processing_status: ''      // 'pending', 'processing', 'completed', 'failed'
+        },
+        ocr_results: {
+          raw_text: '',              // Raw OCR extracted text
+          structured_data: {},       // Parsed structured data
+          confidence_score: 0,       // OCR confidence (0-100)
+          language_detected: '',     // Detected language
+          processing_method: ''      // OCR method used
+        },
+        invoice_data: {
+          invoice_number: '',
+          date: '',
+          supplier: {
+            name: '',
+            address: '',
+            phone: '',
+            email: '',
+            tax_id: '',
+            business_number: ''
+          },
+          items: [],                 // Detailed line items
+          subtotal: 0,
+          vat_amount: 0,
+          total_amount: 0,
+          currency: 'ILS',
+          payment_terms: '',
+          due_date: ''
+        },
+        classification: {
+          category: '',              // 'parts', 'labor', 'materials', etc.
+          subcategory: '',
+          damage_center_assignment: '', // Which damage center this belongs to
+          approval_status: '',       // 'pending', 'approved', 'rejected'
+          notes: ''
+        },
+        validation: {
+          is_valid: false,
+          validation_errors: [],
+          manual_corrections: [],
+          reviewed_by: '',
+          review_date: ''
+        }
+      },
+      
+      // Invoice statistics and tracking
+      statistics: {
+        total_invoices: 0,
+        total_amount: 0,
+        by_supplier: {},             // Grouped by supplier
+        by_category: {},             // Grouped by category
+        by_date: {},                 // Grouped by date
+        processing_errors: 0,
+        manual_corrections: 0
+      }
+    },
+    
+    // Taxes and calculations
     taxes: {
       vat_percentage: 18,
-      vat_amount: 0
+      vat_amount: 0,
+      tax_exempt_items: [],
+      tax_calculations: {}
     },
+    
+    // Final totals
     totals: {
       before_tax: 0,
       after_tax: 0,
       total_compensation: 0,
       salvage_value: 0,
-      net_settlement: 0
+      net_settlement: 0,
+      breakdown: {
+        parts_cost: 0,
+        labor_cost: 0,
+        fees_cost: 0,
+        other_costs: 0
+      }
     },
+    
+    // Metadata
     calculation_date: '',
     calculation_method: '',
-    overrides: []
+    last_updated: '',
+    overrides: [],                   // Manual overrides with reasons
+    audit_trail: []                  // All changes tracked
   },
   parts_search: {
-    search_history: [],
-    all_results: [],
-    selected_parts: [],
-    unselected_parts: [],
-    summary: {
+    // Case-specific selections
+    selected_parts: [],           // Parts chosen for THIS case
+    unselected_parts: [],         // Parts not chosen for this case
+    case_search_history: [],      // Search history for this case
+    
+    // Global parts bank (accumulates across all cases)
+    global_parts_bank: {
+      all_parts: [],              // Every part ever searched/found
+      suppliers: [],              // All supplier information
+      price_history: [],          // Price tracking over time
+      search_patterns: [],        // Common search patterns
+      ocr_results: [],            // All OCR processing results
+      manual_additions: []        // Manually added parts
+    },
+    
+    // Search session data
+    current_session: {
+      search_query: '',
+      vehicle_context: {},        // Vehicle info for current search
+      results: [],               // Current search results
+      timestamp: '',
+      search_method: ''          // 'manual', 'ocr_image', 'ocr_file', etc.
+    },
+    
+    // Comprehensive search history
+    search_history: {
+      by_date: [],               // Chronological search history
+      by_vehicle: {},            // Searches grouped by vehicle/plate
+      by_part_name: {},          // Searches grouped by part name
+      by_supplier: {},           // Searches grouped by supplier
+      statistics: {
+        total_searches: 0,
+        unique_parts: 0,
+        unique_suppliers: 0,
+        average_results_per_search: 0
+      }
+    },
+    
+    // Summary for current case
+    case_summary: {
       total_searches: 0,
       total_results: 0,
       selected_count: 0,
-      last_search: ''
+      unselected_count: 0,
+      last_search: '',
+      estimated_total_cost: 0
     }
   },
   documents: {
@@ -2914,6 +3315,12 @@ window.universalWebhookReceiver = function(data, source = 'unknown') {
   console.log('🌐 Universal webhook receiver activated:', source);
   console.log('📥 Raw incoming data:', data);
   
+  // 🔍 CAPTURE RAW WEBHOOK RESPONSE FOR DEBUGGING
+  window.captureRawWebhookResponse(source, data, {
+    receiver_function: 'universalWebhookReceiver',
+    processing_method: 'universal'
+  });
+  
   if (!data) {
     console.warn('⚠️ No data received by universal webhook receiver');
     return { success: false, error: 'No data provided' };
@@ -3103,6 +3510,250 @@ window.setupUniversalInputCapture = function() {
   return { monitored: allInputs.length, observer };
 };
 
+/**
+ * Initialize financials section according to helper-structure.md specification
+ */
+window.initializeFinancialsSection = function() {
+  console.log('🏗️ Initializing financials section per helper-structure.md specification');
+  
+  if (!window.helper.financials) {
+    window.helper.financials = {
+      "costs": {
+        "parts_total": 0,
+        "repairs_total": 0,
+        "works_total": 0,
+        "subtotal": 0
+      },
+      "fees": {
+        "photography": {
+          "count": 0,
+          "unit_price": 0,
+          "total": 0
+        },
+        "office": {
+          "fixed_fee": 0,
+          "percentage": 0,
+          "total": 0
+        },
+        "travel": {
+          "count": 0,
+          "unit_price": 0,
+          "total": 0
+        },
+        "assessment": {
+          "hours": 0,
+          "hourly_rate": 0,
+          "total": 0
+        },
+        "subtotal": 0
+      },
+      "taxes": {
+        "vat_percentage": 18,
+        "vat_amount": 0
+      },
+      "totals": {
+        "before_tax": 0,
+        "after_tax": 0,
+        "total_compensation": 0,
+        "salvage_value": 0,
+        "net_settlement": 0
+      },
+      "calculation_date": "",
+      "calculation_method": "",
+      "overrides": []
+    };
+    
+    console.log('✅ Financials section initialized per specification');
+    window.saveHelperToAllStorageLocations();
+  } else {
+    console.log('✅ Financials section already exists');
+  }
+  
+  return window.helper.financials;
+};
+
+/**
+ * Raw webhook response capture for debugging data loss
+ * READ-ONLY debugging zone to track all incoming webhook data
+ */
+window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata = {}) {
+  console.log(`🔍 RAW WEBHOOK CAPTURE: ${webhookType}`);
+  
+  // Initialize debug section if not exists
+  if (!window.helper.debug) {
+    window.helper.debug = {
+      raw_webhook_responses: [],
+      metadata: {
+        total_webhooks_captured: 0,
+        last_capture: null,
+        capture_enabled: true
+      }
+    };
+  }
+  
+  const timestamp = new Date().toISOString();
+  const captureEntry = {
+    webhook_type: webhookType,
+    timestamp: timestamp,
+    raw_response: JSON.parse(JSON.stringify(rawResponse)), // Deep clone to prevent mutations
+    metadata: {
+      ...metadata,
+      capture_sequence: window.helper.debug.metadata.total_webhooks_captured + 1,
+      response_size: JSON.stringify(rawResponse).length,
+      response_keys: Array.isArray(rawResponse) ? rawResponse.length : Object.keys(rawResponse || {}).length
+    },
+    processing_info: {
+      user_agent: navigator.userAgent,
+      page_url: window.location.href,
+      helper_state_before: {
+        meta_plate: window.helper.meta?.plate,
+        case_id: window.helper.meta?.case_id,
+        last_updated: window.helper.meta?.last_updated
+      }
+    }
+  };
+  
+  // Add to capture array (limit to last 100 entries to prevent memory issues)
+  window.helper.debug.raw_webhook_responses.push(captureEntry);
+  if (window.helper.debug.raw_webhook_responses.length > 100) {
+    window.helper.debug.raw_webhook_responses.shift(); // Remove oldest entry
+  }
+  
+  // Update metadata
+  window.helper.debug.metadata.total_webhooks_captured++;
+  window.helper.debug.metadata.last_capture = timestamp;
+  
+  // Log summary for debugging
+  console.log(`📊 WEBHOOK CAPTURE SUMMARY:`, {
+    type: webhookType,
+    sequence: captureEntry.metadata.capture_sequence,
+    size: captureEntry.metadata.response_size,
+    keys: captureEntry.metadata.response_keys,
+    total_captured: window.helper.debug.metadata.total_webhooks_captured
+  });
+  
+  window.saveHelperToAllStorageLocations();
+  
+  return captureEntry.metadata.capture_sequence;
+};
+
+/**
+ * Process comprehensive invoice JSON using actual helper-structure.md specification
+ * Maintains compatibility with existing system while capturing full data
+ */
+window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON) {
+  console.log(`📄 COMPREHENSIVE INVOICE: Processing with actual specification`);
+  
+  // Ensure both structures exist - maintain compatibility
+  if (!window.helper.invoices) {
+    window.helper.invoices = [];  // Original simple structure (used by /invoice upload.html)
+  }
+  
+  // Initialize financials section per specification
+  window.initializeFinancialsSection();
+  
+  if (!window.helper.financials.invoice_processing) {
+    window.helper.financials.invoice_processing = {
+      comprehensive_data: [],
+      ocr_confidence_scores: [],
+      processing_history: [],
+      failed_attempts: [],
+      manual_corrections: [],
+      metadata: {
+        total_invoices_processed: 0,
+        last_processed: null,
+        processing_engine: 'make_com_ocr',
+        supported_formats: ['pdf', 'jpg', 'png', 'webp']
+      }
+    };
+  }
+  
+  const timestamp = new Date().toISOString();
+  
+  // Validate comprehensive JSON matches specification
+  const expectedFields = [
+    'מספר רכב', 'יצרן', 'דגם', 'בעל הרכב', 'שם מוסך', 'חלקים', 'עבודות', 'תיקונים'
+  ];
+  
+  let isValidSpec = true;
+  const missingFields = [];
+  
+  expectedFields.forEach(field => {
+    if (!comprehensiveJSON.hasOwnProperty(field)) {
+      missingFields.push(field);
+      isValidSpec = false;
+    }
+  });
+  
+  if (!isValidSpec) {
+    console.warn(`⚠️ Invoice JSON missing expected fields: ${missingFields.join(', ')}`);
+  }
+  
+  // Add processing metadata to comprehensive data
+  comprehensiveJSON._processing_info = {
+    filename: invoiceFile?.name || 'unknown',
+    size: invoiceFile?.size || 0,
+    type: invoiceFile?.type || 'application/json',
+    uploaded_at: timestamp,
+    processing_status: 'completed',
+    specification_compliance: isValidSpec,
+    missing_fields: missingFields
+  };
+  
+  // Add to comprehensive data store
+  window.helper.financials.invoice_processing.comprehensive_data.push(comprehensiveJSON);
+  
+  // Create simplified version for existing system compatibility  
+  const simpleInvoice = {
+    plate: comprehensiveJSON["מספר רכב"] || window.getPlateNumber() || "",
+    owner: comprehensiveJSON["בעל הרכב"] || window.getOwnerName() || "",
+    garage_name: comprehensiveJSON["שם מוסך"] || "",
+    date: comprehensiveJSON["תאריך"] || "",
+    invoice_type: "mixed", // Default type
+    items: (comprehensiveJSON["חלקים"] || []).map(part => ({
+      name: part["שם חלק"] || "",
+      description: part["תיאור"] || "",
+      quantity: parseInt(part["כמות"]) || 1,
+      unit_price: parseFloat(part["עלות"]?.replace(/[,]/g, '')) || 0
+    })),
+    total: parseFloat(comprehensiveJSON["עלות כוללת"]?.replace(/[,]/g, '')) || 0,
+    processed_at: timestamp
+  };
+  
+  // Add to original simple structure (maintains compatibility)
+  window.helper.invoices.push(simpleInvoice);
+  
+  // Update processing metadata
+  const metadata = window.helper.financials.invoice_processing.metadata;
+  metadata.total_invoices_processed++;
+  metadata.last_processed = timestamp;
+  
+  // Update helper metadata
+  window.helper.meta.last_updated = timestamp;
+  if (!window.helper.meta.total_invoices) {
+    window.helper.meta.total_invoices = 0;
+  }
+  window.helper.meta.total_invoices = window.helper.invoices.length;
+  
+  window.saveHelperToAllStorageLocations();
+  
+  const partsCount = comprehensiveJSON["חלקים"]?.length || 0;
+  const worksCount = comprehensiveJSON["עבודות"]?.length || 0;
+  const repairsCount = comprehensiveJSON["תיקונים"]?.length || 0;
+  
+  console.log(`✅ COMPREHENSIVE INVOICE: Processed with ${partsCount} parts, ${worksCount} works, ${repairsCount} repairs`);
+  console.log(`📊 Total comprehensive invoices: ${window.helper.financials.invoice_processing.comprehensive_data.length}`);
+  console.log(`📊 Total simple invoices: ${window.helper.invoices.length}`);
+  
+  return {
+    success: true,
+    comprehensive_count: window.helper.financials.invoice_processing.comprehensive_data.length,
+    simple_count: window.helper.invoices.length,
+    specification_compliance: isValidSpec,
+    missing_fields: missingFields
+  };
+};
+
 // Auto-setup when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -3143,8 +3794,15 @@ export const fixHelperStructure = window.fixHelperStructure;
 export const enhanceEstimateSections = window.enhanceEstimateSections;
 export const setActiveReportType = window.setActiveReportType;
 export const getActiveReportData = window.getActiveReportData;
+export const addToPartsBank = window.addToPartsBank;
+export const processInvoiceOCR = window.processInvoiceOCR;
+export const captureFeeModuleData = window.captureFeeModuleData;
+export const searchPartsBank = window.searchPartsBank;
 export const protectPlateNumber = window.protectPlateNumber;
 export const testPlateNormalization = window.testPlateNormalization;
+export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
+export const initializeFinancialsSection = window.initializeFinancialsSection;
+export const captureRawWebhookResponse = window.captureRawWebhookResponse;
 // populateAllFormsWithRetry is already declared as a function above
 export const testWithActualWebhookData = window.testWithActualWebhookData;
 
@@ -3271,6 +3929,14 @@ export function markFieldAsManuallyModified(fieldId, value, origin) {
   }
   if (!window.helper.financials.overrides) {
     window.helper.financials.overrides = [];
+  }
+  
+  // Initialize raw webhook capture zone for debugging
+  if (!window.helper.debug) {
+    window.helper.debug = {};
+  }
+  if (!window.helper.debug.raw_webhook_responses) {
+    window.helper.debug.raw_webhook_responses = [];
   }
   
   // Remove any existing override for this field
