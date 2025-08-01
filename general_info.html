@@ -206,6 +206,47 @@
         // SIMPLE: Always start empty - no auto-population at all
         damageDateField.value = '';
         console.log('🔧 SIMPLE: Damage date field starts empty - user must enter manually');
+        
+        // CLEANUP: Clear any corrupted damage_date from helper
+        if (window.helper && window.helper.case_info && !window.helper.meta?.damage_date_manual) {
+          window.helper.case_info.damage_date = '';
+          console.log('🔧 CLEANUP: Cleared corrupted damage_date from helper');
+        }
+        
+        // DIRECT: Add immediate event listener for damage date
+        damageDateField.addEventListener('change', function() {
+          console.log('🔥 DIRECT: Damage date changed to:', this.value);
+          
+          if (this.value) {
+            // Try updateHelper first
+            if (typeof updateHelper === 'function') {
+              updateHelper('case_info', { damage_date: this.value }, 'general_info_direct');
+              updateHelper('meta', { damage_date_manual: true }, 'general_info_direct');
+              console.log('🔥 DIRECT: Saved damage date via updateHelper:', this.value);
+            } else {
+              console.error('❌ DIRECT: updateHelper function not found!');
+            }
+            
+            // FALLBACK: Direct helper update
+            if (window.helper) {
+              if (!window.helper.case_info) window.helper.case_info = {};
+              if (!window.helper.meta) window.helper.meta = {};
+              
+              window.helper.case_info.damage_date = this.value;
+              window.helper.meta.damage_date_manual = true;
+              
+              // Save to sessionStorage
+              try {
+                sessionStorage.setItem('helper', JSON.stringify(window.helper));
+                console.log('🔥 FALLBACK: Saved damage date directly to helper and sessionStorage:', this.value);
+              } catch (e) {
+                console.error('❌ FALLBACK: Failed to save to sessionStorage:', e);
+              }
+            }
+            
+            console.log('🔥 FINAL: Helper case_info now:', window.helper?.case_info);
+          }
+        });
       }
       
       // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
