@@ -203,14 +203,14 @@
       const damageDateField = document.getElementById('damage_date_independent');
       
       if (damageDateField) {
-        // SIMPLE: Always start empty - no auto-population at all
-        damageDateField.value = '';
-        console.log('🔧 SIMPLE: Damage date field starts empty - user must enter manually');
-        
-        // CLEANUP: Clear any corrupted damage_date from helper
-        if (window.helper && window.helper.case_info && !window.helper.meta?.damage_date_manual) {
-          window.helper.case_info.damage_date = '';
-          console.log('🔧 CLEANUP: Cleared corrupted damage_date from helper');
+        // RESTORE: Load saved damage date if user manually entered it before
+        if (window.helper?.case_info?.damage_date && window.helper?.meta?.damage_date_manual) {
+          damageDateField.value = window.helper.case_info.damage_date;
+          console.log('🔧 RESTORE: Loaded saved damage date from helper:', window.helper.case_info.damage_date);
+        } else {
+          // Start empty for new entry
+          damageDateField.value = '';
+          console.log('🔧 SIMPLE: Damage date field starts empty - user must enter manually');
         }
         
         // DIRECT: Add immediate event listener for damage date
@@ -256,17 +256,12 @@
           helperModule.refreshAllModuleForms();
           console.log('✅ General info fields auto-populated from helper');
           
-          // 🔧 CLEAN FIELD: Ensure damage date field remains independent after auto-population
+          // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
           const damageDateField = document.getElementById('damage_date_independent');
           if (damageDateField) {
             const currentValue = damageDateField.value;
-            const helperDamageDate = helperData.case_info?.damage_date || '';
-            
-            // Only restore if we have a stored damage date and field wasn't manually changed
-            if (helperDamageDate && !helperData.meta?.damage_date_manual && !currentValue) {
-              damageDateField.value = helperDamageDate;
-              console.log('🔧 CLEAN FIELD: Restored damage date from helper.case_info.damage_date only:', helperDamageDate);
-            }
+            console.log('🔧 PRESERVE: Damage date field preserved during auto-population:', currentValue);
+            // Don't change the damage date field - it's already set correctly above
           }
         } else {
           console.error('❌ refreshAllModuleForms function not found!');
