@@ -236,16 +236,15 @@ class ForceFormPopulator {
 
     // Case info fields (including damage date - separate from inspection date)
     if (helperData.case_info) {
-      // FIXED: Check for independent damage date field and respect manual entry
+      // FIXED: Only populate damage_date_independent if manually entered before (not corrupted data)
       if (helperData.case_info.damage_date) {
-        // Check helper meta flag instead of sessionStorage
-        const manualEntry = helperData.meta?.damage_date_manual;
-        if (!manualEntry) {
-          console.log('✅ ALLOWING damage_date auto-fill from helper.case_info.damage_date:', helperData.case_info.damage_date);
-          // Map to correct field ID
+        // Only populate if this was manually entered by user (not from corrupted inspection date)
+        const isManuallyEntered = helperData.meta?.damage_date_manual;
+        if (isManuallyEntered) {
+          console.log('✅ RESTORING manually entered damage_date:', helperData.case_info.damage_date);
           mappings.damage_date_independent = helperData.case_info.damage_date;
         } else {
-          console.log('🚫 RESPECTING manual damage_date entry, not overwriting helper value:', helperData.case_info.damage_date);
+          console.log('🚫 SKIPPING damage_date auto-fill - not manually entered (could be corrupted inspection date)');
         }
       }
       mappings.damageType = helperData.case_info.damage_type;

@@ -203,16 +203,17 @@
       const damageDateField = document.getElementById('damage_date_independent');
       
       if (damageDateField) {
-        // Check for existing damage date in helper (from case_info.damage_date - NOT inspection_date)
+        // Only populate if user has manually entered a damage date before (not from corrupted data)
         const existingDamageDate = helperData.case_info?.damage_date || '';
+        const isManuallyEntered = helperData.meta?.damage_date_manual;
         
-        if (existingDamageDate && !helperData.meta?.damage_date_manual) {
+        if (existingDamageDate && isManuallyEntered) {
           damageDateField.value = existingDamageDate;
-          console.log('🔧 CLEAN FIELD: Populated damage date from helper.case_info.damage_date:', existingDamageDate);
+          console.log('🔧 CLEAN FIELD: Restored manually entered damage date:', existingDamageDate);
         } else {
-          // Keep field empty and independent
+          // Keep field empty until user manually enters damage date
           damageDateField.value = '';
-          console.log('🔧 CLEAN FIELD: Damage date field ready for independent input');
+          console.log('🔧 CLEAN FIELD: Damage date field ready for manual input (no auto-population)');
         }
       }
       
