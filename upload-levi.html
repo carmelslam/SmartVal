@@ -2033,116 +2033,6 @@ class LeviProcessor {
     }
   }
 
-  // 🚨 NEW FUNCTION: Display adjustments directly from helper valuation data
-  window.displayAdjustmentsFromHelper = function(adjustments) {
-    console.log('🎯 displayAdjustmentsFromHelper called with:', adjustments);
-    
-    const adjustmentsContainer = document.getElementById('adjustments-container');
-    if (!adjustmentsContainer) {
-      console.error('❌ adjustments-container not found');
-      return;
-    }
-    
-    adjustmentsContainer.innerHTML = '';
-
-    // Add table headers
-    const headerRow = document.createElement('div');
-    headerRow.className = 'adjustment-header-row';
-    headerRow.innerHTML = `
-      <span class="adjustment-header">התאמת מחיר</span>
-      <span class="adjustment-header">ערך</span>
-      <span class="adjustment-header">אחוז %</span>
-      <span class="adjustment-header">סכום ש״ח</span>
-      <span class="adjustment-header">סכום מצטבר</span>
-    `;
-    adjustmentsContainer.appendChild(headerRow);
-
-    // Define adjustment sections mapping to helper structure  
-    const adjustmentSections = [
-      {
-        title: 'מאפיינים',
-        helperKey: 'features',
-        defaultReason: 'מאפיינים נוספים'
-      },
-      {
-        title: 'עליה לכביש', 
-        helperKey: 'registration',
-        defaultReason: 'תאריך עליה לכביש'
-      },
-      {
-        title: 'סוג בעלות',
-        helperKey: 'ownership_type', 
-        defaultReason: 'סוג בעלות'
-      },
-      {
-        title: 'מספר ק״מ',
-        helperKey: 'mileage',
-        defaultReason: 'מספר ק״מ'
-      },
-      {
-        title: 'מספר בעלים',
-        helperKey: 'ownership_history',
-        defaultReason: 'מספר בעלים קודמים'
-      }
-    ];
-
-    let hasAnyData = false;
-
-    adjustmentSections.forEach(section => {
-      const adjustmentData = adjustments[section.helperKey];
-      
-      if (adjustmentData) {
-        hasAnyData = true;
-        const adjustmentRow = document.createElement('div');
-        adjustmentRow.className = 'adjustment-row';
-        
-        // First column: title
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'adjustment-title';
-        titleSpan.textContent = section.title + ':';
-        adjustmentRow.appendChild(titleSpan);
-        
-        // Second column: reason/value description
-        const reasonSpan = document.createElement('span');
-        reasonSpan.className = 'adjustment-value';
-        reasonSpan.textContent = adjustmentData.reason || adjustmentData.type || section.defaultReason;
-        adjustmentRow.appendChild(reasonSpan);
-        
-        // Third column: percentage
-        const percentSpan = document.createElement('span');
-        percentSpan.className = 'adjustment-value';
-        const percent = adjustmentData.percent || 0;
-        percentSpan.textContent = percent ? `${percent}%` : '-';
-        adjustmentRow.appendChild(percentSpan);
-        
-        // Fourth column: amount in ₪
-        const amountSpan = document.createElement('span');
-        amountSpan.className = 'adjustment-value';
-        const amount = adjustmentData.amount || 0;
-        amountSpan.textContent = amount ? `₪${amount.toLocaleString()}` : '-';
-        adjustmentRow.appendChild(amountSpan);
-        
-        // Fifth column: cumulative total
-        const cumulativeSpan = document.createElement('span');
-        cumulativeSpan.className = 'adjustment-value';
-        const cumulative = adjustmentData.cumulative || 0;
-        cumulativeSpan.textContent = cumulative ? `₪${cumulative.toLocaleString()}` : '-';
-        adjustmentRow.appendChild(cumulativeSpan);
-        
-        adjustmentsContainer.appendChild(adjustmentRow);
-        
-        console.log(`  ✅ ${section.title}: ${percent}% = ₪${amount} (total: ₪${cumulative})`);
-      }
-    });
-
-    if (!hasAnyData) {
-      adjustmentsContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">אין נתוני התאמות זמינים בעת זו</p>';
-      console.log('⚠️ No adjustment data found in helper.valuation.adjustments');
-    } else {
-      console.log('✅ Successfully populated adjustments display from helper data');
-    }
-  }
-
   getSourceLabel(source) {
     const sourceLabels = {
       'screenshot': 'צילום מסך מתמחבר',
@@ -2542,6 +2432,116 @@ class LeviProcessor {
     }, 5000);
   }
 }
+
+// 🚨 GLOBAL FUNCTION: Display adjustments directly from helper valuation data
+window.displayAdjustmentsFromHelper = function(adjustments) {
+  console.log('🎯 displayAdjustmentsFromHelper called with:', adjustments);
+  
+  const adjustmentsContainer = document.getElementById('adjustments-container');
+  if (!adjustmentsContainer) {
+    console.error('❌ adjustments-container not found');
+    return;
+  }
+  
+  adjustmentsContainer.innerHTML = '';
+
+  // Add table headers
+  const headerRow = document.createElement('div');
+  headerRow.className = 'adjustment-header-row';
+  headerRow.innerHTML = `
+    <span class="adjustment-header">התאמת מחיר</span>
+    <span class="adjustment-header">ערך</span>
+    <span class="adjustment-header">אחוז %</span>
+    <span class="adjustment-header">סכום ש״ח</span>
+    <span class="adjustment-header">סכום מצטבר</span>
+  `;
+  adjustmentsContainer.appendChild(headerRow);
+
+  // Define adjustment sections mapping to helper structure  
+  const adjustmentSections = [
+    {
+      title: 'מאפיינים',
+      helperKey: 'features',
+      defaultReason: 'מאפיינים נוספים'
+    },
+    {
+      title: 'עליה לכביש', 
+      helperKey: 'registration',
+      defaultReason: 'תאריך עליה לכביש'
+    },
+    {
+      title: 'סוג בעלות',
+      helperKey: 'ownership_type', 
+      defaultReason: 'סוג בעלות'
+    },
+    {
+      title: 'מספר ק״מ',
+      helperKey: 'mileage',
+      defaultReason: 'מספר ק״מ'
+    },
+    {
+      title: 'מספר בעלים',
+      helperKey: 'ownership_history',
+      defaultReason: 'מספר בעלים קודמים'
+    }
+  ];
+
+  let hasAnyData = false;
+
+  adjustmentSections.forEach(section => {
+    const adjustmentData = adjustments[section.helperKey];
+    
+    if (adjustmentData) {
+      hasAnyData = true;
+      const adjustmentRow = document.createElement('div');
+      adjustmentRow.className = 'adjustment-row';
+      
+      // First column: title
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'adjustment-title';
+      titleSpan.textContent = section.title + ':';
+      adjustmentRow.appendChild(titleSpan);
+      
+      // Second column: reason/value description
+      const reasonSpan = document.createElement('span');
+      reasonSpan.className = 'adjustment-value';
+      reasonSpan.textContent = adjustmentData.reason || adjustmentData.type || section.defaultReason;
+      adjustmentRow.appendChild(reasonSpan);
+      
+      // Third column: percentage
+      const percentSpan = document.createElement('span');
+      percentSpan.className = 'adjustment-value';
+      const percent = adjustmentData.percent || 0;
+      percentSpan.textContent = percent ? `${percent}%` : '-';
+      adjustmentRow.appendChild(percentSpan);
+      
+      // Fourth column: amount in ₪
+      const amountSpan = document.createElement('span');
+      amountSpan.className = 'adjustment-value';
+      const amount = adjustmentData.amount || 0;
+      amountSpan.textContent = amount ? `₪${amount.toLocaleString()}` : '-';
+      adjustmentRow.appendChild(amountSpan);
+      
+      // Fifth column: cumulative total
+      const cumulativeSpan = document.createElement('span');
+      cumulativeSpan.className = 'adjustment-value';
+      const cumulative = adjustmentData.cumulative || 0;
+      cumulativeSpan.textContent = cumulative ? `₪${cumulative.toLocaleString()}` : '-';
+      adjustmentRow.appendChild(cumulativeSpan);
+      
+      adjustmentsContainer.appendChild(adjustmentRow);
+      
+      console.log(`  ✅ ${section.title}: ${percent}% = ₪${amount} (total: ₪${cumulative})`);
+    }
+  });
+
+  if (!hasAnyData) {
+    adjustmentsContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">אין נתוני התאמות זמינים בעת זו</p>';
+    console.log('⚠️ No adjustment data found in helper.valuation.adjustments');
+  } else {
+    console.log('✅ Successfully populated adjustments display from helper data');
+  }
+};
 
 // Global functions
 window.openLeviPortal = function() {
