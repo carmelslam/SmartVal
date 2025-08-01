@@ -83,7 +83,7 @@ When making edits, only add new content - never remove existing user notes.
 
 ---
 
-## 🎯 USER INSTRUCTIONS & PROJECT GUIDELINES
+**##🎯 USER INSTRUCTIONS & PROJECT GUIDELINES - DONT EVER DELETE##**
 
 ### Standard Workflow
 1. First think through the problem, read the codebase for relevant files, and write a plan to todo.md. Copy the plan and afterwards a concise implementation report by tasks to the todo.md
@@ -107,6 +107,450 @@ When making edits, only add new content - never remove existing user notes.
 # 🚨 COMPREHENSIVE USER AUDIT & TASK INSTRUCTIONS
 
 **GENERAL NOTES AND THINGS TO FIX - USER INSTRUCTIONS**
+
+*******************************************************************************************
+**GENERAL NOTES AND THINGS TO FIX - USER INSTRUCTIONS**
+Audit 3 : 
+Read all the issues that were found in audit 3 . Go through the issues I found. Learn them and evaluate throughout the whole system files, detect connections , relations and dependencies and evaluate functionality .
+Run your own deep check and conclude the issues broadness  inside the system .
+After understanding all the issues and running a comprehensive audit combined with my list , create a plan to fix the issues . The plan needs to be a task by task plan , DO NOT attempt to include everything in one go. The plan needs to fix issues first targeting foundation and root symptoms that run throughout the whole system and then targeting each module / issue separately .
+Here is the audit 3 list I found for now : 
+
+1. Open new case - redirects to password page and logs out - fixed  ✅
+2. Slow down the logo spin  and make it stop half way ✅
+3. Levi report page : ✅
+    1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Keep general page styling as is fix just the styling issues listed below.
+    3. Re arrange the button : 
+        1. Action buttons in one line - side by side  not one under the other 
+        2. Navigation buttons to be side by side not one under the other 
+        3. The browser opens the site but returns an error : "The page cannot be displayed because an internal server error has occurred "
+        4. We don't need the toggle דפדפן in the top of the page - beside the דו״ח לוי . The link in the green container is enough . Move this toggle with all its features and components to the selection page just before the logout button and make it in orange color style . 
+        5. Fix the title an dbusiness name and site name style so it matches the system : logo, site name , business name and page name 
+        6. The report toggle in the top דו"ח לוי: it's good but needs its outside teh page and also needs change of fields : 
+            1. This is the received json from the OCR: 
+  "סוג רכב": "",
+  "יצרן": "",
+  "קוד דגם": "",
+  "קטגוריה": "",
+  "שנת יצור": "",
+  "שם דגם מלא": "",
+  "מחיר בסיס": "",
+  "מחיר סופי לרכב": ""
+התאמות מחיר : 
+עליה לכביש:
+    "עליה לכביש": "",
+    "עליה לכביש %": "",
+    "ערך ש״ח עליה לכביש": "",
+    "שווי מצטבר עליה לכביש": ""
+סוג בעלות : 
+    "בעלות": "",
+    "בעלות %": "",
+    "ערך ש״ח בעלות": "",
+    "שווי מצטבר בעלות": ""
+מספר ק״מ :
+    "מס ק״מ": "",
+    "מס ק״מ %": "",
+    "ערך ש״ח מס ק״מ": "", 
+    "שווי מצטבר מס ק״מ": ""
+מספר בעלים : 
+    "מספר בעלים": "",
+    "מספר בעלים %": "",
+    "ערך ש״ח מספר בעלים": "", 
+    "שווי מצטבר מספר בעלים": ""
+מאפיינים : 
+  "מאפיינים": "",
+    "מאפיינים %": "",
+    "ערך ש״ח מאפיינים": "",
+    "שווי מצטבר  מאפיינים": ""
+
+Keep the floating window display as is 
+Change the section with the price adjustments layout so each line contains all the 4 square fields in a row each row has a title : 
+Example : 
+סוג בעלות :
+פרטי - 5% - 2500₪- 70,000₪
+Data is inside the same square fields as we have now .✅ 
+
+4. Multi pictures upload page : ✅
+    1. Add a password field - this needs to be refilled from the session storage password. If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Fix the upload function, on mobile and iPad to support : upload from gallery, upload from files, take a picture. On desktop : upload function, on mobile to support : upload from gallery, upload from files
+    3. The function buttons: העלה תמונות ,
+     עוד אפשרויות, look ugly in their layout , keep the style and color but change layout as follow : the upload button to be in the same size as the navigation buttons . The more options button to stay as is but the other options buttons are in a row side by side . keep the navigation buttons unchanged 
+    4. Explain the functionality of the dropdown : מוקד נזק: does display options according to helper data from the expertise or its manual . Take in consideration that uploading pictures can be done before opening a case or finalizing the expertise. So find the best way to balance the dropdown options: in my opinion best solution is like thsi -  in any way there keep those 2  options in the dropdown :  free text input and the current option "all pictures" . 
+        if a helper damage center's description  and names available display them . if  helper data is not available display: " לא הוזנו מוקדי נזק״ . 
+
+5. Invoice upload page :  ✅
+    1. Ensure password is prefilled from session storage : If by any chance someone arrives to this page without going through the gate , a password is required to proceed . 
+    2. Fix the title style so it matches the system : logo, site name , business name and page name 
+
+6. Depreciation module : ✅ 
+    1. Change the buttons  font size it's bold and doesn't match the general buttons font system style
+    2. In this module the majority of data is auto filled from helper , the main inputs by user depreciation data and report types . With the ability to override automatic data 
+    3. And override of automatic data ( not just here but across system) updates the helper and becomes the source of truth for the respective parameter overridden. 
+    4. Floating screens toggles in the top : 
+        1. Fix toggle buttons - for now they display as one pipe for both functions and without names .
+        2. The floating screens here should be : Levi report ( the one we improved when we worked on Levi module) , car details floating screen ( from helper ) , internal browser selection - exist but the button is displayed badly . Create a new floating screen that captures the main fields from the invoice which at this point is already OCRed and live in the helper : garage name , date, details of works, parts and repairs including costs . If an invoice doesn't exist or not needed depending on the report type - display a corresponding message . 
+
+    5. Change in the title instead of car plate number , case id - pulled from helper .  ✅ 
+
+    6. In the summary bulk ( in all types ) needs to "הוסף שדה ״  option to add free text , this needs to open name field and value field . In all types .
+
+
+    8. All relative fields need to be auto calculated locally . All data needs like damage center name , price adjustments parameters ( percentage and value) and so on , need to be autofilled from helper .
+
+    9. In the הפרשים : when opened , add the vat value for each line and total cost : architecture for הפרשים is as follows : 
+        1. The תיאור הפרש field displays all the items detailed in the invoice works , parts and repairs and other services invoiced ,
+        2. The user selects the item 
+        3. The cost , vat and total cost are auto desolated from the invoice .
+        4. In the total section under the fields section : סה"כ הפרשים displays the sum of costs without vat , add another field for accumulated vat and add afield of accumulated total cost ( with vat) .
+        5. The current סה"כ סופי עם הפרשים: field is not part of the הפרשים it's the adjusted summary value after reducing הפרשים . So it needs to be out of the container in its own section under סה״כ נכלל בחוות הדעת as the final value to be inserted in the report summary . The base value in this field is the סה״כ נכלל בחוות הדעת / or total in the summery section , if no הפרשים it's unchanged , if הפרשים exist , it needs to auto calculate: original summary total (minus) total הפרשים
+
+7. Admin hub :  ✅ 
+    1. The administrator hub selection from the selection page , still doesn't work , the admin page doesn't acc the validated password and displays : Access denied: incorrect password
+
+8. Selection page  ✅  -  בחר דוח להפקה . The report selection page opens correctly from selection page correctly but when selecting estimate report we get page doesn't exist 404 : Page not found - Looks like you've followed a broken link or entered a URL that doesn't exist on this site. If this is your site, and you weren't expecting a 404 for this path, please visit Netlify's "page not found" support guide for troubleshooting tips.
+ a total selection page makeover **high priority** to reflect the workflows logics 
+ IMPLEMENT -  **The Report Workflow** REMAKE THE SELECTION MAIN PAGE 
+
+
+
+9. Report selection page **GENERAL**: ✅ 
+ currently selecting a final report or estimate to produce opens the depreciation page or the estimate builder respectively before producing - this is a weak link and risky points because of the following logic : 
+what happens if the user has already completed the depreciation and fees or  estimate bulks but he didn't produce the report ? If the selected options opens empty new pages that are conditional to producing the report then the user is forced to re enter everything again - bad UX . Solution : when selecting the report option from select report page , the opened pages : depreciation or estimate builder , behave differently based on previous work the user has done . If the user didn't do nth then the forms are empty and he needs to fill as expected . If the user already had done work ( either finalized or partially completed forms) - the pages need to pull out the data from helper and refill the fields previously filled by the user ( since we said the logic is per event not session- that means anytime the system logs out / or saves the data is stored and updated in the helper and sent to server ) - then the user can edit or continue working to produce the report ( same logic with the fee fields) . 
+A. To achieve this integrity and data flow we need to add in the report selection page a plate number and password fields - if the session is active they are prefilled if it's a dedicated session for report producing then 2 options 2
+    1. the user needs to input the plate number , this submit button acts like the טען תיק קיים in the selection page , that fetches the helper .
+    2. The button is inactive and message displayed : טען תיק קיים על מנת להמשיך להפקת דו״חות - 
+        - Decide on the best way to proceed with this that is efficient, uses resources wisely and lightly and at the same time user friendly .
+  ***this configuration is set up already but needs deep check and verification***
+B. The estimate report direct to a broken link > detailed in console report is in the console_log.md 
+C. The selection page itself triggeres an error > if there is the plate number is enterd and one of teh butttons is selected / ot not . there is a console error - - **check logic nad see if this needs fixing** i couldnt detrmin teh origins and triggers of this error , if its in teh page itself or in the button,>  detailed in console report is in the console_log.md 
+D. in the selection page add a relaod experise report this will call make to send back a pdf , if this is possible webhook in the js is :   CALL_EXPERTISE: 'https://hook.eu2.make.com/wrl8onixkqki3dy81s865ptpdn82svux',
+E. Upload existing case button needs to take in consideration the fact that :
+   1. if teh session is on and the user already uplaoded teh case from teh selction main page , then the detailes are autopopulated nad the field is prefileed 
+   2. this buttton needs to have teh same relations with the mian upload existing function in the main selection page as teh uplaod existing case uplaod button in teh case status module in  that admin hub 
+   3, errors that this button triggers are also  >  detailed in console report is in the console_log.md 
+F. Explain teh logic of the button create a new case - if its just to create a new case is not needed here it needs to be deleted , report creation cannot happen if teh detailes are nor stored in the helper, if its create a new report entry to the helper for example - then its something else -  ***if teh logic here is something else - explain teh logic***
+
+
+11. Nicole the knowledge manager ✅: 
+    1. The text / audio field are still mandatory this need to be also optional , if the 2 fields are empty then Nicole cannot be activated. At least one fields either plate or free query field need to be filled - but both are optional . 
+    2. When sending a query we still have an error message that reads : שגיאה בשליחת השאלה: The string did not match the expected pattern.. the webhook is activated correctly but it doesn't register any json . So it's possible blow is not sending a json at all . 
+    3. The microphone options sometimes causes screen to freeze and to be not responsive and sometimes it displays an error : שגיאה בזיהוי קול: audio-capture
+    4. Styling changes : 
+        1. Change the microphone color to dark blue 
+        2. Change the send query button to system green 
+        3. Change the icon in the answer from 🤖to Nicol's emoji 👩
+        4. Response TTS check, when nicole answers to also speak and not just send textual message 
+
+12. The system help assistant 🤖that we have across system in all pages :***NOT FIXED - needs mor knowledge base* - low priority** 
+    1. Purpose of this assistant is to help user with the system technical actions, workflows, debugging solutions , handling errors and so on , this is not Nicole this is an inner assistant to learn the system 
+    2. As for now the knowledge of this assistant is very limited and it directs the user to the system manual that doesn't exist . 
+    3. You need to build a comprehensive guide for this assistant to be able to answer complex and technical questions about the system operation and help the user with the work flow 
+    4. Add a functionality for this assistant to display a graphic workflow , and also to suggest next step once the user finishes a step / action . 
+    5. This assistant is very useful and needs to be smart if it's just for "show off" it's not needed .
+    6. add an extensive assistance to the admin hub and its modules .
+    *make sure the **floating system assistant** is visisble on all pages **medium priority***
+
+13. Push notifications: ***status : chrome and iphone can subscribe , mac safari doesnt register subscribtion , iphone recieves push, mac doesnt recive push messages despite chrome has been subscribed*** the one signal still doesn't work , we don't have a subscription prompt and notification are not displayed. The current setup of the notification is already working on another demo system Tevin has before , so it needs to work here too . In all pages we have this message in the top left :התראות כבויות that opened a message : לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן. But there is no option to enable notifications since there is no prompt received . 
+ make sure the **onsignal** is enabeld on all pages  **high priority**
+
+
+
+**THE DAMAGE WIZARD MODULE**
+
+14. The wizard section **high prioriy** : this section is by far the most needed work and modification in the system , it integrates with the parts module and as for now there are a lot of problems and duplications :
+    1. In the wizard : 
+        1. Missing input fields - fields for input are missing in all bulks , name , description, work . 
+        2. Repairs are missing from the wizard and needs to be added.
+        3. Parts open a new search page that is duplicating the parts search  module instead of opening the suggestion required parts module .  In this search page there are some enhancements comparing to the actual parts search module, like the auto suggest of parts in the parts name field pulled from  from the parts.js - you need to examine , think and plan a full parts search module that combines enhancements from the current wizard parts search and keep just the independent parts search module - FOR BEST RESULTS- relearn the parts logic from documentation and specs . In Skelton flow : the wizard sends the user to the search module , the search modules using one or more of its 3 search paths returns an answer , the answer is stored in the helper , the user directed to required parts , auto suggestions are delayed upon typing letters , the user selects and a new add part is prompted . / or fix displayed - doesn't matter. 
+        4. Selected parts are stored in the expertise builder and the helper 
+        5. In the end of the wizard either add a new מוקד נזק  or continue to summary not to upload pictures . 
+        6. For now the summary is missing - no status dropdown , no additional details/ comments and no summary . Needs to be added , we already have the expertise summary html ready . 
+        7. Make sure that the search form that needs to be created is actually created . 
+    2. Those two modules require from you a deep understanding of the logic and flow , a deep check of the current structure and all the files in the repo , and rebuilding the logic from scratch combining all expertise related files in the repo as I already explained before. 
+    3. The wizard is the body pert of the expertise html builder and it files the placeholders . The builder's other part is the car details pulled from the helper . 
+
+15. Orphan pages  ✅: : 
+There are HTMLs that are included in the structure but are not asssigned to any flow.  you need to assign them to a section / module : validation workflow, validation dashboard , test dashboard and debug login .  Those are not connected to any module for now 
+    1. Evaluate and think how and where to combine them 
+    2. Those modules need to be dynamically integrated so they display real time information and not just the pretty face . 
+    3. I think best place for them is in the admin hub  
+
+16. **Fee module:** add another return to selection button under the continue botton . **medium priority**
+
+
+20. is Nicole expecting a voice input by default ? current issue :inconsistant error ,  if a query was sent using the plate number or the text input or both but not usin STT voice query, the webhook sometimes returns false, and creates an error .
+change the page title from  ניקול – עוזרת דיגיטלית to   ניקול – מנהלת הידע
+
+21. automatic logout **high priority** should be initiated 15 min of not use , 2 min before on the min 13 the system sends an alert, the user needs to move the mouse or to touch the screen on mobile to rest the countdown , as long as the user uses the syatem actively the automatic logout is disabled , just on lack of use the countdown starts, 
+
+
+25. **high priority** reprot genration workflow, the continuios of the report selection page: after the first pages , estimate builder in the estimate report generation or depreciation / fee in the final report gneration - we need to add a validation process - we have  the moudle called final report validation from the selection page. each report , estimate and final report need to have a validation process before actualy being able to genarte a report , the generate report module is teh only place - and need to make sure of that - that a report can be generated - with the exclusion of the expertise that has a seperate work flow. the expertise generates : the expertise report using teh expertise builder and the draft report using the final report builder html. the estimate and the final report use that darft to finalize to the desired report using teh final report builder that is in a draft state. ✅
+
+
+**VALIDATION LOGIC, STRUCTURE AND PAGE**
+
+26. **High Priority:** Validation Pages: Validation pages are created for each report separately in two locations:
+
+The Validation Page is a template utilized in both locations. Validation is required for:
+
+- Expertise Report
+- Estimate Report (both types)
+- Final Report (all types)
+
+Validation is performed at two levels:
+
+- System Level:
+  - Automatically checks the validity and integrity of the report’s sections.
+  - Checks for gaps and misalignments.
+  - Extracts main information such as titles of sections/subsections, their descriptions, and properties.
+  - Total costs
+
+- Legal Text: Displays the correct legal text in a window, editable, and requires validation.
+  - All validation items are editable.
+
+- User Level:
+  - Reviews the automatic validation.
+  - Edits fields or legal text as needed.
+  - Saves and confirms.
+  - User modifications become the system truth.
+
+Validation pages are constructed according to each report structure, sections, and legality features:
+
+- Expertise:
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+  - Summary: Status and Comments
+
+- All are editable and can be ignored if missing.
+
+- Estimate Report: Based on the Final Report HTML Builder
+  - Car + General Details
+  - Levi Report Upload
+  - Damage Centers:
+    - Name
+    - Description
+    - Works: Total Works and Total Costs
+    - Parts: Total Parts and Total Costs
+    - Repairs: Total Repairs and Costs
+
+**Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Final Report:**
+
+**Fee Module:**
+
+*   **Legal Text:** Displays the correct legal text in a window, editable, and requires validation.
+*   **Car + General Details:**
+    *   **Levi Report Upload:**
+        *   **Name:**
+        *   **Description:**
+        *   **Works:**
+            *   **Total Works:**
+            *   **Total Costs:**
+        *   **Parts:**
+            **Total Parts:**
+
+*   **Total Costs:**
+
+*   **Repairs:**
+
+    *   **Total Repairs:**
+
+    *   **Total Costs:**
+
+**Levi Price Adjustments Calculations:**
+
+*   **Base Price:**
+
+*   **Adjustments:**
+
+*   **Damage Percentage Calculations:**
+
+*   **Market Price:**
+
+**Depreciation Module Integrity:**
+
+*   **Depreciation per Damage Center and Global:**
+
+*   **Final Report Summary:**
+
+**Legal Text:** Display the correct legal text in a window, editable, and requires validation.
+
+**All are editable and can be ignored if missing.**
+
+**Validation is based on the section of each report and its pulling of the actual data for final review.**
+
+
+
+**Estimate Validation page : follow ups**
+
+Current estimate validation page is widely ok .
+We need key changes to make it useful .
+1. Each section pulls the relevant data from the helper / the builder as follows 
+    1. whatever available data in the builder should be the source of the validation section ✅
+    2. Damage center subtotals are pulled from the damage center section ✅
+    3. Any other data that doesn’t exist in the builder or the damage center section , is pulled from the  helper directly.✅
+2. Each section has an automatic system validation that checks the integrity of data and report required sections ✅
+3. Each filed of validation displays 3 columns / value , stored data , ignore option in case automatic validation returns ❌-  ✅
+4. All fields are editable - edited value becomes the source of truth for the helper, system and report . Important: important : this is my idea - but you should design the best architecture to support editing , either to go into the builder in order to edit or to edit the field itself in validation section which will update all the chain backwards and forwards. - what is important is that any upadtes become the source of truth  in the helper and the report ✅
+5. 
+
+6. The user validation section stays as is for now  ✅
+
+8. The only button that needs to change is the ✅ אישור סופי ויצירת אומדן this button needs to be review estimate report -> the button will display the report builder filled and ready to export , ✅
+9. User needs to authorize and confirm - In the estimate builder we have the final confirmation and create report buttons .✅
+*addons*
+10. the validation page is missing the review option for the filled report builder ✅
+
+12, the damge percentage in the text is not correct ✅
+13.
+14. the levi validation is not pulling data - it shows 0 - ✅
+16. finish the validation page with the same logic ✅
+
+17. *validation flow :* The optimal flow should be Helper → Builder → Validation, with updates looping back to the Helper. Validation primarily retrieves data from the Builder, which itself pulls initial data from the Helper, enabling edits that override the Helper and establish the Builder as the source of truth. In the Builder, the תוספות והורדות section must specifically draw adjustments from the Helper, clearly stating their descriptions, percentages, and values. Editing a field within either the Builder or Validation updates and overrides the Helper accordingly. While Validation should ideally never source directly from the Helper, minimal fallback cases are permitted if data is missing from the Builder—however, these cases must be minimized to zero, precisely why the Builder has been enhanced to maintain full data integrity throughout the workflow. Complete Data Flow: Initially, the Builder loads data from the Helper. The user then makes edits directly in the Builder, with changes stored temporarily in the DOM. Upon clicking "Save Estimate," these edits are committed, and the Builder selectively overrides only the changed data within the Helper. Finally, Validation retrieves data from the Helper, which now reflects all Builder updates and overrides, serving as the accurate source of truth for validation purposes.
+
+
+
+19. Validation and estimate errors: 14.7.25
+    * The damages and repairs validation section doesnt update after changing the builder the expertise damge centers and costs validation section are not pulling the data correctly. also in the builder the calculations for this part are not corrrect ✅
+    observed problems : ✅
+    1. the subtotal תיקונים: in the damage bulk in the builder page, is summing up the parts and the works together , this is wrong, it need to sum up the תיקונים: in the subsection inside the damge center. the subtotatl is the sum of the 3 perametrs +vat ✅
+    2. the work bulk has predefined costs for each work, this is wrong - if its a problem with the system then we need to fix the system in this regard, if its a problem just in this page then it needs to be fixed, the work dropdown selection DOES NOT define the price , the price changes according to the case, this error is causing the wrong calucation of teh work subtotal in the builder page since even of i manual change the predefined cost the yste still uses that predifine cost,✅
+    3. if i add a new damage center , then the calculations in the damge center subtotals eiter dont work or dont calculte all.✅
+
+     * In the builder : תוספות נוספות: need to be a part of the תוספות והורדות: have the same fields and update the Levi helper ✅
+
+**STILL NEEDS WORK** ❌
+
+  **builder page**    
+    * in the builder car details תאריך הפקה: needs to be with a date selector: the initial data is coming from helper and edits are posssible with a date selector ✅
+    * add the **expertise review option**, take the same function from the generate report page but just the expertise pdf report - add teh pdf floating scfreen ✅
+    * add a **save and refresh** button in the end of each section in teh page. the save id just if a manual update is made  ✅
+    * fix the  dropdown in the work bulk in the סיכום מוקדי נזק (ניתן לעריכה)/ מוקד נזק/ עבודות נדרשות: - when selecting "other"  this needs to open a text input option   ✅
+    * in the section חישוב ירידת ערך לפי מוקדי נזק make sure 
+    מהות התיקון: is  saved to the helper because  its deleting on refresh  ✅
+  * make sure the legal text in the builder is also saved to the helper of the specific plate number. ✅
+
+  **VALIDATION PAGE**  ✅
+
+  * Add  to the validation the same floating screens with their fulll functionality - from the builder and the report review page. ✅
+
+  * add a depreciation section in the validation page . use the same logic, the   
+    depreciation is  in the builder under חישוב ירידת ערך לפי מוקדי נזק
+    and it should update the helper, note that the helper doesnt have depreciation data , this data is unput for the first time in the builder, that means the builder needs to update the helper .חישוב ירידת ערך לפי מוקדי נזק and ירידת ערך גלובלי: add values, auto check , edits ignore and so on like the other oage standard ✅
+
+  * Legal text in the validation page is pulled from the selected text in the builder.  
+    Text in the validation page can be edited in the builder -Legal text in the validation needs to be pulled from the BUILDER not the vault ✅
+
+  * All buttons in the current page are valuable and need to stay - you need to check  
+   that all buttons work as expected and are returning the test result/ product they are meant to. ✅
+
+  * valdation page - adjustment section needs to pull from חישוב ערך השוק של הרכב (הצג/
+   הסתר) not from חישוב אחוז הנזק (הצג/הסתר) ✅
+
+  * The button בדוק  טקסט משפטי doesn’t  work ✅ 
+
+  * when finishing one validation stage and saving, the section should be saved , going back to the builder should not reset the whole page, if the user wants to go back a previoslt validated section and edit he has to do that using the edit button. ✅
+
+  * the advanment scale in the top התקדמות האימות
+  is  not measuring good, , it neeeds to satrt with 0 and fills teh relative portion on each section validation , all the sections in the page including teh text section are included in the validation process make sure it is accurate according to advanacement . current state its not measuring , it gives 100% when the levi section is in red  ✅
+  * user cant move to the next validation section if teh previous is not validated , ✅
+
+
+    *
+    **the estimate report builder**  ✅
+    * examin, check, and understand the estimate report buider its structure , data , and purpose 
+    * the rport builder , is based on the actual legal report used by the user , the structre, order, content and logic, refect the actual report template.
+    * the report builder fills out all the fields placeholders from the helper , after tha validation stage. 
+    * The report builder has double html - there are 2 reports in one page . 
+    * The report builder layout when printing is printing one table in each page, the page layout needs to be : inside an A4 page with margins from top, sides and bottom. The margins from bottom and top need to allow a template page with design to fit without writing over the design - attached the design - make assessment how the report would fill inside the page correctly .
+    * The report that is exported to print should be clean with no buttons or floating screens or anything but the report content we cant print a report with the title : report builder as it is now 
+    * The tables in the builder are too wide attached illustration 
+    * the export button needs to be linked to teh webhook SUBMIT_ESTIMATE: 'https:// hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
+    
+   
+  
+    
+20. **General issues :**
+    * *All reports , builders, flowing screens, and main system products are updated and filled from the helper directly*
+    * *Validation pages are updated from builders to make edit and error mapping easier.*
+    * Refresh button on all pages : builder, validation and report : the button needs to be located in 2 places : at the top and at the bottom ✅
+    * The helper is not updated by the builder just the plate field and the market value fields are updating the helper , this means the report doesn’t  get data, the floating screens, car parts, car details, invoice and Levi are not update .✅
+
+
+
+21. **System wide :**
+    * Automatic logout needs to happen just if the user doesn’t  use the system for 15 min, for now the session is closing while working . 
+    * The data in the system should be saved in the system until the next case is loaded/ created. Always to have the last case details . For now each time the system logs out, the data is gone and the user needs to input from the begening, the required functionality: system saves all data all the time while working : dom, session storage and helper, 
+    * On logout: system sends the last helper to make.com and gives it a name : plate_helper_timestamp
+    * On logout : data are saved in the system till the next case loaded or created . The system doesn’t Handke more than one case at a time.
+    * the levi floating 
+   * dark mode option **low priority**
+   * check for orphan pages **medium priority**
+   * dev module : **low priority** total fix and integration  
+   * notification errors in the console 
+
+
+
+
+
+26. fix errors in the *case staus displays*  in the admin hub- these functions were opertaional and working good, somehow they got broken-  errors are in teh console_log.dm **high priority**
+
+**the final report finalization flow**
+*based on the estimate finalization pages structure and logic but designated for the final report structure and componenets*
+
+27. **the final report workflow**
+the final report workflow needs to match teh estimate workflow, it uncludes : the depreciation module which is the equvivelant module for teh estimate builder, the validation page and the report builder.
+the files allready exist in the repo but they dont meet the requirements
+we have built a comprehensive estimate workflow that needs to be duplicated and adjusted to the final report workflow, 
+in the depreciation we have  a lightly diffreent built mainly because of the fact there are several final reports types, each type has a slightly diffrent components and built , we also have more options that need to be intgrated such as : in agreemnt / not in agreement with insurrance company - בהסדר/לא בהסדר , report for a company (yes/no)- דו"ח לחברה , diffrences section that calculates the difference between the invoice and the actual work autheraztion- הפרשים , 
+the current depreciatio page already has logic of dynamic fields that show / hide depends on teh report type 
+the final reprt validation neeeds to be remade to match teh estimate validation 
+the final report builder, in general is goood, but i think its gonna be easier to replace it eith the estimate report builder, add teh fee section to it and change labels. 
+in general we have 2 approches :
+rebuild the files
+copy the estimate files to the current validation and report nuilder, change the sections and add the required parts
+for teh depreciation it needs to be a hybrid approch: keep the existing file but replace sections : נתוני רכב, נתוני תביעה (הצג/הסתר), נתוני התקשרות (הצג/הסתר), חישוב ירידת ערך לפי מוקדי נזק, with the estiamte structure and code 
+**depreciation module:** 
+match logic and structure to the estimate builder page but keep teh current content **important** add legal text according the report selection and make all fields editable - any edits in teh fields need to override teh helper and become system truth. add a summary of the damage centers like in the estimate buider format 
+ match the depreciation module to the estimate builder logic, add what is missing without deleting anything in the page . the current depreciation page has more options and fields than the estimate those need to stay untouched.
+ 
+ 28. **final report valdition** match the logic and features of the final report valdition to the estimate validation - **imporertant** the final report have several components that the estimate has : fee data, invoice data , defferences data and so, its important match the validation fields to the actual final report build according to the final report builder html . also the vlaidation needs to have an option to ignore an error found by the auatomatic scan 
+
+ 28.B final report html generation for a PDF  - copy the estimate report builder and add missing sections to teh html 
+
+
+ -------------------
+
+ 29. update the expertise - calling the metadat and creating version 2 - the version is just for documentaion  **low priority** 
+
+
+ 30 . *floating screens -:* proper mapping , full match to helper mapping , pulls data from helepr 
+ * the levi floating somehow shoing רכב פרטי in סוג רכב and קטגוריה even if the helper is empty . 
+
+
+
+
+
+**. General :**
+*  Run a deep check across system files ensure that all  modules are configured correctly :
+* configurations, dependencies, workflows and data flow are according to the specs and documentations 
+*  Ensure all webhooks are active and connect correctly 
+* Ensure that there is a unification of styles across system, layouts, fonts , button shapes and classifications and colors. 
+* ensure passwors fields are prefilled when user filles the password in teh login page - the gate page.
+* Change the system default font from Ariel to simply family font : sans-serif; no assistant no Ariel , or choose a modern look font , I hate Ariel .
+
+*******************************************************************************************
+
 
 ## Audit 3 Comprehensive System Review
 Read all the issues that were found in audit 3. Go through the issues I found. Learn them and evaluate throughout the whole system files, detect connections, relations and dependencies and evaluate functionality.

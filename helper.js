@@ -2866,7 +2866,12 @@ function populateAllForms() {
             const shouldBeChecked = value === true || value === 'כן' || value === 'yes' || value === 'true';
             element.checked = shouldBeChecked;
           } else {
-            element.value = newValue;
+            // Clean percentage values for number inputs
+            if (element.type === 'number' && typeof newValue === 'string' && newValue.includes('%')) {
+              element.value = parseFloat(newValue.replace('%', '')) || 0;
+            } else {
+              element.value = newValue;
+            }
           }
           
           // Trigger events
