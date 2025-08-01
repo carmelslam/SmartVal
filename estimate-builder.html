@@ -1768,30 +1768,39 @@
             helper.vehicle.model = vehicleData.model;
             helper.vehicle.year = vehicleData.year;
             helper.vehicle.model_code = vehicleData.model_code;
-            helper.vehicle.plate_number = vehicleData.plate_number;
+            // 🔧 FIELD MAPPING FIX: Use correct helper structure field name
+            helper.vehicle.plate = vehicleData.plate_number || vehicleData.plate;
             sessionStorage.setItem('helper', JSON.stringify(helper));
           }
         }
         
-        // Load claims data (now editable) - with fallback to manual input data
-        const calc = helper.expertise?.calculations || {};
+        // 🔧 FIELD MAPPING FIX: Use correct helper structure for claims data
         const claimsData = helper.claims_data || {};
+        const damageAssessment = helper.damage_assessment?.summary || {};
+        const valuation = helper.valuation || {};
+        const financials = helper.financials || {};
         
-        // Load with priority: manual input (claims_data) > calculated data (expertise.calculations)
+        // Load with proper field mapping priority: manual input > calculated data > valuation data
         document.getElementById('totalClaim').value = claimsData.total_claim || 
-          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
-        document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
-          (helper.calculations?.vehicle_value_gross ? `₪${helper.calculations.vehicle_value_gross.toLocaleString()}` : '') ||
-          (helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '');
-        document.getElementById('grossPercent').value = claimsData.gross_percent || 
-          (helper.calculations?.damage_percent ? `${helper.calculations.damage_percent}%` : '') ||
-          (calc.damage_percent ? `${calc.damage_percent}%` : '');
-        document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
-          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+          (damageAssessment.total_damage_amount ? `₪${damageAssessment.total_damage_amount.toLocaleString()}` : '') ||
+          (financials.totals?.total_compensation ? `₪${financials.totals.total_compensation.toLocaleString()}` : '');
           
-        console.log('💰 Loaded claims data:', { 
+        document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
+          (valuation.final_price ? `₪${valuation.final_price.toLocaleString()}` : '') ||
+          (valuation.calculations?.market_price?.total ? `₪${valuation.calculations.market_price.total.toLocaleString()}` : '');
+          
+        document.getElementById('grossPercent').value = claimsData.gross_percent || 
+          (damageAssessment.damage_percentage ? `${damageAssessment.damage_percentage}%` : '');
+          
+        document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
+          (financials.totals?.after_tax ? `₪${financials.totals.after_tax.toLocaleString()}` : '') ||
+          (damageAssessment.total_damage_amount ? `₪${damageAssessment.total_damage_amount.toLocaleString()}` : '');
+          
+        console.log('💰 PHASE 2.4: Loaded claims data with correct field mapping:', { 
           from_claims_data: claimsData, 
-          from_calculations: calc 
+          from_damage_assessment: damageAssessment,
+          from_valuation: valuation,
+          from_financials: financials
         });
         
         // Update gross market value field with calculated value
@@ -2490,9 +2499,9 @@
             
             console.log(`🔍 Processing Levi adjustment: "${reason}" (${percentage}%, ₪${value})`);
             
-            // Map to market value categories based on description - PRESERVE ACTUAL DESCRIPTIONS
+            // 🔧 FIELD MAPPING FIX: Map to correct helper structure fields
             if (desc.includes('בעל') || desc.includes('בעלות') || desc.includes('בעלים קודם')) {
-              helper.valuation.adjustments.condition = {
+              helper.valuation.adjustments.ownership_type = {
                 reason: reason, // ACTUAL description from Levi, not generic category
                 percent: percentage,
                 amount: value,
@@ -2500,7 +2509,7 @@
                 detailed_description: reason,
                 category: 'ownership_type'
               };
-              console.log('📊 Mapped to OWNERSHIP TYPE with actual description:', helper.valuation.adjustments.condition);
+              console.log('📊 PHASE 2.4: Fixed field mapping - OWNERSHIP TYPE:', helper.valuation.adjustments.ownership_type);
               
             } else if (desc.includes('ק"מ') || desc.includes('קילומטר') || desc.includes('מרחק') || desc.includes('נסיעה')) {
               helper.valuation.adjustments.mileage = {
@@ -2549,15 +2558,15 @@
               console.log('📊 Mapped to REGISTRATION (gross section) with actual description:', helper.valuation.adjustments.registration);
               
             } else {
-              // Generic market adjustment - assign to condition if empty
-              if (!helper.valuation.adjustments.condition?.percent && !helper.valuation.adjustments.condition?.amount) {
-                helper.valuation.adjustments.condition = {
+              // 🔧 FIELD MAPPING FIX: Generic market adjustment - use market_factors field
+              if (!helper.valuation.adjustments.market_factors?.percent && !helper.valuation.adjustments.market_factors?.amount) {
+                helper.valuation.adjustments.market_factors = {
                   reason: reason || 'התאמת שוק כללית',
                   percent: percentage,
                   amount: value,
                   description: reason || 'התאמת שוק כללית'
                 };
-                console.log('📊 Mapped to GENERAL MARKET ADJUSTMENT:', helper.valuation.adjustments.condition);
+                console.log('📊 PHASE 2.4: Fixed field mapping - MARKET FACTORS:', helper.valuation.adjustments.market_factors);
               }
             }
           });
