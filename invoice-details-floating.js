@@ -401,14 +401,27 @@
       }
     });
 
-    // Save to storage locations
+    // 🔧 PHASE 2.1: Save through helper system only (single source)
     try {
-      // Use proper helper update function instead of direct storage
-      const { updateHelper } = await import('./helper.js');
-      await updateHelper(window.helper);
-      console.log('✅ Invoice changes saved to helper and storage');
+      if (typeof updateHelper === 'function') {
+        // Use global updateHelper function with proper path and source
+        updateHelper('invoice', window.helper.invoice, 'invoice_floating_manual_adjustment');
+        console.log('✅ PHASE 2.1: Invoice changes saved through helper system (single source)');
+      } else {
+        // Fallback: Try importing updateHelper function
+        const { updateHelper: importedUpdateHelper } = await import('./helper.js');
+        await importedUpdateHelper('invoice', window.helper.invoice, 'invoice_floating_import');
+        console.log('✅ PHASE 2.1: Invoice changes saved through imported helper function');
+      }
     } catch (error) {
-      console.error('❌ Failed to save invoice changes:', error);
+      console.error('❌ PHASE 2.1: Failed to save invoice changes through helper system:', error);
+      // Emergency fallback: Direct sessionStorage only (no localStorage)
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        console.log('⚠️ PHASE 2.1: Emergency fallback - saved to primary storage only');
+      } catch (fallbackError) {
+        console.error('❌ PHASE 2.1: Emergency fallback also failed:', fallbackError);
+      }
     }
   }
 
@@ -561,22 +574,26 @@
 
   async function loadInvoiceData() {
     try {
+      console.log('🔄 PHASE 2.1: Loading Invoice data from helper ONLY (single source)...');
+      
+      // 🔧 PHASE 2.1: SINGLE SOURCE LOADING - window.helper is authoritative
       let helper = {};
       
-      // Use proper helper data access instead of direct sessionStorage
-      try {
-        const { getCurrentHelper } = await import('./helper.js');
-        const currentHelper = getCurrentHelper();
-        if (currentHelper && Object.keys(currentHelper).length > 0) {
-          helper = currentHelper;
-        } else if (typeof window.helper !== 'undefined') {
-          helper = window.helper;
-        }
-      } catch (importError) {
-        console.warn('Could not import helper functions, using fallback:', importError);
-        // Fallback to global helper variable
-        if (typeof window.helper !== 'undefined') {
-          helper = window.helper;
+      if (typeof window.helper === 'object' && window.helper !== null) {
+        helper = window.helper;
+        console.log('✅ PHASE 2.1: Loaded Invoice data from window.helper (authoritative source)');
+      } else {
+        // Try to get current helper from helper system
+        try {
+          const { getCurrentHelper } = await import('./helper.js');
+          const currentHelper = getCurrentHelper();
+          if (currentHelper && Object.keys(currentHelper).length > 0) {
+            helper = currentHelper;
+            window.helper = helper; // Sync to window.helper
+            console.log('✅ PHASE 2.1: Loaded Invoice data from helper system, synced to window.helper');
+          }
+        } catch (importError) {
+          console.warn('❌ PHASE 2.1: Could not load from helper system:', importError);
         }
       }
 

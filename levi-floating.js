@@ -587,14 +587,24 @@
       Object.assign(window.helper.vehicle, helperUpdates.vehicle);
     }
 
-    // Save to storage locations
+    // 🔧 PHASE 2.1: SINGLE STORAGE SOURCE - Save through helper system only
     try {
-      const helperString = JSON.stringify(window.helper);
-      sessionStorage.setItem('helper', helperString);
-      localStorage.setItem('helper_data', helperString);
-      console.log('✅ Levi OCR corrections saved to helper and storage');
+      // Use updateHelper() function for proper data flow
+      if (typeof updateHelper === 'function') {
+        // The helper has already been updated above, just need to trigger save
+        updateHelper('system', { 
+          levi_floating_last_save: new Date().toISOString(),
+          levi_floating_source: 'user_correction'
+        }, 'levi_floating_save');
+        console.log('✅ PHASE 2.1: Levi OCR corrections saved through helper system (single source)');
+      } else {
+        // Fallback: Direct sessionStorage only (no competing localStorage)
+        const helperString = JSON.stringify(window.helper);
+        sessionStorage.setItem('helper', helperString);
+        console.log('✅ PHASE 2.1: Levi OCR corrections saved to primary storage (helper system not available)');
+      }
     } catch (error) {
-      console.error('❌ Failed to save Levi changes:', error);
+      console.error('❌ PHASE 2.1: Failed to save Levi changes:', error);
     }
   }
 
@@ -745,21 +755,27 @@
 
   function loadLeviData() {
     try {
+      console.log('🔄 PHASE 2.1: Loading Levi data from helper ONLY (single source)...');
+      
+      // 🔧 PHASE 2.1: SINGLE SOURCE LOADING - window.helper is authoritative
       let helper = {};
       
-      // SIMPLIFIED: Match car details pattern - load from sessionStorage helper
-      try {
-        const storedHelper = sessionStorage.getItem('helper');
-        if (storedHelper) {
-          helper = JSON.parse(storedHelper);
-        }
-      } catch (parseError) {
-        console.warn('Could not parse helper from sessionStorage:', parseError);
-      }
-      
-      // Fallback to global helper variable
-      if (Object.keys(helper).length === 0 && typeof window.helper !== 'undefined') {
+      if (typeof window.helper === 'object' && window.helper !== null) {
         helper = window.helper;
+        console.log('✅ PHASE 2.1: Loaded Levi data from window.helper (authoritative source)');
+      } else {
+        // Emergency fallback: Try sessionStorage only if window.helper unavailable
+        try {
+          const storedHelper = sessionStorage.getItem('helper');
+          if (storedHelper) {
+            helper = JSON.parse(storedHelper);
+            // Sync back to window.helper immediately
+            window.helper = helper;
+            console.log('⚠️ PHASE 2.1: Emergency fallback - loaded from sessionStorage, synced to window.helper');
+          }
+        } catch (parseError) {
+          console.error('❌ PHASE 2.1: Failed to load from emergency fallback:', parseError);
+        }
       }
 
       // FOLLOW HELPER ARCHITECTURE: Load ONLY from helper structure
@@ -787,8 +803,8 @@
   function updateLeviDisplay(result) {
     console.log('🔄 updateLeviDisplay called with result:', result);
     
-    // Get helper data safely
-    const helper = JSON.parse(sessionStorage.getItem('helper')) || {};
+    // 🔧 PHASE 2.1: Get helper data from single source (window.helper)
+    const helper = window.helper || {};
     
     // DEBUG: Log all percentage fields found in the data
     const percentageFields = Object.keys(result).filter(key => key.includes('%'));

@@ -53,14 +53,25 @@ export const sessionEngine = {
         return { success: true, source: 'window.helper' };
       }
       
-      // Priority 2: Try primary source (sessionStorage)
+      // 🔧 PHASE 1.1: SINGLE STORAGE SOURCE LOADING
+      // Priority 1: Load from PRIMARY source only (sessionStorage)
       let raw = sessionStorage.getItem('helper');
-      let dataSource = 'sessionStorage';
+      let dataSource = 'sessionStorage_primary';
       
       if (!raw) {
-        // Priority 3: Try backup source (localStorage)
-        raw = localStorage.getItem('helper_data');
-        dataSource = 'localStorage';
+        // 🚨 EMERGENCY FALLBACK: Only if primary source completely fails
+        // Load from emergency backup (not competing regular storage)
+        const emergencyBackup = localStorage.getItem('helper_emergency_backup');
+        if (emergencyBackup) {
+          try {
+            const backupData = JSON.parse(emergencyBackup);
+            raw = backupData.data;
+            dataSource = 'emergency_backup';
+            console.warn('⚠️ PHASE 1.1: Using emergency backup - primary storage failed');
+          } catch (e) {
+            console.error('❌ Emergency backup corrupted');
+          }
+        }
         
         if (raw) {
           console.log('📦 Loading session data from backup storage');
@@ -86,10 +97,10 @@ export const sessionEngine = {
       window.helper = parsedData;  // Ensure window.helper is updated
       this.lastSaveTimestamp = Date.now();
       
-      // If data was loaded from localStorage, sync to sessionStorage
-      if (dataSource === 'localStorage') {
+      // 🔧 PHASE 1.1: Emergency backup sync to primary storage
+      if (dataSource === 'emergency_backup') {
         sessionStorage.setItem('helper', raw);
-        console.log('🔄 Session data synced to primary storage');
+        console.log('🔄 PHASE 1.1: Emergency data synced to primary storage - single source restored');
       }
       
       console.log('✅ Session data loaded successfully from', dataSource);
@@ -205,16 +216,30 @@ export const sessionEngine = {
     return false;
   },
 
+  // 🔧 PHASE 1.1: DEPRECATED - Use emergencyRecovery() instead
+  // This method used competing localStorage sources - replaced with single source approach
   recoverFromLocalStorage() {
-    const backupData = localStorage.getItem('helper_data_backup');
-    if (backupData) {
-      const parsedData = JSON.parse(backupData);
-      const validation = this.validateSessionData(parsedData);
-      
-      if (validation.isValid || validation.score > 50) {
-        this.helper = parsedData;
-        this.saveSessionData();
-        return { success: true, method: 'localStorage backup' };
+    console.warn('⚠️ DEPRECATED: recoverFromLocalStorage() - use emergencyRecovery() instead');
+    return this.emergencyRecovery();
+  },
+
+  // 🔧 PHASE 1.1: NEW - Emergency recovery from single backup source
+  emergencyRecovery() {
+    const emergencyBackup = localStorage.getItem('helper_emergency_backup');
+    if (emergencyBackup) {
+      try {
+        const backupData = JSON.parse(emergencyBackup);
+        const parsedData = JSON.parse(backupData.data);
+        const validation = this.validateSessionData(parsedData);
+        
+        if (validation.isValid || validation.score > 50) {
+          this.helper = parsedData;
+          this.saveSessionData(); // This will save to primary storage only
+          console.log('✅ PHASE 1.1: Emergency recovery successful - data restored to primary storage');
+          return { success: true, method: 'emergency backup recovery' };
+        }
+      } catch (error) {
+        console.error('❌ Emergency recovery failed:', error);
       }
     }
     return { success: false };
@@ -287,16 +312,27 @@ export const sessionEngine = {
       // Ensure window.helper is in sync
       window.helper = this.helper;
       
-      // Save to primary storage
+      // 🔧 PHASE 1.1: SINGLE STORAGE SOURCE IMPLEMENTATION
+      // Save to PRIMARY storage only - eliminate competing data sources
       sessionStorage.setItem('helper', dataString);
       
-      // Save to backup storage locations
-      localStorage.setItem('helper_data', dataString);
-      localStorage.setItem('helper_data_backup', dataString);
-      
-      // Also save to compatibility locations
-      sessionStorage.setItem('helper_backup', dataString);
-      sessionStorage.setItem('helper_timestamp', new Date().toISOString());
+      // 📝 BACKWARD COMPATIBILITY: Keep minimal backup for emergency recovery only
+      // Remove duplicate localStorage storage that creates competing data sources
+      try {
+        // Keep only essential backup - no more competing sources
+        sessionStorage.setItem('helper_timestamp', new Date().toISOString());
+        
+        // Emergency backup only (not for regular data loading)
+        localStorage.setItem('helper_emergency_backup', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: dataString,
+          note: 'Emergency backup only - do not use for regular loading'
+        }));
+        
+        console.log('✅ PHASE 1.1: Single storage source implemented - eliminated competing localStorage sources');
+      } catch (backupError) {
+        console.warn('⚠️ Backup storage failed, but primary storage succeeded:', backupError);
+      }
       
       this.lastSaveTimestamp = Date.now();
       
@@ -422,10 +458,16 @@ export const sessionEngine = {
       // Automatically save data - don't ask user
       this.saveSessionData();
       
-      // Save to localStorage for persistence
+      // 🔧 PHASE 1.1: Archive to emergency backup only (not competing storage)
       if (helperData) {
-        localStorage.setItem('lastCaseData', helperData);
-        localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
+        const archiveData = {
+          timestamp: new Date().toISOString(),
+          data: helperData,
+          note: 'Case archive - emergency backup only',
+          type: 'case_archive'
+        };
+        localStorage.setItem('helper_emergency_backup', JSON.stringify(archiveData));
+        console.log('✅ PHASE 1.1: Case archived to emergency backup (single source maintained)');
       }
     }
     
