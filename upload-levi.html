@@ -2248,14 +2248,28 @@ class LeviProcessor {
       helper.valuation.levi_code = result['קוד דגם'] || '';
       helper.valuation.levi_report_date = result['תאריך'] || new Date().toISOString().split('T')[0];
       
-      // Create adjustments structure with EXACT same data as leviSummary (for floating page)
+      // Create adjustments structure with CORRECT webhook field mapping (for floating page)
       helper.valuation.adjustments = {
         features: {
-          description: result['ערך מאפיינים'] || '', // "adventure" 
-          reason: result['ערך מאפיינים'] || '',
-          percent: parseFloat((result['מחיר מאפיינים %'] || '0').replace('%', '')) || 0,
-          amount: parseFloat((result['ערך ש״ח מאפיינים'] || '0').replace(/[₪,\s]/g, '')) || 0,
-          cumulative: parseFloat((result['שווי מצטבר מאפיינים'] || '0').replace(/[₪,\s]/g, '')) || 0
+          description: (() => {
+            // Get the FULL features description from the BEGINNING of webhook, not from adjustment section
+            const fullFeatures = result['מאפיינים'];
+            if (fullFeatures && fullFeatures.length > 20 && fullFeatures.includes(',')) {
+              return fullFeatures; // "גג נפתח, פנורמי, מ.רוורס..."
+            }
+            return result['ערך מאפיינים'] || ''; // Fallback to "adventure"
+          })(),
+          reason: (() => {
+            const fullFeatures = result['מאפיינים'];
+            if (fullFeatures && fullFeatures.length > 20 && fullFeatures.includes(',')) {
+              return fullFeatures;
+            }
+            return result['ערך מאפיינים'] || '';
+          })(),
+          percent: result['מחיר מאפיינים %'] || '0%', // Keep as string "9%"
+          percentage: result['מאפיינים'] && result['מאפיינים'] === 'מאפיינים' ? result['מאפיינים'] : '', // Category field "מאפיינים"
+          amount: result['ערך ש״ח מאפיינים'] || '₪0', // Keep as string "₪ 10,620"
+          cumulative: result['שווי מצטבר מאפיינים'] || '₪0' // Keep as string "₪ 128,620"
         },
         registration: {
           description: result['ערך עליה לכביש'] || '', // "11/2022"
