@@ -1891,6 +1891,8 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
     }
     
     // Store raw webhook data for debugging
+    if (!window.helper) window.helper = {};
+    if (!window.helper.raw_webhook_data) window.helper.raw_webhook_data = {};
     window.helper.raw_webhook_data[`${webhookId}_${Date.now()}`] = {
       data: data,
       timestamp: new Date().toISOString(),
