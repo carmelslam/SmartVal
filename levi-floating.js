@@ -639,15 +639,15 @@
     // Map adjustment fields to helper.valuation.adjustments structure
     const adjustmentMap = {
       'levi-registration-percent': { type: 'registration', field: 'percent', value: parseFloat(changes['levi-registration-percent']) || 0 },
-      'levi-registration-value': { type: 'registration', field: 'amount', value: parseFloat(changes['levi-registration-value'].replace(/[₪,]/g, '')) || 0 },
+      'levi-registration-value': { type: 'registration', field: 'amount', value: parseFloat((changes['levi-registration-value'] || '').replace(/[₪,]/g, '')) || 0 },
       'levi-ownership-percent': { type: 'ownership_type', field: 'percent', value: parseFloat(changes['levi-ownership-percent']) || 0 },
-      'levi-ownership-value': { type: 'ownership_type', field: 'amount', value: parseFloat(changes['levi-ownership-value'].replace(/[₪,]/g, '')) || 0 },
+      'levi-ownership-value': { type: 'ownership_type', field: 'amount', value: parseFloat((changes['levi-ownership-value'] || '').replace(/[₪,]/g, '')) || 0 },
       'levi-km-percent': { type: 'mileage', field: 'percent', value: parseFloat(changes['levi-km-percent']) || 0 },
-      'levi-km-value': { type: 'mileage', field: 'amount', value: parseFloat(changes['levi-km-value'].replace(/[₪,]/g, '')) || 0 },
+      'levi-km-value': { type: 'mileage', field: 'amount', value: parseFloat((changes['levi-km-value'] || '').replace(/[₪,]/g, '')) || 0 },
       'levi-owners-percent': { type: 'ownership_history', field: 'percent', value: parseFloat(changes['levi-owners-percent']) || 0 },
-      'levi-owners-value': { type: 'ownership_history', field: 'amount', value: parseFloat(changes['levi-owners-value'].replace(/[₪,]/g, '')) || 0 },
+      'levi-owners-value': { type: 'ownership_history', field: 'amount', value: parseFloat((changes['levi-owners-value'] || '').replace(/[₪,]/g, '')) || 0 },
       'levi-features-percent': { type: 'features', field: 'percent', value: parseFloat(changes['levi-features-percent']) || 0 },
-      'levi-features-value': { type: 'features', field: 'amount', value: parseFloat(changes['levi-features-value'].replace(/[₪,]/g, '')) || 0 }
+      'levi-features-value': { type: 'features', field: 'amount', value: parseFloat((changes['levi-features-value'] || '').replace(/[₪,]/g, '')) || 0 }
     };
 
     if (!updates.valuation.adjustments) updates.valuation.adjustments = {};
