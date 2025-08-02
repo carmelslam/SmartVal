@@ -207,7 +207,7 @@ class ForceFormPopulator {
     if (helperData.stakeholders) {
       if (helperData.stakeholders.owner) {
         if (!mappings.owner) mappings.owner = helperData.stakeholders.owner.name;
-        mappings.owner_phone_number = helperData.stakeholders.owner.phone;
+        // mappings.ownerPhone = helperData.stakeholders.owner.phone; // DISABLED - should not auto-populate
         mappings.ownerAddress = helperData.stakeholders.owner.address;
       }
       

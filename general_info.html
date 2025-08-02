@@ -65,7 +65,7 @@
 
     <input id="km" placeholder="מד אוץ" type="text" />
     <input id="damage_date_independent" placeholder="תאריך נזק" type="date" style="background: white !important;" />
-    <input id="owner_phone_number" placeholder="טלפון בעל הרכב" type="tel" />
+    <input id="owner_phone" placeholder="טלפון בעל הרכב" type="text" style="text-align: right; direction: rtl;" />
     <input id="owner_address" placeholder="כתובת בעל הרכב" type="text" />
     <input id="garage_name" placeholder="שם מוסך" type="text" />
     <input id="garage_phone" placeholder="טלפון מוסך" type="text" />
@@ -251,10 +251,34 @@
       
       // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
       import('./helper.js').then(helperModule => {
-        // NUCLEAR CLEANUP: Force clear contaminated phone data
-        if (window.helper?.stakeholders?.owner?.phone) {
-          console.log('🧨 NUCLEAR: Clearing all phone data to start fresh');
-          window.helper.stakeholders.owner.phone = '';
+        // DEBUG: Check what contaminated data exists
+        if (window.helper) {
+          console.log('🔍 DEBUG: Checking for contaminated phone data');
+          console.log('car_details:', window.helper.car_details);
+          console.log('stakeholders.owner:', window.helper.stakeholders?.owner);
+          console.log('meta owner fields:', {
+            owner_phone: window.helper.meta?.owner_phone,
+            phone: window.helper.meta?.phone
+          });
+          
+          // Clear ALL possible phone contamination sources
+          if (window.helper.car_details?.ownerPhone) {
+            console.log('🧨 FOUND: Clearing car_details.ownerPhone:', window.helper.car_details.ownerPhone);
+            delete window.helper.car_details.ownerPhone;
+          }
+          if (window.helper.stakeholders?.owner?.phone) {
+            console.log('🧨 FOUND: Clearing stakeholders.owner.phone:', window.helper.stakeholders.owner.phone);
+            window.helper.stakeholders.owner.phone = '';
+          }
+          if (window.helper.meta?.owner_phone) {
+            console.log('🧨 FOUND: Clearing meta.owner_phone:', window.helper.meta.owner_phone);
+            delete window.helper.meta.owner_phone;
+          }
+          if (window.helper.meta?.phone) {
+            console.log('🧨 FOUND: Clearing meta.phone:', window.helper.meta.phone);
+            delete window.helper.meta.phone;
+          }
+          
           if (typeof helperModule.saveHelperToAllStorageLocations === 'function') {
             helperModule.saveHelperToAllStorageLocations();
           }
@@ -327,7 +351,7 @@
           }
           return damageDate;
         })(),
-        ownerPhone: document.getElementById("owner_phone_number").value.trim(),
+        ownerPhone: document.getElementById("owner_phone").value.trim(),
         ownerAddress: document.getElementById("owner_address").value.trim(),
         damageType: (document.getElementById("damageType").value === "אחר" ? document.getElementById("otherDamageType").value.trim() : document.getElementById("damageType").value.trim()),
         password: password
