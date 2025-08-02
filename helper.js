@@ -3434,7 +3434,7 @@ window.setupUniversalInputCapture = function() {
     'client_name': 'stakeholders.owner.name',
     'ownerPhone': 'stakeholders.owner.phone',
     'owner_phone': 'stakeholders.owner.phone',
-    'owner_phone_number': 'stakeholders.owner.phone', // NEW CLEAN FIELD
+    'phone_number': 'stakeholders.owner.phone', // NEW CLEAN FIELD
     'ownerAddress': 'stakeholders.owner.address',
     'owner_address': 'stakeholders.owner.address',
     
