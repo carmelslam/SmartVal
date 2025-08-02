@@ -102,7 +102,7 @@ class UniversalDataCapture {
       'agentEmail': 'stakeholders.insurance.agent.email',
       'insuranceCompany': 'stakeholders.insurance.company',
       'insuranceEmail': 'stakeholders.insurance.email',
-      'ownerPhone': 'stakeholders.owner.phone',
+      // 'ownerPhone': 'stakeholders.owner.phone', // DISABLED - should not auto-populate
       'ownerAddress': 'stakeholders.owner.address',
       
       // Damage data
