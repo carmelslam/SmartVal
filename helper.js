@@ -182,6 +182,13 @@ window.setOwnerPhone = function(ownerPhone, source = 'manual') {
   
   const cleanedPhone = ownerPhone.trim();
   
+  // VALIDATION: Prevent owner names from being assigned to phone field
+  const currentOwnerName = window.helper?.stakeholders?.owner?.name;
+  if (currentOwnerName && cleanedPhone === currentOwnerName) {
+    console.warn('🚫 BLOCKED: Preventing owner name from being assigned to phone field:', cleanedPhone);
+    return false;
+  }
+  
   // SINGLE SOURCE OF TRUTH: Store owner phone only in stakeholders.owner.phone
   if (!window.helper.stakeholders) window.helper.stakeholders = {};
   if (!window.helper.stakeholders.owner) window.helper.stakeholders.owner = {};
