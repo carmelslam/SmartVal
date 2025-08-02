@@ -369,7 +369,17 @@ window.cleanupDuplicateOwnerData = function() {
       console.log('🧹 CLEANUP: Removing owner name from phone field:', phone);
       window.helper.stakeholders.owner.phone = '';
       cleanedCount++;
+      // FORCE SAVE IMMEDIATELY
+      saveHelperToAllStorageLocations();
     }
+  }
+  
+  // AGGRESSIVE: Force clear phone field if it still contains owner name
+  if (window.helper.stakeholders?.owner?.phone === window.helper.stakeholders?.owner?.name) {
+    console.log('🚨 FORCE CLEARING: Owner name still in phone field');
+    window.helper.stakeholders.owner.phone = '';
+    cleanedCount++;
+    saveHelperToAllStorageLocations();
   }
   if (window.helper.general_info?.owner_address) {
     delete window.helper.general_info.owner_address;
