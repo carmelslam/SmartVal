@@ -676,6 +676,89 @@
   <script src="helper.js"></script>
   <script type="module" src="parts.js"></script>
   <script>
+    // Global wizard state and module data storage
+    let moduleData = {
+      works: [],
+      parts: [],
+      repairs: [],
+      takana389: '',
+      location: '',
+      description: ''
+    };
+    
+    // Listen for data from iframe modules
+    window.addEventListener('message', function(event) {
+      console.log('📨 Wizard received message:', event.data);
+      
+      if (event.data.type === 'moduleData') {
+        const { module, data } = event.data;
+        
+        switch(module) {
+          case 'work':
+            moduleData.works = data.works || [];
+            moduleData.takana389 = data.takana389 || '';
+            console.log('✅ Work data received in wizard:', moduleData.works);
+            break;
+            
+          case 'parts':
+            moduleData.parts = data.parts || [];
+            console.log('✅ Parts data received in wizard:', moduleData.parts);
+            break;
+            
+          case 'repairs':
+            moduleData.repairs = data.repairs || [];
+            console.log('✅ Repairs data received in wizard:', moduleData.repairs);
+            break;
+        }
+        
+        // Update helper with collected data
+        updateHelperWithModuleData();
+      }
+    });
+    
+    function updateHelperWithModuleData() {
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Update damage_assessment with current module data
+        helper.damage_assessment = helper.damage_assessment || {};
+        
+        if (moduleData.works.length > 0) {
+          helper.damage_assessment.works = {
+            takana389: moduleData.takana389,
+            work_items: moduleData.works,
+            updated_at: new Date().toISOString(),
+            updated_by: 'wizard_collection'
+          };
+        }
+        
+        if (moduleData.parts.length > 0) {
+          helper.damage_assessment.parts = {
+            parts_items: moduleData.parts,
+            updated_at: new Date().toISOString(),
+            updated_by: 'wizard_collection'
+          };
+        }
+        
+        if (moduleData.repairs.length > 0) {
+          helper.damage_assessment.repairs = {
+            repairs_items: moduleData.repairs,
+            updated_at: new Date().toISOString(),
+            updated_by: 'wizard_collection'
+          };
+        }
+        
+        helper.meta = helper.meta || {};
+        helper.meta.last_updated = new Date().toISOString();
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Helper updated with module data');
+        
+      } catch (error) {
+        console.error('❌ Failed to update helper with module data:', error);
+      }
+    }
+    
     // Global wizard state
     let currentStep = 1;
     const totalSteps = 7; // Added one more step for parts search
@@ -1087,11 +1170,64 @@
     }
     
     function saveCurrentStepData() {
+      console.log('💾 Saving step data for step:', currentStep);
+      
+      // Get current helper data
+      let helper = {};
+      try {
+        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      } catch (e) {
+        helper = {};
+      }
+      
+      // Initialize wizard data structure if needed
+      helper.wizard_current_data = helper.wizard_current_data || {};
+      
       switch(currentStep) {
+        case 1:
+          // Save location data
+          const locationSelect = document.getElementById('locationSelect');
+          const otherLocationInput = document.getElementById('otherLocationInput');
+          const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
+          
+          helper.wizard_current_data.location = location;
+          damageCenterData.location = location;
+          console.log('✅ Location saved:', location);
+          break;
+          
         case 2:
-          damageCenterData.description = document.getElementById('damageDescription').value.trim();
+          // Save description
+          const description = document.getElementById('damageDescription')?.value?.trim();
+          helper.wizard_current_data.description = description;
+          damageCenterData.description = description;
+          console.log('✅ Description saved:', description);
+          break;
+          
+        case 3:
+          // Work data is handled by work.html module
+          console.log('✅ Work step - data handled by work module');
+          break;
+          
+        case 4:
+          // Parts search data is handled by parts search module
+          console.log('✅ Parts search step - data handled by parts search module');
+          break;
+          
+        case 5:
+          // Parts required data is handled by parts-required.html module
+          console.log('✅ Parts required step - data handled by parts required module');
+          break;
+          
+        case 6:
+          // Repairs data is handled by repairs-required.html module
+          console.log('✅ Repairs step - data handled by repairs module');
           break;
       }
+      
+      // Save updated helper
+      helper.wizard_current_data.last_updated = new Date().toISOString();
+      helper.wizard_current_data.current_step = currentStep;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
     }
     
     function loadWorkModule() {
@@ -1189,19 +1325,157 @@
     }
     
     function saveDamageCenterToHelper() {
-      if (typeof window.helper !== 'undefined') {
-        if (!window.helper.damage_centers) {
-          window.helper.damage_centers = [];
+      console.log('💾 Creating organized damage center structure...');
+      
+      try {
+        // Get current helper data
+        let helper = {};
+        try {
+          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.warn('Failed to parse helper from sessionStorage, using empty object');
+          helper = {};
         }
         
-        // Add timestamp
-        damageCenterData.created_at = new Date().toISOString();
-        damageCenterData.id = `damage_center_${Date.now()}`;
+        // Initialize proper damage centers structure
+        if (!helper.damage_centers_organized) {
+          helper.damage_centers_organized = {
+            total_damage_centers: 0,
+            damage_centers: {},
+            global_totals: {
+              all_works_total: 0,
+              all_parts_total: 0,
+              all_repairs_total: 0,
+              grand_subtotal: 0,
+              grand_vat: 0,
+              grand_total: 0
+            },
+            last_updated: new Date().toISOString()
+          };
+        }
         
-        // Save to helper
-        window.helper.damage_centers.push(damageCenterData);
+        // Get location data
+        const locationSelect = document.getElementById('locationSelect');
+        const otherLocationInput = document.getElementById('otherLocationInput');
+        const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
+        const description = document.getElementById('damageDescription')?.value;
         
-        console.log('💾 Damage center saved to helper:', damageCenterData);
+        // Get actual data from helper modules
+        const workData = helper.damage_assessment?.works?.work_items || [];
+        const partsData = helper.damage_assessment?.parts?.parts_items || [];
+        const repairsData = helper.damage_assessment?.repairs?.repairs_items || [];
+        
+        // Calculate totals
+        const workTotal = workData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+        const partsTotal = partsData.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+        const repairsTotal = repairsData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+        
+        const centerSubtotal = workTotal + partsTotal + repairsTotal;
+        const centerVat = centerSubtotal * 0.18;
+        const centerTotal = centerSubtotal + centerVat;
+        
+        // Create damage center number
+        const centerNumber = helper.damage_centers_organized.total_damage_centers + 1;
+        const centerId = `damage_center_${centerNumber}`;
+        
+        // Create complete damage center structure
+        const damageCenterComplete = {
+          center_info: {
+            number: centerNumber,
+            id: centerId,
+            location: location || 'מיקום לא צוין',
+            description: description || 'תיאור לא צוין',
+            created_at: new Date().toISOString(),
+            status: 'completed'
+          },
+          
+          works_needed: {
+            takana389: helper.damage_assessment?.works?.takana389 || 'לא צוין',
+            items: workData.map(work => ({
+              category: work.category || work.name,
+              cost: parseFloat(work.cost) || 0,
+              comments: work.comments || work.description || '',
+              added_at: work.added_at || new Date().toISOString()
+            })),
+            category_total: workTotal
+          },
+          
+          parts_needed: {
+            items: partsData.map(part => ({
+              name: part.part || part.name,
+              description: part.desc || part.description,
+              cost: parseFloat(part.price) || 0,
+              source: part.source || 'לא צוין',
+              supplier: part.supplier || '',
+              location: part.location || '',
+              availability: part.availability || '',
+              from_search: part.fromSearch || false,
+              added_at: part.addedAt || new Date().toISOString()
+            })),
+            category_total: partsTotal
+          },
+          
+          repairs_needed: {
+            items: repairsData.map(repair => ({
+              name: repair.name,
+              description: repair.description || '',
+              cost: parseFloat(repair.cost) || 0,
+              priority: repair.priority || 'רגיל',
+              added_at: repair.added_at || new Date().toISOString()
+            })),
+            category_total: repairsTotal
+          },
+          
+          cost_breakdown: {
+            works_subtotal: workTotal,
+            parts_subtotal: partsTotal,
+            repairs_subtotal: repairsTotal,
+            center_subtotal_without_vat: centerSubtotal,
+            center_vat_amount: centerVat,
+            center_total_with_vat: centerTotal,
+            vat_percentage: 18
+          }
+        };
+        
+        // Save damage center to organized structure
+        helper.damage_centers_organized.damage_centers[centerId] = damageCenterComplete;
+        helper.damage_centers_organized.total_damage_centers = centerNumber;
+        
+        // Update global totals
+        const allCenters = Object.values(helper.damage_centers_organized.damage_centers);
+        helper.damage_centers_organized.global_totals = {
+          all_works_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.works_subtotal, 0),
+          all_parts_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.parts_subtotal, 0),
+          all_repairs_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.repairs_subtotal, 0),
+          grand_subtotal: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_subtotal_without_vat, 0),
+          grand_vat: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_vat_amount, 0),
+          grand_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_total_with_vat, 0)
+        };
+        
+        helper.damage_centers_organized.last_updated = new Date().toISOString();
+        
+        // Update meta information
+        helper.meta = helper.meta || {};
+        helper.meta.last_updated = new Date().toISOString();
+        helper.meta.damage_centers_count = centerNumber;
+        
+        // Save to session storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ Organized damage center saved to helper:', damageCenterComplete);
+        console.log('✅ Global totals updated:', helper.damage_centers_organized.global_totals);
+        
+        // Clear current damage assessment data for next center
+        if (helper.damage_assessment) {
+          helper.damage_assessment.works = {};
+          helper.damage_assessment.parts = {};
+          helper.damage_assessment.repairs = {};
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to save organized damage center to helper:', error);
+        alert('שגיאה בשמירת מוקד הנזק');
       }
     }
     

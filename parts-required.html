@@ -358,10 +358,41 @@ function savePartsData() {
     } else if (part.price && isNaN(parseFloat(part.price))) {
       invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
     } else {
+      // Check if this part came from search results and preserve full JSON data
+      let searchResultData = {};
+      const storedHelper = JSON.parse(sessionStorage.getItem("helper") || '{}');
+      const searchResults = storedHelper?.parts_search?.search_results || [];
+      
+      // Find matching search result to preserve full data
+      const matchingResult = searchResults.find(result => 
+        (result.name && result.name.toLowerCase().includes(part.part.toLowerCase())) ||
+        (result.description && result.description.toLowerCase().includes(part.part.toLowerCase()))
+      );
+      
+      if (matchingResult) {
+        searchResultData = {
+          supplier: matchingResult.supplier || '',
+          location: matchingResult.location || '',
+          availability: matchingResult.availability || '',
+          part_number: matchingResult.part_number || '',
+          brand: matchingResult.brand || '',
+          condition: matchingResult.condition || '',
+          warranty: matchingResult.warranty || '',
+          search_metadata: {
+            search_engine: matchingResult.search_engine || '',
+            result_rank: matchingResult.result_rank || 0,
+            confidence_score: matchingResult.confidence_score || 0,
+            matched_keywords: matchingResult.matched_keywords || []
+          }
+        };
+      }
+      
       validParts.push({
         ...part,
+        ...searchResultData,
         addedAt: new Date().toISOString(),
-        fromWizard: true
+        fromWizard: true,
+        fromSearch: !!matchingResult
       });
     }
   });
@@ -454,10 +485,41 @@ function savePartsData() {
         } else if (part.price && isNaN(parseFloat(part.price))) {
           invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
         } else {
+          // Check if this part came from search results and preserve full JSON data
+          let searchResultData = {};
+          const storedHelper = JSON.parse(sessionStorage.getItem("helper") || '{}');
+          const searchResults = storedHelper?.parts_search?.search_results || [];
+          
+          // Find matching search result to preserve full data
+          const matchingResult = searchResults.find(result => 
+            (result.name && result.name.toLowerCase().includes(part.part.toLowerCase())) ||
+            (result.description && result.description.toLowerCase().includes(part.part.toLowerCase()))
+          );
+          
+          if (matchingResult) {
+            searchResultData = {
+              supplier: matchingResult.supplier || '',
+              location: matchingResult.location || '',
+              availability: matchingResult.availability || '',
+              part_number: matchingResult.part_number || '',
+              brand: matchingResult.brand || '',
+              condition: matchingResult.condition || '',
+              warranty: matchingResult.warranty || '',
+              search_metadata: {
+                search_engine: matchingResult.search_engine || '',
+                result_rank: matchingResult.result_rank || 0,
+                confidence_score: matchingResult.confidence_score || 0,
+                matched_keywords: matchingResult.matched_keywords || []
+              }
+            };
+          }
+          
           validParts.push({
             ...part,
+            ...searchResultData,
             addedAt: new Date().toISOString(),
-            fromWizard: !isStandalone
+            fromWizard: !isStandalone,
+            fromSearch: !!matchingResult
           });
         }
       });
