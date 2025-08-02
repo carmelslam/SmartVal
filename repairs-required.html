@@ -102,14 +102,7 @@
     <div style="color: red; font-weight: bold; margin-bottom: 15px;">
  לזמן שמאי לאחר פירוקים ולפני צבע
  
-  <button onclick="toggleVehicle()">פרטי הרכב</button>
-       <div id="vehiclePopup"></div>
-</div>
-
-   <div class="top-bar">
-      <button onclick="window.location.href='selection.html'">עמוד הבית</button>
-      <button class="logout-btn" onclick="logout()">התנתק</button>
-    </div>
+  <!-- Removed navigation buttons when in wizard -->
 
     <form id="fixesForm">
       <div id="fixesList">
@@ -121,8 +114,6 @@
       </div>
 
       <button type="button" class="btn-secondary" onclick="addRepairRow()">הוסף תיקון</button>
-      <button type="button" class="save-btn" onclick="saveRepairsData()" style="background-color: #28a745; margin-top: 10px;">שמור נתונים</button>
-      <button type="submit">המשך</button>
     </form>
 
     <div class="footer">All rights reserved © Carmel Cayouf</div>
@@ -244,26 +235,25 @@
       }
     }
 
-    document.getElementById("fixesForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const repairs = [];
-
-      document.querySelectorAll("#fixesList .repair-row").forEach(row => {
-        const name = row.querySelector(".repair-name").value.trim();
-        const cost = parseFloat(row.querySelector(".repair-cost").value) || 0;
-        const desc = row.querySelector(".repair-desc").value.trim();
-        
-        if (name && desc) {
-          repairs.push({ 
-            name: name, 
-            cost: cost,
-            description: desc 
-          });
-        }
-      });
-
-      // Send data to parent wizard if in iframe
+    // Auto-send data to parent wizard when repairs change (for wizard mode)
+    function autoSendRepairsData() {
       if (window.parent !== window) {
+        const repairs = [];
+
+        document.querySelectorAll("#fixesList .repair-row").forEach(row => {
+          const name = row.querySelector(".repair-name").value.trim();
+          const cost = parseFloat(row.querySelector(".repair-cost").value) || 0;
+          const desc = row.querySelector(".repair-desc").value.trim();
+          
+          if (name && desc) {
+            repairs.push({ 
+              name: name, 
+              cost: cost,
+              description: desc 
+            });
+          }
+        });
+
         const repairsData = {
           type: 'moduleData',
           module: 'repairs',
@@ -272,127 +262,13 @@
           }
         };
         window.parent.postMessage(repairsData, '*');
-        console.log('📤 Repairs data sent to parent wizard:', repairsData);
+        console.log('📤 Repairs data auto-sent to parent wizard:', repairsData);
       }
-      
-      // ✅ FIXED: Save repairs to damage_centers structure with ACTUAL DATA
-      console.log('🔄 Updating helper with repairs data AND damage centers...');
-      
-      try {
-        // Get current helper data
-        let helper = {};
-        try {
-          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        } catch (e) {
-          console.warn('Failed to parse helper from sessionStorage, using empty object');
-          helper = {};
-        }
-        
-        // Initialize damage_assessment structure if needed
-        helper.damage_assessment = helper.damage_assessment || {};
-        helper.damage_assessment.repairs = helper.damage_assessment.repairs || {};
-        
-        // Store repairs data in legacy damage_assessment structure
-        helper.damage_assessment.repairs = {
-          repairs_items: repairs,
-          updated_at: new Date().toISOString(),
-          updated_by: 'repairs_required_module'
-        };
-        
-        // ✅ CRITICAL: Also save to damage_centers structure with REAL DATA
-        if (!helper.damage_centers) {
-          helper.damage_centers = {
-            centers: [],
-            current_center_id: null,
-            active_center_count: 0,
-            totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 }
-          };
-        }
-        
-        // Find or create current damage center
-        let currentCenterId = helper.damage_centers.current_center_id;
-        if (!currentCenterId) {
-          currentCenterId = `center_${Date.now()}`;
-          helper.damage_centers.current_center_id = currentCenterId;
-          helper.damage_centers.active_center_count = 1;
-        }
-        
-        let currentCenter = helper.damage_centers.centers.find(c => c.id === currentCenterId);
-        if (!currentCenter) {
-          currentCenter = {
-            id: currentCenterId,
-            number: helper.damage_centers.active_center_count,
-            location: 'מיקום לא צוין',
-            description: 'תיאור לא צוין',
-            work_items: [],
-            parts_items: [],
-            repairs_items: [],
-            subtotals: { works: 0, parts: 0, repairs: 0, subtotal_without_vat: 0, vat_amount: 0, total_with_vat: 0 },
-            takana389: 'לא צוין',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            status: 'active'
-          };
-          helper.damage_centers.centers.push(currentCenter);
-        }
-        
-        // ✅ POPULATE WITH ACTUAL REPAIRS ITEMS AND COSTS
-        currentCenter.repairs_items = repairs.map((repair, index) => ({
-          id: `repair_${Date.now()}_${index}`,
-          name: repair.name,
-          description: repair.description || '',
-          cost: parseFloat(repair.cost) || 0,
-          category: 'תיקון כללי',
-          priority: 'רגיל',
-          added_at: new Date().toISOString(),
-          source: 'manual_entry'
-        }));
-        
-        // ✅ CALCULATE REAL SUBTOTALS
-        const repairsTotal = currentCenter.repairs_items.reduce((sum, item) => sum + (item.cost || 0), 0);
-        currentCenter.subtotals.repairs = repairsTotal;
-        
-        // Recalculate center totals
-        const subtotalWithoutVat = currentCenter.subtotals.works + currentCenter.subtotals.parts + currentCenter.subtotals.repairs;
-        const vatAmount = subtotalWithoutVat * 0.18;
-        currentCenter.subtotals.subtotal_without_vat = subtotalWithoutVat;
-        currentCenter.subtotals.vat_amount = vatAmount;
-        currentCenter.subtotals.total_with_vat = subtotalWithoutVat + vatAmount;
-        currentCenter.updated_at = new Date().toISOString();
-        
-        // ✅ UPDATE GLOBAL TOTALS WITH REAL NUMBERS
-        const globalSubtotal = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.subtotal_without_vat || 0), 0);
-        const globalVat = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.vat_amount || 0), 0);
-        helper.damage_centers.totals = {
-          all_centers_subtotal: globalSubtotal,
-          all_centers_vat: globalVat,
-          all_centers_total: globalSubtotal + globalVat,
-          last_calculated: new Date().toISOString()
-        };
-        
-        // Update meta information
-        helper.meta = helper.meta || {};
-        helper.meta.last_updated = new Date().toISOString();
-        
-        // Save to session storage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        console.log('✅ Helper updated successfully with repairs data:', helper.damage_assessment.repairs);
-        console.log('✅ Damage centers updated with repairs:', currentCenter.repairs_items);
-        
-        // Trigger helper update broadcast if available
-        if (typeof window.broadcastHelperUpdate === 'function') {
-          window.broadcastHelperUpdate(['damage_assessment', 'damage_centers'], 'repairs_required_module');
-        }
-        
-      } catch (error) {
-        console.error('❌ Failed to update helper with repairs data:', error);
-        alert('שגיאה בשמירת תיקוני הרכב');
-        return;
-      }
-      
-      window.location.href = "general-comments.html";
-    });
+    }
+
+    // Auto-send when repairs data changes
+    document.addEventListener('change', autoSendRepairsData);
+    document.addEventListener('input', autoSendRepairsData);
   </script>
 <script src="car-details-floating.js"></script>
 
