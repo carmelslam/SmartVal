@@ -2440,34 +2440,39 @@ function processDirectData(data, result) {
     'קוד לוי': ['valuation.levi_code'],
     'קוד דגם לוי': ['valuation.levi_model_code'],
     
-    // Additional Hebrew adjustment fields from webhook
+    // LEVI WEBHOOK RESPONSE MAPPING - Fixed according to documentation
+    // Registration adjustments
     'עליה לכביש': ['valuation.adjustments.registration.description'],
-    'עליה לכביש %': ['valuation.adjustments.registration.percent'],
     'ערך עליה לכביש': ['valuation.adjustments.registration.value'],
+    'עליה לכביש %': ['valuation.adjustments.registration.percent'],
     'ערך ש"ח עליה לכביש': ['valuation.adjustments.registration.amount'],
     'שווי מצטבר עליה לכביש': ['valuation.adjustments.registration.cumulative'],
     
+    // Ownership type adjustments
     'בעלות': ['valuation.adjustments.ownership_type.description'],
-    'בעלות %': ['valuation.adjustments.ownership_type.percent'],
     'ערך בעלות': ['valuation.adjustments.ownership_type.value'],
+    'בעלות %': ['valuation.adjustments.ownership_type.percent'],
     'ערך ש"ח בעלות': ['valuation.adjustments.ownership_type.amount'],
     'שווי מצטבר בעלות': ['valuation.adjustments.ownership_type.cumulative'],
     
+    // Mileage adjustments
     'מס ק"מ': ['valuation.adjustments.mileage.description'],
-    'מס ק"מ %': ['valuation.adjustments.mileage.percent'],
     'ערך מס ק"מ': ['valuation.adjustments.mileage.value'],
+    'מס ק"מ %': ['valuation.adjustments.mileage.percent'],
     'ערך ש"ח מס ק"מ': ['valuation.adjustments.mileage.amount'],
     'שווי מצטבר מס ק"מ': ['valuation.adjustments.mileage.cumulative'],
     
+    // Ownership history adjustments (number of owners)
     'מספר בעלים': ['valuation.adjustments.ownership_history.description'],
-    'מספר בעלים %': ['valuation.adjustments.ownership_history.percent'],
     'ערך מספר בעלים': ['valuation.adjustments.ownership_history.value'],
+    'מספר בעלים %': ['valuation.adjustments.ownership_history.percent'],
     'ערך ש"ח מספר בעלים': ['valuation.adjustments.ownership_history.amount'],
     'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
     
+    // Features adjustments
     'מאפיינים': ['valuation.adjustments.features.description'],
+    'ערך מאפיינים': ['valuation.adjustments.features.value'],
     'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
-    'ערך מאפיינים ': ['valuation.adjustments.features.value'],
     'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
     'שווי מצטבר מאפיינים': ['valuation.adjustments.features.cumulative'],
     'מאפיינים_text': ['vehicle.features_text'],
@@ -2475,39 +2480,8 @@ function processDirectData(data, result) {
     // 🔧 UNIVERSAL SOLUTION: Features text preservation from duplicate key parser
     'features-text': ['vehicle.features_text'],
     
-    // Levi adjustment fields - Registration
-    'עליה לכביש': ['valuation.adjustments.registration.description'],
-    'ערך עליה לכביש': ['valuation.adjustments.registration.value'],
-    'עליה לכביש %': ['valuation.adjustments.registration.percent'],
-    'ערך ש"ח עליה לכביש': ['valuation.adjustments.registration.amount'],
-    'שווי מצטבר עליה לכביש': ['valuation.adjustments.registration.cumulative'],
-    
-    // Levi adjustment fields - Ownership
-    'בעלות': ['valuation.adjustments.ownership_type.description'],
-    'ערך בעלות': ['valuation.adjustments.ownership_type.value'],
-    'בעלות %': ['valuation.adjustments.ownership_type.percent'],
-    'ערך ש"ח בעלות': ['valuation.adjustments.ownership_type.amount'],
-    'שווי מצטבר בעלות': ['valuation.adjustments.ownership_type.cumulative'],
-    
-    // Levi adjustment fields - Mileage 
-    'מס ק"מ': ['valuation.adjustments.mileage.description'],
-    'ערך מס ק"מ': ['valuation.adjustments.mileage.value', 'vehicle.km'],
-    'מס ק"מ %': ['valuation.adjustments.mileage.percent'],
-    'ערך ש"ח מס ק"מ': ['valuation.adjustments.mileage.amount'],
-    'שווי מצטבר מס ק"מ': ['valuation.adjustments.mileage.cumulative'],
-    
-    // Levi adjustment fields - Owner Count
-    'מספר בעלים': ['valuation.adjustments.ownership_history.description'],
-    'ערך מספר בעלים': ['valuation.adjustments.ownership_history.value', 'valuation.adjustments.ownership_history.owner_count'],
-    'מספר בעלים %': ['valuation.adjustments.ownership_history.percent'],
-    'ערך ש"ח מספר בעלים': ['valuation.adjustments.ownership_history.amount'],
-    'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
-    
-    // Levi adjustment fields - Features (note: duplicate key 'מאפיינים' handled)
-    'ערך מאפיינים ': ['valuation.adjustments.features.value'],
-    'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
-    'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
-    'שווי מצטבר  מאפיינים': ['valuation.adjustments.features.cumulative'],
+    // Additional fields for specific data mapping
+    'ערך מס ק"מ': ['vehicle.km'], // Mileage value also goes to vehicle.km
     
     // Final price
     'מחיר סופי לרכב': ['valuation.final_price', 'vehicle.market_value'],

@@ -1,3 +1,121 @@
+# FIND LEVI SUMMARY SECTION LOCATION AND MAPPING
+**Created: 02/08/2025**
+
+## 🎯 OBJECTIVE  
+Locate where the levi summary section is defined and populated in helper.js, including the structure that stores levi adjustment data outside of helper.valuation.adjustments.
+
+## 📊 ANALYSIS FINDINGS
+
+Based on comprehensive search through the codebase, I have identified where the levi summary section is defined and populated:
+
+### **Primary Levi Summary Structure - `helper.levisummary`**
+
+**Location**: `/Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation /IntegratedAppBuild/System Building Team /code /new code /evalsystem/upload-levi.html`
+
+**Lines**: 2192-2238 in the `updateHelperWithResults()` function
+
+**Structure Definition**:
+```javascript
+helper.levisummary = {
+  model_code: result['קוד דגם'] || '',
+  full_model: result['שם דגם מלא'] || '',
+  is_automatic: result['אוטומט'] === 'כן' || false,
+  features: result['מאפיינים'] || '',
+  report_date: result['תאריך'] || new Date().toISOString().split('T')[0],
+  registration_date: result['ערך עליה לכביש'] || '',
+  base_price: result['מחיר בסיס'] || '',
+  final_price: result['מחיר סופי לרכב'] || '',
+  adjustments: {
+    features: {
+      value: result['ערך מאפיינים' || '',
+      percent: result['מחיר מאפיינים %'] || '0%',
+      amount: result['ערך ש"ח מאפיינים'] || '₪0',
+      cumulative: result['שווי מצטבר מאפיינים'] || '₪0'
+    },
+    registration: {
+      value: result['ערך עליה לכביש' || '',
+      percent: result['עליה לכביש %'] || '0%',
+      amount: result['ערך ש"ח עליה לכביש'] || '₪0',
+      cumulative: result['שווי מצטבר עליה לכביש'] || '₪0'
+    },
+    mileage: {
+      value: result['ערך מס ק"מ'] || '',
+      percent: result['מס ק"מ %'] || '0%',
+      amount: result['ערך ש"ח מס ק"מ'] || '₪0',
+      cumulative: result['שווי מצטבר מס ק"מ'] || '₪0'
+    },
+    ownership_type: {
+      value: result ['ערך בעלות'] || '',
+      percent: result['בעלות %'] || '0%',
+      amount: result['ערך ש"ח בעלות'] || '₪0',
+      cumulative: result['שווי מצטבר בעלות'] || '₪0'
+    },
+    ownership_history: {
+      value: result['ערך מספר בעלים'] || '',
+      percent: result['מספר בעלים %'] || '0%',
+      amount: result['ערך ש"ח מספר בעלים'] || '₪0',
+      cumulative: result['שווי מצטבר מספר בעלים'] || '₪0'
+    }
+  }
+};
+```
+
+### **Secondary Levi Structure - `helper.expertise.levi_report`**
+
+**Location**: `/Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation /IntegratedAppBuild/System Building Team /code /new code /evalsystem/helper.expertise.levi_report.parts.image count.js`
+
+**Lines**: 7-48
+
+**Structure Definition**:
+```javascript
+updateHelper('expertise', {
+  levi_report: {
+    model_code: '',
+    full_model: '',
+    is_automatic: '',
+    features: '',
+    report_date: '',
+    registration_date: '',
+    owner_count: '',
+    category: '',
+    km: '',
+    base_price: '',
+    final_price: '',
+    adjustments: {
+      registration: { percent: '', value: '', total: '' },
+      km: { percent: '', value: '', total: '' },
+      ownership: { type: '', percent: '', value: '', total: '' },
+      owner_count: { percent: '', value: '', total: '' },
+      features: { percent: '', value: '', total: '' }
+    }
+  }
+});
+```
+
+### **Webhook Data Mapping Process**
+
+**Location**: `/Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation /IntegratedAppBuild/System Building Team /code /new code /evalsystem/upload-levi.html`
+
+**Function**: `updateHelperWithResults()` - Lines 2186-2358
+
+**Process Flow**:
+1. Webhook data arrives with Hebrew field names (e.g., 'קוד דגם', 'מחיר בסיס')
+2. Data is mapped to `helper.levisummary` structure 
+3. Same data is copied to `helper.expertise.levi_report`
+4. Both structures are updated via `updateHelper()` calls
+5. Data is broadcast to all modules via `broadcastHelperUpdate()`
+
+### **Key Data Flow**
+
+**Webhook → helper.levisummary → helper.expertise.levi_report → UI Forms**
+
+The system maintains two separate but synchronized levi structures:
+- `helper.levisummary`: Primary storage for levi data
+- `helper.expertise.levi_report`: Secondary structure for expertise module
+- `helper.valuation.adjustments`: Additional mapping for detailed valuation calculations
+
+---
+
 # FIX LEVI PERCENTAGE FIELDS NEGATIVE VALUES PARSING ERROR
 **Created: 01/08/2025**
 
