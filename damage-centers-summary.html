@@ -474,7 +474,7 @@
     function loadDamageCentersSummary() {
       console.log('📊 Loading damage centers summary...');
       
-      // Load from helper damage_blocks
+      // Load from comprehensive damage_centers structure
       let helper = {};
       try {
         helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -482,8 +482,8 @@
         console.warn('Failed to parse helper from sessionStorage');
       }
       
-      if (helper.damage_blocks && Array.isArray(helper.damage_blocks)) {
-        damageCenters = helper.damage_blocks;
+      if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
+        damageCenters = helper.damage_centers.centers;
       } else {
         damageCenters = [];
       }
@@ -535,27 +535,27 @@
       cardDiv.innerHTML = `
         <div class="damage-center-header">
           <div class="damage-center-title">
-            <div class="center-name">מוקד נזק ${center["damage center number"]}</div>
-            <div class="center-number">${center["damage center number"]}</div>
+            <div class="center-name">מוקד נזק ${center.number}</div>
+            <div class="center-number">${center.number}</div>
           </div>
           <div class="center-location">📍 ${center.location || 'לא צוין מיקום'}</div>
-          <div class="center-description">${center["damage center description"] || 'אין תיאור'}</div>
+          <div class="center-description">${center.description || 'אין תיאור'}</div>
         </div>
         
         <div class="damage-center-body">
-          ${createSimpleItemsSection('עבודות נדרשות', center["works needed"] || [], '🔧')}
-          ${createSimpleItemsSection('חלפים נדרשים', center["parts needed"] || [], '🔩')}
-          ${createSimpleItemsSection('תיקונים נדרשים', center["repairs needed"] || [], '🔨')}
+          ${createSimpleItemsSection('עבודות נדרשות', center.work_items || [], '🔧')}
+          ${createSimpleItemsSection('חלפים נדרשים', center.parts_items || [], '🔩')}
+          ${createSimpleItemsSection('תיקונים נדרשים', center.repairs_items || [], '🔨')}
           
           <div class="center-totals">
             <div class="totals-grid">
               <div class="total-item">
                 <div class="total-label">סך הכל</div>
-                <div class="total-amount">₪${formatNumber(center["total cost"] || 0)}</div>
+                <div class="total-amount">₪${formatNumber(center.calculations?.total_with_vat || 0)}</div>
               </div>
               <div class="total-item">
-                <div class="total-label">מע"מ (18%)</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.vat_amount || 0)}</div>
+                <div class="total-label">מע"מ (17%)</div>
+                <div class="total-amount">₪${formatNumber(center.calculations?.vat_amount || 0)}</div>
               </div>
             </div>
             

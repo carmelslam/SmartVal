@@ -1355,9 +1355,10 @@
           helper = {};
         }
         
-        // Initialize simple damage centers structure (your original concept)
-        if (!helper.damage_blocks) {
-          helper.damage_blocks = [];
+        // Initialize comprehensive damage centers structure
+        if (!helper.damage_centers) {
+          console.error('❌ Damage centers structure not found in helper');
+          return false;
         }
         
         // Get damage center data
@@ -1375,60 +1376,88 @@
         const repairsTotal = repairsData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
         const total = workTotal + partsTotal + repairsTotal;
         
-        // Create simple damage center block (your original concept)
-        const damageBlock = {
-          "damage center number": helper.damage_blocks.length + 1,
-          "damage center description": description,
-          "location": location,
-          "works needed": {},
-          "parts needed": {},
-          "repairs needed": {},
-          "total cost": total
-        };
+        // Create comprehensive damage center using the advanced system
+        const newCenter = window.createDamageCenter(location, description, {
+          created_by: 'damage_centers_wizard',
+          creation_method: 'wizard'
+        });
         
-        // Add works with costs and comments
+        if (!newCenter) {
+          console.error('❌ Failed to create damage center');
+          return false;
+        }
+        
+        // Add all work items with comprehensive data
         workData.forEach(work => {
-          damageBlock["works needed"][work.category] = {
-            "cost": parseFloat(work.cost) || 0,
-            "comments": work.comments || ""
+          const workItem = {
+            category: work.category,
+            cost: parseFloat(work.cost) || 0,
+            comments: work.comments || '',
+            hours: parseFloat(work.hours) || 0,
+            hourly_rate: parseFloat(work.hourly_rate) || 0,
+            source: 'wizard_input',
+            added_at: new Date().toISOString(),
+            validated: true
           };
+          newCenter.work_items.push(workItem);
         });
         
-        // Add parts with full search result data
+        // Add all parts items with comprehensive data including webhook results
         partsData.forEach(part => {
-          damageBlock["parts needed"][part.part || part.name] = {
-            "description": part.desc || part.description || "",
-            "cost": parseFloat(part.price) || 0,
-            "source": part.source || "",
-            "supplier": part.supplier || "",
-            "location": part.location || "",
-            "availability": part.availability || "",
-            "part_number": part.part_number || "",
-            "brand": part.brand || "",
-            "condition": part.condition || ""
+          const partItem = {
+            name: part.part || part.name || '',
+            description: part.desc || part.description || '',
+            price: parseFloat(part.price) || 0,
+            cost: parseFloat(part.price) || 0,
+            supplier: part.supplier || '',
+            location: part.location || '',
+            part_number: part.part_number || '',
+            brand: part.brand || '',
+            condition: part.condition || 'משומש',
+            availability: part.availability || '',
+            source: part.source || 'manual',
+            
+            // Advanced tracking
+            search_session: part.search_session || '',
+            webhook_data: part.webhook_data || {},
+            ocr_extracted: part.ocr_extracted || false,
+            verified: part.verified || false,
+            added_at: new Date().toISOString(),
+            
+            // Integration data
+            linked_search_id: part.linked_search_id || '',
+            confidence_score: part.confidence_score || 0
           };
+          newCenter.parts_items.push(partItem);
         });
         
-        // Add repairs with costs
+        // Add all repair items with comprehensive data
         repairsData.forEach(repair => {
-          damageBlock["repairs needed"][repair.name] = {
-            "description": repair.description || "",
-            "cost": parseFloat(repair.cost) || 0,
-            "priority": repair.priority || "רגיל"
+          const repairItem = {
+            name: repair.name || '',
+            description: repair.description || '',
+            cost: parseFloat(repair.cost) || 0,
+            priority: repair.priority || 'normal',
+            estimated_hours: parseFloat(repair.estimated_hours) || 0,
+            complexity: repair.complexity || 'medium',
+            source: 'wizard_input',
+            added_at: new Date().toISOString(),
+            validated: true
           };
+          newCenter.repairs_items.push(repairItem);
         });
         
-        // Add to damage blocks array
-        helper.damage_blocks.push(damageBlock);
+        // Calculate comprehensive totals
+        window.calculateDamageCenterTotals(newCenter.id);
         
-        // Create simple damage summary (your original concept)
-        helper.damage_summary = helper.damage_blocks.map(block => ({
-          "label": block.location,
-          "total": block["total cost"]
-        }));
-        
-        // Calculate total damage cost
-        helper.damage_total = helper.damage_blocks.reduce((sum, block) => sum + block["total cost"], 0);
+        // Update center workflow status
+        window.updateDamageCenter(newCenter.id, {
+          'workflow.status': 'completed',
+          'workflow.completed_steps': [1, 2, 3, 4, 5, 6, 7],
+          'timestamps.completed_at': new Date().toISOString(),
+          'validation.is_complete': true,
+          'validation.is_valid': true
+        });
         
         // Update meta
         helper.meta = helper.meta || {};

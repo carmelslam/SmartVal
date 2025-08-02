@@ -59,52 +59,332 @@ function parseJSONWithDuplicates(jsonString) {
 }
 
 // ============================================================================
-// 🏗️ DAMAGE BLOCKS SIMPLE SYSTEM
+// 🏗️ DAMAGE CENTERS COMPREHENSIVE MANAGEMENT SYSTEM
 // ============================================================================
 
 /**
- * Save damage center to helper as simple damage block
+ * Create a new damage center with comprehensive tracking
  */
-window.saveDamageCenterToHelper = function(location, description, works, parts, repairs) {
-  console.log('💾 Saving damage center to helper as simple damage block...');
+window.createDamageCenter = function(location = '', description = '', sourceData = {}) {
+  console.log('🏗️ Creating comprehensive damage center...');
   
-  if (!window.helper) {
-    console.error('❌ Helper not initialized');
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ Helper or damage_centers not initialized');
+    return null;
+  }
+  
+  const centerNumber = window.helper.damage_centers.centers.length + 1;
+  const centerId = `damage_center_${Date.now()}_${centerNumber}`;
+  
+  // Create comprehensive damage center structure
+  const newCenter = {
+    // Basic identification
+    id: centerId,
+    number: centerNumber,
+    location: location,
+    description: description,
+    
+    // Core data
+    work_items: [],
+    parts_items: [],
+    repairs_items: [],
+    attachments: [],
+    images: [],
+    
+    // Comprehensive calculations
+    calculations: {
+      works_subtotal: 0,
+      parts_subtotal: 0,
+      repairs_subtotal: 0,
+      fees_subtotal: 0,
+      subtotal_before_vat: 0,
+      vat_amount: 0,
+      total_with_vat: 0,
+      
+      // Detailed breakdown
+      breakdown: {
+        labor_hours: 0,
+        hourly_rate: 0,
+        parts_count: 0,
+        repairs_count: 0
+      },
+      
+      // Manual adjustments
+      adjustments: [],
+      manual_overrides: [],
+      
+      // Calculation metadata
+      last_calculated: new Date().toISOString(),
+      calculation_method: 'auto',
+      calculated_by: 'system'
+    },
+    
+    // Integration data
+    integrations: {
+      parts_search: {
+        linked_search_sessions: [],
+        auto_populated_parts: [],
+        manual_parts: [],
+        rejected_suggestions: []
+      },
+      invoices: {
+        linked_invoices: [],
+        matched_items: [],
+        unmatched_items: []
+      },
+      estimates: {
+        included_in_estimates: [],
+        estimate_line_items: []
+      }
+    },
+    
+    // Quality and validation
+    validation: {
+      is_complete: false,
+      is_valid: false,
+      validation_errors: [],
+      validation_warnings: [],
+      manual_reviews: [],
+      reviewed_by: '',
+      review_date: '',
+      approval_status: 'pending'
+    },
+    
+    // Workflow and status
+    workflow: {
+      status: 'draft', // draft, in_progress, review, approved, rejected
+      current_step: 1,
+      completed_steps: [],
+      workflow_history: [],
+      assigned_to: '',
+      priority: 'normal'
+    },
+    
+    // Source and provenance
+    source: {
+      created_by: sourceData.created_by || 'damage_centers_wizard',
+      creation_method: sourceData.creation_method || 'wizard',
+      source_document: sourceData.source_document || '',
+      import_batch: sourceData.import_batch || '',
+      data_sources: {
+        manual_input: true,
+        ocr_extracted: false,
+        invoice_matched: false,
+        estimate_imported: false
+      }
+    },
+    
+    // Timestamps and metadata
+    timestamps: {
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completed_at: '',
+      reviewed_at: '',
+      approved_at: ''
+    },
+    
+    // Additional metadata
+    metadata: {
+      version: '2.0.0',
+      tags: [],
+      notes: [],
+      flags: [],
+      custom_fields: {}
+    }
+  };
+  
+  // Add to centers array
+  window.helper.damage_centers.centers.push(newCenter);
+  
+  // Update session management
+  window.helper.damage_centers.current_session.active_center_id = centerId;
+  window.helper.damage_centers.current_session.center_count = centerNumber;
+  window.helper.damage_centers.current_session.last_activity = new Date().toISOString();
+  
+  // Update statistics
+  window.helper.damage_centers.statistics.total_centers = centerNumber;
+  
+  // Add audit trail entry
+  window.helper.damage_centers.audit_trail.push({
+    action: 'center_created',
+    center_id: centerId,
+    timestamp: new Date().toISOString(),
+    details: { location, description },
+    user: sourceData.created_by || 'system'
+  });
+  
+  console.log(`✅ Created comprehensive damage center #${centerNumber}:`, newCenter);
+  return newCenter;
+};
+
+/**
+ * Update damage center with comprehensive tracking
+ */
+window.updateDamageCenter = function(centerId, updates = {}) {
+  console.log(`🔄 Updating damage center ${centerId}:`, updates);
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ Helper or damage_centers not initialized');
     return false;
   }
   
-  // Initialize damage_blocks if not exists
-  if (!window.helper.damage_blocks) {
-    window.helper.damage_blocks = [];
+  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
   }
   
-  // Calculate total cost
-  const worksTotal = works.reduce((sum, work) => sum + (work.cost || 0), 0);
-  const partsTotal = parts.reduce((sum, part) => sum + (part.price || 0), 0);
-  const repairsTotal = repairs.reduce((sum, repair) => sum + (repair.cost || 0), 0);
-  const total = worksTotal + partsTotal + repairsTotal;
+  // Store original state for audit trail
+  const originalState = JSON.parse(JSON.stringify(center));
   
-  // Create damage block
-  const damageBlock = {
-    "damage center number": window.helper.damage_blocks.length + 1,
-    "damage center description": description,
-    "location": location,
-    "works needed": works,
-    "parts needed": parts,
-    "repairs needed": repairs,
-    "total cost": total,
-    "created_at": new Date().toISOString()
+  // Apply updates
+  Object.keys(updates).forEach(key => {
+    if (updates[key] !== undefined) {
+      // Handle nested updates
+      if (key.includes('.')) {
+        const [parent, child] = key.split('.');
+        center[parent] = center[parent] || {};
+        center[parent][child] = updates[key];
+      } else {
+        center[key] = updates[key];
+      }
+    }
+  });
+  
+  // Update timestamps
+  center.timestamps.updated_at = new Date().toISOString();
+  
+  // Add audit trail entry
+  window.helper.damage_centers.audit_trail.push({
+    action: 'center_updated',
+    center_id: centerId,
+    timestamp: new Date().toISOString(),
+    changes: updates,
+    previous_state: originalState,
+    user: updates.updated_by || 'system'
+  });
+  
+  // Recalculate if needed
+  if (updates.work_items || updates.parts_items || updates.repairs_items) {
+    window.calculateDamageCenterTotals(centerId);
+  }
+  
+  console.log(`✅ Updated damage center ${centerId}`);
+  return true;
+};
+
+/**
+ * Calculate comprehensive totals for a damage center
+ */
+window.calculateDamageCenterTotals = function(centerId) {
+  console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
+  
+  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Calculate subtotals
+  const worksTotal = center.work_items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+  const partsTotal = center.parts_items.reduce((sum, item) => sum + (parseFloat(item.price || item.cost) || 0), 0);
+  const repairsTotal = center.repairs_items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+  const feesTotal = 0; // Can be extended for additional fees
+  
+  const subtotalBeforeVat = worksTotal + partsTotal + repairsTotal + feesTotal;
+  const vatPercentage = window.helper.damage_centers.settings.default_vat_percentage || 17;
+  const vatAmount = subtotalBeforeVat * (vatPercentage / 100);
+  const totalWithVat = subtotalBeforeVat + vatAmount;
+  
+  // Update center calculations
+  center.calculations = {
+    ...center.calculations,
+    works_subtotal: worksTotal,
+    parts_subtotal: partsTotal,
+    repairs_subtotal: repairsTotal,
+    fees_subtotal: feesTotal,
+    subtotal_before_vat: subtotalBeforeVat,
+    vat_amount: vatAmount,
+    total_with_vat: totalWithVat,
+    
+    breakdown: {
+      labor_hours: center.work_items.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0),
+      hourly_rate: center.work_items.length > 0 ? worksTotal / Math.max(1, center.work_items.reduce((sum, item) => sum + (parseFloat(item.hours) || 1), 0)) : 0,
+      parts_count: center.parts_items.length,
+      repairs_count: center.repairs_items.length
+    },
+    
+    last_calculated: new Date().toISOString(),
+    calculation_method: 'auto',
+    calculated_by: 'system'
   };
   
-  // Add to damage blocks
-  window.helper.damage_blocks.push(damageBlock);
+  // Update global totals
+  window.calculateAllDamageCentersTotals();
   
-  console.log('✅ Damage center saved to helper:', damageBlock);
+  console.log(`✅ Calculated comprehensive totals for ${centerId}:`, center.calculations);
+  return center.calculations;
+};
+
+/**
+ * Calculate global totals across all damage centers
+ */
+window.calculateAllDamageCentersTotals = function() {
+  console.log('🧮 Calculating global damage centers totals');
   
-  // Save to session storage
-  sessionStorage.setItem('helper', JSON.stringify(window.helper));
+  if (!window.helper || !window.helper.damage_centers) {
+    return false;
+  }
   
-  return damageBlock;
+  let totalSubtotal = 0;
+  let totalVat = 0;
+  let totalWithVat = 0;
+  let breakdownTotals = {
+    total_works: 0,
+    total_parts: 0,
+    total_repairs: 0,
+    total_fees: 0
+  };
+  
+  const byLocation = {};
+  
+  window.helper.damage_centers.centers.forEach(center => {
+    if (center.workflow?.status !== 'rejected' && center.calculations) {
+      totalSubtotal += center.calculations.subtotal_before_vat || 0;
+      totalVat += center.calculations.vat_amount || 0;
+      totalWithVat += center.calculations.total_with_vat || 0;
+      
+      breakdownTotals.total_works += center.calculations.works_subtotal || 0;
+      breakdownTotals.total_parts += center.calculations.parts_subtotal || 0;
+      breakdownTotals.total_repairs += center.calculations.repairs_subtotal || 0;
+      breakdownTotals.total_fees += center.calculations.fees_subtotal || 0;
+      
+      // Group by location
+      const location = center.location || 'Unknown';
+      byLocation[location] = (byLocation[location] || 0) + (center.calculations.total_with_vat || 0);
+    }
+  });
+  
+  // Update global totals
+  window.helper.damage_centers.totals = {
+    all_centers_subtotal: totalSubtotal,
+    all_centers_vat: totalVat,
+    all_centers_total: totalWithVat,
+    breakdown: breakdownTotals,
+    by_location: byLocation,
+    last_calculated: new Date().toISOString(),
+    calculation_method: 'auto',
+    manual_overrides: window.helper.damage_centers.totals?.manual_overrides || []
+  };
+  
+  // Update statistics
+  const activeCenters = window.helper.damage_centers.centers.filter(c => c.workflow?.status !== 'rejected');
+  window.helper.damage_centers.statistics.avg_cost_per_center = activeCenters.length > 0 ? totalWithVat / activeCenters.length : 0;
+  window.helper.damage_centers.statistics.most_expensive_center = activeCenters.reduce((max, center) => 
+    (center.calculations?.total_with_vat || 0) > (max?.calculations?.total_with_vat || 0) ? center : max, null);
+  
+  console.log('✅ Global damage centers totals calculated:', window.helper.damage_centers.totals);
+  return window.helper.damage_centers.totals;
 };
 
 
@@ -1864,8 +2144,139 @@ window.helper = existingHelper || {
     vat_percentage: 18 // Global VAT percentage setting
   },
   
-  // Damage Centers - Simple Structure
-  damage_blocks: []
+  // Damage Centers - Comprehensive Structure
+  damage_centers: {
+    // Individual damage centers
+    centers: [],
+    
+    // Current session management
+    current_session: {
+      active_center_id: null,
+      center_count: 0,
+      session_start: '',
+      last_activity: '',
+      wizard_step: 1,
+      wizard_data: {},
+      temp_data: {}
+    },
+    
+    // Aggregated totals and calculations
+    totals: {
+      all_centers_subtotal: 0,
+      all_centers_vat: 0,
+      all_centers_total: 0,
+      
+      // Breakdown by category
+      breakdown: {
+        total_works: 0,
+        total_parts: 0,
+        total_repairs: 0,
+        total_fees: 0
+      },
+      
+      // By location analysis
+      by_location: {},
+      
+      // Calculation metadata
+      last_calculated: '',
+      calculation_method: 'auto',
+      manual_overrides: []
+    },
+    
+    // Integration with other modules
+    integrations: {
+      parts_search: {
+        linked_searches: [],
+        auto_suggestions_enabled: true,
+        last_sync: ''
+      },
+      invoices: {
+        linked_invoices: [],
+        auto_matching_enabled: true,
+        matching_confidence: {}
+      },
+      estimates: {
+        linked_estimates: [],
+        estimate_basis: 'damage_centers',
+        last_export: ''
+      }
+    },
+    
+    // Validation and quality control
+    validation: {
+      all_centers_valid: false,
+      validation_errors: [],
+      validation_warnings: [],
+      manual_reviews: [],
+      last_validation: '',
+      validation_rules: {
+        require_location: true,
+        require_description: true,
+        require_at_least_one_item: true,
+        require_costs: true
+      }
+    },
+    
+    // Statistics and analytics
+    statistics: {
+      total_centers: 0,
+      avg_cost_per_center: 0,
+      most_common_locations: {},
+      most_expensive_center: null,
+      completion_rate: 0,
+      
+      // Time tracking
+      time_spent: {
+        total_minutes: 0,
+        per_center_avg: 0,
+        per_step_breakdown: {}
+      }
+    },
+    
+    // Templates and automation
+    templates: {
+      common_works: [],
+      common_parts: [],
+      common_repairs: [],
+      auto_fill_enabled: true,
+      smart_suggestions: true
+    },
+    
+    // Audit trail and history
+    audit_trail: [],
+    
+    // Settings and configuration
+    settings: {
+      auto_increment_numbers: true,
+      default_vat_percentage: 17,
+      currency: 'ILS',
+      allow_multiple_centers: true,
+      wizard_mode: true,
+      
+      // UI preferences
+      ui_preferences: {
+        show_subtotals: true,
+        show_vat_breakdown: true,
+        auto_save: true,
+        confirmation_dialogs: true
+      },
+      
+      // Validation settings
+      validation_settings: {
+        strict_mode: false,
+        require_images: false,
+        require_part_numbers: false,
+        min_cost_threshold: 0
+      }
+    },
+    
+    // Metadata
+    created_date: '',
+    last_updated: '',
+    version: '2.0.0',
+    created_by: 'damage_centers_wizard',
+    workflow_status: 'in_progress'
+  }
 };
 
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
