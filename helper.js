@@ -2099,25 +2099,8 @@ window.helper = existingHelper || {
     vat_percentage: 18 // Global VAT percentage setting
   },
   
-  // Damage Centers Workflow System
-  damage_centers: {
-    centers: [],  // Array of individual damage centers
-    current_center_id: null,  // Currently active damage center
-    active_center_count: 0,   // Number of damage centers created
-    totals: {
-      all_centers_subtotal: 0,      // Total of all damage centers without VAT
-      all_centers_vat: 0,           // Total VAT amount
-      all_centers_total: 0,         // Total with VAT
-      last_calculated: ''           // Timestamp of last calculation
-    },
-    settings: {
-      auto_increment_numbers: true,
-      default_vat_percentage: 18,
-      allow_multiple_centers: true,
-      require_location_selection: true,
-      require_description: true
-    }
-  }
+  // Damage Centers - Simple Structure
+  damage_blocks: []
 };
 
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
