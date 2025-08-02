@@ -221,11 +221,6 @@
     
     .btn-secondary {
       background: #6b7280;
-      color: white;
-    }
-    
-    .btn-secondary:hover {
-      background: #4b5563;
     }
     
     .btn-success {
@@ -237,36 +232,15 @@
       background: #059669;
     }
     
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    
     .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     
-    .location-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-    
-    .location-card {
-      border: 2px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    
-    .location-card:hover {
-      border-color: #3b82f6;
-      background: #f0f9ff;
-    }
-    
-    .location-card.selected {
-      border-color: #3b82f6;
-      background: #dbeafe;
-    }
     
     .damage-center-summary {
       background: white;
@@ -394,9 +368,15 @@
         
         <div class="form-group">
           <label class="form-label">בחר מיקום הנזק</label>
-          <div class="location-grid" id="locationGrid">
+          <select class="form-select" id="locationSelect" onchange="handleLocationChange()">
+            <option value="">בחר מיקום נזק</option>
             <!-- Location options will be populated dynamically -->
-          </div>
+          </select>
+        </div>
+        
+        <div class="form-group" id="otherLocationGroup" style="display: none;">
+          <label class="form-label">פרט מיקום אחר</label>
+          <input type="text" class="form-input" id="otherLocationInput" placeholder="הכנס מיקום נזק מותאם אישית..." onchange="updateOtherLocation()">
         </div>
       </div>
       
@@ -526,6 +506,7 @@
       
       <div class="navigation">
         <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display:none;">הקודם</button>
+        <button class="btn btn-success" id="saveBtn" onclick="saveCurrentStep()">שמור נתונים</button>
         <div id="stepInfo">שלב 1 מתוך 6</div>
         <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">הבא</button>
       </div>
@@ -560,8 +541,8 @@
       // Generate damage center number
       generateDamageCenterNumber();
       
-      // Populate location grid
-      populateLocationGrid();
+      // Populate location dropdown
+      populateLocationDropdown();
       
       // Initialize helper system
       if (typeof window.helper !== 'undefined') {
@@ -585,29 +566,46 @@
       damageCenterData.number = nextNumber;
     }
     
-    function populateLocationGrid() {
-      const grid = document.getElementById('locationGrid');
-      grid.innerHTML = '';
+    function populateLocationDropdown() {
+      const select = document.getElementById('locationSelect');
+      select.innerHTML = '<option value="">בחר מיקום נזק</option>';
       
       damageLocations.forEach(location => {
-        const card = document.createElement('div');
-        card.className = 'location-card';
-        card.textContent = location;
-        card.onclick = () => selectLocation(location, card);
-        grid.appendChild(card);
-      });
-    }
-    
-    function selectLocation(location, element) {
-      // Remove previous selection
-      document.querySelectorAll('.location-card').forEach(card => {
-        card.classList.remove('selected');
+        const option = document.createElement('option');
+        option.value = location;
+        option.textContent = location;
+        select.appendChild(option);
       });
       
-      // Select current location
-      element.classList.add('selected');
-      damageCenterData.location = location;
+      // Add "other" option
+      const otherOption = document.createElement('option');
+      otherOption.value = 'other';
+      otherOption.textContent = 'אחר (פרט במקום הבא)';
+      select.appendChild(otherOption);
     }
+    
+    window.handleLocationChange = function() {
+      const select = document.getElementById('locationSelect');
+      const otherGroup = document.getElementById('otherLocationGroup');
+      const otherInput = document.getElementById('otherLocationInput');
+      
+      if (select.value === 'other') {
+        otherGroup.style.display = 'block';
+        otherInput.focus();
+        damageCenterData.location = 'other';
+        damageCenterData.customLocation = '';
+      } else {
+        otherGroup.style.display = 'none';
+        otherInput.value = '';
+        damageCenterData.location = select.value;
+        damageCenterData.customLocation = '';
+      }
+    };
+    
+    window.updateOtherLocation = function() {
+      const otherInput = document.getElementById('otherLocationInput');
+      damageCenterData.customLocation = otherInput.value.trim();
+    };
     
     function nextStep() {
       if (validateCurrentStep()) {
@@ -634,6 +632,117 @@
         currentStep--;
         showStep(currentStep);
         updateProgress();
+      }
+    }
+    
+    function saveCurrentStep() {
+      console.log('💾 Saving current step data to helper...');
+      
+      try {
+        // Get current helper data
+        let helper = {};
+        try {
+          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.warn('Failed to parse helper from sessionStorage, using empty object');
+          helper = {};
+        }
+        
+        // Initialize damage_centers structure if needed
+        helper.damage_centers = helper.damage_centers || {
+          centers: [],
+          current_center_id: null,
+          active_center_count: 0,
+          totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 }
+        };
+        
+        // Save current step data based on which step we're on
+        const stepData = {};
+        
+        switch(currentStep) {
+          case 1:
+            // Location and number
+            const locationSelect = document.getElementById('locationSelect');
+            const otherLocationInput = document.getElementById('otherLocationInput');
+            stepData.location = locationSelect?.value;
+            stepData.customLocation = otherLocationInput?.value;
+            stepData.number = damageCenterData.number;
+            break;
+            
+          case 2:
+            // Description
+            const description = document.getElementById('damageDescription');
+            stepData.description = description?.value;
+            break;
+            
+          default:
+            // For module steps (3-6), modules handle their own saving
+            stepData.currentStep = currentStep;
+            stepData.stepName = ['', 'location', 'description', 'work', 'parts_search', 'parts_required', 'repairs'][currentStep];
+            break;
+        }
+        
+        // Update damage center data in helper
+        if (!helper.damage_centers.current_center_id) {
+          helper.damage_centers.current_center_id = damageCenterData.id || `center_${Date.now()}`;
+        }
+        
+        // Find or create current center
+        let currentCenter = helper.damage_centers.centers.find(c => c.id === helper.damage_centers.current_center_id);
+        if (!currentCenter) {
+          currentCenter = {
+            id: helper.damage_centers.current_center_id,
+            number: damageCenterData.number || helper.damage_centers.centers.length + 1,
+            steps: {}
+          };
+          helper.damage_centers.centers.push(currentCenter);
+        }
+        
+        // Save step data
+        Object.assign(currentCenter.steps, stepData);
+        currentCenter.last_updated = new Date().toISOString();
+        currentCenter.current_step = currentStep;
+        
+        // Update meta
+        helper.meta = helper.meta || {};
+        helper.meta.last_updated = new Date().toISOString();
+        
+        // Save to session storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ Step data saved to helper:', stepData);
+        
+        // Show save confirmation
+        const saveBtn = document.getElementById('saveBtn');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '✅ נשמר';
+        saveBtn.style.background = '#059669';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '#10b981';
+        }, 2000);
+        
+        // Trigger helper update broadcast if available
+        if (typeof window.broadcastHelperUpdate === 'function') {
+          window.broadcastHelperUpdate(['damage_centers'], 'damage_center_wizard');
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to save step data to helper:', error);
+        
+        // Show error state
+        const saveBtn = document.getElementById('saveBtn');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '❌ שגיאה';
+        saveBtn.style.background = '#dc2626';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '#10b981';
+        }, 3000);
+        
+        alert('שגיאה בשמירת הנתונים');
       }
     }
     
@@ -698,10 +807,9 @@
     
     function loadPartsSearchModule() {
       const moduleContainer = document.getElementById('partsSearchModule');
-      const currentCenterId = damageCenterData.id || window.helper?.damage_centers?.current_center_id;
       
       // Use existing parts search module
-      moduleContainer.innerHTML = `<iframe src="parts search.html?damageCenterId=${currentCenterId}" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsSearchModuleFrame"></iframe>`;
+      moduleContainer.innerHTML = `<iframe src="parts search.html" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsSearchModuleFrame"></iframe>`;
       moduleContainer.classList.add('loaded');
       
       // Show search results info
@@ -714,8 +822,16 @@
     function validateCurrentStep() {
       switch(currentStep) {
         case 1:
-          if (!damageCenterData.location) {
+          const locationSelect = document.getElementById('locationSelect');
+          const otherLocationInput = document.getElementById('otherLocationInput');
+          
+          if (!locationSelect.value) {
             alert('אנא בחר מיקום נזק');
+            return false;
+          }
+          
+          if (locationSelect.value === 'other' && !otherLocationInput.value.trim()) {
+            alert('אנא הזן מיקום נזק מותאם אישית');
             return false;
           }
           break;
@@ -740,10 +856,9 @@
     
     function loadWorkModule() {
       const moduleContainer = document.getElementById('workModule');
-      const currentCenterId = damageCenterData.id || window.helper?.damage_centers?.current_center_id;
       
-      // Add damage center ID as URL parameter for the work module
-      moduleContainer.innerHTML = `<iframe src="work.html?damageCenterId=${currentCenterId}" style="width:100%; height:600px; border:none; border-radius:10px;" id="workModuleFrame"></iframe>`;
+      // Load work module without URL parameters (work.html handles data via helper.js)
+      moduleContainer.innerHTML = `<iframe src="work.html" style="width:100%; height:600px; border:none; border-radius:10px;" id="workModuleFrame"></iframe>`;
       moduleContainer.classList.add('loaded');
       
       // Show subtotal
@@ -755,10 +870,9 @@
     
     function loadPartsModule() {
       const moduleContainer = document.getElementById('partsModule');
-      const currentCenterId = damageCenterData.id || window.helper?.damage_centers?.current_center_id;
       
       // Use existing parts-required.html module
-      moduleContainer.innerHTML = `<iframe src="parts-required.html?damageCenterId=${currentCenterId}" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsModuleFrame"></iframe>`;
+      moduleContainer.innerHTML = `<iframe src="parts-required.html" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsModuleFrame"></iframe>`;
       moduleContainer.classList.add('loaded');
       
       // Show subtotal
@@ -770,10 +884,9 @@
     
     function loadRepairsModule() {
       const moduleContainer = document.getElementById('repairsModule');
-      const currentCenterId = damageCenterData.id || window.helper?.damage_centers?.current_center_id;
       
       // Use existing repairs-required.html module
-      moduleContainer.innerHTML = `<iframe src="repairs-required.html?damageCenterId=${currentCenterId}" style="width:100%; height:600px; border:none; border-radius:10px;" id="repairsModuleFrame"></iframe>`;
+      moduleContainer.innerHTML = `<iframe src="repairs-required.html" style="width:100%; height:600px; border:none; border-radius:10px;" id="repairsModuleFrame"></iframe>`;
       moduleContainer.classList.add('loaded');
       
       // Show subtotal
@@ -785,7 +898,14 @@
     
     function updateSummary() {
       document.getElementById('summaryNumber').textContent = damageCenterData.number;
-      document.getElementById('summaryLocation').textContent = damageCenterData.location;
+      
+      // Display location (either selected or custom)
+      let locationText = damageCenterData.location;
+      if (damageCenterData.location === 'other' && damageCenterData.customLocation) {
+        locationText = damageCenterData.customLocation;
+      }
+      document.getElementById('summaryLocation').textContent = locationText;
+      
       document.getElementById('summaryDescription').textContent = damageCenterData.description;
       
       // Calculate totals

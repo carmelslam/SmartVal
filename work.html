@@ -117,6 +117,7 @@
 
 
   .add-btn { background: #6c757d; }
+  .save-btn { background: #28a745; }
   .submit-btn { background: #007bff; }
 
   button {
@@ -184,6 +185,7 @@
       </div>
 
       <button type="button" class="add-btn" onclick="addWorkRow()">הוסף עבודה</button>
+      <button type="button" class="save-btn" onclick="saveWorkData()">שמור נתונים</button>
       <button type="submit" class="submit-btn">המשך</button>
     </form>
 
@@ -219,23 +221,107 @@ function addWorkRow() {
   const row = document.createElement("div");
   row.className = "row";
  
-const select = document.createElement("select");
+  // Work type dropdown
+  const select = document.createElement("select");
   select.innerHTML = `<option value="">בחר סוג עבודה</option>` + workOptions.map(opt => `<option>${opt}</option>`).join("");
+  select.style.flex = "2";
 
-  const input = document.createElement("input");
-  input.placeholder = "הערה / פירוט";
-  input.style.display = "none";
+  // Cost input field
+  const costInput = document.createElement("input");
+  costInput.type = "number";
+  costInput.placeholder = "עלות (₪)";
+  costInput.style.flex = "1";
+  costInput.min = "0";
+  costInput.step = "0.01";
 
-  select.onchange = () => {
-    input.style.display = select.value === "אחר" ? "block" : "none";
-  };
+  // Comments input field  
+  const commentsInput = document.createElement("input");
+  commentsInput.placeholder = "הערות / פירוט";
+  commentsInput.style.flex = "2";
 
   row.appendChild(select);
-  row.appendChild(input);
+  row.appendChild(costInput);
+  row.appendChild(commentsInput);
   document.getElementById("worksList").appendChild(row);
 }
 
 addWorkRow(); // first default
+
+// Save work data to helper without navigation
+function saveWorkData() {
+  const takana = document.getElementById("takana389").value;
+  const works = [];
+
+  document.querySelectorAll("#worksList .row").forEach(row => {
+    const select = row.querySelector("select").value;
+    const costInput = row.querySelectorAll("input")[0];
+    const commentsInput = row.querySelectorAll("input")[1];
+    const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
+    const comments = commentsInput ? commentsInput.value : "";
+    
+    if (select) {
+      works.push({ 
+        category: select, 
+        cost: cost,
+        comments: comments 
+      });
+    }
+  });
+
+  console.log('💾 Saving work data to helper...');
+  
+  try {
+    // Get current helper data
+    let helper = {};
+    try {
+      helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    } catch (e) {
+      console.warn('Failed to parse helper from sessionStorage, using empty object');
+      helper = {};
+    }
+    
+    // Initialize damage_assessment structure if needed
+    helper.damage_assessment = helper.damage_assessment || {};
+    helper.damage_assessment.works = helper.damage_assessment.works || {};
+    
+    // Store works data in proper helper structure
+    helper.damage_assessment.works = {
+      takana389: takana,
+      work_items: works,
+      updated_at: new Date().toISOString(),
+      updated_by: 'work_module'
+    };
+    
+    // Update meta information
+    helper.meta = helper.meta || {};
+    helper.meta.last_updated = new Date().toISOString();
+    
+    // Save to session storage
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    console.log('✅ Work data saved to helper:', helper.damage_assessment.works);
+    
+    // Show save confirmation
+    const saveBtn = document.querySelector('.save-btn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '✅ נשמר';
+    saveBtn.style.background = '#155724';
+    
+    setTimeout(() => {
+      saveBtn.textContent = originalText;
+      saveBtn.style.background = '#28a745';
+    }, 2000);
+    
+    // Trigger helper update broadcast if available
+    if (typeof window.broadcastHelperUpdate === 'function') {
+      window.broadcastHelperUpdate(['damage_assessment'], 'work_module');
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to save work data to helper:', error);
+    alert('שגיאה בשמירת הנתונים');
+  }
+}
 
 document.getElementById("workForm").addEventListener("submit", function(e) {
   e.preventDefault();
@@ -244,9 +330,17 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
 
   document.querySelectorAll("#worksList .row").forEach(row => {
     const select = row.querySelector("select").value;
-    const note = row.querySelector("input").value;
+    const costInput = row.querySelectorAll("input")[0];
+    const commentsInput = row.querySelectorAll("input")[1];
+    const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
+    const comments = commentsInput ? commentsInput.value : "";
+    
     if (select) {
-      works.push({ category: select, note });
+      works.push({ 
+        category: select, 
+        cost: cost,
+        comments: comments 
+      });
     }
   });
 
