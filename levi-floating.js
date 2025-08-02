@@ -609,10 +609,20 @@
   }
 
   function mapLeviFieldsToHelper(changes) {
+    // CRITICAL FIX: Preserve existing helper data instead of creating empty objects
+    const helper = window.helper || {};
     const updates = {
-      valuation: {},
-      vehicle: {}
+      valuation: { ...helper.valuation } || {},
+      vehicle: { ...helper.vehicle } || {}
     };
+    
+    // Ensure adjustments structure exists and preserve existing data
+    if (!updates.valuation.adjustments) {
+      updates.valuation.adjustments = helper.valuation?.adjustments || {};
+    } else {
+      // Deep clone existing adjustments to preserve all data
+      updates.valuation.adjustments = JSON.parse(JSON.stringify(helper.valuation?.adjustments || {}));
+    }
 
     // Map basic fields
     if (changes['levi-base-price']) {
@@ -654,14 +664,12 @@
       'levi-features-percent': { type: 'features', field: 'percent', value: parseFloat(changes['levi-features-percent']) || 0 },
       'levi-features-value': { type: 'features', field: 'amount', value: parseFloat((changes['levi-features-value'] || '').replace(/[₪,]/g, '')) || 0 }
     };
-
-    if (!updates.valuation.adjustments) updates.valuation.adjustments = {};
     
     Object.keys(changes).forEach(fieldId => {
       if (adjustmentMap[fieldId]) {
         const mapping = adjustmentMap[fieldId];
         if (!updates.valuation.adjustments[mapping.type]) {
-          updates.valuation.adjustments[mapping.type] = {};
+          updates.valuation.adjustments[mapping.type] = helper.valuation?.adjustments?.[mapping.type] || {};
         }
         updates.valuation.adjustments[mapping.type][mapping.field] = mapping.value;
       }
@@ -914,12 +922,13 @@
       '-'
     );
 
-    // FIXED: Registration adjustments - use same approach as summary
+    // FIXED: Registration adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
     document.getElementById("levi-registration").textContent = formatValue(
+      helper.valuation?.adjustments?.registration?.description || 
+      helper.valuation?.adjustments?.registration?.value ||
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
-    // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
     document.getElementById("levi-registration-percent").textContent = formatPercent(
       helper.valuation?.adjustments?.registration?.percent || 0
     );
@@ -933,8 +942,10 @@
       result['שווי מצטבר עליה לכביש'] || 0
     );
 
-    // FIXED: Ownership adjustments - use same approach as summary
+    // FIXED: Ownership adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
     document.getElementById("levi-ownership").textContent = formatValue(
+      helper.valuation?.adjustments?.ownership_type?.description || 
+      helper.valuation?.adjustments?.ownership_type?.value ||
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
@@ -953,8 +964,10 @@
       result['שווי מצטבר בעלות'] || 0
     );
 
-    // FIXED: KM adjustments - use same approach as summary
+    // FIXED: KM adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
     document.getElementById("levi-km").textContent = formatValue(
+      helper.valuation?.adjustments?.mileage?.description || 
+      helper.valuation?.adjustments?.mileage?.value ||
       result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
     // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
@@ -972,8 +985,10 @@
       result['שווי מצטבר מס ק"מ'] || 0
     );
 
-    // FIXED: Owners adjustments - use same approach as summary
+    // FIXED: Owners adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
     document.getElementById("levi-owners").textContent = formatValue(
+      helper.valuation?.adjustments?.ownership_history?.description || 
+      helper.valuation?.adjustments?.ownership_history?.value ||
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
     // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
@@ -991,8 +1006,10 @@
       result['שווי מצטבר מספר בעלים'] || 0
     );
 
-    // FIXED: Features adjustments - use same approach as summary
+    // FIXED: Features adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
     document.getElementById("levi-features").textContent = formatValue(
+      helper.valuation?.adjustments?.features?.description || 
+      helper.valuation?.adjustments?.features?.value ||
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
