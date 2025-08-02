@@ -1339,139 +1339,92 @@
           helper = {};
         }
         
-        // Initialize proper damage centers structure
-        if (!helper.damage_centers_organized) {
-          helper.damage_centers_organized = {
-            total_damage_centers: 0,
-            damage_centers: {},
-            global_totals: {
-              all_works_total: 0,
-              all_parts_total: 0,
-              all_repairs_total: 0,
-              grand_subtotal: 0,
-              grand_vat: 0,
-              grand_total: 0
-            },
-            last_updated: new Date().toISOString()
-          };
+        // Initialize simple damage centers structure (your original concept)
+        if (!helper.damage_blocks) {
+          helper.damage_blocks = [];
         }
         
-        // Get location data from current wizard state
+        // Get damage center data
         const location = moduleData.location || helper.wizard_current_data?.location || 'מיקום לא צוין';
         const description = moduleData.description || helper.wizard_current_data?.description || 'תיאור לא צוין';
         
-        // Get actual data from collected module data (primary source) or fallback to helper
+        // Get actual data from modules
         const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.works?.work_items || []);
         const partsData = moduleData.parts.length > 0 ? moduleData.parts : (helper.damage_assessment?.parts?.parts_items || []);
         const repairsData = moduleData.repairs.length > 0 ? moduleData.repairs : (helper.damage_assessment?.repairs?.repairs_items || []);
-        
-        console.log('📊 Using collected data:', {
-          location,
-          description, 
-          workItems: workData.length,
-          partsItems: partsData.length,
-          repairsItems: repairsData.length
-        });
         
         // Calculate totals
         const workTotal = workData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
         const partsTotal = partsData.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
         const repairsTotal = repairsData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+        const total = workTotal + partsTotal + repairsTotal;
         
-        const centerSubtotal = workTotal + partsTotal + repairsTotal;
-        const centerVat = centerSubtotal * 0.18;
-        const centerTotal = centerSubtotal + centerVat;
-        
-        // Create damage center number
-        const centerNumber = helper.damage_centers_organized.total_damage_centers + 1;
-        const centerId = `damage_center_${centerNumber}`;
-        
-        // Create complete damage center structure
-        const damageCenterComplete = {
-          center_info: {
-            number: centerNumber,
-            id: centerId,
-            location: location || 'מיקום לא צוין',
-            description: description || 'תיאור לא צוין',
-            created_at: new Date().toISOString(),
-            status: 'completed'
-          },
-          
-          works_needed: {
-            takana389: helper.damage_assessment?.works?.takana389 || 'לא צוין',
-            items: workData.map(work => ({
-              category: work.category || work.name,
-              cost: parseFloat(work.cost) || 0,
-              comments: work.comments || work.description || '',
-              added_at: work.added_at || new Date().toISOString()
-            })),
-            category_total: workTotal
-          },
-          
-          parts_needed: {
-            items: partsData.map(part => ({
-              name: part.part || part.name,
-              description: part.desc || part.description,
-              cost: parseFloat(part.price) || 0,
-              source: part.source || 'לא צוין',
-              supplier: part.supplier || '',
-              location: part.location || '',
-              availability: part.availability || '',
-              from_search: part.fromSearch || false,
-              added_at: part.addedAt || new Date().toISOString()
-            })),
-            category_total: partsTotal
-          },
-          
-          repairs_needed: {
-            items: repairsData.map(repair => ({
-              name: repair.name,
-              description: repair.description || '',
-              cost: parseFloat(repair.cost) || 0,
-              priority: repair.priority || 'רגיל',
-              added_at: repair.added_at || new Date().toISOString()
-            })),
-            category_total: repairsTotal
-          },
-          
-          cost_breakdown: {
-            works_subtotal: workTotal,
-            parts_subtotal: partsTotal,
-            repairs_subtotal: repairsTotal,
-            center_subtotal_without_vat: centerSubtotal,
-            center_vat_amount: centerVat,
-            center_total_with_vat: centerTotal,
-            vat_percentage: 18
-          }
+        // Create simple damage center block (your original concept)
+        const damageBlock = {
+          "damage center number": helper.damage_blocks.length + 1,
+          "damage center description": description,
+          "location": location,
+          "works needed": {},
+          "parts needed": {},
+          "repairs needed": {},
+          "total cost": total
         };
         
-        // Save damage center to organized structure
-        helper.damage_centers_organized.damage_centers[centerId] = damageCenterComplete;
-        helper.damage_centers_organized.total_damage_centers = centerNumber;
+        // Add works with costs and comments
+        workData.forEach(work => {
+          damageBlock["works needed"][work.category] = {
+            "cost": parseFloat(work.cost) || 0,
+            "comments": work.comments || ""
+          };
+        });
         
-        // Update global totals
-        const allCenters = Object.values(helper.damage_centers_organized.damage_centers);
-        helper.damage_centers_organized.global_totals = {
-          all_works_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.works_subtotal, 0),
-          all_parts_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.parts_subtotal, 0),
-          all_repairs_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.repairs_subtotal, 0),
-          grand_subtotal: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_subtotal_without_vat, 0),
-          grand_vat: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_vat_amount, 0),
-          grand_total: allCenters.reduce((sum, center) => sum + center.cost_breakdown.center_total_with_vat, 0)
-        };
+        // Add parts with full search result data
+        partsData.forEach(part => {
+          damageBlock["parts needed"][part.part || part.name] = {
+            "description": part.desc || part.description || "",
+            "cost": parseFloat(part.price) || 0,
+            "source": part.source || "",
+            "supplier": part.supplier || "",
+            "location": part.location || "",
+            "availability": part.availability || "",
+            "part_number": part.part_number || "",
+            "brand": part.brand || "",
+            "condition": part.condition || ""
+          };
+        });
         
-        helper.damage_centers_organized.last_updated = new Date().toISOString();
+        // Add repairs with costs
+        repairsData.forEach(repair => {
+          damageBlock["repairs needed"][repair.name] = {
+            "description": repair.description || "",
+            "cost": parseFloat(repair.cost) || 0,
+            "priority": repair.priority || "רגיל"
+          };
+        });
         
-        // Update meta information
+        // Add to damage blocks array
+        helper.damage_blocks.push(damageBlock);
+        
+        // Create simple damage summary (your original concept)
+        helper.damage_summary = helper.damage_blocks.map(block => ({
+          "label": block.location,
+          "total": block["total cost"]
+        }));
+        
+        // Calculate total damage cost
+        helper.damage_total = helper.damage_blocks.reduce((sum, block) => sum + block["total cost"], 0);
+        
+        // Update meta
         helper.meta = helper.meta || {};
         helper.meta.last_updated = new Date().toISOString();
-        helper.meta.damage_centers_count = centerNumber;
+        helper.meta.damage_centers_count = helper.damage_blocks.length;
         
         // Save to session storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        console.log('✅ Organized damage center saved to helper:', damageCenterComplete);
-        console.log('✅ Global totals updated:', helper.damage_centers_organized.global_totals);
+        console.log('✅ Simple damage center saved:', damageBlock);
+        console.log('✅ Total damage centers:', helper.damage_blocks.length);
+        console.log('✅ Total damage cost:', helper.damage_total);
         
         // Clear current damage assessment data for next center
         if (helper.damage_assessment) {
