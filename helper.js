@@ -2766,6 +2766,7 @@ function populateAllForms() {
     'client_name': window.getOwnerName(),
     // 'ownerPhone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
     // 'owner_phone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
+    // 'owner_phone_number': window.helper.stakeholders?.owner?.phone, // NEW CLEAN FIELD - NO AUTO-POPULATE
     'ownerAddress': window.helper.stakeholders?.owner?.address,
     'owner_address': window.helper.stakeholders?.owner?.address,
     'ownerEmail': window.helper.stakeholders?.owner?.email,
@@ -3433,6 +3434,7 @@ window.setupUniversalInputCapture = function() {
     'client_name': 'stakeholders.owner.name',
     'ownerPhone': 'stakeholders.owner.phone',
     'owner_phone': 'stakeholders.owner.phone',
+    'owner_phone_number': 'stakeholders.owner.phone', // NEW CLEAN FIELD
     'ownerAddress': 'stakeholders.owner.address',
     'owner_address': 'stakeholders.owner.address',
     
