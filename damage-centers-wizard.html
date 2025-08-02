@@ -713,6 +713,9 @@
         
         // Update helper with collected data
         updateHelperWithModuleData();
+        
+        // Recalculate totals whenever module data changes
+        calculateTotals();
       }
     });
     
@@ -1271,10 +1274,10 @@
     }
     
     function calculateTotals() {
-      // This will be enhanced with actual data from modules
-      const workTotal = 0; // Get from work module
-      const partsTotal = 0; // Get from parts module
-      const repairsTotal = 0; // Get from repairs module
+      // Get actual totals from module data
+      const workTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+      const partsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+      const repairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
       
       const subtotal = workTotal + partsTotal + repairsTotal;
       const vatAmount = subtotal * (vatPercentage / 100);
@@ -1285,6 +1288,9 @@
       document.getElementById('totalWithoutVat').textContent = `₪${subtotal.toLocaleString()}`;
       document.getElementById('totalWithVat').textContent = `₪${totalWithVat.toLocaleString()}`;
       
+      // Update individual subtotals in wizard
+      updateModuleSubtotals(workTotal, partsTotal, repairsTotal);
+      
       // Save to damage center data
       damageCenterData.workTotal = workTotal;
       damageCenterData.partsTotal = partsTotal;
@@ -1292,6 +1298,40 @@
       damageCenterData.subtotal = subtotal;
       damageCenterData.vatAmount = vatAmount;
       damageCenterData.totalWithVat = totalWithVat;
+      
+      console.log('🧮 Calculated totals:', { workTotal, partsTotal, repairsTotal, subtotal, totalWithVat });
+    }
+    
+    function updateModuleSubtotals(workTotal, partsTotal, repairsTotal) {
+      // Update work subtotal display
+      const workSubtotal = document.getElementById('workSubtotal');
+      if (workSubtotal) {
+        const workAmount = document.getElementById('workAmount');
+        const workAmountWithVat = document.getElementById('workAmountWithVat');
+        if (workAmount) workAmount.textContent = `₪${workTotal.toLocaleString()}`;
+        if (workAmountWithVat) workAmountWithVat.textContent = `₪${(workTotal * 1.17).toLocaleString()}`;
+        workSubtotal.style.display = workTotal > 0 ? 'block' : 'none';
+      }
+      
+      // Update parts subtotal display  
+      const partsSubtotal = document.getElementById('partsSubtotal');
+      if (partsSubtotal) {
+        const partsAmount = document.getElementById('partsAmount');
+        const partsAmountWithVat = document.getElementById('partsAmountWithVat');
+        if (partsAmount) partsAmount.textContent = `₪${partsTotal.toLocaleString()}`;
+        if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(partsTotal * 1.17).toLocaleString()}`;
+        partsSubtotal.style.display = partsTotal > 0 ? 'block' : 'none';
+      }
+      
+      // Update repairs subtotal display
+      const repairsSubtotal = document.getElementById('repairsSubtotal');
+      if (repairsSubtotal) {
+        const repairsAmount = document.getElementById('repairsAmount');
+        const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
+        if (repairsAmount) repairsAmount.textContent = `₪${repairsTotal.toLocaleString()}`;
+        if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(repairsTotal * 1.17).toLocaleString()}`;
+        repairsSubtotal.style.display = repairsTotal > 0 ? 'block' : 'none';
+      }
     }
     
     function completeDamageCenter() {

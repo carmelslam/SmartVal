@@ -240,11 +240,7 @@ form button {
   <button onclick="toggleVehicle()">פרטי הרכב</button>
        <div id="vehiclePopup"></div>
 
-    <div class="top-bar">
-    
-      <button onclick="window.location.href='selection.html'">עמוד הבית</button>
-      <button class="logout-btn" onclick="logout()">התנתק</button>
-    </div>
+    <!-- Removed navigation buttons when in wizard -->
       
     <form id="partsForm">
       <div id="carDetailsBox" style="display:none;">
@@ -273,11 +269,7 @@ form button {
         </div>
       </div>
 
-    <div class="button-row">
-  <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
-  <button type="button" class="save-btn" onclick="savePartsData()" style="background-color: #28a745;">שמור נתונים</button>
-  <button type="submit">המשך</button>
-</div>
+      <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
 
     </form>
 
@@ -784,6 +776,52 @@ function savePartsData() {
         nameInput.dispatchEvent(new Event('change'));
       };
     }
+    // Calculate and display totals
+    function calculatePartsTotals() {
+      const parts = [];
+      
+      document.querySelectorAll("#partsList .part-row").forEach(row => {
+        const partInput = row.querySelector('.part-name');
+        const priceInput = row.querySelector('.part-price');
+        const sourceSelect = row.querySelector('.source');
+        
+        const partName = partInput ? partInput.value.trim() : '';
+        const price = priceInput ? parseFloat(priceInput.value) || 0 : 0;
+        const source = sourceSelect ? sourceSelect.value : '';
+        
+        if (partName && price > 0) {
+          parts.push({ 
+            part: partName, 
+            price: price,
+            source: source
+          });
+        }
+      });
+      
+      const total = parts.reduce((sum, part) => sum + part.price, 0);
+      
+      // Display total in the page
+      let totalDisplay = document.getElementById('partsTotal');
+      if (!totalDisplay) {
+        totalDisplay = document.createElement('div');
+        totalDisplay.id = 'partsTotal';
+        totalDisplay.style.cssText = 'background: #e8f5e8; padding: 15px; margin: 20px 0; border-radius: 8px; font-weight: bold; text-align: center; border: 2px solid #4caf50;';
+        document.querySelector('.container').insertBefore(totalDisplay, document.querySelector('.footer'));
+      }
+      
+      totalDisplay.innerHTML = `
+        <div style="font-size: 18px; color: #2e7d32; margin-bottom: 5px;">סיכום חלפים</div>
+        <div style="font-size: 24px; color: #1b5e20;">₪${total.toLocaleString()}</div>
+        <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
+      `;
+      
+      return { parts, total };
+    }
+    
+    // Auto-calculate when data changes
+    document.addEventListener('change', calculatePartsTotals);
+    document.addEventListener('input', calculatePartsTotals);
+    
     // ...existing code for addPart, etc...
   </script>
   <script type="module">

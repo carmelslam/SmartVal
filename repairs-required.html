@@ -450,6 +450,52 @@
     // Auto-send when repairs data changes
     document.addEventListener('change', autoSendRepairsData);
     document.addEventListener('input', autoSendRepairsData);
+    
+    // Calculate and display totals
+    function calculateRepairsTotals() {
+      const repairs = [];
+      
+      document.querySelectorAll("#fixesList .repair-row").forEach(row => {
+        const nameInput = row.querySelector('.repair-name');
+        const costInput = row.querySelector('.repair-cost');
+        const descInput = row.querySelector('.repair-desc');
+        
+        const name = nameInput ? nameInput.value.trim() : '';
+        const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
+        const description = descInput ? descInput.value.trim() : '';
+        
+        if (name && description && cost > 0) {
+          repairs.push({ 
+            name: name, 
+            cost: cost,
+            description: description
+          });
+        }
+      });
+      
+      const total = repairs.reduce((sum, repair) => sum + repair.cost, 0);
+      
+      // Display total in the page
+      let totalDisplay = document.getElementById('repairsTotal');
+      if (!totalDisplay) {
+        totalDisplay = document.createElement('div');
+        totalDisplay.id = 'repairsTotal';
+        totalDisplay.style.cssText = 'background: #fff3e0; padding: 15px; margin: 20px 0; border-radius: 8px; font-weight: bold; text-align: center; border: 2px solid #ff9800;';
+        document.querySelector('.container').insertBefore(totalDisplay, document.querySelector('.footer'));
+      }
+      
+      totalDisplay.innerHTML = `
+        <div style="font-size: 18px; color: #e65100; margin-bottom: 5px;">סיכום תיקונים</div>
+        <div style="font-size: 24px; color: #bf360c;">₪${total.toLocaleString()}</div>
+        <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
+      `;
+      
+      return { repairs, total };
+    }
+    
+    // Auto-calculate when data changes
+    document.addEventListener('change', calculateRepairsTotals);
+    document.addEventListener('input', calculateRepairsTotals);
   </script>
 <script src="car-details-floating.js"></script>
 

@@ -549,6 +549,44 @@ function autoSendWorkData() {
 document.addEventListener('change', autoSendWorkData);
 document.addEventListener('input', autoSendWorkData);
 
+// Calculate and display totals
+function calculateWorkTotals() {
+  const works = [];
+  
+  document.querySelectorAll("#worksList .row").forEach(row => {
+    const select = row.querySelector("select").value;
+    const costInput = row.querySelectorAll("input")[0];
+    const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
+    
+    if (select && cost > 0) {
+      works.push({ category: select, cost: cost });
+    }
+  });
+  
+  const total = works.reduce((sum, work) => sum + work.cost, 0);
+  
+  // Display total in the page if we have a display element
+  let totalDisplay = document.getElementById('workTotal');
+  if (!totalDisplay) {
+    totalDisplay = document.createElement('div');
+    totalDisplay.id = 'workTotal';
+    totalDisplay.style.cssText = 'background: #e3f2fd; padding: 15px; margin: 20px 0; border-radius: 8px; font-weight: bold; text-align: center; border: 2px solid #2196f3;';
+    document.querySelector('.container').insertBefore(totalDisplay, document.querySelector('.footer'));
+  }
+  
+  totalDisplay.innerHTML = `
+    <div style="font-size: 18px; color: #1976d2; margin-bottom: 5px;">סיכום עבודות</div>
+    <div style="font-size: 24px; color: #0d47a1;">₪${total.toLocaleString()}</div>
+    <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
+  `;
+  
+  return { works, total };
+}
+
+// Auto-calculate when data changes
+document.addEventListener('change', calculateWorkTotals);
+document.addEventListener('input', calculateWorkTotals);
+
   </script>
 <script src="helper.js" type="module"></script>
 <script src="car-details-floating.js"></script>
