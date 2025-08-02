@@ -767,6 +767,47 @@
   // Remove old duplicate function that was causing issues
   // window.refreshLeviData is now defined above with logging
 
+  function cleanupAdjustmentsStructure(helper) {
+    console.log('🧹 Cleaning up helper.valuation.adjustments structure...');
+    
+    if (!helper.valuation?.adjustments) return helper;
+    
+    const adjustments = helper.valuation.adjustments;
+    
+    // Clean each adjustment section to have consistent structure
+    ['features', 'registration', 'ownership_type', 'mileage', 'ownership_history'].forEach(section => {
+      if (adjustments[section]) {
+        const adj = adjustments[section];
+        
+        // Remove invalid fields
+        delete adj.percentage;
+        delete adj.reason;
+        delete adj.type;
+        delete adj.km_value;
+        delete adj.owner_count;
+        
+        // Ensure all required fields exist
+        if (!adj.description) adj.description = section === 'features' ? 'מאפיינים' : 
+                                                section === 'registration' ? 'עליה לכביש' :
+                                                section === 'ownership_type' ? 'בעלות' :
+                                                section === 'mileage' ? 'מס ק"מ' : 'מספר בעלים';
+        if (!adj.value) adj.value = '';
+        if (!adj.percent) adj.percent = '0%';
+        if (!adj.amount) adj.amount = '₪0';
+        if (!adj.cumulative) adj.cumulative = '₪0';
+        
+        // Special handling for mileage - move percentage data to value if needed
+        if (section === 'mileage' && adj.percentage && adj.percentage.includes('ק"מ')) {
+          adj.value = adj.percentage;
+          delete adj.percentage;
+        }
+      }
+    });
+    
+    console.log('✅ Cleaned up adjustments structure');
+    return helper;
+  }
+
   function loadLeviData() {
     try {
       console.log('🔄 PHASE 2.1: Loading Levi data from helper ONLY (single source)...');
@@ -775,17 +816,19 @@
       let helper = {};
       
       if (typeof window.helper === 'object' && window.helper !== null) {
-        helper = window.helper;
-        console.log('✅ PHASE 2.1: Loaded Levi data from window.helper (authoritative source)');
+        helper = cleanupAdjustmentsStructure(window.helper);
+        window.helper = helper; // Update the global helper with cleaned data
+        console.log('✅ PHASE 2.1: Loaded and cleaned Levi data from window.helper (authoritative source)');
       } else {
         // Emergency fallback: Try sessionStorage only if window.helper unavailable
         try {
           const storedHelper = sessionStorage.getItem('helper');
           if (storedHelper) {
             helper = JSON.parse(storedHelper);
+            helper = cleanupAdjustmentsStructure(helper);
             // Sync back to window.helper immediately
             window.helper = helper;
-            console.log('⚠️ PHASE 2.1: Emergency fallback - loaded from sessionStorage, synced to window.helper');
+            console.log('⚠️ PHASE 2.1: Emergency fallback - loaded and cleaned from sessionStorage, synced to window.helper');
           }
         } catch (parseError) {
           console.error('❌ PHASE 2.1: Failed to load from emergency fallback:', parseError);
@@ -834,11 +877,11 @@
     // DEBUG: Log helper valuation adjustments for comparison  
     if (helper.valuation?.adjustments) {
       console.log('🔧 DEBUG: Helper valuation adjustments:');
-      console.log('   Registration %:', helper.valuation.adjustments.registration?.percent);
-      console.log('   Ownership %:', helper.valuation.adjustments.ownership_type?.percent);
-      console.log('   Mileage %:', helper.valuation.adjustments.mileage?.percent);
-      console.log('   Owners %:', helper.valuation.adjustments.ownership_history?.percent);
-      console.log('   Features %:', helper.valuation.adjustments.features?.percent);
+      console.log('   Features:', helper.valuation.adjustments.features);
+      console.log('   Registration:', helper.valuation.adjustments.registration);
+      console.log('   Ownership:', helper.valuation.adjustments.ownership_type);
+      console.log('   Mileage:', helper.valuation.adjustments.mileage);
+      console.log('   Owners:', helper.valuation.adjustments.ownership_history);
     } else {
       console.log('⚠️ DEBUG: No helper valuation adjustments found');
     }
@@ -853,8 +896,10 @@
     };
 
     const formatPrice = (value) => {
+      if (!value || value === '₪0' || value === 0) return "₪0";
+      if (typeof value === 'string' && value.includes('₪')) return value; // Already formatted
       const num = parseCurrency(value);
-      return num > 0 ? `₪${num.toLocaleString()}` : "₪0";
+      return num !== 0 ? `₪${num.toLocaleString()}` : "₪0";
     };
 
     const formatValue = (value) => {
