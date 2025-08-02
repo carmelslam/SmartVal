@@ -1191,6 +1191,7 @@
           const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
           
           helper.wizard_current_data.location = location;
+          moduleData.location = location;
           damageCenterData.location = location;
           console.log('✅ Location saved:', location);
           break;
@@ -1199,6 +1200,7 @@
           // Save description
           const description = document.getElementById('damageDescription')?.value?.trim();
           helper.wizard_current_data.description = description;
+          moduleData.description = description;
           damageCenterData.description = description;
           console.log('✅ Description saved:', description);
           break;
@@ -1354,16 +1356,22 @@
           };
         }
         
-        // Get location data
-        const locationSelect = document.getElementById('locationSelect');
-        const otherLocationInput = document.getElementById('otherLocationInput');
-        const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
-        const description = document.getElementById('damageDescription')?.value;
+        // Get location data from current wizard state
+        const location = moduleData.location || helper.wizard_current_data?.location || 'מיקום לא צוין';
+        const description = moduleData.description || helper.wizard_current_data?.description || 'תיאור לא צוין';
         
-        // Get actual data from helper modules
-        const workData = helper.damage_assessment?.works?.work_items || [];
-        const partsData = helper.damage_assessment?.parts?.parts_items || [];
-        const repairsData = helper.damage_assessment?.repairs?.repairs_items || [];
+        // Get actual data from collected module data (primary source) or fallback to helper
+        const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.works?.work_items || []);
+        const partsData = moduleData.parts.length > 0 ? moduleData.parts : (helper.damage_assessment?.parts?.parts_items || []);
+        const repairsData = moduleData.repairs.length > 0 ? moduleData.repairs : (helper.damage_assessment?.repairs?.repairs_items || []);
+        
+        console.log('📊 Using collected data:', {
+          location,
+          description, 
+          workItems: workData.length,
+          partsItems: partsData.length,
+          repairsItems: repairsData.length
+        });
         
         // Calculate totals
         const workTotal = workData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);

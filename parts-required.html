@@ -405,6 +405,19 @@ function savePartsData() {
 
   console.log('💾 Saving parts data to helper...');
   
+  // Send data to parent wizard if in iframe
+  if (window.parent !== window) {
+    const partsData = {
+      type: 'moduleData',
+      module: 'parts',
+      data: {
+        parts: validParts
+      }
+    };
+    window.parent.postMessage(partsData, '*');
+    console.log('📤 Parts data sent to parent wizard:', partsData);
+  }
+  
   try {
     // Get current helper data
     let helper = {};
@@ -560,6 +573,19 @@ function savePartsData() {
           alert('שגיאה בשמירת החלקים');
         }
       } else {
+        // Send data to parent wizard if in iframe
+        if (window.parent !== window) {
+          const partsData = {
+            type: 'moduleData',
+            module: 'parts',
+            data: {
+              parts: validParts
+            }
+          };
+          window.parent.postMessage(partsData, '*');
+          console.log('📤 Parts data sent to parent wizard:', partsData);
+        }
+        
         // ✅ FIXED: Save parts to damage_centers structure with ACTUAL DATA
         console.log('🔄 Updating helper with parts data AND damage centers...');
         
