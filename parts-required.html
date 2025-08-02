@@ -505,19 +505,22 @@ form button {
       // Get suggestions from multiple sources
       const suggestions = [];
       
-      // Search in PARTS_BANK (if available)
-      if (window.PARTS_BANK) {
-        Object.keys(window.PARTS_BANK).forEach(category => {
-          window.PARTS_BANK[category].forEach(part => {
-            if (part.toLowerCase().includes(query.toLowerCase())) {
-              suggestions.push({ 
-                name: part, 
-                desc: part, 
-                source: 'תחליפי',
-                category: category 
-              });
-            }
-          });
+      // Search in parts search results from helper (primary source)
+      if (window.helper && window.helper.parts_search && window.helper.parts_search.search_results) {
+        window.helper.parts_search.search_results.forEach(part => {
+          if (part.name && part.name.toLowerCase().includes(query.toLowerCase()) ||
+              part.description && part.description.toLowerCase().includes(query.toLowerCase())) {
+            suggestions.push({ 
+              name: part.name || part.description, 
+              desc: part.description || part.name, 
+              source: part.condition || part.source || 'לא צוין',
+              price: part.price || '',
+              supplier: part.supplier || '',
+              location: part.location || '',
+              availability: part.availability || '',
+              searchResult: true // Mark as from search results
+            });
+          }
         });
       }
       

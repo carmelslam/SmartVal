@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>חיפוש חלקים - מוקד נזק</title>
+  <script type="module" src="./parts.js"></script>
+  <script type="module" src="./webhook.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8fafc;
+      direction: rtl;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .search-methods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 30px;
+    }
+    
+    .search-method {
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .search-method:hover {
+      border-color: #3b82f6;
+      background: #f0f9ff;
+    }
+    
+    .search-method.active {
+      border-color: #3b82f6;
+      background: #dbeafe;
+    }
+    
+    .search-method-icon {
+      font-size: 32px;
+      margin-bottom: 15px;
+    }
+    
+    .search-method-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+    
+    .search-method-desc {
+      color: #64748b;
+      font-size: 14px;
+    }
+    
+    .search-content {
+      padding: 30px;
+      display: none;
+    }
+    
+    .search-content.active {
+      display: block;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: bold;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+    
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+    }
+    
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .autocomplete-container {
+      position: relative;
+    }
+    
+    .autocomplete-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .autocomplete-suggestion {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .autocomplete-suggestion:hover {
+      background: #f0f9ff;
+    }
+    
+    .autocomplete-suggestion.highlighted {
+      background: #dbeafe;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+    
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #059669;
+    }
+    
+    .search-results {
+      margin-top: 30px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 30px;
+    }
+    
+    .result-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    .result-item:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.1);
+    }
+    
+    .result-item.selected {
+      border-color: #10b981;
+      background: #ecfdf5;
+    }
+    
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .result-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+    
+    .result-price {
+      font-size: 20px;
+      font-weight: bold;
+      color: #059669;
+    }
+    
+    .result-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .result-detail {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .result-detail-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    
+    .result-detail-value {
+      font-size: 14px;
+      color: #374151;
+    }
+    
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    
+    .btn-small {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    
+    .selected-parts {
+      background: #f0f9ff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    
+    .selected-parts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .selected-parts-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+    
+    .selected-parts-count {
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .selected-part-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .image-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>חיפוש חלקים מתקדם</h1>
+      <p>בחר שיטת חיפוש להגדרת החלקים הנדרשים</p>
+    </div>
+    
+    <!-- Search Method Selection -->
+    <div class="search-methods">
+      <div class="search-method" onclick="selectSearchMethod('internal')">
+        <div class="search-method-icon">🔍</div>
+        <div class="search-method-title">חיפוש פנימי</div>
+        <div class="search-method-desc">חיפוש בבסיס הנתונים הפנימי</div>
+      </div>
+      
+      <div class="search-method" onclick="selectSearchMethod('external')">
+        <div class="search-method-icon">🌐</div>
+        <div class="search-method-title">חיפוש חיצוני</div>
+        <div class="search-method-desc">חיפוש באתרי חלפים חיצוניים</div>
+      </div>
+      
+      <div class="search-method" onclick="selectSearchMethod('ai')">
+        <div class="search-method-icon">🤖</div>
+        <div class="search-method-title">חיפוש AI</div>
+        <div class="search-method-desc">חיפוש באמצעות בינה מלאכותית</div>
+      </div>
+      
+      <div class="search-method" onclick="selectSearchMethod('image')">
+        <div class="search-method-icon">📷</div>
+        <div class="search-method-title">חיפוש תמונה</div>
+        <div class="search-method-desc">זיהוי חלקים מתמונה</div>
+      </div>
+    </div>
+    
+    <!-- Internal Search Content -->
+    <div class="search-content" id="internal-content">
+      <h3>חיפוש פנימי בבסיס נתונים</h3>
+      
+      <div class="form-group">
+        <label class="form-label">קטגוריית חלק</label>
+        <select class="form-select" id="partCategory" onchange="updatePartSuggestions()">
+          <option value="">בחר קטגוריה</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">שם החלק</label>
+        <div class="autocomplete-container">
+          <input type="text" class="form-input" id="partName" placeholder="הקלד לפחות 2 אותיות..." onkeyup="showPartSuggestions(this.value)" autocomplete="off">
+          <div class="autocomplete-suggestions" id="partSuggestions"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">כמות</label>
+        <input type="number" class="form-input" id="partQuantity" value="1" min="1">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">מצב החלק</label>
+        <select class="form-select" id="partCondition">
+          <option value="new">חדש</option>
+          <option value="used">משומש</option>
+          <option value="refurbished">מחודש</option>
+        </select>
+      </div>
+      
+      <button class="btn btn-primary" onclick="searchInternalParts()">חפש חלקים</button>
+    </div>
+    
+    <!-- External Search Content -->
+    <div class="search-content" id="external-content">
+      <h3>חיפוש באתרי חלפים חיצוניים</h3>
+      
+      <div class="form-group">
+        <label class="form-label">פרטי הרכב</label>
+        <input type="text" class="form-input" id="vehicleDetails" placeholder="יצרן, דגם, שנה">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">חיפוש חופשי</label>
+        <input type="text" class="form-input" id="freeSearch" placeholder="תאר את החלק שאתה מחפש">
+      </div>
+      
+      <button class="btn btn-primary" onclick="searchExternalParts()">חפש באתרים חיצוניים</button>
+      <button class="btn btn-success" onclick="openCarPartSite()">פתח אתר Car-Part</button>
+    </div>
+    
+    <!-- AI Search Content -->
+    <div class="search-content" id="ai-content">
+      <h3>חיפוש באמצעות בינה מלאכותית</h3>
+      
+      <div class="form-group">
+        <label class="form-label">תיאור הנזק והחלק הנדרש</label>
+        <textarea class="form-input" id="aiDescription" placeholder="תאר את הנזק והחלק שאתה צריך בפירוט..." rows="4"></textarea>
+      </div>
+      
+      <button class="btn btn-primary" onclick="searchWithAI()">חפש עם AI</button>
+    </div>
+    
+    <!-- Image Search Content -->
+    <div class="search-content" id="image-content">
+      <h3>זיהוי חלקים מתמונה</h3>
+      
+      <div class="form-group">
+        <label class="form-label">העלה תמונה</label>
+        <input type="file" class="form-input" id="partImage" accept="image/*" onchange="previewImage(this)">
+        <img id="imagePreview" class="image-preview" style="display:none;">
+      </div>
+      
+      <button class="btn btn-primary" onclick="searchByImage()">זהה חלק מתמונה</button>
+    </div>
+    
+    <!-- Search Results -->
+    <div class="search-results" id="searchResults" style="display:none;">
+      <h3>תוצאות חיפוש</h3>
+      <div id="resultsContainer"></div>
+    </div>
+    
+    <!-- Selected Parts -->
+    <div class="selected-parts" id="selectedParts" style="display:none;">
+      <div class="selected-parts-header">
+        <div class="selected-parts-title">חלקים שנבחרו</div>
+        <div class="selected-parts-count" id="selectedCount">0</div>
+      </div>
+      <div id="selectedPartsContainer"></div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="btn btn-success" onclick="confirmPartSelection()">אשר בחירת חלקים</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="helper.js"></script>
+  <script type="module">
+    import { PARTS_BANK } from './parts.js';
+    import { sendPartSearch, sendSearchResultFile } from './webhook.js';
+    
+    // Make parts bank available globally
+    window.PARTS_BANK = PARTS_BANK;
+    window.sendPartSearch = sendPartSearch;
+    window.sendSearchResultFile = sendSearchResultFile;
+    
+    // Global variables
+    let currentSearchMethod = 'internal';
+    let searchResults = [];
+    let selectedParts = [];
+    let currentDamageCenterId = null;
+    
+    // Initialize the module
+    document.addEventListener('DOMContentLoaded', function() {
+      initializePartsSearch();
+      
+      // Get damage center ID from parent window or URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      currentDamageCenterId = urlParams.get('damageCenterId') || window.parent?.currentDamageCenterId;
+    });
+    
+    function initializePartsSearch() {
+      // Populate categories from PARTS_BANK
+      const categorySelect = document.getElementById('partCategory');
+      Object.keys(PARTS_BANK).forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+      });
+      
+      // Set default search method
+      selectSearchMethod('internal');
+    }
+    
+    window.selectSearchMethod = function(method) {
+      currentSearchMethod = method;
+      
+      // Update method selection UI
+      document.querySelectorAll('.search-method').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelector(`[onclick="selectSearchMethod('${method}')"]`).classList.add('active');
+      
+      // Show corresponding content
+      document.querySelectorAll('.search-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.getElementById(`${method}-content`).classList.add('active');
+    };
+    
+    window.updatePartSuggestions = function() {
+      const category = document.getElementById('partCategory').value;
+      const partNameInput = document.getElementById('partName');
+      
+      // Clear current value and suggestions
+      partNameInput.value = '';
+      document.getElementById('partSuggestions').style.display = 'none';
+      
+      if (category) {
+        partNameInput.placeholder = `הקלד שם חלק מקטגוריה: ${category}`;
+      } else {
+        partNameInput.placeholder = 'הקלד לפחות 2 אותיות...';
+      }
+    };
+    
+    window.showPartSuggestions = function(query) {
+      if (query.length < 2) {
+        document.getElementById('partSuggestions').style.display = 'none';
+        return;
+      }
+      
+      const category = document.getElementById('partCategory').value;
+      const suggestions = [];
+      
+      // Get parts from selected category or all categories
+      const categoriesToSearch = category ? [category] : Object.keys(PARTS_BANK);
+      
+      categoriesToSearch.forEach(cat => {
+        PARTS_BANK[cat].forEach(part => {
+          if (part.includes(query)) {
+            suggestions.push({
+              name: part,
+              category: cat
+            });
+          }
+        });
+      });
+      
+      displaySuggestions(suggestions);
+    };
+    
+    function displaySuggestions(suggestions) {
+      const container = document.getElementById('partSuggestions');
+      container.innerHTML = '';
+      
+      if (suggestions.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      suggestions.slice(0, 10).forEach(suggestion => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-suggestion';
+        div.innerHTML = `<strong>${suggestion.name}</strong><br><small>${suggestion.category}</small>`;
+        div.onclick = () => selectSuggestion(suggestion);
+        container.appendChild(div);
+      });
+      
+      container.style.display = 'block';
+    }
+    
+    function selectSuggestion(suggestion) {
+      document.getElementById('partName').value = suggestion.name;
+      document.getElementById('partCategory').value = suggestion.category;
+      document.getElementById('partSuggestions').style.display = 'none';
+    }
+    
+    window.searchInternalParts = function() {
+      const category = document.getElementById('partCategory').value;
+      const name = document.getElementById('partName').value;
+      const quantity = document.getElementById('partQuantity').value;
+      const condition = document.getElementById('partCondition').value;
+      
+      if (!name) {
+        alert('אנא הזן שם חלק');
+        return;
+      }
+      
+      // Mock search results for internal search
+      const mockResults = [{
+        id: `part_${Date.now()}`,
+        name: name,
+        category: category,
+        quantity: parseInt(quantity),
+        condition: condition,
+        price: Math.floor(Math.random() * 1000) + 100,
+        supplier: 'ספק פנימי',
+        availability: 'במחסן',
+        description: `${name} - ${condition}`,
+        location: 'מחסן ראשי'
+      }];
+      
+      displaySearchResults(mockResults);
+    };
+    
+    window.searchExternalParts = function() {
+      const vehicleDetails = document.getElementById('vehicleDetails').value;
+      const freeSearch = document.getElementById('freeSearch').value;
+      
+      if (!vehicleDetails && !freeSearch) {
+        alert('אנא הזן פרטי רכב או חיפוש חופשי');
+        return;
+      }
+      
+      showLoading();
+      
+      // Use existing webhook functionality
+      sendPartSearch({
+        vehicle_details: vehicleDetails,
+        free_query: freeSearch,
+        search_type: 'external'
+      }).then(results => {
+        if (results && results.parts) {
+          displaySearchResults(results.parts);
+        } else {
+          alert('לא נמצאו תוצאות');
+        }
+      }).catch(error => {
+        console.error('Search error:', error);
+        alert('שגיאה בחיפוש');
+      }).finally(() => {
+        hideLoading();
+      });
+    };
+    
+    window.searchWithAI = function() {
+      const description = document.getElementById('aiDescription').value;
+      
+      if (!description) {
+        alert('אנא הזן תיאור הנזק והחלק הנדרש');
+        return;
+      }
+      
+      showLoading();
+      
+      sendPartSearch({
+        ai_description: description,
+        search_type: 'ai'
+      }).then(results => {
+        if (results && results.parts) {
+          displaySearchResults(results.parts);
+        } else {
+          alert('לא נמצאו תוצאות');
+        }
+      }).catch(error => {
+        console.error('AI search error:', error);
+        alert('שגיאה בחיפוש AI');
+      }).finally(() => {
+        hideLoading();
+      });
+    };
+    
+    window.searchByImage = function() {
+      const imageInput = document.getElementById('partImage');
+      const file = imageInput.files[0];
+      
+      if (!file) {
+        alert('אנא העלה תמונה');
+        return;
+      }
+      
+      showLoading();
+      
+      sendSearchResultFile(file, {
+        search_type: 'image'
+      }).then(results => {
+        if (results && results.parts) {
+          displaySearchResults(results.parts);
+        } else {
+          alert('לא נמצאו חלקים בתמונה');
+        }
+      }).catch(error => {
+        console.error('Image search error:', error);
+        alert('שגיאה בזיהוי תמונה');
+      }).finally(() => {
+        hideLoading();
+      });
+    };
+    
+    window.previewImage = function(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const preview = document.getElementById('imagePreview');
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    };
+    
+    window.openCarPartSite = function() {
+      window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank');
+    };
+    
+    function displaySearchResults(results) {
+      searchResults = results;
+      const container = document.getElementById('resultsContainer');
+      container.innerHTML = '';
+      
+      if (results.length === 0) {
+        container.innerHTML = '<p>לא נמצאו תוצאות</p>';
+        return;
+      }
+      
+      results.forEach((result, index) => {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'result-item';
+        resultDiv.innerHTML = `
+          <div class="result-header">
+            <div class="result-name">${result.name || result.description}</div>
+            <div class="result-price">₪${result.price || 'לא צוין'}</div>
+          </div>
+          <div class="result-details">
+            <div class="result-detail">
+              <div class="result-detail-label">ספק</div>
+              <div class="result-detail-value">${result.supplier || 'לא צוין'}</div>
+            </div>
+            <div class="result-detail">
+              <div class="result-detail-label">מצב</div>
+              <div class="result-detail-value">${result.condition || 'לא צוין'}</div>
+            </div>
+            <div class="result-detail">
+              <div class="result-detail-label">זמינות</div>
+              <div class="result-detail-value">${result.availability || 'לא צוין'}</div>
+            </div>
+            <div class="result-detail">
+              <div class="result-detail-label">מיקום</div>
+              <div class="result-detail-value">${result.location || 'לא צוין'}</div>
+            </div>
+          </div>
+          <div class="result-actions">
+            <button class="btn btn-primary btn-small" onclick="selectPart(${index})">בחר חלק</button>
+          </div>
+        `;
+        container.appendChild(resultDiv);
+      });
+      
+      document.getElementById('searchResults').style.display = 'block';
+    }
+    
+    window.selectPart = function(index) {
+      const part = searchResults[index];
+      if (!part) return;
+      
+      // Check if already selected
+      if (selectedParts.find(p => p.id === part.id)) {
+        alert('חלק זה כבר נבחר');
+        return;
+      }
+      
+      selectedParts.push({
+        ...part,
+        selectedAt: new Date().toISOString()
+      });
+      
+      updateSelectedPartsDisplay();
+      
+      // Mark as selected in results
+      document.querySelectorAll('.result-item')[index].classList.add('selected');
+    };
+    
+    function updateSelectedPartsDisplay() {
+      const count = selectedParts.length;
+      document.getElementById('selectedCount').textContent = count;
+      
+      if (count === 0) {
+        document.getElementById('selectedParts').style.display = 'none';
+        return;
+      }
+      
+      document.getElementById('selectedParts').style.display = 'block';
+      
+      const container = document.getElementById('selectedPartsContainer');
+      container.innerHTML = '';
+      
+      selectedParts.forEach((part, index) => {
+        const partDiv = document.createElement('div');
+        partDiv.className = 'selected-part-item';
+        partDiv.innerHTML = `
+          <div>
+            <strong>${part.name || part.description}</strong><br>
+            <small>${part.supplier} - ₪${part.price}</small>
+          </div>
+          <button class="btn btn-small" onclick="removePart(${index})" style="background: #ef4444; color: white;">הסר</button>
+        `;
+        container.appendChild(partDiv);
+      });
+    }
+    
+    window.removePart = function(index) {
+      selectedParts.splice(index, 1);
+      updateSelectedPartsDisplay();
+    };
+    
+    window.confirmPartSelection = function() {
+      if (selectedParts.length === 0) {
+        alert('לא נבחרו חלקים');
+        return;
+      }
+      
+      // Save to damage center if available
+      if (currentDamageCenterId && typeof window.addPartToDamageCenter === 'function') {
+        selectedParts.forEach(part => {
+          window.addPartToDamageCenter(currentDamageCenterId, part);
+        });
+      }
+      
+      // Notify parent window
+      if (window.parent && window.parent.postMessage) {
+        window.parent.postMessage({
+          type: 'partsSelected',
+          parts: selectedParts,
+          damageCenterId: currentDamageCenterId
+        }, '*');
+      }
+      
+      alert(`נבחרו ${selectedParts.length} חלקים בהצלחה!`);
+      
+      // Reset for next search
+      selectedParts = [];
+      updateSelectedPartsDisplay();
+    };
+    
+    function showLoading() {
+      const container = document.getElementById('resultsContainer');
+      container.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <div>מחפש חלקים...</div>
+        </div>
+      `;
+      document.getElementById('searchResults').style.display = 'block';
+    }
+    
+    function hideLoading() {
+      // Loading will be hidden when results are displayed
+    }
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.autocomplete-container')) {
+        document.getElementById('partSuggestions').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

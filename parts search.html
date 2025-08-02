@@ -121,7 +121,7 @@
 <h2 class="right-small-heading">העלה/צלם תמונה לחיפוש</h2>
     <input type="file" id="part_image" accept="image/*" capture="environment" required>
     <img id="previewImage" />
-    <select id="part_group" required>
+    <select id="part_group" required onchange="updatePartNameOptions()">
       <option value="" disabled selected hidden>בחר קבוצת חלקים</option>
     </select>
     <select id="part_name" required>
@@ -147,6 +147,7 @@
 </div>
 
 <h2 style="text-align: right; font-size: 18px;">חיפוש חלפים באתר</h2>
+<button type="button" class="btn" onclick="generateExternalForm()" style="background: #10b981; margin-bottom: 10px;">🚀 צור טופס חכם לאתר חיצוני</button>
 <button type="button" class="btn" onclick="openSearchSite()">פתח אתר car-part לחיפוש</button>
  <label for="resultFileUpload">העלה תוצאת חיפוש (PDF/תמונה)</label>
 <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html">
@@ -237,14 +238,170 @@
 
   groupSelect.addEventListener('change', () => {
     nameSelect.innerHTML = '<option value="" disabled selected hidden>בחר חלק</option>';
-    const parts = window.PARTS_BANK[groupSelect.value] || [];
+    const selectedCategory = groupSelect.value;
+    const parts = window.PARTS_BANK[selectedCategory] || [];
+    
+    console.log(`🔍 Loading ${parts.length} parts for category: ${selectedCategory}`);
+    
     parts.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
+      opt.setAttribute('data-category', selectedCategory);
       nameSelect.appendChild(opt);
+    });
+    
+    // 🎯 CREATIVE: Visual feedback for category loading
+    showNotification(`נטענו ${parts.length} חלקים עבור ${selectedCategory}`, 'info');
+    autoSaveSearchProgress();
   });
-});
+  
+  // 🎯 CREATIVE ENHANCEMENTS: Smart features for parts search
+  
+  // Smart notification system
+  function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    const colors = {
+      success: '#10b981',
+      info: '#3b82f6', 
+      warning: '#f59e0b',
+      error: '#ef4444'
+    };
+    
+    notification.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 9999;
+      background: ${colors[type]}; color: white; padding: 12px 16px;
+      border-radius: 8px; font-size: 14px; font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateX(100%); transition: transform 0.3s ease;
+      max-width: 300px; direction: rtl;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+  
+  // Auto-save search progress
+  function autoSaveSearchProgress() {
+    const searchData = {
+      vehicle: {
+        plate: document.getElementById('plate').value,
+        manufacturer: document.getElementById('manufacturer').value,
+        model: document.getElementById('model').value,
+        year: document.getElementById('year').value,
+        engine_volume: document.getElementById('engine_volume').value
+      },
+      parts: {
+        group: document.getElementById('part_group').value,
+        name: document.getElementById('part_name').value,
+        source: document.getElementById('part_source').value,
+        quantity: document.getElementById('part_quantity').value
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    sessionStorage.setItem('partsSearchProgress', JSON.stringify(searchData));
+    console.log('💾 Auto-saved search progress');
+  }
+  
+  // 🎯 SMART FORM BUILDER for external sites
+  window.generateExternalForm = function() {
+    const vehicle = {
+      manufacturer: document.getElementById('manufacturer').value,
+      model: document.getElementById('model').value,
+      year: document.getElementById('year').value,
+      engine_volume: document.getElementById('engine_volume').value
+    };
+    
+    const part = {
+      group: document.getElementById('part_group').value,
+      name: document.getElementById('part_name').value,
+      source: document.getElementById('part_source').value,
+      quantity: document.getElementById('part_quantity').value || 1
+    };
+    
+    if (!vehicle.manufacturer || !vehicle.model || !part.group) {
+      showNotification('אנא מלא את פרטי הרכב וקבוצת החלק', 'warning');
+      return;
+    }
+    
+    showExternalFormModal(vehicle, part);
+  };
+  
+  function showExternalFormModal(vehicle, part) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); display: flex; align-items: center;
+      justify-content: center; z-index: 10000; direction: rtl;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">🔍 טופס לאתר חלפים חיצוני</h3>
+        
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
+          <strong>פרטי הרכב:</strong><br>
+          יצרן: <strong>${vehicle.manufacturer}</strong><br>
+          דגם: <strong>${vehicle.model}</strong><br>
+          שנה: <strong>${vehicle.year}</strong><br>
+          נפח מנוע: <strong>${vehicle.engine_volume}</strong>
+        </div>
+        
+        <div style="background: #ecfdf5; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+          <strong>חלק מבוקש:</strong><br>
+          קטגוריה: <strong>${part.group}</strong><br>
+          ${part.name ? `שם החלק: <strong>${part.name}</strong><br>` : ''}
+          ${part.source ? `מקור: <strong>${part.source}</strong><br>` : ''}
+          כמות: <strong>${part.quantity}</strong>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button onclick="copyFormData('${JSON.stringify({vehicle, part}).replace(/"/g, '&quot;')}')" 
+                  style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            📋 העתק נתונים
+          </button>
+          <button onclick="window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank')" 
+                  style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            🌐 פתח Car-Part
+          </button>
+          <button onclick="this.closest('[style*=fixed]').remove()" 
+                  style="background: #6b7280; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer;">
+            ✕ סגור
+          </button>
+        </div>
+      </div>
+    `;
+    
+    modal.onclick = (e) => e.target === modal && modal.remove();
+    document.body.appendChild(modal);
+  }
+  
+  window.copyFormData = function(dataStr) {
+    const data = JSON.parse(dataStr.replace(/&quot;/g, '"'));
+    const text = `רכב: ${data.vehicle.manufacturer} ${data.vehicle.model} ${data.vehicle.year}
+נפח מנוע: ${data.vehicle.engine_volume}
+חלק: ${data.part.group} - ${data.part.name || ''}
+מקור: ${data.part.source || ''}
+כמות: ${data.part.quantity}`;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      showNotification('נתונים הועתקו בהצלחה!', 'success');
+    }).catch(() => {
+      showNotification('שגיאה בהעתקה', 'error');
+    });
+  };
+  
+  // Auto-save on form changes
+  document.querySelectorAll('input, select').forEach(element => {
+    element.addEventListener('change', autoSaveSearchProgress);
+  });
+  
   });
 
   let imageBase64 = null;
