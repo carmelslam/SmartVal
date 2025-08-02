@@ -474,14 +474,21 @@
     function loadDamageCentersSummary() {
       console.log('📊 Loading damage centers summary...');
       
-      // Load from helper system
-      if (typeof window.getAllDamageCenters === 'function') {
-        damageCenters = window.getAllDamageCenters();
-      } else if (window.helper && window.helper.damage_centers && window.helper.damage_centers.centers) {
-        damageCenters = window.helper.damage_centers.centers.filter(c => c.status === 'active');
+      // Load from helper damage_blocks
+      let helper = {};
+      try {
+        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      } catch (e) {
+        console.warn('Failed to parse helper from sessionStorage');
       }
       
-      console.log(`📊 Loaded ${damageCenters.length} damage centers:`, damageCenters);
+      if (helper.damage_blocks && Array.isArray(helper.damage_blocks)) {
+        damageCenters = helper.damage_blocks;
+      } else {
+        damageCenters = [];
+      }
+      
+      console.log(`📊 Loaded ${damageCenters.length} damage blocks:`, damageCenters);
       
       // Hide loading
       document.getElementById('loadingState').style.display = 'none';
@@ -528,31 +535,23 @@
       cardDiv.innerHTML = `
         <div class="damage-center-header">
           <div class="damage-center-title">
-            <div class="center-name">מוקד נזק ${center.number}</div>
-            <div class="center-number">${center.number}</div>
+            <div class="center-name">מוקד נזק ${center["damage center number"]}</div>
+            <div class="center-number">${center["damage center number"]}</div>
           </div>
           <div class="center-location">📍 ${center.location || 'לא צוין מיקום'}</div>
-          <div class="center-description">${center.description || 'אין תיאור'}</div>
+          <div class="center-description">${center["damage center description"] || 'אין תיאור'}</div>
         </div>
         
         <div class="damage-center-body">
-          ${createItemsSection('עבודות נדרשות', center.work_items || [], '🔧')}
-          ${createItemsSection('חלפים נדרשים', center.parts_items || [], '🔩')}
-          ${createItemsSection('תיקונים נדרשים', center.repairs_items || [], '🔨')}
+          ${createSimpleItemsSection('עבודות נדרשות', center["works needed"] || [], '🔧')}
+          ${createSimpleItemsSection('חלפים נדרשים', center["parts needed"] || [], '🔩')}
+          ${createSimpleItemsSection('תיקונים נדרשים', center["repairs needed"] || [], '🔨')}
           
           <div class="center-totals">
             <div class="totals-grid">
               <div class="total-item">
-                <div class="total-label">עבודות</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.works || 0)}</div>
-              </div>
-              <div class="total-item">
-                <div class="total-label">חלפים</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.parts || 0)}</div>
-              </div>
-              <div class="total-item">
-                <div class="total-label">תיקונים</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.repairs || 0)}</div>
+                <div class="total-label">סך הכל</div>
+                <div class="total-amount">₪${formatNumber(center["total cost"] || 0)}</div>
               </div>
               <div class="total-item">
                 <div class="total-label">מע"מ (18%)</div>
@@ -569,6 +568,84 @@
       `;
       
       return cardDiv;
+    }
+    
+    function createSimpleItemsSection(title, items, icon) {
+      // Handle array of items
+      if (Array.isArray(items)) {
+        if (items.length === 0) {
+          return `
+            <div class="items-section">
+              <div class="items-section-title">
+                <span class="items-section-icon">${icon}</span>
+                ${title}
+              </div>
+              <div class="empty-section">לא הוגדרו ${title.toLowerCase()}</div>
+            </div>
+          `;
+        }
+        
+        const itemsHtml = items.map(item => `
+          <div class="item-card">
+            <div class="item-name">${item.name || item.category || item.description || 'ללא שם'}</div>
+            <div class="item-details">
+              ${item.description ? `תיאור: ${item.description}<br>` : ''}
+              ${item.comments ? `הערות: ${item.comments}<br>` : ''}
+              ${item.supplier ? `ספק: ${item.supplier}<br>` : ''}
+            </div>
+            <div class="item-price">₪${formatNumber(item.cost || item.price || 0)}</div>
+          </div>
+        `).join('');
+        
+        return `
+          <div class="items-section">
+            <div class="items-section-title">
+              <span class="items-section-icon">${icon}</span>
+              ${title} (${items.length})
+            </div>
+            <div class="items-list">${itemsHtml}</div>
+          </div>
+        `;
+      }
+      
+      // Handle object structure (e.g., {"work1": {cost: 100}, "work2": {cost: 200}})
+      const itemKeys = Object.keys(items || {});
+      if (itemKeys.length === 0) {
+        return `
+          <div class="items-section">
+            <div class="items-section-title">
+              <span class="items-section-icon">${icon}</span>
+              ${title}
+            </div>
+            <div class="empty-section">לא הוגדרו ${title.toLowerCase()}</div>
+          </div>
+        `;
+      }
+      
+      const itemsHtml = itemKeys.map(key => {
+        const item = items[key];
+        return `
+          <div class="item-card">
+            <div class="item-name">${key}</div>
+            <div class="item-details">
+              ${item.description ? `תיאור: ${item.description}<br>` : ''}
+              ${item.comments ? `הערות: ${item.comments}<br>` : ''}
+              ${item.supplier ? `ספק: ${item.supplier}<br>` : ''}
+            </div>
+            <div class="item-price">₪${formatNumber(item.cost || item.price || 0)}</div>
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="items-section">
+          <div class="items-section-title">
+            <span class="items-section-icon">${icon}</span>
+            ${title} (${itemKeys.length})
+          </div>
+          <div class="items-list">${itemsHtml}</div>
+        </div>
+      `;
     }
     
     function createItemsSection(title, items, icon) {

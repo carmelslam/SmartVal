@@ -107,6 +107,242 @@ window.saveDamageCenterToHelper = function(location, description, works, parts, 
   return damageBlock;
 };
 
+/**
+ * Update damage center data
+ */
+window.updateDamageCenter = function(centerId, field, value) {
+  console.log(`🔄 Updating damage center ${centerId}, field: ${field}`);
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ Helper or damage_centers not initialized');
+    return false;
+  }
+  
+  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Update the field
+  if (field.includes('.')) {
+    // Handle nested fields like 'subtotals.works'
+    const [parent, child] = field.split('.');
+    if (!center[parent]) center[parent] = {};
+    center[parent][child] = value;
+  } else {
+    center[field] = value;
+  }
+  
+  center.updated_at = new Date().toISOString();
+  
+  // Recalculate totals if it's a cost-related update
+  if (field.includes('subtotals') || field === 'work_items' || field === 'parts_items' || field === 'repairs_items') {
+    calculateDamageCenterTotals(centerId);
+  }
+  
+  console.log(`✅ Updated damage center ${centerId}:`, center);
+  return true;
+};
+
+/**
+ * Calculate totals for a specific damage center
+ */
+window.calculateDamageCenterTotals = function(centerId) {
+  console.log(`🧮 Calculating totals for damage center ${centerId}`);
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ Helper or damage_centers not initialized');
+    return false;
+  }
+  
+  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Calculate subtotals from items
+  const worksTotal = center.work_items.reduce((sum, item) => sum + (item.cost || 0), 0);
+  const partsTotal = center.parts_items.reduce((sum, item) => sum + (item.price || 0), 0);
+  const repairsTotal = center.repairs_items.reduce((sum, item) => sum + (item.cost || 0), 0);
+  
+  const subtotalWithoutVat = worksTotal + partsTotal + repairsTotal;
+  const vatPercentage = window.helper.system.vat_percentage || 18;
+  const vatAmount = subtotalWithoutVat * (vatPercentage / 100);
+  const totalWithVat = subtotalWithoutVat + vatAmount;
+  
+  // Update center subtotals
+  center.subtotals = {
+    works: worksTotal,
+    parts: partsTotal,
+    repairs: repairsTotal,
+    subtotal_without_vat: subtotalWithoutVat,
+    vat_amount: vatAmount,
+    total_with_vat: totalWithVat
+  };
+  
+  center.updated_at = new Date().toISOString();
+  
+  // Recalculate global totals
+  calculateAllDamageCentersTotals();
+  
+  console.log(`✅ Calculated totals for damage center ${centerId}:`, center.subtotals);
+  return center.subtotals;
+};
+
+/**
+ * Calculate totals for all damage centers combined
+ */
+window.calculateAllDamageCentersTotals = function() {
+  console.log('🧮 Calculating totals for all damage centers');
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ Helper or damage_centers not initialized');
+    return false;
+  }
+  
+  let totalSubtotal = 0;
+  let totalVat = 0;
+  let totalWithVat = 0;
+  
+  window.helper.damage_centers.centers.forEach(center => {
+    if (center.status === 'active' && center.subtotals) {
+      totalSubtotal += center.subtotals.subtotal_without_vat || 0;
+      totalVat += center.subtotals.vat_amount || 0;
+      totalWithVat += center.subtotals.total_with_vat || 0;
+    }
+  });
+  
+  // Update global totals
+  window.helper.damage_centers.totals = {
+    all_centers_subtotal: totalSubtotal,
+    all_centers_vat: totalVat,
+    all_centers_total: totalWithVat,
+    last_calculated: new Date().toISOString()
+  };
+  
+  console.log('✅ All damage centers totals calculated:', window.helper.damage_centers.totals);
+  return window.helper.damage_centers.totals;
+};
+
+/**
+ * Get damage center by ID
+ */
+window.getDamageCenter = function(centerId) {
+  if (!window.helper || !window.helper.damage_centers) {
+    return null;
+  }
+  
+  return window.helper.damage_centers.centers.find(c => c.id === centerId) || null;
+};
+
+/**
+ * Get all active damage centers
+ */
+window.getAllDamageCenters = function() {
+  if (!window.helper || !window.helper.damage_centers) {
+    return [];
+  }
+  
+  return window.helper.damage_centers.centers.filter(c => c.status === 'active');
+};
+
+/**
+ * Add work item to damage center
+ */
+window.addWorkToDamageCenter = function(centerId, workItem) {
+  console.log(`🔧 Adding work item to damage center ${centerId}:`, workItem);
+  
+  const center = window.getDamageCenter(centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Ensure work item has required fields
+  const standardizedWorkItem = {
+    id: `work_${Date.now()}`,
+    name: workItem.name || '',
+    description: workItem.description || '',
+    cost: parseFloat(workItem.cost) || 0,
+    quantity: parseInt(workItem.quantity) || 1,
+    unit_price: parseFloat(workItem.unit_price) || 0,
+    added_at: new Date().toISOString(),
+    ...workItem
+  };
+  
+  center.work_items.push(standardizedWorkItem);
+  calculateDamageCenterTotals(centerId);
+  
+  console.log(`✅ Added work item to damage center ${centerId}`);
+  return true;
+};
+
+/**
+ * Add parts item to damage center
+ */
+window.addPartToDamageCenter = function(centerId, partItem) {
+  console.log(`🔩 Adding part item to damage center ${centerId}:`, partItem);
+  
+  const center = window.getDamageCenter(centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Ensure part item has required fields
+  const standardizedPartItem = {
+    id: `part_${Date.now()}`,
+    name: partItem.name || '',
+    description: partItem.description || '',
+    price: parseFloat(partItem.price) || 0,
+    quantity: parseInt(partItem.quantity) || 1,
+    unit_price: parseFloat(partItem.unit_price) || 0,
+    supplier: partItem.supplier || '',
+    condition: partItem.condition || 'new',
+    location: partItem.location || '',
+    added_at: new Date().toISOString(),
+    ...partItem
+  };
+  
+  center.parts_items.push(standardizedPartItem);
+  calculateDamageCenterTotals(centerId);
+  
+  console.log(`✅ Added part item to damage center ${centerId}`);
+  return true;
+};
+
+/**
+ * Add repair item to damage center
+ */
+window.addRepairToDamageCenter = function(centerId, repairItem) {
+  console.log(`🔨 Adding repair item to damage center ${centerId}:`, repairItem);
+  
+  const center = window.getDamageCenter(centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Ensure repair item has required fields
+  const standardizedRepairItem = {
+    id: `repair_${Date.now()}`,
+    name: repairItem.name || '',
+    description: repairItem.description || '',
+    cost: parseFloat(repairItem.cost) || 0,
+    labor_hours: parseFloat(repairItem.labor_hours) || 0,
+    hourly_rate: parseFloat(repairItem.hourly_rate) || 0,
+    added_at: new Date().toISOString(),
+    ...repairItem
+  };
+  
+  center.repairs_items.push(standardizedRepairItem);
+  calculateDamageCenterTotals(centerId);
+  
+  console.log(`✅ Added repair item to damage center ${centerId}`);
+  return true;
+};
 
 // ============================================================================
 // 🔒 PLATE NUMBER PROTECTION SYSTEM
