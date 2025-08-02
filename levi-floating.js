@@ -662,7 +662,8 @@
       'levi-owners-value': { type: 'ownership_history', field: 'amount', value: parseFloat((changes['levi-owners-value'] || '').replace(/[₪,]/g, '')) || 0 },
       'levi-features': { type: 'features', field: 'description', value: changes['levi-features'] || '' },
       'levi-features-percent': { type: 'features', field: 'percent', value: parseFloat(changes['levi-features-percent']) || 0 },
-      'levi-features-value': { type: 'features', field: 'amount', value: parseFloat((changes['levi-features-value'] || '').replace(/[₪,]/g, '')) || 0 }
+      'levi-features-value': { type: 'features', field: 'amount', value: parseFloat((changes['levi-features-value'] || '').replace(/[₪,]/g, '')) || 0 },
+      'levi-features-description': { type: 'features', field: 'תיאור מאפיינים', value: changes['levi-features-description'] || '' }
     };
     
     Object.keys(changes).forEach(fieldId => {
@@ -1010,10 +1011,10 @@
       result['שווי מצטבר מאפיינים'] || 0
     );
 
-    // Features description - use the actual features text from the main מאפיינים field  
+    // Features description - read from helper.valuation.adjustments.features
     document.getElementById("levi-features-description").textContent = formatValue(
-      result['מאפיינים'] || // This contains the full features text in the webhook
-      result['ערך מאפיינים'] || // Alternative field name
+      helper.valuation?.adjustments?.features?.['תיאור מאפיינים'] ||
+      result['מאפיינים'] || // Fallback to direct webhook field
       '-'
     );
 
