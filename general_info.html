@@ -271,15 +271,17 @@
           }
         }
         
-        // AGGRESSIVE FIX: Monitor and prevent owner phone field from showing owner name
+        // SMART FIX: Only clear phone field when it contains owner name, preserve real phone numbers
         setInterval(() => {
           const phoneField = document.getElementById('owner_phone');
           const ownerName = window.helper?.stakeholders?.owner?.name;
-          if (phoneField && ownerName && phoneField.value === ownerName) {
+          
+          // Only intervene if the field value EXACTLY matches the owner name
+          if (phoneField && ownerName && phoneField.value.trim() === ownerName.trim()) {
             console.log('🚫 BLOCKED: Clearing owner name from phone field:', ownerName);
             phoneField.value = '';
-            // Also clear from helper data
-            if (window.helper?.stakeholders?.owner) {
+            // Also clear from helper data if it matches owner name
+            if (window.helper?.stakeholders?.owner?.phone === ownerName) {
               window.helper.stakeholders.owner.phone = '';
             }
           }
