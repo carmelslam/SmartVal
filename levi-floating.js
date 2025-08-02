@@ -638,14 +638,19 @@
 
     // Map adjustment fields to helper.valuation.adjustments structure
     const adjustmentMap = {
+      'levi-registration': { type: 'registration', field: 'description', value: changes['levi-registration'] || '' },
       'levi-registration-percent': { type: 'registration', field: 'percent', value: parseFloat(changes['levi-registration-percent']) || 0 },
       'levi-registration-value': { type: 'registration', field: 'amount', value: parseFloat((changes['levi-registration-value'] || '').replace(/[₪,]/g, '')) || 0 },
+      'levi-ownership': { type: 'ownership_type', field: 'description', value: changes['levi-ownership'] || '' },
       'levi-ownership-percent': { type: 'ownership_type', field: 'percent', value: parseFloat(changes['levi-ownership-percent']) || 0 },
       'levi-ownership-value': { type: 'ownership_type', field: 'amount', value: parseFloat((changes['levi-ownership-value'] || '').replace(/[₪,]/g, '')) || 0 },
+      'levi-km': { type: 'mileage', field: 'description', value: changes['levi-km'] || '' },
       'levi-km-percent': { type: 'mileage', field: 'percent', value: parseFloat(changes['levi-km-percent']) || 0 },
       'levi-km-value': { type: 'mileage', field: 'amount', value: parseFloat((changes['levi-km-value'] || '').replace(/[₪,]/g, '')) || 0 },
+      'levi-owners': { type: 'ownership_history', field: 'description', value: changes['levi-owners'] || '' },
       'levi-owners-percent': { type: 'ownership_history', field: 'percent', value: parseFloat(changes['levi-owners-percent']) || 0 },
       'levi-owners-value': { type: 'ownership_history', field: 'amount', value: parseFloat((changes['levi-owners-value'] || '').replace(/[₪,]/g, '')) || 0 },
+      'levi-features': { type: 'features', field: 'description', value: changes['levi-features'] || '' },
       'levi-features-percent': { type: 'features', field: 'percent', value: parseFloat(changes['levi-features-percent']) || 0 },
       'levi-features-value': { type: 'features', field: 'amount', value: parseFloat((changes['levi-features-value'] || '').replace(/[₪,]/g, '')) || 0 }
     };
@@ -1027,6 +1032,15 @@
         el.classList.remove('empty');
       }
     });
+
+    // CRITICAL: Store current helper.valuation.adjustments data for edit mode access
+    window.currentLeviData = {
+      registration: helper.valuation?.adjustments?.registration || {},
+      ownership_type: helper.valuation?.adjustments?.ownership_type || {},
+      mileage: helper.valuation?.adjustments?.mileage || {},
+      ownership_history: helper.valuation?.adjustments?.ownership_history || {},
+      features: helper.valuation?.adjustments?.features || {}
+    };
   }
 
   // ULTRA-SAFE AUTO-REFRESH: Multiple safeguards to prevent loops
