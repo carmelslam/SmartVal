@@ -360,6 +360,17 @@ window.cleanupDuplicateOwnerData = function() {
     delete window.helper.general_info.owner_phone;
     cleanedCount++;
   }
+  
+  // CRITICAL: Clean up incorrect phone data if it matches owner name
+  if (window.helper.stakeholders?.owner?.phone && window.helper.stakeholders?.owner?.name) {
+    const phone = window.helper.stakeholders.owner.phone;
+    const name = window.helper.stakeholders.owner.name;
+    if (phone === name) {
+      console.log('🧹 CLEANUP: Removing owner name from phone field:', phone);
+      window.helper.stakeholders.owner.phone = '';
+      cleanedCount++;
+    }
+  }
   if (window.helper.general_info?.owner_address) {
     delete window.helper.general_info.owner_address;
     cleanedCount++;
