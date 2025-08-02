@@ -251,41 +251,6 @@
       
       // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
       import('./helper.js').then(helperModule => {
-        // CRITICAL: Clean up any incorrect phone data before populating forms
-        if (typeof helperModule.cleanupDuplicateOwnerData === 'function') {
-          console.log('🧹 Cleaning up owner data...');
-          helperModule.cleanupDuplicateOwnerData();
-        }
-        
-        // EMERGENCY FIX: Force clear phone field if it contains owner name
-        if (window.helper?.stakeholders?.owner?.phone && window.helper?.stakeholders?.owner?.name) {
-          const phone = window.helper.stakeholders.owner.phone;
-          const name = window.helper.stakeholders.owner.name;
-          if (phone === name) {
-            console.log('🚨 EMERGENCY: Force clearing owner name from phone field');
-            window.helper.stakeholders.owner.phone = '';
-            // Save immediately
-            if (typeof helperModule.saveHelperToAllStorageLocations === 'function') {
-              helperModule.saveHelperToAllStorageLocations();
-            }
-          }
-        }
-        
-        // SMART FIX: Only clear phone field when it contains owner name, preserve real phone numbers
-        setInterval(() => {
-          const phoneField = document.getElementById('owner_phone');
-          const ownerName = window.helper?.stakeholders?.owner?.name;
-          
-          // Only intervene if the field value EXACTLY matches the owner name
-          if (phoneField && ownerName && phoneField.value.trim() === ownerName.trim()) {
-            console.log('🚫 BLOCKED: Clearing owner name from phone field:', ownerName);
-            phoneField.value = '';
-            // Also clear from helper data if it matches owner name
-            if (window.helper?.stakeholders?.owner?.phone === ownerName) {
-              window.helper.stakeholders.owner.phone = '';
-            }
-          }
-        }, 500);
         
         if (typeof helperModule.refreshAllModuleForms === 'function') {
           console.log('🔄 Calling refreshAllModuleForms...');
