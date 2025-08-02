@@ -2470,8 +2470,8 @@ function processDirectData(data, result) {
     'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
     
     // Features adjustments
-    'מאפיינים': ['valuation.adjustments.features.description', 'valuation.adjustments.features.תיאור מאפיינים'],
-    'ערך מאפיינים': ['valuation.adjustments.features.value'],
+    'מאפיינים': ['valuation.adjustments.features.description'],
+    'ערך מאפיינים': ['valuation.adjustments.features.value', 'valuation.adjustments.features.תיאור מאפיינים'],
     'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
     'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
     'שווי מצטבר מאפיינים': ['valuation.adjustments.features.cumulative'],
