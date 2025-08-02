@@ -333,6 +333,165 @@
         width: 100%;
       }
     }
+    
+    /* System-standard nav-button styling */
+    .nav-button {
+      background: #3b82f6;
+      color: white;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .nav-button:hover {
+      background: #1e3a8a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .nav-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Navigation area styling */
+    .navigation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    #stepInfo {
+      font-weight: bold;
+      color: #64748b;
+      font-size: 14px;
+      flex: 1;
+      text-align: center;
+      min-width: 120px;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .container {
+        margin: 0;
+        border-radius: 10px;
+      }
+      
+      .header {
+        padding: 20px 15px;
+      }
+      
+      .header h1 {
+        font-size: 22px;
+      }
+      
+      .header p {
+        font-size: 14px;
+      }
+      
+      .logo {
+        width: 80px;
+      }
+      
+      .wizard-content {
+        padding: 20px 15px;
+      }
+      
+      .step-title {
+        font-size: 20px;
+      }
+      
+      .step-description {
+        font-size: 14px;
+      }
+      
+      .form-group {
+        margin-bottom: 20px;
+      }
+      
+      .form-label {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      
+      .form-input, .form-select, .form-textarea {
+        padding: 12px;
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+      
+      .navigation {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+      }
+      
+      .nav-button {
+        width: 100%;
+        max-width: 200px;
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+      
+      #stepInfo {
+        order: -1; /* Show step info at top on mobile */
+        text-align: center;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      
+      /* Module iframe mobile styling */
+      .module-container iframe {
+        height: 500px !important;
+        border-radius: 8px !important;
+      }
+      
+      /* Step number mobile adjustment */
+      .step-number {
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        font-size: 14px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header {
+        padding: 15px 10px;
+      }
+      
+      .wizard-content {
+        padding: 15px 10px;
+      }
+      
+      .nav-button {
+        font-size: 13px;
+        padding: 10px 14px;
+      }
+      
+      .module-container iframe {
+        height: 450px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -505,10 +664,11 @@
       </div>
       
       <div class="navigation">
-        <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display:none;">הקודם</button>
-        <button class="btn btn-success" id="saveBtn" onclick="saveCurrentStep()">שמור נתונים</button>
-        <div id="stepInfo">שלב 1 מתוך 6</div>
-        <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">הבא</button>
+        <button class="nav-button" onclick="window.location.href='selection.html'" style="background-color: #6c757d;">חזור לבחירה</button>
+        <button class="nav-button" id="prevBtn" onclick="previousStep()" style="display:none; background-color: #6c757d;">הקודם</button>
+        <button class="nav-button" id="saveBtn" onclick="saveCurrentStep()" style="background-color: #28a745;">שמור נתונים</button>
+        <div id="stepInfo">שלב 1 מתוך 7</div>
+        <button class="nav-button" id="nextBtn" onclick="nextStep()">הבא</button>
       </div>
     </div>
   </div>
@@ -840,6 +1000,29 @@
       const progressFill = document.getElementById('progressFill');
       const percentage = (currentStep / totalSteps) * 100;
       progressFill.style.width = `${percentage}%`;
+      
+      // Update step info
+      document.getElementById('stepInfo').textContent = `שלב ${currentStep} מתוך ${totalSteps}`;
+      
+      // Update navigation buttons
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      
+      // Show/hide previous button
+      if (currentStep === 1) {
+        prevBtn.style.display = 'none';
+      } else {
+        prevBtn.style.display = 'inline-block';
+      }
+      
+      // Update next button text for final step
+      if (currentStep === totalSteps) {
+        nextBtn.textContent = 'סיום ומעבר לסיכום אקספרטיזה';
+        nextBtn.style.background = '#059669'; // Green for completion
+      } else {
+        nextBtn.textContent = 'הבא';
+        nextBtn.style.background = '#3b82f6'; // Default blue
+      }
     }
     
     function loadStepModule(step) {
@@ -998,15 +1181,11 @@
       // Save damage center to helper
       saveDamageCenterToHelper();
       
-      // Show completion message
-      if (confirm('מוקד הנזק נוצר בהצלחה!\n\nהאם תרצה ליצור מוקד נזק נוסף?')) {
-        // Reset wizard for new damage center
-        resetWizard();
-      } else {
-        // Navigate to summary or next part of workflow
-        alert('מוקד הנזק נשמר בהצלחה!');
-        // Could redirect to expertise builder or main menu
-      }
+      // Show completion message and navigate to expertise summary
+      alert('מוקד הנזק נוצר ונשמר בהצלחה!');
+      
+      // Navigate to expertise summary as the next step in the workflow
+      window.location.href = "expertise-summary.html";
     }
     
     function saveDamageCenterToHelper() {
