@@ -6,6 +6,7 @@
   <title>ירון כיוף שמאות - פורטל - חיפוש חלפים</title>
   <script type="module" src="./parts.js"></script>
   <script type="module" src="./webhook.js"></script>
+  <script src="./internal-browser.js"></script>
 
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
@@ -309,7 +310,7 @@
     console.log('💾 Auto-saved search progress');
   }
   
-  // 🎯 SMART FORM BUILDER for external sites
+  // 🎯 SMART FORM BUILDER for external sites - ENHANCED to capture ALL parts
   window.generateExternalForm = function() {
     const vehicle = {
       manufacturer: document.getElementById('manufacturer').value,
@@ -318,22 +319,53 @@
       engine_volume: document.getElementById('engine_volume').value
     };
     
-    const part = {
+    // ✅ FIXED: Capture ALL parts from selectedParts array, not just current dropdown
+    let partsToExport = [];
+    
+    // Add all parts from the selected parts list
+    if (selectedParts && selectedParts.length > 0) {
+      partsToExport = [...selectedParts];
+    }
+    
+    // Also add current form part if it's filled out and not already in the list
+    const currentPart = {
       group: document.getElementById('part_group').value,
       name: document.getElementById('part_name').value,
       source: document.getElementById('part_source').value,
       quantity: document.getElementById('part_quantity').value || 1
     };
     
-    if (!vehicle.manufacturer || !vehicle.model || !part.group) {
-      showNotification('אנא מלא את פרטי הרכב וקבוצת החלק', 'warning');
+    if (currentPart.group && currentPart.name) {
+      // Check if this part is not already in the list
+      const isDuplicate = partsToExport.some(p => 
+        p.group === currentPart.group && 
+        p.name === currentPart.name && 
+        p.source === currentPart.source
+      );
+      
+      if (!isDuplicate) {
+        partsToExport.push(currentPart);
+      }
+    }
+    
+    if (!vehicle.manufacturer || !vehicle.model) {
+      showNotification('אנא מלא את פרטי הרכב', 'warning');
       return;
     }
     
-    showExternalFormModal(vehicle, part);
+    if (partsToExport.length === 0) {
+      showNotification('אנא הוסף לפחות חלק אחד לרשימה', 'warning');
+      return;
+    }
+    
+    showExternalFormModal(vehicle, partsToExport);
   };
   
-  function showExternalFormModal(vehicle, part) {
+  function showExternalFormModal(vehicle, parts) {
+    // ✅ ENHANCED: Handle multiple parts in smart form
+    const partsArray = Array.isArray(parts) ? parts : [parts];
+    const totalParts = partsArray.length;
+    
     const modal = document.createElement('div');
     modal.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -341,9 +373,22 @@
       justify-content: center; z-index: 10000; direction: rtl;
     `;
     
+    // Generate parts list HTML
+    const partsListHTML = partsArray.map((part, index) => `
+      <div style="background: #ecfdf5; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #10b981;">
+        <strong>חלק ${index + 1}:</strong><br>
+        קטגוריה: <strong>${part.group}</strong><br>
+        ${part.name ? `שם החלק: <strong>${part.name}</strong><br>` : ''}
+        ${part.source ? `מקור: <strong>${part.source}</strong><br>` : ''}
+        כמות: <strong>${part.quantity || part.qty || 1}</strong>
+        ${part.price ? `<br>מחיר משוער: <strong>${part.price}</strong>` : ''}
+        ${part.supplier ? `<br>ספק: <strong>${part.supplier}</strong>` : ''}
+      </div>
+    `).join('');
+    
     modal.innerHTML = `
-      <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-        <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">🔍 טופס לאתר חלפים חיצוני</h3>
+      <div style="background: white; padding: 30px; border-radius: 15px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">🔍 טופס חכם לאתר חלפים חיצוני</h3>
         
         <div style="background: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
           <strong>פרטי הרכב:</strong><br>
@@ -353,20 +398,17 @@
           נפח מנוע: <strong>${vehicle.engine_volume}</strong>
         </div>
         
-        <div style="background: #ecfdf5; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #10b981;">
-          <strong>חלק מבוקש:</strong><br>
-          קטגוריה: <strong>${part.group}</strong><br>
-          ${part.name ? `שם החלק: <strong>${part.name}</strong><br>` : ''}
-          ${part.source ? `מקור: <strong>${part.source}</strong><br>` : ''}
-          כמות: <strong>${part.quantity}</strong>
+        <div style="margin-bottom: 20px;">
+          <strong style="color: #10b981;">חלקים מבוקשים (${totalParts}):</strong><br>
+          ${partsListHTML}
         </div>
         
         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-          <button onclick="copyFormData('${JSON.stringify({vehicle, part}).replace(/"/g, '&quot;')}')" 
+          <button onclick="copyFormData('${JSON.stringify({vehicle, parts: partsArray}).replace(/"/g, '&quot;')}')" 
                   style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
             📋 העתק נתונים
           </button>
-          <button onclick="window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank')" 
+          <button onclick="window.openInternalBrowser ? window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים') : window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank')" 
                   style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
             🌐 פתח Car-Part
           </button>
@@ -384,11 +426,34 @@
   
   window.copyFormData = function(dataStr) {
     const data = JSON.parse(dataStr.replace(/&quot;/g, '"'));
-    const text = `רכב: ${data.vehicle.manufacturer} ${data.vehicle.model} ${data.vehicle.year}
+    
+    // ✅ ENHANCED: Handle multiple parts in copy function
+    let text = `פרטי רכב:
+יצרן: ${data.vehicle.manufacturer}
+דגם: ${data.vehicle.model}
+שנה: ${data.vehicle.year}
 נפח מנוע: ${data.vehicle.engine_volume}
-חלק: ${data.part.group} - ${data.part.name || ''}
-מקור: ${data.part.source || ''}
-כמות: ${data.part.quantity}`;
+
+חלקים מבוקשים (${data.parts ? data.parts.length : 1}):
+`;
+    
+    if (data.parts && Array.isArray(data.parts)) {
+      // Multiple parts
+      data.parts.forEach((part, index) => {
+        text += `${index + 1}. ${part.group} - ${part.name || ''}
+   מקור: ${part.source || ''}
+   כמות: ${part.quantity || part.qty || 1}
+${part.price ? `   מחיר משוער: ${part.price}` : ''}
+${part.supplier ? `   ספק: ${part.supplier}` : ''}
+
+`;
+      });
+    } else if (data.part) {
+      // Single part (legacy support)
+      text += `1. ${data.part.group} - ${data.part.name || ''}
+   מקור: ${data.part.source || ''}
+   כמות: ${data.part.quantity}`;
+    }
     
     navigator.clipboard.writeText(text).then(() => {
       showNotification('נתונים הועתקו בהצלחה!', 'success');
@@ -629,8 +694,22 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       year: document.getElementById('year').value
     };
     
-    const url = 'https://www.car-part.co.il/Include/Generic/AccessSystem.jsp';
-    const newWindow = window.open(url, '_blank');
+    // ✅ FIXED: Use internal browser instead of external redirect
+    console.log('🌐 Opening Car-Part in internal browser with vehicle data:', vehicleData);
+    
+    // ✅ FIXED: Use correct site key for internal browser
+    if (typeof window.openInternalBrowser === 'function') {
+      try {
+        // Use correct site key from internal-browser.js siteConfigs
+        window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים');
+      } catch (error) {
+        console.error('❌ Failed to open internal browser:', error);
+        showNotification('שגיאה בפתיחת הדפדפן הפנימי', 'error');
+      }
+    } else {
+      console.error('❌ Internal browser not available');
+      showNotification('הדפדפן הפנימי לא זמין במערכת', 'error');
+    }
 
     const creds = dev_credentials?.carPart;
     if (creds) {

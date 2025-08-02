@@ -2917,3 +2917,65 @@ All Modules/Screens/Builders
 
 ### Implementation Status: ✅ COMPLETE
 All Codex recommendations have been implemented. The system now has a single source of truth with proper session management and data persistence.
+
+---
+
+## Car-Part Button Internal Browser Fix
+
+### Problem Analysis
+The "פתח אתר car-part לחיפוש" button in `parts search.html` (line 152) currently uses external browser redirect instead of the internal browser system. This breaks the unified user experience and session management.
+
+### Current Implementation
+- Button calls `openSearchSite()` function
+- Function attempts to use internal browser but has fallback to external
+- Missing proper site configuration in internal browser system
+
+### Fix Plan
+
+#### Task 1: Update Car-Part Site Configuration
+- [ ] Verify car-part.co.il configuration in internal-browser.js
+- [ ] Ensure proper URL and credential mapping
+- [ ] Test site configuration compatibility
+
+#### Task 2: Fix openSearchSite() Function  
+- [ ] Remove external fallback from parts search.html
+- [ ] Ensure proper internal browser integration
+- [ ] Add error handling for internal browser failures
+
+#### Task 3: Test Internal Browser Integration
+- [ ] Test button functionality with internal browser
+- [ ] Verify credentials auto-fill works
+- [ ] Ensure session preservation during navigation
+
+#### Task 4: Update Button Styling
+- [ ] Maintain consistent blue button styling
+- [ ] Preserve button text and positioning
+- [ ] Keep existing functionality intact
+
+### Technical Changes Required
+
+1. **File: parts search.html**
+   - Line 152: Button already has correct onclick handler
+   - Verify `openSearchSite()` uses internal browser properly
+
+2. **File: internal-browser.js**
+   - Car-part configuration exists (lines 225-235)
+   - Credentials vault setup present
+   - Site URL correct: https://www.car-part.co.il
+
+3. **Current Code Analysis**
+   - `openSearchSite()` function already attempts internal browser first
+   - Has fallback to external which should be removed or made conditional
+   - Proper error handling exists
+
+### Expected Outcome
+- Car-part button opens in internal browser consistently  
+- User credentials auto-filled when possible
+- Session preserved during external site navigation
+- No breaking changes to existing functionality
+
+### Implementation Approach
+- Minimal code changes
+- Preserve existing button appearance
+- Maintain all current functionality
+- Add better error handling
