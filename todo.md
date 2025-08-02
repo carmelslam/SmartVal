@@ -375,7 +375,64 @@ F. Explain teh logic of the button create a new case - if its just to create a n
 
 
 **THE DAMAGE WIZARD MODULE**
+Our task to day is to fix the damage centers workflow . The damage centers workflows is a sub workflow inside the expertise main workflow. The damage centers work flow consist of 6 subsections , each with its unique properties and data acquisition, also the damage centers workflow is able to create several damages centers analysis and each is a independent on its own .
+The subsections are :
+1. The damage center number and location :
+    1. The number is giving automatically 
+    2. The location is selected from a dropdown ( list is in the documentation and in the advanced damage center module)
+2. The damage center description: manual input field that describes the damage in the location - input is in a text field manually
+3. Work needed: this subsection describes the list of works needed for the damage center . It has the name  of the work , description and cost. 
+    1. We have a module called work.html , this module should inserted in this stage and it needs to be the platform on which the user analyses the works needed 
+    2. The  page will also show subtotal of all the needed works  costs .
+4. The parts needed subsection : 
+    1. This section is one the most complicated section in the whole system - detailed documentations are in the documents folder on: legacy , primary specs, parts module and other documentation. ITS IMPORTANT YOU READ ALL OF THOSE FIRST 
+    2. THE WORKFLOW of the parts module is complex and depends on several factors and modules : the user starts direction ( I still don’t know exactly in what way ) that  direct the user to The parts search module - in there the user has several options : 
+        1. Step 1 : 
+            1. An internal browser that sends request for parts availability and returns a past which later is OCRed and return to the system 
+            2. System parts search via make.com and Gemini AI 
+            3. IMAGE SEARCH via make.com and Gemini.
+            4. All search results are converted to JSON results sent to the system via webhook response. 
+        2. Step 2: 
+            1. The user is directed to the module parts required .html 
+            2. When the user enters 2 letters in Hebrew the results from the webhook suggest parts
+            3. The user then select the part he wants - all the sequent fields as location , condition and price are automatically filled from the search results.
+            4. Once the user selects all the parts he wants the list is saved to the helper - selected parts 
+            5. All the unselected parts are saved to unselected in helper 
+            6. All search results are saved to the helper ( * this can be improved by other ideas if you have)
+            7. The  page will also show subtotal of all the selected parts costs .
+    3. The flow is complex since :
+        1. The search module will need to create a form that is compatible with the inner browser query and present it to the user so he can easily send on the site- 
+        2. The search module needs to suggest parts in the search fields based on the category and parts list in the parts .js 
+        3. The received pdf from the site needs to be captured in the module and natively sent to make.com for parsing 
+        4. When the user want to use the native search via make.com ( contextual or image) the query is sent one by one . Here I need suggestion how to send a list to make without breaking the automation .
+        5. All results need to be standardized in the helper to use the same structure .
+        6. The search results need to be captured in the parts search results floating page divided between selected and not selected and to show all the details : description , supplier , communication, costs and condition 
+        7. IT IS IMPERATIVE YOU READ AND UNDERSTAND THE RELEVANT DOCUMENTATION FOR THE PARTS SEARCH MODULE. 
+5. REQUIRED REPAIRS : 
+    1. This subsection - like the work - directs the user to the module required repairs html there the user needs to select repairs and input costs 
+    2. The  page will also show subtotal of all the selected repairs costs .
+6. Subtotal of all the damage center costs - without vat and with vat. 
+Directives : 
+1. All products of all subsections create the holistic analysis of the damage center requirements and its saved to the helper .
+2. All subsections and html have “add field” option so the user can add as many additional items as he wants.
+3. All fields are written and saved in the helper 
+4. After finishing the damage center, the user can add another damage center which opens the same workflow 
+5. In a sequential damage center , the parts search results accumulated will be used in the suggestions and selection .
+6. You need to learn the documentation carefully. Also you need to look at the advanced damage center html in the admin hub, and convert it to this workflow .
+7. In the current damage center wizard we have parts search html that is not needed , but it has an advantage over the needed module on the fact that is connects the parts js and suggest parts in the search field - a function that needs to be copied to the needed parts search module.
+8. Helper mapping and construction should be standardized and consistent- 
+9. In the end of the damage center analysis- each damage center needs to have a subtotal for all the required works and repairs and parts in one summary table 
+10. All damage centers need to have a summary that takes each damage center subtotal as one row and sum up all of them together : without vat and  with vat 
+11. Vat is from the system definitions - vat is configured from the admin hub and its captured throughout the system via the math engine 
+12. Utilizing the math engine for all calculations so fields get auto calculated 
+13. Modules to inspect and study :
+    1. Current damage center wizard
+    2. Part module
+    3. Advanced damage center 
+    4. The expertise template found in the documentation 
+14. You are allowed to be creative in building this workflow, as long as you don’t break or change any other logic , other modules’ structures and helper logic  -actullay carfull creativity is welcomed . 
 
+current status as audited for now : 
 14. The wizard section **high prioriy** : this section is by far the most needed work and modification in the system , it integrates with the parts module and as for now there are a lot of problems and duplications :
     1. In the wizard : 
         1. Missing input fields - fields for input are missing in all bulks , name , description, work . 
@@ -384,7 +441,7 @@ F. Explain teh logic of the button create a new case - if its just to create a n
         4. Selected parts are stored in the expertise builder and the helper 
         5. In the end of the wizard either add a new מוקד נזק  or continue to summary not to upload pictures . 
         6. For now the summary is missing - no status dropdown , no additional details/ comments and no summary . Needs to be added , we already have the expertise summary html ready . 
-        7. Make sure that the search form that needs to be created is actually created . 
+        7. Make sure that the  inner browser search form that needs to be created for the external site is actually created . 
     2. Those two modules require from you a deep understanding of the logic and flow , a deep check of the current structure and all the files in the repo , and rebuilding the logic from scratch combining all expertise related files in the repo as I already explained before. 
     3. The wizard is the body pert of the expertise html builder and it files the placeholders . The builder's other part is the car details pulled from the helper . 
 
