@@ -109,18 +109,18 @@
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
   <h2>חיפוש חלפים לרכב</h2>
   <form id="partSearchForm">
-    <input type="text" id="plate" name="plate" placeholder="מספר רישוי" required>
-    <input type="text" id="manufacturer" name="manufacturer" placeholder="יצרן" required>
-    <input type="text" id="model" name="model" placeholder="דגם" required>
-    <input type="text" id="trim" name="trim" placeholder="רמת גימור" required>
-    <input type="text" id="year" name="year" placeholder="שנה" required>
-    <input type="text" id="engine_volume" name="engine_volume" placeholder="נפח מנוע" required>
+    <input type="text" id="plate" name="plate" placeholder="מספר רישוי">
+    <input type="text" id="manufacturer" name="manufacturer" placeholder="יצרן">
+    <input type="text" id="model" name="model" placeholder="דגם">
+    <input type="text" id="trim" name="trim" placeholder="רמת גימור">
+    <input type="text" id="year" name="year" placeholder="שנה">
+    <input type="text" id="engine_volume" name="engine_volume" placeholder="נפח מנוע">
     <input type="text" id="engine_code" name="engine_code" placeholder="דגם מנוע">
     <input type="text" id="engine_type" name="engine_type" placeholder="סוג מנוע">
     <input type="text" id="vin" name="vin" placeholder="מספר שלדה">
  <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
 <h2 class="right-small-heading">העלה/צלם תמונה לחיפוש</h2>
-    <input type="file" id="part_image" accept="image/*" capture="environment" required>
+    <input type="file" id="part_image" accept="image/*" capture="environment">
     <img id="previewImage" />
     <select id="part_group" required onchange="updatePartNameOptions()">
       <option value="" disabled selected hidden>בחר קבוצת חלקים</option>
@@ -158,6 +158,7 @@
 
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
+  <button type="button" class="btn" onclick="sendPartsListToMake()" style="background: #6f42c1; color: white;">🚀 שלח רשימת חלקים לחיפוש</button>
   <button type="button" class="btn" onclick="exportSelectedParts()" style="background: #28a745;">📄 ייצא חלקים לאקסל</button>
   <button type="button" class="btn" onclick="saveToSession()" style="background: #ffc107; color: #000;">💾 שמור להמשך באשף</button>
 </div>
@@ -519,6 +520,72 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     document.getElementById('part_quantity').value = '1';
     document.getElementById('part_source').value = '';
   }
+  
+  // ✅ NEW: Send current parts list to Make.com for processing
+  window.sendPartsListToMake = function() {
+    if (!selectedParts || selectedParts.length === 0) {
+      showNotification('אנא הוסף לפחות חלק אחד לרשימה לפני השליחה', 'warning');
+      return;
+    }
+    
+    // Get vehicle data (optional)
+    const vehicleData = {
+      plate: document.getElementById('plate').value.trim() || '',
+      manufacturer: document.getElementById('manufacturer').value.trim() || '',
+      model: document.getElementById('model').value.trim() || '',
+      year: document.getElementById('year').value.trim() || '',
+      engine_volume: document.getElementById('engine_volume').value.trim() || ''
+    };
+    
+    // Create search query from parts list
+    const partsQuery = selectedParts.map(part => 
+      `${part.group} - ${part.name} (${part.source}, כמות: ${part.qty})`
+    ).join('; ');
+    
+    const payload = {
+      search_type: 'parts_list',
+      parts_list: selectedParts,
+      free_query: partsQuery,
+      vehicle_context: vehicleData,
+      selectedParts: selectedParts,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('🚀 Sending parts list to Make.com:', payload);
+    
+    const sendBtn = document.querySelector('button[onclick="sendPartsListToMake()"]');
+    const originalText = sendBtn.textContent;
+    sendBtn.textContent = '⏳ שולח...';
+    sendBtn.disabled = true;
+    
+    showNotification('שולח רשימת חלקים לעיבוד...', 'info');
+    
+    sendPartSearch(payload).then(results => {
+      if (results && results.parts && results.parts.length > 0) {
+        displaySearchResults(results.parts);
+        showNotification(`✅ נמצאו ${results.parts.length} חלקים לרשימה שנשלחה`, 'success');
+        
+        // Save results to helper
+        try {
+          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.parts_search = helper.parts_search || { search_results: [], selected_parts: [], unselected_parts: [] };
+          helper.parts_search.search_results = results.parts;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('✅ Parts list search results saved to helper');
+        } catch (error) {
+          console.error('❌ Failed to save parts list results:', error);
+        }
+      } else {
+        showNotification('לא נמצאו תוצאות לרשימת החלקים', 'warning');
+      }
+    }).catch(error => {
+      console.error('❌ Error sending parts list:', error);
+      showNotification('שגיאה בשליחת רשימת החלקים', 'error');
+    }).finally(() => {
+      sendBtn.textContent = originalText;
+      sendBtn.disabled = false;
+    });
+  };
 </script>
 
 <script>

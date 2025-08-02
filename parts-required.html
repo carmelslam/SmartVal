@@ -275,6 +275,7 @@ form button {
 
     <div class="button-row">
   <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
+  <button type="button" class="save-btn" onclick="savePartsData()" style="background-color: #28a745;">שמור נתונים</button>
   <button type="submit">המשך</button>
 </div>
 
@@ -333,6 +334,97 @@ form button {
   document.getElementById("partsList").appendChild(row);
 }
 
+// Save parts data to helper without navigation
+function savePartsData() {
+  const allParts = [];
+
+  document.querySelectorAll("#partsList .row").forEach(row => {
+    const name = row.querySelector(".name").value.trim();
+    const desc = row.querySelector(".desc").value.trim();
+    const price = row.querySelector(".price").value.trim();
+    const source = row.querySelector(".source").value;
+    if (name && desc && source) {
+      allParts.push({ part: name, desc, price, source });
+    }
+  });
+
+  // Enhanced part validation and processing
+  const validParts = [];
+  const invalidParts = [];
+  
+  allParts.forEach(part => {
+    if (!part.part || !part.desc) {
+      invalidParts.push({ part, error: 'שם החלק ותיאור הם שדות חובה' });
+    } else if (part.price && isNaN(parseFloat(part.price))) {
+      invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
+    } else {
+      validParts.push({
+        ...part,
+        addedAt: new Date().toISOString(),
+        fromWizard: true
+      });
+    }
+  });
+  
+  if (invalidParts.length > 0) {
+    alert(`נמצאו ${invalidParts.length} חלקים לא תקינים:\n` + 
+          invalidParts.map(item => `${item.part.part || 'לא מוגדר'}: ${item.error}`).join('\n'));
+    return;
+  }
+
+  console.log('💾 Saving parts data to helper...');
+  
+  try {
+    // Get current helper data
+    let helper = {};
+    try {
+      helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    } catch (e) {
+      console.warn('Failed to parse helper from sessionStorage, using empty object');
+      helper = {};
+    }
+    
+    // Initialize damage_assessment structure if needed
+    helper.damage_assessment = helper.damage_assessment || {};
+    helper.damage_assessment.parts = helper.damage_assessment.parts || {};
+    
+    // Store parts data in proper helper structure
+    helper.damage_assessment.parts = {
+      parts_items: validParts,
+      updated_at: new Date().toISOString(),
+      updated_by: 'parts_required_module'
+    };
+    
+    // Update meta information
+    helper.meta = helper.meta || {};
+    helper.meta.last_updated = new Date().toISOString();
+    
+    // Save to session storage
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    console.log('✅ Parts data saved to helper:', helper.damage_assessment.parts);
+    
+    // Show save confirmation
+    const saveBtn = document.querySelector('.save-btn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '✅ נשמר';
+    saveBtn.style.background = '#155724';
+    
+    setTimeout(() => {
+      saveBtn.textContent = originalText;
+      saveBtn.style.background = '#28a745';
+    }, 2000);
+    
+    // Trigger helper update broadcast if available
+    if (typeof window.broadcastHelperUpdate === 'function') {
+      window.broadcastHelperUpdate(['damage_assessment'], 'parts_required_module');
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to save parts data to helper:', error);
+    alert('שגיאה בשמירת הנתונים');
+  }
+}
 
     document.getElementById("partsForm").addEventListener("submit", function(e) {
       e.preventDefault();
@@ -406,38 +498,129 @@ form button {
           alert('שגיאה בשמירת החלקים');
         }
       } else {
-        // ✅ UNIFIED HELPER INTEGRATION: Use proper helper functions
-        import('./helper.js').then(helperModule => {
-          // Save parts to damage center draft
-          helperModule.updateHelper('damage_center_draft', { parts: validParts });
-          
-          // Also save to parts_search for future suggestions
-          const existingResults = helperModule.helper.parts_search?.results || [];
-          const allResults = [...existingResults, ...validParts];
-          helperModule.updateHelper('parts_search', { 
-            results: allResults,
-            last_updated: new Date().toISOString(),
-            source: 'parts_required_module'
-          });
-          
-          // Broadcast update to other modules
-          helperModule.broadcastHelperUpdate(['parts_search', 'damage_center_draft'], 'parts_required');
-          
-        }).catch(error => {
-          console.error('Error importing helper module:', error);
-          // Fallback to direct helper manipulation
+        // ✅ FIXED: Save parts to damage_centers structure with ACTUAL DATA
+        console.log('🔄 Updating helper with parts data AND damage centers...');
+        
+        try {
+          // Get current helper data
           let helper = {};
-          try { helper = JSON.parse(sessionStorage.getItem("helper") || '{}'); } catch(e){}
-          helper.damage_center_draft = helper.damage_center_draft || {};
-          helper.damage_center_draft.parts = validParts;
+          try {
+            helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          } catch (e) {
+            console.warn('Failed to parse helper from sessionStorage, using empty object');
+            helper = {};
+          }
+          
+          // Initialize damage_assessment structure if needed
+          helper.damage_assessment = helper.damage_assessment || {};
+          helper.damage_assessment.parts = helper.damage_assessment.parts || {};
+          
+          // Store parts data in legacy damage_assessment structure
+          helper.damage_assessment.parts = {
+            parts_items: validParts,
+            updated_at: new Date().toISOString(),
+            updated_by: 'parts_required_module'
+          };
+          
+          // ✅ CRITICAL: Also save to damage_centers structure with REAL DATA
+          if (!helper.damage_centers) {
+            helper.damage_centers = {
+              centers: [],
+              current_center_id: null,
+              active_center_count: 0,
+              totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 }
+            };
+          }
+          
+          // Find or create current damage center
+          let currentCenterId = helper.damage_centers.current_center_id;
+          if (!currentCenterId) {
+            currentCenterId = `center_${Date.now()}`;
+            helper.damage_centers.current_center_id = currentCenterId;
+            helper.damage_centers.active_center_count = 1;
+          }
+          
+          let currentCenter = helper.damage_centers.centers.find(c => c.id === currentCenterId);
+          if (!currentCenter) {
+            currentCenter = {
+              id: currentCenterId,
+              number: helper.damage_centers.active_center_count,
+              location: 'מיקום לא צוין',
+              description: 'תיאור לא צוין',
+              work_items: [],
+              parts_items: [],
+              repairs_items: [],
+              subtotals: { works: 0, parts: 0, repairs: 0, subtotal_without_vat: 0, vat_amount: 0, total_with_vat: 0 },
+              takana389: 'לא צוין',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              status: 'active'
+            };
+            helper.damage_centers.centers.push(currentCenter);
+          }
+          
+          // ✅ POPULATE WITH ACTUAL PARTS ITEMS AND COSTS
+          currentCenter.parts_items = validParts.map((part, index) => ({
+            id: `part_${Date.now()}_${index}`,
+            name: part.part,
+            description: part.desc || '',
+            cost: parseFloat(part.price) || 0,
+            source: part.source || 'לא צוין',
+            category: part.category || 'חלק כללי',
+            added_at: new Date().toISOString(),
+            from_search: part.fromSearch || false
+          }));
+          
+          // ✅ CALCULATE REAL SUBTOTALS
+          const partsTotal = currentCenter.parts_items.reduce((sum, item) => sum + (item.cost || 0), 0);
+          currentCenter.subtotals.parts = partsTotal;
+          
+          // Recalculate center totals
+          const subtotalWithoutVat = currentCenter.subtotals.works + currentCenter.subtotals.parts + currentCenter.subtotals.repairs;
+          const vatAmount = subtotalWithoutVat * 0.18;
+          currentCenter.subtotals.subtotal_without_vat = subtotalWithoutVat;
+          currentCenter.subtotals.vat_amount = vatAmount;
+          currentCenter.subtotals.total_with_vat = subtotalWithoutVat + vatAmount;
+          currentCenter.updated_at = new Date().toISOString();
+          
+          // ✅ UPDATE GLOBAL TOTALS WITH REAL NUMBERS
+          const globalSubtotal = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.subtotal_without_vat || 0), 0);
+          const globalVat = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.vat_amount || 0), 0);
+          helper.damage_centers.totals = {
+            all_centers_subtotal: globalSubtotal,
+            all_centers_vat: globalVat,
+            all_centers_total: globalSubtotal + globalVat,
+            last_calculated: new Date().toISOString()
+          };
+          
+          // Also save to parts_search for future suggestions  
           helper.parts_search = helper.parts_search || { results: [] };
-          helper.parts_search.results = [...(helper.parts_search.results || []), ...validParts];
-          sessionStorage.setItem("helper", JSON.stringify(helper));
-        });
+          const existingResults = helper.parts_search.results || [];
+          helper.parts_search.results = [...existingResults, ...validParts];
+          helper.parts_search.last_updated = new Date().toISOString();
+          
+          // Update meta information
+          helper.meta = helper.meta || {};
+          helper.meta.last_updated = new Date().toISOString();
+          
+          // Save to session storage
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log('✅ Helper updated successfully with parts data:', helper.damage_assessment.parts);
+          console.log('✅ Damage centers updated with parts:', currentCenter.parts_items);
+          
+          // Trigger helper update broadcast if available
+          if (typeof window.broadcastHelperUpdate === 'function') {
+            window.broadcastHelperUpdate(['damage_assessment', 'damage_centers'], 'parts_required_module');
+          }
+          
+        } catch (error) {
+          console.error('❌ Failed to update helper with parts data:', error);
+          alert('שגיאה בשמירת חלקי הרכב');
+          return;
+        }
         
-        // REMOVED: No localStorage needed - helper system handles persistence
-        
-        window.location.href = "damage-center-repairs.html";
+        window.location.href = "repairs-required.html";
       }
     });
 

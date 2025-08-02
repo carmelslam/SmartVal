@@ -344,8 +344,8 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
     }
   });
 
-  // ✅ FIXED: Proper helper system integration instead of bypass
-  console.log('🔄 Updating helper with works data...');
+  // ✅ FIXED: Proper helper system integration with ACTUAL DATA
+  console.log('🔄 Updating helper with works data AND damage centers...');
   
   try {
     // Get current helper data
@@ -361,12 +361,84 @@ document.getElementById("workForm").addEventListener("submit", function(e) {
     helper.damage_assessment = helper.damage_assessment || {};
     helper.damage_assessment.works = helper.damage_assessment.works || {};
     
-    // Store works data in proper helper structure
+    // Store works data in legacy structure
     helper.damage_assessment.works = {
       takana389: takana,
       work_items: works,
       updated_at: new Date().toISOString(),
       updated_by: 'work_module'
+    };
+    
+    // ✅ CRITICAL: Also save to damage_centers structure with REAL DATA
+    if (!helper.damage_centers) {
+      helper.damage_centers = {
+        centers: [],
+        current_center_id: null,
+        active_center_count: 0,
+        totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 }
+      };
+    }
+    
+    // Find or create current damage center
+    let currentCenterId = helper.damage_centers.current_center_id;
+    if (!currentCenterId) {
+      currentCenterId = `center_${Date.now()}`;
+      helper.damage_centers.current_center_id = currentCenterId;
+      helper.damage_centers.active_center_count = 1;
+    }
+    
+    let currentCenter = helper.damage_centers.centers.find(c => c.id === currentCenterId);
+    if (!currentCenter) {
+      currentCenter = {
+        id: currentCenterId,
+        number: helper.damage_centers.active_center_count,
+        location: 'מיקום לא צוין',
+        description: 'תיאור לא צוין',
+        work_items: [],
+        parts_items: [],
+        repairs_items: [],
+        subtotals: { works: 0, parts: 0, repairs: 0, subtotal_without_vat: 0, vat_amount: 0, total_with_vat: 0 },
+        takana389: takana,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: 'active'
+      };
+      helper.damage_centers.centers.push(currentCenter);
+    }
+    
+    // ✅ POPULATE WITH ACTUAL WORK ITEMS AND COSTS
+    currentCenter.work_items = works.map((work, index) => ({
+      id: `work_${Date.now()}_${index}`,
+      name: work.category,
+      description: work.comments || '',
+      cost: parseFloat(work.cost) || 0,
+      category: work.category,
+      source: 'manual_entry',
+      added_at: new Date().toISOString()
+    }));
+    
+    currentCenter.takana389 = takana;
+    
+    // ✅ CALCULATE REAL SUBTOTALS
+    const workTotal = currentCenter.work_items.reduce((sum, item) => sum + (item.cost || 0), 0);
+    currentCenter.subtotals.works = workTotal;
+    
+    // Recalculate center totals
+    const subtotalWithoutVat = currentCenter.subtotals.works + currentCenter.subtotals.parts + currentCenter.subtotals.repairs;
+    const vatAmount = subtotalWithoutVat * 0.18;
+    currentCenter.subtotals.subtotal_without_vat = subtotalWithoutVat;
+    currentCenter.subtotals.vat_amount = vatAmount;
+    currentCenter.subtotals.total_with_vat = subtotalWithoutVat + vatAmount;
+    currentCenter.updated_at = new Date().toISOString();
+    
+    // ✅ UPDATE GLOBAL TOTALS WITH REAL NUMBERS
+    const globalSubtotal = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.subtotal_without_vat || 0), 0);
+    const globalVat = helper.damage_centers.centers.reduce((sum, center) => sum + (center.subtotals.vat_amount || 0), 0);
+    helper.damage_centers.totals = {
+      all_centers_subtotal: globalSubtotal,
+      all_centers_vat: globalVat,
+      all_centers_total: globalSubtotal + globalVat,
+      last_calculated: new Date().toISOString()
     };
     
     // Update meta information

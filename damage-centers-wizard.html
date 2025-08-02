@@ -675,8 +675,65 @@
             stepData.description = description?.value;
             break;
             
+          case 3:
+            // Work module - trigger actual save function in iframe
+            try {
+              const workIframe = document.getElementById('workModuleFrame');
+              if (workIframe && workIframe.contentWindow && workIframe.contentWindow.saveWorkData) {
+                workIframe.contentWindow.saveWorkData();
+                stepData.work_saved = true;
+                stepData.work_saved_at = new Date().toISOString();
+              } else {
+                console.warn('Work iframe or saveWorkData function not found');
+                stepData.work_saved = false;
+              }
+            } catch (error) {
+              console.error('Error saving work data from wizard:', error);
+              stepData.work_saved = false;
+            }
+            stepData.stepName = 'work';
+            break;
+            
+          case 5:
+            // Parts required module - trigger actual save function in iframe
+            try {
+              const partsIframe = document.getElementById('partsModuleFrame');
+              if (partsIframe && partsIframe.contentWindow && partsIframe.contentWindow.savePartsData) {
+                partsIframe.contentWindow.savePartsData();
+                stepData.parts_saved = true;
+                stepData.parts_saved_at = new Date().toISOString();
+              } else {
+                console.warn('Parts iframe or savePartsData function not found');
+                stepData.parts_saved = false;
+              }
+            } catch (error) {
+              console.error('Error saving parts data from wizard:', error);
+              stepData.parts_saved = false;
+            }
+            stepData.stepName = 'parts_required';
+            break;
+            
+          case 6:
+            // Repairs module - trigger actual save function in iframe
+            try {
+              const repairsIframe = document.getElementById('repairsModuleFrame');
+              if (repairsIframe && repairsIframe.contentWindow && repairsIframe.contentWindow.saveRepairsData) {
+                repairsIframe.contentWindow.saveRepairsData();
+                stepData.repairs_saved = true;
+                stepData.repairs_saved_at = new Date().toISOString();
+              } else {
+                console.warn('Repairs iframe or saveRepairsData function not found');
+                stepData.repairs_saved = false;
+              }
+            } catch (error) {
+              console.error('Error saving repairs data from wizard:', error);
+              stepData.repairs_saved = false;
+            }
+            stepData.stepName = 'repairs';
+            break;
+            
           default:
-            // For module steps (3-6), modules handle their own saving
+            // Other steps or parts search
             stepData.currentStep = currentStep;
             stepData.stepName = ['', 'location', 'description', 'work', 'parts_search', 'parts_required', 'repairs'][currentStep];
             break;
