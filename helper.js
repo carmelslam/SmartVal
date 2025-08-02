@@ -2766,7 +2766,7 @@ function populateAllForms() {
     'client_name': window.getOwnerName(),
     // 'ownerPhone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
     // 'owner_phone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
-    // 'owner_phone_number': window.helper.stakeholders?.owner?.phone, // NEW CLEAN FIELD - NO AUTO-POPULATE
+    'phone_number': window.helper.stakeholders?.owner?.phone, // NEW CLEAN FIELD - AUTO-POPULATE
     'ownerAddress': window.helper.stakeholders?.owner?.address,
     'owner_address': window.helper.stakeholders?.owner?.address,
     'ownerEmail': window.helper.stakeholders?.owner?.email,
