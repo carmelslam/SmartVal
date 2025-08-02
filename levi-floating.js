@@ -779,8 +779,14 @@
       if (adjustments[section]) {
         const adj = adjustments[section];
         
-        // Remove invalid fields
-        delete adj.percentage;
+        // Remove invalid fields (percentage should not exist, only percent)
+        if (adj.percentage) {
+          // Special handling for mileage - move percentage data to value if it contains actual value
+          if (section === 'mileage' && adj.percentage && (adj.percentage.includes('ק"מ') || adj.percentage.includes('km'))) {
+            adj.value = adj.percentage;
+          }
+          delete adj.percentage;
+        }
         delete adj.reason;
         delete adj.type;
         delete adj.km_value;
@@ -796,11 +802,6 @@
         if (!adj.amount) adj.amount = '₪0';
         if (!adj.cumulative) adj.cumulative = '₪0';
         
-        // Special handling for mileage - move percentage data to value if needed
-        if (section === 'mileage' && adj.percentage && adj.percentage.includes('ק"מ')) {
-          adj.value = adj.percentage;
-          delete adj.percentage;
-        }
       }
     });
     
@@ -983,6 +984,7 @@
       result['ערך ש״ח עליה לכביש']
     );
     document.getElementById("levi-registration-total").textContent = formatPrice(
+      helper.valuation?.adjustments?.registration?.cumulative ||
       result['שווי מצטבר עליה לכביש'] || 0
     );
 
@@ -1001,6 +1003,7 @@
       result['ערך ש״ח בעלות']
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
+      helper.valuation?.adjustments?.ownership_type?.cumulative ||
       result['שווי מצטבר בעלות'] || 0
     );
 
@@ -1018,6 +1021,7 @@
       result['ערך ש״ח מס ק״מ']
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
+      helper.valuation?.adjustments?.mileage?.cumulative ||
       result['שווי מצטבר מס ק"מ'] || 0
     );
 
@@ -1035,6 +1039,7 @@
       result['ערך ש"ח מספר בעלים']
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
+      helper.valuation?.adjustments?.ownership_history?.cumulative ||
       result['שווי מצטבר מספר בעלים'] || 0
     );
 
@@ -1053,6 +1058,7 @@
       result['ערך ש״ח מאפיינים']
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
+      helper.valuation?.adjustments?.features?.cumulative ||
       result['שווי מצטבר מאפיינים'] || 0
     );
 
