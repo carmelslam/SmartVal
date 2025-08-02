@@ -271,6 +271,20 @@
           }
         }
         
+        // AGGRESSIVE FIX: Monitor and prevent owner phone field from showing owner name
+        setInterval(() => {
+          const phoneField = document.getElementById('owner_phone');
+          const ownerName = window.helper?.stakeholders?.owner?.name;
+          if (phoneField && ownerName && phoneField.value === ownerName) {
+            console.log('🚫 BLOCKED: Clearing owner name from phone field:', ownerName);
+            phoneField.value = '';
+            // Also clear from helper data
+            if (window.helper?.stakeholders?.owner) {
+              window.helper.stakeholders.owner.phone = '';
+            }
+          }
+        }, 500);
+        
         if (typeof helperModule.refreshAllModuleForms === 'function') {
           console.log('🔄 Calling refreshAllModuleForms...');
           helperModule.refreshAllModuleForms();
