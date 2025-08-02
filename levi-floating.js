@@ -922,113 +922,89 @@
       '-'
     );
 
-    // FIXED: Registration adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
+    // FIXED: Registration adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-registration").textContent = formatValue(
-      helper.valuation?.adjustments?.registration?.description || 
       helper.valuation?.adjustments?.registration?.value ||
       result['ערך עליה לכביש'] || result['עליה לכביש'] || "-"
     );
     
     document.getElementById("levi-registration-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.registration?.percent || 0
+      helper.valuation?.adjustments?.registration?.percent
     );
     document.getElementById("levi-registration-value").textContent = formatPrice(
       helper.valuation?.adjustments?.registration?.amount ||
       result['ערך ש"ח עליה לכביש'] || 
-      result['ערך ש״ח עליה לכביש'] || 
-      0
+      result['ערך ש״ח עליה לכביש']
     );
     document.getElementById("levi-registration-total").textContent = formatPrice(
       result['שווי מצטבר עליה לכביש'] || 0
     );
 
-    // FIXED: Ownership adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
+    // FIXED: Ownership adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-ownership").textContent = formatValue(
-      helper.valuation?.adjustments?.ownership_type?.description || 
       helper.valuation?.adjustments?.ownership_type?.value ||
       result['ערך בעלות'] || result['בעלות'] || "-"
     );
     
-    // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
     document.getElementById("levi-ownership-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.ownership_type?.percent || 0
+      helper.valuation?.adjustments?.ownership_type?.percent
     );
-    // FIXED: Ownership value - from helper.valuation.adjustments
     document.getElementById("levi-ownership-value").textContent = formatPrice(
       helper.valuation?.adjustments?.ownership_type?.amount ||
       result['ערך ש"ח בעלות'] || 
-      result['ערך ש״ח בעלות'] || 
-      0
+      result['ערך ש״ח בעלות']
     );
     document.getElementById("levi-ownership-total").textContent = formatPrice(
       result['שווי מצטבר בעלות'] || 0
     );
 
-    // FIXED: KM adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
+    // FIXED: KM adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-km").textContent = formatValue(
-      helper.valuation?.adjustments?.mileage?.description || 
       helper.valuation?.adjustments?.mileage?.value ||
       result['ערך מס ק"מ'] || result['מס ק"מ'] || "-"
     );
-    // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
     document.getElementById("levi-km-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.mileage?.percent || 0
+      helper.valuation?.adjustments?.mileage?.percent
     );
-    // FIXED: KM value - from helper.valuation.adjustments
     document.getElementById("levi-km-value").textContent = formatPrice(
       helper.valuation?.adjustments?.mileage?.amount ||
       result['ערך ש"ח מס ק"מ'] || 
-      result['ערך ש״ח מס ק״מ'] || 
-      0
+      result['ערך ש״ח מס ק״מ']
     );
     document.getElementById("levi-km-total").textContent = formatPrice(
       result['שווי מצטבר מס ק"מ'] || 0
     );
 
-    // FIXED: Owners adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
+    // FIXED: Owners adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-owners").textContent = formatValue(
-      helper.valuation?.adjustments?.ownership_history?.description || 
       helper.valuation?.adjustments?.ownership_history?.value ||
       result['ערך מספר בעלים'] || result['מספר בעלים'] || "-"
     );
-    // FOLLOW HELPER ARCHITECTURE: Read from helper.valuation.adjustments only
     document.getElementById("levi-owners-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.ownership_history?.percent || 0
+      helper.valuation?.adjustments?.ownership_history?.percent
     );
-    // FIXED: Owners value - from helper.valuation.adjustments
     document.getElementById("levi-owners-value").textContent = formatPrice(
       helper.valuation?.adjustments?.ownership_history?.amount ||
       result['ערך ש״ח מספר בעלים'] || 
-      result['ערך ש"ח מספר בעלים'] || 
-      0
+      result['ערך ש"ח מספר בעלים']
     );
     document.getElementById("levi-owners-total").textContent = formatPrice(
       result['שווי מצטבר מספר בעלים'] || 0
     );
 
-    // FIXED: Features adjustments - READ DIRECTLY FROM HELPER.VALUATION.ADJUSTMENTS
+    // FIXED: Features adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-features").textContent = formatValue(
-      helper.valuation?.adjustments?.features?.description || 
       helper.valuation?.adjustments?.features?.value ||
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
-    // FIXED: Features percentage - match upload-levi.html approach
     document.getElementById("levi-features-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.features?.percent ||
-      result['מחיר מאפיינים %'] || 
-      result['מאפיינים %'] || 
-      result['מחיר מאפיינים%'] || 
-      result['מאפיינים%'] || 
-      result['features_percent'] || 
-      0
+      helper.valuation?.adjustments?.features?.percent
     );
-    // FIXED: Features value - from helper.valuation.adjustments
     document.getElementById("levi-features-value").textContent = formatPrice(
       helper.valuation?.adjustments?.features?.amount ||
       result['ערך ש"ח מאפיינים'] || 
-      result['ערך ש״ח מאפיינים'] || 
-      0
+      result['ערך ש״ח מאפיינים']
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
       result['שווי מצטבר מאפיינים'] || 0
