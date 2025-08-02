@@ -2736,8 +2736,8 @@ function populateAllForms() {
     'owner': window.getOwnerName(),
     'ownerName': window.getOwnerName(),
     'client_name': window.getOwnerName(),
-    'ownerPhone': window.helper.stakeholders?.owner?.phone,
-    'owner_phone': window.helper.stakeholders?.owner?.phone,
+    // 'ownerPhone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
+    // 'owner_phone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
     'ownerAddress': window.helper.stakeholders?.owner?.address,
     'owner_address': window.helper.stakeholders?.owner?.address,
     'ownerEmail': window.helper.stakeholders?.owner?.email,
