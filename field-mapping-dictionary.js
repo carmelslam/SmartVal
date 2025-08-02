@@ -303,7 +303,7 @@ export const UI_FIELD_TO_HELPER = {
   'owner': 'stakeholders.owner.name',
   'owner_name': 'stakeholders.owner.name',
   'owner_phone': 'stakeholders.owner.phone',
-  'phone': 'stakeholders.owner.phone', // Legacy alias
+  // 'phone': 'stakeholders.owner.phone', // DISABLED - too broad, causing owner name to be mapped to phone
   'owner_address': 'stakeholders.owner.address',
   'address': 'stakeholders.owner.address', // Legacy alias
   'owner_email': 'stakeholders.owner.email',
