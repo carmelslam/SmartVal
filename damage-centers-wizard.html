@@ -1162,8 +1162,7 @@
         helper = {};
       }
       
-      // Initialize wizard data structure if needed
-      helper.wizard_current_data = helper.wizard_current_data || {};
+      // No need for wizard temporary data - using simple damage_blocks structure
       
       switch(currentStep) {
         case 1:
@@ -1172,7 +1171,7 @@
           const otherLocationInput = document.getElementById('otherLocationInput');
           const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
           
-          helper.wizard_current_data.location = location;
+          // Location saved directly to moduleData
           moduleData.location = location;
           damageCenterData.location = location;
           console.log('✅ Location saved:', location);
@@ -1181,7 +1180,7 @@
         case 2:
           // Save description
           const description = document.getElementById('damageDescription')?.value?.trim();
-          helper.wizard_current_data.description = description;
+          // Description saved directly to moduleData
           moduleData.description = description;
           damageCenterData.description = description;
           console.log('✅ Description saved:', description);
@@ -1208,9 +1207,7 @@
           break;
       }
       
-      // Save updated helper
-      helper.wizard_current_data.last_updated = new Date().toISOString();
-      helper.wizard_current_data.current_step = currentStep;
+      // Update helper meta info only
       sessionStorage.setItem('helper', JSON.stringify(helper));
     }
     
@@ -1364,8 +1361,8 @@
         }
         
         // Get damage center data
-        const location = moduleData.location || helper.wizard_current_data?.location || 'מיקום לא צוין';
-        const description = moduleData.description || helper.wizard_current_data?.description || 'תיאור לא צוין';
+        const location = moduleData.location || 'מיקום לא צוין';
+        const description = moduleData.description || 'תיאור לא צוין';
         
         // Get actual data from modules
         const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.works?.work_items || []);
