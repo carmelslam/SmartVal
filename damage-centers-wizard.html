@@ -2018,43 +2018,36 @@
           // ✅ IMPROVED: More flexible property detection for option text
           let optionText = '';
           
-          // Try various number/identifier properties
-          if (center.number) {
-            optionText = `מוקד ${center.number}`;
-          } else if (center.center_number) {
-            optionText = `מוקד ${center.center_number}`;
-          } else if (center.block_number) {
-            optionText = `מוקד ${center.block_number}`;
-          } else if (center.id) {
-            optionText = `מוקד ${center.id}`;
-          } else {
-            optionText = `מוקד ${index + 1}`;
-          }
+          // ✅ IMPROVED: Better identification using correct structure
+          const centerNumber = center.number || center.center_number || (index + 1);
+          optionText = `מוקד ${centerNumber}`;
           
-          // Try various location properties
-          if (center.location) {
+          // Add location if available
+          if (center.location && center.location !== 'מיקום לא צוין') {
             optionText += ` - ${center.location}`;
-          } else if (center.selected_location) {
-            optionText += ` - ${center.selected_location}`;
-          } else if (center.damage_location) {
-            optionText += ` - ${center.damage_location}`;
-          } else if (center.area) {
-            optionText += ` - ${center.area}`;
           }
           
-          // Try various description properties
-          if (center.damage_description) {
-            const preview = center.damage_description.substring(0, 25);
-            optionText += ` (${preview}${center.damage_description.length > 25 ? '...' : ''})`;
-          } else if (center.description) {
-            const preview = center.description.substring(0, 25);
-            optionText += ` (${preview}${center.description.length > 25 ? '...' : ''})`;
-          } else if (center.details) {
-            const preview = center.details.substring(0, 25);
-            optionText += ` (${preview}${center.details.length > 25 ? '...' : ''})`;
-          } else if (center.summary) {
-            const preview = center.summary.substring(0, 25);
-            optionText += ` (${preview}${center.summary.length > 25 ? '...' : ''})`;
+          // Add description preview if available
+          const description = center.description || center.damage_description;
+          if (description && description !== 'תיאור לא צוין') {
+            const preview = description.substring(0, 30);
+            optionText += ` (${preview}${description.length > 30 ? '...' : ''})`;
+          }
+          
+          // Add work/parts/repairs count summary
+          const workCount = center.work_items?.length || 0;
+          const partsCount = center.parts_items?.length || 0;
+          const repairsCount = center.repairs_items?.length || 0;
+          const totalItems = workCount + partsCount + repairsCount;
+          
+          if (totalItems > 0) {
+            optionText += ` [${totalItems} פריטים]`;
+          }
+          
+          // Add total cost if available
+          const totalCost = center.calculations?.total_with_vat || center.totals?.total;
+          if (totalCost > 0) {
+            optionText += ` - ₪${totalCost.toLocaleString()}`;
           }
           
           option.textContent = optionText;
@@ -2166,7 +2159,7 @@
           return;
         }
         
-        // Find the damage center to remove
+        // ✅ IMPROVED: Better center identification for deletion
         const centerIndex = damageCenters.findIndex(center => 
           (center.id === selectedValue) || 
           (center.center_id === selectedValue) ||
@@ -2179,7 +2172,8 @@
         }
         
         const centerToRemove = damageCenters[centerIndex];
-        const centerDescription = centerToRemove.number || centerToRemove.center_number || `מוקד ${centerIndex + 1}`;
+        const centerNumber = centerToRemove.number || centerToRemove.center_number || (centerIndex + 1);
+        const centerDescription = `מוקד ${centerNumber}${centerToRemove.location ? ` - ${centerToRemove.location}` : ''}`;
         
         // Confirm deletion
         const confirmMessage = `האם אתה בטוח שברצונך למחוק את הנתונים של ${centerDescription}?\n\nפעולה זו תמחק:\n• פרטי המוקד והמיקום\n• תיאור הנזק\n• רשימת עבודות\n• רשימת חלפים\n• רשימת תיקונים\n• חישובי עלויות\n\nלא ניתן לבטל פעולה זו!`;

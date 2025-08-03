@@ -258,98 +258,116 @@ export function damageCenters() {
       damageData.summary.assessment_notes = `סיכום אוטומטי: ${finalTotals.centerCount} מוקדי נזק בסך ${finalTotals.formatted.total}`;
       syncDamageData(damageData);
 
-      // ✅ CRITICAL FIX: Save individual damage centers to the correct helper location
-      const damageCenters = [];
-      document.querySelectorAll('[data-center-id]').forEach((centerElement, index) => {
-        const centerId = centerElement.getAttribute('data-center-id');
-        const centerData = {
-          id: centerId,
-          center_number: index + 1,
-          location: centerElement.querySelector('[data-field="location"]')?.textContent || '',
-          damage_description: centerElement.querySelector('[data-field="damage-description"]')?.textContent || '',
-          work_items: [],
-          parts_items: [],
-          repairs_items: [],
-          totals: {
-            work_total: 0,
-            parts_total: 0,
-            repairs_total: 0,
-            subtotal: 0,
-            vat: 0,
-            total: 0
+      // ✅ FIXED: Get location and description from wizard's moduleData
+      let wizardData = {};
+      try {
+        // Try to get data from parent window (wizard)
+        if (window.parent && window.parent.moduleData) {
+          wizardData = window.parent.moduleData;
+          console.log('✅ Got wizard data from parent:', wizardData);
+        } else if (window.opener && window.opener.moduleData) {
+          wizardData = window.opener.moduleData;
+          console.log('✅ Got wizard data from opener:', wizardData);
+        } else {
+          console.log('⚠️ No wizard data found, using defaults');
+        }
+      } catch (error) {
+        console.log('⚠️ Error accessing wizard data:', error);
+      }
+
+      // Extract basic damage center info from wizard
+      const location = wizardData.location || 'מיקום לא צוין';
+      const description = wizardData.description || 'תיאור לא צוין';
+      const centerNumber = (window.helper?.damage_assessment?.centers?.length || 0) + 1;
+      
+      console.log(`🏗️ Creating damage center ${centerNumber}: ${location} - ${description}`);
+
+      // ✅ FIXED: Use proper createDamageCenter function with all required data
+      if (typeof window.createDamageCenter === 'function') {
+        console.log('✅ Using createDamageCenter function');
+        
+        const newCenter = window.createDamageCenter(location, description);
+        
+        // Add work items from current data
+        if (centers && centers.length > 0) {
+          const centerData = centers[0]; // Use first center's data
+          
+          // Add work items
+          if (centerData.work_items) {
+            newCenter.work_items = centerData.work_items;
+            newCenter.calculations.work_subtotal = centerData.calculations?.work_subtotal || 0;
+          }
+          
+          // Add parts items  
+          if (centerData.parts_items) {
+            newCenter.parts_items = centerData.parts_items;
+            newCenter.calculations.parts_subtotal = centerData.calculations?.parts_subtotal || 0;
+          }
+          
+          // Add repairs items
+          if (centerData.repairs_items) {
+            newCenter.repairs_items = centerData.repairs_items;
+            newCenter.calculations.repairs_subtotal = centerData.calculations?.repairs_subtotal || 0;
+          }
+          
+          // Recalculate totals
+          newCenter.calculations.subtotal = (newCenter.calculations.work_subtotal || 0) + 
+                                           (newCenter.calculations.parts_subtotal || 0) + 
+                                           (newCenter.calculations.repairs_subtotal || 0);
+          newCenter.calculations.vat_amount = newCenter.calculations.subtotal * 0.18;
+          newCenter.calculations.total_with_vat = newCenter.calculations.subtotal + newCenter.calculations.vat_amount;
+        }
+        
+        console.log('✅ Created complete damage center:', newCenter);
+        
+      } else {
+        console.log('❌ createDamageCenter function not available, using fallback');
+        
+        // Fallback: Manually update damage_assessment.centers
+        const existingCenters = window.helper?.damage_assessment?.centers || [];
+        const newCenter = {
+          id: `center_${Date.now()}`,
+          number: centerNumber,
+          location: location,
+          description: description,
+          work_items: centers[0]?.work_items || [],
+          parts_items: centers[0]?.parts_items || [],
+          repairs_items: centers[0]?.repairs_items || [],
+          calculations: {
+            work_subtotal: centers[0]?.calculations?.work_subtotal || 0,
+            parts_subtotal: centers[0]?.calculations?.parts_subtotal || 0,
+            repairs_subtotal: centers[0]?.calculations?.repairs_subtotal || 0,
+            subtotal: finalTotals.subtotal,
+            vat_amount: finalTotals.vat,
+            total_with_vat: finalTotals.total
           },
-          created_at: new Date().toISOString(),
-          last_updated: new Date().toISOString()
+          workflow: {
+            status: 'completed',
+            created_at: new Date().toISOString(),
+            last_updated: new Date().toISOString()
+          }
         };
         
-        // Extract work items
-        centerElement.querySelectorAll('[data-category="work"] .item-row').forEach(row => {
-          centerData.work_items.push({
-            description: row.querySelector('.description')?.textContent || '',
-            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
-            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
-            total: parseFloat(row.querySelector('.total')?.textContent || '0')
-          });
-        });
+        existingCenters.push(newCenter);
         
-        // Extract parts items
-        centerElement.querySelectorAll('[data-category="parts"] .item-row').forEach(row => {
-          centerData.parts_items.push({
-            description: row.querySelector('.description')?.textContent || '',
-            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
-            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
-            total: parseFloat(row.querySelector('.total')?.textContent || '0')
-          });
-        });
-        
-        // Extract repairs items
-        centerElement.querySelectorAll('[data-category="repairs"] .item-row').forEach(row => {
-          centerData.repairs_items.push({
-            description: row.querySelector('.description')?.textContent || '',
-            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
-            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
-            total: parseFloat(row.querySelector('.total')?.textContent || '0')
-          });
-        });
-        
-        // Calculate totals
-        centerData.totals.work_total = centerData.work_items.reduce((sum, item) => sum + item.total, 0);
-        centerData.totals.parts_total = centerData.parts_items.reduce((sum, item) => sum + item.total, 0);
-        centerData.totals.repairs_total = centerData.repairs_items.reduce((sum, item) => sum + item.total, 0);
-        centerData.totals.subtotal = centerData.totals.work_total + centerData.totals.parts_total + centerData.totals.repairs_total;
-        centerData.totals.vat = centerData.totals.subtotal * 0.18;
-        centerData.totals.total = centerData.totals.subtotal + centerData.totals.vat;
-        
-        damageCenters.push(centerData);
-      });
-      
-      // ✅ SAVE TO CORRECT HELPER STRUCTURE: damage_assessment.centers 
-      updateHelper('damage_assessment', {
-        centers: damageCenters,
-        current_session: {
-          active_center_id: null,
-          center_count: damageCenters.length,
-          session_start: new Date().toISOString(),
-          last_activity: new Date().toISOString(),
-          wizard_step: 'completed',
-          wizard_data: {},
-          temp_data: {}
-        },
-        totals: {
-          all_centers_subtotal: finalTotals.subtotal,
-          all_centers_vat: finalTotals.vat,
-          all_centers_total: finalTotals.total,
-          breakdown: {
-            total_works: damageCenters.reduce((sum, center) => sum + center.totals.work_total, 0),
-            total_parts: damageCenters.reduce((sum, center) => sum + center.totals.parts_total, 0),
-            total_repairs: damageCenters.reduce((sum, center) => sum + center.totals.repairs_total, 0),
-            total_fees: 0
+        updateHelper('damage_assessment', {
+          centers: existingCenters,
+          current_session: {
+            active_center_id: newCenter.id,
+            center_count: existingCenters.length,
+            session_start: new Date().toISOString(),
+            last_activity: new Date().toISOString(),
+            wizard_step: 'completed'
           },
-          last_calculated: new Date().toISOString(),
-          calculation_method: 'auto',
-          manual_overrides: []
-        }
-      });
+          totals: {
+            all_centers_subtotal: existingCenters.reduce((sum, c) => sum + (c.calculations?.subtotal || 0), 0),
+            all_centers_vat: existingCenters.reduce((sum, c) => sum + (c.calculations?.vat_amount || 0), 0),
+            all_centers_total: existingCenters.reduce((sum, c) => sum + (c.calculations?.total_with_vat || 0), 0)
+          }
+        });
+        
+        console.log('✅ Manually created damage center:', newCenter);
+      }
 
       // ⬇️ Save fixed legal disclaimer + status field to helper
       updateHelper('expertise', {
