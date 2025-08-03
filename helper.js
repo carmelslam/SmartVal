@@ -68,12 +68,12 @@ function parseJSONWithDuplicates(jsonString) {
 window.createDamageCenter = function(location = '', description = '', sourceData = {}) {
   console.log('🏗️ Creating comprehensive damage center...');
   
-  if (!window.helper || !window.helper.damage_centers) {
-    console.error('❌ Helper or damage_centers not initialized');
+  if (!window.helper || !window.helper.damage_assessment) {
+    console.error('❌ Helper or damage_assessment not initialized');
     return null;
   }
   
-  const centerNumber = window.helper.damage_centers.centers.length + 1;
+  const centerNumber = window.helper.damage_assessment.centers.length + 1;
   const centerId = `damage_center_${Date.now()}_${centerNumber}`;
   
   // Create comprehensive damage center structure
@@ -194,18 +194,18 @@ window.createDamageCenter = function(location = '', description = '', sourceData
   };
   
   // Add to centers array
-  window.helper.damage_centers.centers.push(newCenter);
+  window.helper.damage_assessment.centers.push(newCenter);
   
   // Update session management
-  window.helper.damage_centers.current_session.active_center_id = centerId;
-  window.helper.damage_centers.current_session.center_count = centerNumber;
-  window.helper.damage_centers.current_session.last_activity = new Date().toISOString();
+  window.helper.damage_assessment.current_session.active_center_id = centerId;
+  window.helper.damage_assessment.current_session.center_count = centerNumber;
+  window.helper.damage_assessment.current_session.last_activity = new Date().toISOString();
   
   // Update statistics
-  window.helper.damage_centers.statistics.total_centers = centerNumber;
+  window.helper.damage_assessment.statistics.total_centers = centerNumber;
   
   // Add audit trail entry
-  window.helper.damage_centers.audit_trail.push({
+  window.helper.damage_assessment.audit_trail.push({
     action: 'center_created',
     center_id: centerId,
     timestamp: new Date().toISOString(),
@@ -223,12 +223,12 @@ window.createDamageCenter = function(location = '', description = '', sourceData
 window.updateDamageCenter = function(centerId, updates = {}) {
   console.log(`🔄 Updating damage center ${centerId}:`, updates);
   
-  if (!window.helper || !window.helper.damage_centers) {
-    console.error('❌ Helper or damage_centers not initialized');
+  if (!window.helper || !window.helper.damage_assessment) {
+    console.error('❌ Helper or damage_assessment not initialized');
     return false;
   }
   
-  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
@@ -255,7 +255,7 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   center.timestamps.updated_at = new Date().toISOString();
   
   // Add audit trail entry
-  window.helper.damage_centers.audit_trail.push({
+  window.helper.damage_assessment.audit_trail.push({
     action: 'center_updated',
     center_id: centerId,
     timestamp: new Date().toISOString(),
@@ -279,7 +279,7 @@ window.updateDamageCenter = function(centerId, updates = {}) {
 window.calculateDamageCenterTotals = function(centerId) {
   console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
   
-  const center = window.helper.damage_centers.centers.find(c => c.id === centerId);
+  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
@@ -292,7 +292,7 @@ window.calculateDamageCenterTotals = function(centerId) {
   const feesTotal = 0; // Can be extended for additional fees
   
   const subtotalBeforeVat = worksTotal + partsTotal + repairsTotal + feesTotal;
-  const vatPercentage = window.helper.damage_centers.settings.default_vat_percentage || 17;
+  const vatPercentage = window.helper.damage_assessment.settings.default_vat_percentage || 17;
   const vatAmount = subtotalBeforeVat * (vatPercentage / 100);
   const totalWithVat = subtotalBeforeVat + vatAmount;
   
@@ -332,7 +332,7 @@ window.calculateDamageCenterTotals = function(centerId) {
 window.calculateAllDamageCentersTotals = function() {
   console.log('🧮 Calculating global damage centers totals');
   
-  if (!window.helper || !window.helper.damage_centers) {
+  if (!window.helper || !window.helper.damage_assessment) {
     return false;
   }
   
@@ -348,7 +348,7 @@ window.calculateAllDamageCentersTotals = function() {
   
   const byLocation = {};
   
-  window.helper.damage_centers.centers.forEach(center => {
+  window.helper.damage_assessment.centers.forEach(center => {
     if (center.workflow?.status !== 'rejected' && center.calculations) {
       totalSubtotal += center.calculations.subtotal_before_vat || 0;
       totalVat += center.calculations.vat_amount || 0;
@@ -366,7 +366,7 @@ window.calculateAllDamageCentersTotals = function() {
   });
   
   // Update global totals
-  window.helper.damage_centers.totals = {
+  window.helper.damage_assessment.totals = {
     all_centers_subtotal: totalSubtotal,
     all_centers_vat: totalVat,
     all_centers_total: totalWithVat,
@@ -374,17 +374,17 @@ window.calculateAllDamageCentersTotals = function() {
     by_location: byLocation,
     last_calculated: new Date().toISOString(),
     calculation_method: 'auto',
-    manual_overrides: window.helper.damage_centers.totals?.manual_overrides || []
+    manual_overrides: window.helper.damage_assessment.totals?.manual_overrides || []
   };
   
   // Update statistics
-  const activeCenters = window.helper.damage_centers.centers.filter(c => c.workflow?.status !== 'rejected');
-  window.helper.damage_centers.statistics.avg_cost_per_center = activeCenters.length > 0 ? totalWithVat / activeCenters.length : 0;
-  window.helper.damage_centers.statistics.most_expensive_center = activeCenters.reduce((max, center) => 
+  const activeCenters = window.helper.damage_assessment.centers.filter(c => c.workflow?.status !== 'rejected');
+  window.helper.damage_assessment.statistics.avg_cost_per_center = activeCenters.length > 0 ? totalWithVat / activeCenters.length : 0;
+  window.helper.damage_assessment.statistics.most_expensive_center = activeCenters.reduce((max, center) => 
     (center.calculations?.total_with_vat || 0) > (max?.calculations?.total_with_vat || 0) ? center : max, null);
   
-  console.log('✅ Global damage centers totals calculated:', window.helper.damage_centers.totals);
-  return window.helper.damage_centers.totals;
+  console.log('✅ Global damage centers totals calculated:', window.helper.damage_assessment.totals);
+  return window.helper.damage_assessment.totals;
 };
 
 
@@ -1804,7 +1804,140 @@ window.helper = existingHelper || {
       classification: '',
       assessment_notes: ''
     },
-    centers: []
+    // Individual damage centers (AUTHORITATIVE LOCATION)
+    centers: [],
+    
+    // Session management for damage centers workflow
+    current_session: {
+      active_center_id: null,
+      center_count: 0,
+      session_start: '',
+      last_activity: '',
+      wizard_step: 1,
+      wizard_data: {},
+      temp_data: {}
+    },
+    
+    // Aggregated totals and calculations
+    totals: {
+      all_centers_subtotal: 0,
+      all_centers_vat: 0,
+      all_centers_total: 0,
+      
+      // Breakdown by category
+      breakdown: {
+        total_works: 0,
+        total_parts: 0,
+        total_repairs: 0,
+        total_fees: 0
+      },
+      
+      // By location analysis
+      by_location: {},
+      
+      // Calculation metadata
+      last_calculated: '',
+      calculation_method: 'auto',
+      manual_overrides: []
+    },
+    
+    // Integration with other modules
+    integrations: {
+      parts_search: {
+        linked_searches: [],
+        auto_suggestions_enabled: true,
+        last_sync: '',
+        // Integration with helper.parts_search structure
+        selected_parts_sync: true,
+        unselected_parts_sync: true,
+        webhook_capture_enabled: true
+      },
+      invoices: {
+        linked_invoices: [],
+        auto_matching_enabled: true,
+        matching_confidence: {}
+      },
+      estimates: {
+        linked_estimates: [],
+        estimate_basis: 'damage_centers',
+        last_export: ''
+      }
+    },
+    
+    // Validation and quality control
+    validation: {
+      all_centers_valid: false,
+      validation_errors: [],
+      validation_warnings: [],
+      manual_reviews: [],
+      last_validation: '',
+      validation_rules: {
+        require_location: true,
+        require_description: true,
+        require_at_least_one_item: true,
+        require_costs: true
+      }
+    },
+    
+    // Statistics and analytics
+    statistics: {
+      total_centers: 0,
+      avg_cost_per_center: 0,
+      most_common_locations: {},
+      most_expensive_center: null,
+      completion_rate: 0,
+      
+      // Time tracking
+      time_spent: {
+        total_minutes: 0,
+        per_center_avg: 0,
+        per_step_breakdown: {}
+      }
+    },
+    
+    // Templates and automation
+    templates: {
+      common_works: [],
+      common_parts: [],
+      common_repairs: [],
+      auto_fill_enabled: true,
+      smart_suggestions: true
+    },
+    
+    // Audit trail and history
+    audit_trail: [],
+    
+    // Settings and configuration
+    settings: {
+      auto_increment_numbers: true,
+      default_vat_percentage: 17,
+      currency: 'ILS',
+      allow_multiple_centers: true,
+      wizard_mode: true,
+      
+      // UI preferences
+      ui_preferences: {
+        show_subtotals: true,
+        show_vat_breakdown: true,
+        auto_save: true,
+        confirmation_dialogs: true
+      },
+      
+      // Validation settings
+      validation_settings: {
+        strict_mode: false,
+        require_images: false,
+        require_part_numbers: false,
+        min_cost_threshold: 0
+      }
+    },
+    
+    // Metadata
+    created_date: '',
+    last_updated: '',
+    version: '2.0.1', // Updated version to indicate enhancement
+    created_by: 'damage_centers_wizard',
+    workflow_status: 'in_progress'
   },
   valuation: {
     source: 'levi_yitzhak',
@@ -2142,140 +2275,6 @@ window.helper = existingHelper || {
       estimate_generated: false
     },
     vat_percentage: 18 // Global VAT percentage setting
-  },
-  
-  // Damage Centers - Comprehensive Structure
-  damage_centers: {
-    // Individual damage centers
-    centers: [],
-    
-    // Current session management
-    current_session: {
-      active_center_id: null,
-      center_count: 0,
-      session_start: '',
-      last_activity: '',
-      wizard_step: 1,
-      wizard_data: {},
-      temp_data: {}
-    },
-    
-    // Aggregated totals and calculations
-    totals: {
-      all_centers_subtotal: 0,
-      all_centers_vat: 0,
-      all_centers_total: 0,
-      
-      // Breakdown by category
-      breakdown: {
-        total_works: 0,
-        total_parts: 0,
-        total_repairs: 0,
-        total_fees: 0
-      },
-      
-      // By location analysis
-      by_location: {},
-      
-      // Calculation metadata
-      last_calculated: '',
-      calculation_method: 'auto',
-      manual_overrides: []
-    },
-    
-    // Integration with other modules
-    integrations: {
-      parts_search: {
-        linked_searches: [],
-        auto_suggestions_enabled: true,
-        last_sync: ''
-      },
-      invoices: {
-        linked_invoices: [],
-        auto_matching_enabled: true,
-        matching_confidence: {}
-      },
-      estimates: {
-        linked_estimates: [],
-        estimate_basis: 'damage_centers',
-        last_export: ''
-      }
-    },
-    
-    // Validation and quality control
-    validation: {
-      all_centers_valid: false,
-      validation_errors: [],
-      validation_warnings: [],
-      manual_reviews: [],
-      last_validation: '',
-      validation_rules: {
-        require_location: true,
-        require_description: true,
-        require_at_least_one_item: true,
-        require_costs: true
-      }
-    },
-    
-    // Statistics and analytics
-    statistics: {
-      total_centers: 0,
-      avg_cost_per_center: 0,
-      most_common_locations: {},
-      most_expensive_center: null,
-      completion_rate: 0,
-      
-      // Time tracking
-      time_spent: {
-        total_minutes: 0,
-        per_center_avg: 0,
-        per_step_breakdown: {}
-      }
-    },
-    
-    // Templates and automation
-    templates: {
-      common_works: [],
-      common_parts: [],
-      common_repairs: [],
-      auto_fill_enabled: true,
-      smart_suggestions: true
-    },
-    
-    // Audit trail and history
-    audit_trail: [],
-    
-    // Settings and configuration
-    settings: {
-      auto_increment_numbers: true,
-      default_vat_percentage: 17,
-      currency: 'ILS',
-      allow_multiple_centers: true,
-      wizard_mode: true,
-      
-      // UI preferences
-      ui_preferences: {
-        show_subtotals: true,
-        show_vat_breakdown: true,
-        auto_save: true,
-        confirmation_dialogs: true
-      },
-      
-      // Validation settings
-      validation_settings: {
-        strict_mode: false,
-        require_images: false,
-        require_part_numbers: false,
-        min_cost_threshold: 0
-      }
-    },
-    
-    // Metadata
-    created_date: '',
-    last_updated: '',
-    version: '2.0.0',
-    created_by: 'damage_centers_wizard',
-    workflow_status: 'in_progress'
   }
 };
 

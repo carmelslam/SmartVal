@@ -1,8 +1,9 @@
-// 🧱 Enhanced Damage Centers Module
+// 🧱 Enhanced Damage Centers Module  
 import { helper, updateHelper, saveHelperToStorage, getDamageData, syncDamageData, getVehicleData } from './helper.js';
 import { sendToWebhook } from './webhook.js';
 import { PARTS_BANK } from './parts.js';
 import { calculate, MathEngine } from './math.js';
+import { capturePartsWebhookResponse, getPartsSearchData, updatePartsSearchData } from './DAMAGE CENTER MODULE.js';
 
 class EnhancedDamageCenters {
   constructor() {
