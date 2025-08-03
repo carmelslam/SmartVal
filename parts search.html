@@ -122,20 +122,20 @@
 <h2 class="right-small-heading">העלה/צלם תמונה לחיפוש (אופציונלי)</h2>
     <input type="file" id="part_image" accept="image/*" capture="environment" placeholder="תמונת חלק (אופציונלי)">
     <img id="previewImage" />
-    <select id="part_group" required onchange="updatePartNameOptions()">
+    <select id="part_group" onchange="updatePartNameOptions()">
       <option value="" disabled selected hidden>בחר קבוצת חלקים</option>
     </select>
-    <select id="part_name" required>
+    <select id="part_name">
       <option value="" disabled selected hidden>בחר חלק</option>
     </select>
-<select id="part_source" required>
+<select id="part_source">
   <option value="" disabled selected hidden>בחר מקור</option>
   <option value="מקורי">מקורי</option>
   <option value="תחליפי">תחליפי</option>
   <option value="משומש">משומש</option>
   <option value="הכל">הכל</option>
 </select>
-<input type="number" id="part_quantity" placeholder="כמות" min="1" value="1" required>
+<input type="number" id="part_quantity" placeholder="כמות" min="1" value="1">
 
 <button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
 <ul id="selected_parts_list" style="text-align:right; padding-right: 0; font-size: 14px;"></ul>
@@ -490,11 +490,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   function addFullPart() {
     const group = document.getElementById('part_group').value;
     const name = document.getElementById('part_name').value;
-    const qty = document.getElementById('part_quantity').value;
-    const source = document.getElementById('part_source').value;
+    const qty = document.getElementById('part_quantity').value || '1';
+    const source = document.getElementById('part_source').value || 'מקורי';
 
-    if (!group || !name || !qty || !source) {
-      alert("יש למלא את כל פרטי החלק לפני ההוספה");
+    if (!group || !name) {
+      alert("יש לבחור לפחות קבוצת חלקים ושם חלק");
       return;
     }
 
@@ -643,17 +643,30 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   
   // ✅ FIX 3: Enhanced validation rules according to architecture
   function validateSearchForm() {
-    const selectedPartsCount = selectedParts.length;
+    const selectedPartsCount = selectedParts ? selectedParts.length : 0;
     const freeQuery = document.getElementById('free_query').value.trim();
     const hasImage = imageBase64 !== null;
     const hasVehicleData = document.getElementById('manufacturer').value.trim() !== '';
+    const hasPartGroup = document.getElementById('part_group').value.trim() !== '';
+    const hasPartName = document.getElementById('part_name').value.trim() !== '';
+    
+    console.log('🔍 Validation check:', {
+      selectedPartsCount,
+      freeQuery,
+      hasImage,
+      hasVehicleData,
+      hasPartGroup,
+      hasPartName
+    });
     
     // Rule 1: External site search - requires parts list
     // (This is handled in the external site functions)
     
-    // Rule 2: System/Image search - requires one of: free search field, parts list, OR image
-    if (!freeQuery && selectedPartsCount === 0 && !hasImage) {
-      alert('יש למלא לפחות אחד מהשדות הבאים:\n• חיפוש חופשי\n• רשימת חלקים\n• תמונה לחיפוש');
+    // Rule 2: System/Image search - requires one of: free search field, parts list, part selection, OR image
+    const hasSearchCriteria = freeQuery || selectedPartsCount > 0 || hasImage || (hasPartGroup && hasPartName);
+    
+    if (!hasSearchCriteria) {
+      alert('יש למלא לפחות אחד מהשדות הבאים:\n• חיפוש חופשי\n• בחירת חלק מהרשימה\n• רשימת חלקים שנוספה\n• תמונה לחיפוש');
       return false;
     }
     
@@ -663,6 +676,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (!confirmSearch) return false;
     }
     
+    console.log('✅ Validation passed');
     return true;
   }
   
@@ -909,23 +923,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     window.currentSearchResults = [];
   };
   
-  window.exportSelectedParts = function() {
-    if (selectedParts.length === 0) {
-      alert('אין חלקים לייצוא');
-      return;
-    }
-    
-    const csv = generatePartsCSV(selectedParts);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `parts_search_${Date.now()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // exportSelectedParts function moved to lines 526-580 (webhook-based Excel export)
   
   window.saveToSession = function() {
     if (selectedParts.length === 0) {
