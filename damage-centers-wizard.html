@@ -723,22 +723,6 @@
               ">
                 <option value="">בחר מוקד נזק לניקוי</option>
               </select>
-              <button type="button" onclick="populateExistingDamageCenters(true)" style="
-                background: #0ea5e9; 
-                color: white; 
-                border: none; 
-                padding: 8px 12px; 
-                border-radius: 6px; 
-                cursor: pointer; 
-                font-size: 14px;
-                transition: background 0.3s ease;
-                margin-left: 5px;
-              " 
-              onmouseover="this.style.background='#0284c7'" 
-              onmouseout="this.style.background='#0ea5e9'"
-              title="רענן רשימת מוקדי נזק">
-                🔄
-              </button>
               <button type="button" onclick="clearDamageCenterData()" style="
                 background: #dc2626; 
                 color: white; 
@@ -1938,21 +1922,20 @@
         // ✅ ENHANCED: More comprehensive search for damage centers data
         console.log('🔍 Full helper structure debug:', helper);
         
-        // ✅ PRIORITY FIX: Focus on damage_blocks first since that's where the data is
-        if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
+        // ✅ CORRECTED: Check the actual correct location first (damage_assessment.centers)
+        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
+          damageCenters = helper.damage_assessment.centers;
+          dataSource = 'damage_assessment.centers';
+          console.log('✅ Found damage centers in CORRECT location helper.damage_assessment.centers:', damageCenters);
+        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
           dataSource = 'damage_blocks';
-          console.log('✅ Found damage centers in helper.damage_blocks:', damageCenters);
+          console.log('✅ Found damage centers in LEGACY location helper.damage_blocks:', damageCenters);
           console.log('🔍 First damage block structure:', damageCenters[0]);
-          console.log('🔍 Full damage_blocks array:', JSON.stringify(helper.damage_blocks, null, 2));
         } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
           damageCenters = helper.damage_centers;
           dataSource = 'damage_centers';
           console.log('✅ Found damage centers in helper.damage_centers:', damageCenters);
-        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
-          damageCenters = helper.damage_assessment.centers;
-          dataSource = 'damage_assessment.centers';
-          console.log('✅ Found damage centers in helper.damage_assessment.centers:', damageCenters);
         }
         
         // ✅ NEW: Check for other possible damage center structures
@@ -2120,17 +2103,18 @@
         // ✅ ENHANCED: Use same comprehensive search logic as populateExistingDamageCenters
         console.log('🔍 Searching for damage centers to clear...');
         
-        // ✅ PRIORITY FIX: Use same logic as populate function
-        if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
+        // ✅ CORRECTED: Check correct location first (damage_assessment.centers)
+        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
+          damageCenters = helper.damage_assessment.centers;
+          dataLocation = 'damage_assessment.centers';
+          console.log('✅ Found damage centers in CORRECT location for clearing');
+        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
           dataLocation = 'damage_blocks';
-          console.log('✅ Found damage centers in helper.damage_blocks for clearing');
+          console.log('✅ Found damage centers in LEGACY location helper.damage_blocks for clearing');
         } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
           damageCenters = helper.damage_centers;
           dataLocation = 'damage_centers';
-        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
-          damageCenters = helper.damage_assessment.centers;
-          dataLocation = 'damage_assessment.centers';
         } else if (helper.damage_assessment && Array.isArray(helper.damage_assessment) && helper.damage_assessment.length > 0) {
           damageCenters = helper.damage_assessment;
           dataLocation = 'damage_assessment_array';

@@ -258,6 +258,99 @@ export function damageCenters() {
       damageData.summary.assessment_notes = `סיכום אוטומטי: ${finalTotals.centerCount} מוקדי נזק בסך ${finalTotals.formatted.total}`;
       syncDamageData(damageData);
 
+      // ✅ CRITICAL FIX: Save individual damage centers to the correct helper location
+      const damageCenters = [];
+      document.querySelectorAll('[data-center-id]').forEach((centerElement, index) => {
+        const centerId = centerElement.getAttribute('data-center-id');
+        const centerData = {
+          id: centerId,
+          center_number: index + 1,
+          location: centerElement.querySelector('[data-field="location"]')?.textContent || '',
+          damage_description: centerElement.querySelector('[data-field="damage-description"]')?.textContent || '',
+          work_items: [],
+          parts_items: [],
+          repairs_items: [],
+          totals: {
+            work_total: 0,
+            parts_total: 0,
+            repairs_total: 0,
+            subtotal: 0,
+            vat: 0,
+            total: 0
+          },
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString()
+        };
+        
+        // Extract work items
+        centerElement.querySelectorAll('[data-category="work"] .item-row').forEach(row => {
+          centerData.work_items.push({
+            description: row.querySelector('.description')?.textContent || '',
+            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
+            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
+            total: parseFloat(row.querySelector('.total')?.textContent || '0')
+          });
+        });
+        
+        // Extract parts items
+        centerElement.querySelectorAll('[data-category="parts"] .item-row').forEach(row => {
+          centerData.parts_items.push({
+            description: row.querySelector('.description')?.textContent || '',
+            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
+            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
+            total: parseFloat(row.querySelector('.total')?.textContent || '0')
+          });
+        });
+        
+        // Extract repairs items
+        centerElement.querySelectorAll('[data-category="repairs"] .item-row').forEach(row => {
+          centerData.repairs_items.push({
+            description: row.querySelector('.description')?.textContent || '',
+            quantity: parseFloat(row.querySelector('.quantity')?.textContent || '0'),
+            unit_price: parseFloat(row.querySelector('.unit-price')?.textContent || '0'),
+            total: parseFloat(row.querySelector('.total')?.textContent || '0')
+          });
+        });
+        
+        // Calculate totals
+        centerData.totals.work_total = centerData.work_items.reduce((sum, item) => sum + item.total, 0);
+        centerData.totals.parts_total = centerData.parts_items.reduce((sum, item) => sum + item.total, 0);
+        centerData.totals.repairs_total = centerData.repairs_items.reduce((sum, item) => sum + item.total, 0);
+        centerData.totals.subtotal = centerData.totals.work_total + centerData.totals.parts_total + centerData.totals.repairs_total;
+        centerData.totals.vat = centerData.totals.subtotal * 0.18;
+        centerData.totals.total = centerData.totals.subtotal + centerData.totals.vat;
+        
+        damageCenters.push(centerData);
+      });
+      
+      // ✅ SAVE TO CORRECT HELPER STRUCTURE: damage_assessment.centers 
+      updateHelper('damage_assessment', {
+        centers: damageCenters,
+        current_session: {
+          active_center_id: null,
+          center_count: damageCenters.length,
+          session_start: new Date().toISOString(),
+          last_activity: new Date().toISOString(),
+          wizard_step: 'completed',
+          wizard_data: {},
+          temp_data: {}
+        },
+        totals: {
+          all_centers_subtotal: finalTotals.subtotal,
+          all_centers_vat: finalTotals.vat,
+          all_centers_total: finalTotals.total,
+          breakdown: {
+            total_works: damageCenters.reduce((sum, center) => sum + center.totals.work_total, 0),
+            total_parts: damageCenters.reduce((sum, center) => sum + center.totals.parts_total, 0),
+            total_repairs: damageCenters.reduce((sum, center) => sum + center.totals.repairs_total, 0),
+            total_fees: 0
+          },
+          last_calculated: new Date().toISOString(),
+          calculation_method: 'auto',
+          manual_overrides: []
+        }
+      });
+
       // ⬇️ Save fixed legal disclaimer + status field to helper
       updateHelper('expertise', {
         summary: {
