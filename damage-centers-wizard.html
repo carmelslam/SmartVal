@@ -738,6 +738,19 @@
               onmouseout="this.style.background='#dc2626'">
                 🗑️ נקה נתונים
               </button>
+              <button type="button" onclick="debugHelperStructure()" style="
+                background: #6b7280; 
+                color: white; 
+                border: none; 
+                padding: 8px 12px; 
+                border-radius: 6px; 
+                cursor: pointer; 
+                font-size: 12px;
+                margin-right: 5px;
+              " 
+              title="הצג מבנה נתונים להדרכה">
+                🔍 Debug
+              </button>
             </div>
           </div>
         </div>
@@ -1887,17 +1900,83 @@
         
         const helper = JSON.parse(helperString);
         let damageCenters = [];
+        let dataSource = '';
+        
+        // ✅ ENHANCED: More comprehensive search for damage centers data
+        console.log('🔍 Full helper structure debug:', helper);
         
         // Check multiple possible locations for damage centers
-        if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+        if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
           damageCenters = helper.damage_centers;
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks)) {
+          dataSource = 'damage_centers';
+          console.log('✅ Found damage centers in helper.damage_centers:', damageCenters);
+        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
-        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+          dataSource = 'damage_blocks';
+          console.log('✅ Found damage centers in helper.damage_blocks:', damageCenters);
+        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
           damageCenters = helper.damage_assessment.centers;
+          dataSource = 'damage_assessment.centers';
+          console.log('✅ Found damage centers in helper.damage_assessment.centers:', damageCenters);
         }
         
-        console.log(`📊 Found ${damageCenters.length} damage centers in helper data`);
+        // ✅ NEW: Check for other possible damage center structures
+        else if (helper.damage_assessment && Array.isArray(helper.damage_assessment) && helper.damage_assessment.length > 0) {
+          // Sometimes damage_assessment itself is an array
+          damageCenters = helper.damage_assessment;
+          dataSource = 'damage_assessment_array';
+          console.log('✅ Found damage centers in helper.damage_assessment (array format):', damageCenters);
+        }
+        
+        // ✅ NEW: Search for any object that looks like damage centers
+        else {
+          console.log('🔍 No standard damage centers found, searching for damage center patterns...');
+          
+          // Look for any arrays that might contain damage center data
+          for (const [key, value] of Object.entries(helper)) {
+            if (Array.isArray(value) && value.length > 0) {
+              // Check if array items look like damage centers
+              const firstItem = value[0];
+              if (firstItem && typeof firstItem === 'object') {
+                // Look for damage center indicators
+                if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
+                    firstItem.number || firstItem.selected_location || firstItem.description ||
+                    firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
+                  damageCenters = value;
+                  dataSource = key;
+                  console.log(`✅ Found potential damage centers in helper.${key}:`, damageCenters);
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Also check nested objects
+          if (damageCenters.length === 0) {
+            for (const [key, value] of Object.entries(helper)) {
+              if (value && typeof value === 'object' && !Array.isArray(value)) {
+                for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                  if (Array.isArray(nestedValue) && nestedValue.length > 0) {
+                    const firstItem = nestedValue[0];
+                    if (firstItem && typeof firstItem === 'object') {
+                      if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
+                          firstItem.number || firstItem.selected_location || firstItem.description ||
+                          firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
+                        damageCenters = nestedValue;
+                        dataSource = `${key}.${nestedKey}`;
+                        console.log(`✅ Found potential damage centers in helper.${key}.${nestedKey}:`, damageCenters);
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (damageCenters.length > 0) break;
+              }
+            }
+          }
+        }
+        
+        console.log(`📊 Found ${damageCenters.length} damage centers in ${dataSource}`);
         
         if (damageCenters.length === 0) {
           // Add option to indicate no damage centers
@@ -1906,6 +1985,7 @@
           option.textContent = 'אין מוקדי נזק קיימים';
           option.disabled = true;
           select.appendChild(option);
+          console.log('❌ No damage centers found in helper data');
           return;
         }
         
@@ -1981,17 +2061,64 @@
         let damageCenters = [];
         let dataLocation = '';
         
-        // Find the damage centers array
-        if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+        // ✅ ENHANCED: Use same comprehensive search logic as populateExistingDamageCenters
+        console.log('🔍 Searching for damage centers to clear...');
+        
+        // Find the damage centers array using enhanced detection
+        if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
           damageCenters = helper.damage_centers;
           dataLocation = 'damage_centers';
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks)) {
+        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
           dataLocation = 'damage_blocks';
-        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
           damageCenters = helper.damage_assessment.centers;
           dataLocation = 'damage_assessment.centers';
+        } else if (helper.damage_assessment && Array.isArray(helper.damage_assessment) && helper.damage_assessment.length > 0) {
+          damageCenters = helper.damage_assessment;
+          dataLocation = 'damage_assessment_array';
+        } else {
+          // Search for any arrays that might contain damage center data
+          for (const [key, value] of Object.entries(helper)) {
+            if (Array.isArray(value) && value.length > 0) {
+              const firstItem = value[0];
+              if (firstItem && typeof firstItem === 'object') {
+                if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
+                    firstItem.number || firstItem.selected_location || firstItem.description ||
+                    firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
+                  damageCenters = value;
+                  dataLocation = key;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Check nested objects if still not found
+          if (damageCenters.length === 0) {
+            for (const [key, value] of Object.entries(helper)) {
+              if (value && typeof value === 'object' && !Array.isArray(value)) {
+                for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                  if (Array.isArray(nestedValue) && nestedValue.length > 0) {
+                    const firstItem = nestedValue[0];
+                    if (firstItem && typeof firstItem === 'object') {
+                      if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
+                          firstItem.number || firstItem.selected_location || firstItem.description ||
+                          firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
+                        damageCenters = nestedValue;
+                        dataLocation = `${key}.${nestedKey}`;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (damageCenters.length > 0) break;
+              }
+            }
+          }
         }
+        
+        console.log(`Found ${damageCenters.length} damage centers in ${dataLocation}`);
         
         if (damageCenters.length === 0) {
           alert('לא נמצאו מוקדי נזק לניקוי');
@@ -2025,13 +2152,26 @@
         // Remove the damage center from the array
         damageCenters.splice(centerIndex, 1);
         
-        // Update the helper object based on data location
+        // ✅ ENHANCED: Update the helper object based on data location (supports nested paths)
         if (dataLocation === 'damage_centers') {
           helper.damage_centers = damageCenters;
         } else if (dataLocation === 'damage_blocks') {
           helper.damage_blocks = damageCenters;
         } else if (dataLocation === 'damage_assessment.centers') {
           helper.damage_assessment.centers = damageCenters;
+        } else if (dataLocation === 'damage_assessment_array') {
+          helper.damage_assessment = damageCenters;
+        } else if (dataLocation.includes('.')) {
+          // Handle nested paths like "someObject.nestedArray"
+          const parts = dataLocation.split('.');
+          let target = helper;
+          for (let i = 0; i < parts.length - 1; i++) {
+            target = target[parts[i]];
+          }
+          target[parts[parts.length - 1]] = damageCenters;
+        } else {
+          // Handle direct properties
+          helper[dataLocation] = damageCenters;
         }
         
         // Recalculate totals if function is available
@@ -2103,9 +2243,107 @@
       });
     });
     
+    // ✅ DEBUG: Helper structure debugging function
+    function debugHelperStructure() {
+      console.log('🔍 Debug: Showing helper structure for troubleshooting');
+      
+      try {
+        const helperString = sessionStorage.getItem('helper');
+        if (!helperString) {
+          alert('לא נמצאו נתונים ב-sessionStorage');
+          return;
+        }
+        
+        const helper = JSON.parse(helperString);
+        
+        // Create a summary of the helper structure
+        let summary = '📊 מבנה נתוני Helper:\n\n';
+        
+        // Look for potential damage center arrays
+        const potentialArrays = [];
+        
+        for (const [key, value] of Object.entries(helper)) {
+          if (Array.isArray(value)) {
+            const info = `${key}: [${value.length} items]`;
+            summary += `• ${info}\n`;
+            
+            if (value.length > 0) {
+              const firstItem = value[0];
+              if (firstItem && typeof firstItem === 'object') {
+                const hasProperties = [];
+                if (firstItem.center_number) hasProperties.push('center_number');
+                if (firstItem.damage_description) hasProperties.push('damage_description');
+                if (firstItem.location) hasProperties.push('location');
+                if (firstItem.number) hasProperties.push('number');
+                if (firstItem.selected_location) hasProperties.push('selected_location');
+                if (firstItem.work_items) hasProperties.push('work_items');
+                if (firstItem.parts_items) hasProperties.push('parts_items');
+                if (firstItem.repairs_items) hasProperties.push('repairs_items');
+                
+                if (hasProperties.length > 0) {
+                  potentialArrays.push({key, count: value.length, properties: hasProperties});
+                  summary += `  └─ 🎯 נראה כמו מוקדי נזק (${hasProperties.join(', ')})\n`;
+                }
+              }
+            }
+          } else if (value && typeof value === 'object') {
+            summary += `• ${key}: {object}\n`;
+            
+            // Check nested arrays
+            for (const [nestedKey, nestedValue] of Object.entries(value)) {
+              if (Array.isArray(nestedValue)) {
+                summary += `  └─ ${nestedKey}: [${nestedValue.length} items]\n`;
+                
+                if (nestedValue.length > 0) {
+                  const firstItem = nestedValue[0];
+                  if (firstItem && typeof firstItem === 'object') {
+                    const hasProperties = [];
+                    if (firstItem.center_number) hasProperties.push('center_number');
+                    if (firstItem.damage_description) hasProperties.push('damage_description');
+                    if (firstItem.location) hasProperties.push('location');
+                    if (firstItem.number) hasProperties.push('number');
+                    if (firstItem.selected_location) hasProperties.push('selected_location');
+                    if (firstItem.work_items) hasProperties.push('work_items');
+                    if (firstItem.parts_items) hasProperties.push('parts_items');
+                    if (firstItem.repairs_items) hasProperties.push('repairs_items');
+                    
+                    if (hasProperties.length > 0) {
+                      potentialArrays.push({key: `${key}.${nestedKey}`, count: nestedValue.length, properties: hasProperties});
+                      summary += `     └─ 🎯 נראה כמו מוקדי נזק (${hasProperties.join(', ')})\n`;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        summary += '\n🔍 מועמדים למוקדי נזק:\n';
+        if (potentialArrays.length === 0) {
+          summary += '❌ לא נמצאו מערכי נתונים שנראים כמו מוקדי נזק\n';
+        } else {
+          potentialArrays.forEach(array => {
+            summary += `✅ ${array.key}: ${array.count} מוקדים (${array.properties.join(', ')})\n`;
+          });
+        }
+        
+        // Show the summary
+        alert(summary);
+        
+        // Also log to console for detailed inspection
+        console.log('🔍 Complete helper structure:', helper);
+        console.log('📊 Potential damage center arrays:', potentialArrays);
+        
+      } catch (error) {
+        console.error('❌ Error in debug function:', error);
+        alert('שגיאה בקריאת נתוני Debug: ' + error.message);
+      }
+    }
+    
     // Make functions globally available
     window.populateExistingDamageCenters = populateExistingDamageCenters;
     window.clearDamageCenterData = clearDamageCenterData;
+    window.debugHelperStructure = debugHelperStructure;
   </script>
 </body>
 </html>
