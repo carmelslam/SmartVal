@@ -521,11 +521,166 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   }
   
   // ✅ NEW: Send current parts list to Make.com for processing
+  
+  // ✅ FIX 1: Implement missing exportSelectedParts function
+  function exportSelectedParts() {
+    console.log('📄 Exporting selected parts to Excel...');
+    
+    if (selectedParts.length === 0) {
+      alert('אין חלקים נבחרים לייצוא');
+      return;
+    }
+    
+    // Prepare export payload
+    const exportData = {
+      parts: selectedParts,
+      vehicle_context: {
+        plate: document.getElementById('plate').value,
+        manufacturer: document.getElementById('manufacturer').value,
+        model: document.getElementById('model').value,
+        year: document.getElementById('year').value,
+        trim: document.getElementById('trim').value,
+        engine_volume: document.getElementById('engine_volume').value
+      },
+      export_timestamp: new Date().toISOString(),
+      export_type: 'selected_parts_list'
+    };
+    
+    // Send to ADMIN_EXPORT_SEARCH_RESULTS webhook
+    fetch('https://hook.eu2.make.com/rocp5ue661qn3597akgptja4ol9cnksy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: 'export_parts_list',
+        payload: exportData
+      })
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Export failed');
+      return response.json();
+    })
+    .then(result => {
+      console.log('✅ Parts exported successfully:', result);
+      alert(`✅ ייצוא הושלם בהצלחה!\n${selectedParts.length} חלקים יוצאו לקובץ Excel`);
+      
+      // If download URL is provided, trigger download
+      if (result.download_url) {
+        const a = document.createElement('a');
+        a.href = result.download_url;
+        a.download = `parts_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    })
+    .catch(error => {
+      console.error('❌ Export error:', error);
+      alert('שגיאה בייצוא הקובץ');
+    });
+  }
+  
+  // ✅ FIX 2: Enhanced helper integration with 3-category system
+  function updateHelperWithPartsSearch(searchResults, searchContext) {
+    try {
+      let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Initialize enhanced parts_search structure
+      if (!helper.parts_search) {
+        helper.parts_search = {
+          selected_parts: [],
+          unselected_parts: [],
+          global_parts_bank: { all_parts: [] },
+          current_session: { results: [] },
+          case_search_history: [],
+          case_summary: {
+            total_searches: 0,
+            total_results: 0,
+            selected_count: 0,
+            unselected_count: 0,
+            last_search: '',
+            estimated_total_cost: 0
+          }
+        };
+      }
+      
+      // Add search results to all categories
+      if (searchResults && searchResults.length > 0) {
+        // Mark as unselected initially
+        const markedResults = searchResults.map(part => ({
+          ...part,
+          id: `part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          selected: false,
+          search_timestamp: new Date().toISOString(),
+          search_context: searchContext
+        }));
+        
+        // Add to unselected_parts and global bank
+        helper.parts_search.unselected_parts.push(...markedResults);
+        helper.parts_search.global_parts_bank.all_parts.push(...markedResults);
+        helper.parts_search.current_session.results = markedResults;
+        
+        // Update summary
+        helper.parts_search.case_summary = {
+          ...helper.parts_search.case_summary,
+          total_results: helper.parts_search.global_parts_bank.all_parts.length,
+          unselected_count: helper.parts_search.unselected_parts.length,
+          last_search: new Date().toISOString()
+        };
+      }
+      
+      // Save updated helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      localStorage.setItem('helper_data', JSON.stringify(helper));
+      
+      console.log('✅ Helper updated with enhanced parts search structure');
+      
+      return helper;
+    } catch (error) {
+      console.error('❌ Error updating helper:', error);
+      return null;
+    }
+  }
+  
+  // ✅ FIX 3: Enhanced validation rules according to architecture
+  function validateSearchForm() {
+    const selectedPartsCount = selectedParts.length;
+    const freeQuery = document.getElementById('free_query').value.trim();
+    const hasImage = imageBase64 !== null;
+    const hasVehicleData = document.getElementById('manufacturer').value.trim() !== '';
+    
+    // Rule 1: External site search - requires parts list
+    // (This is handled in the external site functions)
+    
+    // Rule 2: System/Image search - requires one of: free search field, parts list, OR image
+    if (!freeQuery && selectedPartsCount === 0 && !hasImage) {
+      alert('יש למלא לפחות אחד מהשדות הבאים:\n• חיפוש חופשי\n• רשימת חלקים\n• תמונה לחיפוש');
+      return false;
+    }
+    
+    // Rule 3: Car details not mandatory but recommended
+    if (!hasVehicleData) {
+      const confirmSearch = confirm('לא הוזנו פרטי רכב. האם להמשיך בחיפוש כללי?');
+      if (!confirmSearch) return false;
+    }
+    
+    return true;
+  }
+  
+  // Make functions globally available
+  window.exportSelectedParts = exportSelectedParts;
+  window.updateHelperWithPartsSearch = updateHelperWithPartsSearch;
+  window.validateSearchForm = validateSearchForm;
+  
 </script>
 
 <script>
   document.getElementById('partSearchForm').addEventListener('submit', e => {
     e.preventDefault();
+    
+    // ✅ FIX 4: Apply validation rules before submitting
+    if (!validateSearchForm()) {
+      return;
+    }
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
@@ -558,28 +713,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         displaySearchResults(results.parts);
         alert(`✅ נמצאו ${results.parts.length} חלקים`);
         
-        // ✅ FIXED: Save ALL results to helper using correct sessionStorage location
+        // ✅ FIXED: Use enhanced helper integration with 3-category system
         try {
-          // Get helper data from correct location (sessionStorage, not localStorage)
-          let helper = {};
-          try {
-            helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          } catch (e) {
-            console.warn('Failed to parse helper from sessionStorage, using empty object');
-            helper = {};
-          }
-          
-          // Initialize parts_search structure if needed
-          helper.parts_search = helper.parts_search || { 
-            results: [],
-            search_history: [],
-            all_results: [],
-            selected_parts: [],
-            unselected_parts: [],
-            summary: {}
-          };
-          
-          // Save search context and parameters
           const searchContext = {
             query: {
               plate: plate.value.trim(),
@@ -590,52 +725,28 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
               free_query: free_query.value.trim()
             },
             timestamp: new Date().toISOString(),
-            results_count: results.parts.length
+            results_count: results.parts.length,
+            search_type: 'system_search'
           };
           
-          // Save search to history
-          helper.parts_search.search_history.unshift(searchContext);
-          if (helper.parts_search.search_history.length > 10) {
-            helper.parts_search.search_history = helper.parts_search.search_history.slice(0, 10);
-          }
+          // Use enhanced helper integration
+          const updatedHelper = updateHelperWithPartsSearch(results.parts, searchContext);
           
-          // Mark all results as unselected initially and save them
-          const markedResults = results.parts.map(part => ({
-            ...part,
-            selected: false,
-            search_timestamp: new Date().toISOString(),
-            search_query: searchContext.query
-          }));
-          
-          // Add to all results (preserve existing + add new)
-          helper.parts_search.all_results = [...(helper.parts_search.all_results || []), ...markedResults];
-          
-          // Update summary
-          helper.parts_search.summary = {
-            total_searches: helper.parts_search.search_history.length,
-            total_results: helper.parts_search.all_results.length,
-            selected_count: helper.parts_search.selected_parts.length || 0,
-            last_search: new Date().toISOString()
-          };
-          
-          // Update meta information
-          helper.meta = helper.meta || {};
-          helper.meta.last_updated = new Date().toISOString();
-          
-          // ✅ FIXED: Save to correct sessionStorage location
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          
-          // Also save to localStorage for backup (maintaining original functionality)
-          localStorage.setItem('helper_data', JSON.stringify(helper));
-          
-          console.log(`✅ FIXED: Saved ${markedResults.length} search results to helper (sessionStorage)`);
-          
-          // Trigger helper update broadcast if available
-          if (typeof window.broadcastHelperUpdate === 'function') {
-            window.broadcastHelperUpdate(['parts_search'], 'parts_search_module');
+          if (updatedHelper) {
+            console.log(`✅ Enhanced: Saved ${results.parts.length} search results to helper with 3-category system`);
+            
+            // Trigger helper update broadcast if available
+            if (typeof window.broadcastHelperUpdate === 'function') {
+              window.broadcastHelperUpdate(['parts_search'], 'parts_search_module');
+            }
+            
+            // Integration with damage centers if in wizard mode
+            if (typeof window.capturePartsWebhookResponse === 'function') {
+              window.capturePartsWebhookResponse(results, searchContext);
+            }
           }
         } catch (e) {
-          console.warn('Could not save search results:', e);
+          console.error('❌ Error saving search results with enhanced system:', e);
         }
       } else {
         alert('לא נמצאו תוצאות מתאימות');
@@ -703,11 +814,17 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     // ✅ FIXED: Use internal browser instead of external redirect
     console.log('🌐 Opening Car-Part in internal browser with vehicle data:', vehicleData);
     
-    // ✅ FIXED: Use correct site key for internal browser
+    // ✅ FIXED: Use correct site key for internal browser with toggle popup
     if (typeof window.openInternalBrowser === 'function') {
       try {
         // Use correct site key from internal-browser.js siteConfigs
         window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים');
+        
+        // ✅ FIX 5: Create toggle popup for parts list visibility
+        setTimeout(() => {
+          createPartsListTogglePopup();
+        }, 2000); // Wait for browser to load
+        
       } catch (error) {
         console.error('❌ Failed to open internal browser:', error);
         showNotification('שגיאה בפתיחת הדפדפן הפנימי', 'error');
@@ -969,6 +1086,149 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       window.location.href = "index.html";
     });
   }
+  
+  // ✅ FIX 5: Create toggle popup for parts list visibility in internal browser
+  function createPartsListTogglePopup() {
+    console.log('🎯 Creating parts list toggle popup for internal browser');
+    
+    if (selectedParts.length === 0) {
+      console.warn('⚠️ No parts selected for external site search');
+      return;
+    }
+    
+    // Remove existing popup if any
+    const existingPopup = document.getElementById('partsListTogglePopup');
+    if (existingPopup) {
+      existingPopup.remove();
+    }
+    
+    // Create toggle popup
+    const popup = document.createElement('div');
+    popup.id = 'partsListTogglePopup';
+    popup.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      max-height: 400px;
+      background: white;
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      overflow-y: auto;
+    `;
+    
+    const partsListHTML = selectedParts.map((part, index) => `
+      <div style="padding: 8px; border-bottom: 1px solid #eee; background: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
+        <div style="font-weight: bold; color: #1e40af;">${part.group} - ${part.name}</div>
+        <div style="font-size: 12px; color: #6b7280;">
+          כמות: ${part.qty} | מקור: ${part.source}
+        </div>
+      </div>
+    `).join('');
+    
+    popup.innerHTML = `
+      <div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 12px; border-radius: 10px 10px 0 0; text-align: center;">
+        <strong>רשימת חלקים מבוקשים (${selectedParts.length})</strong>
+      </div>
+      <div style="padding: 12px;">
+        <div style="max-height: 250px; overflow-y: auto; margin-bottom: 12px;">
+          ${partsListHTML}
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          <button onclick="copyPartsListForSite()" style="
+            background: #10b981; color: white; border: none; padding: 8px 12px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">📋 העתק רשימה</button>
+          <button onclick="togglePopupVisibility()" style="
+            background: #f59e0b; color: white; border: none; padding: 8px 12px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">👁️ הסתר/הצג</button>
+          <button onclick="closePartsListPopup()" style="
+            background: #ef4444; color: white; border: none; padding: 8px 12px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px;
+          ">✕</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Make popup draggable
+    let isDragging = false;
+    let currentX, currentY, initialX, initialY;
+    
+    popup.addEventListener('mousedown', (e) => {
+      if (e.target === popup || e.target.closest('.popup-header')) {
+        isDragging = true;
+        initialX = e.clientX - popup.offsetLeft;
+        initialY = e.clientY - popup.offsetTop;
+      }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        popup.style.left = currentX + 'px';
+        popup.style.top = currentY + 'px';
+        popup.style.right = 'auto';
+      }
+    });
+    
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+  }
+  
+  // ✅ Helper functions for toggle popup
+  window.copyPartsListForSite = function() {
+    const partsText = selectedParts.map(part => 
+      `${part.group} - ${part.name} (כמות: ${part.qty}, מקור: ${part.source})`
+    ).join('\n');
+    
+    const vehicleInfo = `פרטי רכב:
+יצרן: ${document.getElementById('manufacturer').value}
+דגם: ${document.getElementById('model').value}
+שנה: ${document.getElementById('year').value}
+
+רשימת חלקים מבוקשים:
+${partsText}`;
+    
+    navigator.clipboard.writeText(vehicleInfo).then(() => {
+      alert('✅ רשימת החלקים הועתקה ללוח!');
+    }).catch(() => {
+      alert('❌ שגיאה בהעתקה');
+    });
+  };
+  
+  window.togglePopupVisibility = function() {
+    const popup = document.getElementById('partsListTogglePopup');
+    if (popup) {
+      const content = popup.querySelector('div:last-child');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        popup.style.height = 'auto';
+      } else {
+        content.style.display = 'none';
+        popup.style.height = '44px';
+      }
+    }
+  };
+  
+  window.closePartsListPopup = function() {
+    const popup = document.getElementById('partsListTogglePopup');
+    if (popup) {
+      popup.remove();
+    }
+  };
+  
+  // Make function globally available
+  window.createPartsListTogglePopup = createPartsListTogglePopup;
+
 </script>
 </body>
 </html>
