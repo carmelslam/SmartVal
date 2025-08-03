@@ -723,6 +723,22 @@
               ">
                 <option value="">בחר מוקד נזק לניקוי</option>
               </select>
+              <button type="button" onclick="populateExistingDamageCenters(true)" style="
+                background: #0ea5e9; 
+                color: white; 
+                border: none; 
+                padding: 8px 12px; 
+                border-radius: 6px; 
+                cursor: pointer; 
+                font-size: 14px;
+                transition: background 0.3s ease;
+                margin-left: 5px;
+              " 
+              onmouseover="this.style.background='#0284c7'" 
+              onmouseout="this.style.background='#0ea5e9'"
+              title="רענן רשימת מוקדי נזק">
+                🔄
+              </button>
               <button type="button" onclick="clearDamageCenterData()" style="
                 background: #dc2626; 
                 color: white; 
@@ -1881,39 +1897,58 @@
     }
 
     // ✅ NEW: Clear helper data functionality
-    function populateExistingDamageCenters() {
-      console.log('🔍 Populating existing damage centers dropdown');
+    function populateExistingDamageCenters(forceRefresh = false) {
+      console.log(`🔍 Populating existing damage centers dropdown (forceRefresh: ${forceRefresh})`);
       
       const select = document.getElementById('existingDamageCenterSelect');
-      if (!select) return;
+      if (!select) {
+        console.log('❌ existingDamageCenterSelect element not found');
+        return;
+      }
       
       // Clear existing options except the first one
       select.innerHTML = '<option value="">בחר מוקד נזק לניקוי</option>';
       
       try {
-        // Get helper data from sessionStorage
-        const helperString = sessionStorage.getItem('helper');
+        // ✅ ENHANCED: Try multiple sources for helper data
+        let helperString = sessionStorage.getItem('helper');
+        
+        // If no data in sessionStorage, try localStorage
         if (!helperString) {
-          console.log('ℹ️ No helper data found');
+          helperString = localStorage.getItem('helper');
+          console.log('💾 Trying localStorage for helper data');
+        }
+        
+        // Try global helper if available
+        if (!helperString && typeof window.helper === 'object') {
+          helperString = JSON.stringify(window.helper);
+          console.log('🌐 Using global window.helper');
+        }
+        
+        if (!helperString) {
+          console.log('❌ No helper data found in any storage location');
           return;
         }
         
         const helper = JSON.parse(helperString);
+        console.log('📊 Helper data parsed successfully, keys:', Object.keys(helper));
         let damageCenters = [];
         let dataSource = '';
         
         // ✅ ENHANCED: More comprehensive search for damage centers data
         console.log('🔍 Full helper structure debug:', helper);
         
-        // Check multiple possible locations for damage centers
-        if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
-          damageCenters = helper.damage_centers;
-          dataSource = 'damage_centers';
-          console.log('✅ Found damage centers in helper.damage_centers:', damageCenters);
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
+        // ✅ PRIORITY FIX: Focus on damage_blocks first since that's where the data is
+        if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
           dataSource = 'damage_blocks';
           console.log('✅ Found damage centers in helper.damage_blocks:', damageCenters);
+          console.log('🔍 First damage block structure:', damageCenters[0]);
+          console.log('🔍 Full damage_blocks array:', JSON.stringify(helper.damage_blocks, null, 2));
+        } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
+          damageCenters = helper.damage_centers;
+          dataSource = 'damage_centers';
+          console.log('✅ Found damage centers in helper.damage_centers:', damageCenters);
         } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
           damageCenters = helper.damage_assessment.centers;
           dataSource = 'damage_assessment.centers';
@@ -1989,39 +2024,60 @@
           return;
         }
         
-        // Populate dropdown with existing damage centers
+        // ✅ ENHANCED: Robust option creation for damage centers
         damageCenters.forEach((center, index) => {
-          const option = document.createElement('option');
-          option.value = center.id || `center_${index}`;
+          console.log(`🔍 Processing damage center ${index}:`, center);
           
-          // Create descriptive text for the option
+          const option = document.createElement('option');
+          // Use multiple possible ID formats
+          option.value = center.id || center.center_id || center.block_id || `center_${index}`;
+          
+          // ✅ IMPROVED: More flexible property detection for option text
           let optionText = '';
+          
+          // Try various number/identifier properties
           if (center.number) {
             optionText = `מוקד ${center.number}`;
           } else if (center.center_number) {
             optionText = `מוקד ${center.center_number}`;
+          } else if (center.block_number) {
+            optionText = `מוקד ${center.block_number}`;
+          } else if (center.id) {
+            optionText = `מוקד ${center.id}`;
           } else {
             optionText = `מוקד ${index + 1}`;
           }
           
-          // Add location if available
+          // Try various location properties
           if (center.location) {
             optionText += ` - ${center.location}`;
           } else if (center.selected_location) {
             optionText += ` - ${center.selected_location}`;
+          } else if (center.damage_location) {
+            optionText += ` - ${center.damage_location}`;
+          } else if (center.area) {
+            optionText += ` - ${center.area}`;
           }
           
-          // Add damage description preview if available
+          // Try various description properties
           if (center.damage_description) {
-            const preview = center.damage_description.substring(0, 30);
-            optionText += ` (${preview}${center.damage_description.length > 30 ? '...' : ''})`;
+            const preview = center.damage_description.substring(0, 25);
+            optionText += ` (${preview}${center.damage_description.length > 25 ? '...' : ''})`;
           } else if (center.description) {
-            const preview = center.description.substring(0, 30);
-            optionText += ` (${preview}${center.description.length > 30 ? '...' : ''})`;
+            const preview = center.description.substring(0, 25);
+            optionText += ` (${preview}${center.description.length > 25 ? '...' : ''})`;
+          } else if (center.details) {
+            const preview = center.details.substring(0, 25);
+            optionText += ` (${preview}${center.details.length > 25 ? '...' : ''})`;
+          } else if (center.summary) {
+            const preview = center.summary.substring(0, 25);
+            optionText += ` (${preview}${center.summary.length > 25 ? '...' : ''})`;
           }
           
           option.textContent = optionText;
           select.appendChild(option);
+          
+          console.log(`✅ Created option: "${optionText}" with value: "${option.value}"`);
         });
         
         console.log('✅ Populated damage centers dropdown');
@@ -2064,13 +2120,14 @@
         // ✅ ENHANCED: Use same comprehensive search logic as populateExistingDamageCenters
         console.log('🔍 Searching for damage centers to clear...');
         
-        // Find the damage centers array using enhanced detection
-        if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
-          damageCenters = helper.damage_centers;
-          dataLocation = 'damage_centers';
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
+        // ✅ PRIORITY FIX: Use same logic as populate function
+        if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
           damageCenters = helper.damage_blocks;
           dataLocation = 'damage_blocks';
+          console.log('✅ Found damage centers in helper.damage_blocks for clearing');
+        } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
+          damageCenters = helper.damage_centers;
+          dataLocation = 'damage_centers';
         } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
           damageCenters = helper.damage_assessment.centers;
           dataLocation = 'damage_assessment.centers';
@@ -2206,7 +2263,7 @@
         console.log(`📊 Remaining damage centers: ${damageCenters.length}`);
         
         // Update UI
-        populateExistingDamageCenters();
+        populateExistingDamageCenters(true);
         select.value = '';
         
         // Show success message
@@ -2229,7 +2286,7 @@
       
       // Wait a bit for helper data to be available
       setTimeout(() => {
-        populateExistingDamageCenters();
+        populateExistingDamageCenters(true);
       }, 500);
       
       // Also update when helper data changes
@@ -2237,7 +2294,7 @@
         if (e.key === 'helper') {
           console.log('🔄 Helper data updated, refreshing damage centers dropdown...');
           setTimeout(() => {
-            populateExistingDamageCenters();
+            populateExistingDamageCenters(true);
           }, 100);
         }
       });
@@ -2333,6 +2390,12 @@
         // Also log to console for detailed inspection
         console.log('🔍 Complete helper structure:', helper);
         console.log('📊 Potential damage center arrays:', potentialArrays);
+        
+        // ✅ ENHANCED: After showing debug, try to populate dropdown again
+        console.log('🔄 Re-running populateExistingDamageCenters after debug...');
+        setTimeout(() => {
+          populateExistingDamageCenters(true);
+        }, 1000);
         
       } catch (error) {
         console.error('❌ Error in debug function:', error);
