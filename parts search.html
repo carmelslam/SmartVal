@@ -774,31 +774,33 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     };
     
     sendPartSearch(payload).then(results => {
-      if (results && results.parts && results.parts.length > 0) {
-        displaySearchResults(results.parts);
-        alert(`✅ נמצאו ${results.parts.length} חלקים`);
+      console.log('📥 Parts search response received:', results);
+      
+      if (results && results.success && results.parts && results.parts.length > 0) {
+        // ✅ ENHANCED: Display comprehensive search results from Make.com
+        displayComprehensiveSearchResults(results.parts);
         
-        // ✅ FIXED: Use enhanced helper integration with 3-category system
+        const totalParts = results.parts.reduce((sum, group) => {
+          return sum + (group.search_results ? group.search_results.length : 0);
+        }, 0);
+        
+        alert(`✅ נמצאו ${results.parts.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות!`);
+        
+        // ✅ FIXED: Use enhanced helper integration with search results
         try {
           const searchContext = {
-            query: {
-              plate: plate.value.trim(),
-              manufacturer: manufacturer.value.trim(),
-              model: model.value.trim(),
-              part_group: part_group.value,
-              part_name: part_name.value,
-              free_query: free_query.value.trim()
-            },
+            query: payload,
             timestamp: new Date().toISOString(),
             results_count: results.parts.length,
-            search_type: 'system_search'
+            total_parts: totalParts,
+            search_type: 'system_search_enhanced'
           };
           
           // Use enhanced helper integration
           const updatedHelper = updateHelperWithPartsSearch(results.parts, searchContext);
           
           if (updatedHelper) {
-            console.log(`✅ Enhanced: Saved ${results.parts.length} search results to helper with 3-category system`);
+            console.log(`✅ Enhanced: Saved ${results.parts.length} search result groups to helper`);
             
             // Trigger helper update broadcast if available
             if (typeof window.broadcastHelperUpdate === 'function') {
@@ -813,8 +815,15 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         } catch (e) {
           console.error('❌ Error saving search results with enhanced system:', e);
         }
+      } else if (results && results.success && results.no_results) {
+        alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
+        console.log('ℹ️ Search completed with no results');
+      } else if (results && !results.success) {
+        alert(`❌ שגיאה בחיפוש: ${results.error || 'שגיאה לא ידועה'}`);
+        console.error('❌ Search failed:', results.error);
       } else {
-        alert('לא נמצאו תוצאות מתאימות');
+        alert('⚠️ תגובה לא צפויה מהשרת');
+        console.warn('⚠️ Unexpected response format:', results);
       }
     }).catch(error => {
       console.error('Search error:', error);
@@ -922,8 +931,121 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   };
   
-  // Enhanced result display function
+  // ✅ ENHANCED: Comprehensive search results display for Make.com response format
+  window.displayComprehensiveSearchResults = function(resultGroups) {
+    const container = document.getElementById('search_results_display');
+    const content = document.getElementById('search_results_content');
+    
+    if (!resultGroups || resultGroups.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    // Create comprehensive display for grouped results
+    const groupsHTML = resultGroups.map((group, groupIndex) => {
+      const searchResults = group.search_results || [];
+      const groupName = group.group || 'קבוצת חלקים';
+      const partName = group.name || 'חלק ללא שם';
+      
+      const resultsHTML = searchResults.map((result, resultIndex) => `
+        <div style="
+          border: 1px solid #e5e7eb; 
+          padding: 15px; 
+          margin: 8px 0; 
+          border-radius: 8px; 
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); 
+          cursor: pointer;
+          transition: all 0.3s ease;
+        " 
+        onmouseover="this.style.borderColor='#3b82f6'; this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform='translateY(0)'"
+        onclick="selectComprehensiveSearchResult(${groupIndex}, ${resultIndex})">
+          
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+            <div style="flex: 1;">
+              <div style="font-weight: bold; color: #1e40af; font-size: 16px; margin-bottom: 5px;">
+                ${result.תיאור || result.description || partName}
+              </div>
+              <div style="color: #059669; font-weight: bold; font-size: 18px;">
+                ${result.מחיר || result.price || 'מחיר לא צוין'}
+              </div>
+            </div>
+            <div style="text-align: left;">
+              <div style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                ${result['סוג חלק'] || result.type || 'לא צוין'}
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
+            <div>
+              <span style="font-weight: bold; color: #4b5563;">ספק:</span>
+              <span style="color: #374151;">${result.ספק || result.supplier || 'לא צוין'}</span>
+            </div>
+            <div>
+              <span style="font-weight: bold; color: #4b5563;">מיקום:</span>
+              <span style="color: #374151;">${result.מיקום || result.location || 'לא צוין'}</span>
+            </div>
+            <div>
+              <span style="font-weight: bold; color: #4b5563;">זמינות:</span>
+              <span style="color: #059669; font-weight: bold;">${result.זמינות || result.availability || 'לא צוין'}</span>
+            </div>
+            ${result['מספר OEM'] || result.oem_number ? `
+            <div>
+              <span style="font-weight: bold; color: #4b5563;">OEM:</span>
+              <span style="color: #374151; font-family: monospace;">${result['מספר OEM'] || result.oem_number}</span>
+            </div>
+            ` : ''}
+          </div>
+          
+          ${result.הערות || result.notes ? `
+          <div style="margin-top: 10px; padding: 8px; background: #fef3c7; border-radius: 4px; border-left: 4px solid #f59e0b;">
+            <span style="font-weight: bold; color: #92400e;">הערות:</span>
+            <span style="color: #92400e;">${result.הערות || result.notes}</span>
+          </div>
+          ` : ''}
+          
+          <div style="text-align: center; margin-top: 12px;">
+            <small style="color: #3b82f6; font-weight: bold;">👆 לחץ להוספה לרשימת החלקים</small>
+          </div>
+        </div>
+      `).join('');
+      
+      return `
+        <div style="margin-bottom: 25px; border: 2px solid #3b82f6; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 15px; text-align: center;">
+            <h3 style="margin: 0; font-size: 18px;">${groupName}</h3>
+            <div style="font-size: 16px; margin-top: 5px; opacity: 0.9;">${partName}</div>
+            <div style="font-size: 14px; margin-top: 5px; opacity: 0.8;">${searchResults.length} אפשרויות נמצאו</div>
+          </div>
+          <div style="padding: 15px;">
+            ${resultsHTML}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Update content with comprehensive results
+    content.innerHTML = `
+      <div style="margin-bottom: 20px; text-align: center; padding: 15px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; border: 1px solid #10b981;">
+        <h3 style="color: #047857; margin: 0;">🔍 תוצאות חיפוש מקיפות</h3>
+        <p style="color: #059669; margin: 5px 0 0 0;">נמצאו ${resultGroups.length} קבוצות חלקים עם אפשרויות רכישה מגוונות</p>
+      </div>
+      ${groupsHTML}
+    `;
+    
+    container.style.display = 'block';
+    window.currentComprehensiveResults = resultGroups;
+  };
+  
+  // Enhanced result display function (backward compatibility)
   window.displaySearchResults = function(results) {
+    // Check if this is the new comprehensive format
+    if (results && results.length > 0 && results[0].search_results) {
+      return displayComprehensiveSearchResults(results);
+    }
+    
+    // Legacy format handling
     const container = document.getElementById('search_results_display');
     const content = document.getElementById('search_results_content');
     
@@ -948,6 +1070,83 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     window.currentSearchResults = results;
   };
   
+  // ✅ NEW: Select comprehensive search result (for Make.com format)
+  window.selectComprehensiveSearchResult = function(groupIndex, resultIndex) {
+    const resultGroup = window.currentComprehensiveResults[groupIndex];
+    if (!resultGroup || !resultGroup.search_results) return;
+    
+    const result = resultGroup.search_results[resultIndex];
+    if (!result) return;
+    
+    console.log('🎯 Selected comprehensive search result:', { groupIndex, resultIndex, result });
+    
+    // Extract details from Hebrew/English mixed format
+    const partName = result.תיאור || result.description || resultGroup.name || 'חלק מתוצאת חיפוש';
+    const price = result.מחיר || result.price || '';
+    const supplier = result.ספק || result.supplier || '';
+    const partType = result['סוג חלק'] || result.type || '';
+    const oem = result['מספר OEM'] || result.oem_number || '';
+    const location = result.מיקום || result.location || '';
+    const availability = result.זמינות || result.availability || '';
+    const notes = result.הערות || result.notes || '';
+    
+    // Determine source based on part type
+    let source = 'תחליפי';
+    if (partType.includes('OEM') || partType.includes('מקורי')) {
+      source = 'מקורי';
+    } else if (partType.includes('משומש')) {
+      source = 'משומש';
+    }
+    
+    // Create enhanced part item
+    const item = {
+      group: resultGroup.group || 'תוצאת חיפוש',
+      name: partName,
+      qty: 1,
+      source: source,
+      price: price.replace('₪', '').trim(),
+      supplier: supplier,
+      id: `search_result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      added_at: new Date().toISOString(),
+      search_metadata: {
+        oem_number: oem,
+        location: location,
+        availability: availability,
+        notes: notes,
+        part_type: partType,
+        from_comprehensive_search: true,
+        group_index: groupIndex,
+        result_index: resultIndex
+      }
+    };
+    
+    // Check for duplicates
+    const isDuplicate = selectedParts.some(existing => 
+      existing.name === item.name && 
+      existing.supplier === item.supplier &&
+      existing.source === item.source
+    );
+    
+    if (isDuplicate) {
+      alert('⚠️ חלק זה כבר קיים ברשימה');
+      return;
+    }
+    
+    // Add to selected parts
+    selectedParts.push(item);
+    updateSelectedPartsList();
+    
+    // Visual feedback
+    if (typeof showNotification === 'function') {
+      showNotification(`נוסף לרשימה: ${partName}`, 'success');
+    }
+    
+    alert(`✅ נוסף לרשימה: ${partName}\nספק: ${supplier}\nמחיר: ${price}`);
+    
+    console.log('✅ Added comprehensive search result to selected parts:', item);
+  };
+  
+  // Legacy search result selection (backward compatibility)
   window.selectSearchResult = function(index) {
     const result = window.currentSearchResults[index];
     if (!result) return;

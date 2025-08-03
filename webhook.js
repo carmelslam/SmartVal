@@ -649,37 +649,194 @@ function createFallbackNotification(message, type = 'info', duration = 5000) {
   }
 }
 
-// Specialized part search function
+// ✅ FIXED: Enhanced part search function with proper payload structure and response capture
 export function sendPartSearch(data) {
-  fetch(WEBHOOKS.PARTS_SEARCH, {
+  console.log('🔍 Parts Search: Preparing structured payload for Make.com');
+  
+  // ✅ CREATE PROPER STRUCTURED PAYLOAD according to Make.com format
+  const structuredPayload = {
+    manufacturer: data.manufacturer || "",
+    model: data.model || "",
+    trim: data.trim || "",
+    model_code: data.engine_code || data.model_code || "",
+    car_model_number: "", // Not available in current form
+    year: data.year || "",
+    engine: data.engine_type || "",
+    engine_volume: data.engine_volume || "",
+    engine_model: data.engine_type || "",
+    engine_type: data.engine_type || "",
+    wheel_drive: "", // Not available in current form
+    transmission: "", // Not available in current form
+    vin_number: data.vin || "",
+    license_number: data.plate || "",
+    keyword: data.free_query || "",
+    part_group: data.part_group || "",
+    // ✅ CRITICAL: Parts_needed as array from selectedParts list
+    Parts_needed: (data.selectedParts && data.selectedParts.length > 0) ? 
+      data.selectedParts.map(part => ({
+        group: part.group || "",
+        name: part.name || "",
+        quantity: part.qty || 1,
+        source: part.source || "",
+        price: part.price || "",
+        supplier: part.supplier || ""
+      })) : [],
+    Image: data.part_image_base64 || "",
+    Source: data.search_type || "system_search"
+  };
+  
+  console.log('📤 Sending structured payload to Make.com:', structuredPayload);
+  
+  return fetch(WEBHOOKS.PARTS_SEARCH, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      task: 'part_search',
-      payload: data
-    })
+    body: JSON.stringify(structuredPayload)
   })
     .then(res => {
-      if (!res.ok) throw new Error('Request failed');
-      return res.json();
+      console.log(`📡 Webhook response status: ${res.status} ${res.statusText}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      return res.text(); // Get as text first to handle different response formats
     })
-    .then(response => {
-      console.log('✅ Part search request sent:', response);
-      alert('הבקשה נשלחה בהצלחה!');
-
-      if (Array.isArray(response.results)) {
+    .then(responseText => {
+      console.log('📥 Raw webhook response:', responseText);
+      
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(responseText);
+        console.log('✅ Parsed JSON response:', parsedResponse);
+      } catch (parseError) {
+        console.warn('⚠️ Response is not JSON, treating as text:', responseText);
+        parsedResponse = { message: responseText, raw: responseText };
+      }
+      
+      // ✅ ENHANCED RESPONSE CAPTURE: Handle Make.com response format
+      let processedResults = null;
+      
+      if (parsedResponse) {
+        // Check for direct results array
+        if (parsedResponse.results && Array.isArray(parsedResponse.results)) {
+          processedResults = {
+            plate: parsedResponse.plate || structuredPayload.license_number,
+            date: parsedResponse.date || new Date().toISOString(),
+            results: parsedResponse.results,
+            search_context: {
+              query: structuredPayload,
+              timestamp: new Date().toISOString(),
+              results_count: parsedResponse.results.length
+            }
+          };
+          console.log('✅ Found results array in response:', processedResults);
+        }
+        
+        // Check for Make.com array format
+        else if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+          console.log('📦 Detected Make.com array response format');
+          const firstItem = parsedResponse[0];
+          
+          // Try to extract nested data
+          if (firstItem && firstItem.value) {
+            try {
+              const nestedData = typeof firstItem.value === 'string' ? 
+                JSON.parse(firstItem.value) : firstItem.value;
+              
+              if (nestedData.results && Array.isArray(nestedData.results)) {
+                processedResults = {
+                  plate: nestedData.plate || structuredPayload.license_number,
+                  date: nestedData.date || new Date().toISOString(),
+                  results: nestedData.results,
+                  search_context: {
+                    query: structuredPayload,
+                    timestamp: new Date().toISOString(),
+                    results_count: nestedData.results.length
+                  }
+                };
+                console.log('✅ Extracted results from Make.com nested format:', processedResults);
+              }
+            } catch (extractError) {
+              console.error('❌ Failed to extract nested data:', extractError);
+            }
+          }
+        }
+        
+        // Check for parts field (alternative format)
+        else if (parsedResponse.parts && Array.isArray(parsedResponse.parts)) {
+          processedResults = {
+            plate: structuredPayload.license_number,
+            date: new Date().toISOString(),
+            results: parsedResponse.parts.map(part => ({
+              group: "תוצאות חיפוש",
+              name: part.name || part.description || "",
+              search_results: [part]
+            })),
+            search_context: {
+              query: structuredPayload,
+              timestamp: new Date().toISOString(),
+              results_count: parsedResponse.parts.length
+            }
+          };
+          console.log('✅ Converted parts array to results format:', processedResults);
+        }
+      }
+      
+      // ✅ SAVE TO HELPER WITH ENHANCED STRUCTURE
+      if (processedResults && processedResults.results && processedResults.results.length > 0) {
+        console.log('💾 Saving search results to helper with enhanced structure');
+        
+        // Update helper with comprehensive parts search data
         updateHelperAndSession("parts_search", {
-          summary: {
-            total_results: response.results.length,
-            recommended: response.recommended || ''
+          current_session: {
+            results: processedResults.results,
+            search_context: processedResults.search_context,
+            response_captured_at: new Date().toISOString()
           },
-          results: response.results
+          all_results: processedResults.results,
+          search_history: [{
+            query: structuredPayload,
+            results: processedResults.results,
+            timestamp: new Date().toISOString(),
+            results_count: processedResults.results.length
+          }],
+          case_summary: {
+            total_searches: 1,
+            total_results: processedResults.results.length,
+            last_search: new Date().toISOString(),
+            plate: processedResults.plate
+          }
         });
+        
+        // Also store the raw response for debugging
+        sessionStorage.setItem('last_parts_search_response', JSON.stringify(processedResults));
+        
+        console.log(`✅ Parts search completed: ${processedResults.results.length} result groups saved to helper`);
+        
+        return {
+          success: true,
+          parts: processedResults.results,
+          raw_response: parsedResponse,
+          search_context: processedResults.search_context
+        };
+      } else {
+        console.log('⚠️ No structured results found in response');
+        return {
+          success: true,
+          message: responseText,
+          raw_response: parsedResponse,
+          no_results: true
+        };
       }
     })
     .catch(err => {
-      console.error('❌ Error sending part search:', err);
-      alert('שגיאה בשליחת הבקשה');
+      console.error('❌ Error in parts search:', err);
+      
+      return {
+        success: false,
+        error: err.message || 'שגיאה בחיפוש חלקים',
+        search_context: {
+          query: structuredPayload,
+          timestamp: new Date().toISOString(),
+          error: err.message
+        }
+      };
     });
 }
 
