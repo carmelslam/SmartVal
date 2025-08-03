@@ -170,6 +170,33 @@
 </div>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+  // ✅ DEBUG: Check internal browser availability on page load
+  console.log('🔍 Parts Search Page Loaded - Debug Info:');
+  console.log('  - openInternalBrowser function available:', typeof window.openInternalBrowser === 'function');
+  console.log('  - internal-browser.js loaded:', !!document.querySelector('script[src*="internal-browser"]'));
+  if (typeof window.openInternalBrowser === 'function') {
+    console.log('  ✅ Internal browser is ready');
+  } else {
+    console.log('  ❌ Internal browser not available');
+    console.log('  - Available window functions containing "Internal":', Object.keys(window).filter(k => k.toLowerCase().includes('internal')));
+    console.log('  - Available window functions containing "Browser":', Object.keys(window).filter(k => k.toLowerCase().includes('browser')));
+    
+    // ✅ RETRY: Try to manually load internal browser if not available
+    console.log('  🔄 Attempting to manually load internal browser...');
+    const scriptExists = document.querySelector('script[src*="internal-browser"]');
+    if (!scriptExists) {
+      const script = document.createElement('script');
+      script.src = './internal-browser.js';
+      script.onload = () => {
+        console.log('  ✅ Internal browser manually loaded');
+      };
+      script.onerror = () => {
+        console.log('  ❌ Failed to manually load internal browser');
+      };
+      document.head.appendChild(script);
+    }
+  }
+  
   // ENHANCED: Auto-populate vehicle data from helper
   function populateVehicleDataFromHelper() {
     console.log('🚗 Parts Search: Auto-populating vehicle data from helper...');
@@ -408,7 +435,7 @@
                   style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
             📋 העתק נתונים
           </button>
-          <button onclick="window.openInternalBrowser ? window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים') : window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank')" 
+          <button onclick="openSearchSite(); this.closest('[style*=fixed]').remove();" 
                   style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
             🌐 פתח Car-Part
           </button>
@@ -825,27 +852,31 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       year: document.getElementById('year').value
     };
     
-    // ✅ FIXED: Use internal browser instead of external redirect
     console.log('🌐 Opening Car-Part in internal browser with vehicle data:', vehicleData);
     
-    // ✅ FIXED: Use correct site key for internal browser with toggle popup
+    // ✅ FIXED: Enhanced check and fallback for internal browser
     if (typeof window.openInternalBrowser === 'function') {
       try {
-        // Use correct site key from internal-browser.js siteConfigs
+        console.log('✅ Internal browser available, opening car-part.co.il');
         window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים');
         
-        // ✅ FIX 5: Create toggle popup for parts list visibility
+        // Create toggle popup for parts list visibility
         setTimeout(() => {
           createPartsListTogglePopup();
-        }, 2000); // Wait for browser to load
+        }, 2000);
         
       } catch (error) {
         console.error('❌ Failed to open internal browser:', error);
-        showNotification('שגיאה בפתיחת הדפדפן הפנימי', 'error');
+        alert('שגיאה בפתיחת הדפדפן הפנימי: ' + error.message);
+        // Fallback to external window
+        window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank');
       }
     } else {
-      console.error('❌ Internal browser not available');
-      showNotification('הדפדפן הפנימי לא זמין במערכת', 'error');
+      console.error('❌ Internal browser function not available');
+      console.log('Available window functions:', Object.keys(window).filter(k => k.includes('Internal') || k.includes('Browser')));
+      alert('הדפדפן הפנימי לא זמין במערכת, פותח בחלון נפרד');
+      // Fallback to external window
+      window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank');
     }
 
     const creds = dev_credentials?.carPart;
