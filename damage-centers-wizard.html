@@ -1433,6 +1433,40 @@
       
       document.getElementById('damageCenterNumber').value = nextNumber;
       damageCenterData.number = nextNumber;
+      
+      // FIXED: Generate and set active center ID to prevent orphaned data
+      const newCenterId = `center_${Date.now()}_${nextNumber}`;
+      damageCenterData.id = newCenterId;
+      
+      // Set active center for modules
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.damage_assessment = helper.damage_assessment || {};
+      helper.damage_assessment.current_center_id = newCenterId;
+      sessionStorage.setItem('active_damage_center_id', newCenterId);
+      
+      // ARCHITECTURAL FIX: Clear orphaned global assessment data when starting new center
+      console.log('🧹 Clearing orphaned global assessment data...');
+      if (helper.damage_assessment.works) {
+        console.log('⚠️ Removing orphaned works data:', helper.damage_assessment.works);
+        delete helper.damage_assessment.works;
+      }
+      if (helper.damage_assessment.parts) {
+        console.log('⚠️ Removing orphaned parts data:', helper.damage_assessment.parts);
+        delete helper.damage_assessment.parts;
+      }
+      if (helper.damage_assessment.repairs) {
+        console.log('⚠️ Removing orphaned repairs data:', helper.damage_assessment.repairs);
+        delete helper.damage_assessment.repairs;
+      }
+      if (helper.damage_assessment.totals) {
+        console.log('⚠️ Removing orphaned totals data:', helper.damage_assessment.totals);
+        delete helper.damage_assessment.totals;
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('🎯 Set active damage center ID for new center:', newCenterId);
+      console.log('✅ Cleared orphaned data, modules will now save to specific centers only');
     }
     
     function populateLocationDropdown() {
@@ -1591,10 +1625,15 @@
             break;
         }
         
-        // Update damage center data in helper
-        if (!helper.damage_centers.current_center_id) {
-          helper.damage_centers.current_center_id = damageCenterData.id || `center_${Date.now()}`;
-        }
+        // FIXED: Set active damage center for modules to prevent orphaned data
+        const activeCenterId = damageCenterData.id || `center_${Date.now()}`;
+        
+        // Set active center in multiple places for maximum compatibility
+        helper.damage_assessment.current_center_id = activeCenterId;
+        sessionStorage.setItem('active_damage_center_id', activeCenterId);
+        
+        console.log('🎯 Set active damage center ID:', activeCenterId);
+        console.log('💾 This ensures modules save data to specific center instead of global assessment');
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         

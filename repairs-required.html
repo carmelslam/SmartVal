@@ -374,38 +374,62 @@
           helper = {};
         }
         
-        // Initialize damage_assessment structure if needed
-        helper.damage_assessment = helper.damage_assessment || {};
-        helper.damage_assessment.repairs = helper.damage_assessment.repairs || {};
+        // ARCHITECTURAL FIX: Only save repairs data if there's an active damage center
+        // This prevents orphaned data accumulation in damage_assessment
         
-        // FIXED: Accumulate repairs items instead of overwriting
-        const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
-        
-        // Merge new repairs with existing ones, avoiding duplicates
-        const mergedRepairsItems = [...existingRepairsItems];
-        
-        repairs.forEach(newRepair => {
-          const existingIndex = mergedRepairsItems.findIndex(existing => 
-            existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
-          );
+        const activeCenterId = helper.damage_assessment?.current_center_id || 
+                              helper.damage_centers?.current_center_id ||
+                              sessionStorage.getItem('active_damage_center_id');
+                              
+        if (!activeCenterId) {
+          console.log('⚠️ No active damage center - repairs data will not be saved to prevent orphaned data');
+          console.log('📝 Repairs items:', repairs);
           
-          if (existingIndex >= 0) {
-            // Update existing repairs item
-            mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
-            console.log('🔄 Updated existing repairs item:', newRepair.repair_type);
-          } else {
-            // Add new repairs item
-            mergedRepairsItems.push(newRepair);
-            console.log('➕ Added new repairs item:', newRepair.repair_type);
-          }
-        });
+          // Store in temporary session storage for potential recovery
+          sessionStorage.setItem('pending_repairs_data', JSON.stringify({
+            repairs: repairs,
+            timestamp: new Date().toISOString(),
+            source: 'repairs_required_module'
+          }));
+          
+          alert('⚠️ לא ניתן לשמור נתוני תיקונים ללא מוקד נזק פעיל. אנא צור/ערוך מוקד נזק תחילה.');
+          return;
+        }
         
-        // Store accumulated repairs data in proper helper structure
-        helper.damage_assessment.repairs = {
-          repairs_items: mergedRepairsItems,
+        console.log('✅ Active damage center detected:', activeCenterId);
+        console.log('💾 Saving repairs data to active damage center instead of global assessment');
+        
+        // Save repairs data to specific damage center, not global assessment
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.centers = helper.damage_assessment.centers || [];
+        
+        // Find the active center
+        let activeCenter = helper.damage_assessment.centers.find(center => 
+          center.id === activeCenterId || center.current_center_id === activeCenterId
+        );
+        
+        if (!activeCenter) {
+          console.log('❌ Active center not found in centers array, repairs data not saved');
+          alert('שגיאה: לא נמצא מוקד נזק פעיל');
+          return;
+        }
+        
+        // Save repairs items directly to the active damage center
+        activeCenter.repairs_items = activeCenter.repairs_items || [];
+        
+        // Replace all repairs items in this center with current data
+        activeCenter.repairs_items = repairs.map(repair => ({
+          ...repair,
+          center_id: activeCenterId,
           updated_at: new Date().toISOString(),
-          updated_by: 'repairs_required_module'
-        };
+          source: 'repairs_required_module'
+        }));
+        
+        activeCenter.repairs_updated_at = new Date().toISOString();
+        
+        console.log(`✅ Saved ${repairs.length} repairs items to damage center ${activeCenterId}`);
+        
+        // DO NOT save to global damage_assessment - this prevents orphaned data
         
         // Update meta information
         helper.meta = helper.meta || {};

@@ -467,39 +467,66 @@ function saveWorkData() {
       helper = {};
     }
     
-    // Initialize damage_assessment structure if needed
-    helper.damage_assessment = helper.damage_assessment || {};
-    helper.damage_assessment.works = helper.damage_assessment.works || {};
+    // ARCHITECTURAL FIX: Only save work data if there's an active damage center
+    // This prevents orphaned data accumulation in damage_assessment
     
-    // FIXED: Accumulate work items instead of overwriting
-    const existingWorkItems = helper.damage_assessment.works?.work_items || [];
-    
-    // Merge new works with existing ones, avoiding duplicates
-    const mergedWorkItems = [...existingWorkItems];
-    
-    works.forEach(newWork => {
-      const existingIndex = mergedWorkItems.findIndex(existing => 
-        existing.work === newWork.work && existing.description === newWork.description
-      );
+    const activeCenterId = helper.damage_assessment?.current_center_id || 
+                          helper.damage_centers?.current_center_id ||
+                          sessionStorage.getItem('active_damage_center_id');
+                          
+    if (!activeCenterId) {
+      console.log('⚠️ No active damage center - work data will not be saved to prevent orphaned data');
+      console.log('📝 Work items:', works);
+      console.log('📝 Takana 389:', takana);
       
-      if (existingIndex >= 0) {
-        // Update existing work item
-        mergedWorkItems[existingIndex] = { ...mergedWorkItems[existingIndex], ...newWork };
-        console.log('🔄 Updated existing work item:', newWork.work);
-      } else {
-        // Add new work item
-        mergedWorkItems.push(newWork);
-        console.log('➕ Added new work item:', newWork.work);
-      }
-    });
+      // Store in temporary session storage for potential recovery
+      sessionStorage.setItem('pending_work_data', JSON.stringify({
+        works: works,
+        takana389: takana,
+        timestamp: new Date().toISOString(),
+        source: 'work_module'
+      }));
+      
+      alert('⚠️ לא ניתן לשמור נתוני עבודות ללא מוקד נזק פעיל. אנא צור/ערוך מוקד נזק תחילה.');
+      return;
+    }
     
-    // Store accumulated works data in proper helper structure
-    helper.damage_assessment.works = {
-      takana389: takana,
-      work_items: mergedWorkItems,
+    console.log('✅ Active damage center detected:', activeCenterId);
+    console.log('💾 Saving work data to active damage center instead of global assessment');
+    
+    // Save work data to specific damage center, not global assessment
+    helper.damage_assessment = helper.damage_assessment || {};
+    helper.damage_assessment.centers = helper.damage_assessment.centers || [];
+    
+    // Find the active center
+    let activeCenter = helper.damage_assessment.centers.find(center => 
+      center.id === activeCenterId || center.current_center_id === activeCenterId
+    );
+    
+    if (!activeCenter) {
+      console.log('❌ Active center not found in centers array, work data not saved');
+      alert('שגיאה: לא נמצא מוקד נזק פעיל');
+      return;
+    }
+    
+    // Save work items directly to the active damage center
+    activeCenter.work_items = activeCenter.work_items || [];
+    
+    // Replace all work items in this center with current data
+    activeCenter.work_items = works.map(work => ({
+      ...work,
+      center_id: activeCenterId,
       updated_at: new Date().toISOString(),
-      updated_by: 'work_module'
-    };
+      source: 'work_module'
+    }));
+    
+    // Also store takana389 in center
+    activeCenter.takana389 = takana;
+    activeCenter.work_updated_at = new Date().toISOString();
+    
+    console.log(`✅ Saved ${works.length} work items to damage center ${activeCenterId}`);
+    
+    // DO NOT save to global damage_assessment - this prevents orphaned data
     
     // Update meta information
     helper.meta = helper.meta || {};

@@ -556,38 +556,62 @@ function savePartsData() {
       helper = {};
     }
     
-    // Initialize damage_assessment structure if needed
-    helper.damage_assessment = helper.damage_assessment || {};
-    helper.damage_assessment.parts = helper.damage_assessment.parts || {};
+    // ARCHITECTURAL FIX: Only save parts data if there's an active damage center
+    // This prevents orphaned data accumulation in damage_assessment
     
-    // FIXED: Accumulate parts items instead of overwriting
-    const existingPartsItems = helper.damage_assessment.parts?.parts_items || [];
-    
-    // Merge new parts with existing ones, avoiding duplicates
-    const mergedPartsItems = [...existingPartsItems];
-    
-    validParts.forEach(newPart => {
-      const existingIndex = mergedPartsItems.findIndex(existing => 
-        existing.part_name === newPart.part_name && existing.description === newPart.description
-      );
+    const activeCenterId = helper.damage_assessment?.current_center_id || 
+                          helper.damage_centers?.current_center_id ||
+                          sessionStorage.getItem('active_damage_center_id');
+                          
+    if (!activeCenterId) {
+      console.log('⚠️ No active damage center - parts data will not be saved to prevent orphaned data');
+      console.log('📝 Parts items:', validParts);
       
-      if (existingIndex >= 0) {
-        // Update existing parts item
-        mergedPartsItems[existingIndex] = { ...mergedPartsItems[existingIndex], ...newPart };
-        console.log('🔄 Updated existing parts item:', newPart.part_name);
-      } else {
-        // Add new parts item
-        mergedPartsItems.push(newPart);
-        console.log('➕ Added new parts item:', newPart.part_name);
-      }
-    });
+      // Store in temporary session storage for potential recovery
+      sessionStorage.setItem('pending_parts_data', JSON.stringify({
+        parts: validParts,
+        timestamp: new Date().toISOString(),
+        source: 'parts_required_module'
+      }));
+      
+      alert('⚠️ לא ניתן לשמור נתוני חלפים ללא מוקד נזק פעיל. אנא צור/ערוך מוקד נזק תחילה.');
+      return;
+    }
     
-    // Store accumulated parts data in proper helper structure
-    helper.damage_assessment.parts = {
-      parts_items: mergedPartsItems,
+    console.log('✅ Active damage center detected:', activeCenterId);
+    console.log('💾 Saving parts data to active damage center instead of global assessment');
+    
+    // Save parts data to specific damage center, not global assessment
+    helper.damage_assessment = helper.damage_assessment || {};
+    helper.damage_assessment.centers = helper.damage_assessment.centers || [];
+    
+    // Find the active center
+    let activeCenter = helper.damage_assessment.centers.find(center => 
+      center.id === activeCenterId || center.current_center_id === activeCenterId
+    );
+    
+    if (!activeCenter) {
+      console.log('❌ Active center not found in centers array, parts data not saved');
+      alert('שגיאה: לא נמצא מוקד נזק פעיל');
+      return;
+    }
+    
+    // Save parts items directly to the active damage center
+    activeCenter.parts_items = activeCenter.parts_items || [];
+    
+    // Replace all parts items in this center with current data
+    activeCenter.parts_items = validParts.map(part => ({
+      ...part,
+      center_id: activeCenterId,
       updated_at: new Date().toISOString(),
-      updated_by: 'parts_required_module'
-    };
+      source: 'parts_required_module'
+    }));
+    
+    activeCenter.parts_updated_at = new Date().toISOString();
+    
+    console.log(`✅ Saved ${validParts.length} parts items to damage center ${activeCenterId}`);
+    
+    // DO NOT save to global damage_assessment - this prevents orphaned data
     
     // ALSO store in parts_search.selected_parts as requested
     helper.parts_search = helper.parts_search || {};
