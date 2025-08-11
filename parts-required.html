@@ -847,25 +847,22 @@ function savePartsData() {
       // Get suggestions from multiple sources
       const suggestions = [];
       
-      // ✅ FIXED: Search in parts search results from helper (primary source)
-      // Try both old and new helper structures for compatibility
+      // ✅ FIXED: Search ONLY in helper parts_search results (from parts search module)
       const searchResults = [];
       
-      // Wizard search results (highest priority - from recent webhook)
-      if (window.wizardSearchResults && window.wizardSearchResults.length > 0) {
-        searchResults.push(...window.wizardSearchResults);
-        console.log(`🔍 Using ${window.wizardSearchResults.length} wizard search results for suggestions`);
+      // Get search results from helper.parts_search (populated by parts search module)
+      if (window.helper?.parts_search?.all_results) {
+        searchResults.push(...window.helper.parts_search.all_results);
+        console.log(`🔍 Using ${window.helper.parts_search.all_results.length} parts from helper.parts_search.all_results`);
       }
       
-      // New structure (from wizard integration)
-      if (window.helper && window.helper.parts_search && window.helper.parts_search.current_session && window.helper.parts_search.current_session.results) {
-        searchResults.push(...window.helper.parts_search.current_session.results);
+      // Also check results array (legacy support)
+      if (window.helper?.parts_search?.results) {
+        searchResults.push(...window.helper.parts_search.results);
+        console.log(`🔍 Using ${window.helper.parts_search.results.length} parts from helper.parts_search.results`);
       }
       
-      // Legacy structure (backwards compatibility)
-      if (window.helper && window.helper.parts_search && window.helper.parts_search.search_results) {
-        searchResults.push(...window.helper.parts_search.search_results);
-      }
+      console.log(`📋 Total search results available for suggestions: ${searchResults.length}`);
       
       // Process search results (handle both flat and nested structures)
       searchResults.forEach(item => {

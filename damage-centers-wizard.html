@@ -1172,6 +1172,42 @@
     window.addEventListener('message', function(event) {
       console.log('📨 Wizard received message:', event.data);
       
+      // ✅ CRITICAL FIX: Handle parts search webhook results from parts search module
+      if (event.data.type === 'partsSearchResults') {
+        console.log('🔍 Parts search results received from webhook:', event.data);
+        
+        try {
+          // Store webhook results in helper for parts-required to use as suggestions
+          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.parts_search = helper.parts_search || {};
+          
+          // Store the webhook results in helper.parts_search
+          helper.parts_search.all_results = event.data.results || [];
+          helper.parts_search.current_session = {
+            results: event.data.results || [],
+            plate: event.data.plate,
+            search_date: event.data.date,
+            source: event.data.source || 'parts_search_webhook',
+            timestamp: new Date().toISOString()
+          };
+          
+          // Save updated helper
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          
+          console.log(`✅ Stored ${event.data.results?.length || 0} parts search results in helper.parts_search`);
+          
+          // Show user notification
+          showUserNotification(`נמצאו ${event.data.results?.length || 0} קבוצות חלקים מ-webhook!`, 'success', 3000);
+          
+        } catch (error) {
+          console.error('❌ Error storing parts search results:', error);
+          showUserNotification('שגיאה בשמירת תוצאות חיפוש חלקים', 'error');
+        }
+        
+        return;
+      }
+      
       if (event.data.type === 'moduleData') {
         const { module, data } = event.data;
         
@@ -2967,7 +3003,7 @@
         const description = moduleData.description || 'תיאור לא צוין';
         
         // Get actual data from modules
-        const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.works?.work_items || []);
+        const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.work?.work_items || []);
         const partsData = moduleData.parts.length > 0 ? moduleData.parts : (helper.damage_assessment?.parts?.parts_items || []);
         const repairsData = moduleData.repairs.length > 0 ? moduleData.repairs : (helper.damage_assessment?.repairs?.repairs_items || []);
         
@@ -3104,7 +3140,7 @@
         
         // ✅ FIXED: Clear wizard temp data and current damage assessment data for next center
         if (helper.damage_assessment) {
-          helper.damage_assessment.works = {};
+          helper.damage_assessment.work = {};
           helper.damage_assessment.parts = {};
           helper.damage_assessment.repairs = {};
         }
