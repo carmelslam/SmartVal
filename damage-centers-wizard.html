@@ -1341,8 +1341,16 @@
     function restorePreviousWizardSession(previousSession) {
       console.log('🔄 Restoring previous wizard session:', previousSession);
       
-      // Restore wizard state
-      currentStep = previousSession.last_step || 1;
+      // ✅ FIXED: Always start new wizard at step 1, only restore if continuing same center
+      if (previousSession.mode === 'edit' && previousSession.id) {
+        // Only restore step for editing existing centers
+        currentStep = previousSession.last_step || 1;
+        console.log('📝 Restored edit mode to step:', currentStep);
+      } else {
+        // Always start new centers at step 1
+        currentStep = 1;
+        console.log('✨ Starting new damage center at step 1');
+      }
       damageCenterData.number = previousSession.number;
       
       // Update number display
@@ -1479,21 +1487,11 @@
             break;
             
           case 3:
-            // Work module - trigger actual save function in iframe
-            try {
-              const workIframe = document.getElementById('workModuleFrame');
-              if (workIframe && workIframe.contentWindow && workIframe.contentWindow.saveWorkData) {
-                workIframe.contentWindow.saveWorkData();
-                stepData.work_saved = true;
-                stepData.work_saved_at = new Date().toISOString();
-              } else {
-                console.warn('Work iframe or saveWorkData function not found');
-                stepData.work_saved = false;
-              }
-            } catch (error) {
-              console.error('Error saving work data from wizard:', error);
-              stepData.work_saved = false;
-            }
+            // Work module - inline component (not iframe)
+            // Data is already saved via updateWorkData() calls, so just mark as saved
+            stepData.work_saved = true;
+            stepData.work_saved_at = new Date().toISOString();
+            console.log('✅ Work step data already captured via inline component');
             stepData.stepName = 'work';
             break;
             
@@ -1517,21 +1515,11 @@
             break;
             
           case 6:
-            // Repairs module - trigger actual save function in iframe
-            try {
-              const repairsIframe = document.getElementById('repairsModuleFrame');
-              if (repairsIframe && repairsIframe.contentWindow && repairsIframe.contentWindow.saveRepairsData) {
-                repairsIframe.contentWindow.saveRepairsData();
-                stepData.repairs_saved = true;
-                stepData.repairs_saved_at = new Date().toISOString();
-              } else {
-                console.warn('Repairs iframe or saveRepairsData function not found');
-                stepData.repairs_saved = false;
-              }
-            } catch (error) {
-              console.error('Error saving repairs data from wizard:', error);
-              stepData.repairs_saved = false;
-            }
+            // Repairs module - inline component (like work module)
+            // Data is already saved via updateRepairData() calls, so just mark as saved
+            stepData.repairs_saved = true;
+            stepData.repairs_saved_at = new Date().toISOString();
+            console.log('✅ Repairs step data already captured via inline component');
             stepData.stepName = 'repairs';
             break;
             
