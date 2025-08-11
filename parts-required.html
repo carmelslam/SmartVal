@@ -84,13 +84,17 @@ form button {
 
     .row {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       margin-bottom: 20px;
-      align-items: stretch;
+      align-items: center;
       position: relative;
       flex-wrap: wrap;
       box-sizing: border-box;
       width: 100%;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f8fafc;
     }
     .row .input-wrap {
       flex: 2 1 160px;
@@ -118,11 +122,24 @@ form button {
   border-radius: 8px;
   border: 1px solid #ccc;
 }
-.row input.price {
-  flex: 0 0 70px;
-  width: 70px;
+.row input.quantity {
+  flex: 0 0 60px;
+  width: 60px;
   min-width: 50px;
-  max-width: 90px;
+  max-width: 70px;
+  box-sizing: border-box;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+.row input.price {
+  flex: 0 0 80px;
+  width: 80px;
+  min-width: 60px;
+  max-width: 100px;
   box-sizing: border-box;
   padding: 10px;
   font-size: 14px;
@@ -250,14 +267,15 @@ form button {
         <input id="inputYear" placeholder="שנה" type="number" />
       </div>
       <div id="partsList">
-        <div class="row">
+        <div class="row" data-row-index="0">
           <div class="input-wrap">
-            <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+            <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)">
             <select class="suggest-dropdown" style="display:none;"></select>
           </div>
-          <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)">
-          <input type="text" class="price" placeholder="מחיר" required>
-          <select class="source" required>
+          <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)">
+          <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;">
+          <input type="text" class="price" placeholder="מחיר">
+          <select class="source">
             <option value="">מקור</option>
             <option value="חליפי/מקורי">חליפי/מקורי</option>
             <option value="חליפי/משומש">חליפי/משומש</option>
@@ -266,6 +284,16 @@ form button {
             <option value="משומש">משומש</option>
             <option value="ריק">ריק</option>
           </select>
+          <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
+            <button type="button" class="btn-edit" onclick="editPartRow(0)" title="ערוך חלק" style="
+              background: #f59e0b; color: white; border: none; padding: 6px 10px; 
+              border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+            ">✏️</button>
+            <button type="button" class="btn-delete" onclick="deletePartRow(0)" title="מחק חלק" style="
+              background: #dc3545; color: white; border: none; padding: 6px 10px; 
+              border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+            ">🗑️</button>
+          </div>
         </div>
       </div>
 
@@ -308,6 +336,23 @@ form button {
         if (contextData.helper) {
           window.helper = contextData.helper;
           globalHelper = contextData.helper;
+        }
+        
+        // Store search results globally for suggestions
+        if (contextData.searchResults && contextData.searchResults.length > 0) {
+          window.wizardSearchResults = contextData.searchResults;
+          console.log(`✅ Received ${contextData.searchResults.length} search results from wizard`);
+          
+          // Update helper with search results if not already present
+          if (!window.helper.parts_search) {
+            window.helper.parts_search = {};
+          }
+          if (!window.helper.parts_search.current_session) {
+            window.helper.parts_search.current_session = {};
+          }
+          if (!window.helper.parts_search.current_session.results) {
+            window.helper.parts_search.current_session.results = contextData.searchResults;
+          }
         }
         
         // Pre-fill with existing selected parts
@@ -369,16 +414,21 @@ form button {
     }
 
   function addPart() {
+  const partsList = document.getElementById("partsList");
+  const newRowIndex = partsList.children.length;
+  
   const row = document.createElement("div");
   row.className = "row";
+  row.setAttribute("data-row-index", newRowIndex);
   row.innerHTML = `
     <div class="input-wrap">
-          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)">
+          <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)">
           <select class="suggest-dropdown" style="display:none;"></select>
         </div>
-        <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)">
-        <input type="text" class="price" placeholder="מחיר" required>
-        <select class="source" required>
+        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)">
+        <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;">
+        <input type="text" class="price" placeholder="מחיר">
+        <select class="source">
           <option value="">מקור</option>
           <option value="חליפי/מקורי">חליפי/מקורי</option>
           <option value="חליפי/משומש">חליפי/משומש</option>
@@ -387,8 +437,20 @@ form button {
           <option value="משומש">משומש</option>
           <option value="ריק">ריק</option>
         </select>
+        <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
+          <button type="button" class="btn-edit" onclick="editPartRow(${newRowIndex})" title="ערוך חלק" style="
+            background: #f59e0b; color: white; border: none; padding: 6px 10px; 
+            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">✏️</button>
+          <button type="button" class="btn-delete" onclick="deletePartRow(${newRowIndex})" title="מחק חלק" style="
+            background: #dc3545; color: white; border: none; padding: 6px 10px; 
+            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">🗑️</button>
+        </div>
   `;
-  document.getElementById("partsList").appendChild(row);
+  partsList.appendChild(row);
+  
+  console.log(`➕ Added new part row ${newRowIndex}`);
 }
 
 // Save parts data to helper without navigation
@@ -398,21 +460,30 @@ function savePartsData() {
   document.querySelectorAll("#partsList .row").forEach(row => {
     const name = row.querySelector(".name").value.trim();
     const desc = row.querySelector(".desc").value.trim();
+    const quantity = parseInt(row.querySelector(".quantity")?.value) || 1;
     const price = row.querySelector(".price").value.trim();
     const source = row.querySelector(".source").value;
-    if (name && desc && source) {
-      allParts.push({ part: name, desc, price, source });
+    
+    // ✅ CHANGED: Include quantity in parts data
+    if (name || desc || price || source) {
+      allParts.push({ 
+        part: name, 
+        desc, 
+        quantity: quantity,
+        price, 
+        source 
+      });
     }
   });
 
-  // Enhanced part validation and processing
+  // ✅ CHANGED: Enhanced part validation - allow saving with 0 parts
   const validParts = [];
   const invalidParts = [];
   
   allParts.forEach(part => {
-    if (!part.part || !part.desc) {
-      invalidParts.push({ part, error: 'שם החלק ותיאור הם שדות חובה' });
-    } else if (part.price && isNaN(parseFloat(part.price))) {
+    // ✅ REMOVED: No longer require both name and desc - be more flexible
+    // Only validate price format if a price was entered
+    if (part.price && isNaN(parseFloat(part.price))) {
       invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
     } else {
       // Check if this part came from search results and preserve full JSON data
@@ -496,6 +567,16 @@ function savePartsData() {
       updated_by: 'parts_required_module'
     };
     
+    // ALSO store in parts_search.selected_parts as requested
+    helper.parts_search = helper.parts_search || {};
+    helper.parts_search.selected_parts = validParts.map(part => ({
+      ...part,
+      selected_at: new Date().toISOString(),
+      selected_in_module: 'parts_required'
+    }));
+    
+    console.log(`✅ Also saved ${validParts.length} parts to helper.parts_search.selected_parts`);
+    
     // Update meta information
     helper.meta = helper.meta || {};
     helper.meta.last_updated = new Date().toISOString();
@@ -545,14 +626,13 @@ function savePartsData() {
     const urlParams = new URLSearchParams(window.location.search);
     const isStandalone = urlParams.get('standalone') === '1';
 
-      // Enhanced part validation and processing
+      // ✅ CHANGED: Enhanced part validation - allow saving with 0 parts (same as savePartsData)
       const validParts = [];
       const invalidParts = [];
       
       allParts.forEach(part => {
-        if (!part.part || !part.desc) {
-          invalidParts.push({ part, error: 'שם החלק ותיאור הם שדות חובה' });
-        } else if (part.price && isNaN(parseFloat(part.price))) {
+        // ✅ REMOVED: No longer require both name and desc - be more flexible
+        if (part.price && isNaN(parseFloat(part.price))) {
           invalidParts.push({ part, error: 'מחיר חייב להיות מספר תקין' });
         } else {
           // Check if this part came from search results and preserve full JSON data
@@ -771,6 +851,12 @@ function savePartsData() {
       // Try both old and new helper structures for compatibility
       const searchResults = [];
       
+      // Wizard search results (highest priority - from recent webhook)
+      if (window.wizardSearchResults && window.wizardSearchResults.length > 0) {
+        searchResults.push(...window.wizardSearchResults);
+        console.log(`🔍 Using ${window.wizardSearchResults.length} wizard search results for suggestions`);
+      }
+      
       // New structure (from wizard integration)
       if (window.helper && window.helper.parts_search && window.helper.parts_search.current_session && window.helper.parts_search.current_session.results) {
         searchResults.push(...window.helper.parts_search.current_session.results);
@@ -781,21 +867,47 @@ function savePartsData() {
         searchResults.push(...window.helper.parts_search.search_results);
       }
       
-      // Process search results
-      searchResults.forEach(part => {
-        if ((part.name && part.name.toLowerCase().includes(query.toLowerCase())) ||
-            (part.description && part.description.toLowerCase().includes(query.toLowerCase())) ||
-            (part.desc && part.desc.toLowerCase().includes(query.toLowerCase()))) {
-          suggestions.push({ 
-            name: part.name || part.description || part.desc, 
-            desc: part.description || part.desc || part.name, 
-            source: part.condition || part.source || 'לא צוין',
-            price: part.price || '',
-            supplier: part.supplier || '',
-            location: part.location || '',
-            availability: part.availability || '',
-            searchResult: true // Mark as from search results
+      // Process search results (handle both flat and nested structures)
+      searchResults.forEach(item => {
+        // Handle nested structure (webhook groups with search_results)
+        if (item.search_results && Array.isArray(item.search_results)) {
+          item.search_results.forEach(part => {
+            const partName = part.תיאור || part.description || part.name || '';
+            const partDesc = part.תיאור || part.description || part.name || '';
+            
+            if (partName.toLowerCase().includes(query.toLowerCase()) ||
+                partDesc.toLowerCase().includes(query.toLowerCase())) {
+              suggestions.push({ 
+                name: partName,
+                desc: partDesc,
+                source: part['סוג חלק'] || part.type || 'לא צוין',
+                price: (part.מחיר || part.price || '').toString().replace('₪', '').trim(),
+                supplier: part.ספק || part.supplier || '',
+                location: part.מיקום || part.location || '',
+                availability: part.זמינות || part.availability || '',
+                searchResult: true, // Mark as from search results
+                group: item.group || 'כללי'
+              });
+            }
           });
+        }
+        // Handle flat structure (legacy compatibility)
+        else {
+          const part = item;
+          if ((part.name && part.name.toLowerCase().includes(query.toLowerCase())) ||
+              (part.description && part.description.toLowerCase().includes(query.toLowerCase())) ||
+              (part.desc && part.desc.toLowerCase().includes(query.toLowerCase()))) {
+            suggestions.push({ 
+              name: part.name || part.description || part.desc, 
+              desc: part.description || part.desc || part.name, 
+              source: part.condition || part.source || 'לא צוין',
+              price: part.price || '',
+              supplier: part.supplier || '',
+              location: part.location || '',
+              availability: part.availability || '',
+              searchResult: true // Mark as from search results
+            });
+          }
         }
       });
       
@@ -949,14 +1061,18 @@ function savePartsData() {
       const newRow = document.createElement('div');
       newRow.className = 'row';
       
+      const rowIndex = partsList.children.length;
+      newRow.setAttribute('data-row-index', rowIndex);
+      
       newRow.innerHTML = `
         <div class="input-wrap">
-          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)" value="${partData.name || partData.part || ''}">
+          <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)" value="${partData.name || partData.part || ''}">
           <select class="suggest-dropdown" style="display:none;"></select>
         </div>
-        <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)" value="${partData.description || partData.desc || ''}">
-        <input type="text" class="price" placeholder="מחיר" required value="${partData.price || ''}">
-        <select class="source" required>
+        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)" value="${partData.description || partData.desc || ''}">
+        <input type="number" class="quantity" placeholder="כמות" value="${partData.quantity || partData.qty || 1}" min="1" style="width: 60px; margin-left: 8px;">
+        <input type="text" class="price" placeholder="מחיר" value="${partData.price || ''}">
+        <select class="source">
           <option value="">מקור</option>
           <option value="חליפי/מקורי" ${partData.source === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
           <option value="חליפי/משומש" ${partData.source === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
@@ -965,13 +1081,133 @@ function savePartsData() {
           <option value="משומש" ${partData.source === 'משומש' ? 'selected' : ''}>משומש</option>
           <option value="ריק" ${partData.source === 'ריק' ? 'selected' : ''}>ריק</option>
         </select>
-        <button type="button" onclick="removePart(this)">הסר</button>
+        <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
+          <button type="button" class="btn-edit" onclick="editPartRow(${rowIndex})" title="ערוך חלק" style="
+            background: #f59e0b; color: white; border: none; padding: 6px 10px; 
+            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">✏️</button>
+          <button type="button" class="btn-delete" onclick="deletePartRow(${rowIndex})" title="מחק חלק" style="
+            background: #dc3545; color: white; border: none; padding: 6px 10px; 
+            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+          ">🗑️</button>
+        </div>
       `;
       
       partsList.appendChild(newRow);
     }
     
-    // ...existing code for addPart, etc...
+    // ✅ NEW: Edit/Delete functionality for individual parts
+    let editingRowIndex = -1;
+    
+    function editPartRow(rowIndex) {
+      const rows = document.querySelectorAll('#partsList .row');
+      const row = rows[rowIndex];
+      
+      if (!row) {
+        console.error('Row not found:', rowIndex);
+        return;
+      }
+      
+      if (editingRowIndex === rowIndex) {
+        // Already editing this row, finish editing
+        finishEditingRow(rowIndex);
+        return;
+      }
+      
+      // If editing another row, finish that first
+      if (editingRowIndex >= 0) {
+        finishEditingRow(editingRowIndex);
+      }
+      
+      // Start editing this row
+      editingRowIndex = rowIndex;
+      const editBtn = row.querySelector('.btn-edit');
+      editBtn.textContent = '💾';
+      editBtn.title = 'שמור שינויים';
+      editBtn.style.background = '#10b981';
+      
+      // Make fields more prominent for editing
+      row.style.background = '#fffbeb';
+      row.style.borderColor = '#f59e0b';
+      row.style.borderWidth = '2px';
+      
+      console.log(`📝 Started editing row ${rowIndex}`);
+    }
+    
+    function finishEditingRow(rowIndex) {
+      const rows = document.querySelectorAll('#partsList .row');
+      const row = rows[rowIndex];
+      
+      if (!row) return;
+      
+      const editBtn = row.querySelector('.btn-edit');
+      editBtn.textContent = '✏️';
+      editBtn.title = 'ערוך חלק';
+      editBtn.style.background = '#f59e0b';
+      
+      // Reset row styling
+      row.style.background = '#f8fafc';
+      row.style.borderColor = '#e5e7eb';
+      row.style.borderWidth = '1px';
+      
+      editingRowIndex = -1;
+      console.log(`💾 Finished editing row ${rowIndex}`);
+    }
+    
+    function deletePartRow(rowIndex) {
+      const rows = document.querySelectorAll('#partsList .row');
+      const row = rows[rowIndex];
+      
+      if (!row) {
+        console.error('Row not found:', rowIndex);
+        return;
+      }
+      
+      // Get part info for confirmation
+      const name = row.querySelector('.name').value.trim();
+      const desc = row.querySelector('.desc').value.trim();
+      const partInfo = name || desc || 'חלק ללא שם';
+      
+      const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${partInfo}`);
+      
+      if (confirmDelete) {
+        row.remove();
+        
+        // Update row indices for remaining rows
+        updateRowIndices();
+        
+        console.log(`🗑️ Deleted row ${rowIndex}: ${partInfo}`);
+        
+        // Show notification if available
+        if (typeof showNotification === 'function') {
+          showNotification(`נמחק חלק: ${partInfo}`, 'success');
+        }
+      }
+    }
+    
+    function updateRowIndices() {
+      const rows = document.querySelectorAll('#partsList .row');
+      rows.forEach((row, index) => {
+        row.setAttribute('data-row-index', index);
+        
+        // Update button onclick handlers
+        const editBtn = row.querySelector('.btn-edit');
+        const deleteBtn = row.querySelector('.btn-delete');
+        
+        if (editBtn) editBtn.onclick = () => editPartRow(index);
+        if (deleteBtn) deleteBtn.onclick = () => deletePartRow(index);
+      });
+      
+      // Reset editing state if we were editing a deleted row
+      if (editingRowIndex >= rows.length) {
+        editingRowIndex = -1;
+      }
+    }
+    
+    // Make functions globally available
+    window.editPartRow = editPartRow;
+    window.deletePartRow = deletePartRow;
+    window.updateRowIndices = updateRowIndices;
   </script>
   <script type="module">
     // Try to load parts bank for better suggestions

@@ -776,50 +776,60 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     sendPartSearch(payload).then(results => {
       console.log('📥 Parts search response received:', results);
       
-      if (results && results.success && results.parts && results.parts.length > 0) {
+      // Fix: Handle actual webhook structure {plate, date, results}
+      if (results && results.results && results.results.length > 0) {
         // ✅ ENHANCED: Display comprehensive search results from Make.com
-        displayComprehensiveSearchResults(results.parts);
+        displayComprehensiveSearchResults(results.results);
         
-        const totalParts = results.parts.reduce((sum, group) => {
+        const totalParts = results.results.reduce((sum, group) => {
           return sum + (group.search_results ? group.search_results.length : 0);
         }, 0);
         
-        alert(`✅ נמצאו ${results.parts.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות!`);
+        alert(`✅ נמצאו ${results.results.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות!`);
+        
+        // Forward webhook results to damage centers wizard
+        if (window.parent !== window && window.parent.postMessage) {
+          window.parent.postMessage({
+            type: 'partsSearchResults',
+            results: results.results,
+            plate: results.plate,
+            date: results.date,
+            source: 'parts_search_webhook'
+          }, '*');
+          console.log('📤 Forwarded webhook results to damage centers wizard');
+        }
         
         // ✅ FIXED: Use enhanced helper integration with search results
         try {
           const searchContext = {
             query: payload,
             timestamp: new Date().toISOString(),
-            results_count: results.parts.length,
+            results_count: results.results.length,
             total_parts: totalParts,
-            search_type: 'system_search_enhanced'
+            search_type: 'system_search_enhanced',
+            plate: results.plate,
+            webhook_date: results.date
           };
           
           // Use enhanced helper integration
-          const updatedHelper = updateHelperWithPartsSearch(results.parts, searchContext);
+          const updatedHelper = updateHelperWithPartsSearch(results.results, searchContext);
           
           if (updatedHelper) {
-            console.log(`✅ Enhanced: Saved ${results.parts.length} search result groups to helper`);
+            console.log(`✅ Enhanced: Saved ${results.results.length} search result groups to helper`);
             
             // Trigger helper update broadcast if available
             if (typeof window.broadcastHelperUpdate === 'function') {
               window.broadcastHelperUpdate(['parts_search'], 'parts_search_module');
             }
-            
-            // Integration with damage centers if in wizard mode
-            if (typeof window.capturePartsWebhookResponse === 'function') {
-              window.capturePartsWebhookResponse(results, searchContext);
-            }
           }
         } catch (e) {
           console.error('❌ Error saving search results with enhanced system:', e);
         }
-      } else if (results && results.success && results.no_results) {
+      } else if (results && results.plate && results.results && results.results.length === 0) {
         alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
-        console.log('ℹ️ Search completed with no results');
-      } else if (results && !results.success) {
-        alert(`❌ שגיאה בחיפוש: ${results.error || 'שגיאה לא ידועה'}`);
+        console.log('ℹ️ Search completed with no results for plate:', results.plate);
+      } else if (results && results.error) {
+        alert(`❌ שגיאה בחיפוש: ${results.error}`);
         console.error('❌ Search failed:', results.error);
       } else {
         alert('⚠️ תגובה לא צפויה מהשרת');

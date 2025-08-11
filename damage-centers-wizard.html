@@ -892,53 +892,86 @@
           <p class="step-description">הגדרת מספר מוקד הנזק ובחירת מיקום הנזק ברכב</p>
         </div>
 
-        <!-- ✅ NEW: Clear Helper Data Option -->
-        <div class="data-management-section" style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; border: 1px solid #f59e0b;">
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-            <div style="flex: 1; min-width: 200px;">
-              <h4 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">🗂️ ניהול נתוני מוקדי נזק קיימים</h4>
-              <p style="color: #a16207; margin: 0; font-size: 14px;">ניתן לנקות נתונים של מוקד נזק קיים כדי להתחיל מחדש</p>
+        <!-- ✅ ENHANCED: Comprehensive Damage Center Management -->
+        <div class="damage-center-management-section" style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #0369a1; box-shadow: 0 4px 12px rgba(3, 105, 161, 0.1);">
+          <div style="margin-bottom: 20px;">
+            <h4 style="color: #0c4a6e; margin: 0 0 8px 0; font-size: 18px; font-weight: bold;">🔧 ניהול מוקדי נזק</h4>
+            <p style="color: #075985; margin: 0; font-size: 14px;">צור מוקד נזק חדש או ערוך מוקד קיים</p>
+          </div>
+          
+          <!-- Existing Centers Display -->
+          <div id="existingCentersDisplay" style="margin-bottom: 20px; display: none;">
+            <div style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #bae6fd;">
+              <h5 style="color: #0369a1; margin: 0 0 12px 0; font-size: 16px;">📋 מוקדי נזק קיימים</h5>
+              <div id="existingCentersList" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <select id="existingDamageCenterSelect" style="
-                padding: 8px 12px; 
-                border: 1px solid #d97706; 
-                border-radius: 6px; 
-                background: white;
-                color: #92400e;
-                font-size: 14px;
-                min-width: 150px;
-              ">
-                <option value="">בחר מוקד נזק לניקוי</option>
-              </select>
-              <button type="button" onclick="clearDamageCenterData()" style="
-                background: #dc2626; 
-                color: white; 
-                border: none; 
-                padding: 8px 16px; 
-                border-radius: 6px; 
-                cursor: pointer; 
-                font-weight: bold;
-                font-size: 14px;
-                transition: background 0.3s ease;
-              " 
-              onmouseover="this.style.background='#b91c1c'" 
-              onmouseout="this.style.background='#dc2626'">
-                🗑️ נקה נתונים
-              </button>
-              <button type="button" onclick="debugHelperStructure()" style="
-                background: #6b7280; 
-                color: white; 
-                border: none; 
-                padding: 8px 12px; 
-                border-radius: 6px; 
-                cursor: pointer; 
-                font-size: 12px;
-                margin-right: 5px;
-              " 
-              title="הצג מבנה נתונים להדרכה">
-                🔍 Debug
-              </button>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;">
+            <button type="button" onclick="createNewDamageCenter()" style="
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+              color: white; 
+              border: none; 
+              padding: 12px 20px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-weight: bold;
+              font-size: 14px;
+              transition: all 0.3s ease;
+              box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+            " 
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(16, 185, 129, 0.4)'" 
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'">
+              ➕ צור מוקד נזק חדש
+            </button>
+            
+            <select id="existingDamageCenterSelect" style="
+              padding: 10px 14px; 
+              border: 2px solid #0369a1; 
+              border-radius: 8px; 
+              background: white;
+              color: #0c4a6e;
+              font-size: 14px;
+              min-width: 180px;
+              cursor: pointer;
+            " onchange="handleExistingCenterSelection()">
+              <option value="">בחר מוקד קיים לעריכה</option>
+            </select>
+            
+            <button type="button" onclick="editSelectedDamageCenter()" style="
+              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+              color: white; 
+              border: none; 
+              padding: 10px 16px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-weight: bold;
+              font-size: 14px;
+              transition: all 0.3s ease;
+            ">
+              ✏️ ערוך
+            </button>
+            
+            <button type="button" onclick="clearDamageCenterData()" style="
+              background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); 
+              color: white; 
+              border: none; 
+              padding: 10px 16px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-weight: bold;
+              font-size: 14px;
+              transition: all 0.3s ease;
+            ">
+              🗑️ מחק
+            </button>
+          </div>
+          
+          <!-- Status Display -->
+          <div id="damageCenterStatus" style="margin-top: 15px; padding: 12px; background: #dcfce7; border-radius: 8px; border: 1px solid #16a34a; display: none;">
+            <div style="color: #15803d; font-weight: bold; text-align: center;" id="statusMessage">
+              ✅ מוכן ליצירת מוקד נזק חדש
             </div>
           </div>
         </div>
@@ -1891,22 +1924,22 @@
         return false;
       }
       
-      if (workRows.length === 0) {
-        showUserNotification('אנא הוסף לפחות עבודה אחת', 'warning');
-        return false;
-      }
+      // ✅ REMOVED: No longer require at least one work - allow 0 works
+      // Allow proceeding with 0 works - user can create damage center with only parts/repairs
       
-      let hasValidWork = false;
+      // Only validate existing work rows for data completeness (if any exist)
+      let hasIncompleteWork = false;
       workRows.forEach(row => {
         const type = row.querySelector('.work-type')?.value;
         const cost = parseFloat(row.querySelector('.work-cost')?.value) || 0;
-        if (type && cost > 0) {
-          hasValidWork = true;
+        // If user started filling work but didn't complete it
+        if ((type && cost === 0) || (!type && cost > 0)) {
+          hasIncompleteWork = true;
         }
       });
       
-      if (!hasValidWork) {
-        showUserNotification('אנא הזן לפחות עבודה אחת עם עלות', 'warning');
+      if (hasIncompleteWork) {
+        showUserNotification('אנא השלם את פרטי העבודות שהתחלת או הסר אותן', 'warning');
         return false;
       }
       
@@ -1925,23 +1958,27 @@
     function validateRepairsData() {
       const repairRows = document.querySelectorAll('.repair-row');
       
-      if (repairRows.length === 0) {
-        const confirm = window.confirm('לא הוגדרו תיקונים. האם אתה בטוח שברצונך להמשיך בלי תיקונים?');
-        return confirm;
-      }
+      // ✅ REMOVED: No longer require at least one repair - allow 0 repairs
+      // Allow proceeding with 0 repairs - user can create damage center with only works/parts
       
-      let hasValidRepair = false;
+      // Only validate existing repair rows for data completeness (if any exist)
+      let hasIncompleteRepair = false;
       repairRows.forEach(row => {
         const name = row.querySelector('.repair-name')?.value.trim();
         const cost = parseFloat(row.querySelector('.repair-cost')?.value) || 0;
         const desc = row.querySelector('.repair-desc')?.value.trim();
-        if (name && cost > 0 && desc) {
-          hasValidRepair = true;
+        
+        // If user started filling repair but didn't complete all required fields
+        const hasAnyData = name || cost > 0 || desc;
+        const isComplete = name && cost > 0 && desc;
+        
+        if (hasAnyData && !isComplete) {
+          hasIncompleteRepair = true;
         }
       });
       
-      if (!hasValidRepair) {
-        showUserNotification('אנא הזן לפחות תיקון אחד עם שם, עלות ותיאור', 'warning');
+      if (hasIncompleteRepair) {
+        showUserNotification('אנא השלם את פרטי התיקונים שהתחלת או הסר אותם', 'warning');
         return false;
       }
       
@@ -2697,6 +2734,21 @@
       // Update module data
       moduleData.repairs = repairs;
       
+      // ✅ FIXED: Also save to helper.damage_assessment.repairs for real-time persistence
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.repairs = {
+          repairs_items: repairs,
+          updated_at: new Date().toISOString(),
+          updated_by: 'wizard_repairs_realtime'
+        };
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log(`✅ Saved ${repairs.length} repairs to helper.damage_assessment.repairs in real-time`);
+      } catch (error) {
+        console.error('❌ Failed to save repairs to helper:', error);
+      }
+      
       // ✅ FIXED: Update both internal display and wizard subtotal consistently
       const totalDisplay = document.getElementById('repairTotalDisplay');
       const totalAmount = document.getElementById('repairTotalAmount');
@@ -2760,6 +2812,27 @@
       damageCenterData.subtotal = subtotal;
       damageCenterData.vatAmount = vatAmount;
       damageCenterData.totalWithVat = totalWithVat;
+      
+      // ✅ FIXED: Also save totals to helper.damage_assessment.totals
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.totals = {
+          work_total: workTotal,
+          parts_total: partsTotal,
+          repairs_total: repairsTotal,
+          subtotal_without_vat: subtotal,
+          vat_amount: vatAmount,
+          total_with_vat: totalWithVat,
+          vat_percentage: vatPercentage,
+          calculated_at: new Date().toISOString(),
+          damage_center_id: damageCenterData.id || `center_${Date.now()}`
+        };
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Saved cost totals to helper.damage_assessment.totals');
+      } catch (error) {
+        console.error('❌ Failed to save totals to helper:', error);
+      }
       
       console.log('🧮 Calculated totals:', { workTotal, partsTotal, repairsTotal, subtotal, totalWithVat });
     }
@@ -3425,7 +3498,7 @@
       }
       
       // Clear existing options except the first one
-      select.innerHTML = '<option value="">בחר מוקד נזק לניקוי</option>';
+      select.innerHTML = '<option value="">בחר מוקד קיים לעריכה</option>';
       
       try {
         // ✅ ENHANCED: Try multiple sources for helper data
@@ -3591,6 +3664,9 @@
         });
         
         console.log('✅ Populated damage centers dropdown');
+        
+        // ✅ NEW: Also populate the visual existing centers display
+        updateExistingCentersDisplay(damageCenters);
         
       } catch (error) {
         console.error('❌ Error populating damage centers:', error);
@@ -3812,113 +3888,225 @@
       });
     });
     
-    // ✅ DEBUG: Helper structure debugging function
-    function debugHelperStructure() {
-      console.log('🔍 Debug: Showing helper structure for troubleshooting');
+    // ✅ NEW: Update existing centers visual display
+    function updateExistingCentersDisplay(damageCenters) {
+      const displayDiv = document.getElementById('existingCentersDisplay');
+      const listDiv = document.getElementById('existingCentersList');
+      
+      if (damageCenters.length === 0) {
+        displayDiv.style.display = 'none';
+        return;
+      }
+      
+      // Show the display section
+      displayDiv.style.display = 'block';
+      
+      // Create HTML for each center
+      const centersHTML = damageCenters.map((center, index) => {
+        const centerNumber = center.number || center.center_number || (index + 1);
+        const location = center.location || 'מיקום לא צוין';
+        const description = (center.description || center.damage_description || '').substring(0, 100);
+        const totalCost = center.calculations?.total_with_vat || center.totals?.total || 0;
+        
+        return `
+          <div style="
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 12px; 
+            background: #f8fafc; 
+            border-radius: 8px; 
+            border: 1px solid #e2e8f0;
+          ">
+            <div style="flex: 1;">
+              <div style="font-weight: bold; color: #1e40af; margin-bottom: 4px;">
+                מוקד ${centerNumber} - ${location}
+              </div>
+              ${description ? `<div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">${description}${description.length >= 100 ? '...' : ''}</div>` : ''}
+              <div style="font-size: 12px; color: #059669; font-weight: bold;">
+                ${totalCost > 0 ? `₪${totalCost.toLocaleString()}` : 'ללא עלות מתועדת'}
+              </div>
+            </div>
+            <div style="color: #6b7280; font-size: 12px;">
+              ${center.created_at ? new Date(center.created_at).toLocaleDateString('he-IL') : 'לא ידוע'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      listDiv.innerHTML = centersHTML;
+      
+      console.log(`✅ Updated existing centers display with ${damageCenters.length} centers`);
+    }
+    
+    // ✅ NEW: Create new damage center with sequential numbering
+    function createNewDamageCenter() {
+      console.log('➕ Creating new damage center...');
       
       try {
-        const helperString = sessionStorage.getItem('helper');
-        if (!helperString) {
-          alert('לא נמצאו נתונים ב-sessionStorage');
+        // Get current helper data to determine next number
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let existingCenters = [];
+        
+        // Find existing centers using same logic as populateExistingDamageCenters
+        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+          existingCenters = helper.damage_assessment.centers;
+        }
+        
+        // Calculate next sequential number
+        const nextNumber = existingCenters.length + 1;
+        
+        // Reset wizard for new center
+        currentStep = 1;
+        damageCenterData = {
+          id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          number: nextNumber,
+          created_at: new Date().toISOString(),
+          mode: 'create_new'
+        };
+        
+        // Clear form data
+        moduleData = { works: [], parts: [], repairs: [] };
+        
+        // Update UI
+        document.getElementById('damageCenterNumber').value = nextNumber;
+        document.getElementById('locationSelect').value = '';
+        document.getElementById('damageDescription').value = '';
+        document.getElementById('otherLocationInput').value = '';
+        document.getElementById('otherLocationGroup').style.display = 'none';
+        
+        // Show status
+        updateStatusMessage(`מוכן ליצירת מוקד נזק ${nextNumber}`, 'success');
+        
+        // Show step 1
+        showStep(1);
+        
+        console.log(`✅ Ready to create damage center ${nextNumber}`);
+        
+      } catch (error) {
+        console.error('❌ Error creating new damage center:', error);
+        alert('שגיאה ביצירת מוקד נזק חדש');
+      }
+    }
+    
+    // ✅ NEW: Handle existing center selection change
+    function handleExistingCenterSelection() {
+      const select = document.getElementById('existingDamageCenterSelect');
+      const selectedValue = select.value;
+      
+      if (selectedValue) {
+        console.log('🔍 Selected existing center for edit:', selectedValue);
+        updateStatusMessage('מוקד נזק נבחר - לחץ "ערוך" לעריכה', 'info');
+      } else {
+        updateStatusMessage('', 'hidden');
+      }
+    }
+    
+    // ✅ NEW: Edit selected damage center
+    function editSelectedDamageCenter() {
+      const select = document.getElementById('existingDamageCenterSelect');
+      const selectedValue = select.value;
+      
+      if (!selectedValue) {
+        alert('אנא בחר מוקד נזק לעריכה');
+        return;
+      }
+      
+      console.log('✏️ Loading damage center for editing:', selectedValue);
+      
+      try {
+        // Get helper data
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let existingCenters = [];
+        
+        // Find existing centers
+        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+          existingCenters = helper.damage_assessment.centers;
+        }
+        
+        // Find the selected center
+        const centerToEdit = existingCenters.find(center => 
+          (center.id === selectedValue) || 
+          (center.center_id === selectedValue) ||
+          (center.block_id === selectedValue)
+        );
+        
+        if (!centerToEdit) {
+          alert('מוקד הנזק הנבחר לא נמצא');
           return;
         }
         
-        const helper = JSON.parse(helperString);
+        // Load center data into wizard
+        damageCenterData = {
+          ...centerToEdit,
+          mode: 'edit_existing',
+          original_id: centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
+        };
         
-        // Create a summary of the helper structure
-        let summary = '📊 מבנה נתוני Helper:\n\n';
+        // Load module data
+        moduleData = {
+          works: centerToEdit.work_items || centerToEdit.works || [],
+          parts: centerToEdit.parts_items || centerToEdit.parts || [],
+          repairs: centerToEdit.repairs_items || centerToEdit.repairs || []
+        };
         
-        // Look for potential damage center arrays
-        const potentialArrays = [];
+        // Fill form fields
+        document.getElementById('damageCenterNumber').value = centerToEdit.number || centerToEdit.center_number || '';
+        document.getElementById('locationSelect').value = centerToEdit.location || '';
+        document.getElementById('damageDescription').value = centerToEdit.description || centerToEdit.damage_description || '';
         
-        for (const [key, value] of Object.entries(helper)) {
-          if (Array.isArray(value)) {
-            const info = `${key}: [${value.length} items]`;
-            summary += `• ${info}\n`;
-            
-            if (value.length > 0) {
-              const firstItem = value[0];
-              if (firstItem && typeof firstItem === 'object') {
-                const hasProperties = [];
-                if (firstItem.center_number) hasProperties.push('center_number');
-                if (firstItem.damage_description) hasProperties.push('damage_description');
-                if (firstItem.location) hasProperties.push('location');
-                if (firstItem.number) hasProperties.push('number');
-                if (firstItem.selected_location) hasProperties.push('selected_location');
-                if (firstItem.work_items) hasProperties.push('work_items');
-                if (firstItem.parts_items) hasProperties.push('parts_items');
-                if (firstItem.repairs_items) hasProperties.push('repairs_items');
-                
-                if (hasProperties.length > 0) {
-                  potentialArrays.push({key, count: value.length, properties: hasProperties});
-                  summary += `  └─ 🎯 נראה כמו מוקדי נזק (${hasProperties.join(', ')})\n`;
-                }
-              }
-            }
-          } else if (value && typeof value === 'object') {
-            summary += `• ${key}: {object}\n`;
-            
-            // Check nested arrays
-            for (const [nestedKey, nestedValue] of Object.entries(value)) {
-              if (Array.isArray(nestedValue)) {
-                summary += `  └─ ${nestedKey}: [${nestedValue.length} items]\n`;
-                
-                if (nestedValue.length > 0) {
-                  const firstItem = nestedValue[0];
-                  if (firstItem && typeof firstItem === 'object') {
-                    const hasProperties = [];
-                    if (firstItem.center_number) hasProperties.push('center_number');
-                    if (firstItem.damage_description) hasProperties.push('damage_description');
-                    if (firstItem.location) hasProperties.push('location');
-                    if (firstItem.number) hasProperties.push('number');
-                    if (firstItem.selected_location) hasProperties.push('selected_location');
-                    if (firstItem.work_items) hasProperties.push('work_items');
-                    if (firstItem.parts_items) hasProperties.push('parts_items');
-                    if (firstItem.repairs_items) hasProperties.push('repairs_items');
-                    
-                    if (hasProperties.length > 0) {
-                      potentialArrays.push({key: `${key}.${nestedKey}`, count: nestedValue.length, properties: hasProperties});
-                      summary += `     └─ 🎯 נראה כמו מוקדי נזק (${hasProperties.join(', ')})\n`;
-                    }
-                  }
-                }
-              }
-            }
-          }
+        // Handle custom location
+        if (centerToEdit.location === 'other' && centerToEdit.customLocation) {
+          document.getElementById('otherLocationInput').value = centerToEdit.customLocation;
+          document.getElementById('otherLocationGroup').style.display = 'block';
         }
         
-        summary += '\n🔍 מועמדים למוקדי נזק:\n';
-        if (potentialArrays.length === 0) {
-          summary += '❌ לא נמצאו מערכי נתונים שנראים כמו מוקדי נזק\n';
-        } else {
-          potentialArrays.forEach(array => {
-            summary += `✅ ${array.key}: ${array.count} מוקדים (${array.properties.join(', ')})\n`;
-          });
-        }
+        // Show status and start wizard
+        updateStatusMessage(`עורך מוקד נזק ${centerToEdit.number || centerToEdit.center_number}`, 'edit');
+        currentStep = 1;
+        showStep(1);
         
-        // Show the summary
-        alert(summary);
-        
-        // Also log to console for detailed inspection
-        console.log('🔍 Complete helper structure:', helper);
-        console.log('📊 Potential damage center arrays:', potentialArrays);
-        
-        // ✅ ENHANCED: After showing debug, try to populate dropdown again
-        console.log('🔄 Re-running populateExistingDamageCenters after debug...');
-        setTimeout(() => {
-          populateExistingDamageCenters(true);
-        }, 1000);
+        console.log('✅ Damage center loaded for editing:', centerToEdit);
         
       } catch (error) {
-        console.error('❌ Error in debug function:', error);
-        alert('שגיאה בקריאת נתוני Debug: ' + error.message);
+        console.error('❌ Error loading damage center for editing:', error);
+        alert('שגיאה בטעינת מוקד הנזק לעריכה');
       }
+    }
+    
+    // ✅ NEW: Update status message
+    function updateStatusMessage(message, type = 'info') {
+      const statusDiv = document.getElementById('damageCenterStatus');
+      const messageDiv = document.getElementById('statusMessage');
+      
+      if (type === 'hidden' || !message) {
+        statusDiv.style.display = 'none';
+        return;
+      }
+      
+      const styles = {
+        success: { bg: '#dcfce7', border: '#16a34a', color: '#15803d', icon: '✅' },
+        info: { bg: '#dbeafe', border: '#3b82f6', color: '#1e40af', icon: '💡' },
+        edit: { bg: '#fef3c7', border: '#f59e0b', color: '#92400e', icon: '✏️' },
+        error: { bg: '#fecaca', border: '#dc2626', color: '#991b1b', icon: '❌' }
+      };
+      
+      const style = styles[type] || styles.info;
+      
+      statusDiv.style.background = style.bg;
+      statusDiv.style.borderColor = style.border;
+      statusDiv.style.display = 'block';
+      
+      messageDiv.style.color = style.color;
+      messageDiv.textContent = `${style.icon} ${message}`;
     }
     
     // Make functions globally available
     window.populateExistingDamageCenters = populateExistingDamageCenters;
     window.clearDamageCenterData = clearDamageCenterData;
-    window.debugHelperStructure = debugHelperStructure;
+    window.createNewDamageCenter = createNewDamageCenter;
+    window.handleExistingCenterSelection = handleExistingCenterSelection;
+    window.editSelectedDamageCenter = editSelectedDamageCenter;
   </script>
 </body>
 </html>
