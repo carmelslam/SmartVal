@@ -835,6 +835,52 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         } catch (e) {
           console.error('❌ Error saving search results with enhanced system:', e);
         }
+      } else if (results && results.success && results.message === 'Accepted') {
+        // Handle "Accepted" responses (processing started)
+        alert('✅ החיפוש התקבל לעיבוד! התוצאות יגיעו בקרוב...');
+        console.log('⏳ Search accepted for processing');
+      } else if (results && results.success && results.no_results) {
+        // Handle processing responses - check for embedded JSON
+        if (results.message && results.message.includes('"plate"') && results.message.includes('"results"')) {
+          try {
+            console.log('🔄 Parsing embedded JSON from response message...');
+            const jsonMatch = results.message.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsedData = JSON.parse(jsonMatch[0]);
+              console.log('✅ Found embedded JSON data:', parsedData);
+              
+              if (parsedData.results && parsedData.results.length > 0) {
+                // Process the actual results
+                displayComprehensiveSearchResults(parsedData.results);
+                const totalParts = parsedData.results.reduce((sum, group) => {
+                  return sum + (group.search_results ? group.search_results.length : 0);
+                }, 0);
+                alert(`✅ נמצאו ${parsedData.results.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות!`);
+                
+                // Forward webhook results to damage centers wizard
+                if (window.parent !== window && window.parent.postMessage) {
+                  window.parent.postMessage({
+                    type: 'partsSearchResults',
+                    results: parsedData.results,
+                    plate: parsedData.plate,
+                    date: parsedData.search_date || parsedData.date,
+                    source: 'parts_search_webhook'
+                  }, '*');
+                  console.log('📤 Forwarded webhook results to damage centers wizard');
+                }
+              } else {
+                alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
+                console.log('ℹ️ Search completed with no results');
+              }
+            }
+          } catch (parseError) {
+            console.error('❌ Error parsing embedded JSON:', parseError);
+            alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
+          }
+        } else {
+          alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
+          console.log('ℹ️ Search completed with no results');
+        }
       } else if (results && results.plate && results.results && results.results.length === 0) {
         alert('🔍 החיפוש הושלם אך לא נמצאו תוצאות מתאימות');
         console.log('ℹ️ Search completed with no results for plate:', results.plate);
@@ -842,8 +888,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         alert(`❌ שגיאה בחיפוש: ${results.error}`);
         console.error('❌ Search failed:', results.error);
       } else {
-        alert('⚠️ תגובה לא צפויה מהשרת');
         console.warn('⚠️ Unexpected response format:', results);
+        alert('⚠️ התקבלה תגובה בפורמט לא צפוי מהשרת');
       }
     }).catch(error => {
       console.error('Search error:', error);
@@ -1711,6 +1757,32 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   }
 
   window.loadSavedPartsFromHelper = loadSavedPartsFromHelper;
+
+  // ✅ MISSING FUNCTION: Define updatePartNameOptions for dropdown change
+  function updatePartNameOptions() {
+    const groupSelect = document.getElementById('part_group');
+    const nameSelect = document.getElementById('part_name');
+    
+    if (!groupSelect || !nameSelect) return;
+    
+    const selectedGroup = groupSelect.value;
+    nameSelect.innerHTML = '<option value="" disabled selected>בחר שם חלק</option>';
+    
+    if (selectedGroup && window.PARTS_BANK && window.PARTS_BANK[selectedGroup]) {
+      window.PARTS_BANK[selectedGroup].forEach(partName => {
+        const option = document.createElement('option');
+        option.value = partName;
+        option.textContent = partName;
+        nameSelect.appendChild(option);
+      });
+    }
+    
+    console.log(`🔄 Updated part name options for group: ${selectedGroup}`);
+  }
+
+  // Make functions globally available
+  window.updateSelectedPartsList = updateSelectedPartsList;
+  window.updatePartNameOptions = updatePartNameOptions;
 
   const autofillFields = [
     'plate', 'manufacturer', 'model', 'trim', 'year',
