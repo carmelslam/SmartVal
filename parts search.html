@@ -871,6 +871,72 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
 </script>
 <script type="module">
   import { sendPartSearch, sendSearchResultFile } from './webhook.js';
+  
+  // ✅ NEW: Listen for messages from damage centers wizard
+  window.addEventListener('message', function(event) {
+    console.log('📨 Parts search received message:', event.data);
+    
+    switch(event.data.type) {
+      case 'damageCenterContext':
+        handleWizardContext(event.data);
+        break;
+      case 'wizardReady':
+        console.log('✅ Wizard is ready, parts search module loaded');
+        // Send ready confirmation back
+        if (window.parent && window.parent.postMessage) {
+          window.parent.postMessage({
+            type: 'moduleReady',
+            module: 'partsSearch',
+            source: 'parts_search_iframe'
+          }, '*');
+        }
+        break;
+    }
+  });
+  
+  // ✅ NEW: Handle wizard context data
+  function handleWizardContext(contextData) {
+    console.log('🎯 Handling wizard context:', contextData);
+    
+    try {
+      // Pre-fill vehicle data if available
+      if (contextData.vehicleData) {
+        const vehicle = contextData.vehicleData;
+        
+        if (vehicle.plate) document.getElementById('plate').value = vehicle.plate;
+        if (vehicle.manufacturer) document.getElementById('manufacturer').value = vehicle.manufacturer;
+        if (vehicle.model) document.getElementById('model').value = vehicle.model;
+        if (vehicle.year) document.getElementById('year').value = vehicle.year;
+        if (vehicle.engine_volume) document.getElementById('engine_volume').value = vehicle.engine_volume;
+        if (vehicle.chassis) document.getElementById('vin').value = vehicle.chassis;
+        
+        console.log('✅ Pre-filled vehicle data from wizard context');
+      }
+      
+      // Show wizard-specific UI hints
+      showWizardModeUI(contextData);
+      
+    } catch (error) {
+      console.error('❌ Failed to handle wizard context:', error);
+    }
+  }
+  
+  // ✅ NEW: Show wizard-specific UI
+  function showWizardModeUI(contextData) {
+    // Add wizard indication to page
+    const container = document.querySelector('.container');
+    if (container) {
+      const wizardIndicator = document.createElement('div');
+      wizardIndicator.style.cssText = `
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px;
+        text-align: center; font-weight: bold;
+      `;
+      wizardIndicator.innerHTML = `🧭 מודול חיפוש חלפים - אשף מוקדי נזק (מוקד ${contextData.damageCenterId || 'חדש'})`;
+      
+      container.insertBefore(wizardIndicator, container.firstChild);
+    }
+  }
   import { dev_credentials } from './credentials-vault.js';
 
   window.sendPartSearch = sendPartSearch;
@@ -1271,6 +1337,26 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           }
         } catch (e) {
           console.error('Error communicating with estimate builder:', e);
+        }
+      }
+      
+      // ✅ NEW: Check if running inside damage centers wizard iframe
+      if (window.parent !== window && window.parent.postMessage) {
+        try {
+          // Send search results back to wizard
+          window.parent.postMessage({
+            type: 'partsSearchResults',
+            results: helper.parts_search?.current_session?.results || [],
+            selectedParts: selectedParts,
+            query: document.getElementById('free_query')?.value || '',
+            source: 'parts_search_iframe'
+          }, '*');
+          
+          console.log(`📤 Sent search results to wizard: ${selectedParts.length} parts selected`);
+          alert(`✅ נשמרו ${selectedParts.length} חלקים והועברו לאשף מוקדי הנזק`);
+          return;
+        } catch (e) {
+          console.error('Error communicating with damage centers wizard:', e);
         }
       }
       

@@ -277,6 +277,71 @@ form button {
   </div>
 
   <script>
+    // ✅ NEW: Listen for messages from damage centers wizard
+    window.addEventListener('message', function(event) {
+      console.log('📨 Parts required received message:', event.data);
+      
+      switch(event.data.type) {
+        case 'damageCenterContext':
+          handleWizardContext(event.data);
+          break;
+        case 'wizardReady':
+          console.log('✅ Wizard ready signal received');
+          // Send ready confirmation back
+          if (window.parent && window.parent.postMessage) {
+            window.parent.postMessage({
+              type: 'moduleReady',
+              module: 'parts',
+              source: 'parts_required_iframe'
+            }, '*');
+          }
+          break;
+      }
+    });
+    
+    // ✅ NEW: Handle wizard context
+    function handleWizardContext(contextData) {
+      console.log('🎯 Parts required handling wizard context:', contextData);
+      
+      try {
+        // Update global helper with wizard data
+        if (contextData.helper) {
+          window.helper = contextData.helper;
+          globalHelper = contextData.helper;
+        }
+        
+        // Pre-fill with existing selected parts
+        if (contextData.selectedParts && contextData.selectedParts.length > 0) {
+          contextData.selectedParts.forEach(part => {
+            addPartFromData(part);
+          });
+          console.log(`✅ Pre-filled ${contextData.selectedParts.length} parts from wizard`);
+        }
+        
+        // Show wizard mode indicator
+        showWizardModeUI(contextData);
+        
+      } catch (error) {
+        console.error('❌ Failed to handle wizard context:', error);
+      }
+    }
+    
+    // ✅ NEW: Show wizard-specific UI
+    function showWizardModeUI(contextData) {
+      const container = document.querySelector('.container');
+      if (container) {
+        const wizardIndicator = document.createElement('div');
+        wizardIndicator.style.cssText = `
+          background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+          color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px;
+          text-align: center; font-weight: bold;
+        `;
+        wizardIndicator.innerHTML = `🔧 בחירת חלפים - אשף מוקדי נזק (מוקד ${contextData.damageCenter?.number || 'חדש'})`;
+        
+        container.insertBefore(wizardIndicator, container.firstChild);
+      }
+    }
+    
     // Authentication check
     const auth = sessionStorage.getItem("auth");
     if (!auth) {
@@ -702,24 +767,37 @@ function savePartsData() {
       // Get suggestions from multiple sources
       const suggestions = [];
       
-      // Search in parts search results from helper (primary source)
-      if (window.helper && window.helper.parts_search && window.helper.parts_search.search_results) {
-        window.helper.parts_search.search_results.forEach(part => {
-          if (part.name && part.name.toLowerCase().includes(query.toLowerCase()) ||
-              part.description && part.description.toLowerCase().includes(query.toLowerCase())) {
-            suggestions.push({ 
-              name: part.name || part.description, 
-              desc: part.description || part.name, 
-              source: part.condition || part.source || 'לא צוין',
-              price: part.price || '',
-              supplier: part.supplier || '',
-              location: part.location || '',
-              availability: part.availability || '',
-              searchResult: true // Mark as from search results
-            });
-          }
-        });
+      // ✅ FIXED: Search in parts search results from helper (primary source)
+      // Try both old and new helper structures for compatibility
+      const searchResults = [];
+      
+      // New structure (from wizard integration)
+      if (window.helper && window.helper.parts_search && window.helper.parts_search.current_session && window.helper.parts_search.current_session.results) {
+        searchResults.push(...window.helper.parts_search.current_session.results);
       }
+      
+      // Legacy structure (backwards compatibility)
+      if (window.helper && window.helper.parts_search && window.helper.parts_search.search_results) {
+        searchResults.push(...window.helper.parts_search.search_results);
+      }
+      
+      // Process search results
+      searchResults.forEach(part => {
+        if ((part.name && part.name.toLowerCase().includes(query.toLowerCase())) ||
+            (part.description && part.description.toLowerCase().includes(query.toLowerCase())) ||
+            (part.desc && part.desc.toLowerCase().includes(query.toLowerCase()))) {
+          suggestions.push({ 
+            name: part.name || part.description || part.desc, 
+            desc: part.description || part.desc || part.name, 
+            source: part.condition || part.source || 'לא צוין',
+            price: part.price || '',
+            supplier: part.supplier || '',
+            location: part.location || '',
+            availability: part.availability || '',
+            searchResult: true // Mark as from search results
+          });
+        }
+      });
       
       // Search in stored helper results
       // REMOVED: No localStorage fallback - helper only
@@ -818,9 +896,80 @@ function savePartsData() {
       return { parts, total };
     }
     
-    // Auto-calculate when data changes
-    document.addEventListener('change', calculatePartsTotals);
-    document.addEventListener('input', calculatePartsTotals);
+    // ✅ NEW: Send parts selection updates to wizard
+    function sendPartsUpdateToWizard() {
+      if (window.parent && window.parent.postMessage && window.parent !== window) {
+        try {
+          const partsData = calculatePartsTotals();
+          
+          // Separate selected and unselected parts
+          const allSearchResults = [];
+          
+          // Get all search results from helper
+          if (globalHelper.parts_search && globalHelper.parts_search.current_session && globalHelper.parts_search.current_session.results) {
+            allSearchResults.push(...globalHelper.parts_search.current_session.results);
+          }
+          
+          // Identify unselected parts (from search results that weren't selected)
+          const selectedPartNames = partsData.parts.map(p => p.name.toLowerCase());
+          const unselectedParts = allSearchResults.filter(result => 
+            !selectedPartNames.includes((result.name || result.description || '').toLowerCase())
+          );
+          
+          // Send update to wizard
+          window.parent.postMessage({
+            type: 'partsSelectionUpdate',
+            selectedParts: partsData.parts,
+            unselectedParts: unselectedParts,
+            total: partsData.total,
+            source: 'parts_required_iframe'
+          }, '*');
+          
+          console.log(`📤 Sent parts update to wizard: ${partsData.parts.length} selected, ${unselectedParts.length} unselected`);
+          
+        } catch (error) {
+          console.error('❌ Failed to send parts update to wizard:', error);
+        }
+      }
+    }
+    
+    // Auto-calculate when data changes and send updates to wizard
+    document.addEventListener('change', function() {
+      calculatePartsTotals();
+      sendPartsUpdateToWizard();
+    });
+    document.addEventListener('input', function() {
+      calculatePartsTotals();
+      sendPartsUpdateToWizard();
+    });
+    
+    // ✅ NEW: Helper function to add part from data (for pre-filling from wizard)
+    function addPartFromData(partData) {
+      const partsList = document.getElementById('partsList');
+      const newRow = document.createElement('div');
+      newRow.className = 'row';
+      
+      newRow.innerHTML = `
+        <div class="input-wrap">
+          <input type="text" class="name" placeholder="שם החלק" required oninput="suggestPart(this)" value="${partData.name || partData.part || ''}">
+          <select class="suggest-dropdown" style="display:none;"></select>
+        </div>
+        <input type="text" class="desc" placeholder="תיאור" required oninput="suggestPart(this)" value="${partData.description || partData.desc || ''}">
+        <input type="text" class="price" placeholder="מחיר" required value="${partData.price || ''}">
+        <select class="source" required>
+          <option value="">מקור</option>
+          <option value="חליפי/מקורי" ${partData.source === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
+          <option value="חליפי/משומש" ${partData.source === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
+          <option value="חדש מקורי" ${partData.source === 'חדש מקורי' ? 'selected' : ''}>חדש מקורי</option>
+          <option value="חליפי" ${partData.source === 'חליפי' ? 'selected' : ''}>חליפי</option>
+          <option value="משומש" ${partData.source === 'משומש' ? 'selected' : ''}>משומש</option>
+          <option value="ריק" ${partData.source === 'ריק' ? 'selected' : ''}>ריק</option>
+        </select>
+        <button type="button" onclick="removePart(this)">הסר</button>
+      `;
+      
+      partsList.appendChild(newRow);
+    }
     
     // ...existing code for addPart, etc...
   </script>

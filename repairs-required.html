@@ -412,7 +412,26 @@
         
       } catch (error) {
         console.error('❌ Failed to save repairs data to helper:', error);
-        alert('שגיאה בשמירת הנתונים');
+        
+        // Enhanced error feedback
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+          background: #fee2e2;
+          border: 2px solid #ef4444;
+          color: #dc2626;
+          padding: 12px;
+          border-radius: 8px;
+          margin: 10px 0;
+          font-weight: bold;
+          text-align: center;
+        `;
+        errorDiv.textContent = '❌ שגיאה בשמירת הנתונים. אנא בדוק את הנתונים ונסה שוב.';
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(errorDiv, container.querySelector('.footer'));
+        
+        // Auto-remove error message after 5 seconds
+        setTimeout(() => errorDiv.remove(), 5000);
       }
     }
 
@@ -484,10 +503,14 @@
         document.querySelector('.container').insertBefore(totalDisplay, document.querySelector('.footer'));
       }
       
+      // ✅ FIXED: Use proper VAT calculation instead of hardcoded 1.17
+      const vatPercentage = 17; // Default VAT percentage  
+      const vatMultiplier = 1 + (vatPercentage / 100);
+      
       totalDisplay.innerHTML = `
         <div style="font-size: 18px; color: #e65100; margin-bottom: 5px;">סיכום תיקונים</div>
         <div style="font-size: 24px; color: #bf360c;">₪${total.toLocaleString()}</div>
-        <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
+        <div style="font-size: 14px; color: #424242;">כולל מע"מ (${vatPercentage}%): ₪${(total * vatMultiplier).toLocaleString()}</div>
       `;
       
       return { repairs, total };
