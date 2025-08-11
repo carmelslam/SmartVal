@@ -1517,12 +1517,15 @@
           helper = {};
         }
         
-        // Initialize damage_centers structure if needed
-        helper.damage_centers = helper.damage_centers || {
-          centers: [],
-          current_center_id: null,
-          active_center_count: 0,
-          totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 }
+        // FIXED: Use unified damage_assessment.centers structure - remove duplicate damage_centers
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.centers = helper.damage_assessment.centers || [];
+        
+        // Initialize totals structure in the correct location
+        helper.damage_assessment.totals = helper.damage_assessment.totals || {
+          all_centers_subtotal: 0, 
+          all_centers_vat: 0, 
+          all_centers_total: 0
         };
         
         // Save current step data based on which step we're on
@@ -3247,9 +3250,49 @@
     }
     
     function getDamageCentersFromHelper() {
-      if (typeof window.helper !== 'undefined' && window.helper.damage_centers) {
-        return window.helper.damage_centers;
+      // FIXED: Comprehensive search for damage centers in all possible locations
+      let helper;
+      
+      // Try window.helper first, then sessionStorage
+      if (typeof window.helper !== 'undefined' && window.helper) {
+        helper = window.helper;
+      } else {
+        try {
+          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.error('❌ Failed to parse helper from sessionStorage:', e);
+          return [];
+        }
       }
+      
+      // Check all possible locations where damage centers might be stored
+      // 1. Primary location: helper.damage_assessment.centers (official location)
+      if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+        console.log('✅ Found damage centers in helper.damage_assessment.centers:', helper.damage_assessment.centers.length);
+        return helper.damage_assessment.centers;
+      }
+      
+      // 2. Legacy location: helper.damage_centers.centers
+      if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
+        console.log('✅ Found damage centers in helper.damage_centers.centers (migrating):', helper.damage_centers.centers.length);
+        // Migrate to official location
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.centers = helper.damage_centers.centers;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        return helper.damage_centers.centers;
+      }
+      
+      // 3. Legacy location: helper.damage_centers (direct array)
+      if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+        console.log('✅ Found damage centers in helper.damage_centers (direct array, migrating):', helper.damage_centers.length);
+        // Migrate to official location
+        helper.damage_assessment = helper.damage_assessment || {};
+        helper.damage_assessment.centers = helper.damage_centers;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        return helper.damage_centers;
+      }
+      
+      console.log('❌ No damage centers found in any location');
       return [];
     }
     
@@ -3680,79 +3723,15 @@
         let damageCenters = [];
         let dataSource = '';
         
-        // ✅ ENHANCED: More comprehensive search for damage centers data
-        console.log('🔍 Full helper structure debug:', helper);
+        // ✅ FIXED: Use unified getDamageCentersFromHelper function instead of duplicating logic
+        console.log('🔍 Using getDamageCentersFromHelper to find damage centers...');
         
-        // ✅ CORRECTED: Check the actual correct location first (damage_assessment.centers)
-        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
-          damageCenters = helper.damage_assessment.centers;
-          dataSource = 'damage_assessment.centers';
-          console.log('✅ Found damage centers in CORRECT location helper.damage_assessment.centers:', damageCenters);
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
-          damageCenters = helper.damage_blocks;
-          dataSource = 'damage_blocks';
-          console.log('✅ Found damage centers in LEGACY location helper.damage_blocks:', damageCenters);
-          console.log('🔍 First damage block structure:', damageCenters[0]);
-        } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
-          damageCenters = helper.damage_centers;
-          dataSource = 'damage_centers';
-          console.log('✅ Found damage centers in helper.damage_centers:', damageCenters);
-        }
-        
-        // ✅ NEW: Check for other possible damage center structures
-        else if (helper.damage_assessment && Array.isArray(helper.damage_assessment) && helper.damage_assessment.length > 0) {
-          // Sometimes damage_assessment itself is an array
-          damageCenters = helper.damage_assessment;
-          dataSource = 'damage_assessment_array';
-          console.log('✅ Found damage centers in helper.damage_assessment (array format):', damageCenters);
-        }
-        
-        // ✅ NEW: Search for any object that looks like damage centers
-        else {
-          console.log('🔍 No standard damage centers found, searching for damage center patterns...');
-          
-          // Look for any arrays that might contain damage center data
-          for (const [key, value] of Object.entries(helper)) {
-            if (Array.isArray(value) && value.length > 0) {
-              // Check if array items look like damage centers
-              const firstItem = value[0];
-              if (firstItem && typeof firstItem === 'object') {
-                // Look for damage center indicators
-                if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
-                    firstItem.number || firstItem.selected_location || firstItem.description ||
-                    firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
-                  damageCenters = value;
-                  dataSource = key;
-                  console.log(`✅ Found potential damage centers in helper.${key}:`, damageCenters);
-                  break;
-                }
-              }
-            }
-          }
-          
-          // Also check nested objects
-          if (damageCenters.length === 0) {
-            for (const [key, value] of Object.entries(helper)) {
-              if (value && typeof value === 'object' && !Array.isArray(value)) {
-                for (const [nestedKey, nestedValue] of Object.entries(value)) {
-                  if (Array.isArray(nestedValue) && nestedValue.length > 0) {
-                    const firstItem = nestedValue[0];
-                    if (firstItem && typeof firstItem === 'object') {
-                      if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
-                          firstItem.number || firstItem.selected_location || firstItem.description ||
-                          firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
-                        damageCenters = nestedValue;
-                        dataSource = `${key}.${nestedKey}`;
-                        console.log(`✅ Found potential damage centers in helper.${key}.${nestedKey}:`, damageCenters);
-                        break;
-                      }
-                    }
-                  }
-                }
-                if (damageCenters.length > 0) break;
-              }
-            }
-          }
+        damageCenters = getDamageCentersFromHelper();
+        if (damageCenters.length > 0) {
+          dataSource = 'getDamageCentersFromHelper';
+          console.log('✅ Found damage centers via getDamageCentersFromHelper:', damageCenters.length);
+        } else {
+          console.log('❌ No damage centers found via getDamageCentersFromHelper');
         }
         
         console.log(`📊 Found ${damageCenters.length} damage centers in ${dataSource}`);
