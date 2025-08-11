@@ -515,6 +515,26 @@
         const centerDiv = createDamageCenterCard(center);
         container.appendChild(centerDiv);
         
+        // FIXED: Calculate subtotals if missing, then accumulate
+        if (!center.subtotals && (center.work_items || center.parts_items || center.repairs_items)) {
+          // Calculate subtotals from raw data if missing
+          const worksTotal = (center.work_items || []).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+          const partsTotal = (center.parts_items || []).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+          const repairsTotal = (center.repairs_items || []).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+          const subtotal = worksTotal + partsTotal + repairsTotal;
+          const vatAmount = subtotal * 0.18; // Default 18% VAT
+          
+          center.subtotals = {
+            works: worksTotal,
+            parts: partsTotal,
+            repairs: repairsTotal,
+            subtotal: subtotal,
+            vat_amount: vatAmount,
+            total_with_vat: subtotal + vatAmount
+          };
+          console.log(`📊 Calculated missing subtotals for center ${center.number}: ₪${subtotal + vatAmount}`);
+        }
+        
         // Accumulate totals
         if (center.subtotals) {
           totalWorks += center.subtotals.works || 0;
@@ -550,12 +570,20 @@
           <div class="center-totals">
             <div class="totals-grid">
               <div class="total-item">
-                <div class="total-label">סך הכל</div>
-                <div class="total-amount">₪${formatNumber(center.calculations?.total_with_vat || 0)}</div>
+                <div class="total-label">עבודות</div>
+                <div class="total-amount">₪${formatNumber(center.subtotals?.works || 0)}</div>
               </div>
               <div class="total-item">
-                <div class="total-label">מע"מ (17%)</div>
-                <div class="total-amount">₪${formatNumber(center.calculations?.vat_amount || 0)}</div>
+                <div class="total-label">חלפים</div>
+                <div class="total-amount">₪${formatNumber(center.subtotals?.parts || 0)}</div>
+              </div>
+              <div class="total-item">
+                <div class="total-label">תיקונים</div>
+                <div class="total-amount">₪${formatNumber(center.subtotals?.repairs || 0)}</div>
+              </div>
+              <div class="total-item">
+                <div class="total-label">מע"מ (18%)</div>
+                <div class="total-amount">₪${formatNumber(center.subtotals?.vat_amount || 0)}</div>
               </div>
             </div>
             

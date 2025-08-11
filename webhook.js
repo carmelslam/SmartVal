@@ -1,4 +1,5 @@
-import { updateHelper, updateHelperAndSession, broadcastHelperUpdate, processIncomingData } from './helper.js';
+// ✅ FIXED: Use global window functions instead of imports (helper.js no longer exports)
+// Functions are available as: window.updateHelper, window.updateHelperAndSession, etc.
 
 // ✅ Centralized Webhook Handler – Clean + Unified with Enhanced Data Capture
 export const WEBHOOKS = {
@@ -388,19 +389,19 @@ export async function sendToWebhook(id, payload) {
           // 🔧 CORE FIX: Skip webhook processing for OPEN_CASE_UI (handled by open-cases.html)
           if (id === 'OPEN_CASE_UI') {
             console.log('⏭️ Skipping webhook processing for OPEN_CASE_UI - handled by page-specific logic');
-          } else if (typeof processIncomingData === 'function') {
+          } else if (typeof window.processIncomingData === 'function') {
             console.log('🔄 CRITICAL: Processing webhook data via processIncomingData...');
             console.log('📊 Data type:', typeof actualData, 'Webhook ID:', id);
             
             // Ensure we process the data even if it's a string
             const dataToProcess = (typeof actualData === 'string') ? { Body: actualData } : actualData;
             
-            await processIncomingData(dataToProcess, id);
+            await window.processIncomingData(dataToProcess, id);
             console.log('✅ CRITICAL: Data processed via processIncomingData successfully');
-          } else if (typeof updateHelperAndSession === 'function') {
+          } else if (typeof window.updateHelperAndSession === 'function') {
             // Fallback for simple updates
             Object.keys(actualData).forEach(key => {
-              updateHelperAndSession(key, actualData[key]);
+              window.updateHelperAndSession(key, actualData[key]);
             });
             console.log('✅ Data processed and helper updated (fallback)');
           } else {
@@ -783,7 +784,7 @@ export function sendPartSearch(data) {
         console.log('💾 Saving search results to helper with enhanced structure');
         
         // Update helper with comprehensive parts search data
-        updateHelperAndSession("parts_search", {
+        window.updateHelperAndSession("parts_search", {
           current_session: {
             results: processedResults.results,
             search_context: processedResults.search_context,
@@ -874,7 +875,7 @@ window.WEBHOOKS = WEBHOOKS;
 // Handle incoming webhook data from Make.com
 function handleWebhookData(data) {
   Object.entries(data).forEach(([key, value]) => {
-    updateHelperAndSession(key, value);
+    window.updateHelperAndSession(key, value);
   });
 }
 

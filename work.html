@@ -471,10 +471,32 @@ function saveWorkData() {
     helper.damage_assessment = helper.damage_assessment || {};
     helper.damage_assessment.works = helper.damage_assessment.works || {};
     
-    // Store works data in proper helper structure
+    // FIXED: Accumulate work items instead of overwriting
+    const existingWorkItems = helper.damage_assessment.works?.work_items || [];
+    
+    // Merge new works with existing ones, avoiding duplicates
+    const mergedWorkItems = [...existingWorkItems];
+    
+    works.forEach(newWork => {
+      const existingIndex = mergedWorkItems.findIndex(existing => 
+        existing.work === newWork.work && existing.description === newWork.description
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing work item
+        mergedWorkItems[existingIndex] = { ...mergedWorkItems[existingIndex], ...newWork };
+        console.log('🔄 Updated existing work item:', newWork.work);
+      } else {
+        // Add new work item
+        mergedWorkItems.push(newWork);
+        console.log('➕ Added new work item:', newWork.work);
+      }
+    });
+    
+    // Store accumulated works data in proper helper structure
     helper.damage_assessment.works = {
       takana389: takana,
-      work_items: works,
+      work_items: mergedWorkItems,
       updated_at: new Date().toISOString(),
       updated_by: 'work_module'
     };

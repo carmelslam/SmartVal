@@ -560,9 +560,31 @@ function savePartsData() {
     helper.damage_assessment = helper.damage_assessment || {};
     helper.damage_assessment.parts = helper.damage_assessment.parts || {};
     
-    // Store parts data in proper helper structure
+    // FIXED: Accumulate parts items instead of overwriting
+    const existingPartsItems = helper.damage_assessment.parts?.parts_items || [];
+    
+    // Merge new parts with existing ones, avoiding duplicates
+    const mergedPartsItems = [...existingPartsItems];
+    
+    validParts.forEach(newPart => {
+      const existingIndex = mergedPartsItems.findIndex(existing => 
+        existing.part_name === newPart.part_name && existing.description === newPart.description
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing parts item
+        mergedPartsItems[existingIndex] = { ...mergedPartsItems[existingIndex], ...newPart };
+        console.log('🔄 Updated existing parts item:', newPart.part_name);
+      } else {
+        // Add new parts item
+        mergedPartsItems.push(newPart);
+        console.log('➕ Added new parts item:', newPart.part_name);
+      }
+    });
+    
+    // Store accumulated parts data in proper helper structure
     helper.damage_assessment.parts = {
-      parts_items: validParts,
+      parts_items: mergedPartsItems,
       updated_at: new Date().toISOString(),
       updated_by: 'parts_required_module'
     };
@@ -744,9 +766,31 @@ function savePartsData() {
           helper.damage_assessment = helper.damage_assessment || {};
           helper.damage_assessment.parts = helper.damage_assessment.parts || {};
           
-          // Store parts data in legacy damage_assessment structure
+          // FIXED: Accumulate parts items in legacy damage_assessment structure
+          const existingLegacyPartsItems = helper.damage_assessment.parts?.parts_items || [];
+          
+          // Merge new parts with existing ones, avoiding duplicates
+          const mergedLegacyPartsItems = [...existingLegacyPartsItems];
+          
+          validParts.forEach(newPart => {
+            const existingIndex = mergedLegacyPartsItems.findIndex(existing => 
+              existing.part_name === newPart.part_name && existing.description === newPart.description
+            );
+            
+            if (existingIndex >= 0) {
+              // Update existing parts item
+              mergedLegacyPartsItems[existingIndex] = { ...mergedLegacyPartsItems[existingIndex], ...newPart };
+              console.log('🔄 Updated existing legacy parts item:', newPart.part_name);
+            } else {
+              // Add new parts item
+              mergedLegacyPartsItems.push(newPart);
+              console.log('➕ Added new legacy parts item:', newPart.part_name);
+            }
+          });
+          
+          // Store accumulated parts data in legacy damage_assessment structure
           helper.damage_assessment.parts = {
-            parts_items: validParts,
+            parts_items: mergedLegacyPartsItems,
             updated_at: new Date().toISOString(),
             updated_by: 'parts_required_module'
           };

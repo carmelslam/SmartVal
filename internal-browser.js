@@ -212,7 +212,16 @@
       <button class="browser-btn" onclick="hideCredentials()" style="margin-top: 10px; width: 100%;">סגור</button>
     </div>
   `;
-  document.body.appendChild(browser);
+  
+  // ✅ FIXED: Check if document.body exists before appending
+  if (document.body) {
+    document.body.appendChild(browser);
+  } else {
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(browser);
+    });
+  }
 
   // Global variables
   let currentSite = null;
@@ -808,7 +817,13 @@
       </button>
     `;
     
-    document.body.appendChild(menu);
+    // ✅ FIXED: Check if document.body exists before appending
+    if (document.body) {
+      document.body.appendChild(menu);
+    } else {
+      console.warn('⚠️ document.body not available for browser menu');
+      return;
+    }
     
     // Remove menu when clicking outside
     setTimeout(() => {

@@ -378,9 +378,31 @@
         helper.damage_assessment = helper.damage_assessment || {};
         helper.damage_assessment.repairs = helper.damage_assessment.repairs || {};
         
-        // Store repairs data in proper helper structure
+        // FIXED: Accumulate repairs items instead of overwriting
+        const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
+        
+        // Merge new repairs with existing ones, avoiding duplicates
+        const mergedRepairsItems = [...existingRepairsItems];
+        
+        repairs.forEach(newRepair => {
+          const existingIndex = mergedRepairsItems.findIndex(existing => 
+            existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
+          );
+          
+          if (existingIndex >= 0) {
+            // Update existing repairs item
+            mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
+            console.log('🔄 Updated existing repairs item:', newRepair.repair_type);
+          } else {
+            // Add new repairs item
+            mergedRepairsItems.push(newRepair);
+            console.log('➕ Added new repairs item:', newRepair.repair_type);
+          }
+        });
+        
+        // Store accumulated repairs data in proper helper structure
         helper.damage_assessment.repairs = {
-          repairs_items: repairs,
+          repairs_items: mergedRepairsItems,
           updated_at: new Date().toISOString(),
           updated_by: 'repairs_required_module'
         };

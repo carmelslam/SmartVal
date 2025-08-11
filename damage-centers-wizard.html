@@ -1243,6 +1243,8 @@
         
         // Update damage_assessment with current module data
         helper.damage_assessment = helper.damage_assessment || {};
+        // FIXED: Ensure centers array is initialized for proper sequential numbering
+        helper.damage_assessment.centers = helper.damage_assessment.centers || [];
         
         if (moduleData.works.length > 0) {
           helper.damage_assessment.work = {
@@ -1254,16 +1256,60 @@
         }
         
         if (moduleData.parts.length > 0) {
+          // FIXED: Accumulate parts items instead of overwriting
+          const existingPartsItems = helper.damage_assessment.parts?.parts_items || [];
+          
+          // Merge new parts with existing ones, avoiding duplicates
+          const mergedPartsItems = [...existingPartsItems];
+          
+          moduleData.parts.forEach(newPart => {
+            const existingIndex = mergedPartsItems.findIndex(existing => 
+              existing.part_name === newPart.part_name && existing.description === newPart.description
+            );
+            
+            if (existingIndex >= 0) {
+              // Update existing parts item
+              mergedPartsItems[existingIndex] = { ...mergedPartsItems[existingIndex], ...newPart };
+              console.log('🔄 Updated existing parts item in wizard:', newPart.part_name);
+            } else {
+              // Add new parts item
+              mergedPartsItems.push(newPart);
+              console.log('➕ Added new parts item in wizard:', newPart.part_name);
+            }
+          });
+          
           helper.damage_assessment.parts = {
-            parts_items: moduleData.parts,
+            parts_items: mergedPartsItems,
             updated_at: new Date().toISOString(),
             updated_by: 'wizard_collection'
           };
         }
         
         if (moduleData.repairs.length > 0) {
+          // FIXED: Accumulate repairs items instead of overwriting
+          const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
+          
+          // Merge new repairs with existing ones, avoiding duplicates
+          const mergedRepairsItems = [...existingRepairsItems];
+          
+          moduleData.repairs.forEach(newRepair => {
+            const existingIndex = mergedRepairsItems.findIndex(existing => 
+              existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
+            );
+            
+            if (existingIndex >= 0) {
+              // Update existing repairs item
+              mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
+              console.log('🔄 Updated existing repairs item in wizard:', newRepair.repair_type);
+            } else {
+              // Add new repairs item
+              mergedRepairsItems.push(newRepair);
+              console.log('➕ Added new repairs item in wizard:', newRepair.repair_type);
+            }
+          });
+          
           helper.damage_assessment.repairs = {
-            repairs_items: moduleData.repairs,
+            repairs_items: mergedRepairsItems,
             updated_at: new Date().toISOString(),
             updated_by: 'wizard_collection'
           };
@@ -1370,9 +1416,21 @@
     }
     
     function generateDamageCenterNumber() {
-      // Auto-generate damage center number
+      // FIXED: Auto-generate damage center number starting at 1 with proper sequencing
       const existingCenters = getDamageCentersFromHelper();
-      const nextNumber = existingCenters.length + 1;
+      
+      // Get highest existing number to ensure proper sequencing
+      let highestNumber = 0;
+      existingCenters.forEach(center => {
+        const centerNumber = parseInt(center.number || center.center_number || 0);
+        if (centerNumber > highestNumber) {
+          highestNumber = centerNumber;
+        }
+      });
+      
+      const nextNumber = highestNumber + 1;
+      console.log(`🔢 Generated damage center number: ${nextNumber} (existing centers: ${existingCenters.length}, highest: ${highestNumber})`);
+      
       document.getElementById('damageCenterNumber').value = nextNumber;
       damageCenterData.number = nextNumber;
     }
@@ -2788,8 +2846,28 @@
       try {
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         helper.damage_assessment = helper.damage_assessment || {};
+        // FIXED: Accumulate repairs items in real-time instead of overwriting
+        const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
+        
+        // Merge new repairs with existing ones, avoiding duplicates
+        const mergedRepairsItems = [...existingRepairsItems];
+        
+        repairs.forEach(newRepair => {
+          const existingIndex = mergedRepairsItems.findIndex(existing => 
+            existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
+          );
+          
+          if (existingIndex >= 0) {
+            // Update existing repairs item
+            mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
+          } else {
+            // Add new repairs item
+            mergedRepairsItems.push(newRepair);
+          }
+        });
+        
         helper.damage_assessment.repairs = {
-          repairs_items: repairs,
+          repairs_items: mergedRepairsItems,
           updated_at: new Date().toISOString(),
           updated_by: 'wizard_repairs_realtime'
         };
@@ -3096,6 +3174,27 @@
         newCenter.totals.subtotal = total;
         newCenter.totals.vat_amount = total * (vatPercentage / 100);
         newCenter.totals.total_with_vat = total + newCenter.totals.vat_amount;
+        
+        // FIXED: Also create subtotals structure expected by summary page
+        newCenter.subtotals = {
+          works: workTotal,
+          parts: partsTotal,
+          repairs: repairsTotal,
+          subtotal: total,
+          vat_amount: total * (vatPercentage / 100),
+          total_with_vat: total + (total * (vatPercentage / 100))
+        };
+        
+        // FIXED: Also create calculations structure expected by summary page  
+        newCenter.calculations = {
+          works_subtotal: workTotal,
+          parts_subtotal: partsTotal,
+          repairs_subtotal: repairsTotal,
+          subtotal_before_vat: total,
+          vat_percentage: vatPercentage,
+          vat_amount: total * (vatPercentage / 100),
+          total_with_vat: total + (total * (vatPercentage / 100))
+        };
         
         // ✅ FIXED: Save to proper helper structure
         if (!helper.damage_assessment) {
@@ -4008,8 +4107,15 @@
           existingCenters = helper.damage_assessment.centers;
         }
         
-        // Calculate next sequential number
-        const nextNumber = existingCenters.length + 1;
+        // FIXED: Calculate next sequential number properly starting at 1
+        let highestNumber = 0;
+        existingCenters.forEach(center => {
+          const centerNumber = parseInt(center.number || center.center_number || 0);
+          if (centerNumber > highestNumber) {
+            highestNumber = centerNumber;
+          }
+        });
+        const nextNumber = highestNumber + 1;
         
         // Reset wizard for new center
         currentStep = 1;
