@@ -909,22 +909,6 @@
           
           <!-- Action Buttons -->
           <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;">
-            <button type="button" onclick="createNewDamageCenter()" style="
-              background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-              color: white; 
-              border: none; 
-              padding: 12px 20px; 
-              border-radius: 8px; 
-              cursor: pointer; 
-              font-weight: bold;
-              font-size: 14px;
-              transition: all 0.3s ease;
-              box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-            " 
-            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(16, 185, 129, 0.4)'" 
-            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'">
-              ➕ צור מוקד נזק חדש
-            </button>
             
             <select id="existingDamageCenterSelect" style="
               padding: 10px 14px; 
@@ -1114,6 +1098,48 @@
             <div class="vat-info">
               ללא מע"מ: <span id="totalWithoutVat">₪0</span> | 
               כולל מע"מ: <span id="totalWithVat">₪0</span>
+            </div>
+          </div>
+          
+          <!-- Add New Damage Center Option at End of Flow -->
+          <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 12px; border: 2px dashed #10b981;">
+            <div style="text-align: center; margin-bottom: 15px;">
+              <h4 style="color: #374151; margin: 0 0 8px 0;">האם תרצה ליצור מוקד נזק נוסף?</h4>
+              <p style="color: #6b7280; margin: 0; font-size: 14px;">לחץ כדי ליצור מוקד נזק חדש או סיים להשלמת האקספרטיזה</p>
+            </div>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" onclick="createNewDamageCenter()" style="
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                font-weight: bold;
+                font-size: 16px;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+              " 
+              onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(16, 185, 129, 0.4)'" 
+              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
+                ➕ צור מוקד נזק חדש
+              </button>
+              <button type="button" onclick="finishAndGoToSummary()" style="
+                background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                font-weight: bold;
+                font-size: 16px;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+              " 
+              onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(30, 64, 175, 0.4)'" 
+              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(30, 64, 175, 0.3)'">
+                ✅ סיים ועבור לסיכום האקספרטיזה
+              </button>
             </div>
           </div>
         </div>
@@ -1362,8 +1388,8 @@
           // Load module if needed
           loadStepModule(currentStep);
         } else {
-          // Final step - complete damage center
-          completeDamageCenter();
+          // Final step - save damage center but stay on step 7 for user to choose next action
+          saveDamageCenter();
         }
       }
     }
@@ -2898,18 +2924,23 @@
       console.log('📊 Updated module subtotals:', { workTotal, partsTotal, repairsTotal, vatPercentage });
     }
     
-    function completeDamageCenter() {
+    function saveDamageCenter() {
       // ✅ FIXED: Final calculation before saving to ensure totals are accurate
       calculateTotals();
       
       // Save damage center to helper
       saveDamageCenterToHelper();
       
-      // Show completion message and navigate to expertise summary
-      showUserNotification('מוקד הנזק נוצר ונשמר בהצלחה! מעבר לסיכום האקספרטיזה...', 'success', 3000);
-      
-      // Navigate to expertise summary as the next step in the workflow
-      window.location.href = "expertise-summary.html";
+      // Show completion message but stay on step 7 for user choice
+      showUserNotification('מוקד הנזק נוצר ונשמר בהצלחה! בחר פעולה הבאה למטה.', 'success', 3000);
+    }
+    
+    // New function for finishing and going to expertise summary
+    function finishAndGoToSummary() {
+      showUserNotification('מסיים ועובר לסיכום האקספרטיזה...', 'info', 2000);
+      setTimeout(() => {
+        window.location.href = "expertise-summary.html";
+      }, 1500);
     }
     
     function saveDamageCenterToHelper() {
@@ -4107,6 +4138,7 @@
     window.createNewDamageCenter = createNewDamageCenter;
     window.handleExistingCenterSelection = handleExistingCenterSelection;
     window.editSelectedDamageCenter = editSelectedDamageCenter;
+    window.finishAndGoToSummary = finishAndGoToSummary;
   </script>
 </body>
 </html>
