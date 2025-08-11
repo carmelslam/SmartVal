@@ -138,7 +138,17 @@
 <input type="number" id="part_quantity" placeholder="כמות" min="1" value="1">
 
 <button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
-<ul id="selected_parts_list" style="text-align:right; padding-right: 0; font-size: 14px;"></ul>
+
+<!-- Selected Parts List Header and Display (matching screenshot design) -->
+<div style="margin-top: 20px; background: #c5f5e8; padding: 15px; border-radius: 8px; border: 1px solid #10b981;">
+  <div style="text-align: center; margin-bottom: 10px;">
+    <h3 id="selected_parts_header" style="color: #047857; margin: 0; font-size: 16px; font-weight: bold;">
+      רשימת חלקים נבחרים <span id="selected_parts_count">0</span>
+    </h3>
+    <p style="color: #059669; margin: 5px 0 0 0; font-size: 12px;">החלקים ישמרו נתונים לצורך חיפוש באתרים החיצוניים</p>
+  </div>
+  <ul id="selected_parts_list" style="text-align:right; padding-right: 0; font-size: 14px; list-style: none; margin: 0;"></ul>
+</div>
 
 <!-- Parts List Management Buttons -->
 <div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center; gap: 10px;">
@@ -876,6 +886,12 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     btn.textContent = originalText;
     btn.disabled = false;
   });
+  
+  // ✅ FIXED: Initialize selected parts list and load saved parts from helper
+  loadSavedPartsFromHelper();
+  if (typeof updateSelectedPartsList === 'function') {
+    updateSelectedPartsList();
+  }
 });
 
 </script>
@@ -1396,6 +1412,12 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   function updateSelectedPartsList() {
     const listUI = document.getElementById('selected_parts_list');
     const managementButtons = document.getElementById('parts_management_buttons');
+    const countDisplay = document.getElementById('selected_parts_count');
+    
+    // Update count display
+    if (countDisplay) {
+      countDisplay.textContent = selectedParts.length;
+    }
     
     if (selectedParts.length === 0) {
       listUI.innerHTML = '<li style="color: #6b7280; font-style: italic; padding: 10px; text-align: center;">אין חלקים ברשימה</li>';
@@ -1646,6 +1668,49 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   window.deletePart = deletePart;
   window.clearAllParts = clearAllParts;
   window.duplicateSelectedPart = duplicateSelectedPart;
+
+  // ✅ NEW: Load saved selected parts from helper on page initialization
+  function loadSavedPartsFromHelper() {
+    console.log('📦 Loading saved selected parts from helper...');
+    
+    try {
+      const helperString = sessionStorage.getItem('helper');
+      if (helperString) {
+        const helper = JSON.parse(helperString);
+        
+        // Load selected parts from helper.parts_search.selected_parts
+        if (helper.parts_search && helper.parts_search.selected_parts && Array.isArray(helper.parts_search.selected_parts)) {
+          const savedParts = helper.parts_search.selected_parts;
+          console.log(`✅ Found ${savedParts.length} saved selected parts in helper`);
+          
+          // Clear current array and load saved parts
+          selectedParts.length = 0;
+          savedParts.forEach(part => {
+            selectedParts.push({
+              id: part.id || Date.now() + Math.random(),
+              group: part.group || 'לא צוין',
+              name: part.name || 'לא צוין',
+              qty: part.qty || '1',
+              source: part.source || 'מקורי',
+              price: part.price || '',
+              supplier: part.supplier || '',
+              added_at: part.added_at || new Date().toISOString()
+            });
+          });
+          
+          console.log(`📦 Loaded ${selectedParts.length} parts from helper storage`);
+        } else {
+          console.log('ℹ️ No saved selected parts found in helper');
+        }
+      } else {
+        console.log('ℹ️ No helper data found in session storage');
+      }
+    } catch (error) {
+      console.error('❌ Error loading saved parts from helper:', error);
+    }
+  }
+
+  window.loadSavedPartsFromHelper = loadSavedPartsFromHelper;
 
   const autofillFields = [
     'plate', 'manufacturer', 'model', 'trim', 'year',
