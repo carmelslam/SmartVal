@@ -2555,8 +2555,12 @@
           };
           
           // Save to helper immediately using helper API
+          console.log('🔍 Checking if window.createDamageCenter exists:', typeof window.createDamageCenter);
+          console.log('🔍 Available window functions:', Object.keys(window).filter(k => k.includes('Damage')));
+          
           if (typeof window.createDamageCenter === 'function') {
             const centerId = window.createDamageCenter(damageCenter);
+            console.log('🔍 createDamageCenter returned:', centerId);
             if (centerId) {
               console.log('✅ Damage center created in step 1:', centerId);
               damageCenterData.id = centerId;
@@ -2579,10 +2583,23 @@
               
               showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
             } else {
-              console.error('❌ Failed to create damage center in step 1');
+              console.error('❌ Failed to create damage center in step 1 - createDamageCenter returned:', centerId);
             }
           } else {
-            console.error('❌ Helper API not available');
+            console.error('❌ Helper API not available - window.createDamageCenter is:', typeof window.createDamageCenter);
+            // Fallback: create damage center directly in helper structure
+            console.log('📝 Creating damage center directly in helper structure as fallback');
+            if (!helper.damage_centers) {
+              helper.damage_centers = [];
+            }
+            helper.damage_centers.push(damageCenter);
+            
+            damageCenterData.id = damageCenter.id;
+            damageCenterData.number = nextNumber;
+            damageCenterData.location = location;
+            
+            showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
+            console.log('✅ Damage center created directly in helper structure');
           }
           
           console.log('✅ Step 1 - Damage center created and saved to helper:', location);
