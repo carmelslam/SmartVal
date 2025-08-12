@@ -474,21 +474,39 @@
     function loadDamageCentersSummary() {
       console.log('📊 Loading damage centers summary...');
       
-      // Load from comprehensive damage_centers structure
-      let helper = {};
-      try {
-        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      } catch (e) {
-        console.warn('Failed to parse helper from sessionStorage');
-      }
-      
-      if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
-        damageCenters = helper.damage_centers.centers;
+      // Load from comprehensive damage_centers structure using new helper API
+      if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+        const assessment = window.buildComprehensiveDamageAssessment();
+        if (assessment && assessment.centers) {
+          damageCenters = assessment.centers;
+          grandTotals = assessment.grand_totals;
+          console.log('✅ Loaded comprehensive damage assessment:', assessment);
+        } else {
+          console.log('⚠️ No comprehensive assessment available');
+          damageCenters = [];
+        }
       } else {
-        damageCenters = [];
+        // Fallback to direct helper access
+        let helper = {};
+        try {
+          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.warn('Failed to parse helper from sessionStorage');
+        }
+        
+        // Check the new canonical structure first
+        if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+          damageCenters = helper.damage_centers;
+        } else if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
+          damageCenters = helper.damage_centers.centers;
+        } else if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+          damageCenters = helper.damage_assessment.centers;
+        } else {
+          damageCenters = [];
+        }
       }
       
-      console.log(`📊 Loaded ${damageCenters.length} damage blocks:`, damageCenters);
+      console.log(`📊 Loaded ${damageCenters.length} damage centers:`, damageCenters);
       
       // Hide loading
       document.getElementById('loadingState').style.display = 'none';
@@ -563,33 +581,33 @@
         </div>
         
         <div class="damage-center-body">
-          ${createSimpleItemsSection('עבודות נדרשות', center.work_items || [], '🔧')}
-          ${createSimpleItemsSection('חלפים נדרשים', center.parts_items || [], '🔩')}
-          ${createSimpleItemsSection('תיקונים נדרשים', center.repairs_items || [], '🔨')}
+          ${createSimpleItemsSection('עבודות נדרשות', center.works?.items || center.work_items || [], '🔧')}
+          ${createSimpleItemsSection('חלפים נדרשים', center.parts?.items || center.parts_items || center.parts_required || [], '🔩')}
+          ${createSimpleItemsSection('תיקונים נדרשים', center.repairs?.items || center.repairs_items || [], '🔨')}
           
           <div class="center-totals">
             <div class="totals-grid">
               <div class="total-item">
                 <div class="total-label">עבודות</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.works || 0)}</div>
+                <div class="total-amount">₪${formatNumber(center.totals?.works_subtotal || center.works?.subtotal || center.subtotals?.works || 0)}</div>
               </div>
               <div class="total-item">
                 <div class="total-label">חלפים</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.parts || 0)}</div>
+                <div class="total-amount">₪${formatNumber(center.totals?.parts_subtotal || center.parts?.subtotal || center.subtotals?.parts || 0)}</div>
               </div>
               <div class="total-item">
                 <div class="total-label">תיקונים</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.repairs || 0)}</div>
+                <div class="total-amount">₪${formatNumber(center.totals?.repairs_subtotal || center.repairs?.subtotal || center.subtotals?.repairs || 0)}</div>
               </div>
               <div class="total-item">
-                <div class="total-label">מע"מ (18%)</div>
-                <div class="total-amount">₪${formatNumber(center.subtotals?.vat_amount || 0)}</div>
+                <div class="total-label">מע"מ (17%)</div>
+                <div class="total-amount">₪${formatNumber(center.totals?.vat_amount || center.subtotals?.vat_amount || 0)}</div>
               </div>
             </div>
             
             <div class="center-final-total">
               <div class="center-final-label">סה"כ מוקד נזק</div>
-              <div class="center-final-amount">₪${formatNumber(center.subtotals?.total_with_vat || 0)}</div>
+              <div class="center-final-amount">₪${formatNumber(center.totals?.center_total_with_vat || center.subtotals?.total_with_vat || 0)}</div>
             </div>
           </div>
         </div>

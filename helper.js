@@ -643,6 +643,210 @@ window.syncDamageAssessmentCenters = function() {
   }
 };
 
+/**
+ * Build comprehensive damage assessment with ALL details from ALL damage centers
+ * This creates the complete JSON structure with detailed breakdown by center
+ */
+window.buildComprehensiveDamageAssessment = function() {
+  console.log('🏗️ Building comprehensive damage assessment with ALL damage center details...');
+  
+  try {
+    const allCenters = window.getDamageCenters();
+    
+    if (allCenters.length === 0) {
+      console.log('⚠️ No damage centers found for assessment');
+      return {
+        meta: { total_centers: 0, error: 'No damage centers found' },
+        centers: [],
+        grand_totals: { total_works: 0, total_parts: 0, total_repairs: 0, subtotal_without_vat: 0, total_vat: 0, total_with_vat: 0 }
+      };
+    }
+    
+    const vatPercentage = window.helper.system?.vat_percentage || 17;
+    
+    const assessment = {
+      meta: {
+        generated_at: new Date().toISOString(),
+        total_centers: allCenters.length,
+        calculation_method: 'comprehensive_rollup_v2',
+        vat_percentage: vatPercentage,
+        last_updated: new Date().toISOString()
+      },
+      
+      // Detailed breakdown by damage center with ALL fucking details
+      centers: allCenters.map((center, index) => {
+        // Calculate totals for this specific center
+        const workTotal = (center.works || []).reduce((sum, work) => {
+          const qty = parseFloat(work.qty || 1);
+          const cost = parseFloat(work.cost || work.price || 0);
+          return sum + (qty * cost);
+        }, 0);
+        
+        const partsTotal = (center.parts_required || []).reduce((sum, part) => {
+          const qty = parseFloat(part.qty || 1);
+          const price = parseFloat(part.price || 0);
+          return sum + (qty * price);
+        }, 0);
+        
+        const repairsTotal = (center.repairs || []).reduce((sum, repair) => {
+          const qty = parseFloat(repair.qty || 1);
+          const cost = parseFloat(repair.cost || 0);
+          return sum + (qty * cost);
+        }, 0);
+        
+        const centerSubtotal = workTotal + partsTotal + repairsTotal;
+        const centerVat = centerSubtotal * (vatPercentage / 100);
+        const centerTotal = centerSubtotal + centerVat;
+        
+        return {
+          // Basic damage center info
+          number: center.number || (index + 1),
+          id: center.id,
+          location: center.location || center.area_label || 'מיקום לא צוין',
+          description: center.description || center.notes || 'תיאור לא צוין',
+          area_code: center.area_code || 'GENERAL',
+          severity: center.severity || 0,
+          damage_types: center.damage_types || [],
+          
+          // DETAILED works breakdown with ALL information
+          works: {
+            items: (center.works || []).map((work, workIndex) => ({
+              id: work.id || `work_${workIndex}`,
+              category: work.category || 'עבודה כללית',
+              description: work.comments || work.description || work.category || '',
+              hours: parseFloat(work.hours || 0),
+              hourly_rate: parseFloat(work.hourly_rate || 0),
+              quantity: parseFloat(work.qty || 1),
+              unit_cost: parseFloat(work.cost || work.price || 0),
+              total_cost: parseFloat(work.qty || 1) * parseFloat(work.cost || work.price || 0),
+              source: work.source || 'manual',
+              added_at: work.added_at || new Date().toISOString()
+            })),
+            subtotal: workTotal,
+            item_count: (center.works || []).length,
+            total_hours: (center.works || []).reduce((sum, work) => sum + (parseFloat(work.hours) || 0), 0)
+          },
+          
+          // DETAILED parts breakdown with ALL fucking JSON details from parts search
+          parts: {
+            items: (center.parts_required || []).map((part, partIndex) => ({
+              id: part.id || `part_${partIndex}`,
+              part_id: part.part_id || part.code || 'UNKNOWN',
+              name: part.name || part.description || 'חלק לא מזוהה',
+              quantity: parseInt(part.qty || 1),
+              unit_price: parseFloat(part.price || 0),
+              total_price: parseInt(part.qty || 1) * parseFloat(part.price || 0),
+              source: part.source || 'manual',
+              supplier: part.supplier || '',
+              oem_code: part.oem_code || '',
+              aftermarket_code: part.aftermarket_code || '',
+              // Include ALL webhook/search data
+              search_data: part.search_data || {},
+              webhook_data: part.webhook_data || {},
+              ocr_extracted: part.ocr_extracted || false,
+              verified: part.verified || false,
+              confidence_score: part.confidence_score || 0,
+              added_at: part.added_at || new Date().toISOString()
+            })),
+            subtotal: partsTotal,
+            item_count: (center.parts_required || []).length
+          },
+          
+          // DETAILED repairs breakdown with ALL information
+          repairs: {
+            items: (center.repairs || []).map((repair, repairIndex) => ({
+              id: repair.id || `repair_${repairIndex}`,
+              name: repair.name || repair.category || 'תיקון כללי',
+              description: repair.description || repair.comments || '',
+              quantity: parseFloat(repair.qty || 1),
+              unit_cost: parseFloat(repair.cost || 0),
+              total_cost: parseFloat(repair.qty || 1) * parseFloat(repair.cost || 0),
+              estimated_hours: parseFloat(repair.estimated_hours || 0),
+              priority: repair.priority || 'normal',
+              complexity: repair.complexity || 'medium',
+              added_at: repair.added_at || new Date().toISOString()
+            })),
+            subtotal: repairsTotal,
+            item_count: (center.repairs || []).length
+          },
+          
+          // Center totals with VAT breakdown
+          totals: {
+            works_subtotal: workTotal,
+            parts_subtotal: partsTotal,
+            repairs_subtotal: repairsTotal,
+            center_subtotal_without_vat: centerSubtotal,
+            vat_amount: centerVat,
+            center_total_with_vat: centerTotal
+          }
+        };
+      }),
+      
+      // GRAND TOTALS across ALL centers
+      grand_totals: {
+        total_works: 0,
+        total_parts: 0,
+        total_repairs: 0,
+        subtotal_without_vat: 0,
+        total_vat: 0,
+        total_with_vat: 0
+      },
+      
+      // SUMMARY by category across all centers
+      summary: {
+        works: { total_cost: 0, total_hours: 0, item_count: 0 },
+        parts: { total_cost: 0, total_items: 0, unique_parts: 0 },
+        repairs: { total_cost: 0, total_items: 0 }
+      }
+    };
+    
+    // Calculate GRAND TOTALS
+    assessment.centers.forEach(center => {
+      assessment.grand_totals.total_works += center.totals.works_subtotal;
+      assessment.grand_totals.total_parts += center.totals.parts_subtotal;
+      assessment.grand_totals.total_repairs += center.totals.repairs_subtotal;
+      assessment.grand_totals.subtotal_without_vat += center.totals.center_subtotal_without_vat;
+      assessment.grand_totals.total_vat += center.totals.vat_amount;
+      assessment.grand_totals.total_with_vat += center.totals.center_total_with_vat;
+      
+      // Update summary
+      assessment.summary.works.total_cost += center.totals.works_subtotal;
+      assessment.summary.works.total_hours += center.works.total_hours;
+      assessment.summary.works.item_count += center.works.item_count;
+      
+      assessment.summary.parts.total_cost += center.totals.parts_subtotal;
+      assessment.summary.parts.total_items += center.parts.item_count;
+      
+      assessment.summary.repairs.total_cost += center.totals.repairs_subtotal;
+      assessment.summary.repairs.total_items += center.repairs.item_count;
+    });
+    
+    // Count unique parts across all centers
+    const uniqueParts = new Set();
+    assessment.centers.forEach(center => {
+      center.parts.items.forEach(part => {
+        uniqueParts.add(part.part_id);
+      });
+    });
+    assessment.summary.parts.unique_parts = uniqueParts.size;
+    
+    // Save the comprehensive assessment to helper
+    window.helper.damage_assessment = window.helper.damage_assessment || {};
+    window.helper.damage_assessment.comprehensive = assessment;
+    window.helper.damage_assessment.totals = assessment.grand_totals;
+    window.helper.damage_assessment.last_updated = new Date().toISOString();
+    
+    console.log('✅ Built comprehensive damage assessment with ALL details:', assessment);
+    console.log(`📊 Summary: ${assessment.meta.total_centers} centers, ₪${assessment.grand_totals.total_with_vat.toLocaleString()} total`);
+    
+    return assessment;
+    
+  } catch (error) {
+    console.error('❌ Failed to build comprehensive damage assessment:', error);
+    return null;
+  }
+};
+
 
 // ============================================================================
 // 🔒 PLATE NUMBER PROTECTION SYSTEM
