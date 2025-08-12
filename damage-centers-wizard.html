@@ -1658,17 +1658,8 @@
     function nextStep() {
       if (validateCurrentStep()) {
         if (currentStep < totalSteps) {
-          // Save current step data
+          // Save current step data (now includes damage center creation/update)
           saveCurrentStepData();
-          
-          // CRITICAL: Create damage center immediately after step 1 (location + description)
-          if (currentStep === 1) {
-            createInitialDamageCenter();
-          }
-          // Update existing damage center after each step
-          else if (currentStep > 1 && damageCenterData.id) {
-            updateExistingDamageCenter();
-          }
           
           // Move to next step
           currentStep++;
@@ -2528,7 +2519,7 @@
       
       switch(currentStep) {
         case 1:
-          // Save location data - COMPLETE CAPTURE
+          // Save location data AND create damage center immediately
           const locationSelect = document.getElementById('locationSelect');
           const otherLocationInput = document.getElementById('otherLocationInput');
           let location = locationSelect?.value || 'מיקום לא צוין';
@@ -2538,39 +2529,102 @@
             location = otherLocationInput?.value?.trim() || 'מיקום אחר לא צוין';
           }
           
-          // COMPLETE SAVE to all structures
-          moduleData.location = location;
-          damageCenterData.location = location;
-          helper.wizard_temp.current_damage_center.location = location;
+          // Get next damage center number
+          const nextNumber = typeof window.getNextDamageCenterNumber === 'function' 
+            ? window.getNextDamageCenterNumber() 
+            : 1;
           
-          // Also capture location metadata
-          helper.wizard_temp.current_damage_center.location_meta = {
-            selected_option: locationSelect?.value,
-            custom_input: otherLocationInput?.value,
-            timestamp: new Date().toISOString()
+          // Create damage center immediately with location
+          const damageCenter = {
+            id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            number: nextNumber,
+            location: location,
+            description: 'תיאור יתווסף בשלב הבא',
+            area_code: 'GENERAL',
+            side: 'N/A',
+            severity: 3,
+            damage_types: ['GENERAL'],
+            notes: '',
+            photos: [],
+            works: [],
+            parts_required: [],
+            repairs: [],
+            created_at: new Date().toISOString(),
+            created_by: 'wizard_step_1',
+            status: 'in_progress'
           };
           
-          console.log('✅ Step 1 - Location data FULLY captured:', {location, meta: helper.wizard_temp.current_damage_center.location_meta});
+          // Save to helper immediately using helper API
+          if (typeof window.createDamageCenter === 'function') {
+            const centerId = window.createDamageCenter(damageCenter);
+            if (centerId) {
+              console.log('✅ Damage center created in step 1:', centerId);
+              damageCenterData.id = centerId;
+              damageCenterData.number = nextNumber;
+              damageCenterData.location = location;
+              
+              // Save to all structures
+              moduleData.location = location;
+              helper.wizard_temp.current_damage_center = {
+                id: centerId,
+                number: nextNumber,
+                location: location,
+                last_step: currentStep,
+                location_meta: {
+                  selected_option: locationSelect?.value,
+                  custom_input: otherLocationInput?.value,
+                  timestamp: new Date().toISOString()
+                }
+              };
+              
+              showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
+            } else {
+              console.error('❌ Failed to create damage center in step 1');
+            }
+          } else {
+            console.error('❌ Helper API not available');
+          }
+          
+          console.log('✅ Step 1 - Damage center created and saved to helper:', location);
           break;
           
         case 2:
-          // Save description data - COMPLETE CAPTURE
+          // Save description data AND update existing damage center
           const damageDescriptionInput = document.getElementById('damageDescription');
           const description = damageDescriptionInput?.value?.trim() || 'תיאור לא צוין';
           
-          // COMPLETE SAVE to all structures
-          moduleData.description = description;
-          damageCenterData.description = description;
-          helper.wizard_temp.current_damage_center.description = description;
+          // Update existing damage center with description
+          if (damageCenterData.id && typeof window.updateDamageCenter === 'function') {
+            const updateData = {
+              description: description,
+              notes: description,
+              updated_at: new Date().toISOString(),
+              updated_by: 'wizard_step_2'
+            };
+            
+            const success = window.updateDamageCenter(damageCenterData.id, updateData);
+            if (success) {
+              console.log('✅ Damage center updated with description in step 2');
+              damageCenterData.description = description;
+              
+              // Save to all structures
+              moduleData.description = description;
+              helper.wizard_temp.current_damage_center.description = description;
+              helper.wizard_temp.current_damage_center.description_meta = {
+                char_count: description.length,
+                timestamp: new Date().toISOString(),
+                source: 'manual_input'
+              };
+              
+              showUserNotification(`תיאור נזק נוסף למוקד ${damageCenterData.number}`, 'success', 2000);
+            } else {
+              console.error('❌ Failed to update damage center with description');
+            }
+          } else {
+            console.error('❌ No damage center ID or helper API not available');
+          }
           
-          // Also capture description metadata
-          helper.wizard_temp.current_damage_center.description_meta = {
-            char_count: description.length,
-            timestamp: new Date().toISOString(),
-            source: 'manual_input'
-          };
-          
-          console.log('✅ Step 2 - Description data FULLY captured:', {description, meta: helper.wizard_temp.current_damage_center.description_meta});
+          console.log('✅ Step 2 - Description added to existing damage center:', description);
           break;
           
         case 3:
@@ -3470,9 +3524,8 @@
       console.log('🚀 Creating initial damage center after step 1...');
       
       try {
-        // Get location and description from step 1
+        // Get location from step 1 (description will be added in step 2)
         const locationSelect = document.getElementById('locationSelect');
-        const damageDescription = document.getElementById('damageDescription');
         const otherLocationInput = document.getElementById('otherLocationInput');
         
         let location = locationSelect?.value || 'מיקום לא צוין';
@@ -3480,7 +3533,7 @@
           location = otherLocationInput.value.trim();
         }
         
-        const description = damageDescription?.value?.trim() || 'תיאור לא צוין';
+        const description = 'תיאור יתווסף בשלב הבא'; // Placeholder until step 2
         
         // Get next damage center number
         const nextNumber = typeof window.getNextDamageCenterNumber === 'function' 
