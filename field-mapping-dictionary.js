@@ -148,6 +148,15 @@ export const HEBREW_TO_ENGLISH = {
   'אימייל': 'email',
   'דואר אלקטרוני': 'email',
   
+  // === Case & File Management ===
+  'מספר תיק': 'case_number',
+  'תיק מספר': 'case_number',
+  'מס\' תיק': 'case_number',
+  'מס׳ תיק': 'case_number',
+  'מס״ תיק': 'case_number',
+  'קוד תיק': 'case_id',
+  'מזהה תיק': 'case_id',
+  
   // === Insurance & Damage ===
   'חברת ביטוח': 'insurance_company',
   'ביטוח': 'insurance_company',
@@ -200,6 +209,7 @@ export const MAKECOM_TO_HELPER = {
   
   // === Case Information ===
   'case_id': 'case_info.case_id',
+  'case_number': 'case_info.case_number',
   'damage_date': 'case_info.damage_date',
   'inspection_date': 'case_info.inspection_date',
   'submission_date': 'case_info.submission_date',
@@ -291,6 +301,7 @@ export const UI_FIELD_TO_HELPER = {
   
   // === Case Information Fields ===
   'case_id': 'case_info.case_id',
+  'case_number': 'case_info.case_number',
   'damage_date': 'case_info.damage_date',
   'inspection_date': 'case_info.inspection_date',
   'submission_date': 'case_info.submission_date',

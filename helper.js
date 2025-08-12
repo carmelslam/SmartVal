@@ -4376,9 +4376,78 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // export { saveHelperToAllStorageLocations };
 // export { populateAllFormsWithRetry };
 
+// Add missing refreshAllModuleForms function
+window.refreshAllModuleForms = function() {
+  console.log('🔄 Refreshing all module forms...');
+  if (typeof window.populateAllForms === 'function') {
+    window.populateAllForms();
+  } else if (typeof window.populateAllFormsWithRetry === 'function') {
+    window.populateAllFormsWithRetry();
+  } else {
+    console.warn('⚠️ No populate function available - trying direct form population');
+    // Fallback: try to populate forms directly if available
+    if (typeof window.populateFormFields === 'function') {
+      window.populateFormFields();
+    }
+  }
+};
+
+// Add missing manual override tracking functions
+window.markFieldAsManuallyModified = function(fieldId, value, origin) {
+  console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
+  
+  if (!window.helper) {
+    console.warn('Helper not initialized, cannot mark field as modified');
+    return;
+  }
+  
+  // Initialize overrides structure
+  if (!window.helper.meta) window.helper.meta = {};
+  if (!window.helper.meta.manual_overrides) window.helper.meta.manual_overrides = [];
+  
+  // Create override record
+  const override = {
+    fieldId: fieldId,
+    value: value,
+    origin: origin,
+    timestamp: new Date().toISOString(),
+    type: 'manual_override'
+  };
+  
+  // Remove any existing override for this field
+  window.helper.meta.manual_overrides = window.helper.meta.manual_overrides.filter(
+    o => o.fieldId !== fieldId
+  );
+  
+  // Add new override
+  window.helper.meta.manual_overrides.push(override);
+  
+  // Update helper timestamp
+  window.helper.meta.last_updated = new Date().toISOString();
+  
+  // Save to storage
+  if (typeof window.saveHelperToStorage === 'function') {
+    window.saveHelperToStorage();
+  }
+  
+  console.log(`✅ Field ${fieldId} marked as manually modified`);
+};
+
+window.isFieldManuallyModified = function(fieldId) {
+  if (!window.helper?.meta?.manual_overrides) {
+    return false;
+  }
+  
+  const override = window.helper.meta.manual_overrides.find(o => o.fieldId === fieldId);
+  return !!override;
+};
+
 // ✅ RESTORE CRITICAL EXPORTS: Essential functions that modules need
 export const helper = window.helper;
 export const updateHelper = window.updateHelper;
 export const saveHelperToStorage = window.saveHelperToStorage;
 export const broadcastHelperUpdate = window.broadcastHelperUpdate;
 export const processIncomingData = window.processIncomingData;
+export const refreshAllModuleForms = window.refreshAllModuleForms;
+export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
+export const isFieldManuallyModified = window.isFieldManuallyModified;
