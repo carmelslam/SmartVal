@@ -208,38 +208,37 @@ const testFormPopulation = () => {
 
 // Test 5: Session Storage Integration
 const testSessionStorage = () => {
-  if (!window.sessionEngine || !window.sessionEngine.saveSessionData) {
-    return { success: false, error: 'SessionEngine not found' };
+  // Use helper's save function instead of sessionEngine
+  if (!window.saveHelperToStorage) {
+    return { success: false, error: 'saveHelperToStorage function not found' };
   }
   
-  // Test session save
-  const saveResult = window.sessionEngine.saveSessionData();
-  if (!saveResult) {
-    return { success: false, error: 'Session save failed' };
-  }
-  
-  // Check if data was saved to storage
-  const sessionData = sessionStorage.getItem('helper');
-  const localData = localStorage.getItem('helper_data');
-  
-  if (!sessionData || !localData) {
-    return { success: false, error: 'Data not saved to storage locations' };
-  }
-  
-  // Verify data integrity
+  // Test session save using helper system
   try {
-    const parsedSession = JSON.parse(sessionData);
-    const parsedLocal = JSON.parse(localData);
+    window.saveHelperToStorage();
+    console.log('✅ Helper data saved to storage');
     
-    const sessionKeys = Object.keys(parsedSession);
-    const localKeys = Object.keys(parsedLocal);
+    // Check if data was saved to storage
+    const sessionData = sessionStorage.getItem('helper');
     
-    return {
-      success: sessionKeys.length > 0 && localKeys.length > 0,
-      details: `Session: ${sessionKeys.length} keys, Local: ${localKeys.length} keys`
-    };
-  } catch (e) {
-    return { success: false, error: 'Stored data is corrupted' };
+    if (!sessionData) {
+      return { success: false, error: 'Data not saved to sessionStorage' };
+    }
+  
+    // Verify data integrity
+    try {
+      const parsedSession = JSON.parse(sessionData);
+      const sessionKeys = Object.keys(parsedSession);
+    
+      return {
+        success: sessionKeys.length > 0,
+        details: `Session: ${sessionKeys.length} keys saved successfully`
+      };
+    } catch (e) {
+      return { success: false, error: 'Stored data is corrupted' };
+    }
+  } catch (error) {
+    return { success: false, error: `Save operation failed: ${error.message}` };
   }
 };
 

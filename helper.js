@@ -2862,6 +2862,7 @@ function processDirectData(data, result) {
     'license_plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מספר_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מס_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'מס רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'], // With space for test compatibility
     'manufacturer': ['vehicle.manufacturer'],
     'make': ['vehicle.manufacturer'],
     'יצרן': ['vehicle.manufacturer'],
