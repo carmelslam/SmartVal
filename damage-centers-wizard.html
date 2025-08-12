@@ -2554,52 +2554,106 @@
             status: 'in_progress'
           };
           
-          // Save to helper immediately using helper API
-          console.log('🔍 Checking if window.createDamageCenter exists:', typeof window.createDamageCenter);
-          console.log('🔍 Available window functions:', Object.keys(window).filter(k => k.includes('Damage')));
+          // ✅ CRITICAL DEBUG: Check helper API availability with detailed logging
+          console.log('🔍 === STEP 1 DAMAGE CENTER CREATION DEBUG ===');
+          console.log('🔍 window.createDamageCenter type:', typeof window.createDamageCenter);
+          console.log('🔍 window.helper exists:', !!window.helper);
+          console.log('🔍 window.helper.damage_centers exists:', !!window.helper?.damage_centers);
+          console.log('🔍 Available window functions with "Damage":', Object.keys(window).filter(k => k.includes('Damage')));
+          console.log('🔍 Available window functions with "create":', Object.keys(window).filter(k => k.includes('create')));
           
+          // ✅ FORCE INITIALIZATION: Ensure helper is properly set up
+          if (!window.helper) {
+            console.log('⚠️ window.helper not found, initializing...');
+            window.helper = helper;
+          }
+          
+          if (!window.helper.damage_centers) {
+            console.log('⚠️ window.helper.damage_centers not found, initializing...');
+            window.helper.damage_centers = [];
+          }
+          
+          // ✅ TRY MULTIPLE APPROACHES: Direct creation, window function, fallback
+          let centerId = null;
+          let creationMethod = 'unknown';
+          
+          // Approach 1: Try window.createDamageCenter function
           if (typeof window.createDamageCenter === 'function') {
-            const centerId = window.createDamageCenter(damageCenter);
-            console.log('🔍 createDamageCenter returned:', centerId);
-            if (centerId) {
-              console.log('✅ Damage center created in step 1:', centerId);
-              damageCenterData.id = centerId;
-              damageCenterData.number = nextNumber;
-              damageCenterData.location = location;
-              
-              // Save to all structures
-              moduleData.location = location;
-              helper.wizard_temp.current_damage_center = {
-                id: centerId,
-                number: nextNumber,
-                location: location,
-                last_step: currentStep,
-                location_meta: {
-                  selected_option: locationSelect?.value,
-                  custom_input: otherLocationInput?.value,
-                  timestamp: new Date().toISOString()
-                }
-              };
-              
-              showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
-            } else {
-              console.error('❌ Failed to create damage center in step 1 - createDamageCenter returned:', centerId);
+            console.log('🔄 Attempting creation via window.createDamageCenter...');
+            try {
+              centerId = window.createDamageCenter(damageCenter);
+              creationMethod = 'window_function';
+              console.log('✅ Window function returned centerId:', centerId);
+            } catch (error) {
+              console.error('❌ Window function failed:', error);
             }
-          } else {
-            console.error('❌ Helper API not available - window.createDamageCenter is:', typeof window.createDamageCenter);
-            // Fallback: create damage center directly in helper structure
-            console.log('📝 Creating damage center directly in helper structure as fallback');
-            if (!helper.damage_centers) {
-              helper.damage_centers = [];
+          }
+          
+          // Approach 2: Direct creation if window function failed
+          if (!centerId) {
+            console.log('🔄 Attempting direct creation in helper.damage_centers...');
+            try {
+              window.helper.damage_centers.push(damageCenter);
+              centerId = damageCenter.id;
+              creationMethod = 'direct_push';
+              console.log('✅ Direct push successful, centerId:', centerId);
+            } catch (error) {
+              console.error('❌ Direct push failed:', error);
             }
-            helper.damage_centers.push(damageCenter);
+          }
+          
+          // Approach 3: Fallback to session storage helper
+          if (!centerId) {
+            console.log('🔄 Attempting fallback to session storage helper...');
+            try {
+              if (!helper.damage_centers) {
+                helper.damage_centers = [];
+              }
+              helper.damage_centers.push(damageCenter);
+              centerId = damageCenter.id;
+              creationMethod = 'session_fallback';
+              console.log('✅ Session fallback successful, centerId:', centerId);
+            } catch (error) {
+              console.error('❌ Session fallback failed:', error);
+            }
+          }
+          
+          if (centerId) {
+            console.log(`✅ Damage center created via ${creationMethod}:`, centerId);
             
-            damageCenterData.id = damageCenter.id;
+            // Update all tracking structures
+            damageCenterData.id = centerId;
             damageCenterData.number = nextNumber;
             damageCenterData.location = location;
             
+            moduleData.location = location;
+            helper.wizard_temp.current_damage_center = {
+              id: centerId,
+              number: nextNumber,
+              location: location,
+              last_step: currentStep,
+              creation_method: creationMethod,
+              location_meta: {
+                selected_option: locationSelect?.value,
+                custom_input: otherLocationInput?.value,
+                timestamp: new Date().toISOString()
+              }
+            };
+            
+            // ✅ FORCE SYNC: Ensure window.helper and session storage are in sync
+            window.helper = helper;
+            
             showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
-            console.log('✅ Damage center created directly in helper structure');
+            
+            // ✅ VERIFICATION: Log final state
+            console.log('🔍 === CREATION VERIFICATION ===');
+            console.log('🔍 helper.damage_centers length:', helper.damage_centers?.length || 0);
+            console.log('🔍 window.helper.damage_centers length:', window.helper?.damage_centers?.length || 0);
+            console.log('🔍 damageCenterData:', damageCenterData);
+            
+          } else {
+            console.error('❌ All creation methods failed!');
+            showUserNotification('שגיאה ביצירת מוקד נזק - נסה שוב', 'error', 3000);
           }
           
           console.log('✅ Step 1 - Damage center created and saved to helper:', location);
