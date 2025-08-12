@@ -2571,8 +2571,8 @@
           
           // Get next damage center number
           const nextNumber = typeof window.getNextDamageCenterNumber === 'function' 
-            ? window.getNextDamageCenterNumber() 
-            : 1;
+            ? Math.max(1, window.getNextDamageCenterNumber()) 
+            : 1; // ✅ FIXED: Ensure minimum number is 1
           
           // Create damage center immediately with location
           const damageCenter = {
@@ -2682,6 +2682,11 @@
             
             // ✅ FORCE SYNC: Ensure window.helper and session storage are in sync
             window.helper = helper;
+            
+            // ✅ CRITICAL: Force save updated helper back to session storage
+            console.log('🔄 Force saving updated helper to session storage...');
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            console.log('✅ Helper saved to session storage');
             
             showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
             

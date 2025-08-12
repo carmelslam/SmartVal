@@ -268,9 +268,9 @@ window.createDamageCenter = function(damageCenterData = {}) {
     window.helper.damage_centers = [];
   }
   
-  // Generate sequential number based on existing centers
+  // Generate sequential number based on existing centers  
   const existingCenters = window.helper.damage_centers;
-  const nextNumber = existingCenters.length + 1;
+  const nextNumber = Math.max(1, existingCenters.length + 1); // ✅ FIXED: Ensure minimum number is 1
   const centerId = `dc_${Date.now()}_${nextNumber}`;
   
   // Create damage center with canonical structure
