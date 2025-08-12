@@ -4383,6 +4383,7 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // Expose populate functions on window object
 window.populateAllForms = populateAllForms;
 window.populateAllFormsWithRetry = populateAllFormsWithRetry;
+window.saveHelperToStorage = saveHelperToAllStorageLocations;
 
 // Add missing refreshAllModuleForms function
 window.refreshAllModuleForms = function() {
