@@ -1656,22 +1656,42 @@
     };
     
     function nextStep() {
-      if (validateCurrentStep()) {
+      console.log('🔍 === NEXT STEP BUTTON CLICKED ===');
+      console.log('🔍 Current step:', currentStep);
+      console.log('🔍 Total steps:', totalSteps);
+      
+      // ✅ CRITICAL DEBUG: Check validation first
+      console.log('🔍 Checking validation for current step...');
+      const isValid = validateCurrentStep();
+      console.log('🔍 Validation result:', isValid);
+      
+      if (isValid) {
+        console.log('✅ Validation passed, proceeding...');
+        
         if (currentStep < totalSteps) {
+          console.log('🔍 Not final step, saving current step data...');
+          
           // Save current step data (now includes damage center creation/update)
+          console.log('🔍 About to call saveCurrentStepData()...');
           saveCurrentStepData();
+          console.log('✅ saveCurrentStepData() completed');
           
           // Move to next step
+          console.log('🔍 Moving to next step...');
           currentStep++;
           showStep(currentStep);
           updateProgress();
           
           // Load module if needed
           loadStepModule(currentStep);
+          console.log('✅ Step transition completed');
         } else {
+          console.log('🔍 Final step, updating final damage center data...');
           // Final step - save final data to existing damage center
           updateFinalDamageCenterData();
         }
+      } else {
+        console.log('❌ Validation failed, step not advanced');
       }
     }
     
@@ -1684,8 +1704,16 @@
     }
     
     function saveCurrentStep() {
-      console.log('💾 Saving current step data to helper...');
+      console.log('💾 === SAVE BUTTON CLICKED (saveCurrentStep) ===');
+      console.log('🔍 Current step:', currentStep);
       
+      // ✅ CRITICAL FIX: Call the same logic as saveCurrentStepData() but for save button
+      console.log('🔄 Calling saveCurrentStepData() from save button...');
+      saveCurrentStepData();
+      console.log('✅ saveCurrentStepData() completed from save button');
+      return;
+      
+      // OLD CODE BELOW (now bypassed)
       try {
         // Get current helper data
         let helper = {};
@@ -2097,23 +2125,35 @@
     }
     
     function validateCurrentStep() {
+      console.log('🔍 === VALIDATION DEBUG ===');
+      console.log('🔍 Validating step:', currentStep);
+      
       // ✅ ENHANCED: Improved validation with better user feedback
       switch(currentStep) {
         case 1:
+          console.log('🔍 Validating step 1 (location)...');
           const locationSelect = document.getElementById('locationSelect');
           const otherLocationInput = document.getElementById('otherLocationInput');
           
-          if (!locationSelect.value) {
+          console.log('🔍 locationSelect element:', !!locationSelect);
+          console.log('🔍 locationSelect value:', locationSelect?.value);
+          console.log('🔍 otherLocationInput element:', !!otherLocationInput);
+          console.log('🔍 otherLocationInput value:', otherLocationInput?.value);
+          
+          if (!locationSelect || !locationSelect.value) {
+            console.log('❌ No location selected');
             showValidationError('locationSelect', 'אנא בחר מיקום נזק מהרשימה');
             return false;
           }
           
-          if (locationSelect.value === 'other' && !otherLocationInput.value.trim()) {
+          if (locationSelect.value === 'other' && (!otherLocationInput || !otherLocationInput.value.trim())) {
+            console.log('❌ Other location selected but no custom input');
             showValidationError('otherLocationInput', 'אנא הזן מיקום נזק מותאם אישית');
-            otherLocationInput.focus();
+            otherLocationInput?.focus();
             return false;
           }
           
+          console.log('✅ Step 1 validation passed');
           clearValidationError('locationSelect');
           clearValidationError('otherLocationInput');
           break;
