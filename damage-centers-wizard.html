@@ -1937,6 +1937,12 @@
     function loadPartsSearchModule() {
       const moduleContainer = document.getElementById('partsSearchModule');
       
+      // ✅ CRITICAL: Set active damage center ID for webhook capture
+      if (damageCenterData.id) {
+        sessionStorage.setItem('active_damage_center_id', damageCenterData.id);
+        console.log('🎯 Set active damage center ID for parts search webhook:', damageCenterData.id);
+      }
+      
       // Use existing parts search module with enhanced parameters
       const timestamp = new Date().getTime();
       moduleContainer.innerHTML = `<iframe src="parts search.html?wizard=true&step=4&t=${timestamp}" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsSearchModuleFrame" onload="console.log('✅ Parts search module iframe loaded');" onerror="console.error('❌ Parts search module failed to load');"></iframe>`;
@@ -2762,6 +2768,12 @@
     
     function loadPartsModule() {
       const moduleContainer = document.getElementById('partsModule');
+      
+      // ✅ CRITICAL: Set active damage center ID for webhook capture
+      if (damageCenterData.id) {
+        sessionStorage.setItem('active_damage_center_id', damageCenterData.id);
+        console.log('🎯 Set active damage center ID for parts search:', damageCenterData.id);
+      }
       
       // Use existing parts-required.html module
       moduleContainer.innerHTML = `<iframe src="parts-required.html" style="width:100%; height:600px; border:none; border-radius:10px;" id="partsModuleFrame"></iframe>`;
@@ -4011,6 +4023,22 @@
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // ✅ CRITICAL FIX: Update current damage center with selected parts
+        if (damageCenterData.id && typeof window.updateDamageCenter === 'function') {
+          const selectedPartsData = {
+            selected_parts: data.selectedParts || [],
+            unselected_parts: data.unselectedParts || [],
+            parts_selection_timestamp: new Date().toISOString(),
+            parts_selection_total: data.total || 0,
+            parts_source: 'wizard_step_5_selection'
+          };
+          
+          window.updateDamageCenter(damageCenterData.id, selectedPartsData);
+          console.log(`✅ Updated damage center ${damageCenterData.id} with ${data.selectedParts?.length || 0} selected parts`);
+        } else {
+          console.warn('⚠️ Cannot update damage center: missing ID or updateDamageCenter function');
+        }
         
         // Update wizard totals
         calculateTotals();

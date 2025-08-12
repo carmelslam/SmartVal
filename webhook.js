@@ -832,6 +832,34 @@ export function sendPartSearch(data) {
           }
         });
         
+        // ✅ CRITICAL FIX: Also save search results to current damage center if in wizard
+        const activeDamageCenterId = sessionStorage.getItem('active_damage_center_id') || 
+                                      (window.damageCenterData && window.damageCenterData.id);
+        
+        if (activeDamageCenterId && typeof window.updateDamageCenter === 'function') {
+          console.log('💾 Saving search results to active damage center:', activeDamageCenterId);
+          
+          const damageCenter = window.getDamageCenterById(activeDamageCenterId);
+          if (damageCenter) {
+            // Update damage center with search results
+            const searchData = {
+              parts_search_results: processedResults.results,
+              parts_search_meta: {
+                search_timestamp: new Date().toISOString(),
+                results_count: processedResults.results.length,
+                search_query: structuredPayload,
+                webhook_response: processedResults
+              },
+              last_search_session: new Date().toISOString()
+            };
+            
+            window.updateDamageCenter(activeDamageCenterId, searchData);
+            console.log('✅ Search results saved to damage center:', activeDamageCenterId);
+          }
+        } else {
+          console.log('⚠️ No active damage center found for search results');
+        }
+        
         // Also store the raw response for debugging
         sessionStorage.setItem('last_parts_search_response', JSON.stringify(processedResults));
         
