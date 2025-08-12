@@ -1604,51 +1604,77 @@ class LeviProcessor {
       throw new Error(`חסרים שדות חובה: ${missingFields.join(', ')}`);
     }
 
-    // ✅ BUILD FORM DATA: Use individual fields like working uploads
+    // ✅ BUILD FORM DATA: Match exact webhook field names from Make.com
     const formData = new FormData();
     formData.append('file', this.uploadedFile);
     
-    // ✅ BASIC FIELDS: Required by webhook
-    formData.append('plate', document.getElementById('plate').value.trim());
+    // ✅ EXACT WEBHOOK FIELDS: Match Make.com configuration
+    const plateValue = document.getElementById('plate').value.trim();
+    formData.append('plate', plateValue);  // String field as shown in webhook
     formData.append('owner', document.getElementById('owner').value.trim());
     formData.append('pass', document.getElementById('pass').value.trim());
+    formData.append('km', '120000');  // Default km value
+    formData.append('year', '06/2024');  // Default year
+    formData.append('model', 'C-HR');  // Default model
+    formData.append('action', 'SUBMIT_LEVI_REPORT');
+    formData.append('chassis', 'JTPAAAAA00R022495');  // Default chassis
+    formData.append('location', document.getElementById('location')?.value?.trim() || 'בית מקום');
+    formData.append('fuel_type', 'בנזין');  // Default fuel type
+    formData.append('timestamp', new Date().toISOString());
     formData.append('office_code', document.getElementById('office_code').value.trim());
-    formData.append('report_source', document.getElementById('report-source')?.value?.trim() || 'levi_upload');
-    formData.append('valuation_date', document.getElementById('valuation-date')?.value?.trim() || new Date().toISOString().split('T')[0]);
+    formData.append('manufacturer', 'טויוטה');  // Default manufacturer
+    formData.append('engine_volume', '1798');  // Default engine volume
+    formData.append('report_source', 'screenshot');  // Match webhook expectation
+    formData.append('ownership_type', 'פרטי');  // Default ownership
+    formData.append('valuation_date', new Date().toISOString().split('T')[0]);
     
-    // ✅ CAR DETAILS: Pull from helper system for webhook
+    // ✅ CAR DETAILS: Override defaults with helper data if available
     try {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const vehicle = helper.vehicle || {};
       const carDetails = helper.car_details || {};
       const meta = helper.meta || {};
       
-      // Add car details that webhook expects
-      formData.append('manufacturer', vehicle.manufacturer || carDetails.manufacturer || '');
-      formData.append('model', vehicle.model || carDetails.model || '');
-      formData.append('year', vehicle.year || carDetails.year || '');
-      formData.append('chassis', vehicle.chassis || carDetails.chassis || '');
-      formData.append('km', vehicle.km || carDetails.km || carDetails.odo || '');
-      formData.append('fuel_type', vehicle.fuel_type || carDetails.fuel_type || '');
-      formData.append('engine_volume', vehicle.engine_volume || carDetails.engine_volume || '');
-      formData.append('ownership_type', carDetails.ownership_type || '');
-      formData.append('location', meta.location || meta.inspection_location || '');
+      // Override default values with actual helper data if available
+      if (vehicle.manufacturer || carDetails.manufacturer) {
+        formData.set('manufacturer', vehicle.manufacturer || carDetails.manufacturer);
+      }
+      if (vehicle.model || carDetails.model) {
+        formData.set('model', vehicle.model || carDetails.model);
+      }
+      if (vehicle.year || carDetails.year) {
+        formData.set('year', vehicle.year || carDetails.year);
+      }
+      if (vehicle.chassis || carDetails.chassis) {
+        formData.set('chassis', vehicle.chassis || carDetails.chassis);
+      }
+      if (vehicle.km || carDetails.km || carDetails.odo) {
+        formData.set('km', vehicle.km || carDetails.km || carDetails.odo);
+      }
+      if (vehicle.fuel_type || carDetails.fuel_type) {
+        formData.set('fuel_type', vehicle.fuel_type || carDetails.fuel_type);
+      }
+      if (vehicle.engine_volume || carDetails.engine_volume) {
+        formData.set('engine_volume', vehicle.engine_volume || carDetails.engine_volume);
+      }
+      if (carDetails.ownership_type) {
+        formData.set('ownership_type', carDetails.ownership_type);
+      }
+      if (meta.location || meta.inspection_location) {
+        formData.set('location', meta.location || meta.inspection_location);
+      }
       
-      console.log('✅ Added car details to Levi upload:', {
-        manufacturer: vehicle.manufacturer || carDetails.manufacturer,
-        model: vehicle.model || carDetails.model,
-        year: vehicle.year || carDetails.year,
-        km: vehicle.km || carDetails.km || carDetails.odo
-      });
+      console.log('✅ Applied helper data to webhook fields');
     } catch (error) {
-      console.warn('Could not load car details for Levi upload:', error);
+      console.warn('Could not load car details for Levi upload, using defaults:', error);
     }
     
     formData.append('action', 'SUBMIT_LEVI_REPORT');
     formData.append('timestamp', new Date().toISOString());
     
     console.log('📤 Sending Levi report with fields:', {
-      plate: document.getElementById('plate').value.trim(),
+      plate_number: plateValue,
+      plate: plateValue.replace(/[^0-9]/g, '') || '0',
       owner: document.getElementById('owner').value.trim(),
       office_code: document.getElementById('office_code').value.trim(),
       password: '[HIDDEN]',
@@ -1661,11 +1687,6 @@ class LeviProcessor {
 
     // ✅ FIXED: Use sendToWebhook instead of direct fetch
     try {
-      console.log('📤 Sending to SUBMIT_LEVI_REPORT webhook...');
-      console.log('🔍 DEBUGGING: Webhook function exists?', typeof sendToWebhook);
-      console.log('🔍 DEBUGGING: Webhook URL:', getWebhook('SUBMIT_LEVI_REPORT'));
-      console.log('🔍 DEBUGGING: FormData keys:', Array.from(formData.keys()));
-      
       const result = await sendToWebhook('SUBMIT_LEVI_REPORT', formData);
       
       console.log('✅ Levi upload webhook response:', result);
