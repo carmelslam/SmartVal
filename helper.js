@@ -3017,7 +3017,10 @@ function processDirectData(data, result) {
     'inspection_date': ['case_info.inspection_date'],
     'תאריך_בדיקה': ['case_info.inspection_date'],
     'location': ['case_info.inspection_location'],
+    'inspection_location': ['case_info.inspection_location'],
     'מקום_בדיקה': ['case_info.inspection_location'],
+    'case_number': ['case_info.case_number'],
+    'מספר_תיק': ['case_info.case_number'],
     
     // Valuation fields
     'base_price': ['valuation.base_price'],
@@ -4375,6 +4378,10 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // export const saveHelperToStorage = saveHelperToAllStorageLocations;
 // export { saveHelperToAllStorageLocations };
 // export { populateAllFormsWithRetry };
+
+// Expose populate functions on window object
+window.populateAllForms = populateAllForms;
+window.populateAllFormsWithRetry = populateAllFormsWithRetry;
 
 // Add missing refreshAllModuleForms function
 window.refreshAllModuleForms = function() {
