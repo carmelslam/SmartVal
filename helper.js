@@ -690,6 +690,11 @@ window.cleanupDuplicateOwnerData = function() {
     delete window.helper.general_info.owner_phone;
     cleanedCount++;
   }
+  if (window.helper.general_info?.phone_number) {
+    delete window.helper.general_info.phone_number;
+    cleanedCount++;
+    console.log('🧹 CLEANUP: Removed wrong phone_number field from general_info');
+  }
   
   // CRITICAL: Clean up incorrect phone data if it matches owner name
   if (window.helper.stakeholders?.owner?.phone && window.helper.stakeholders?.owner?.name) {
@@ -3234,7 +3239,7 @@ function populateAllForms() {
     'client_name': window.getOwnerName(),
     // 'ownerPhone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
     // 'owner_phone': window.helper.stakeholders?.owner?.phone, // DISABLED - should not auto-populate
-    'phone_number': window.helper.stakeholders?.owner?.phone, // NEW CLEAN FIELD - AUTO-POPULATE
+    // 'phone_number': window.helper.stakeholders?.owner?.phone, // REMOVED - was causing duplicate/wrong data
     'ownerAddress': window.helper.stakeholders?.owner?.address,
     'owner_address': window.helper.stakeholders?.owner?.address,
     'ownerEmail': window.helper.stakeholders?.owner?.email,
@@ -3902,7 +3907,7 @@ window.setupUniversalInputCapture = function() {
     'client_name': 'stakeholders.owner.name',
     'ownerPhone': 'stakeholders.owner.phone',
     'owner_phone': 'stakeholders.owner.phone',
-    'phone_number': 'stakeholders.owner.phone', // NEW CLEAN FIELD
+    // 'phone_number': 'stakeholders.owner.phone', // REMOVED - was causing duplicate/wrong data
     'ownerAddress': 'stakeholders.owner.address',
     'owner_address': 'stakeholders.owner.address',
     
@@ -4384,6 +4389,25 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 window.populateAllForms = populateAllForms;
 window.populateAllFormsWithRetry = populateAllFormsWithRetry;
 window.saveHelperToStorage = saveHelperToAllStorageLocations;
+
+// Auto-cleanup function to remove wrong phone_number data on load
+window.autoCleanupWrongPhoneData = function() {
+  if (window.helper?.general_info?.phone_number) {
+    console.log('🧹 AUTO-CLEANUP: Found wrong phone_number data, cleaning up...');
+    delete window.helper.general_info.phone_number;
+    saveHelperToAllStorageLocations();
+    console.log('✅ AUTO-CLEANUP: Removed wrong phone_number field');
+    return true;
+  }
+  return false;
+};
+
+// Run auto-cleanup when helper loads
+setTimeout(() => {
+  if (window.helper) {
+    window.autoCleanupWrongPhoneData();
+  }
+}, 1000);
 
 // Add missing refreshAllModuleForms function
 window.refreshAllModuleForms = function() {
