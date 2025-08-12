@@ -654,36 +654,63 @@ function createFallbackNotification(message, type = 'info', duration = 5000) {
 export function sendPartSearch(data) {
   console.log('🔍 Parts Search: Preparing structured payload for Make.com');
   
-  // ✅ CREATE PROPER STRUCTURED PAYLOAD according to Make.com format
+  // ✅ CREATE FLATTENED PAYLOAD for better webhook processing
   const structuredPayload = {
+    // Vehicle Information
     manufacturer: data.manufacturer || "",
     model: data.model || "",
     trim: data.trim || "",
     model_code: data.engine_code || data.model_code || "",
-    car_model_number: "", // Not available in current form
     year: data.year || "",
     engine: data.engine_type || "",
     engine_volume: data.engine_volume || "",
     engine_model: data.engine_type || "",
     engine_type: data.engine_type || "",
-    wheel_drive: "", // Not available in current form
-    transmission: "", // Not available in current form
     vin_number: data.vin || "",
-    license_number: data.plate || "",
+    plate: data.plate || "",
+    
+    // Search Parameters
     keyword: data.free_query || "",
     part_group: data.part_group || "",
-    // ✅ CRITICAL: Parts_needed as array from selectedParts list
-    Parts_needed: (data.selectedParts && data.selectedParts.length > 0) ? 
-      data.selectedParts.map(part => ({
-        group: part.group || "",
-        name: part.name || "",
-        quantity: part.qty || 1,
-        source: part.source || "",
-        price: part.price || "",
-        supplier: part.supplier || ""
-      })) : [],
-    Image: data.part_image_base64 || "",
-    Source: data.search_type || "system_search"
+    search_type: data.search_type || "system_search",
+    
+    // Flatten parts information for easier processing
+    parts_count: (data.selectedParts && data.selectedParts.length > 0) ? data.selectedParts.length : 0,
+    parts_list: (data.selectedParts && data.selectedParts.length > 0) ? 
+      data.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
+    
+    // Individual part fields (flattened for first 3 parts)
+    ...(data.selectedParts && data.selectedParts.length > 0 && data.selectedParts[0] ? {
+      part_1_group: data.selectedParts[0].group || "",
+      part_1_name: data.selectedParts[0].name || "",
+      part_1_quantity: data.selectedParts[0].qty || 1,
+      part_1_source: data.selectedParts[0].source || "",
+      part_1_price: data.selectedParts[0].price || "",
+      part_1_supplier: data.selectedParts[0].supplier || ""
+    } : {}),
+    
+    ...(data.selectedParts && data.selectedParts.length > 1 && data.selectedParts[1] ? {
+      part_2_group: data.selectedParts[1].group || "",
+      part_2_name: data.selectedParts[1].name || "",
+      part_2_quantity: data.selectedParts[1].qty || 1,
+      part_2_source: data.selectedParts[1].source || "",
+      part_2_price: data.selectedParts[1].price || "",
+      part_2_supplier: data.selectedParts[1].supplier || ""
+    } : {}),
+    
+    ...(data.selectedParts && data.selectedParts.length > 2 && data.selectedParts[2] ? {
+      part_3_group: data.selectedParts[2].group || "",
+      part_3_name: data.selectedParts[2].name || "",
+      part_3_quantity: data.selectedParts[2].qty || 1,
+      part_3_source: data.selectedParts[2].source || "",
+      part_3_price: data.selectedParts[2].price || "",
+      part_3_supplier: data.selectedParts[2].supplier || ""
+    } : {}),
+    
+    // Additional fields
+    image_data: data.part_image_base64 || "",
+    timestamp: new Date().toISOString(),
+    source: "parts_search_module"
   };
   
   console.log('📤 Sending structured payload to Make.com:', structuredPayload);
@@ -717,7 +744,7 @@ export function sendPartSearch(data) {
         // Check for direct results array
         if (parsedResponse.results && Array.isArray(parsedResponse.results)) {
           processedResults = {
-            plate: parsedResponse.plate || structuredPayload.license_number,
+            plate: parsedResponse.plate || structuredPayload.plate,
             date: parsedResponse.date || new Date().toISOString(),
             results: parsedResponse.results,
             search_context: {
@@ -742,7 +769,7 @@ export function sendPartSearch(data) {
               
               if (nestedData.results && Array.isArray(nestedData.results)) {
                 processedResults = {
-                  plate: nestedData.plate || structuredPayload.license_number,
+                  plate: nestedData.plate || structuredPayload.plate,
                   date: nestedData.date || new Date().toISOString(),
                   results: nestedData.results,
                   search_context: {
@@ -762,7 +789,7 @@ export function sendPartSearch(data) {
         // Check for parts field (alternative format)
         else if (parsedResponse.parts && Array.isArray(parsedResponse.parts)) {
           processedResults = {
-            plate: structuredPayload.license_number,
+            plate: structuredPayload.plate,
             date: new Date().toISOString(),
             results: parsedResponse.parts.map(part => ({
               group: "תוצאות חיפוש",

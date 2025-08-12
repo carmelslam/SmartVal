@@ -871,7 +871,7 @@
           </div>
           <div class="invoice-field">
             <div class="label">מספר רישיון:</div>
-            <div class="value">${formatValue(getInvoiceValue('מספר רישיון', 'license_number'))}</div>
+            <div class="value">${formatValue(getInvoiceValue('מספר רישיון', 'plate'))}</div>
           </div>
           <div class="invoice-field">
             <div class="label">טלפון נייד:</div>
