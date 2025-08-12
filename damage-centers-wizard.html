@@ -1706,11 +1706,43 @@
     function saveCurrentStep() {
       console.log('💾 === SAVE BUTTON CLICKED (saveCurrentStep) ===');
       console.log('🔍 Current step:', currentStep);
+      console.log('🔍 Total steps:', totalSteps);
+      console.log('🔍 damageCenterData:', damageCenterData);
       
-      // ✅ CRITICAL FIX: Call the same logic as saveCurrentStepData() but for save button
-      console.log('🔄 Calling saveCurrentStepData() from save button...');
-      saveCurrentStepData();
-      console.log('✅ saveCurrentStepData() completed from save button');
+      // ✅ Show visual feedback immediately
+      const saveBtn = document.getElementById('saveBtn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = '🔄 שומר...';
+      saveBtn.disabled = true;
+      
+      try {
+        // ✅ CRITICAL FIX: Call the same logic as saveCurrentStepData() but for save button
+        console.log('🔄 Calling saveCurrentStepData() from save button...');
+        saveCurrentStepData();
+        console.log('✅ saveCurrentStepData() completed from save button');
+        
+        // ✅ Show success feedback
+        saveBtn.textContent = '✅ נשמר';
+        saveBtn.style.background = '#28a745';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '#28a745';
+          saveBtn.disabled = false;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('❌ Save failed:', error);
+        saveBtn.textContent = '❌ שגיאה';
+        saveBtn.style.background = '#dc3545';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '#28a745';
+          saveBtn.disabled = false;
+        }, 3000);
+      }
+      
       return;
       
       // OLD CODE BELOW (now bypassed)
@@ -2577,7 +2609,7 @@
           // Create damage center immediately with location
           const damageCenter = {
             id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            number: nextNumber,
+            number: Math.max(1, nextNumber), // ✅ FORCE number to be at least 1
             location: location,
             description: 'תיאור יתווסף בשלב הבא',
             area_code: 'GENERAL',
@@ -2663,7 +2695,7 @@
             
             // Update all tracking structures
             damageCenterData.id = centerId;
-            damageCenterData.number = nextNumber;
+            damageCenterData.number = Math.max(1, nextNumber); // ✅ FORCE number to be at least 1
             damageCenterData.location = location;
             
             moduleData.location = location;
@@ -2687,6 +2719,11 @@
             console.log('🔄 Force saving updated helper to session storage...');
             sessionStorage.setItem('helper', JSON.stringify(helper));
             console.log('✅ Helper saved to session storage');
+            
+            // ✅ CRITICAL: Force sync window.helper with session storage
+            console.log('🔄 Force syncing window.helper with session storage...');
+            window.helper = JSON.parse(sessionStorage.getItem('helper'));
+            console.log('✅ window.helper synced with session storage');
             
             showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
             
@@ -2818,8 +2855,11 @@
           break;
       }
       
-      // Update helper meta info only
+      // ✅ CRITICAL: Save to both session storage AND sync window.helper
+      console.log('🔄 Saving step data to session storage and syncing window.helper...');
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper; // ✅ CRITICAL: Sync window.helper
+      console.log('✅ Step data saved and window.helper synced for step:', currentStep);
     }
     
     // ✅ CONVERTED: Inline work component (no more iframe needed)
