@@ -4376,7 +4376,9 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // export { saveHelperToAllStorageLocations };
 // export { populateAllFormsWithRetry };
 
-// ✅ FIXED: Removed orphaned return statements and export functions
-// All data getter functions are already available on window object
-// ✅ CLEANED: Removed all orphaned export functions and syntax errors
-// Helper.js is now clean and ready for use
+// ✅ RESTORE CRITICAL EXPORTS: Essential functions that modules need
+export const helper = window.helper;
+export const updateHelper = window.updateHelper;
+export const saveHelperToStorage = window.saveHelperToStorage;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+export const processIncomingData = window.processIncomingData;
