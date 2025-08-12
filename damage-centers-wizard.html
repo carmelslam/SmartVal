@@ -1524,6 +1524,15 @@
           // Save current step data
           saveCurrentStepData();
           
+          // CRITICAL: Create damage center immediately after step 1 (location + description)
+          if (currentStep === 1) {
+            createInitialDamageCenter();
+          }
+          // Update existing damage center after each step
+          else if (currentStep > 1 && damageCenterData.id) {
+            updateExistingDamageCenter();
+          }
+          
           // Move to next step
           currentStep++;
           showStep(currentStep);
@@ -1532,8 +1541,8 @@
           // Load module if needed
           loadStepModule(currentStep);
         } else {
-          // Final step - save damage center but stay on step 7 for user to choose next action
-          saveDamageCenter();
+          // Final step - save final data to existing damage center
+          updateFinalDamageCenterData();
         }
       }
     }
@@ -2376,47 +2385,123 @@
       
       switch(currentStep) {
         case 1:
-          // Save location data to both moduleData and wizard temp
+          // Save location data - COMPLETE CAPTURE
           const locationSelect = document.getElementById('locationSelect');
           const otherLocationInput = document.getElementById('otherLocationInput');
-          const location = locationSelect?.value === 'אחר' ? otherLocationInput?.value : locationSelect?.value;
+          let location = locationSelect?.value || 'מיקום לא צוין';
           
-          // Save to multiple places for persistence
+          // Handle "other" location properly
+          if (location === 'other' || location === 'אחר') {
+            location = otherLocationInput?.value?.trim() || 'מיקום אחר לא צוין';
+          }
+          
+          // COMPLETE SAVE to all structures
           moduleData.location = location;
           damageCenterData.location = location;
           helper.wizard_temp.current_damage_center.location = location;
-          console.log('✅ Location saved to wizard temp:', location);
+          
+          // Also capture location metadata
+          helper.wizard_temp.current_damage_center.location_meta = {
+            selected_option: locationSelect?.value,
+            custom_input: otherLocationInput?.value,
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log('✅ Step 1 - Location data FULLY captured:', {location, meta: helper.wizard_temp.current_damage_center.location_meta});
           break;
           
         case 2:
-          // Save description data to both moduleData and wizard temp
-          const description = document.getElementById('damageDescription')?.value?.trim();
+          // Save description data - COMPLETE CAPTURE
+          const damageDescriptionInput = document.getElementById('damageDescription');
+          const description = damageDescriptionInput?.value?.trim() || 'תיאור לא צוין';
           
-          // Save to multiple places for persistence
+          // COMPLETE SAVE to all structures
           moduleData.description = description;
           damageCenterData.description = description;
           helper.wizard_temp.current_damage_center.description = description;
-          console.log('✅ Description saved to wizard temp:', description);
+          
+          // Also capture description metadata
+          helper.wizard_temp.current_damage_center.description_meta = {
+            char_count: description.length,
+            timestamp: new Date().toISOString(),
+            source: 'manual_input'
+          };
+          
+          console.log('✅ Step 2 - Description data FULLY captured:', {description, meta: helper.wizard_temp.current_damage_center.description_meta});
           break;
           
         case 3:
-          // Work data is handled by work.html module
-          console.log('✅ Work step - data handled by work module');
+          // COMPLETE WORKS DATA CAPTURE
+          const takana389 = document.getElementById('takana389Work')?.value || '';
+          const worksData = moduleData.works || [];
+          
+          // COMPLETE SAVE to all structures
+          helper.wizard_temp.current_damage_center.works = worksData;
+          helper.wizard_temp.current_damage_center.takana389 = takana389;
+          helper.wizard_temp.current_damage_center.works_meta = {
+            total_items: worksData.length,
+            total_cost: worksData.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0),
+            takana389_status: takana389,
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log('✅ Step 3 - Works data FULLY captured:', {
+            items: worksData.length, 
+            total: helper.wizard_temp.current_damage_center.works_meta.total_cost,
+            takana389
+          });
           break;
           
         case 4:
-          // Parts search data is handled by parts search module
-          console.log('✅ Parts search step - data handled by parts search module');
+          // COMPLETE PARTS SEARCH DATA CAPTURE
+          const searchResults = moduleData.searchResults || [];
+          
+          helper.wizard_temp.current_damage_center.parts_search = {
+            results: searchResults,
+            search_meta: {
+              total_results: searchResults.length,
+              timestamp: new Date().toISOString(),
+              search_session: `search_${Date.now()}`
+            }
+          };
+          
+          console.log('✅ Step 4 - Parts search data FULLY captured:', {
+            results: searchResults.length
+          });
           break;
           
         case 5:
-          // Parts required data is handled by parts-required.html module
-          console.log('✅ Parts required step - data handled by parts required module');
+          // COMPLETE PARTS REQUIRED DATA CAPTURE
+          const partsData = moduleData.parts || [];
+          
+          helper.wizard_temp.current_damage_center.parts_required = partsData;
+          helper.wizard_temp.current_damage_center.parts_meta = {
+            total_items: partsData.length,
+            total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0),
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log('✅ Step 5 - Parts required data FULLY captured:', {
+            items: partsData.length,
+            total: helper.wizard_temp.current_damage_center.parts_meta.total_cost
+          });
           break;
           
         case 6:
-          // Repairs data is handled by repairs-required.html module
-          console.log('✅ Repairs step - data handled by repairs module');
+          // COMPLETE REPAIRS DATA CAPTURE
+          const repairsData = moduleData.repairs || [];
+          
+          helper.wizard_temp.current_damage_center.repairs = repairsData;
+          helper.wizard_temp.current_damage_center.repairs_meta = {
+            total_items: repairsData.length,
+            total_cost: repairsData.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0),
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log('✅ Step 6 - Repairs data FULLY captured:', {
+            items: repairsData.length,
+            total: helper.wizard_temp.current_damage_center.repairs_meta.total_cost
+          });
           break;
       }
       
@@ -3093,15 +3178,166 @@
       console.log('📊 Updated module subtotals:', { workTotal, partsTotal, repairsTotal, vatPercentage });
     }
     
+    // Create damage center immediately after step 1 (location + description)
+    function createInitialDamageCenter() {
+      console.log('🚀 Creating initial damage center after step 1...');
+      
+      try {
+        // Get location and description from step 1
+        const locationSelect = document.getElementById('locationSelect');
+        const damageDescription = document.getElementById('damageDescription');
+        const otherLocationInput = document.getElementById('otherLocationInput');
+        
+        let location = locationSelect?.value || 'מיקום לא צוין';
+        if (location === 'other' && otherLocationInput?.value) {
+          location = otherLocationInput.value.trim();
+        }
+        
+        const description = damageDescription?.value?.trim() || 'תיאור לא צוין';
+        
+        // Get next damage center number
+        const nextNumber = typeof window.getNextDamageCenterNumber === 'function' 
+          ? window.getNextDamageCenterNumber() 
+          : 1;
+        
+        // Create initial damage center structure
+        const initialDamageCenter = {
+          id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          number: nextNumber,
+          location: location,
+          description: description,
+          area_code: 'GENERAL',
+          side: 'N/A',
+          severity: 3,
+          damage_types: ['GENERAL'],
+          notes: description,
+          photos: [],
+          works: [],
+          parts_required: [],
+          repairs: [],
+          created_at: new Date().toISOString(),
+          created_by: 'wizard_step_1',
+          status: 'in_progress'
+        };
+        
+        // Save using helper API
+        if (typeof window.createDamageCenter === 'function') {
+          const centerId = window.createDamageCenter(initialDamageCenter);
+          if (centerId) {
+            console.log('✅ Initial damage center created:', centerId);
+            damageCenterData.id = centerId;
+            damageCenterData.number = nextNumber;
+            damageCenterData.location = location;
+            damageCenterData.description = description;
+            
+            // Build comprehensive assessment
+            if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+              window.buildComprehensiveDamageAssessment();
+            }
+            
+            showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
+          } else {
+            console.error('❌ Failed to create initial damage center');
+          }
+        } else {
+          console.error('❌ Helper API not available');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error creating initial damage center:', error);
+      }
+    }
+    
+    // Update existing damage center after each step
+    function updateExistingDamageCenter() {
+      console.log('📝 Updating existing damage center with step data...');
+      
+      if (!damageCenterData.id) {
+        console.error('❌ No damage center ID to update');
+        return;
+      }
+      
+      try {
+        // Prepare update data based on current step
+        const updateData = {
+          works: moduleData.works || [],
+          parts_required: moduleData.parts || [],
+          repairs: moduleData.repairs || [],
+          updated_at: new Date().toISOString(),
+          updated_by: `wizard_step_${currentStep}`
+        };
+        
+        // Update using helper API
+        if (typeof window.updateDamageCenter === 'function') {
+          const success = window.updateDamageCenter(damageCenterData.id, updateData);
+          if (success) {
+            console.log(`✅ Updated damage center ${damageCenterData.id} with step ${currentStep} data`);
+            
+            // Recalculate totals
+            if (typeof window.calculateDamageCenterTotals === 'function') {
+              window.calculateDamageCenterTotals(damageCenterData.id);
+            }
+            
+            // Rebuild comprehensive assessment
+            if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+              window.buildComprehensiveDamageAssessment();
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Error updating damage center:', error);
+      }
+    }
+    
+    // Final update for completed damage center
+    function updateFinalDamageCenterData() {
+      console.log('🏁 Finalizing damage center data...');
+      
+      if (!damageCenterData.id) {
+        console.error('❌ No damage center to finalize');
+        return;
+      }
+      
+      try {
+        // Mark as completed
+        const finalData = {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          wizard_steps_completed: 7,
+          works: moduleData.works || [],
+          parts_required: moduleData.parts || [],
+          repairs: moduleData.repairs || []
+        };
+        
+        // Update using helper API
+        if (typeof window.updateDamageCenter === 'function') {
+          const success = window.updateDamageCenter(damageCenterData.id, finalData);
+          if (success) {
+            console.log(`✅ Finalized damage center ${damageCenterData.id}`);
+            
+            // Final calculations
+            if (typeof window.calculateDamageCenterTotals === 'function') {
+              window.calculateDamageCenterTotals(damageCenterData.id);
+            }
+            
+            // Final comprehensive assessment
+            if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+              window.buildComprehensiveDamageAssessment();
+            }
+            
+            showUserNotification(`מוקד נזק ${damageCenterData.number} הושלם בהצלחה!`, 'success', 3000);
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Error finalizing damage center:', error);
+      }
+    }
+    
     function saveDamageCenter() {
-      // ✅ FIXED: Final calculation before saving to ensure totals are accurate
-      calculateTotals();
-      
-      // Save damage center to helper
-      saveDamageCenterToHelper();
-      
-      // Show completion message but stay on step 7 for user choice
-      showUserNotification('מוקד הנזק נוצר ונשמר בהצלחה! בחר פעולה הבאה למטה.', 'success', 3000);
+      // ✅ LEGACY FUNCTION - replaced by updateFinalDamageCenterData
+      updateFinalDamageCenterData();
     }
     
     // New function for finishing and going to expertise summary

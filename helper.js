@@ -618,11 +618,26 @@ window.calculateDamageCenterTotals = function(centerId) {
 };
 
 /**
- * Get next damage center number for creation
+ * Get next damage center number for creation - starts from 1, not 0
  */
 window.getNextDamageCenterNumber = function() {
   const existingCenters = window.getDamageCenters();
-  return existingCenters.length + 1;
+  
+  if (existingCenters.length === 0) {
+    // First damage center should be number 1
+    return 1;
+  }
+  
+  // Find the highest existing number and add 1
+  let highestNumber = 0;
+  existingCenters.forEach(center => {
+    const centerNumber = parseInt(center.number || 0);
+    if (centerNumber > highestNumber) {
+      highestNumber = centerNumber;
+    }
+  });
+  
+  return highestNumber + 1;
 };
 
 /**
