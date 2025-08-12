@@ -387,6 +387,262 @@ window.calculateAllDamageCentersTotals = function() {
   return window.helper.damage_assessment.totals;
 };
 
+// ============================================================================
+// 🚀 DAMAGE CENTERS API - Canonical CRUD operations for damage centers
+// ============================================================================
+
+/**
+ * Get all damage centers from helper - single source of truth
+ */
+window.getDamageCenters = function() {
+  if (!window.helper || !window.helper.damage_centers) {
+    console.log('📋 No damage centers found - initializing empty array');
+    return [];
+  }
+  
+  const centers = window.helper.damage_centers;
+  console.log(`📋 Retrieved ${centers.length} damage centers from helper`);
+  return centers;
+};
+
+/**
+ * Create new damage center with proper sequential numbering
+ */
+window.createDamageCenter = function(damageCenterData = {}) {
+  console.log('🏗️ Creating new damage center with data:', damageCenterData);
+  
+  if (!window.helper) {
+    console.error('❌ Helper not initialized');
+    return null;
+  }
+  
+  // Initialize damage_centers array if needed
+  if (!window.helper.damage_centers) {
+    window.helper.damage_centers = [];
+  }
+  
+  // Generate sequential number based on existing centers
+  const existingCenters = window.helper.damage_centers;
+  const nextNumber = existingCenters.length + 1;
+  const centerId = `dc_${Date.now()}_${nextNumber}`;
+  
+  // Create damage center with canonical structure
+  const newCenter = {
+    id: centerId,
+    number: damageCenterData.number || nextNumber,
+    location: damageCenterData.location || '',
+    description: damageCenterData.description || '',
+    damage_types: damageCenterData.damage_types || [],
+    severity: damageCenterData.severity || 0,
+    
+    // Work items for this damage center
+    works: damageCenterData.works || [],
+    
+    // Parts required for this damage center
+    parts_required: damageCenterData.parts_required || [],
+    
+    // Repairs needed for this damage center
+    repairs: damageCenterData.repairs || [],
+    
+    // Photos for this damage center
+    photos: damageCenterData.photos || [],
+    
+    // Cost calculations
+    calculations: {
+      works_total: 0,
+      parts_total: 0,
+      repairs_total: 0,
+      subtotal: 0,
+      vat_amount: 0,
+      total_with_vat: 0,
+      last_calculated: new Date().toISOString()
+    },
+    
+    // Metadata
+    meta: {
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: damageCenterData.created_by || 'damage_centers_wizard',
+      status: 'active'
+    }
+  };
+  
+  // Add to damage centers array
+  window.helper.damage_centers.push(newCenter);
+  
+  // Calculate totals for the new center
+  window.calculateDamageCenterTotals(centerId);
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Created damage center #${nextNumber} with ID: ${centerId}`);
+  return newCenter;
+};
+
+/**
+ * Update existing damage center
+ */
+window.updateDamageCenter = function(centerId, updates = {}) {
+  console.log(`🔄 Updating damage center ${centerId} with:`, updates);
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ No damage centers found in helper');
+    return false;
+  }
+  
+  const centerIndex = window.helper.damage_centers.findIndex(center => center.id === centerId);
+  if (centerIndex === -1) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  const center = window.helper.damage_centers[centerIndex];
+  
+  // Update fields (preserve ID and number)
+  Object.keys(updates).forEach(key => {
+    if (key !== 'id' && key !== 'number') {
+      center[key] = updates[key];
+    }
+  });
+  
+  // Update metadata
+  center.meta.updated_at = new Date().toISOString();
+  
+  // Recalculate totals
+  window.calculateDamageCenterTotals(centerId);
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Updated damage center ${centerId}`);
+  return true;
+};
+
+/**
+ * Delete damage center and renumber remaining centers
+ */
+window.deleteDamageCenter = function(centerId) {
+  console.log(`🗑️ Deleting damage center ${centerId}`);
+  
+  if (!window.helper || !window.helper.damage_centers) {
+    console.error('❌ No damage centers found in helper');
+    return false;
+  }
+  
+  const centerIndex = window.helper.damage_centers.findIndex(center => center.id === centerId);
+  if (centerIndex === -1) {
+    console.error(`❌ Damage center ${centerId} not found`);
+    return false;
+  }
+  
+  // Remove the center
+  const deletedCenter = window.helper.damage_centers.splice(centerIndex, 1)[0];
+  
+  // Renumber remaining centers to maintain sequential numbering
+  window.helper.damage_centers.forEach((center, index) => {
+    center.number = index + 1;
+    center.meta.updated_at = new Date().toISOString();
+  });
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Deleted damage center ${centerId} (was #${deletedCenter.number}), renumbered remaining centers`);
+  return true;
+};
+
+/**
+ * Get damage center by ID
+ */
+window.getDamageCenterById = function(centerId) {
+  if (!window.helper || !window.helper.damage_centers) {
+    return null;
+  }
+  
+  return window.helper.damage_centers.find(center => center.id === centerId) || null;
+};
+
+/**
+ * Calculate totals for specific damage center
+ */
+window.calculateDamageCenterTotals = function(centerId) {
+  console.log(`🧮 Calculating totals for damage center ${centerId}`);
+  
+  const center = window.getDamageCenterById(centerId);
+  if (!center) {
+    console.error(`❌ Damage center ${centerId} not found for calculation`);
+    return false;
+  }
+  
+  // Calculate works total
+  const worksTotal = (center.works || []).reduce((sum, work) => {
+    const qty = parseFloat(work.qty || 1);
+    const price = parseFloat(work.price || 0);
+    return sum + (qty * price);
+  }, 0);
+  
+  // Calculate parts total
+  const partsTotal = (center.parts_required || []).reduce((sum, part) => {
+    const qty = parseFloat(part.qty || 1);
+    const price = parseFloat(part.price || 0);
+    return sum + (qty * price);
+  }, 0);
+  
+  // Calculate repairs total
+  const repairsTotal = (center.repairs || []).reduce((sum, repair) => {
+    const qty = parseFloat(repair.qty || 1);
+    const price = parseFloat(repair.price || 0);
+    return sum + (qty * price);
+  }, 0);
+  
+  // Calculate subtotal and VAT
+  const subtotal = worksTotal + partsTotal + repairsTotal;
+  const vatRate = 0.17; // 17% VAT
+  const vatAmount = subtotal * vatRate;
+  const totalWithVat = subtotal + vatAmount;
+  
+  // Update calculations
+  center.calculations = {
+    works_total: worksTotal,
+    parts_total: partsTotal,
+    repairs_total: repairsTotal,
+    subtotal: subtotal,
+    vat_amount: vatAmount,
+    total_with_vat: totalWithVat,
+    last_calculated: new Date().toISOString()
+  };
+  
+  console.log(`✅ Calculated totals for damage center ${centerId}: ₪${totalWithVat.toFixed(2)} total`);
+  return center.calculations;
+};
+
+/**
+ * Get next damage center number for creation
+ */
+window.getNextDamageCenterNumber = function() {
+  const existingCenters = window.getDamageCenters();
+  return existingCenters.length + 1;
+};
+
+/**
+ * Sync damage_centers with damage_assessment.centers for backward compatibility
+ */
+window.syncDamageAssessmentCenters = function() {
+  if (!window.helper) return;
+  
+  // Initialize damage_assessment if needed
+  if (!window.helper.damage_assessment) {
+    window.helper.damage_assessment = { centers: [] };
+  }
+  
+  // Sync damage_centers to damage_assessment.centers
+  if (window.helper.damage_centers) {
+    window.helper.damage_assessment.centers = [...window.helper.damage_centers];
+    console.log('✅ Synced damage_centers to damage_assessment.centers');
+  }
+};
+
 
 // ============================================================================
 // 🔒 PLATE NUMBER PROTECTION SYSTEM
@@ -2021,6 +2277,10 @@ window.helper = existingHelper || {
       }
     }
   },
+  
+  // ✅ DAMAGE CENTERS - Canonical single source of truth for damage centers
+  damage_centers: [],
+  
   financials: {
     // Case costs (aggregated)
     costs: {

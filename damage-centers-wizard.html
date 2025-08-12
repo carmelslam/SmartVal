@@ -1416,20 +1416,28 @@
     }
     
     function generateDamageCenterNumber() {
-      // FIXED: Auto-generate damage center number starting at 1 with proper sequencing
-      const existingCenters = getDamageCentersFromHelper();
+      // Use the new helper API for proper damage center numbering
+      let nextNumber = 1;
       
-      // Get highest existing number to ensure proper sequencing
-      let highestNumber = 0;
-      existingCenters.forEach(center => {
-        const centerNumber = parseInt(center.number || center.center_number || 0);
-        if (centerNumber > highestNumber) {
-          highestNumber = centerNumber;
-        }
-      });
-      
-      const nextNumber = highestNumber + 1;
-      console.log(`🔢 Generated damage center number: ${nextNumber} (existing centers: ${existingCenters.length}, highest: ${highestNumber})`);
+      if (typeof window.getNextDamageCenterNumber === 'function') {
+        nextNumber = window.getNextDamageCenterNumber();
+        console.log(`🔢 Generated damage center number using helper API: ${nextNumber}`);
+      } else {
+        // Fallback to legacy method if helper API not available
+        const existingCenters = getDamageCentersFromHelper();
+        
+        // Get highest existing number to ensure proper sequencing
+        let highestNumber = 0;
+        existingCenters.forEach(center => {
+          const centerNumber = parseInt(center.number || center.center_number || 0);
+          if (centerNumber > highestNumber) {
+            highestNumber = centerNumber;
+          }
+        });
+        
+        nextNumber = highestNumber + 1;
+        console.log(`🔢 Generated damage center number (fallback): ${nextNumber} (existing centers: ${existingCenters.length}, highest: ${highestNumber})`);
+      }
       
       document.getElementById('damageCenterNumber').value = nextNumber;
       damageCenterData.number = nextNumber;
@@ -2958,7 +2966,24 @@
     }
     
     function calculateTotals() {
-      // Get actual totals from module data
+      // Use helper API for calculation if available
+      if (typeof window.calculateDamageCenterTotals === 'function' && damageCenterData.id) {
+        const totals = window.calculateDamageCenterTotals(damageCenterData.id);
+        if (totals) {
+          // Update display with helper API results
+          document.getElementById('totalAmount').textContent = `₪${totals.subtotal.toLocaleString()}`;
+          document.getElementById('totalWithoutVat').textContent = `₪${totals.subtotal.toLocaleString()}`;
+          document.getElementById('totalWithVat').textContent = `₪${totals.totalWithVat.toLocaleString()}`;
+          
+          // Update individual subtotals
+          updateModuleSubtotals(totals.workTotal, totals.partsTotal, totals.repairsTotal);
+          
+          console.log('🧮 Calculated totals using helper API:', totals);
+          return;
+        }
+      }
+      
+      // Fallback to manual calculation
       const workTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
       const partsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
       const repairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
@@ -3088,10 +3113,74 @@
     }
     
     function saveDamageCenterToHelper() {
-      console.log('💾 Creating organized damage center structure...');
+      console.log('💾 Saving damage center using helper API...');
       
       try {
-        // Get current helper data
+        // Prepare damage center data
+        const location = moduleData.location || document.getElementById('locationSelect')?.value || 'מיקום לא צוין';
+        const description = moduleData.description || document.getElementById('damageDescription')?.value || 'תיאור לא צוין';
+        
+        // Get actual data from modules
+        const workData = moduleData.works || [];
+        const partsData = moduleData.parts || [];
+        const repairsData = moduleData.repairs || [];
+        
+        // Create damage center draft
+        const damageCenterDraft = {
+          id: damageCenterData.id || `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          number: damageCenterData.number || 1,
+          location: location,
+          description: description,
+          area_code: 'GENERAL', // Default area code, can be enhanced later
+          side: 'N/A',
+          severity: 3, // Default severity, can be enhanced later
+          damage_types: ['GENERAL'], // Default damage type, can be enhanced later
+          notes: description,
+          photos: [],
+          works: workData.map(work => ({
+            id: `wk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            category: work.category || 'עבודה כללית',
+            cost: parseFloat(work.cost) || 0,
+            comments: work.comments || '',
+            hours: parseFloat(work.hours) || 0,
+            hourly_rate: parseFloat(work.hourly_rate) || 0,
+            qty: 1
+          })),
+          parts_required: partsData.map(part => ({
+            id: `pr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            part_id: part.part_id || part.code || 'UNKNOWN',
+            name: part.name || part.description || 'חלק לא מזוהה',
+            price: parseFloat(part.price) || 0,
+            qty: parseInt(part.quantity) || 1,
+            source: part.source || 'MANUAL'
+          }))
+        };
+        
+        // Use the new helper API if available
+        if (typeof window.createDamageCenter === 'function') {
+          const centerId = window.createDamageCenter(damageCenterDraft);
+          if (centerId) {
+            console.log('✅ Damage center saved successfully using helper API:', centerId);
+            
+            // Update the current damage center data
+            damageCenterData.id = centerId;
+            
+            // Calculate totals using helper API if available
+            if (typeof window.calculateDamageCenterTotals === 'function') {
+              window.calculateDamageCenterTotals(centerId);
+            }
+            
+            showUserNotification('מוקד הנזק נשמר בהצלחה!', 'success');
+            return true;
+          } else {
+            console.error('❌ Failed to save damage center using helper API');
+            showUserNotification('שגיאה בשמירת מוקד הנזק', 'error');
+            return false;
+          }
+        }
+        
+        // Fallback to legacy method if helper API not available
+        console.log('🔄 Using fallback save method');
         let helper = {};
         try {
           helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -3100,25 +3189,24 @@
           helper = {};
         }
         
-        // Initialize comprehensive damage centers structure
+        // Initialize damage centers structure if missing
         if (!helper.damage_centers) {
-          console.error('❌ Damage centers structure not found in helper');
-          return false;
+          helper.damage_centers = [];
         }
         
-        // Get damage center data
-        const location = moduleData.location || 'מיקום לא צוין';
-        const description = moduleData.description || 'תיאור לא צוין';
+        // Get damage center data for fallback method
+        const fallbackLocation = moduleData.location || 'מיקום לא צוין';
+        const fallbackDescription = moduleData.description || 'תיאור לא צוין';
         
-        // Get actual data from modules
-        const workData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.work?.work_items || []);
-        const partsData = moduleData.parts.length > 0 ? moduleData.parts : (helper.damage_assessment?.parts?.parts_items || []);
-        const repairsData = moduleData.repairs.length > 0 ? moduleData.repairs : (helper.damage_assessment?.repairs?.repairs_items || []);
+        // Get actual data from modules for fallback
+        const fallbackWorkData = moduleData.works.length > 0 ? moduleData.works : (helper.damage_assessment?.work?.work_items || []);
+        const fallbackPartsData = moduleData.parts.length > 0 ? moduleData.parts : (helper.damage_assessment?.parts?.parts_items || []);
+        const fallbackRepairsData = moduleData.repairs.length > 0 ? moduleData.repairs : (helper.damage_assessment?.repairs?.repairs_items || []);
         
-        // Calculate totals
-        const workTotal = workData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
-        const partsTotal = partsData.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
-        const repairsTotal = repairsData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+        // Calculate totals for fallback method
+        const workTotal = fallbackWorkData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+        const partsTotal = fallbackPartsData.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+        const repairsTotal = fallbackRepairsData.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
         const total = workTotal + partsTotal + repairsTotal;
         
         // ✅ FIXED: Create damage center directly without missing function dependencies  
@@ -3128,8 +3216,8 @@
         const newCenter = {
           id: centerId,
           number: centerNumber,
-          location: location,
-          description: description,
+          location: fallbackLocation,
+          description: fallbackDescription,
           work_items: [],
           parts_items: [],
           repairs_items: [],
@@ -3150,7 +3238,7 @@
         };
         
         // Add all work items with comprehensive data
-        workData.forEach(work => {
+        fallbackWorkData.forEach(work => {
           const workItem = {
             category: work.category,
             cost: parseFloat(work.cost) || 0,
@@ -3165,7 +3253,7 @@
         });
         
         // Add all parts items with comprehensive data including webhook results
-        partsData.forEach(part => {
+        fallbackPartsData.forEach(part => {
           const partItem = {
             name: part.part || part.name || '',
             description: part.desc || part.description || '',
@@ -3194,7 +3282,7 @@
         });
         
         // Add all repair items with comprehensive data
-        repairsData.forEach(repair => {
+        fallbackRepairsData.forEach(repair => {
           const repairItem = {
             name: repair.name || '',
             description: repair.description || '',
@@ -3289,7 +3377,14 @@
     }
     
     function getDamageCentersFromHelper() {
-      // FIXED: Comprehensive search for damage centers in all possible locations
+      // Use the new helper API for getting damage centers
+      if (typeof window.getDamageCenters === 'function') {
+        const centers = window.getDamageCenters();
+        console.log('✅ Found damage centers using helper API:', centers.length);
+        return centers;
+      }
+      
+      // Fallback to legacy method if helper API not available
       let helper;
       
       // Try window.helper first, then sessionStorage
@@ -3304,31 +3399,23 @@
         }
       }
       
-      // Check all possible locations where damage centers might be stored
-      // 1. Primary location: helper.damage_assessment.centers (official location)
+      // Check canonical location first: helper.damage_centers
+      if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+        console.log('✅ Found damage centers in canonical location helper.damage_centers:', helper.damage_centers.length);
+        return helper.damage_centers;
+      }
+      
+      // Check legacy locations for migration
+      // 1. Legacy location: helper.damage_assessment.centers
       if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
-        console.log('✅ Found damage centers in helper.damage_assessment.centers:', helper.damage_assessment.centers.length);
+        console.log('✅ Found damage centers in helper.damage_assessment.centers (legacy):', helper.damage_assessment.centers.length);
         return helper.damage_assessment.centers;
       }
       
       // 2. Legacy location: helper.damage_centers.centers
       if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
-        console.log('✅ Found damage centers in helper.damage_centers.centers (migrating):', helper.damage_centers.centers.length);
-        // Migrate to official location
-        helper.damage_assessment = helper.damage_assessment || {};
-        helper.damage_assessment.centers = helper.damage_centers.centers;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Found damage centers in helper.damage_centers.centers (legacy):', helper.damage_centers.centers.length);
         return helper.damage_centers.centers;
-      }
-      
-      // 3. Legacy location: helper.damage_centers (direct array)
-      if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
-        console.log('✅ Found damage centers in helper.damage_centers (direct array, migrating):', helper.damage_centers.length);
-        // Migrate to official location
-        helper.damage_assessment = helper.damage_assessment || {};
-        helper.damage_assessment.centers = helper.damage_centers;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        return helper.damage_centers;
       }
       
       console.log('❌ No damage centers found in any location');
@@ -3853,99 +3940,65 @@
     }
     
     function clearDamageCenterData() {
-      console.log('🗑️ Starting damage center data clear process');
+      console.log('🗑️ Starting damage center deletion process');
       
       const select = document.getElementById('existingDamageCenterSelect');
       const selectedValue = select.value;
       
       if (!selectedValue) {
-        alert('אנא בחר מוקד נזק לניקוי');
+        alert('אנא בחר מוקד נזק למחיקה');
+        return;
+      }
+      
+      if (!confirm('האם אתה בטוח שברצונך למחוק את מוקד הנזק הזה? פעולה זו לא ניתנת לביטול.')) {
         return;
       }
       
       try {
-        // Get helper data
+        // Use the new helper API if available
+        if (typeof window.deleteDamageCenter === 'function') {
+          const success = window.deleteDamageCenter(selectedValue);
+          if (success) {
+            console.log('✅ Damage center deleted successfully using helper API');
+            alert('מוקד הנזק נמחק בהצלחה');
+            
+            // Reset dropdown selection and refresh
+            select.value = '';
+            populateExistingDamageCenters(true);
+            
+            // Clear wizard data if this center was being edited
+            if (damageCenterData && damageCenterData.id === selectedValue) {
+              resetWizard();
+            }
+            
+            return;
+          } else {
+            alert('שגיאה במחיקת מוקד הנזק');
+            return;
+          }
+        }
+        
+        // Fallback to legacy deletion method
+        console.log('🔄 Using fallback deletion method');
         const helperString = sessionStorage.getItem('helper');
         if (!helperString) {
-          alert('לא נמצאו נתונים לניקוי');
+          alert('לא נמצאו נתונים למחיקה');
           return;
         }
         
         const helper = JSON.parse(helperString);
-        let damageCenters = [];
-        let dataLocation = '';
-        
-        // ✅ ENHANCED: Use same comprehensive search logic as populateExistingDamageCenters
-        console.log('🔍 Searching for damage centers to clear...');
-        
-        // ✅ CORRECTED: Check correct location first (damage_assessment.centers)
-        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers) && helper.damage_assessment.centers.length > 0) {
-          damageCenters = helper.damage_assessment.centers;
-          dataLocation = 'damage_assessment.centers';
-          console.log('✅ Found damage centers in CORRECT location for clearing');
-        } else if (helper.damage_blocks && Array.isArray(helper.damage_blocks) && helper.damage_blocks.length > 0) {
-          damageCenters = helper.damage_blocks;
-          dataLocation = 'damage_blocks';
-          console.log('✅ Found damage centers in LEGACY location helper.damage_blocks for clearing');
-        } else if (helper.damage_centers && Array.isArray(helper.damage_centers) && helper.damage_centers.length > 0) {
-          damageCenters = helper.damage_centers;
-          dataLocation = 'damage_centers';
-        } else if (helper.damage_assessment && Array.isArray(helper.damage_assessment) && helper.damage_assessment.length > 0) {
-          damageCenters = helper.damage_assessment;
-          dataLocation = 'damage_assessment_array';
-        } else {
-          // Search for any arrays that might contain damage center data
-          for (const [key, value] of Object.entries(helper)) {
-            if (Array.isArray(value) && value.length > 0) {
-              const firstItem = value[0];
-              if (firstItem && typeof firstItem === 'object') {
-                if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
-                    firstItem.number || firstItem.selected_location || firstItem.description ||
-                    firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
-                  damageCenters = value;
-                  dataLocation = key;
-                  break;
-                }
-              }
-            }
-          }
-          
-          // Check nested objects if still not found
-          if (damageCenters.length === 0) {
-            for (const [key, value] of Object.entries(helper)) {
-              if (value && typeof value === 'object' && !Array.isArray(value)) {
-                for (const [nestedKey, nestedValue] of Object.entries(value)) {
-                  if (Array.isArray(nestedValue) && nestedValue.length > 0) {
-                    const firstItem = nestedValue[0];
-                    if (firstItem && typeof firstItem === 'object') {
-                      if (firstItem.center_number || firstItem.damage_description || firstItem.location || 
-                          firstItem.number || firstItem.selected_location || firstItem.description ||
-                          firstItem.work_items || firstItem.parts_items || firstItem.repairs_items) {
-                        damageCenters = nestedValue;
-                        dataLocation = `${key}.${nestedKey}`;
-                        break;
-                      }
-                    }
-                  }
-                }
-                if (damageCenters.length > 0) break;
-              }
-            }
-          }
-        }
-        
-        console.log(`Found ${damageCenters.length} damage centers in ${dataLocation}`);
+        const damageCenters = getDamageCentersFromHelper();
         
         if (damageCenters.length === 0) {
-          alert('לא נמצאו מוקדי נזק לניקוי');
+          alert('לא נמצאו מוקדי נזק למחיקה');
           return;
         }
         
-        // ✅ IMPROVED: Better center identification for deletion
+        // Find the damage center to delete
         const centerIndex = damageCenters.findIndex(center => 
           (center.id === selectedValue) || 
           (center.center_id === selectedValue) ||
-          (`center_${damageCenters.indexOf(center)}` === selectedValue)
+          (center.block_id === selectedValue)
         );
         
         if (centerIndex === -1) {
@@ -3969,26 +4022,14 @@
         // Remove the damage center from the array
         damageCenters.splice(centerIndex, 1);
         
-        // ✅ ENHANCED: Update the helper object based on data location (supports nested paths)
-        if (dataLocation === 'damage_centers') {
+        // Update the helper with the modified array
+        // Save to canonical location if it exists
+        if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
           helper.damage_centers = damageCenters;
-        } else if (dataLocation === 'damage_blocks') {
-          helper.damage_blocks = damageCenters;
-        } else if (dataLocation === 'damage_assessment.centers') {
+        }
+        // Also update legacy locations
+        if (helper.damage_assessment && helper.damage_assessment.centers) {
           helper.damage_assessment.centers = damageCenters;
-        } else if (dataLocation === 'damage_assessment_array') {
-          helper.damage_assessment = damageCenters;
-        } else if (dataLocation.includes('.')) {
-          // Handle nested paths like "someObject.nestedArray"
-          const parts = dataLocation.split('.');
-          let target = helper;
-          for (let i = 0; i < parts.length - 1; i++) {
-            target = target[parts[i]];
-          }
-          target[parts[parts.length - 1]] = damageCenters;
-        } else {
-          // Handle direct properties
-          helper[dataLocation] = damageCenters;
         }
         
         // Recalculate totals if function is available
@@ -4116,24 +4157,26 @@
       console.log('➕ Creating new damage center...');
       
       try {
-        // Get current helper data to determine next number
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        let existingCenters = [];
+        // Use the new helper API for numbering if available
+        let nextNumber = 1;
         
-        // Find existing centers using same logic as populateExistingDamageCenters
-        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
-          existingCenters = helper.damage_assessment.centers;
+        if (typeof window.getNextDamageCenterNumber === 'function') {
+          nextNumber = window.getNextDamageCenterNumber();
+          console.log('✅ Got next damage center number using helper API:', nextNumber);
+        } else {
+          // Fallback to legacy method
+          const existingCenters = getDamageCentersFromHelper();
+          
+          let highestNumber = 0;
+          existingCenters.forEach(center => {
+            const centerNumber = parseInt(center.number || center.center_number || 0);
+            if (centerNumber > highestNumber) {
+              highestNumber = centerNumber;
+            }
+          });
+          nextNumber = highestNumber + 1;
+          console.log('✅ Got next damage center number using fallback method:', nextNumber);
         }
-        
-        // FIXED: Calculate next sequential number properly starting at 1
-        let highestNumber = 0;
-        existingCenters.forEach(center => {
-          const centerNumber = parseInt(center.number || center.center_number || 0);
-          if (centerNumber > highestNumber) {
-            highestNumber = centerNumber;
-          }
-        });
-        const nextNumber = highestNumber + 1;
         
         // Reset wizard for new center
         currentStep = 1;
@@ -4194,21 +4237,22 @@
       console.log('✏️ Loading damage center for editing:', selectedValue);
       
       try {
-        // Get helper data
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        let existingCenters = [];
+        // Use the new helper API if available
+        let centerToEdit = null;
         
-        // Find existing centers
-        if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
-          existingCenters = helper.damage_assessment.centers;
+        if (typeof window.getDamageCenterById === 'function') {
+          centerToEdit = window.getDamageCenterById(selectedValue);
+          console.log('✅ Found damage center using helper API:', centerToEdit);
+        } else {
+          // Fallback to legacy method
+          const existingCenters = getDamageCentersFromHelper();
+          centerToEdit = existingCenters.find(center => 
+            (center.id === selectedValue) || 
+            (center.center_id === selectedValue) ||
+            (center.block_id === selectedValue)
+          );
+          console.log('✅ Found damage center using fallback method:', centerToEdit);
         }
-        
-        // Find the selected center
-        const centerToEdit = existingCenters.find(center => 
-          (center.id === selectedValue) || 
-          (center.center_id === selectedValue) ||
-          (center.block_id === selectedValue)
-        );
         
         if (!centerToEdit) {
           alert('מוקד הנזק הנבחר לא נמצא');
