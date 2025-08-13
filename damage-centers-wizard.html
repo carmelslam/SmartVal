@@ -1402,7 +1402,7 @@
       // Show loading
       document.getElementById('loadingOverlay').style.display = 'flex';
       
-      // ✅ CRITICAL: Initialize helper and ensure damage_centers array exists
+      // ✅ CRITICAL: Initialize helper with correct structure per documentation
       let helper = {};
       try {
         helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -1410,17 +1410,27 @@
         console.error('Failed to parse helper:', e);
       }
       
-      // Ensure damage_centers array exists
-      if (!helper.damage_centers) {
-        helper.damage_centers = [];
-        console.log('✅ Initialized empty damage_centers array');
+      // Ensure correct structure exists per documentation
+      if (!helper.centers) {
+        helper.centers = [];
+        console.log('✅ Initialized empty centers array');
+      }
+      
+      if (!helper.current_damage_center) {
+        helper.current_damage_center = {};
+        console.log('✅ Initialized empty current_damage_center');
       }
       
       // Sync to window.helper
       if (!window.helper) {
         window.helper = helper;
-      } else if (!window.helper.damage_centers) {
-        window.helper.damage_centers = [];
+      } else {
+        if (!window.helper.centers) {
+          window.helper.centers = [];
+        }
+        if (!window.helper.current_damage_center) {
+          window.helper.current_damage_center = {};
+        }
       }
       
       // Save back to sessionStorage
@@ -2570,25 +2580,11 @@
         helper = {};
       }
       
-      // ✅ FIXED: Create wizard temporary data structure for step navigation persistence
-      if (!helper.wizard_temp) {
-        helper.wizard_temp = {};
-      }
-      
-      if (!helper.wizard_temp.current_damage_center) {
-        helper.wizard_temp.current_damage_center = {
-          number: damageCenterData.number || 1,
-          created_at: new Date().toISOString(),
-          last_step: currentStep
-        };
-      }
-      
-      // Update last step
-      helper.wizard_temp.current_damage_center.last_step = currentStep;
+      // ✅ REMOVED: No more wizard_temp - using current_damage_center directly per documentation
       
       switch(currentStep) {
         case 1:
-          // Save location data AND create damage center immediately
+          // Save location to current_damage_center per documentation
           const locationSelect = document.getElementById('locationSelect');
           const otherLocationInput = document.getElementById('otherLocationInput');
           let location = locationSelect?.value || 'מיקום לא צוין';
@@ -2598,314 +2594,249 @@
             location = otherLocationInput?.value?.trim() || 'מיקום אחר לא צוין';
           }
           
-          // Get next damage center number
-          const nextNumber = typeof window.getNextDamageCenterNumber === 'function' 
-            ? Math.max(1, window.getNextDamageCenterNumber()) 
-            : 1; // ✅ FIXED: Ensure minimum number is 1
+          // Get next damage center number based on existing centers
+          const existingCenters = getDamageCentersFromHelper();
+          const nextNumber = existingCenters.length + 1;
           
-          // Create damage center immediately with location
-          const damageCenter = {
-            id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            number: Math.max(1, nextNumber), // ✅ FORCE number to be at least 1
-            location: location,
-            description: 'תיאור יתווסף בשלב הבא',
-            area_code: 'GENERAL',
-            side: 'N/A',
-            severity: 3,
-            damage_types: ['GENERAL'],
-            notes: '',
-            photos: [],
-            works: [],
-            parts_required: [],
-            repairs: [],
-            created_at: new Date().toISOString(),
-            created_by: 'wizard_step_1',
-            status: 'in_progress'
+          // ✅ FIXED: Initialize current_damage_center with proper structure per documentation
+          const centerId = `dc_${Date.now()}_${nextNumber}`;
+          
+          helper.current_damage_center = {
+            "Id": centerId,
+            "Damage center Number": nextNumber.toString(),
+            "Location": location,
+            "Description": "", // Will be filled in step 2
+            "Works": {
+              "takana389": "",
+              "works": [],
+              "works_meta": {
+                "total_items": 0,
+                "total_cost": 0,
+                "takana389_status": "",
+                "timestamp": new Date().toISOString()
+              }
+            },
+            "Parts": {
+              "parts_meta": {
+                "total_items": 0,
+                "total_cost": 0,
+                "timestamp": new Date().toISOString()
+              },
+              "parts_required": [],
+              "parts_search": {
+                "results": [],
+                "search_meta": {
+                  "total_results": 0,
+                  "timestamp": new Date().toISOString(),
+                  "search_session": `search_${Date.now()}`
+                }
+              },
+              "takana389": ""
+            },
+            "Repairs": {
+              "repairs": [],
+              "repairs_meta": {
+                "total_items": 0,
+                "total_cost": 0,
+                "timestamp": new Date().toISOString()
+              }
+            },
+            "Summary": {
+              "Total works": 0,
+              "Total parts": 0,
+              "Total repairs": 0,
+              "Total without VAT": 0,
+              "Total with VAT": 0
+            }
           };
+          // Update tracking variables
+          damageCenterData.id = centerId;
+          damageCenterData.number = nextNumber;
+          damageCenterData.location = location;
+          moduleData.location = location;
           
-          // ✅ CRITICAL DEBUG: Check helper API availability with detailed logging
-          console.log('🔍 === STEP 1 DAMAGE CENTER CREATION DEBUG ===');
-          console.log('🔍 window.createDamageCenter type:', typeof window.createDamageCenter);
-          console.log('🔍 window.helper exists:', !!window.helper);
-          console.log('🔍 window.helper.damage_centers exists:', !!window.helper?.damage_centers);
-          console.log('🔍 Available window functions with "Damage":', Object.keys(window).filter(k => k.includes('Damage')));
-          console.log('🔍 Available window functions with "create":', Object.keys(window).filter(k => k.includes('create')));
+          console.log('✅ Current damage center initialized:', {
+            id: centerId,
+            number: nextNumber,
+            location: location
+          });
           
-          // ✅ FORCE INITIALIZATION: Ensure helper is properly set up
-          if (!window.helper) {
-            console.log('⚠️ window.helper not found, initializing...');
-            window.helper = helper;
-          }
-          
-          if (!window.helper.damage_centers) {
-            console.log('⚠️ window.helper.damage_centers not found, initializing...');
-            window.helper.damage_centers = [];
-            // Also ensure it exists in the local helper object
-            if (!helper.damage_centers) {
-              helper.damage_centers = [];
-            }
-          }
-          
-          // ✅ TRY MULTIPLE APPROACHES: Direct creation, window function, fallback
-          let centerId = null;
-          let creationMethod = 'unknown';
-          
-          // Approach 1: Try window.createDamageCenter function
-          if (typeof window.createDamageCenter === 'function') {
-            console.log('🔄 Attempting creation via window.createDamageCenter...');
-            console.log('📊 Current damage centers before creation:', window.helper?.damage_centers?.length || 0);
-            try {
-              centerId = window.createDamageCenter(damageCenter);
-              creationMethod = 'window_function';
-              console.log('✅ Window function returned centerId:', centerId);
-              console.log('📊 Current damage centers after creation:', window.helper?.damage_centers?.length || 0);
-            } catch (error) {
-              console.error('❌ Window function failed:', error);
-            }
-          }
-          
-          // Approach 2: Direct creation if window function failed
-          if (!centerId) {
-            console.log('🔄 Attempting direct creation in helper.damage_centers...');
-            try {
-              window.helper.damage_centers.push(damageCenter);
-              centerId = damageCenter.id;
-              creationMethod = 'direct_push';
-              console.log('✅ Direct push successful, centerId:', centerId);
-            } catch (error) {
-              console.error('❌ Direct push failed:', error);
-            }
-          }
-          
-          // Approach 3: Fallback to session storage helper
-          if (!centerId) {
-            console.log('🔄 Attempting fallback to session storage helper...');
-            try {
-              if (!helper.damage_centers) {
-                helper.damage_centers = [];
-              }
-              helper.damage_centers.push(damageCenter);
-              centerId = damageCenter.id;
-              creationMethod = 'session_fallback';
-              console.log('✅ Session fallback successful, centerId:', centerId);
-            } catch (error) {
-              console.error('❌ Session fallback failed:', error);
-            }
-          }
-          
-          if (centerId) {
-            console.log(`✅ Damage center created via ${creationMethod}:`, centerId);
-            
-            // Update all tracking structures
-            damageCenterData.id = centerId;
-            damageCenterData.number = Math.max(1, nextNumber); // ✅ FORCE number to be at least 1
-            damageCenterData.location = location;
-            
-            moduleData.location = location;
-            helper.wizard_temp.current_damage_center = {
-              id: centerId,
-              number: nextNumber,
-              location: location,
-              last_step: currentStep,
-              creation_method: creationMethod,
-              location_meta: {
-                selected_option: locationSelect?.value,
-                custom_input: otherLocationInput?.value,
-                timestamp: new Date().toISOString()
-              }
-            };
-            
-            // ✅ FORCE SYNC: Ensure window.helper and session storage are in sync
-            window.helper = helper;
-            
-            // ✅ CRITICAL: Force save updated helper back to session storage
-            console.log('🔄 Force saving updated helper to session storage...');
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            console.log('✅ Helper saved to session storage with damage_centers:', helper.damage_centers?.length || 0);
-            
-            // ✅ CRITICAL: Don't overwrite window.helper, just ensure it's synced
-            console.log('🔄 Syncing window.helper...');
-            if (!window.helper) {
-              window.helper = helper;
-            } else {
-              // Merge damage_centers to ensure they're not lost
-              window.helper.damage_centers = helper.damage_centers;
-            }
-            console.log('✅ window.helper synced, damage_centers:', window.helper.damage_centers?.length || 0);
-            
-            showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
-            
-            // ✅ VERIFICATION: Log final state
-            console.log('🔍 === CREATION VERIFICATION ===');
-            console.log('🔍 helper.damage_centers length:', helper.damage_centers?.length || 0);
-            console.log('🔍 window.helper.damage_centers length:', window.helper?.damage_centers?.length || 0);
-            console.log('🔍 damageCenterData:', damageCenterData);
-            
-          } else {
-            console.error('❌ All creation methods failed!');
-            showUserNotification('שגיאה ביצירת מוקד נזק - נסה שוב', 'error', 3000);
-          }
+          showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
           
           console.log('✅ Step 1 - Damage center created and saved to helper:', location);
           break;
           
         case 2:
-          // Save description data AND update existing damage center
-          console.log('🔍 === STEP 2 SAVE DEBUG ===');
+          // ✅ FIXED: Save description to current_damage_center per documentation
           const damageDescriptionInput = document.getElementById('damageDescription');
           const description = damageDescriptionInput?.value?.trim() || 'תיאור לא צוין';
-          console.log('🔍 Description input element:', !!damageDescriptionInput);
+          
+          console.log('🔍 === STEP 2 DESCRIPTION SAVE ===');
           console.log('🔍 Description value:', description);
-          console.log('🔍 damageCenterData.id:', damageCenterData.id);
-          console.log('🔍 window.updateDamageCenter type:', typeof window.updateDamageCenter);
           
-          // ✅ FIXED: Update the damage center in the damage_centers array directly
-          if (damageCenterData.id && helper.damage_centers) {
-            // Find the damage center in the array
-            const centerIndex = helper.damage_centers.findIndex(c => c.id === damageCenterData.id);
+          // Save to current_damage_center.Description
+          if (helper.current_damage_center) {
+            helper.current_damage_center.Description = description;
             
-            if (centerIndex >= 0) {
-              // Update the damage center with description
-              helper.damage_centers[centerIndex].description = description;
-              helper.damage_centers[centerIndex].notes = description;
-              helper.damage_centers[centerIndex].updated_at = new Date().toISOString();
-              helper.damage_centers[centerIndex].updated_by = 'wizard_step_2';
-              
-              console.log('✅ Updated damage center with description at index:', centerIndex);
-              console.log('✅ Description saved:', description);
-              
-              // Update all tracking structures
-              damageCenterData.description = description;
-              moduleData.description = description;
-              helper.wizard_temp.current_damage_center.description = description;
-              helper.wizard_temp.current_damage_center.description_meta = {
-                char_count: description.length,
-                timestamp: new Date().toISOString(),
-                source: 'manual_input'
-              };
-              
-              showUserNotification(`תיאור נזק נוסף למוקד ${damageCenterData.number}`, 'success', 2000);
-            } else {
-              console.error('❌ Damage center not found in array! Creating fallback...');
-              
-              // Fallback: ensure the damage center exists
-              const newCenter = {
-                id: damageCenterData.id,
-                number: damageCenterData.number,
-                location: damageCenterData.location || 'מיקום לא צוין',
-                description: description,
-                notes: description,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                updated_by: 'wizard_step_2_fallback'
-              };
-              
-              helper.damage_centers.push(newCenter);
-              console.log('✅ Created new damage center with description as fallback');
-            }
-          } else {
-            console.error('❌ No damage center ID or damage_centers array not found');
-            console.error('❌ Debug info:');
-            console.error('   - damageCenterData.id:', damageCenterData.id);
-            console.error('   - helper.damage_centers:', helper.damage_centers);
-            
-            // ✅ FALLBACK: Save to wizard temp at least
-            helper.wizard_temp.current_damage_center.description = description;
-            moduleData.description = description;
+            // Update tracking variables
             damageCenterData.description = description;
-            showUserNotification('תיאור נשמר (מצב גיבוי)', 'info', 2000);
+            moduleData.description = description;
+            
+            console.log('✅ Description saved to current_damage_center.Description:', description);
+            showUserNotification(`תיאור נזק נוסף למוקד ${damageCenterData.number}`, 'success', 2000);
+          } else {
+            console.error('❌ current_damage_center not found!');
+            showUserNotification('שגיאה בשמירת תיאור', 'error', 2000);
           }
           
-          // ✅ CRITICAL: Sync window.helper with updated damage_centers
-          if (window.helper) {
-            window.helper.damage_centers = helper.damage_centers;
-          }
-          
-          console.log('✅ Step 2 - Description added to existing damage center:', description);
+          console.log('✅ Step 2 - Description saved to current_damage_center');
           break;
           
         case 3:
-          // COMPLETE WORKS DATA CAPTURE
+          // Save works data to current_damage_center per documentation
           const takana389 = document.getElementById('takana389Work')?.value || '';
           const worksData = moduleData.works || [];
           
-          // COMPLETE SAVE to all structures
-          helper.wizard_temp.current_damage_center.works = worksData;
-          helper.wizard_temp.current_damage_center.takana389 = takana389;
-          helper.wizard_temp.current_damage_center.works_meta = {
-            total_items: worksData.length,
-            total_cost: worksData.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0),
-            takana389_status: takana389,
-            timestamp: new Date().toISOString()
-          };
-          
-          console.log('✅ Step 3 - Works data FULLY captured:', {
-            items: worksData.length, 
-            total: helper.wizard_temp.current_damage_center.works_meta.total_cost,
-            takana389
-          });
+          if (helper.current_damage_center) {
+            helper.current_damage_center.Works.takana389 = takana389;
+            helper.current_damage_center.Works.works = worksData.map(work => ({
+              category: work.category || '',
+              cost: parseFloat(work.cost) || 0,
+              comments: work.comments || '',
+              added_at: new Date().toISOString(),
+              source: 'wizard_inline_component'
+            }));
+            helper.current_damage_center.Works.works_meta = {
+              total_items: worksData.length,
+              total_cost: worksData.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0),
+              takana389_status: takana389,
+              timestamp: new Date().toISOString()
+            };
+            
+            console.log('✅ Step 3 - Works data saved to current_damage_center.Works');
+          }
           break;
           
         case 4:
-          // COMPLETE PARTS SEARCH DATA CAPTURE
+          // Save parts search data to current_damage_center
           const searchResults = moduleData.searchResults || [];
           
-          helper.wizard_temp.current_damage_center.parts_search = {
-            results: searchResults,
-            search_meta: {
-              total_results: searchResults.length,
-              timestamp: new Date().toISOString(),
-              search_session: `search_${Date.now()}`
-            }
-          };
-          
-          console.log('✅ Step 4 - Parts search data FULLY captured:', {
-            results: searchResults.length
-          });
+          if (helper.current_damage_center) {
+            helper.current_damage_center.Parts.parts_search = {
+              results: searchResults,
+              search_meta: {
+                total_results: searchResults.length,
+                timestamp: new Date().toISOString(),
+                search_session: `search_${Date.now()}`
+              }
+            };
+            
+            console.log('✅ Step 4 - Parts search data saved to current_damage_center.Parts');
+          }
           break;
           
         case 5:
-          // COMPLETE PARTS REQUIRED DATA CAPTURE
+          // Save parts required data to current_damage_center
           const partsData = moduleData.parts || [];
           
-          helper.wizard_temp.current_damage_center.parts_required = partsData;
-          helper.wizard_temp.current_damage_center.parts_meta = {
-            total_items: partsData.length,
-            total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0),
-            timestamp: new Date().toISOString()
-          };
-          
-          console.log('✅ Step 5 - Parts required data FULLY captured:', {
-            items: partsData.length,
-            total: helper.wizard_temp.current_damage_center.parts_meta.total_cost
-          });
+          if (helper.current_damage_center) {
+            helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
+              name: part.name || part.part || '',
+              תיאור: part.description || part.תיאור || '',
+              כמות: parseInt(part.quantity || part.כמות) || 1,
+              מחיר: part.price ? `₪${part.price}` : '₪0',
+              price: parseFloat(part.price) || 0,
+              quantity: parseInt(part.quantity || part.כמות) || 1,
+              source: part.source || 'manual',
+              'סוג חלק': part.source || 'חליפי/מקורי',
+              ספק: part.supplier || '',
+              'מספר OEM': part.part_number || '',
+              מיקום: part.location || 'ישראל',
+              הערות: part.notes || '',
+              זמינות: part.availability || 'זמין'
+            }));
+            helper.current_damage_center.Parts.parts_meta = {
+              total_items: partsData.length,
+              total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0),
+              timestamp: new Date().toISOString()
+            };
+            
+            console.log('✅ Step 5 - Parts required data saved to current_damage_center.Parts');
+          }
           break;
           
         case 6:
-          // COMPLETE REPAIRS DATA CAPTURE
+          // Save repairs data to current_damage_center
           const repairsData = moduleData.repairs || [];
           
-          helper.wizard_temp.current_damage_center.repairs = repairsData;
-          helper.wizard_temp.current_damage_center.repairs_meta = {
-            total_items: repairsData.length,
-            total_cost: repairsData.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0),
-            timestamp: new Date().toISOString()
-          };
-          
-          console.log('✅ Step 6 - Repairs data FULLY captured:', {
-            items: repairsData.length,
-            total: helper.wizard_temp.current_damage_center.repairs_meta.total_cost
-          });
+          if (helper.current_damage_center) {
+            helper.current_damage_center.Repairs.repairs = repairsData.map(repair => ({
+              name: repair.name || '',
+              cost: parseFloat(repair.cost) || 0,
+              description: repair.description || '',
+              added_at: new Date().toISOString(),
+              source: 'wizard_inline_component'
+            }));
+            helper.current_damage_center.Repairs.repairs_meta = {
+              total_items: repairsData.length,
+              total_cost: repairsData.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0),
+              timestamp: new Date().toISOString()
+            };
+            
+            console.log('✅ Step 6 - Repairs data saved to current_damage_center.Repairs');
+          }
           break;
           
         case 7:
-          // ✅ FINAL STEP - SAVE DAMAGE CENTER TO ARRAY
-          console.log('🏁 Step 7 - Finalizing and saving damage center to array...');
+          // ✅ FINAL STEP - Move current_damage_center to centers array
+          console.log('🏁 Step 7 - Moving current_damage_center to centers array...');
           
-          // Call the function that saves damage center to helper
-          saveDamageCenterToHelper();
-          
-          showUserNotification(`מוקד נזק ${damageCenterData.number} נשמר בהצלחה!`, 'success', 3000);
+          if (helper.current_damage_center && helper.current_damage_center.Id) {
+            // Update the Summary with current totals
+            const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
+            const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
+            const repairsTotal = helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0;
+            const subtotal = worksTotal + partsTotal + repairsTotal;
+            const vatAmount = subtotal * (vatPercentage / 100);
+            const totalWithVat = subtotal + vatAmount;
+            
+            helper.current_damage_center.Summary = {
+              "Total works": worksTotal,
+              "Total parts": partsTotal,
+              "Total repairs": repairsTotal,
+              "Total without VAT": subtotal,
+              "Total with VAT": totalWithVat
+            };
+            
+            // Move to centers array
+            if (!helper.centers) {
+              helper.centers = [];
+            }
+            
+            helper.centers.push(helper.current_damage_center);
+            
+            console.log('✅ Damage center moved to centers array:', {
+              id: helper.current_damage_center.Id,
+              number: helper.current_damage_center["Damage center Number"],
+              location: helper.current_damage_center.Location,
+              description: helper.current_damage_center.Description
+            });
+            
+            // Clear current_damage_center for next use
+            helper.current_damage_center = {};
+            
+            showUserNotification(`מוקד נזק ${damageCenterData.number} נשמר בהצלחה!`, 'success', 3000);
+            
+            // Update dropdown immediately
+            setTimeout(() => {
+              populateExistingDamageCenters(true);
+              console.log('🔄 Updated damage centers dropdown after save');
+            }, 100);
+            
+          } else {
+            console.error('❌ No current_damage_center to save!');
+            showUserNotification('שגיאה בשמירת מוקד הנזק', 'error', 3000);
+          }
           break;
       }
       
@@ -4211,14 +4142,7 @@
     }
     
     function getDamageCentersFromHelper() {
-      // Use the new helper API for getting damage centers
-      if (typeof window.getDamageCenters === 'function') {
-        const centers = window.getDamageCenters();
-        console.log('✅ Found damage centers using helper API:', centers.length);
-        return centers;
-      }
-      
-      // Fallback to legacy method if helper API not available
+      // Get helper data
       let helper;
       
       // Try window.helper first, then sessionStorage
@@ -4233,26 +4157,13 @@
         }
       }
       
-      // Check canonical location first: helper.damage_centers
-      if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
-        console.log('✅ Found damage centers in canonical location helper.damage_centers:', helper.damage_centers.length);
-        return helper.damage_centers;
+      // ✅ FIXED: Use correct structure per documentation - helper.centers
+      if (helper.centers && Array.isArray(helper.centers)) {
+        console.log('✅ Found damage centers in helper.centers:', helper.centers.length);
+        return helper.centers;
       }
       
-      // Check legacy locations for migration
-      // 1. Legacy location: helper.damage_assessment.centers
-      if (helper.damage_assessment && helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
-        console.log('✅ Found damage centers in helper.damage_assessment.centers (legacy):', helper.damage_assessment.centers.length);
-        return helper.damage_assessment.centers;
-      }
-      
-      // 2. Legacy location: helper.damage_centers.centers
-      if (helper.damage_centers && helper.damage_centers.centers && Array.isArray(helper.damage_centers.centers)) {
-        console.log('✅ Found damage centers in helper.damage_centers.centers (legacy):', helper.damage_centers.centers.length);
-        return helper.damage_centers.centers;
-      }
-      
-      console.log('❌ No damage centers found in any location');
+      console.log('❌ No damage centers found in helper.centers');
       return [];
     }
     
