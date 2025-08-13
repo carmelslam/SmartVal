@@ -5094,9 +5094,9 @@
           console.log(`🔍 Processing damage center ${index}:`, center);
           
           const option = document.createElement('option');
-          // Use multiple possible ID formats - FIXED: Use correct field name per documentation
-          const optionId = center.Id || center.id || center.center_id || center.block_id || `center_${index}`;
-          option.value = optionId;
+          // FIXED: Use damage center number as value since it's more reliable
+          const centerNumber = center["Damage center Number"] || (index + 1).toString();
+          option.value = centerNumber;
           
           
           // ✅ IMPROVED: More flexible property detection for option text
@@ -5222,12 +5222,11 @@
           return;
         }
         
-        // Find the damage center to delete - FIXED: Use correct field name per documentation
+        // Find the damage center to delete - FIXED: Search by number instead of ID
         const centerIndex = damageCenters.findIndex(center => 
-          (center.Id === selectedValue) ||
-          (center.id === selectedValue) || 
-          (center.center_id === selectedValue) ||
-          (center.block_id === selectedValue)
+          center["Damage center Number"] === selectedValue ||
+          center.number === selectedValue ||
+          center.center_number === selectedValue
         );
         
         if (centerIndex === -1) {
@@ -5482,11 +5481,11 @@
           const existingCenters = getDamageCentersFromHelper();
           
           
+          // FIXED: Search by damage center number instead of ID
           centerToEdit = existingCenters.find(center => 
-            (center.Id === selectedValue) ||
-            (center.id === selectedValue) || 
-            (center.center_id === selectedValue) ||
-            (center.block_id === selectedValue)
+            center["Damage center Number"] === selectedValue ||
+            center.number === selectedValue ||
+            center.center_number === selectedValue
           );
           console.log('✅ Found damage center using fallback method:', centerToEdit);
         }
