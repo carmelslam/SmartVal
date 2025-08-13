@@ -3540,10 +3540,35 @@
         const location = center.Location || 'מיקום לא צוין';
         const description = center.Description || 'אין תיאור';
         
-        // Calculate costs - FIXED: Calculate from actual items if meta is empty
-        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
-        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
-        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
+        console.log(`🔍 Processing damage center at index ${index}:`, {
+          centerNumber,
+          location,
+          centerData: center
+        });
+        
+        // Calculate costs - FIXED: Try multiple field variations
+        let worksTotal = center.Works?.works_meta?.total_cost || 
+                        center.Summary?.["Total works"] || 
+                        center.Summary?.["total works"] ||
+                        center.Summary?.works ||
+                        center.totals?.works || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || 
+                        center.Summary?.["Total parts"] || 
+                        center.Summary?.["total parts"] ||
+                        center.Summary?.parts ||
+                        center.totals?.parts || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || 
+                          center.Summary?.["Total repairs"] || 
+                          center.Summary?.["total repairs"] ||
+                          center.Summary?.repairs ||
+                          center.totals?.repairs || 0;
+        
+        console.log(`💰 Initial costs for center ${centerNumber}:`, {
+          worksTotal,
+          partsTotal, 
+          repairsTotal,
+          summary: center.Summary
+        });
         
         // If meta costs are 0, calculate from actual items
         if (worksTotal === 0 && center.Works?.works) {
@@ -3560,7 +3585,12 @@
         
         const subtotal = worksTotal + partsTotal + repairsTotal;
         const vatAmount = subtotal * 0.18;
-        const totalWithVat = subtotal + vatAmount;
+        
+        // Try to get total with VAT directly from Summary first, then calculate
+        const totalWithVat = center.Summary?.["Total with VAT"] || 
+                            center.Summary?.["total with VAT"] ||
+                            center.totals?.total_with_vat ||
+                            (subtotal + vatAmount);
         
         console.log(`💰 Center ${centerNumber} costs:`, {
           works: worksTotal,
@@ -3636,9 +3666,21 @@
         const centerNumber = center["Damage center Number"] || (index + 1).toString();
         const location = center.Location || 'מיקום לא צוין';
         
-        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
-        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
-        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
+        let worksTotal = center.Works?.works_meta?.total_cost || 
+                        center.Summary?.["Total works"] || 
+                        center.Summary?.["total works"] ||
+                        center.Summary?.works ||
+                        center.totals?.works || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || 
+                        center.Summary?.["Total parts"] || 
+                        center.Summary?.["total parts"] ||
+                        center.Summary?.parts ||
+                        center.totals?.parts || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || 
+                          center.Summary?.["Total repairs"] || 
+                          center.Summary?.["total repairs"] ||
+                          center.Summary?.repairs ||
+                          center.totals?.repairs || 0;
         
         // Calculate from actual items if meta is empty
         if (worksTotal === 0 && center.Works?.works) {
@@ -3654,7 +3696,10 @@
         }
         
         const subtotal = worksTotal + partsTotal + repairsTotal;
-        const totalWithVat = subtotal * 1.18;
+        const totalWithVat = center.Summary?.["Total with VAT"] || 
+                            center.Summary?.["total with VAT"] ||
+                            center.totals?.total_with_vat ||
+                            (subtotal * 1.18);
         
         centersTotalsHtml += `
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px;">
