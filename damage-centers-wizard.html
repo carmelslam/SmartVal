@@ -1546,10 +1546,10 @@
         // Fallback to legacy method if helper API not available
         const existingCenters = getDamageCentersFromHelper();
         
-        // Get highest existing number to ensure proper sequencing
+        // ✅ FIXED: Use correct field name per documentation
         let highestNumber = 0;
         existingCenters.forEach(center => {
-          const centerNumber = parseInt(center.number || center.center_number || 0);
+          const centerNumber = parseInt(center["Damage center Number"] || center.number || 0);
           if (centerNumber > highestNumber) {
             highestNumber = centerNumber;
           }
@@ -4171,6 +4171,16 @@
       currentStep = 1;
       damageCenterData = {};
       
+      // ✅ CRITICAL: Clear ALL module data for new damage center
+      moduleData = {
+        works: [],
+        parts: [],
+        repairs: [],
+        location: '',
+        description: '',
+        searchResults: []
+      };
+      
       // ✅ FIXED: Clear wizard temporary data
       clearWizardTempData();
       
@@ -4195,7 +4205,10 @@
         card.classList.remove('selected');
       });
       
-      console.log('🔄 Wizard reset to initial state');
+      // ✅ CRITICAL: Clear all module displays and subtotals
+      clearAllModuleDisplays();
+      
+      console.log('🔄 Wizard completely reset to initial state');
     }
     
     function clearWizardTempData() {
@@ -4211,6 +4224,55 @@
       } catch (error) {
         console.warn('Failed to clear wizard temp data:', error);
       }
+    }
+    
+    function clearAllModuleDisplays() {
+      console.log('🧹 Clearing all module displays and subtotals...');
+      
+      // Clear work module displays
+      const worksList = document.getElementById('worksList');
+      if (worksList) worksList.innerHTML = '';
+      
+      const workTotalDisplay = document.getElementById('workTotalDisplay');
+      if (workTotalDisplay) workTotalDisplay.style.display = 'none';
+      
+      const workSubtotal = document.getElementById('workSubtotal');
+      if (workSubtotal) workSubtotal.style.display = 'none';
+      
+      // Clear parts module - reset iframe
+      const partsModuleFrame = document.getElementById('partsModuleFrame');
+      if (partsModuleFrame) {
+        partsModuleFrame.src = partsModuleFrame.src; // Reload iframe to clear it
+      }
+      
+      const partsSubtotal = document.getElementById('partsSubtotal');
+      if (partsSubtotal) partsSubtotal.style.display = 'none';
+      
+      // Clear repairs module displays
+      const repairsList = document.getElementById('repairsList');
+      if (repairsList) repairsList.innerHTML = '';
+      
+      const repairTotalDisplay = document.getElementById('repairTotalDisplay');
+      if (repairTotalDisplay) repairTotalDisplay.style.display = 'none';
+      
+      const repairsSubtotal = document.getElementById('repairsSubtotal');
+      if (repairsSubtotal) repairsSubtotal.style.display = 'none';
+      
+      // Clear total displays
+      const totalAmount = document.getElementById('totalAmount');
+      if (totalAmount) totalAmount.textContent = '₪0';
+      
+      const totalWithoutVat = document.getElementById('totalWithoutVat');
+      if (totalWithoutVat) totalWithoutVat.textContent = '₪0';
+      
+      const totalWithVat = document.getElementById('totalWithVat');
+      if (totalWithVat) totalWithVat.textContent = '₪0';
+      
+      // Reset takana389 field
+      const takana389Work = document.getElementById('takana389Work');
+      if (takana389Work) takana389Work.value = '';
+      
+      console.log('✅ All module displays cleared');
     }
     
     // ✅ ENHANCED: Set up communication with embedded modules
@@ -4945,7 +5007,7 @@
           
           let highestNumber = 0;
           existingCenters.forEach(center => {
-            const centerNumber = parseInt(center.number || center.center_number || 0);
+            const centerNumber = parseInt(center["Damage center Number"] || center.number || 0);
             if (centerNumber > highestNumber) {
               highestNumber = centerNumber;
             }
@@ -4954,8 +5016,10 @@
           console.log('✅ Got next damage center number using fallback method:', nextNumber);
         }
         
-        // Reset wizard for new center
-        currentStep = 1;
+        // ✅ FIXED: Use resetWizard to properly clear everything
+        resetWizard();
+        
+        // Update damage center data with correct number after reset
         damageCenterData = {
           id: `center_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           number: nextNumber,
@@ -4963,21 +5027,11 @@
           mode: 'create_new'
         };
         
-        // Clear form data
-        moduleData = { works: [], parts: [], repairs: [] };
-        
-        // Update UI
+        // Set the correct number in UI after reset
         document.getElementById('damageCenterNumber').value = nextNumber;
-        document.getElementById('locationSelect').value = '';
-        document.getElementById('damageDescription').value = '';
-        document.getElementById('otherLocationInput').value = '';
-        document.getElementById('otherLocationGroup').style.display = 'none';
         
-        // Show status
+        // Show status with correct number
         updateStatusMessage(`מוכן ליצירת מוקד נזק ${nextNumber}`, 'success');
-        
-        // Show step 1
-        showStep(1);
         
         console.log(`✅ Ready to create damage center ${nextNumber}`);
         
