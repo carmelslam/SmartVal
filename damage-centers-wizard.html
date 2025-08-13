@@ -2759,32 +2759,23 @@
           console.log('🔍 damageCenterData.id:', damageCenterData.id);
           console.log('🔍 window.updateDamageCenter type:', typeof window.updateDamageCenter);
           
-          // Update existing damage center with description
-          if (damageCenterData.id && typeof window.updateDamageCenter === 'function') {
-            const updateData = {
-              description: description,
-              notes: description,
-              updated_at: new Date().toISOString(),
-              updated_by: 'wizard_step_2',
-              meta: {
-                last_step: currentStep
-              }
-            };
+          // ✅ FIXED: Update the damage center in the damage_centers array directly
+          if (damageCenterData.id && helper.damage_centers) {
+            // Find the damage center in the array
+            const centerIndex = helper.damage_centers.findIndex(c => c.id === damageCenterData.id);
             
-            const success = window.updateDamageCenter(damageCenterData.id, updateData);
-            if (success) {
-              console.log('✅ Damage center updated with description in step 2');
+            if (centerIndex >= 0) {
+              // Update the damage center with description
+              helper.damage_centers[centerIndex].description = description;
+              helper.damage_centers[centerIndex].notes = description;
+              helper.damage_centers[centerIndex].updated_at = new Date().toISOString();
+              helper.damage_centers[centerIndex].updated_by = 'wizard_step_2';
+              
+              console.log('✅ Updated damage center with description at index:', centerIndex);
+              console.log('✅ Description saved:', description);
+              
+              // Update all tracking structures
               damageCenterData.description = description;
-              
-              // ✅ VERIFY: Check that description was actually saved to the damage center
-              const updatedCenter = window.getDamageCenterById ? window.getDamageCenterById(damageCenterData.id) : null;
-              if (updatedCenter && updatedCenter.description === description) {
-                console.log('✅ VERIFIED: Description successfully saved to damage center:', description);
-              } else {
-                console.error('❌ VERIFICATION FAILED: Description not found in damage center after update');
-              }
-              
-              // Save to all structures
               moduleData.description = description;
               helper.wizard_temp.current_damage_center.description = description;
               helper.wizard_temp.current_damage_center.description_meta = {
@@ -2795,21 +2786,39 @@
               
               showUserNotification(`תיאור נזק נוסף למוקד ${damageCenterData.number}`, 'success', 2000);
             } else {
-              console.error('❌ Failed to update damage center with description');
+              console.error('❌ Damage center not found in array! Creating fallback...');
+              
+              // Fallback: ensure the damage center exists
+              const newCenter = {
+                id: damageCenterData.id,
+                number: damageCenterData.number,
+                location: damageCenterData.location || 'מיקום לא צוין',
+                description: description,
+                notes: description,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                updated_by: 'wizard_step_2_fallback'
+              };
+              
+              helper.damage_centers.push(newCenter);
+              console.log('✅ Created new damage center with description as fallback');
             }
           } else {
-            console.error('❌ No damage center ID or helper API not available');
+            console.error('❌ No damage center ID or damage_centers array not found');
             console.error('❌ Debug info:');
             console.error('   - damageCenterData.id:', damageCenterData.id);
-            console.error('   - typeof window.updateDamageCenter:', typeof window.updateDamageCenter);
-            console.error('   - Available window functions with "update":', Object.keys(window).filter(k => k.includes('update')));
+            console.error('   - helper.damage_centers:', helper.damage_centers);
             
-            // ✅ FALLBACK: Save description directly to wizard temp structure
-            console.log('🔄 Using fallback - saving description to wizard temp structure');
+            // ✅ FALLBACK: Save to wizard temp at least
             helper.wizard_temp.current_damage_center.description = description;
             moduleData.description = description;
             damageCenterData.description = description;
             showUserNotification('תיאור נשמר (מצב גיבוי)', 'info', 2000);
+          }
+          
+          // ✅ CRITICAL: Sync window.helper with updated damage_centers
+          if (window.helper) {
+            window.helper.damage_centers = helper.damage_centers;
           }
           
           console.log('✅ Step 2 - Description added to existing damage center:', description);
