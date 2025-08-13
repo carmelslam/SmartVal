@@ -1375,92 +1375,9 @@
     });
     
     function updateHelperWithModuleData() {
-      try {
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Update damage_assessment with current module data
-        helper.damage_assessment = helper.damage_assessment || {};
-        // FIXED: Ensure centers array is initialized for proper sequential numbering
-        helper.damage_assessment.centers = helper.damage_assessment.centers || [];
-        
-        if (moduleData.works.length > 0) {
-          helper.damage_assessment.work = {
-            takana389: moduleData.takana389,
-            work_items: moduleData.works,
-            updated_at: new Date().toISOString(),
-            updated_by: 'wizard_collection'
-          };
-        }
-        
-        if (moduleData.parts.length > 0) {
-          // FIXED: Accumulate parts items instead of overwriting
-          const existingPartsItems = helper.damage_assessment.parts?.parts_items || [];
-          
-          // Merge new parts with existing ones, avoiding duplicates
-          const mergedPartsItems = [...existingPartsItems];
-          
-          moduleData.parts.forEach(newPart => {
-            const existingIndex = mergedPartsItems.findIndex(existing => 
-              existing.part_name === newPart.part_name && existing.description === newPart.description
-            );
-            
-            if (existingIndex >= 0) {
-              // Update existing parts item
-              mergedPartsItems[existingIndex] = { ...mergedPartsItems[existingIndex], ...newPart };
-              console.log('🔄 Updated existing parts item in wizard:', newPart.part_name);
-            } else {
-              // Add new parts item
-              mergedPartsItems.push(newPart);
-              console.log('➕ Added new parts item in wizard:', newPart.part_name);
-            }
-          });
-          
-          helper.damage_assessment.parts = {
-            parts_items: mergedPartsItems,
-            updated_at: new Date().toISOString(),
-            updated_by: 'wizard_collection'
-          };
-        }
-        
-        if (moduleData.repairs.length > 0) {
-          // FIXED: Accumulate repairs items instead of overwriting
-          const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
-          
-          // Merge new repairs with existing ones, avoiding duplicates
-          const mergedRepairsItems = [...existingRepairsItems];
-          
-          moduleData.repairs.forEach(newRepair => {
-            const existingIndex = mergedRepairsItems.findIndex(existing => 
-              existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
-            );
-            
-            if (existingIndex >= 0) {
-              // Update existing repairs item
-              mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
-              console.log('🔄 Updated existing repairs item in wizard:', newRepair.repair_type);
-            } else {
-              // Add new repairs item
-              mergedRepairsItems.push(newRepair);
-              console.log('➕ Added new repairs item in wizard:', newRepair.repair_type);
-            }
-          });
-          
-          helper.damage_assessment.repairs = {
-            repairs_items: mergedRepairsItems,
-            updated_at: new Date().toISOString(),
-            updated_by: 'wizard_collection'
-          };
-        }
-        
-        helper.meta = helper.meta || {};
-        helper.meta.last_updated = new Date().toISOString();
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Helper updated with module data');
-        
-      } catch (error) {
-        console.error('❌ Failed to update helper with module data:', error);
-      }
+      // ✅ REMOVED: This function used to save to damage_assessment.work/parts/repairs
+      // Now all data is only saved within the damage center itself
+      // Keeping function empty for backward compatibility
     }
     
     // Global wizard state
@@ -2938,11 +2855,27 @@
             total: helper.wizard_temp.current_damage_center.repairs_meta.total_cost
           });
           break;
+          
+        case 7:
+          // ✅ FINAL STEP - SAVE DAMAGE CENTER TO ARRAY
+          console.log('🏁 Step 7 - Finalizing and saving damage center to array...');
+          
+          // Call the function that saves damage center to helper
+          saveDamageCenterToHelper();
+          
+          showUserNotification(`מוקד נזק ${damageCenterData.number} נשמר בהצלחה!`, 'success', 3000);
+          break;
       }
       
       // ✅ CRITICAL: Save to both session storage AND sync window.helper
       console.log('🔄 Saving step data to session storage and syncing window.helper...');
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // ✅ FIXED: Also sync to window.helper for API functions
+      if (typeof window !== 'undefined') {
+        window.helper = helper;
+        console.log('✅ Synced to window.helper, damage_centers count:', window.helper.damage_centers?.length || 0);
+      }
       window.helper = helper; // ✅ CRITICAL: Sync window.helper
       console.log('✅ Step data saved and window.helper synced for step:', currentStep);
     }
@@ -3421,40 +3354,8 @@
       // Update module data
       moduleData.repairs = repairs;
       
-      // ✅ FIXED: Also save to helper.damage_assessment.repairs for real-time persistence
-      try {
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        helper.damage_assessment = helper.damage_assessment || {};
-        // FIXED: Accumulate repairs items in real-time instead of overwriting
-        const existingRepairsItems = helper.damage_assessment.repairs?.repairs_items || [];
-        
-        // Merge new repairs with existing ones, avoiding duplicates
-        const mergedRepairsItems = [...existingRepairsItems];
-        
-        repairs.forEach(newRepair => {
-          const existingIndex = mergedRepairsItems.findIndex(existing => 
-            existing.repair_type === newRepair.repair_type && existing.description === newRepair.description
-          );
-          
-          if (existingIndex >= 0) {
-            // Update existing repairs item
-            mergedRepairsItems[existingIndex] = { ...mergedRepairsItems[existingIndex], ...newRepair };
-          } else {
-            // Add new repairs item
-            mergedRepairsItems.push(newRepair);
-          }
-        });
-        
-        helper.damage_assessment.repairs = {
-          repairs_items: mergedRepairsItems,
-          updated_at: new Date().toISOString(),
-          updated_by: 'wizard_repairs_realtime'
-        };
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log(`✅ Saved ${repairs.length} repairs to helper.damage_assessment.repairs in real-time`);
-      } catch (error) {
-        console.error('❌ Failed to save repairs to helper:', error);
-      }
+      // ✅ REMOVED: Don't save to damage_assessment.repairs - only save to damage center
+      // All repairs data should be stored within the damage center itself
       
       // ✅ FIXED: Update both internal display and wizard subtotal consistently
       const totalDisplay = document.getElementById('repairTotalDisplay');
@@ -4083,7 +3984,8 @@
         
         // ✅ FIXED: Create damage center directly without missing function dependencies  
         const centerNumber = damageCenterData.number || 1;
-        const centerId = `center_${centerNumber}_${Date.now()}`;
+        // ✅ FIXED: Use existing ID if available, otherwise create new
+        const centerId = damageCenterData.id || `center_${centerNumber}_${Date.now()}`;
         
         const newCenter = {
           id: centerId,
@@ -4203,8 +4105,17 @@
           helper.damage_centers = [];
         }
         
-        // Add the new center to the helper damage_centers array
-        helper.damage_centers.push(newCenter);
+        // ✅ FIXED: Check if damage center already exists and update it, or add new
+        const existingIndex = helper.damage_centers.findIndex(c => c.id === damageCenterData.id);
+        if (existingIndex >= 0) {
+          // Update existing damage center
+          helper.damage_centers[existingIndex] = newCenter;
+          console.log('✅ Updated existing damage center at index:', existingIndex);
+        } else {
+          // Add new damage center
+          helper.damage_centers.push(newCenter);
+          console.log('✅ Added new damage center to array');
+        }
         
         // Update helper meta
         helper.meta = helper.meta || {};
@@ -4233,12 +4144,9 @@
         }
         helper.damage_assessment.centers = [...helper.damage_centers];
         
-        // ✅ FIXED: Clear wizard temp data and current damage assessment data for next center
-        if (helper.damage_assessment) {
-          helper.damage_assessment.work = {};
-          helper.damage_assessment.parts = {};
-          helper.damage_assessment.repairs = {};
-        }
+        // ✅ FIXED: Clear wizard temp data for next center
+        // Note: We don't store work, parts, or repairs in damage_assessment anymore
+        // Everything is stored directly in the damage center
         
         // Clear wizard temporary data since damage center is completed
         if (helper.wizard_temp) {
