@@ -1163,43 +1163,34 @@
       <div class="step" id="step7">
         <div class="step-header">
           <div class="step-number">7</div>
-          <h2 class="step-title">סיכום מוקד הנזק</h2>
-          <p class="step-description">סיכום כולל של כל הפרטים והעלויות</p>
+          <h2 class="step-title">סיכום מוקדי הנזק</h2>
+          <p class="step-description">סיכום כולל של כל מוקדי הנזק והעלויות</p>
         </div>
         
-        <div class="damage-center-summary">
-          <div class="summary-header">
-            <div class="summary-title">מוקד נזק מספר <span id="summaryNumber"></span></div>
+        <!-- ✅ NEW: Container for all damage centers -->
+        <div id="damageCentersContainer">
+          <!-- Dynamic content will be populated here -->
+        </div>
+        
+        <!-- ✅ NEW: Final totals summary -->
+        <div class="final-totals-summary" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);">
+          <h3 style="text-align: center; margin-bottom: 25px; font-size: 24px; color: white;">סיכום סופי - כל מוקדי הנזק</h3>
+          
+          <div id="centersTotalsByLocation" style="margin-bottom: 20px;">
+            <!-- Individual center totals will be populated here -->
           </div>
           
-          <div class="form-group">
-            <label class="form-label">מיקום</label>
-            <div id="summaryLocation"></div>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">תיאור הנזק</label>
-            <div id="summaryDescription"></div>
-          </div>
-          
-          <!-- ✅ ENHANCED: Detailed cost breakdown by category -->
-          <div class="official-cost-breakdown">
-            <h3 style="text-align: center; color: #1e40af; margin-bottom: 20px; font-size: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 10px;">פירוט עלויות רשמי לפי קטגוריות</h3>
-            
-            <!-- Parts Breakdown -->
-            <div class="cost-category-section">
-              <h4 style="color: #059669; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center;">
-                <span style="margin-left: 10px;">🔧</span> חלקים נדרשים
-              </h4>
-              <div id="partsBreakdown" class="items-breakdown">
-                <div style="color: #6b7280; font-style: italic;">לא נמצאו פריטים</div>
-              </div>
-              <div class="category-total">
-                <strong>סה"כ חלקים: <span id="partsTotalDisplay">₪0</span></strong>
-              </div>
+          <div style="border-top: 2px solid rgba(255,255,255,0.3); padding-top: 20px; text-align: center;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 18px;">
+              <span>סה"כ ללא מע"מ:</span>
+              <strong id="grandTotalWithoutVAT">₪0</strong>
             </div>
-            
-            <!-- Works Breakdown -->
+            <div style="display: flex; justify-content: space-between; font-size: 22px; font-weight: bold;">
+              <span>סה"כ כולל מע"מ:</span>
+              <strong id="grandTotalWithVAT">₪0</strong>
+            </div>
+          </div>
+        </div>
             <div class="cost-category-section">
               <h4 style="color: #dc2626; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center;">
                 <span style="margin-left: 10px;">🔨</span> עבודות נדרשות
@@ -1378,6 +1369,74 @@
       // ✅ REMOVED: This function used to save to damage_assessment.work/parts/repairs
       // Now all data is only saved within the damage center itself
       // Keeping function empty for backward compatibility
+    }
+
+    // ✅ NEW: Function to update damage assessment according to documentation structure
+    function updateDamageAssessment(helper) {
+      console.log('🔄 Updating damage assessment structure...');
+      
+      if (!helper.centers || !Array.isArray(helper.centers)) {
+        console.warn('⚠️ No centers data found, skipping assessment update');
+        return;
+      }
+      
+      // Initialize assessment structure per documentation
+      helper.damage_assessment = {
+        damage_centers_summary: {},
+        totals: {}
+      };
+      
+      let totalWithoutVAT = 0;
+      let totalWithVAT = 0;
+      
+      // Process each damage center
+      helper.centers.forEach((center, index) => {
+        const centerNumber = center["Damage center Number"] || (index + 1).toString();
+        const centerKey = `Damage center ${centerNumber}`;
+        
+        // Calculate costs per category
+        const worksTotal = center.Works?.works_meta?.total_cost || 0;
+        const partsTotal = center.Parts?.parts_meta?.total_cost || 0;
+        const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
+        
+        const centerSubtotal = worksTotal + partsTotal + repairsTotal;
+        const centerVAT = centerSubtotal * 0.18; // 18% VAT
+        const centerTotal = centerSubtotal + centerVAT;
+        
+        // Add to damage_centers_summary
+        helper.damage_assessment.damage_centers_summary[centerKey] = {
+          "Works": worksTotal,
+          "Parts": partsTotal,
+          "Repairs": repairsTotal,
+          "Total without VAT": centerSubtotal,
+          "Total with VAT": centerTotal
+        };
+        
+        // Add to totals section
+        helper.damage_assessment.totals[centerKey] = centerTotal;
+        
+        // Accumulate grand totals
+        totalWithoutVAT += centerSubtotal;
+        totalWithVAT += centerTotal;
+        
+        console.log(`✅ Processed ${centerKey}:`, {
+          works: worksTotal,
+          parts: partsTotal,
+          repairs: repairsTotal,
+          subtotal: centerSubtotal,
+          total: centerTotal
+        });
+      });
+      
+      // Add grand totals
+      helper.damage_assessment.totals["Total without VAT"] = totalWithoutVAT;
+      helper.damage_assessment.totals["Total with VAT"] = totalWithVAT;
+      
+      console.log('✅ Damage assessment updated:', {
+        centersProcessed: helper.centers.length,
+        totalWithoutVAT,
+        totalWithVAT
+      });
     }
     
     // Global wizard state
@@ -2821,6 +2880,9 @@
               location: helper.current_damage_center.Location,
               description: helper.current_damage_center.Description
             });
+            
+            // ✅ NEW: Update damage assessment with proper structure per documentation
+            updateDamageAssessment(helper);
             
             // Clear current_damage_center for next use
             helper.current_damage_center = {};
@@ -4704,23 +4766,24 @@
           console.log(`🔍 Processing damage center ${index}:`, center);
           
           const option = document.createElement('option');
-          // Use multiple possible ID formats
-          option.value = center.id || center.center_id || center.block_id || `center_${index}`;
+          // Use multiple possible ID formats - FIXED: Use correct field name per documentation
+          option.value = center.Id || center.id || center.center_id || center.block_id || `center_${index}`;
           
           // ✅ IMPROVED: More flexible property detection for option text
           let optionText = '';
           
-          // ✅ IMPROVED: Better identification using correct structure
-          const centerNumber = center.number || center.center_number || (index + 1);
+          // ✅ FIXED: Use correct field name per documentation  
+          const centerNumber = center["Damage center Number"] || center.number || center.center_number || (index + 1);
           optionText = `מוקד ${centerNumber}`;
           
-          // Add location if available
-          if (center.location && center.location !== 'מיקום לא צוין') {
-            optionText += ` - ${center.location}`;
+          // ✅ FIXED: Use correct field name per documentation
+          const centerLocation = center.Location || center.location;
+          if (centerLocation && centerLocation !== 'מיקום לא צוין') {
+            optionText += ` - ${centerLocation}`;
           }
           
           // Add description preview if available
-          const description = center.description || center.damage_description;
+          const description = center.Description || center.description || center.damage_description;
           if (description && description !== 'תיאור לא צוין') {
             const preview = description.substring(0, 30);
             optionText += ` (${preview}${description.length > 30 ? '...' : ''})`;
@@ -4829,8 +4892,9 @@
           return;
         }
         
-        // Find the damage center to delete
+        // Find the damage center to delete - FIXED: Use correct field name per documentation
         const centerIndex = damageCenters.findIndex(center => 
+          (center.Id === selectedValue) ||
           (center.id === selectedValue) || 
           (center.center_id === selectedValue) ||
           (center.block_id === selectedValue)
@@ -4954,9 +5018,9 @@
       
       // Create HTML for each center
       const centersHTML = damageCenters.map((center, index) => {
-        const centerNumber = center.number || center.center_number || (index + 1);
-        const location = center.location || 'מיקום לא צוין';
-        const description = (center.description || center.damage_description || '').substring(0, 100);
+        const centerNumber = center["Damage center Number"] || center.number || center.center_number || (index + 1);
+        const location = center.Location || center.location || 'מיקום לא צוין';
+        const description = (center.Description || center.description || center.damage_description || '').substring(0, 100);
         const totalCost = center.calculations?.total_with_vat || center.totals?.total || 0;
         
         return `
@@ -5077,6 +5141,7 @@
           // Fallback to legacy method
           const existingCenters = getDamageCentersFromHelper();
           centerToEdit = existingCenters.find(center => 
+            (center.Id === selectedValue) ||
             (center.id === selectedValue) || 
             (center.center_id === selectedValue) ||
             (center.block_id === selectedValue)
@@ -5093,7 +5158,7 @@
         damageCenterData = {
           ...centerToEdit,
           mode: 'edit_existing',
-          original_id: centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
+          original_id: centerToEdit.Id || centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
         };
         
         // Load module data
