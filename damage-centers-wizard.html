@@ -1637,22 +1637,10 @@
         console.log('✨ Starting new damage center at step 1');
       }
       
-      // Update number display - FIXED: Get current number from helper if available
+      // Update number display
       const numberInput = document.getElementById('damageCenterNumber');
       if (numberInput) {
-        // Check if we're working on a current damage center
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const currentCenter = helper.current_damage_center;
-        
-        if (currentCenter && currentCenter["Damage center Number"]) {
-          const currentNumber = currentCenter["Damage center Number"];
-          numberInput.value = currentNumber;
-          damageCenterData.number = parseInt(currentNumber);
-          console.log(`📋 Using current damage center number from helper: ${currentNumber}`);
-        } else {
-          numberInput.value = damageCenterData.number;
-          console.log(`📋 Using damage center number from local data: ${damageCenterData.number}`);
-        }
+        numberInput.value = damageCenterData.number;
       }
       
       // Show appropriate step
@@ -1694,22 +1682,8 @@
         console.log(`🔢 Generated damage center number (fallback): ${nextNumber} (existing centers: ${existingCenters.length}, highest: ${highestNumber})`);
       }
       
-      // FIXED: Check if we already have a current damage center in progress
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const currentCenter = helper.current_damage_center;
-      
-      if (currentCenter && currentCenter["Damage center Number"]) {
-        // Use existing current damage center number
-        const existingNumber = parseInt(currentCenter["Damage center Number"]);
-        document.getElementById('damageCenterNumber').value = existingNumber;
-        damageCenterData.number = existingNumber;
-        console.log(`🔄 Continuing existing damage center ${existingNumber}`);
-      } else {
-        // Create new damage center with next number
-        document.getElementById('damageCenterNumber').value = nextNumber;
-        damageCenterData.number = nextNumber;
-        console.log(`🆕 Creating new damage center ${nextNumber}`);
-      }
+      document.getElementById('damageCenterNumber').value = nextNumber;
+      damageCenterData.number = nextNumber;
       
       // FIXED: Generate and set active center ID to prevent orphaned data
       const newCenterId = `center_${Date.now()}_${nextNumber}`;
@@ -3505,35 +3479,71 @@
     };
     
     function updateSummary() {
-      console.log('📋 Updating summary with all damage centers...');
+      console.log('📋 === UPDATE SUMMARY CALLED ===');
       
-      // Get all damage centers from helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const damageCenters = helper.centers || [];
-      
-      console.log(`📊 Found ${damageCenters.length} damage centers for summary`);
-      
-      if (damageCenters.length === 0) {
-        document.getElementById('damageCentersContainer').innerHTML = `
-          <div style="text-align: center; padding: 40px; color: #6b7280;">
-            <h3>לא נמצאו מוקדי נזק</h3>
-            <p>עליך להשלים לפחות מוקד נזק אחד לצפייה בסיכום</p>
-          </div>
-        `;
-        return;
+      try {
+        // Get all damage centers from helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const damageCenters = helper.centers || [];
+        
+        console.log('📊 Helper data:', helper);
+        console.log(`📊 Found ${damageCenters.length} damage centers for summary:`, damageCenters);
+        
+        const container = document.getElementById('damageCentersContainer');
+        console.log('🎯 Container element:', container);
+        
+        if (!container) {
+          console.error('❌ damageCentersContainer element not found!');
+          return;
+        }
+        
+        if (damageCenters.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+              <h3>לא נמצאו מוקדי נזק</h3>
+              <p>עליך להשלים לפחות מוקד נזק אחד לצפייה בסיכום</p>
+            </div>
+          `;
+          return;
+        }
+        
+        // Build collapsible damage centers
+        console.log('🔨 Building collapsible damage centers...');
+        buildCollapsibleDamageCenters(damageCenters);
+        
+        // Build final totals summary
+        console.log('📊 Building final totals summary...');
+        buildFinalTotalsSummary(damageCenters);
+        
+        console.log('✅ Summary update completed');
+        
+      } catch (error) {
+        console.error('❌ Error in updateSummary:', error);
+        const container = document.getElementById('damageCentersContainer');
+        if (container) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #dc2626;">
+              <h3>שגיאה בטעינת הסיכום</h3>
+              <p>אנא נסה לרענן את הדף</p>
+            </div>
+          `;
+        }
       }
-      
-      // Build collapsible damage centers
-      buildCollapsibleDamageCenters(damageCenters);
-      
-      // Build final totals summary
-      buildFinalTotalsSummary(damageCenters);
     }
 
     // ✅ NEW: Build collapsible damage centers display
     function buildCollapsibleDamageCenters(damageCenters) {
+      console.log('🏗️ === BUILDING COLLAPSIBLE DAMAGE CENTERS ===');
+      console.log('📊 Received damage centers:', damageCenters);
+      
       const container = document.getElementById('damageCentersContainer');
+      if (!container) {
+        console.error('❌ damageCentersContainer not found in buildCollapsibleDamageCenters');
+        return;
+      }
+      
       let html = '';
+      console.log(`🔄 Processing ${damageCenters.length} damage centers...`);
       
       damageCenters.forEach((center, index) => {
         const centerNumber = center["Damage center Number"] || (index + 1).toString();
@@ -3546,22 +3556,10 @@
           centerData: center
         });
         
-        // Calculate costs - FIXED: Try multiple field variations
-        let worksTotal = center.Works?.works_meta?.total_cost || 
-                        center.Summary?.["Total works"] || 
-                        center.Summary?.["total works"] ||
-                        center.Summary?.works ||
-                        center.totals?.works || 0;
-        let partsTotal = center.Parts?.parts_meta?.total_cost || 
-                        center.Summary?.["Total parts"] || 
-                        center.Summary?.["total parts"] ||
-                        center.Summary?.parts ||
-                        center.totals?.parts || 0;
-        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || 
-                          center.Summary?.["Total repairs"] || 
-                          center.Summary?.["total repairs"] ||
-                          center.Summary?.repairs ||
-                          center.totals?.repairs || 0;
+        // Calculate costs
+        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
         
         console.log(`💰 Initial costs for center ${centerNumber}:`, {
           worksTotal,
@@ -3586,11 +3584,7 @@
         const subtotal = worksTotal + partsTotal + repairsTotal;
         const vatAmount = subtotal * 0.18;
         
-        // Try to get total with VAT directly from Summary first, then calculate
-        const totalWithVat = center.Summary?.["Total with VAT"] || 
-                            center.Summary?.["total with VAT"] ||
-                            center.totals?.total_with_vat ||
-                            (subtotal + vatAmount);
+        const totalWithVat = center.Summary?.["Total with VAT"] || (subtotal + vatAmount);
         
         console.log(`💰 Center ${centerNumber} costs:`, {
           works: worksTotal,
@@ -3652,7 +3646,11 @@
         `;
       });
       
+      console.log('📝 Generated HTML length:', html.length);
+      console.log('📝 HTML preview:', html.substring(0, 200) + '...');
+      
       container.innerHTML = html;
+      console.log('✅ Collapsible damage centers built successfully');
     }
 
     // ✅ NEW: Build final totals summary
@@ -3666,21 +3664,9 @@
         const centerNumber = center["Damage center Number"] || (index + 1).toString();
         const location = center.Location || 'מיקום לא צוין';
         
-        let worksTotal = center.Works?.works_meta?.total_cost || 
-                        center.Summary?.["Total works"] || 
-                        center.Summary?.["total works"] ||
-                        center.Summary?.works ||
-                        center.totals?.works || 0;
-        let partsTotal = center.Parts?.parts_meta?.total_cost || 
-                        center.Summary?.["Total parts"] || 
-                        center.Summary?.["total parts"] ||
-                        center.Summary?.parts ||
-                        center.totals?.parts || 0;
-        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || 
-                          center.Summary?.["Total repairs"] || 
-                          center.Summary?.["total repairs"] ||
-                          center.Summary?.repairs ||
-                          center.totals?.repairs || 0;
+        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
         
         // Calculate from actual items if meta is empty
         if (worksTotal === 0 && center.Works?.works) {
@@ -3696,10 +3682,7 @@
         }
         
         const subtotal = worksTotal + partsTotal + repairsTotal;
-        const totalWithVat = center.Summary?.["Total with VAT"] || 
-                            center.Summary?.["total with VAT"] ||
-                            center.totals?.total_with_vat ||
-                            (subtotal * 1.18);
+        const totalWithVat = center.Summary?.["Total with VAT"] || (subtotal * 1.18);
         
         centersTotalsHtml += `
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px;">
