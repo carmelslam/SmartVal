@@ -2708,10 +2708,12 @@
           // Approach 1: Try window.createDamageCenter function
           if (typeof window.createDamageCenter === 'function') {
             console.log('🔄 Attempting creation via window.createDamageCenter...');
+            console.log('📊 Current damage centers before creation:', window.helper?.damage_centers?.length || 0);
             try {
               centerId = window.createDamageCenter(damageCenter);
               creationMethod = 'window_function';
               console.log('✅ Window function returned centerId:', centerId);
+              console.log('📊 Current damage centers after creation:', window.helper?.damage_centers?.length || 0);
             } catch (error) {
               console.error('❌ Window function failed:', error);
             }
@@ -3908,13 +3910,57 @@
               window.buildComprehensiveDamageAssessment();
             }
             
+            // ✅ FIXED: Sync damage centers to assessment
+            if (typeof window.syncDamageAssessmentCenters === 'function') {
+              window.syncDamageAssessmentCenters();
+              console.log('✅ Synced damage centers to assessment');
+            }
+            
             showUserNotification(`מוקד נזק ${damageCenterData.number} הושלם בהצלחה!`, 'success', 3000);
+            
+            // ✅ FIXED: Clear current damage center and prepare for next
+            clearCurrentDamageCenter();
           }
         }
         
       } catch (error) {
         console.error('❌ Error finalizing damage center:', error);
       }
+    }
+    
+    function clearCurrentDamageCenter() {
+      console.log('🧹 Clearing current damage center and preparing for next...');
+      
+      // Clear active damage center ID
+      sessionStorage.removeItem('active_damage_center_id');
+      
+      // Clear wizard temp data
+      let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.wizard_temp) {
+        delete helper.wizard_temp.current_damage_center;
+      }
+      
+      // Clear damage_assessment.current_center_id
+      if (helper.damage_assessment) {
+        delete helper.damage_assessment.current_center_id;
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // ✅ FIXED: Force save to ensure damage center is in storage before reset
+      if (typeof window.saveHelperToStorage === 'function') {
+        window.saveHelperToStorage();
+        console.log('✅ Forced helper save to storage');
+      }
+      
+      // Reset wizard for next damage center with extra delay
+      setTimeout(() => {
+        // Double-check that damage centers are properly saved
+        const savedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('📊 Damage centers count before reset:', savedHelper.damage_centers?.length || 0);
+        
+        resetWizard();
+      }, 3000);
     }
     
     function saveDamageCenter() {
