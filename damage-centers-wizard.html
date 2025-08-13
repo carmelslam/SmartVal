@@ -5351,7 +5351,17 @@
         const centerNumber = center["Damage center Number"] || center.number || center.center_number || (index + 1);
         const location = center.Location || center.location || 'מיקום לא צוין';
         const description = (center.Description || center.description || center.damage_description || '').substring(0, 100);
-        const totalCost = center.calculations?.total_with_vat || center.totals?.total || 0;
+        // Calculate cost from available data sources
+        let totalCost = center.calculations?.total_with_vat || center.totals?.total || center.Summary?.["Total with VAT"] || 0;
+        
+        // If no precalculated total, calculate from components
+        if (totalCost === 0) {
+          const worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
+          const partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
+          const repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
+          const subtotal = worksTotal + partsTotal + repairsTotal;
+          totalCost = subtotal > 0 ? subtotal * 1.18 : 0; // Add 18% VAT if we have costs
+        }
         
         return `
           <div style="
