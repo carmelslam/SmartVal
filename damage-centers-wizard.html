@@ -1514,6 +1514,25 @@
     function checkForPreviousWizardSession() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+        
+        // ✅ FIXED: Check for active damage center in damage_centers array
+        if (activeCenterId && helper.damage_centers) {
+          const activeCenter = helper.damage_centers.find(c => c.id === activeCenterId);
+          if (activeCenter) {
+            console.log('🔄 Found active damage center to restore:', activeCenter);
+            return {
+              id: activeCenter.id,
+              number: activeCenter.number,
+              mode: 'edit',
+              last_step: activeCenter.meta?.last_step || 1,
+              location: activeCenter.location,
+              description: activeCenter.description
+            };
+          }
+        }
+        
+        // Fallback to wizard_temp
         return helper.wizard_temp?.current_damage_center || null;
       } catch (e) {
         console.warn('Failed to check for previous wizard session');
@@ -1524,27 +1543,40 @@
     function restorePreviousWizardSession(previousSession) {
       console.log('🔄 Restoring previous wizard session:', previousSession);
       
-      // ✅ FIXED: Always start new wizard at step 1, only restore if continuing same center
+      // ✅ FIXED: Restore full damage center data
       if (previousSession.mode === 'edit' && previousSession.id) {
-        // Only restore step for editing existing centers
+        // Restore damage center data
+        damageCenterData = {
+          id: previousSession.id,
+          number: previousSession.number,
+          location: previousSession.location || '',
+          description: previousSession.description || ''
+        };
+        
+        // Restore to appropriate step
         currentStep = previousSession.last_step || 1;
         console.log('📝 Restored edit mode to step:', currentStep);
       } else {
         // Always start new centers at step 1
         currentStep = 1;
+        damageCenterData.number = previousSession.number;
         console.log('✨ Starting new damage center at step 1');
       }
-      damageCenterData.number = previousSession.number;
       
       // Update number display
       const numberInput = document.getElementById('damageCenterNumber');
       if (numberInput) {
-        numberInput.value = previousSession.number;
+        numberInput.value = damageCenterData.number;
       }
       
       // Show appropriate step
       showStep(currentStep);
       updateProgress();
+      
+      // Restore form data for current step
+      setTimeout(() => {
+        restoreStepData(currentStep);
+      }, 100);
       
       // Load module for current step if needed
       loadStepModule(currentStep);
@@ -1942,8 +1974,20 @@
     }
     
     function restoreLocationData(helper) {
-      // Get current damage center in progress
-      const currentCenterData = helper.wizard_temp?.current_damage_center;
+      // ✅ FIXED: Check for active damage center first, then wizard temp
+      let currentCenterData = null;
+      
+      // First check if we have an active damage center ID
+      const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+      if (activeCenterId && helper.damage_centers) {
+        currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+      }
+      
+      // Fallback to wizard temp
+      if (!currentCenterData) {
+        currentCenterData = helper.wizard_temp?.current_damage_center;
+      }
+      
       if (!currentCenterData) return;
       
       const locationSelect = document.getElementById('locationSelect');
@@ -1977,8 +2021,20 @@
     }
     
     function restoreDescriptionData(helper) {
-      // Get current damage center in progress
-      const currentCenterData = helper.wizard_temp?.current_damage_center;
+      // ✅ FIXED: Check for active damage center first, then wizard temp
+      let currentCenterData = null;
+      
+      // First check if we have an active damage center ID
+      const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+      if (activeCenterId && helper.damage_centers) {
+        currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+      }
+      
+      // Fallback to wizard temp
+      if (!currentCenterData) {
+        currentCenterData = helper.wizard_temp?.current_damage_center;
+      }
+      
       if (!currentCenterData) return;
       
       const descriptionTextarea = document.getElementById('damageDescription');
@@ -2757,7 +2813,10 @@
               description: description,
               notes: description,
               updated_at: new Date().toISOString(),
-              updated_by: 'wizard_step_2'
+              updated_by: 'wizard_step_2',
+              meta: {
+                last_step: currentStep
+              }
             };
             
             const success = window.updateDamageCenter(damageCenterData.id, updateData);
@@ -3776,7 +3835,10 @@
           parts_required: moduleData.parts || [],
           repairs: moduleData.repairs || [],
           updated_at: new Date().toISOString(),
-          updated_by: `wizard_step_${currentStep}`
+          updated_by: `wizard_step_${currentStep}`,
+          meta: {
+            last_step: currentStep
+          }
         };
         
         // Update using helper API
@@ -4531,7 +4593,10 @@
             unselected_parts: data.unselectedParts || [],
             parts_selection_timestamp: new Date().toISOString(),
             parts_selection_total: data.total || 0,
-            parts_source: 'wizard_step_5_selection'
+            parts_source: 'wizard_step_5_selection',
+            meta: {
+              last_step: 5
+            }
           };
           
           window.updateDamageCenter(damageCenterData.id, selectedPartsData);
