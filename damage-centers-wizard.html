@@ -399,6 +399,107 @@
     .official-total-summary {
       text-align: center;
     }
+
+    /* ✅ NEW: Collapsible damage center styles */
+    .damage-center-card {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+
+    .damage-center-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    .damage-center-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-bottom: 2px solid #e5e7eb;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .damage-center-header:hover {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    }
+
+    .damage-center-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .damage-center-location {
+      font-size: 16px;
+      color: #6b7280;
+      margin-right: 10px;
+    }
+
+    .damage-center-total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #059669;
+    }
+
+    .collapse-icon {
+      font-size: 24px;
+      color: #3b82f6;
+      transition: transform 0.3s ease;
+    }
+
+    .collapse-icon.expanded {
+      transform: rotate(180deg);
+    }
+
+    .damage-center-content {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .damage-center-content.expanded {
+      max-height: 1000px;
+      padding: 20px;
+    }
+
+    .cost-breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .cost-breakdown-row:last-child {
+      border-bottom: none;
+      border-top: 2px solid #e5e7eb;
+      margin-top: 10px;
+      padding-top: 15px;
+      font-weight: bold;
+    }
+
+    .cost-category-name {
+      font-size: 16px;
+      color: #374151;
+    }
+
+    .cost-amount {
+      font-size: 16px;
+      font-weight: 600;
+      color: #059669;
+    }
     
     @media (max-width: 768px) {
       .container {
@@ -1191,43 +1292,6 @@
             </div>
           </div>
         </div>
-            <div class="cost-category-section">
-              <h4 style="color: #dc2626; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center;">
-                <span style="margin-left: 10px;">🔨</span> עבודות נדרשות
-              </h4>
-              <div id="worksBreakdown" class="items-breakdown">
-                <div style="color: #6b7280; font-style: italic;">לא נמצאו פריטים</div>
-              </div>
-              <div class="category-total">
-                <strong>סה"כ עבודות: <span id="worksTotalDisplay">₪0</span></strong>
-              </div>
-            </div>
-            
-            <!-- Repairs Breakdown -->
-            <div class="cost-category-section">
-              <h4 style="color: #7c3aed; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center;">
-                <span style="margin-left: 10px;">⚙️</span> תיקונים נדרשים
-              </h4>
-              <div id="repairsBreakdown" class="items-breakdown">
-                <div style="color: #6b7280; font-style: italic;">לא נמצאו פריטים</div>
-              </div>
-              <div class="category-total">
-                <strong>סה"כ תיקונים: <span id="repairsTotalDisplay">₪0</span></strong>
-              </div>
-            </div>
-            
-            <!-- Official Total Summary -->
-            <div class="official-total-summary" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 2px solid #1e40af;">
-              <div class="subtotal-display">
-                <div class="subtotal-title" style="font-size: 22px; color: #1e40af;">סה"כ מוקד נזק מספר <span id="summaryNumberInTotal"></span></div>
-                <div class="subtotal-amount" id="totalAmount" style="font-size: 28px; color: #059669;">₪0</div>
-                <div class="vat-info" style="font-size: 16px; margin-top: 10px;">
-                  ללא מע"מ: <span id="totalWithoutVat" style="font-weight: bold;">₪0</span> | 
-                  כולל מע"מ: <span id="totalWithVat" style="font-weight: bold; color: #dc2626;">₪0</span>
-                </div>
-              </div>
-            </div>
-          </div>
           
           <!-- Add New Damage Center Option at End of Flow -->
           <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 12px; border: 2px dashed #10b981;">
@@ -3415,23 +3479,148 @@
     };
     
     function updateSummary() {
-      document.getElementById('summaryNumber').textContent = damageCenterData.number;
-      document.getElementById('summaryNumberInTotal').textContent = damageCenterData.number;
+      console.log('📋 Updating summary with all damage centers...');
       
-      // Display location (either selected or custom)
-      let locationText = damageCenterData.location;
-      if (damageCenterData.location === 'other' && damageCenterData.customLocation) {
-        locationText = damageCenterData.customLocation;
+      // Get all damage centers from helper
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const damageCenters = helper.centers || [];
+      
+      console.log(`📊 Found ${damageCenters.length} damage centers for summary`);
+      
+      if (damageCenters.length === 0) {
+        document.getElementById('damageCentersContainer').innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <h3>לא נמצאו מוקדי נזק</h3>
+            <p>עליך להשלים לפחות מוקד נזק אחד לצפייה בסיכום</p>
+          </div>
+        `;
+        return;
       }
-      document.getElementById('summaryLocation').textContent = locationText;
       
-      document.getElementById('summaryDescription').textContent = damageCenterData.description;
+      // Build collapsible damage centers
+      buildCollapsibleDamageCenters(damageCenters);
       
-      // ✅ ENHANCED: Generate detailed breakdowns by category
-      generateDetailedBreakdowns();
+      // Build final totals summary
+      buildFinalTotalsSummary(damageCenters);
+    }
+
+    // ✅ NEW: Build collapsible damage centers display
+    function buildCollapsibleDamageCenters(damageCenters) {
+      const container = document.getElementById('damageCentersContainer');
+      let html = '';
       
-      // Calculate totals
-      calculateTotals();
+      damageCenters.forEach((center, index) => {
+        const centerNumber = center["Damage center Number"] || (index + 1).toString();
+        const location = center.Location || 'מיקום לא צוין';
+        const description = center.Description || 'אין תיאור';
+        
+        // Calculate costs
+        const worksTotal = center.Works?.works_meta?.total_cost || 0;
+        const partsTotal = center.Parts?.parts_meta?.total_cost || 0;
+        const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
+        const subtotal = worksTotal + partsTotal + repairsTotal;
+        const vatAmount = subtotal * 0.18;
+        const totalWithVat = subtotal + vatAmount;
+        
+        html += `
+          <div class="damage-center-card">
+            <div class="damage-center-header" onclick="toggleDamageCenter(${index})">
+              <div>
+                <div class="damage-center-title">
+                  <span>🎯 מוקד ${centerNumber}</span>
+                  <span class="damage-center-location">${location}</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="damage-center-total">₪${totalWithVat.toLocaleString()}</div>
+                <div class="collapse-icon" id="icon-${index}">▼</div>
+              </div>
+            </div>
+            
+            <div class="damage-center-content" id="content-${index}">
+              <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                <strong>תיאור הנזק:</strong> ${description}
+              </div>
+              
+              <div class="cost-breakdown-row">
+                <div class="cost-category-name">🔨 עבודות</div>
+                <div class="cost-amount">₪${worksTotal.toLocaleString()}</div>
+              </div>
+              
+              <div class="cost-breakdown-row">
+                <div class="cost-category-name">🔧 חלקים</div>
+                <div class="cost-amount">₪${partsTotal.toLocaleString()}</div>
+              </div>
+              
+              <div class="cost-breakdown-row">
+                <div class="cost-category-name">⚙️ תיקונים</div>
+                <div class="cost-amount">₪${repairsTotal.toLocaleString()}</div>
+              </div>
+              
+              <div class="cost-breakdown-row">
+                <div class="cost-category-name">סה"כ ללא מע"מ</div>
+                <div class="cost-amount">₪${subtotal.toLocaleString()}</div>
+              </div>
+              
+              <div class="cost-breakdown-row">
+                <div class="cost-category-name">סה"כ כולל מע"מ (18%)</div>
+                <div class="cost-amount" style="color: #dc2626; font-size: 18px;">₪${totalWithVat.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    // ✅ NEW: Build final totals summary
+    function buildFinalTotalsSummary(damageCenters) {
+      const centersTotalsContainer = document.getElementById('centersTotalsByLocation');
+      let centersTotalsHtml = '';
+      let grandTotalWithoutVAT = 0;
+      let grandTotalWithVAT = 0;
+      
+      damageCenters.forEach((center, index) => {
+        const centerNumber = center["Damage center Number"] || (index + 1).toString();
+        const location = center.Location || 'מיקום לא צוין';
+        
+        const worksTotal = center.Works?.works_meta?.total_cost || 0;
+        const partsTotal = center.Parts?.parts_meta?.total_cost || 0;
+        const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
+        const subtotal = worksTotal + partsTotal + repairsTotal;
+        const totalWithVat = subtotal * 1.18;
+        
+        centersTotalsHtml += `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px;">
+            <span>מוקד ${centerNumber} - ${location}:</span>
+            <strong>₪${totalWithVat.toLocaleString()}</strong>
+          </div>
+        `;
+        
+        grandTotalWithoutVAT += subtotal;
+        grandTotalWithVAT += totalWithVat;
+      });
+      
+      centersTotalsContainer.innerHTML = centersTotalsHtml;
+      document.getElementById('grandTotalWithoutVAT').textContent = `₪${grandTotalWithoutVAT.toLocaleString()}`;
+      document.getElementById('grandTotalWithVAT').textContent = `₪${grandTotalWithVAT.toLocaleString()}`;
+    }
+
+    // ✅ NEW: Toggle damage center collapse/expand
+    function toggleDamageCenter(index) {
+      const content = document.getElementById(`content-${index}`);
+      const icon = document.getElementById(`icon-${index}`);
+      
+      if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        icon.classList.remove('expanded');
+        icon.textContent = '▼';
+      } else {
+        content.classList.add('expanded');
+        icon.classList.add('expanded');
+        icon.textContent = '▲';
+      }
     }
     
     // ✅ NEW: Generate detailed cost breakdowns for official form
