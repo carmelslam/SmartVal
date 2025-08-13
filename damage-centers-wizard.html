@@ -1637,10 +1637,22 @@
         console.log('✨ Starting new damage center at step 1');
       }
       
-      // Update number display
+      // Update number display - FIXED: Get current number from helper if available
       const numberInput = document.getElementById('damageCenterNumber');
       if (numberInput) {
-        numberInput.value = damageCenterData.number;
+        // Check if we're working on a current damage center
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const currentCenter = helper.current_damage_center;
+        
+        if (currentCenter && currentCenter["Damage center Number"]) {
+          const currentNumber = currentCenter["Damage center Number"];
+          numberInput.value = currentNumber;
+          damageCenterData.number = parseInt(currentNumber);
+          console.log(`📋 Using current damage center number from helper: ${currentNumber}`);
+        } else {
+          numberInput.value = damageCenterData.number;
+          console.log(`📋 Using damage center number from local data: ${damageCenterData.number}`);
+        }
       }
       
       // Show appropriate step
@@ -1682,8 +1694,22 @@
         console.log(`🔢 Generated damage center number (fallback): ${nextNumber} (existing centers: ${existingCenters.length}, highest: ${highestNumber})`);
       }
       
-      document.getElementById('damageCenterNumber').value = nextNumber;
-      damageCenterData.number = nextNumber;
+      // FIXED: Check if we already have a current damage center in progress
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const currentCenter = helper.current_damage_center;
+      
+      if (currentCenter && currentCenter["Damage center Number"]) {
+        // Use existing current damage center number
+        const existingNumber = parseInt(currentCenter["Damage center Number"]);
+        document.getElementById('damageCenterNumber').value = existingNumber;
+        damageCenterData.number = existingNumber;
+        console.log(`🔄 Continuing existing damage center ${existingNumber}`);
+      } else {
+        // Create new damage center with next number
+        document.getElementById('damageCenterNumber').value = nextNumber;
+        damageCenterData.number = nextNumber;
+        console.log(`🆕 Creating new damage center ${nextNumber}`);
+      }
       
       // FIXED: Generate and set active center ID to prevent orphaned data
       const newCenterId = `center_${Date.now()}_${nextNumber}`;
