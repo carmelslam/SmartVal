@@ -62,63 +62,8 @@ function parseJSONWithDuplicates(jsonString) {
 // 🏗️ DAMAGE CENTERS COMPREHENSIVE MANAGEMENT SYSTEM
 // ============================================================================
 
-// ✅ REMOVED: Duplicate createDamageCenter function - keeping the correct one at line 411
-
-/**
- * Update damage center with comprehensive tracking
- */
-window.updateDamageCenter = function(centerId, updates = {}) {
-  console.log(`🔄 Updating damage center ${centerId}:`, updates);
-  
-  if (!window.helper || !window.helper.damage_assessment) {
-    console.error('❌ Helper or damage_assessment not initialized');
-    return false;
-  }
-  
-  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
-  if (!center) {
-    console.error(`❌ Damage center ${centerId} not found`);
-    return false;
-  }
-  
-  // Store original state for audit trail
-  const originalState = JSON.parse(JSON.stringify(center));
-  
-  // Apply updates
-  Object.keys(updates).forEach(key => {
-    if (updates[key] !== undefined) {
-      // Handle nested updates
-      if (key.includes('.')) {
-        const [parent, child] = key.split('.');
-        center[parent] = center[parent] || {};
-        center[parent][child] = updates[key];
-      } else {
-        center[key] = updates[key];
-      }
-    }
-  });
-  
-  // Update timestamps
-  center.timestamps.updated_at = new Date().toISOString();
-  
-  // Add audit trail entry
-  window.helper.damage_assessment.audit_trail.push({
-    action: 'center_updated',
-    center_id: centerId,
-    timestamp: new Date().toISOString(),
-    changes: updates,
-    previous_state: originalState,
-    user: updates.updated_by || 'system'
-  });
-  
-  // Recalculate if needed
-  if (updates.work_items || updates.parts_items || updates.repairs_items) {
-    window.calculateDamageCenterTotals(centerId);
-  }
-  
-  console.log(`✅ Updated damage center ${centerId}`);
-  return true;
-};
+// ✅ REMOVED: Duplicate updateDamageCenter function that uses old damage_assessment.centers
+// The correct version using helper.damage_centers[] is at line 333
 
 /**
  * Calculate comprehensive totals for a damage center
@@ -126,7 +71,7 @@ window.updateDamageCenter = function(centerId, updates = {}) {
 window.calculateDamageCenterTotals = function(centerId) {
   console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
   
-  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
+  const center = window.helper.damage_centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
@@ -195,7 +140,7 @@ window.calculateAllDamageCentersTotals = function() {
   
   const byLocation = {};
   
-  window.helper.damage_assessment.centers.forEach(center => {
+  window.helper.damage_centers.forEach(center => {
     if (center.workflow?.status !== 'rejected' && center.calculations) {
       totalSubtotal += center.calculations.subtotal_before_vat || 0;
       totalVat += center.calculations.vat_amount || 0;
@@ -4801,12 +4746,13 @@ window.isFieldManuallyModified = function(fieldId) {
   return !!override;
 };
 
-// ✅ RESTORE CRITICAL EXPORTS: Essential functions that modules need
-export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const saveHelperToStorage = window.saveHelperToStorage;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const refreshAllModuleForms = window.refreshAllModuleForms;
-export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
-export const isFieldManuallyModified = window.isFieldManuallyModified;
+// ✅ FIXED: Commented out ES6 exports that cause "Uncaught SyntaxError: Unexpected token 'export'"
+// All functions are already available on window object, no exports needed since loaded as regular script
+// export const helper = window.helper;
+// export const updateHelper = window.updateHelper;
+// export const saveHelperToStorage = window.saveHelperToStorage;
+// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// export const processIncomingData = window.processIncomingData;
+// export const refreshAllModuleForms = window.refreshAllModuleForms;
+// export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
+// export const isFieldManuallyModified = window.isFieldManuallyModified;

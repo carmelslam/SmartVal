@@ -1039,20 +1039,37 @@ function savePartsData() {
     function calculatePartsTotals() {
       const parts = [];
       
-      document.querySelectorAll("#partsList .part-row").forEach(row => {
-        const partInput = row.querySelector('.part-name');
-        const priceInput = row.querySelector('.part-price');
+      // ✅ FIXED: Use correct selector for rows
+      document.querySelectorAll("#partsList .row").forEach(row => {
+        const nameInput = row.querySelector('.name');
+        const descInput = row.querySelector('.desc');
+        const quantityInput = row.querySelector('.quantity');
+        const priceInput = row.querySelector('.price');
         const sourceSelect = row.querySelector('.source');
         
-        const partName = partInput ? partInput.value.trim() : '';
+        const name = nameInput ? nameInput.value.trim() : '';
+        const desc = descInput ? descInput.value.trim() : '';
+        const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
         const price = priceInput ? parseFloat(priceInput.value) || 0 : 0;
         const source = sourceSelect ? sourceSelect.value : '';
         
-        if (partName && price > 0) {
+        if (name || desc) {
+          // ✅ Format according to webhook response structure
           parts.push({ 
-            part: partName, 
-            price: price,
-            source: source
+            "name": name,
+            "תיאור": desc,
+            "כמות": quantity,
+            "מחיר": `₪${price}`,
+            "סוג חלק": source,
+            "ספק": "", // To be filled from search results
+            "מיקום": "ישראל", // Default
+            "זמינות": "זמין", // Default
+            "מספר OEM": "", // To be filled if available
+            "הערות": "",
+            // Additional fields for helper compatibility
+            "price": price, // Numeric for calculations
+            "quantity": quantity,
+            "source": source
           });
         }
       });
@@ -1086,15 +1103,38 @@ function savePartsData() {
           // Separate selected and unselected parts
           const allSearchResults = [];
           
-          // Get all search results from helper
-          if (globalHelper.parts_search && globalHelper.parts_search.current_session && globalHelper.parts_search.current_session.results) {
-            allSearchResults.push(...globalHelper.parts_search.current_session.results);
+          // Get all search results from helper - check new structure
+          if (globalHelper.parts_search && globalHelper.parts_search.results) {
+            // Handle new webhook structure with nested search_results
+            globalHelper.parts_search.results.forEach(group => {
+              if (group.search_results && Array.isArray(group.search_results)) {
+                group.search_results.forEach(result => {
+                  // ✅ Ensure consistent structure for all parts
+                  allSearchResults.push({
+                    "name": group.name || '',
+                    "תיאור": result["תיאור"] || '',
+                    "כמות": 1,
+                    "מחיר": result["מחיר"] || '',
+                    "סוג חלק": result["סוג חלק"] || '',
+                    "ספק": result["ספק"] || '',
+                    "מיקום": result["מיקום"] || 'ישראל',
+                    "זמינות": result["זמינות"] || '',
+                    "מספר OEM": result["מספר OEM"] || '',
+                    "הערות": result["הערות"] || '',
+                    // Additional fields for calculations
+                    "price": parseFloat(result["מחיר"]?.replace(/[^0-9.-]/g, '')) || 0,
+                    "quantity": 1,
+                    "source": result["סוג חלק"] || ''
+                  });
+                });
+              }
+            });
           }
           
           // Identify unselected parts (from search results that weren't selected)
           const selectedPartNames = partsData.parts.map(p => p.name.toLowerCase());
           const unselectedParts = allSearchResults.filter(result => 
-            !selectedPartNames.includes((result.name || result.description || '').toLowerCase())
+            !selectedPartNames.includes((result.name || '').toLowerCase())
           );
           
           // Send update to wizard
