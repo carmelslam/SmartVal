@@ -294,7 +294,13 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   // Update fields (preserve ID and number)
   Object.keys(updates).forEach(key => {
     if (key !== 'id' && key !== 'number') {
-      center[key] = updates[key];
+      // ✅ FIXED: Handle nested objects like meta properly
+      if (key === 'meta' && typeof updates[key] === 'object' && center[key]) {
+        // Merge meta object instead of replacing it
+        Object.assign(center[key], updates[key]);
+      } else {
+        center[key] = updates[key];
+      }
     }
   });
   
