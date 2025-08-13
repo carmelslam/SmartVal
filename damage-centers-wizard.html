@@ -1402,6 +1402,30 @@
       // Show loading
       document.getElementById('loadingOverlay').style.display = 'flex';
       
+      // ✅ CRITICAL: Initialize helper and ensure damage_centers array exists
+      let helper = {};
+      try {
+        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      } catch (e) {
+        console.error('Failed to parse helper:', e);
+      }
+      
+      // Ensure damage_centers array exists
+      if (!helper.damage_centers) {
+        helper.damage_centers = [];
+        console.log('✅ Initialized empty damage_centers array');
+      }
+      
+      // Sync to window.helper
+      if (!window.helper) {
+        window.helper = helper;
+      } else if (!window.helper.damage_centers) {
+        window.helper.damage_centers = [];
+      }
+      
+      // Save back to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
       // ✅ FIXED: Check for previous wizard session and restore
       const previousSession = checkForPreviousWizardSession();
       if (previousSession) {
@@ -2616,6 +2640,10 @@
           if (!window.helper.damage_centers) {
             console.log('⚠️ window.helper.damage_centers not found, initializing...');
             window.helper.damage_centers = [];
+            // Also ensure it exists in the local helper object
+            if (!helper.damage_centers) {
+              helper.damage_centers = [];
+            }
           }
           
           // ✅ TRY MULTIPLE APPROACHES: Direct creation, window function, fallback
@@ -2693,12 +2721,17 @@
             // ✅ CRITICAL: Force save updated helper back to session storage
             console.log('🔄 Force saving updated helper to session storage...');
             sessionStorage.setItem('helper', JSON.stringify(helper));
-            console.log('✅ Helper saved to session storage');
+            console.log('✅ Helper saved to session storage with damage_centers:', helper.damage_centers?.length || 0);
             
-            // ✅ CRITICAL: Force sync window.helper with session storage
-            console.log('🔄 Force syncing window.helper with session storage...');
-            window.helper = JSON.parse(sessionStorage.getItem('helper'));
-            console.log('✅ window.helper synced with session storage');
+            // ✅ CRITICAL: Don't overwrite window.helper, just ensure it's synced
+            console.log('🔄 Syncing window.helper...');
+            if (!window.helper) {
+              window.helper = helper;
+            } else {
+              // Merge damage_centers to ensure they're not lost
+              window.helper.damage_centers = helper.damage_centers;
+            }
+            console.log('✅ window.helper synced, damage_centers:', window.helper.damage_centers?.length || 0);
             
             showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
             
