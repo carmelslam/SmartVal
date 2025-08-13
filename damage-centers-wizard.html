@@ -1293,11 +1293,34 @@
           </div>
         </div>
           
+          <!-- ✅ NEW: Quick access to summary -->
+          <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 10px; border: 2px solid #3b82f6;">
+            <div style="text-align: center;">
+              <h4 style="color: #1e40af; margin: 0 0 5px 0; font-size: 16px;">צפה בסיכום כל מוקדי הנזק</h4>
+              <button type="button" onclick="goToSummary()" style="
+                background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); 
+                color: white; 
+                border: none; 
+                padding: 10px 20px; 
+                border-radius: 8px; 
+                font-size: 14px; 
+                font-weight: 600; 
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+              " 
+              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)'" 
+              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(59, 130, 246, 0.3)'">
+                📊 עבור לסיכום מוקדי הנזק
+              </button>
+            </div>
+          </div>
+
           <!-- Add New Damage Center Option at End of Flow -->
           <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 12px; border: 2px dashed #10b981;">
             <div style="text-align: center; margin-bottom: 15px;">
               <h4 style="color: #374151; margin: 0 0 8px 0;">האם תרצה ליצור מוקד נזק נוסף?</h4>
-              <p style="color: #6b7280; margin: 0; font-size: 14px;">לחץ כדי ליצור מוקד נזק חדש או סיים להשלמת האקספרטיזה</p>
+              <p style="color: #6b7280; margin: 0; font-size: 14px;">לחץ כדי ליצור מוקד נزק חדש או סיים להשלמת האקספרטיזה</p>
             </div>
             <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
               <button type="button" onclick="createNewDamageCenter()" style="
@@ -3714,6 +3737,31 @@
         icon.classList.add('expanded');
         icon.textContent = '▲';
       }
+    }
+
+    // ✅ NEW: Quick navigation to summary page
+    function goToSummary() {
+      console.log('📊 Quick navigation to summary requested');
+      
+      // Check if there are any damage centers to show
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const damageCenters = helper.centers || [];
+      
+      if (damageCenters.length === 0) {
+        showUserNotification('אין מוקדי נזק ליצור סיכום. צור מוקד נזק ראשון.', 'warning', 3000);
+        return;
+      }
+      
+      // Navigate directly to step 7
+      currentStep = 7;
+      showStep(currentStep);
+      updateProgress();
+      
+      // Load the summary
+      loadStepModule(currentStep);
+      
+      showUserNotification(`מציג סיכום של ${damageCenters.length} מוקדי נזק`, 'info', 2000);
+      console.log(`✅ Navigated to summary with ${damageCenters.length} damage centers`);
     }
     
     // ✅ NEW: Generate detailed cost breakdowns for official form
