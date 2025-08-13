@@ -3514,13 +3514,38 @@
         const location = center.Location || 'מיקום לא צוין';
         const description = center.Description || 'אין תיאור';
         
-        // Calculate costs
-        const worksTotal = center.Works?.works_meta?.total_cost || 0;
-        const partsTotal = center.Parts?.parts_meta?.total_cost || 0;
-        const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
+        // Calculate costs - FIXED: Calculate from actual items if meta is empty
+        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
+        
+        // If meta costs are 0, calculate from actual items
+        if (worksTotal === 0 && center.Works?.works) {
+          worksTotal = center.Works.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+        }
+        
+        if (partsTotal === 0 && center.Parts?.parts_required) {
+          partsTotal = center.Parts.parts_required.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+        }
+        
+        if (repairsTotal === 0 && center.Repairs?.repairs) {
+          repairsTotal = center.Repairs.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+        }
+        
         const subtotal = worksTotal + partsTotal + repairsTotal;
         const vatAmount = subtotal * 0.18;
         const totalWithVat = subtotal + vatAmount;
+        
+        console.log(`💰 Center ${centerNumber} costs:`, {
+          works: worksTotal,
+          parts: partsTotal,
+          repairs: repairsTotal,
+          subtotal,
+          totalWithVat,
+          worksItems: center.Works?.works?.length || 0,
+          partsItems: center.Parts?.parts_required?.length || 0,
+          repairsItems: center.Repairs?.repairs?.length || 0
+        });
         
         html += `
           <div class="damage-center-card">
@@ -3532,7 +3557,7 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="damage-center-total">₪${totalWithVat.toLocaleString()}</div>
+                <div class="damage-center-total">${totalWithVat > 0 ? `₪${totalWithVat.toLocaleString()}` : 'ללא עלות מחוברת'}</div>
                 <div class="collapse-icon" id="icon-${index}">▼</div>
               </div>
             </div>
@@ -3585,9 +3610,23 @@
         const centerNumber = center["Damage center Number"] || (index + 1).toString();
         const location = center.Location || 'מיקום לא צוין';
         
-        const worksTotal = center.Works?.works_meta?.total_cost || 0;
-        const partsTotal = center.Parts?.parts_meta?.total_cost || 0;
-        const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
+        let worksTotal = center.Works?.works_meta?.total_cost || center.Summary?.["Total works"] || 0;
+        let partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
+        let repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
+        
+        // Calculate from actual items if meta is empty
+        if (worksTotal === 0 && center.Works?.works) {
+          worksTotal = center.Works.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+        }
+        
+        if (partsTotal === 0 && center.Parts?.parts_required) {
+          partsTotal = center.Parts.parts_required.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+        }
+        
+        if (repairsTotal === 0 && center.Repairs?.repairs) {
+          repairsTotal = center.Repairs.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+        }
+        
         const subtotal = worksTotal + partsTotal + repairsTotal;
         const totalWithVat = subtotal * 1.18;
         
@@ -5232,7 +5271,7 @@
               </div>
             </div>
             <div style="color: #6b7280; font-size: 12px;">
-              ${center.created_at ? new Date(center.created_at).toLocaleDateString('he-IL') : 'לא ידוע'}
+              ${center.created_at || center.timestamp ? new Date(center.created_at || center.timestamp).toLocaleDateString('he-IL') : 'נוצר היום'}
             </div>
           </div>
         `;
