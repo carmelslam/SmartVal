@@ -5447,12 +5447,11 @@
           const existingCenters = getDamageCentersFromHelper();
           
           
-          // FIXED: Search by damage center number instead of ID
-          centerToEdit = existingCenters.find(center => 
-            center["Damage center Number"] === selectedValue ||
-            center.number === selectedValue ||
-            center.center_number === selectedValue
-          );
+          // FIXED: Search by damage center number with type conversion
+          centerToEdit = existingCenters.find(center => {
+            const centerNum = center["Damage center Number"] || center.number || center.center_number;
+            return centerNum && (centerNum.toString() === selectedValue.toString());
+          });
         }
         
         if (!centerToEdit) {
@@ -5467,17 +5466,24 @@
           original_id: centerToEdit.Id || centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
         };
         
-        // Load module data
+        // Load module data from proper structure
         moduleData = {
-          works: centerToEdit.work_items || centerToEdit.works || [],
-          parts: centerToEdit.parts_items || centerToEdit.parts || [],
-          repairs: centerToEdit.repairs_items || centerToEdit.repairs || []
+          location: centerToEdit.Location || centerToEdit.location,
+          description: centerToEdit.Description || centerToEdit.description,
+          works: centerToEdit.Works?.works || [],
+          parts: centerToEdit.Parts?.parts_required || [],
+          repairs: centerToEdit.Repairs?.repairs || []
         };
         
-        // Fill form fields
-        document.getElementById('damageCenterNumber').value = centerToEdit.number || centerToEdit.center_number || '';
-        document.getElementById('locationSelect').value = centerToEdit.location || '';
-        document.getElementById('damageDescription').value = centerToEdit.description || centerToEdit.damage_description || '';
+        // Fill form fields with proper field names
+        document.getElementById('damageCenterNumber').value = centerToEdit["Damage center Number"] || centerToEdit.number || '';
+        document.getElementById('locationSelect').value = centerToEdit.Location || centerToEdit.location || '';
+        
+        // Fill description field if it exists
+        const descField = document.getElementById('damageDescription');
+        if (descField) {
+          descField.value = centerToEdit.Description || centerToEdit.description || '';
+        }
         
         // Handle custom location
         if (centerToEdit.location === 'other' && centerToEdit.customLocation) {
