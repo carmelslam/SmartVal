@@ -4198,18 +4198,18 @@
           total_with_vat: total + (total * (vatPercentage / 100))
         };
         
-        // ✅ FIXED: Save to proper helper structure
-        if (!helper.damage_assessment) {
-          helper.damage_assessment = { centers: [] };
+        // ✅ FIXED: Save to proper helper structure - damage_centers is the canonical location
+        if (!helper.damage_centers) {
+          helper.damage_centers = [];
         }
         
-        // Add the new center to the helper
-        helper.damage_assessment.centers.push(newCenter);
+        // Add the new center to the helper damage_centers array
+        helper.damage_centers.push(newCenter);
         
         // Update helper meta
         helper.meta = helper.meta || {};
         helper.meta.last_updated = new Date().toISOString();
-        helper.meta.damage_centers_count = helper.damage_assessment.centers.length;
+        helper.meta.damage_centers_count = helper.damage_centers.length;
         
         // Save to session storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -4225,7 +4225,13 @@
             repairs: newCenter.repairs_items.length
           }
         });
-        console.log('✅ Total damage centers:', helper.damage_assessment.centers.length);
+        console.log('✅ Total damage centers:', helper.damage_centers.length);
+        
+        // ✅ FIXED: Also sync to damage_assessment.centers for backward compatibility
+        if (!helper.damage_assessment) {
+          helper.damage_assessment = { centers: [] };
+        }
+        helper.damage_assessment.centers = [...helper.damage_centers];
         
         // ✅ FIXED: Clear wizard temp data and current damage assessment data for next center
         if (helper.damage_assessment) {
@@ -4241,6 +4247,12 @@
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // ✅ FIXED: Update the damage centers dropdown immediately
+        setTimeout(() => {
+          populateExistingDamageCenters(true);
+          console.log('🔄 Updated damage centers dropdown after completion');
+        }, 100);
         
       } catch (error) {
         console.error('❌ Failed to save organized damage center to helper:', error);
