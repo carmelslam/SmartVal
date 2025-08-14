@@ -290,12 +290,27 @@ window.calculateDamageCenterTotals = function(centerId) {
   console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
   
   // Check if centers array is defined and is an array
-  if (!window.helper || !Array.isArray(window.helper.centers)) {
-    console.error("❌ window.helper.centers is not defined or not an array.");
+  console.log('🔍 DEBUG: window.helper exists?', !!window.helper);
+  console.log('🔍 DEBUG: window.helper.centers exists?', !!window.helper?.centers);
+  console.log('🔍 DEBUG: window.helper.centers is array?', Array.isArray(window.helper?.centers));
+  
+  if (!window.helper) {
+    console.error("❌ window.helper is not defined.");
     return false;
   }
   
-  const center = window.helper.centers.find(c => c.id === centerId);
+  if (!window.helper.centers) {
+    console.error("❌ window.helper.centers is not defined. Initializing...");
+    window.helper.centers = [];
+  }
+  
+  if (!Array.isArray(window.helper.centers)) {
+    console.error("❌ window.helper.centers is not an array:", typeof window.helper.centers);
+    window.helper.centers = [];
+  }
+  
+  console.log('🔍 DEBUG: About to call find on centers array:', window.helper.centers);
+  const center = window.helper.centers.find(c => c && c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
