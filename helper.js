@@ -223,7 +223,18 @@ window.createDamageCenter = function(location = '', description = '', sourceData
   // Update statistics
   window.helper.damage_assessment.statistics.total_centers = centerNumber;
   
-  // Add audit trail entry
+  // ✅ DAMAGE CENTERS FIX: Safely add audit trail entry with full validation
+  if (!window.helper) {
+    console.warn('⚠️ window.helper is undefined - cannot add audit trail for center creation');
+    return newCenter;
+  }
+  if (!window.helper.damage_assessment) {
+    window.helper.damage_assessment = {};
+  }
+  if (!window.helper.damage_assessment.audit_trail) {
+    window.helper.damage_assessment.audit_trail = [];
+  }
+  
   window.helper.damage_assessment.audit_trail.push({
     action: 'center_created',
     center_id: centerId,
@@ -309,7 +320,11 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   }
   // For non-damage center objects (like Levi data), skip timestamps to avoid breaking existing functionality
   
-  // ✅ DAMAGE CENTERS FIX: Safely add audit trail entry
+  // ✅ DAMAGE CENTERS FIX: Safely add audit trail entry with full validation
+  if (!window.helper) {
+    console.warn('⚠️ window.helper is undefined - cannot add audit trail for center update');
+    return;
+  }
   if (!window.helper.damage_assessment) {
     window.helper.damage_assessment = {};
   }
