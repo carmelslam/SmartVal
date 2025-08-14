@@ -297,6 +297,10 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   });
   
   // Update timestamps
+  // ✅ DAMAGE CENTERS FIX: Ensure timestamps object exists before setting properties
+  if (!center.timestamps) {
+    center.timestamps = {};
+  }
   center.timestamps.updated_at = new Date().toISOString();
   
   // Add audit trail entry
