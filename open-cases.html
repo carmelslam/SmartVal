@@ -290,11 +290,8 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { encryptPassword, decryptPassword } from './auth.js';
-    // Use window functions instead of imports - helper.js loaded as regular script
-    const helper = window.helper;
-    const updateHelper = window.updateHelper;
-    const processIncomingData = window.processIncomingData;
-    const broadcastHelperUpdate = window.broadcastHelperUpdate;
+    // Use window functions directly - helper.js loaded as regular script
+    // Don't assign to constants since helper might not be loaded yet when module runs
     import { HEBREW_TO_ENGLISH, processIncomingDataWithMapping } from './field-mapping-dictionary.js';
     
     // Location dropdown handler
@@ -481,30 +478,30 @@
         // Update helper with form data (basic info from user input)
         try {
           // Update helper with new case data (date is inspection_date, NOT damage_date)
-          updateHelper('meta', { plate, location }, 'open_cases');
-          updateHelper('case_info', { 
+          window.updateHelper('meta', { plate, location }, 'open_cases');
+          window.updateHelper('case_info', { 
             inspection_date: date, 
             inspection_location: location,
             damage_date: '', // Clear any previous damage date - user must enter manually
             damage_type: ''  // Clear any previous damage type
           }, 'open_cases');
-          updateHelper('vehicle', { plate }, 'open_cases');
-          updateHelper('stakeholders', { owner: { name: owner } }, 'open_cases');
+          window.updateHelper('vehicle', { plate }, 'open_cases');
+          window.updateHelper('stakeholders', { owner: { name: owner } }, 'open_cases');
           
           // If we have car data from Make.com, update helper with that too
           if (carData) {
             // Update with rich data from Make.com
-            updateHelper('vehicle', carData, 'make_com_response');
-            updateHelper('car_details', carData, 'make_com_response');
+            window.updateHelper('vehicle', carData, 'make_com_response');
+            window.updateHelper('car_details', carData, 'make_com_response');
             
             // Update meta with additional data if available
             if (carData.owner) {
-              updateHelper('stakeholders', { owner: { name: carData.owner } }, 'make_com_response');
+              window.updateHelper('stakeholders', { owner: { name: carData.owner } }, 'make_com_response');
             }
           }
           
           // Broadcast the update to all modules
-          broadcastHelperUpdate(['meta', 'vehicle', 'stakeholders', 'car_details'], 'open_cases');
+          window.broadcastHelperUpdate(['meta', 'vehicle', 'stakeholders', 'car_details'], 'open_cases');
           
           console.log('✅ All data saved to helper system successfully');
         } catch (error) {
