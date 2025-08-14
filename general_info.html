@@ -142,8 +142,7 @@
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
     import { decryptPassword } from './auth.js';
-    // FIXED: Use window.* directly since helper.js is loaded as regular script
-    // import { helper, updateHelper, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js'; // Unified helper system
     
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
@@ -265,22 +264,27 @@
         });
       }
       
-      // FIXED: Use window.refreshAllModuleForms directly since helper.js is loaded as regular script
-      if (typeof window.refreshAllModuleForms === 'function') {
-        console.log('🔄 Calling window.refreshAllModuleForms...');
-        window.refreshAllModuleForms();
-        console.log('✅ General info fields auto-populated from helper');
+      // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
+      import('./helper.js').then(helperModule => {
         
-        // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
-        const damageDateField = document.getElementById('damage_date_independent');
-        if (damageDateField) {
-          const currentValue = damageDateField.value;
-          console.log('🔧 PRESERVE: Damage date field preserved during auto-population:', currentValue);
-          // Don't change the damage date field - it's already set correctly above
+        if (typeof helperModule.refreshAllModuleForms === 'function') {
+          console.log('🔄 Calling refreshAllModuleForms...');
+          helperModule.refreshAllModuleForms();
+          console.log('✅ General info fields auto-populated from helper');
+          
+          // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
+          const damageDateField = document.getElementById('damage_date_independent');
+          if (damageDateField) {
+            const currentValue = damageDateField.value;
+            console.log('🔧 PRESERVE: Damage date field preserved during auto-population:', currentValue);
+            // Don't change the damage date field - it's already set correctly above
+          }
+        } else {
+          console.error('❌ refreshAllModuleForms function not found!');
         }
-      } else {
-        console.error('❌ window.refreshAllModuleForms function not found!');
-      }
+      }).catch(error => {
+        console.error('❌ Could not import helper module:', error);
+      });
     }, 500); // Small delay to ensure DOM is ready
 
     // Fix: Ensure garage email field is always editable
@@ -426,8 +430,8 @@
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
   <script type="module">
-    // FIXED: Use window.* directly since helper.js is loaded as regular script
-    // import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
+    // Import unified helper system for auto-fill
+    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
     
     console.log('🚀 General info page loaded - checking for car data and auto-filling...');
     
@@ -631,12 +635,11 @@
                   console.log('🔥 SIMPLE: Current helper.case_info:', window.helper?.case_info);
                 }
                 
-                // FIXED: Use window.markFieldAsManuallyModified directly
-                if (typeof window.markFieldAsManuallyModified === 'function') {
-                  window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
-                } else {
-                  console.error('window.markFieldAsManuallyModified function not found');
-                }
+                import('./helper.js').then(module => {
+                  module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                }).catch(error => {
+                  console.error('Error importing helper for manual override:', error);
+                });
               }
             }, { passive: true });
           });
@@ -649,12 +652,11 @@
           // Mark as manually modified when user leaves field with changes
           element.addEventListener('blur', function() {
             if (this.dataset.userFocused === 'true' && this.value !== this.defaultValue) {
-              // FIXED: Use window.markFieldAsManuallyModified directly
-              if (typeof window.markFieldAsManuallyModified === 'function') {
-                window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
-              } else {
-                console.error('window.markFieldAsManuallyModified function not found');
-              }
+              import('./helper.js').then(module => {
+                module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+              }).catch(error => {
+                console.error('Error importing helper for manual override:', error);
+              });
             }
             delete this.dataset.userFocused;
           });

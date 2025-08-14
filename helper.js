@@ -4704,14 +4704,14 @@ window.saveHelperToStorage = saveHelperToAllStorageLocations;
 // export const showPlateProtectionAlert = window.showPlateProtectionAlert;
 // export const getPlateProtectionStatus = window.getPlateProtectionStatus;
 
-// ❌ ES6 EXPORTS REMOVED - helper.js loaded as regular script, not module
-// Files that need to import from helper.js should use window.* directly
-// export const helper = window.helper;
-// export const updateHelper = window.updateHelper;
-// export const saveHelperToStorage = window.saveHelperToStorage;
-// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-// export const processIncomingData = window.processIncomingData;
-// export const refreshAllModuleForms = window.refreshAllModuleForms;
+// ✅ ES6 EXPORTS RESTORED - system depends on these
+export const helper = window.helper;
+export const updateHelper = window.updateHelper;
+export const saveHelperToStorage = window.saveHelperToStorage;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+export const processIncomingData = window.processIncomingData;
+export const refreshAllModuleForms = window.refreshAllModuleForms;
+export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
 
 // ✅ SAFETY CHECK: Ensure window.helper is always available
 if (!window.helper) {
