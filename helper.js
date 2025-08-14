@@ -519,6 +519,11 @@ window.calculateAllDamageCentersTotals = function() {
   };
   
   // Update statistics
+  // ✅ DAMAGE CENTERS FIX: Ensure statistics object exists before setting properties
+  if (!window.helper.damage_assessment.statistics) {
+    window.helper.damage_assessment.statistics = { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null };
+  }
+  
   const activeCenters = window.helper.centers.filter(c => c.workflow?.status !== 'rejected');
   window.helper.damage_assessment.statistics.avg_cost_per_center = activeCenters.length > 0 ? totalWithVat / activeCenters.length : 0;
   window.helper.damage_assessment.statistics.most_expensive_center = activeCenters.reduce((max, center) => 
