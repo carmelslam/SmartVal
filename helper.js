@@ -297,11 +297,17 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   });
   
   // Update timestamps
-  // ✅ DAMAGE CENTERS FIX: Ensure timestamps object exists before setting properties
-  if (!center.timestamps) {
-    center.timestamps = {};
+  // ✅ DAMAGE CENTERS FIX: Safely handle timestamps - only for damage centers with proper structure
+  if (center.timestamps) {
+    center.timestamps.updated_at = new Date().toISOString();
+  } else if (centerId && centerId.includes('damage_center_')) {
+    // Only initialize timestamps for actual damage centers
+    center.timestamps = {
+      updated_at: new Date().toISOString(),
+      created_at: center.created_at || new Date().toISOString()
+    };
   }
-  center.timestamps.updated_at = new Date().toISOString();
+  // For non-damage center objects (like Levi data), skip timestamps to avoid breaking existing functionality
   
   // Add audit trail entry
   window.helper.damage_assessment.audit_trail.push({
