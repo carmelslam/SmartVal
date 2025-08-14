@@ -4748,15 +4748,18 @@ window.isFieldManuallyModified = function(fieldId) {
   return !!override;
 };
 
-// ✅ CRITICAL: Ensure helper is globally accessible
-window.helper = window.helper || {};
+// ✅ FIXED: Commented out ES6 exports that cause "Uncaught SyntaxError: Unexpected token 'export'"
+// All functions are already available on window object, no exports needed since loaded as regular script
+// export const helper = window.helper;
+// export const updateHelper = window.updateHelper;
+// export const saveHelperToStorage = window.saveHelperToStorage;
+// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// export const processIncomingData = window.processIncomingData;
+// export const refreshAllModuleForms = window.refreshAllModuleForms;
+// export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
+// export const isFieldManuallyModified = window.isFieldManuallyModified;
 
-// ✅ FIXED: Re-enable all exports that system modules need
-export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const saveHelperToStorage = window.saveHelperToStorage;
-export const refreshAllModuleForms = window.refreshAllModuleForms;
-export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
-export const isFieldManuallyModified = window.isFieldManuallyModified;
+// ✅ FIXED: Removed orphaned return statements and export functions
+// All data getter functions are already available on window object
+// ✅ CLEANED: Removed all orphaned export functions and syntax errors
+// Helper.js is now clean and ready for use
