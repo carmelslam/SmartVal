@@ -3100,6 +3100,7 @@ function processDirectData(data, result) {
     'inspection_date': ['case_info.inspection_date'],
     'תאריך_בדיקה': ['case_info.inspection_date'],
     'location': ['case_info.inspection_location'],
+    'inspection_location': ['case_info.inspection_location'],
     'מקום_בדיקה': ['case_info.inspection_location'],
     
     // Valuation fields
