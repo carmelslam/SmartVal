@@ -4619,11 +4619,22 @@ if (document.readyState === 'loading') {
 //   console.log(`✅ Field ${fieldId} marked as manually modified`);
 // }
 
-// Missing function: refreshAllModuleForms
-// export function refreshAllModuleForms() {
-//   console.log('🔄 Refreshing all module forms...');
-//   populateAllForms();
-// }
+// ✅ RESTORED: refreshAllModuleForms function
+window.refreshAllModuleForms = function() {
+  console.log('🔄 Refreshing all module forms...');
+  if (typeof window.populateAllForms === 'function') {
+    window.populateAllForms();
+  } else {
+    console.warn('⚠️ populateAllForms function not found - attempting alternative refresh');
+    // Alternative: trigger form population via broadcast
+    if (typeof window.broadcastHelperUpdate === 'function') {
+      window.broadcastHelperUpdate(['vehicle', 'stakeholders', 'case_info'], 'refresh_all_forms');
+    }
+  }
+};
+
+// ✅ ALIAS: Create saveHelperToStorage alias for export compatibility
+window.saveHelperToStorage = saveHelperToAllStorageLocations;
 
 // Removed duplicate protectPlateNumber export - already exported above
 // export const validatePlateNumber = window.validatePlateNumber;
@@ -4636,3 +4647,4 @@ export const updateHelper = window.updateHelper;
 export const saveHelperToStorage = window.saveHelperToStorage;
 export const broadcastHelperUpdate = window.broadcastHelperUpdate;
 export const processIncomingData = window.processIncomingData;
+export const refreshAllModuleForms = window.refreshAllModuleForms;
