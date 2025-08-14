@@ -3955,10 +3955,15 @@
     }
     
     function updateModuleSubtotals(workTotal, partsTotal, repairsTotal) {
-      // ✅ DAMAGE CENTERS FIX: Ensure all parameters are valid numbers before calculations
-      workTotal = (typeof workTotal === 'number' && !isNaN(workTotal)) ? workTotal : 0;
-      partsTotal = (typeof partsTotal === 'number' && !isNaN(partsTotal)) ? partsTotal : 0;
-      repairsTotal = (typeof repairsTotal === 'number' && !isNaN(repairsTotal)) ? repairsTotal : 0;
+      // ✅ DAMAGE CENTERS FIX: Only validate parameters if they are actually undefined (preserve calculated values)
+      if (workTotal === undefined || workTotal === null) workTotal = 0;
+      if (partsTotal === undefined || partsTotal === null) partsTotal = 0;  
+      if (repairsTotal === undefined || repairsTotal === null) repairsTotal = 0;
+      
+      // Ensure they are numbers for calculations
+      workTotal = Number(workTotal) || 0;
+      partsTotal = Number(partsTotal) || 0;
+      repairsTotal = Number(repairsTotal) || 0;
       
       // ✅ FIXED: Use proper VAT percentage instead of hardcoded 1.17
       const vatMultiplier = 1 + (vatPercentage / 100);

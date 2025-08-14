@@ -187,4 +187,16 @@ Based on deep code analysis, the following potential conflicts have been identif
 
 ---
 
-**Current Status**: Damage centers fixes applied and ready for testing. Please test the wizard modules first before addressing unrelated Levi upload issues.
+## 🚨 NEW ISSUE DISCOVERED
+
+### Issue: Work Page Calculations Missing After Fix
+- **Problem**: Work page calculations are missing both in iframe and wizard page
+- **Status**: Our calculation fix may have caused this new issue
+- **Screenshot**: Provided - shows missing calculations on work page
+- **Context**: Other modules work fine with no warnings, Levi upload restored
+
+**Analysis Needed**: Our parameter validation fix for `updateModuleSubtotals` may have changed the calculation flow for work items specifically.
+
+---
+
+**Current Status**: Need to investigate work page calculation issue while preserving fixes for other modules.
