@@ -1,7 +1,8 @@
 // 🔄 Helper.js Event-Driven Extensions
 // Provides event-driven updates, auto-save, and consistent data integration
 
-import { helper, updateHelper, saveHelperToStorage } from './helper.js';
+// FIXED: Use window.* directly since helper.js is loaded as regular script
+// import { helper, updateHelper, saveHelperToStorage } from './helper.js';
 
 // Global event system
 class HelperEventBus {

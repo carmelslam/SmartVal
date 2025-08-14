@@ -1,7 +1,8 @@
 // 🔄 Universal Data Capture System - Real-time input monitoring for ALL modules
 // Ensures all UI inputs are automatically captured and saved to helper/session storage
 
-import { updateHelper, helper } from './helper.js';
+// FIXED: Use window.* directly since helper.js is loaded as regular script
+// import { updateHelper, helper } from './helper.js';
 
 class UniversalDataCapture {
   constructor() {
