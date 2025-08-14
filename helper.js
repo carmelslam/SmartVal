@@ -1961,79 +1961,80 @@ window.helper = existingHelper || {
       capture_enabled: true
     }
   },
+  
+  // Validation and quality control
+  validation: {
+    all_centers_valid: false,
+    validation_errors: [],
+    validation_warnings: [],
+    manual_reviews: [],
+    last_validation: '',
+    validation_rules: {
+      require_location: true,
+      require_description: true,
+      require_at_least_one_item: true,
+      require_costs: true
+    }
+  },
+  
+  // Statistics and analytics
+  statistics: {
+    total_centers: 0,
+    avg_cost_per_center: 0,
+    most_common_locations: {},
+    most_expensive_center: null,
+    completion_rate: 0,
     
-    // Validation and quality control
-    validation: {
-      all_centers_valid: false,
-      validation_errors: [],
-      validation_warnings: [],
-      manual_reviews: [],
-      last_validation: '',
-      validation_rules: {
-        require_location: true,
-        require_description: true,
-        require_at_least_one_item: true,
-        require_costs: true
-      }
+    // Time tracking
+    time_spent: {
+      total_minutes: 0,
+      per_center_avg: 0,
+      per_step_breakdown: {}
+    }
+  },
+  
+  // Templates and automation
+  templates: {
+    common_works: [],
+    common_parts: [],
+    common_repairs: [],
+    auto_fill_enabled: true,
+    smart_suggestions: true
+  },
+  
+  // Audit trail and history  
+  audit_trail: [],
+  
+  // Settings and configuration
+  settings: {
+    auto_increment_numbers: true,
+    default_vat_percentage: 17,
+    currency: 'ILS',
+    allow_multiple_centers: true,
+    wizard_mode: true,
+    
+    // UI preferences
+    ui_preferences: {
+      show_subtotals: true,
+      show_vat_breakdown: true,
+      auto_save: true,
+      confirmation_dialogs: true
     },
     
-    // Statistics and analytics
-    statistics: {
-      total_centers: 0,
-      avg_cost_per_center: 0,
-      most_common_locations: {},
-      most_expensive_center: null,
-      completion_rate: 0,
-      
-      // Time tracking
-      time_spent: {
-        total_minutes: 0,
-        per_center_avg: 0,
-        per_step_breakdown: {}
-      }
-    },
-    
-    // Templates and automation
-    templates: {
-      common_works: [],
-      common_parts: [],
-      common_repairs: [],
-      auto_fill_enabled: true,
-      smart_suggestions: true
-    },
-    
-    // Audit trail and history
-    audit_trail: [],
-    
-    // Settings and configuration
-    settings: {
-      auto_increment_numbers: true,
-      default_vat_percentage: 17,
-      currency: 'ILS',
-      allow_multiple_centers: true,
-      wizard_mode: true,
-      
-      // UI preferences
-      ui_preferences: {
-        show_subtotals: true,
-        show_vat_breakdown: true,
-        auto_save: true,
-        confirmation_dialogs: true
-      },
-      
-      // Validation settings
-      validation_settings: {
-        strict_mode: false,
-        require_images: false,
-        require_part_numbers: false,
-        min_cost_threshold: 0
-      }
-    },
-    
-    // Metadata
+    // Validation settings
+    validation_settings: {
+      strict_mode: false,
+      require_images: false,
+      require_part_numbers: false,
+      min_cost_threshold: 0
+    }
+  },
+  
+  // Metadata
+  metadata: {
     created_date: '',
     last_updated: '',
-    version: '2.0.1', // Updated version to indicate enhancement
+    version: '2.0.1',
     created_by: 'damage_centers_wizard',
     workflow_status: 'in_progress'
   },
