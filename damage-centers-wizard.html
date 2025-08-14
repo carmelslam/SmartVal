@@ -2078,9 +2078,9 @@
         currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
       }
       
-      // Fallback to wizard temp
+      // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
-        currentCenterData = helper.wizard_temp?.current_damage_center;
+        currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
       }
       
       if (!currentCenterData) return;
@@ -2088,17 +2088,20 @@
       const locationSelect = document.getElementById('locationSelect');
       const otherLocationInput = document.getElementById('otherLocationInput');
       
-      if (currentCenterData.location && locationSelect) {
+      // ✅ DAMAGE CENTERS FIX: Check both lowercase and uppercase property names
+      const location = currentCenterData.location || currentCenterData.Location;
+      
+      if (location && locationSelect) {
         // Check if location is in standard options
-        const option = Array.from(locationSelect.options).find(opt => opt.value === currentCenterData.location);
+        const option = Array.from(locationSelect.options).find(opt => opt.value === location);
         
         if (option) {
-          locationSelect.value = currentCenterData.location;
+          locationSelect.value = location;
         } else {
           // Custom location
           locationSelect.value = 'other';
           if (otherLocationInput) {
-            otherLocationInput.value = currentCenterData.location;
+            otherLocationInput.value = location;
             otherLocationInput.style.display = 'block';
           }
         }
@@ -2106,12 +2109,12 @@
         // Update location card selection
         document.querySelectorAll('.location-card').forEach(card => {
           card.classList.remove('selected');
-          if (card.dataset.location === currentCenterData.location) {
+          if (card.dataset.location === location) {
             card.classList.add('selected');
           }
         });
         
-        console.log('✅ Restored location data:', currentCenterData.location);
+        console.log('✅ Restored location data:', location);
       }
     }
     
@@ -2125,18 +2128,21 @@
         currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
       }
       
-      // Fallback to wizard temp
+      // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
-        currentCenterData = helper.wizard_temp?.current_damage_center;
+        currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
       }
       
       if (!currentCenterData) return;
       
       const descriptionTextarea = document.getElementById('damageDescription');
       
-      if (currentCenterData.description && descriptionTextarea) {
-        descriptionTextarea.value = currentCenterData.description;
-        console.log('✅ Restored description data:', currentCenterData.description.substring(0, 50) + '...');
+      // ✅ DAMAGE CENTERS FIX: Check both lowercase and uppercase property names
+      const description = currentCenterData.description || currentCenterData.Description;
+      
+      if (description && descriptionTextarea) {
+        descriptionTextarea.value = description;
+        console.log('✅ Restored description data:', description.substring(0, 50) + '...');
       }
     }
     
