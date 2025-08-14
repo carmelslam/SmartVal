@@ -2035,7 +2035,7 @@ window.helper = existingHelper || {
     created_date: '',
     last_updated: '',
     version: '2.0.1',
-    created_by: 'damage_centers_wizard',
+    created_by: 'damage_centers_wizard', 
     workflow_status: 'in_progress'
   },
   valuation: {
@@ -4730,7 +4730,7 @@ window.saveHelperToStorage = saveHelperToAllStorageLocations;
 // ✅ ES6 EXPORTS RESTORED - system depends on these
 export const helper = window.helper;
 export const updateHelper = window.updateHelper;
-export const saveHelperToStorage = window.saveHelperToStorage;
+export const saveHelperToStorage = window.saveHelperToStorage;  
 export const broadcastHelperUpdate = window.broadcastHelperUpdate;
 export const processIncomingData = window.processIncomingData;
 export const refreshAllModuleForms = window.refreshAllModuleForms;
