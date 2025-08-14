@@ -3047,36 +3047,24 @@
             font-size: 16px; 
             font-weight: bold; 
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
           ">
             ➕ הוסף עבודה
           </button>
           
-          <button type="button" onclick="console.log('🔧 MANUAL: Forcing updateWorkData()'); updateWorkData()" style="
-            width: 100%; 
-            padding: 12px; 
-            background: #f59e0b; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer;
-            margin-bottom: 10px;
-          ">
-            🔧 [DEBUG] עדכן חישוב
-          </button>
-          
           <div id="workTotalDisplay" style="
             background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            border: 1px solid #10b981;
-            border-radius: 8px;
-            padding: 15px;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
             display: none;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
           ">
-            <div style="font-size: 16px; color: #059669; margin-bottom: 5px;">סה״כ עבודות</div>
-            <div style="font-size: 24px; font-weight: bold; color: #047857;" id="workTotalAmount">₪0</div>
+            <div style="font-size: 18px; color: #059669; margin-bottom: 10px; font-weight: 600;">סיכום עבודות</div>
+            <div style="font-size: 32px; font-weight: bold; color: #047857; margin-bottom: 8px;" id="workTotalAmount">₪0</div>
+            <div style="font-size: 14px; color: #065f46; opacity: 0.8;" id="workVatBreakdown">ללא מע"מ | כולל מע"מ</div>
           </div>
         </div>
       `;
@@ -3149,15 +3137,15 @@
         border: 1px solid #e5e7eb;
       `;
       
-      const workType = workData ? workData.category : '';
-      const workCost = workData ? workData.cost : '';
-      const workComments = workData ? workData.comments : '';
+      const workTypeValue = workData ? workData.category : '';
+      const workCostValue = workData ? workData.cost : '';
+      const workCommentsValue = workData ? workData.comments : '';
       
       // ✅ ENHANCED: Mobile-optimized work row with better labels and accessibility
       row.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <label style="font-weight: 600; color: #374151; font-size: 14px;">סוג עבודה *</label>
-          <select class="work-type" onchange="console.log('🔧 Work type changed:', this.value); updateWorkData()" oninput="console.log('🔧 Work type input:', this.value); updateWorkData()" style="
+          <select class="work-type" onchange="updateWorkData()" oninput="updateWorkData()" style="
             width: 100%; 
             padding: 12px; 
             border: 2px solid #e5e7eb; 
@@ -3167,13 +3155,13 @@
             box-sizing: border-box;
           ">
             <option value="">בחר סוג עבודה</option>
-            ${window.workOptions.map(opt => `<option value="${opt}" ${opt === workType ? 'selected' : ''}>${opt}</option>`).join('')}
+            ${window.workOptions.map(opt => `<option value="${opt}" ${opt === workTypeValue ? 'selected' : ''}>${opt}</option>`).join('')}
           </select>
         </div>
         
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <label style="font-weight: 600; color: #374151; font-size: 14px;">עלות משוערת *</label>
-          <input type="number" class="work-cost" placeholder="0" value="${workCost}" onchange="console.log('🔧 Work cost changed:', this.value); updateWorkData()" oninput="console.log('🔧 Work cost input:', this.value); updateWorkData()" style="
+          <input type="number" class="work-cost" placeholder="0" value="${workCostValue}" onchange="updateWorkData()" oninput="updateWorkData()" style="
             width: 100%; 
             padding: 12px; 
             border: 2px solid #e5e7eb; 
@@ -3186,7 +3174,7 @@
         
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <label style="font-weight: 600; color: #374151; font-size: 14px;">הערות והבהרות</label>
-          <textarea class="work-comments" placeholder="פרטים נוספים על העבודה..." onchange="console.log('🔧 Work comments changed:', this.value.substring(0, 20)); updateWorkData()" oninput="console.log('🔧 Work comments input:', this.value.substring(0, 20)); updateWorkData()" style="
+          <textarea class="work-comments" placeholder="פרטים נוספים על העבודה..." onchange="updateWorkData()" oninput="updateWorkData()" style="
             width: 100%; 
             padding: 12px; 
             border: 2px solid #e5e7eb; 
@@ -3197,7 +3185,7 @@
             font-size: 16px;
             background: #ffffff;
             box-sizing: border-box;
-          ">${workComments}</textarea>
+          ">${workCommentsValue}</textarea>
         </div>
         
         <button type="button" onclick="removeWorkRow(this)" style="
@@ -3215,6 +3203,26 @@
       `;
       
       worksList.appendChild(row);
+      
+      // ✅ DAMAGE CENTERS FIX: Add additional event listeners for better responsiveness
+      const workType = row.querySelector('.work-type');
+      const workCost = row.querySelector('.work-cost');
+      const workComments = row.querySelector('.work-comments');
+      
+      if (workType) {
+        workType.addEventListener('change', updateWorkData);
+        workType.addEventListener('input', updateWorkData);
+      }
+      if (workCost) {
+        workCost.addEventListener('change', updateWorkData);
+        workCost.addEventListener('input', updateWorkData);
+        workCost.addEventListener('keyup', updateWorkData);
+      }
+      if (workComments) {
+        workComments.addEventListener('change', updateWorkData);
+        workComments.addEventListener('input', updateWorkData);
+      }
+      
       updateWorkData();
     };
     
@@ -3287,9 +3295,17 @@
         if (total > 0) {
           const vatAmount = total * (vatPercentage / 100);
           const totalWithVat = total + vatAmount;
-          totalAmount.textContent = `₪${total.toLocaleString()} (כולל מע"מ: ₪${totalWithVat.toLocaleString()})`;
+          
+          // ✅ ENHANCED: Rich display like parts module
+          totalAmount.textContent = `₪${totalWithVat.toLocaleString()}`;
+          
+          const vatBreakdown = document.getElementById('workVatBreakdown');
+          if (vatBreakdown) {
+            vatBreakdown.textContent = `ללא מע"מ: ₪${total.toLocaleString()} | כולל מע"מ: ₪${totalWithVat.toLocaleString()}`;
+          }
+          
           totalDisplay.style.display = 'block';
-          console.log(`🔧 DEBUG: Set iframe total display to block with: ${totalAmount.textContent}`);
+          console.log(`🔧 DEBUG: Set iframe total display to block - Without VAT: ₪${total.toLocaleString()}, With VAT: ₪${totalWithVat.toLocaleString()}`);
         } else {
           totalDisplay.style.display = 'none';
           console.log(`🔧 DEBUG: Hidden iframe total display (total is 0)`);
