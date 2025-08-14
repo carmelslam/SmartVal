@@ -2069,21 +2069,39 @@
     }
     
     function restoreLocationData(helper) {
+      console.log('🔄 DEBUG: restoreLocationData called with helper:', helper);
+      
       // ✅ FIXED: Check for active damage center first, then wizard temp
       let currentCenterData = null;
       
       // First check if we have an active damage center ID
       const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-      if (activeCenterId && helper.damage_centers) {
-        currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+      console.log('🔄 DEBUG: Active center ID:', activeCenterId);
+      
+      if (activeCenterId) {
+        // Check in helper.centers array (where data is actually stored)
+        if (helper.centers && Array.isArray(helper.centers)) {
+          currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+          console.log('🔄 DEBUG: Found in helper.centers:', currentCenterData);
+        }
+        
+        // Also check helper.damage_centers for backward compatibility
+        if (!currentCenterData && helper.damage_centers) {
+          currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+          console.log('🔄 DEBUG: Found in helper.damage_centers:', currentCenterData);
+        }
       }
       
       // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
         currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
+        console.log('🔄 DEBUG: Using fallback data:', currentCenterData);
       }
       
-      if (!currentCenterData) return;
+      if (!currentCenterData) {
+        console.log('🔄 DEBUG: No current center data found for location restoration');
+        return;
+      }
       
       const locationSelect = document.getElementById('locationSelect');
       const otherLocationInput = document.getElementById('otherLocationInput');
@@ -2119,21 +2137,39 @@
     }
     
     function restoreDescriptionData(helper) {
+      console.log('📝 DEBUG: restoreDescriptionData called with helper:', helper);
+      
       // ✅ FIXED: Check for active damage center first, then wizard temp
       let currentCenterData = null;
       
       // First check if we have an active damage center ID
       const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-      if (activeCenterId && helper.damage_centers) {
-        currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+      console.log('📝 DEBUG: Active center ID:', activeCenterId);
+      
+      if (activeCenterId) {
+        // Check in helper.centers array (where data is actually stored)
+        if (helper.centers && Array.isArray(helper.centers)) {
+          currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+          console.log('📝 DEBUG: Found in helper.centers:', currentCenterData);
+        }
+        
+        // Also check helper.damage_centers for backward compatibility
+        if (!currentCenterData && helper.damage_centers) {
+          currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+          console.log('📝 DEBUG: Found in helper.damage_centers:', currentCenterData);
+        }
       }
       
       // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
         currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
+        console.log('📝 DEBUG: Using fallback data:', currentCenterData);
       }
       
-      if (!currentCenterData) return;
+      if (!currentCenterData) {
+        console.log('📝 DEBUG: No current center data found for description restoration');
+        return;
+      }
       
       const descriptionTextarea = document.getElementById('damageDescription');
       
