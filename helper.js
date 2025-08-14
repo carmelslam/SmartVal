@@ -68,17 +68,17 @@ function parseJSONWithDuplicates(jsonString) {
 window.createDamageCenter = function(location = '', description = '', sourceData = {}) {
   console.log('🏗️ Creating comprehensive damage center...');
   
-  if (!window.helper || !window.helper.damage_assessment) {
-    console.error('❌ Helper or damage_assessment not initialized');
+  if (!window.helper) {
+    console.error('❌ Helper not initialized');
     return null;
   }
   
   // Initialize centers array if it doesn't exist
-  if (!Array.isArray(window.helper.damage_assessment.centers)) {
-    window.helper.damage_assessment.centers = [];
+  if (!Array.isArray(window.helper.centers)) {
+    window.helper.centers = [];
   }
   
-  const centerNumber = window.helper.damage_assessment.centers.length + 1;
+  const centerNumber = window.helper.centers.length + 1;
   const centerId = `damage_center_${Date.now()}_${centerNumber}`;
   
   // Create comprehensive damage center structure
@@ -199,7 +199,7 @@ window.createDamageCenter = function(location = '', description = '', sourceData
   };
   
   // Add to centers array
-  window.helper.damage_assessment.centers.push(newCenter);
+  window.helper.centers.push(newCenter);
   
   // Update session management
   window.helper.damage_assessment.current_session.active_center_id = centerId;
@@ -228,17 +228,17 @@ window.createDamageCenter = function(location = '', description = '', sourceData
 window.updateDamageCenter = function(centerId, updates = {}) {
   console.log(`🔄 Updating damage center ${centerId}:`, updates);
   
-  if (!window.helper || !window.helper.damage_assessment) {
-    console.error('❌ Helper or damage_assessment not initialized');
+  if (!window.helper) {
+    console.error('❌ Helper not initialized');
     return false;
   }
   
   // Initialize centers array if it doesn't exist
-  if (!Array.isArray(window.helper.damage_assessment.centers)) {
-    window.helper.damage_assessment.centers = [];
+  if (!Array.isArray(window.helper.centers)) {
+    window.helper.centers = [];
   }
   
-  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
+  const center = window.helper.centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
@@ -289,13 +289,13 @@ window.updateDamageCenter = function(centerId, updates = {}) {
 window.calculateDamageCenterTotals = function(centerId) {
   console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
   
-  // Check if damage_assessment and centers are defined and centers is an array
-  if (!window.helper || !window.helper.damage_assessment || !Array.isArray(window.helper.damage_assessment.centers)) {
-    console.error("❌ window.helper.damage_assessment or window.helper.damage_assessment.centers is not defined or not an array.");
+  // Check if centers array is defined and is an array
+  if (!window.helper || !Array.isArray(window.helper.centers)) {
+    console.error("❌ window.helper.centers is not defined or not an array.");
     return false;
   }
   
-  const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
+  const center = window.helper.centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
     return false;
@@ -348,13 +348,13 @@ window.calculateDamageCenterTotals = function(centerId) {
 window.calculateAllDamageCentersTotals = function() {
   console.log('🧮 Calculating global damage centers totals');
   
-  if (!window.helper || !window.helper.damage_assessment) {
+  if (!window.helper) {
     return false;
   }
   
   // Initialize centers array if it doesn't exist
-  if (!Array.isArray(window.helper.damage_assessment.centers)) {
-    window.helper.damage_assessment.centers = [];
+  if (!Array.isArray(window.helper.centers)) {
+    window.helper.centers = [];
   }
   
   let totalSubtotal = 0;
@@ -369,7 +369,7 @@ window.calculateAllDamageCentersTotals = function() {
   
   const byLocation = {};
   
-  window.helper.damage_assessment.centers.forEach(center => {
+  window.helper.centers.forEach(center => {
     if (center.workflow?.status !== 'rejected' && center.calculations) {
       totalSubtotal += center.calculations.subtotal_before_vat || 0;
       totalVat += center.calculations.vat_amount || 0;
@@ -399,7 +399,7 @@ window.calculateAllDamageCentersTotals = function() {
   };
   
   // Update statistics
-  const activeCenters = window.helper.damage_assessment.centers.filter(c => c.workflow?.status !== 'rejected');
+  const activeCenters = window.helper.centers.filter(c => c.workflow?.status !== 'rejected');
   window.helper.damage_assessment.statistics.avg_cost_per_center = activeCenters.length > 0 ? totalWithVat / activeCenters.length : 0;
   window.helper.damage_assessment.statistics.most_expensive_center = activeCenters.reduce((max, center) => 
     (center.calculations?.total_with_vat || 0) > (max?.calculations?.total_with_vat || 0) ? center : max, null);
@@ -2360,9 +2360,12 @@ window.helper = existingHelper || {
     vat_percentage: 18 // Global VAT percentage setting
   },
   
-  // ✅ DAMAGE CENTERS
-  damage_centers: [],
-  current_damage_center: {}
+  // ✅ DAMAGE CENTERS (compatible with documentation)
+  centers: [],
+  current_damage_center: {},
+  
+  // Legacy compatibility
+  damage_centers: []
 };
 
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
