@@ -309,7 +309,14 @@ window.updateDamageCenter = function(centerId, updates = {}) {
   }
   // For non-damage center objects (like Levi data), skip timestamps to avoid breaking existing functionality
   
-  // Add audit trail entry
+  // ✅ DAMAGE CENTERS FIX: Safely add audit trail entry
+  if (!window.helper.damage_assessment) {
+    window.helper.damage_assessment = {};
+  }
+  if (!window.helper.damage_assessment.audit_trail) {
+    window.helper.damage_assessment.audit_trail = [];
+  }
+  
   window.helper.damage_assessment.audit_trail.push({
     action: 'center_updated',
     center_id: centerId,
