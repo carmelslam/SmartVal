@@ -2924,7 +2924,7 @@ function processDirectData(data, result) {
   }
   
   // 🔒 CRITICAL: Validate any plate number in incoming data before processing
-  const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב', 'plate_number'];
+  const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב', 'מס רכב', 'plate_number'];
   for (const field of plateFields) {
     if (data[field]) {
       const validation = validatePlateNumber(data[field], 'webhook_direct_data');
@@ -2945,6 +2945,7 @@ function processDirectData(data, result) {
     'license_plate': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מספר_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'מס_רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
+    'מס רכב': ['vehicle.plate', 'meta.plate', 'case_info.plate'],
     'manufacturer': ['vehicle.manufacturer'],
     'make': ['vehicle.manufacturer'],
     'יצרן': ['vehicle.manufacturer'],
@@ -4628,3 +4629,10 @@ if (document.readyState === 'loading') {
 // export const validatePlateNumber = window.validatePlateNumber;
 // export const showPlateProtectionAlert = window.showPlateProtectionAlert;
 // export const getPlateProtectionStatus = window.getPlateProtectionStatus;
+
+// ✅ ES6 EXPORTS - Fixed for module imports
+export const helper = window.helper;
+export const updateHelper = window.updateHelper;
+export const saveHelperToStorage = window.saveHelperToStorage;
+export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+export const processIncomingData = window.processIncomingData;
