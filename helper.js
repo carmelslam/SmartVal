@@ -73,6 +73,11 @@ window.createDamageCenter = function(location = '', description = '', sourceData
     return null;
   }
   
+  // Initialize centers array if it doesn't exist
+  if (!Array.isArray(window.helper.damage_assessment.centers)) {
+    window.helper.damage_assessment.centers = [];
+  }
+  
   const centerNumber = window.helper.damage_assessment.centers.length + 1;
   const centerId = `damage_center_${Date.now()}_${centerNumber}`;
   
@@ -228,6 +233,11 @@ window.updateDamageCenter = function(centerId, updates = {}) {
     return false;
   }
   
+  // Initialize centers array if it doesn't exist
+  if (!Array.isArray(window.helper.damage_assessment.centers)) {
+    window.helper.damage_assessment.centers = [];
+  }
+  
   const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
   if (!center) {
     console.error(`❌ Damage center ${centerId} not found`);
@@ -278,6 +288,12 @@ window.updateDamageCenter = function(centerId, updates = {}) {
  */
 window.calculateDamageCenterTotals = function(centerId) {
   console.log(`🧮 Calculating comprehensive totals for ${centerId}`);
+  
+  // Check if damage_assessment and centers are defined and centers is an array
+  if (!window.helper || !window.helper.damage_assessment || !Array.isArray(window.helper.damage_assessment.centers)) {
+    console.error("❌ window.helper.damage_assessment or window.helper.damage_assessment.centers is not defined or not an array.");
+    return false;
+  }
   
   const center = window.helper.damage_assessment.centers.find(c => c.id === centerId);
   if (!center) {
@@ -334,6 +350,11 @@ window.calculateAllDamageCentersTotals = function() {
   
   if (!window.helper || !window.helper.damage_assessment) {
     return false;
+  }
+  
+  // Initialize centers array if it doesn't exist
+  if (!Array.isArray(window.helper.damage_assessment.centers)) {
+    window.helper.damage_assessment.centers = [];
   }
   
   let totalSubtotal = 0;
@@ -1885,63 +1906,46 @@ window.helper = existingHelper || {
     },
     // Individual damage centers (AUTHORITATIVE LOCATION)
     centers: [],
-    
-    // Session management for damage centers workflow
+    // Session management
     current_session: {
       active_center_id: null,
       center_count: 0,
-      session_start: '',
-      last_activity: '',
-      wizard_step: 1,
-      wizard_data: {},
-      temp_data: {}
+      last_activity: ''
     },
-    
-    // Aggregated totals and calculations
+    // Statistics
+    statistics: {
+      total_centers: 0,
+      avg_cost_per_center: 0,
+      most_expensive_center: null
+    },
+    // Totals
     totals: {
       all_centers_subtotal: 0,
       all_centers_vat: 0,
-      all_centers_total: 0,
-      
-      // Breakdown by category
-      breakdown: {
-        total_works: 0,
-        total_parts: 0,
-        total_repairs: 0,
-        total_fees: 0
-      },
-      
-      // By location analysis
-      by_location: {},
-      
-      // Calculation metadata
-      last_calculated: '',
-      calculation_method: 'auto',
-      manual_overrides: []
+      all_centers_total: 0
     },
-    
-    // Integration with other modules
-    integrations: {
-      parts_search: {
-        linked_searches: [],
-        auto_suggestions_enabled: true,
-        last_sync: '',
-        // Integration with helper.parts_search structure
-        selected_parts_sync: true,
-        unselected_parts_sync: true,
-        webhook_capture_enabled: true
-      },
-      invoices: {
-        linked_invoices: [],
-        auto_matching_enabled: true,
-        matching_confidence: {}
-      },
-      estimates: {
-        linked_estimates: [],
-        estimate_basis: 'damage_centers',
-        last_export: ''
+    // Audit trail
+    audit_trail: []
+  },
+  parts_search: {
+    current_search: '',
+    search_results: [],
+    selected_parts: [],
+    unselected_parts: [],
+    search_history: {
+      recent_searches: [],
+      statistics: {
+        total_searches: 0,
+        unique_parts: 0,
+        successful_finds: 0
       }
     },
+    webhook_capture: {
+      raw_responses: [],
+      last_capture: '',
+      capture_enabled: true
+    }
+  },
     
     // Validation and quality control
     validation: {
