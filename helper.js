@@ -3273,7 +3273,7 @@ function getModuleFields(module) {
 }
 
 // Populate all forms from helper data
-function populateAllForms() {
+window.populateAllForms = function() {
   console.log('🔄 Populating all forms from helper data');
   
   const currentModule = detectCurrentModule();
@@ -3462,7 +3462,7 @@ function populateAllForms() {
 }
 
 // Enhanced form population with retry mechanism
-function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
+window.populateAllFormsWithRetry = function(maxRetries = 3, delay = 1000) {
   console.log('🔄 Starting enhanced form population with retry...');
   
   let attempt = 0;
@@ -3471,7 +3471,7 @@ function populateAllFormsWithRetry(maxRetries = 3, delay = 1000) {
     attempt++;
     console.log(`📝 Form population attempt ${attempt}/${maxRetries}`);
     
-    const result = populateAllForms();
+    const result = window.populateAllForms();
     
     // If we updated few fields and have retries left, try again after delay
     if (result.updated < 3 && attempt < maxRetries) {
@@ -4618,6 +4618,69 @@ if (document.readyState === 'loading') {
 //   
 //   console.log(`✅ Field ${fieldId} marked as manually modified`);
 // }
+
+// ✅ RESTORED: markFieldAsManuallyModified function
+window.markFieldAsManuallyModified = function(fieldId, value, origin) {
+  console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
+  
+  if (!window.helper) {
+    const existingHelper = initializeHelper();
+    window.helper = existingHelper || getDefaultHelper();
+  }
+  
+  // Create override record
+  const override = {
+    fieldId: fieldId,
+    value: value,
+    origin: origin,
+    timestamp: new Date().toISOString(),
+    type: 'manual_override'
+  };
+  
+  // Store in financials.overrides array
+  if (!window.helper.financials) {
+    window.helper.financials = {};
+  }
+  if (!window.helper.financials.overrides) {
+    window.helper.financials.overrides = [];
+  }
+  
+  // Remove any existing override for this field from this origin
+  window.helper.financials.overrides = window.helper.financials.overrides.filter(
+    o => !(o.fieldId === fieldId && o.origin === origin)
+  );
+  
+  // Add the new override
+  window.helper.financials.overrides.push(override);
+  
+  // Update the helper with the new value using the appropriate path
+  const dataMapping = {
+    'km': 'vehicle.km',
+    'damage_date_new': 'case_info.damage_date',
+    'owner_address': 'stakeholders.owner.address',
+    'garage_name': 'stakeholders.garage.name',
+    'garage_phone': 'stakeholders.garage.phone',
+    'garage_email': 'stakeholders.garage.email',
+    'insurance_company': 'stakeholders.insurance.company',
+    'insurance_email': 'stakeholders.insurance.email',
+    'agent_name': 'stakeholders.insurance.agent.name',
+    'agent_phone': 'stakeholders.insurance.agent.phone',
+    'agent_email': 'stakeholders.insurance.agent.email'
+  };
+  
+  const helperPath = dataMapping[fieldId];
+  if (helperPath) {
+    setNestedValue(window.helper, helperPath, value);
+  }
+  
+  // Update metadata
+  window.helper.meta.last_updated = new Date().toISOString();
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Field ${fieldId} marked as manually modified`);
+};
 
 // ✅ RESTORED: refreshAllModuleForms function
 window.refreshAllModuleForms = function() {

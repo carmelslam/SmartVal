@@ -265,27 +265,22 @@
         });
       }
       
-      // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
-      import('./helper.js').then(helperModule => {
+      // FIXED: Use window.refreshAllModuleForms directly since helper.js is loaded as regular script
+      if (typeof window.refreshAllModuleForms === 'function') {
+        console.log('🔄 Calling window.refreshAllModuleForms...');
+        window.refreshAllModuleForms();
+        console.log('✅ General info fields auto-populated from helper');
         
-        if (typeof helperModule.refreshAllModuleForms === 'function') {
-          console.log('🔄 Calling refreshAllModuleForms...');
-          helperModule.refreshAllModuleForms();
-          console.log('✅ General info fields auto-populated from helper');
-          
-          // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
-          const damageDateField = document.getElementById('damage_date_independent');
-          if (damageDateField) {
-            const currentValue = damageDateField.value;
-            console.log('🔧 PRESERVE: Damage date field preserved during auto-population:', currentValue);
-            // Don't change the damage date field - it's already set correctly above
-          }
-        } else {
-          console.error('❌ refreshAllModuleForms function not found!');
+        // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
+        const damageDateField = document.getElementById('damage_date_independent');
+        if (damageDateField) {
+          const currentValue = damageDateField.value;
+          console.log('🔧 PRESERVE: Damage date field preserved during auto-population:', currentValue);
+          // Don't change the damage date field - it's already set correctly above
         }
-      }).catch(error => {
-        console.error('❌ Could not import helper module:', error);
-      });
+      } else {
+        console.error('❌ window.refreshAllModuleForms function not found!');
+      }
     }, 500); // Small delay to ensure DOM is ready
 
     // Fix: Ensure garage email field is always editable
@@ -636,11 +631,12 @@
                   console.log('🔥 SIMPLE: Current helper.case_info:', window.helper?.case_info);
                 }
                 
-                import('./helper.js').then(module => {
-                  module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
-                }).catch(error => {
-                  console.error('Error importing helper for manual override:', error);
-                });
+                // FIXED: Use window.markFieldAsManuallyModified directly
+                if (typeof window.markFieldAsManuallyModified === 'function') {
+                  window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                } else {
+                  console.error('window.markFieldAsManuallyModified function not found');
+                }
               }
             }, { passive: true });
           });
@@ -653,11 +649,12 @@
           // Mark as manually modified when user leaves field with changes
           element.addEventListener('blur', function() {
             if (this.dataset.userFocused === 'true' && this.value !== this.defaultValue) {
-              import('./helper.js').then(module => {
-                module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
-              }).catch(error => {
-                console.error('Error importing helper for manual override:', error);
-              });
+              // FIXED: Use window.markFieldAsManuallyModified directly
+              if (typeof window.markFieldAsManuallyModified === 'function') {
+                window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+              } else {
+                console.error('window.markFieldAsManuallyModified function not found');
+              }
             }
             delete this.dataset.userFocused;
           });
