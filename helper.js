@@ -3093,6 +3093,8 @@ function processDirectData(data, result) {
     'agent_email': ['stakeholders.insurance.agent.email'],
     
     // Case info fields
+    'case_number': ['meta.case_id', 'case_info.case_id'],
+    'case_id': ['meta.case_id', 'case_info.case_id'],
     'damage_date': ['case_info.damage_date'],
     'תאריך_נזק': ['case_info.damage_date'],
     'damage_type': ['case_info.damage_type'],
@@ -3547,6 +3549,8 @@ window.updateHelper = function(field, value) {
     'client_address': 'centralized_owner_address',
     'owner_email': 'centralized_owner_email',
     'client_email': 'centralized_owner_email',
+    'case_number': ['meta.case_id', 'case_info.case_id'],
+    'case_id': ['meta.case_id', 'case_info.case_id'],
     'garage': ['stakeholders.garage.name'],
     'insurance': ['stakeholders.insurance.company']
   };
