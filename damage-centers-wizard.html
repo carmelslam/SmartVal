@@ -4215,6 +4215,13 @@
         console.log('📊 Damage centers count before reset:', savedHelper.damage_centers?.length || 0);
         
         resetWizard();
+        
+        // ✅ FIXED: Set proper number after reset
+        const nextNumber = (typeof window.getNextDamageCenterNumber === 'function') 
+          ? window.getNextDamageCenterNumber() 
+          : (getDamageCentersFromHelper().length + 1);
+        damageCenterData.number = nextNumber;
+        document.getElementById('damageCenterNumber').value = nextNumber;
       }, 3000);
     }
     
@@ -4567,7 +4574,7 @@
       
       showStep(1);
       updateProgress();
-      generateDamageCenterNumber();
+      // ✅ FIXED: Don't generate number here - let calling function handle it
       
       // Clear form fields
       const descField = document.getElementById('damageDescription');
@@ -5183,6 +5190,13 @@
             // Clear wizard data if this center was being edited
             if (damageCenterData && damageCenterData.id === selectedValue) {
               resetWizard();
+              
+              // ✅ FIXED: Set proper number after reset
+              const nextNumber = (typeof window.getNextDamageCenterNumber === 'function') 
+                ? window.getNextDamageCenterNumber() 
+                : (getDamageCentersFromHelper().length + 1);
+              damageCenterData.number = nextNumber;
+              document.getElementById('damageCenterNumber').value = nextNumber;
             }
             
             return;
@@ -5286,6 +5300,13 @@
         
         // ✅ FIXED: Reset wizard state after deletion
         resetWizard();
+        
+        // ✅ FIXED: Set proper number after reset
+        const nextNumber = (typeof window.getNextDamageCenterNumber === 'function') 
+          ? window.getNextDamageCenterNumber() 
+          : (getDamageCentersFromHelper().length + 1);
+        damageCenterData.number = nextNumber;
+        document.getElementById('damageCenterNumber').value = nextNumber;
         
         // Trigger helper update broadcast if available
         if (typeof window.broadcastHelperUpdate === 'function') {

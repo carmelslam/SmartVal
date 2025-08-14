@@ -238,9 +238,16 @@ window.updateDamageCenter = function(centerId, updates = {}) {
     window.helper.centers = [];
   }
   
-  const center = window.helper.centers.find(c => c.id === centerId);
+  let center = window.helper.centers.find(c => c.id === centerId);
+  
+  // ✅ FIXED: Also check current_damage_center if not found in centers array
+  if (!center && window.helper.current_damage_center && window.helper.current_damage_center.Id === centerId) {
+    center = window.helper.current_damage_center;
+    console.log('🔍 DEBUG: Using current_damage_center for update:', centerId);
+  }
+  
   if (!center) {
-    console.error(`❌ Damage center ${centerId} not found`);
+    console.error(`❌ Damage center ${centerId} not found in centers array or current_damage_center`);
     return false;
   }
   
@@ -310,16 +317,38 @@ window.calculateDamageCenterTotals = function(centerId) {
   }
   
   console.log('🔍 DEBUG: About to call find on centers array:', window.helper.centers);
-  const center = window.helper.centers.find(c => c && c.id === centerId);
+  let center = window.helper.centers.find(c => c && c.id === centerId);
+  
+  // ✅ FIXED: Also check current_damage_center if not found in centers array
+  if (!center && window.helper.current_damage_center && window.helper.current_damage_center.Id === centerId) {
+    center = window.helper.current_damage_center;
+    console.log('🔍 DEBUG: Using current_damage_center for calculations:', centerId);
+  }
+  
   if (!center) {
-    console.error(`❌ Damage center ${centerId} not found`);
+    console.error(`❌ Damage center ${centerId} not found in centers array or current_damage_center`);
     return false;
   }
   
+  // ✅ FIXED: Handle both old structure (work_items) and new structure (Works.works)
+  let workItems, partsItems, repairsItems;
+  
+  if (center.work_items && center.parts_items && center.repairs_items) {
+    // Old structure
+    workItems = center.work_items;
+    partsItems = center.parts_items;
+    repairsItems = center.repairs_items;
+  } else {
+    // New structure per documentation
+    workItems = center.Works?.works || [];
+    partsItems = center.Parts?.parts_required || [];
+    repairsItems = center.Repairs?.repairs || [];
+  }
+  
   // Calculate subtotals
-  const worksTotal = center.work_items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
-  const partsTotal = center.parts_items.reduce((sum, item) => sum + (parseFloat(item.price || item.cost) || 0), 0);
-  const repairsTotal = center.repairs_items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+  const worksTotal = workItems.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+  const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.price || item.cost) || 0), 0);
+  const repairsTotal = repairsItems.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
   const feesTotal = 0; // Can be extended for additional fees
   
   const subtotalBeforeVat = worksTotal + partsTotal + repairsTotal + feesTotal;
@@ -339,10 +368,10 @@ window.calculateDamageCenterTotals = function(centerId) {
     total_with_vat: totalWithVat,
     
     breakdown: {
-      labor_hours: center.work_items.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0),
-      hourly_rate: center.work_items.length > 0 ? worksTotal / Math.max(1, center.work_items.reduce((sum, item) => sum + (parseFloat(item.hours) || 1), 0)) : 0,
-      parts_count: center.parts_items.length,
-      repairs_count: center.repairs_items.length
+      labor_hours: workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0),
+      hourly_rate: workItems.length > 0 ? worksTotal / Math.max(1, workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 1), 0)) : 0,
+      parts_count: partsItems.length,
+      repairs_count: repairsItems.length
     },
     
     last_calculated: new Date().toISOString(),
