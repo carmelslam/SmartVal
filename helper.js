@@ -4598,19 +4598,19 @@ window.syncLeviData = function() {
   populateAllForms();
 };
 
-// ✅ REQUIRED EXPORTS: Only the ones that modules are actually importing
-export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const processIncomingData = window.processIncomingData;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const saveHelperToStorage = window.saveHelperToStorage;
-export const getDamageData = window.getDamageData;
-export const syncDamageData = window.syncDamageData;
-export const getVehicleData = window.getVehicleData;
-export const getValuationData = window.getValuationData;
-export const getFinancialData = window.getFinancialData;
-export const syncVehicleData = window.syncVehicleData;
-export const syncLeviData = window.syncLeviData;
+// ✅ COMMENTED OUT: All exports to prevent syntax errors in damage centers wizard
+// export const helper = window.helper;
+// export const updateHelper = window.updateHelper;
+// export const processIncomingData = window.processIncomingData;
+// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// export const saveHelperToStorage = window.saveHelperToStorage;
+// export const getDamageData = window.getDamageData;
+// export const syncDamageData = window.syncDamageData;
+// export const getVehicleData = window.getVehicleData;
+// export const getValuationData = window.getValuationData;
+// export const getFinancialData = window.getFinancialData;
+// export const syncVehicleData = window.syncVehicleData;
+// export const syncLeviData = window.syncLeviData;
 
 // ✅ FIXED: Removed orphaned return statements and export functions
 // All data getter functions are already available on window object
