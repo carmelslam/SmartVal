@@ -4528,12 +4528,46 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // export { saveHelperToAllStorageLocations };
 // export { populateAllFormsWithRetry };
 
-// ✅ ESSENTIAL EXPORTS: Only the ones that modules actually import
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const helper = window.helper;
+console.log('✅ Helper.js loaded successfully - all functions available on window object');
+// ✅ FIXED: All helper functions are available on window object, no ES6 exports needed
 
-// ✅ FIXED: Removed orphaned return statements and export functions  
+// Export new centralized data management functions
+// export const setPlateNumber = window.setPlateNumber;
+// export const getPlateNumber = window.getPlateNumber;
+// export const setOwnerName = window.setOwnerName;
+// export const getOwnerName = window.getOwnerName;
+// export const setOwnerPhone = window.setOwnerPhone;
+// export const getOwnerPhone = window.getOwnerPhone;
+// export const setOwnerAddress = window.setOwnerAddress;
+// export const getOwnerAddress = window.getOwnerAddress;
+// export const setOwnerEmail = window.setOwnerEmail;
+// export const getOwnerEmail = window.getOwnerEmail;
+// export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
+// export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
+// export const setVehicleField = window.setVehicleField;
+// export const fixHelperStructure = window.fixHelperStructure;
+// export const enhanceEstimateSections = window.enhanceEstimateSections;
+// export const setActiveReportType = window.setActiveReportType;
+// export const getActiveReportData = window.getActiveReportData;
+// export const addToPartsBank = window.addToPartsBank;
+// export const processInvoiceOCR = window.processInvoiceOCR;
+// export const captureFeeModuleData = window.captureFeeModuleData;
+// export const searchPartsBank = window.searchPartsBank;
+// export const protectPlateNumber = window.protectPlateNumber;
+// export const testPlateNormalization = window.testPlateNormalization;
+// export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
+// export const initializeFinancialsSection = window.initializeFinancialsSection;
+// export const captureRawWebhookResponse = window.captureRawWebhookResponse;
+// export const initializeDebugSection = window.initializeDebugSection;
+// populateAllFormsWithRetry is already declared as a function above
+// export const testWithActualWebhookData = window.testWithActualWebhookData;
+
+// Additional exports that modules might need
+// export const saveHelperToStorage = saveHelperToAllStorageLocations;
+// export { saveHelperToAllStorageLocations };
+// export { populateAllFormsWithRetry };
+
+// ✅ FIXED: Removed orphaned return statements and export functions
 // All data getter functions are already available on window object
 // ✅ CLEANED: Removed all orphaned export functions and syntax errors
 // Helper.js is now clean and ready for use
