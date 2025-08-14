@@ -73,6 +73,20 @@ window.createDamageCenter = function(location = '', description = '', sourceData
     return null;
   }
   
+  // ✅ FIXED: Initialize damage_assessment structure if missing
+  if (!window.helper.damage_assessment) {
+    console.log("🔧 Initializing damage_assessment structure...");
+    window.helper.damage_assessment = {
+      summary: { total_damage_amount: 0, damage_percentage: 0, is_total_loss: false },
+      centers: [],
+      current_session: { active_center_id: null, center_count: 0, last_activity: '' },
+      statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
+      totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
+      audit_trail: [],
+      settings: { default_vat_percentage: 17 }
+    };
+  }
+  
   // Initialize centers array if it doesn't exist
   if (!Array.isArray(window.helper.centers)) {
     window.helper.centers = [];
@@ -233,6 +247,20 @@ window.updateDamageCenter = function(centerId, updates = {}) {
     return false;
   }
   
+  // ✅ FIXED: Initialize damage_assessment structure if missing
+  if (!window.helper.damage_assessment) {
+    console.log("🔧 Initializing damage_assessment structure...");
+    window.helper.damage_assessment = {
+      summary: { total_damage_amount: 0, damage_percentage: 0, is_total_loss: false },
+      centers: [],
+      current_session: { active_center_id: null, center_count: 0, last_activity: '' },
+      statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
+      totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
+      audit_trail: [],
+      settings: { default_vat_percentage: 17 }
+    };
+  }
+  
   // Initialize centers array if it doesn't exist
   if (!Array.isArray(window.helper.centers)) {
     window.helper.centers = [];
@@ -306,6 +334,20 @@ window.calculateDamageCenterTotals = function(centerId) {
     return false;
   }
   
+  // ✅ FIXED: Initialize damage_assessment structure if missing
+  if (!window.helper.damage_assessment) {
+    console.log("🔧 Initializing damage_assessment structure...");
+    window.helper.damage_assessment = {
+      summary: { total_damage_amount: 0, damage_percentage: 0, is_total_loss: false },
+      centers: [],
+      current_session: { active_center_id: null, center_count: 0, last_activity: '' },
+      statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
+      totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
+      audit_trail: [],
+      settings: { default_vat_percentage: 17 }
+    };
+  }
+  
   if (!window.helper.centers) {
     console.error("❌ window.helper.centers is not defined. Initializing...");
     window.helper.centers = [];
@@ -352,7 +394,17 @@ window.calculateDamageCenterTotals = function(centerId) {
   const feesTotal = 0; // Can be extended for additional fees
   
   const subtotalBeforeVat = worksTotal + partsTotal + repairsTotal + feesTotal;
-  const vatPercentage = window.helper.damage_assessment.settings.default_vat_percentage || 17;
+  
+  // ✅ FIXED: Safe access to VAT percentage with proper null checks
+  let vatPercentage = 17; // Default VAT percentage
+  if (window.helper?.damage_assessment?.settings?.default_vat_percentage) {
+    vatPercentage = window.helper.damage_assessment.settings.default_vat_percentage;
+  } else if (window.helper?.settings?.default_vat_percentage) {
+    vatPercentage = window.helper.settings.default_vat_percentage;
+  } else if (window.helper?.system?.vat_percentage) {
+    vatPercentage = window.helper.system.vat_percentage;
+  }
+  
   const vatAmount = subtotalBeforeVat * (vatPercentage / 100);
   const totalWithVat = subtotalBeforeVat + vatAmount;
   
@@ -394,6 +446,20 @@ window.calculateAllDamageCentersTotals = function() {
   
   if (!window.helper) {
     return false;
+  }
+  
+  // ✅ FIXED: Initialize damage_assessment structure if missing
+  if (!window.helper.damage_assessment) {
+    console.log("🔧 Initializing damage_assessment structure...");
+    window.helper.damage_assessment = {
+      summary: { total_damage_amount: 0, damage_percentage: 0, is_total_loss: false },
+      centers: [],
+      current_session: { active_center_id: null, center_count: 0, last_activity: '' },
+      statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
+      totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
+      audit_trail: [],
+      settings: { default_vat_percentage: 17 }
+    };
   }
   
   // Initialize centers array if it doesn't exist
