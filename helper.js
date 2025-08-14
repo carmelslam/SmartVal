@@ -388,7 +388,7 @@ window.calculateAllDamageCentersTotals = function() {
 };
 
 // ============================================================================
-// 🆕 ADDITIONAL DAMAGE CENTER FUNCTIONS (from damage centers wizard work)
+// 🆕 DAMAGE CENTERS FUNCTIONS - ADDITIONAL FUNCTIONS FOR WIZARD
 // ============================================================================
 
 /**
@@ -4527,90 +4527,6 @@ console.log('✅ Helper.js loaded successfully - all functions available on wind
 // export const saveHelperToStorage = saveHelperToAllStorageLocations;
 // export { saveHelperToAllStorageLocations };
 // export { populateAllFormsWithRetry };
-
-console.log('✅ Helper.js loaded successfully - all functions available on window object');
-// ✅ FIXED: All helper functions are available on window object, no ES6 exports needed
-
-// Export new centralized data management functions
-// export const setPlateNumber = window.setPlateNumber;
-// export const getPlateNumber = window.getPlateNumber;
-// export const setOwnerName = window.setOwnerName;
-// export const getOwnerName = window.getOwnerName;
-// export const setOwnerPhone = window.setOwnerPhone;
-// export const getOwnerPhone = window.getOwnerPhone;
-// export const setOwnerAddress = window.setOwnerAddress;
-// export const getOwnerAddress = window.getOwnerAddress;
-// export const setOwnerEmail = window.setOwnerEmail;
-// export const getOwnerEmail = window.getOwnerEmail;
-// export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
-// export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
-// export const setVehicleField = window.setVehicleField;
-// export const fixHelperStructure = window.fixHelperStructure;
-// export const enhanceEstimateSections = window.enhanceEstimateSections;
-// export const setActiveReportType = window.setActiveReportType;
-// export const getActiveReportData = window.getActiveReportData;
-// export const addToPartsBank = window.addToPartsBank;
-// export const processInvoiceOCR = window.processInvoiceOCR;
-// export const captureFeeModuleData = window.captureFeeModuleData;
-// export const searchPartsBank = window.searchPartsBank;
-// export const protectPlateNumber = window.protectPlateNumber;
-// export const testPlateNormalization = window.testPlateNormalization;
-// export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
-// export const initializeFinancialsSection = window.initializeFinancialsSection;
-// export const captureRawWebhookResponse = window.captureRawWebhookResponse;
-// export const initializeDebugSection = window.initializeDebugSection;
-// populateAllFormsWithRetry is already declared as a function above
-// export const testWithActualWebhookData = window.testWithActualWebhookData;
-
-// Additional exports that modules might need
-// export const saveHelperToStorage = saveHelperToAllStorageLocations;
-// export { saveHelperToAllStorageLocations };
-// export { populateAllFormsWithRetry };
-
-// ============================================================================
-// 🔥 E65 FUNCTIONS - RESTORED FROM OLDER WORKING VERSION
-// ============================================================================
-
-window.getDamageData = function() {
-  return window.helper?.damage_assessment || {};
-};
-
-window.getValuationData = function() {
-  return window.helper?.valuation || {};
-};
-
-window.getFinancialData = function() {
-  return window.helper?.financials || {};
-};
-
-window.syncVehicleData = function() {
-  console.log('Syncing vehicle data...');
-  populateAllForms();
-};
-
-window.syncDamageData = function() {
-  console.log('Syncing damage data...');
-  populateAllForms();
-};
-
-window.syncLeviData = function() {
-  console.log('Syncing Levi data...');
-  populateAllForms();
-};
-
-// ✅ COMMENTED OUT: All exports to prevent syntax errors in damage centers wizard
-// export const helper = window.helper;
-// export const updateHelper = window.updateHelper;
-// export const processIncomingData = window.processIncomingData;
-// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-// export const saveHelperToStorage = window.saveHelperToStorage;
-// export const getDamageData = window.getDamageData;
-// export const syncDamageData = window.syncDamageData;
-// export const getVehicleData = window.getVehicleData;
-// export const getValuationData = window.getValuationData;
-// export const getFinancialData = window.getFinancialData;
-// export const syncVehicleData = window.syncVehicleData;
-// export const syncLeviData = window.syncLeviData;
 
 // ✅ FIXED: Removed orphaned return statements and export functions
 // All data getter functions are already available on window object
