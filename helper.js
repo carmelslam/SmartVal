@@ -4418,90 +4418,91 @@ if (document.readyState === 'loading') {
   setTimeout(() => window.setupUniversalInputCapture(), 1000);
 }
 
+// ✅ COMMENTED OUT: All exports to prevent syntax errors in damage centers wizard
 // Export all the functions that other modules need
-export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const updateHelperAndSession = window.updateHelperAndSession;
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const testDataCapture = window.testDataCapture;
-export const getVehicleData = window.getVehicleData;
-export const getOwnerData = window.getOwnerData;
-export const universalWebhookReceiver = window.universalWebhookReceiver;
-export const processWebhookData = window.processWebhookData;
-export const setupUniversalInputCapture = window.setupUniversalInputCapture;
+// export const helper = window.helper;
+// export const updateHelper = window.updateHelper;
+// export const updateHelperAndSession = window.updateHelperAndSession;
+// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// export const processIncomingData = window.processIncomingData;
+// export const testDataCapture = window.testDataCapture;
+// export const getVehicleData = window.getVehicleData;
+// export const getOwnerData = window.getOwnerData;
+// export const universalWebhookReceiver = window.universalWebhookReceiver;
+// export const processWebhookData = window.processWebhookData;
+// export const setupUniversalInputCapture = window.setupUniversalInputCapture;
 
 // Export new centralized data management functions
-export const setPlateNumber = window.setPlateNumber;
-export const getPlateNumber = window.getPlateNumber;
-export const setOwnerName = window.setOwnerName;
-export const getOwnerName = window.getOwnerName;
-export const setOwnerPhone = window.setOwnerPhone;
-export const getOwnerPhone = window.getOwnerPhone;
-export const setOwnerAddress = window.setOwnerAddress;
-export const getOwnerAddress = window.getOwnerAddress;
-export const setOwnerEmail = window.setOwnerEmail;
-export const getOwnerEmail = window.getOwnerEmail;
-export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
-export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
-export const setVehicleField = window.setVehicleField;
-export const fixHelperStructure = window.fixHelperStructure;
-export const enhanceEstimateSections = window.enhanceEstimateSections;
-export const setActiveReportType = window.setActiveReportType;
-export const getActiveReportData = window.getActiveReportData;
-export const addToPartsBank = window.addToPartsBank;
-export const processInvoiceOCR = window.processInvoiceOCR;
-export const captureFeeModuleData = window.captureFeeModuleData;
-export const searchPartsBank = window.searchPartsBank;
-export const protectPlateNumber = window.protectPlateNumber;
-export const testPlateNormalization = window.testPlateNormalization;
-export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
-export const initializeFinancialsSection = window.initializeFinancialsSection;
-export const captureRawWebhookResponse = window.captureRawWebhookResponse;
-export const initializeDebugSection = window.initializeDebugSection;
+// export const setPlateNumber = window.setPlateNumber;
+// export const getPlateNumber = window.getPlateNumber;
+// export const setOwnerName = window.setOwnerName;
+// export const getOwnerName = window.getOwnerName;
+// export const setOwnerPhone = window.setOwnerPhone;
+// export const getOwnerPhone = window.getOwnerPhone;
+// export const setOwnerAddress = window.setOwnerAddress;
+// export const getOwnerAddress = window.getOwnerAddress;
+// export const setOwnerEmail = window.setOwnerEmail;
+// export const getOwnerEmail = window.getOwnerEmail;
+// export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
+// export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
+// export const setVehicleField = window.setVehicleField;
+// export const fixHelperStructure = window.fixHelperStructure;
+// export const enhanceEstimateSections = window.enhanceEstimateSections;
+// export const setActiveReportType = window.setActiveReportType;
+// export const getActiveReportData = window.getActiveReportData;
+// export const addToPartsBank = window.addToPartsBank;
+// export const processInvoiceOCR = window.processInvoiceOCR;
+// export const captureFeeModuleData = window.captureFeeModuleData;
+// export const searchPartsBank = window.searchPartsBank;
+// export const protectPlateNumber = window.protectPlateNumber;
+// export const testPlateNormalization = window.testPlateNormalization;
+// export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
+// export const initializeFinancialsSection = window.initializeFinancialsSection;
+// export const captureRawWebhookResponse = window.captureRawWebhookResponse;
+// export const initializeDebugSection = window.initializeDebugSection;
 // populateAllFormsWithRetry is already declared as a function above
-export const testWithActualWebhookData = window.testWithActualWebhookData;
+// export const testWithActualWebhookData = window.testWithActualWebhookData;
 
 // Additional exports that modules might need
-export const saveHelperToStorage = saveHelperToAllStorageLocations;
-export { saveHelperToAllStorageLocations };
-export { populateAllFormsWithRetry };
+// export const saveHelperToStorage = saveHelperToAllStorageLocations;
+// export { saveHelperToAllStorageLocations };
+// export { populateAllFormsWithRetry };
 
 // Data getter functions
-export function getDamageData() {
+// export function getDamageData() {
   return window.helper?.damage_assessment || {};
 }
 
-export function getValuationData() {
+// export function getValuationData() {
   return window.helper?.valuation || {};
 }
 
-export function getFinancialData() {
+// export function getFinancialData() {
   return window.helper?.financials || {};
 }
 
-export function syncVehicleData() {
+// export function syncVehicleData() {
   console.log('Syncing vehicle data...');
   populateAllForms();
 }
 
-export function syncDamageData() {
+// export function syncDamageData() {
   console.log('Syncing damage data...');
   populateAllForms();
 }
 
-export function syncLeviData() {
+// export function syncLeviData() {
   console.log('Syncing Levi data...');
   populateAllForms();
 }
 
-export function updateCalculations() {
+// export function updateCalculations() {
   console.log('Updating calculations...');
   window.helper.meta.last_updated = new Date().toISOString();
   saveHelperToAllStorageLocations();
 }
 
-export function initHelper(newData = null) {
+// export function initHelper(newData = null) {
   const helper = initializeHelper() || getDefaultHelper();
   
   // CRITICAL: Fix existing case_id if it's still YC-UNKNOWN-XXXX and we have plate data
@@ -4563,7 +4564,7 @@ export function initHelper(newData = null) {
 }
 
 // Missing function: markFieldAsManuallyModified
-export function markFieldAsManuallyModified(fieldId, value, origin) {
+// export function markFieldAsManuallyModified(fieldId, value, origin) {
   console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
   
   if (!window.helper) {
@@ -4613,12 +4614,12 @@ export function markFieldAsManuallyModified(fieldId, value, origin) {
 }
 
 // Missing function: refreshAllModuleForms
-export function refreshAllModuleForms() {
+// export function refreshAllModuleForms() {
   console.log('🔄 Refreshing all module forms...');
   populateAllForms();
 }
 
 // Removed duplicate protectPlateNumber export - already exported above
-export const validatePlateNumber = window.validatePlateNumber;
-export const showPlateProtectionAlert = window.showPlateProtectionAlert;
-export const getPlateProtectionStatus = window.getPlateProtectionStatus;
+// export const validatePlateNumber = window.validatePlateNumber;
+// export const showPlateProtectionAlert = window.showPlateProtectionAlert;
+// export const getPlateProtectionStatus = window.getPlateProtectionStatus;
