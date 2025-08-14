@@ -4848,9 +4848,13 @@
     function updateWorkSubtotal(total) {
       console.log(`💰 DEBUG: updateWorkSubtotal called with total: ${total}`);
       
+      // ✅ DAMAGE CENTERS FIX: Ensure total is a valid number
+      const validTotal = (typeof total === 'number' && !isNaN(total)) ? total : 0;
+      console.log(`💰 DEBUG: Valid total after validation: ${validTotal}`);
+      
       // ✅ FIXED: Consistent VAT calculation and display updates
-      const vatAmount = total * (vatPercentage / 100);
-      const totalWithVat = total + vatAmount;
+      const vatAmount = validTotal * (vatPercentage / 100);
+      const totalWithVat = validTotal + vatAmount;
       
       const workAmount = document.getElementById('workAmount');
       const workAmountWithVat = document.getElementById('workAmountWithVat');
@@ -4859,24 +4863,25 @@
       console.log(`💰 DEBUG: workAmountWithVat element:`, workAmountWithVat);
       
       if (workAmount) {
-        workAmount.textContent = `₪${total.toLocaleString()}`;
-        console.log(`💰 DEBUG: Set workAmount text to: ₪${total.toLocaleString()}`);
+        workAmount.textContent = `₪${validTotal.toLocaleString()}`;
+        console.log(`💰 DEBUG: Set workAmount text to: ₪${validTotal.toLocaleString()}`);
       }
       if (workAmountWithVat) {
         workAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
         console.log(`💰 DEBUG: Set workAmountWithVat text to: ₪${totalWithVat.toLocaleString()}`);
       }
       
-      // Show/hide subtotal display based on amount
+      // ✅ DAMAGE CENTERS FIX: Always make subtotal visible when called (it means calculation happened)
       const workSubtotal = document.getElementById('workSubtotal');
       console.log(`💰 DEBUG: workSubtotal element:`, workSubtotal);
       
       if (workSubtotal) {
-        workSubtotal.style.display = total > 0 ? 'block' : 'none';
-        console.log(`💰 DEBUG: Set workSubtotal display to: ${total > 0 ? 'block' : 'none'}`);
+        // Show if there's any valid calculation (even if 0, it means fields were processed)
+        workSubtotal.style.display = 'block';
+        console.log(`💰 DEBUG: Set workSubtotal display to: block (always show when calculation happens)`);
       }
       
-      console.log(`💰 Work subtotal updated: ₪${total} (with VAT: ₪${totalWithVat})`);
+      console.log(`💰 Work subtotal updated: ₪${validTotal} (with VAT: ₪${totalWithVat})`);
     }
     
     function updatePartsSubtotal(total) {
