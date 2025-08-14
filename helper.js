@@ -560,17 +560,33 @@ window.calculateAllDamageCentersTotals = function() {
 // ============================================================================
 
 window.getDamageCenters = function() {
-  if (!window.helper || !window.helper.damage_centers) {
+  if (!window.helper) {
     return [];
   }
-  return window.helper.damage_centers;
+  
+  // ✅ DAMAGE CENTERS FIX: Check both storage locations
+  // Primary location: helper.centers (where wizard saves)
+  if (window.helper.centers && Array.isArray(window.helper.centers)) {
+    return window.helper.centers;
+  }
+  
+  // Fallback location: helper.damage_centers
+  if (window.helper.damage_centers && Array.isArray(window.helper.damage_centers)) {
+    return window.helper.damage_centers;
+  }
+  
+  return [];
 };
 
 window.getDamageCenterById = function(centerId) {
-  if (!window.helper || !window.helper.damage_centers) {
+  // ✅ DAMAGE CENTERS FIX: Use the unified getDamageCenters function
+  const centers = window.getDamageCenters();
+  if (!centers || centers.length === 0) {
     return null;
   }
-  return window.helper.damage_centers.find(center => center.id === centerId) || null;
+  return centers.find(center => 
+    center.id === centerId || center.Id === centerId
+  ) || null;
 };
 
 window.deleteDamageCenter = function(centerId) {
@@ -588,13 +604,24 @@ window.deleteDamageCenter = function(centerId) {
 
 window.getNextDamageCenterNumber = function() {
   const existingCenters = window.getDamageCenters();
+  console.log(`🔢 DEBUG: getNextDamageCenterNumber called, found ${existingCenters.length} existing centers:`, existingCenters);
+  
   if (!existingCenters || existingCenters.length === 0) {
+    console.log(`🔢 DEBUG: No existing centers, returning 1`);
     return 1;
   }
-  const highestNumber = Math.max(...existingCenters.map(center => {
-    return parseInt(center["Damage center Number"] || center.number || 0);
-  }));
-  return Math.max(1, highestNumber + 1);
+  
+  const numbers = existingCenters.map(center => {
+    const number = parseInt(center["Damage center Number"] || center.number || 0);
+    console.log(`🔢 DEBUG: Center ${center.Id || center.id} has number: ${number}`);
+    return number;
+  });
+  
+  const highestNumber = Math.max(...numbers);
+  const nextNumber = Math.max(1, highestNumber + 1);
+  console.log(`🔢 DEBUG: Highest number: ${highestNumber}, next number: ${nextNumber}`);
+  
+  return nextNumber;
 };
 
 window.syncDamageAssessmentCenters = function() {
