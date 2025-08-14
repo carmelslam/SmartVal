@@ -387,152 +387,6 @@ window.calculateAllDamageCentersTotals = function() {
   return window.helper.damage_assessment.totals;
 };
 
-// ============================================================================
-// 🆕 ADDITIONAL DAMAGE CENTER FUNCTIONS (from damage centers wizard work)
-// ============================================================================
-
-/**
- * Get all damage centers - enhanced version for wizard
- */
-window.getDamageCenters = function() {
-  if (!window.helper || !window.helper.damage_centers) {
-    console.log('📋 No damage centers found - initializing empty array');
-    return [];
-  }
-  
-  const centers = window.helper.damage_centers;
-  console.log(`📋 Retrieved ${centers.length} damage centers from helper`);
-  return centers;
-};
-
-/**
- * Get damage center by ID
- */
-window.getDamageCenterById = function(centerId) {
-  if (!window.helper || !window.helper.damage_centers) {
-    return null;
-  }
-  
-  return window.helper.damage_centers.find(center => center.id === centerId) || null;
-};
-
-/**
- * Delete damage center
- */
-window.deleteDamageCenter = function(centerId) {
-  if (!window.helper || !window.helper.damage_centers) {
-    console.warn('❌ No damage centers array found');
-    return false;
-  }
-  
-  const centerIndex = window.helper.damage_centers.findIndex(center => center.id === centerId);
-  if (centerIndex === -1) {
-    console.warn(`❌ Damage center with ID ${centerId} not found`);
-    return false;
-  }
-  
-  // Remove the center
-  window.helper.damage_centers.splice(centerIndex, 1);
-  console.log(`✅ Deleted damage center ${centerId}`);
-  
-  // Recalculate totals
-  window.calculateAllDamageCentersTotals();
-  
-  return true;
-};
-
-/**
- * Get next damage center number
- */
-window.getNextDamageCenterNumber = function() {
-  const existingCenters = window.getDamageCenters();
-  if (!existingCenters || existingCenters.length === 0) {
-    return 1;
-  }
-  
-  // Find the highest number and add 1
-  const highestNumber = Math.max(...existingCenters.map(center => {
-    return parseInt(center["Damage center Number"] || center.number || 0);
-  }));
-  
-  return Math.max(1, highestNumber + 1);
-};
-
-/**
- * Sync damage_centers with damage_assessment.centers for backward compatibility
- */
-window.syncDamageAssessmentCenters = function() {
-  if (!window.helper) return;
-  
-  // Initialize damage_assessment if needed
-  if (!window.helper.damage_assessment) {
-    window.helper.damage_assessment = { centers: [] };
-  }
-  
-  // Sync damage_centers to damage_assessment.centers
-  if (window.helper.damage_centers) {
-    window.helper.damage_assessment.centers = [...window.helper.damage_centers];
-    console.log('✅ Synced damage_centers to damage_assessment.centers');
-  }
-};
-
-/**
- * Build comprehensive damage assessment with ALL details from ALL damage centers
- */
-window.buildComprehensiveDamageAssessment = function() {
-  console.log('🏗️ Building comprehensive damage assessment with ALL damage center details...');
-  
-  try {
-    const allCenters = window.getDamageCenters();
-    
-    if (allCenters.length === 0) {
-      console.log('📋 No damage centers found - returning empty assessment');
-      return {
-        centers: [],
-        totals: { all_centers_total: 0 },
-        summary: { total_centers: 0 }
-      };
-    }
-    
-    // Build comprehensive assessment
-    const assessment = {
-      centers: allCenters,
-      totals: {
-        all_centers_subtotal: 0,
-        all_centers_vat: 0,
-        all_centers_total: 0
-      },
-      summary: {
-        total_centers: allCenters.length,
-        completed_centers: allCenters.filter(c => c.status === 'completed').length
-      },
-      metadata: {
-        generated_at: new Date().toISOString(),
-        version: '2.0.0'
-      }
-    };
-    
-    // Calculate totals
-    allCenters.forEach(center => {
-      const centerTotal = parseFloat(center.Summary?.["Total with VAT"] || center.total_with_vat || 0);
-      assessment.totals.all_centers_total += centerTotal;
-    });
-    
-    // Store in helper
-    window.helper.damage_assessment = window.helper.damage_assessment || {};
-    window.helper.damage_assessment.comprehensive = assessment;
-    window.helper.damage_assessment.totals = assessment.totals;
-    window.helper.damage_assessment.last_updated = new Date().toISOString();
-    
-    console.log('✅ Built comprehensive damage assessment:', assessment);
-    return assessment;
-    
-  } catch (error) {
-    console.error('❌ Error building comprehensive damage assessment:', error);
-    return null;
-  }
-};
-
 
 // ============================================================================
 // 🔒 PLATE NUMBER PROTECTION SYSTEM
@@ -2421,13 +2275,7 @@ window.helper = existingHelper || {
       estimate_generated: false
     },
     vat_percentage: 18 // Global VAT percentage setting
-  },
-  
-  // ✅ DAMAGE CENTERS - Canonical single source of truth for damage centers
-  damage_centers: [],
-  
-  // ✅ CURRENT DAMAGE CENTER - Active damage center being worked on in wizard
-  current_damage_center: {}
+  }
 };
 
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
@@ -4487,132 +4335,207 @@ if (document.readyState === 'loading') {
   setTimeout(() => window.setupUniversalInputCapture(), 1000);
 }
 
-// ✅ FIXED: Use window exports instead of ES6 export (since loaded as regular script)
-// All functions are already available on window, no need for additional exports
-console.log('✅ Helper.js loaded successfully - all functions available on window object');
-// ✅ FIXED: All helper functions are available on window object, no ES6 exports needed
-
-// Export new centralized data management functions
-// export const setPlateNumber = window.setPlateNumber;
-// export const getPlateNumber = window.getPlateNumber;
-// export const setOwnerName = window.setOwnerName;
-// export const getOwnerName = window.getOwnerName;
-// export const setOwnerPhone = window.setOwnerPhone;
-// export const getOwnerPhone = window.getOwnerPhone;
-// export const setOwnerAddress = window.setOwnerAddress;
-// export const getOwnerAddress = window.getOwnerAddress;
-// export const setOwnerEmail = window.setOwnerEmail;
-// export const getOwnerEmail = window.getOwnerEmail;
-// export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
-// export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
-// export const setVehicleField = window.setVehicleField;
-// export const fixHelperStructure = window.fixHelperStructure;
-// export const enhanceEstimateSections = window.enhanceEstimateSections;
-// export const setActiveReportType = window.setActiveReportType;
-// export const getActiveReportData = window.getActiveReportData;
-// export const addToPartsBank = window.addToPartsBank;
-// export const processInvoiceOCR = window.processInvoiceOCR;
-// export const captureFeeModuleData = window.captureFeeModuleData;
-// export const searchPartsBank = window.searchPartsBank;
-// export const protectPlateNumber = window.protectPlateNumber;
-// export const testPlateNormalization = window.testPlateNormalization;
-// export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
-// export const initializeFinancialsSection = window.initializeFinancialsSection;
-// export const captureRawWebhookResponse = window.captureRawWebhookResponse;
-// export const initializeDebugSection = window.initializeDebugSection;
-// populateAllFormsWithRetry is already declared as a function above
-// export const testWithActualWebhookData = window.testWithActualWebhookData;
-
-// Additional exports that modules might need
-// export const saveHelperToStorage = saveHelperToAllStorageLocations;
-// export { saveHelperToAllStorageLocations };
-// export { populateAllFormsWithRetry };
-
-console.log('✅ Helper.js loaded successfully - all functions available on window object');
-// ✅ FIXED: All helper functions are available on window object, no ES6 exports needed
-
-// Export new centralized data management functions
-// export const setPlateNumber = window.setPlateNumber;
-// export const getPlateNumber = window.getPlateNumber;
-// export const setOwnerName = window.setOwnerName;
-// export const getOwnerName = window.getOwnerName;
-// export const setOwnerPhone = window.setOwnerPhone;
-// export const getOwnerPhone = window.getOwnerPhone;
-// export const setOwnerAddress = window.setOwnerAddress;
-// export const getOwnerAddress = window.getOwnerAddress;
-// export const setOwnerEmail = window.setOwnerEmail;
-// export const getOwnerEmail = window.getOwnerEmail;
-// export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
-// export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
-// export const setVehicleField = window.setVehicleField;
-// export const fixHelperStructure = window.fixHelperStructure;
-// export const enhanceEstimateSections = window.enhanceEstimateSections;
-// export const setActiveReportType = window.setActiveReportType;
-// export const getActiveReportData = window.getActiveReportData;
-// export const addToPartsBank = window.addToPartsBank;
-// export const processInvoiceOCR = window.processInvoiceOCR;
-// export const captureFeeModuleData = window.captureFeeModuleData;
-// export const searchPartsBank = window.searchPartsBank;
-// export const protectPlateNumber = window.protectPlateNumber;
-// export const testPlateNormalization = window.testPlateNormalization;
-// export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
-// export const initializeFinancialsSection = window.initializeFinancialsSection;
-// export const captureRawWebhookResponse = window.captureRawWebhookResponse;
-// export const initializeDebugSection = window.initializeDebugSection;
-// populateAllFormsWithRetry is already declared as a function above
-// export const testWithActualWebhookData = window.testWithActualWebhookData;
-
-// Additional exports that modules might need
-// export const saveHelperToStorage = saveHelperToAllStorageLocations;
-// export { saveHelperToAllStorageLocations };
-// export { populateAllFormsWithRetry };
-
-// ============================================================================
-// 🔥 E65 FUNCTIONS - RESTORED FROM OLDER WORKING VERSION
-// ============================================================================
-
-window.getDamageData = function() {
-  return window.helper?.damage_assessment || {};
-};
-
-window.getValuationData = function() {
-  return window.helper?.valuation || {};
-};
-
-window.getFinancialData = function() {
-  return window.helper?.financials || {};
-};
-
-window.syncVehicleData = function() {
-  console.log('Syncing vehicle data...');
-  populateAllForms();
-};
-
-window.syncDamageData = function() {
-  console.log('Syncing damage data...');
-  populateAllForms();
-};
-
-window.syncLeviData = function() {
-  console.log('Syncing Levi data...');
-  populateAllForms();
-};
-
-// ✅ REQUIRED EXPORTS: Only the ones that modules are actually importing
+// Export all the functions that other modules need
 export const helper = window.helper;
 export const updateHelper = window.updateHelper;
-export const processIncomingData = window.processIncomingData;
+export const updateHelperAndSession = window.updateHelperAndSession;
 export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const saveHelperToStorage = window.saveHelperToStorage;
-export const getDamageData = window.getDamageData;
-export const syncDamageData = window.syncDamageData;
+export const processIncomingData = window.processIncomingData;
+export const testDataCapture = window.testDataCapture;
 export const getVehicleData = window.getVehicleData;
-export const getValuationData = window.getValuationData;
-export const getFinancialData = window.getFinancialData;
-export const syncVehicleData = window.syncVehicleData;
-export const syncLeviData = window.syncLeviData;
+export const getOwnerData = window.getOwnerData;
+export const universalWebhookReceiver = window.universalWebhookReceiver;
+export const processWebhookData = window.processWebhookData;
+export const setupUniversalInputCapture = window.setupUniversalInputCapture;
 
-// ✅ FIXED: Removed orphaned return statements and export functions
-// All data getter functions are already available on window object
-// ✅ CLEANED: Removed all orphaned export functions and syntax errors
-// Helper.js is now clean and ready for use
+// Export new centralized data management functions
+export const setPlateNumber = window.setPlateNumber;
+export const getPlateNumber = window.getPlateNumber;
+export const setOwnerName = window.setOwnerName;
+export const getOwnerName = window.getOwnerName;
+export const setOwnerPhone = window.setOwnerPhone;
+export const getOwnerPhone = window.getOwnerPhone;
+export const setOwnerAddress = window.setOwnerAddress;
+export const getOwnerAddress = window.getOwnerAddress;
+export const setOwnerEmail = window.setOwnerEmail;
+export const getOwnerEmail = window.getOwnerEmail;
+export const cleanupDuplicateOwnerData = window.cleanupDuplicateOwnerData;
+export const cleanupDuplicateVehicleData = window.cleanupDuplicateVehicleData;
+export const setVehicleField = window.setVehicleField;
+export const fixHelperStructure = window.fixHelperStructure;
+export const enhanceEstimateSections = window.enhanceEstimateSections;
+export const setActiveReportType = window.setActiveReportType;
+export const getActiveReportData = window.getActiveReportData;
+export const addToPartsBank = window.addToPartsBank;
+export const processInvoiceOCR = window.processInvoiceOCR;
+export const captureFeeModuleData = window.captureFeeModuleData;
+export const searchPartsBank = window.searchPartsBank;
+export const protectPlateNumber = window.protectPlateNumber;
+export const testPlateNormalization = window.testPlateNormalization;
+export const processComprehensiveInvoiceJSON = window.processComprehensiveInvoiceJSON;
+export const initializeFinancialsSection = window.initializeFinancialsSection;
+export const captureRawWebhookResponse = window.captureRawWebhookResponse;
+export const initializeDebugSection = window.initializeDebugSection;
+// populateAllFormsWithRetry is already declared as a function above
+export const testWithActualWebhookData = window.testWithActualWebhookData;
+
+// Additional exports that modules might need
+export const saveHelperToStorage = saveHelperToAllStorageLocations;
+export { saveHelperToAllStorageLocations };
+export { populateAllFormsWithRetry };
+
+// Data getter functions
+export function getDamageData() {
+  return window.helper?.damage_assessment || {};
+}
+
+export function getValuationData() {
+  return window.helper?.valuation || {};
+}
+
+export function getFinancialData() {
+  return window.helper?.financials || {};
+}
+
+export function syncVehicleData() {
+  console.log('Syncing vehicle data...');
+  populateAllForms();
+}
+
+export function syncDamageData() {
+  console.log('Syncing damage data...');
+  populateAllForms();
+}
+
+export function syncLeviData() {
+  console.log('Syncing Levi data...');
+  populateAllForms();
+}
+
+export function updateCalculations() {
+  console.log('Updating calculations...');
+  window.helper.meta.last_updated = new Date().toISOString();
+  saveHelperToAllStorageLocations();
+}
+
+export function initHelper(newData = null) {
+  const helper = initializeHelper() || getDefaultHelper();
+  
+  // CRITICAL: Fix existing case_id if it's still YC-UNKNOWN-XXXX and we have plate data
+  const currentYear = new Date().getFullYear();
+  if (helper.meta.case_id && helper.meta.case_id.includes('UNKNOWN') && helper.meta.plate) {
+    const correctedCaseId = `YC-${helper.meta.plate}-${currentYear}`;
+    helper.meta.case_id = correctedCaseId;
+    helper.case_info.case_id = correctedCaseId;
+    console.log(`🔧 Fixed existing case_id: UNKNOWN → ${correctedCaseId}`);
+  }
+  
+  // If new data is provided (like from initial case opening), merge it properly
+  if (newData) {
+    console.log('🔄 Merging new case data into helper:', newData);
+    
+    // Generate proper case_id: YC-PLATENUMBER-YEAR
+    if (newData.plate) {
+      // Use centralized plate management system
+      window.helper = helper; // Ensure global helper is available
+      window.setPlateNumber(newData.plate, 'open_case_ui', true);
+      const generatedCaseId = helper.meta.case_id;
+      console.log(`✅ Generated dynamic case_id: ${generatedCaseId}`);
+    }
+    
+    // Set inspection date from case opening (NOT damage date)
+    if (newData.inspection_date) {
+      helper.case_info.inspection_date = newData.inspection_date;
+      // Do NOT set damage_date here - it stays empty until general info page
+    }
+    
+    // Set inspection location (NOT garage name)
+    if (newData.location) {
+      helper.case_info.inspection_location = newData.location;
+      helper.meta.location = newData.location;
+      // Do NOT set garage name here - they are separate fields
+    }
+    
+    // Set owner info
+    if (newData.client_name) {
+      helper.stakeholders.owner.name = newData.client_name;
+      helper.meta.owner_name = newData.client_name;
+    }
+    
+    // Set current stage report type (expertise stage)
+    helper.case_info.report_type = ''; // Empty for expertise stage
+    helper.case_info.report_type_display = ''; // Empty for expertise stage
+    
+    // Set creation timestamp
+    helper.case_info.created_at = new Date().toISOString();
+    
+    // Set the global helper
+    window.helper = helper;
+    saveHelperToStorage();
+    
+    console.log('✅ Helper initialized with new case data:', helper);
+  }
+  
+  return helper;
+}
+
+// Missing function: markFieldAsManuallyModified
+export function markFieldAsManuallyModified(fieldId, value, origin) {
+  console.log(`🔄 Marking field ${fieldId} as manually modified:`, value, `(origin: ${origin})`);
+  
+  if (!window.helper) {
+    initializeHelper();
+  }
+  
+  // Create override record
+  const override = {
+    fieldId: fieldId,
+    value: value,
+    origin: origin,
+    timestamp: new Date().toISOString(),
+    type: 'manual_override'
+  };
+  
+  // Initialize overrides array if it doesn't exist
+  if (!window.helper.financials) {
+    window.helper.financials = {};
+  }
+  if (!window.helper.financials.overrides) {
+    window.helper.financials.overrides = [];
+  }
+  
+  // Initialize raw webhook capture zone for debugging
+  if (!window.helper.debug) {
+    window.helper.debug = {};
+  }
+  if (!window.helper.debug.raw_webhook_responses) {
+    window.helper.debug.raw_webhook_responses = [];
+  }
+  
+  // Remove any existing override for this field
+  window.helper.financials.overrides = window.helper.financials.overrides.filter(
+    override => override.fieldId !== fieldId
+  );
+  
+  // Add new override
+  window.helper.financials.overrides.push(override);
+  
+  // Update helper timestamp
+  window.helper.meta.last_updated = new Date().toISOString();
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  console.log(`✅ Field ${fieldId} marked as manually modified`);
+}
+
+// Missing function: refreshAllModuleForms
+export function refreshAllModuleForms() {
+  console.log('🔄 Refreshing all module forms...');
+  populateAllForms();
+}
+
+// Removed duplicate protectPlateNumber export - already exported above
+export const validatePlateNumber = window.validatePlateNumber;
+export const showPlateProtectionAlert = window.showPlateProtectionAlert;
+export const getPlateProtectionStatus = window.getPlateProtectionStatus;
