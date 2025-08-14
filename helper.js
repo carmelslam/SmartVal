@@ -604,24 +604,17 @@ window.deleteDamageCenter = function(centerId) {
 
 window.getNextDamageCenterNumber = function() {
   const existingCenters = window.getDamageCenters();
-  console.log(`🔢 DEBUG: getNextDamageCenterNumber called, found ${existingCenters.length} existing centers:`, existingCenters);
   
   if (!existingCenters || existingCenters.length === 0) {
-    console.log(`🔢 DEBUG: No existing centers, returning 1`);
     return 1;
   }
   
   const numbers = existingCenters.map(center => {
-    const number = parseInt(center["Damage center Number"] || center.number || 0);
-    console.log(`🔢 DEBUG: Center ${center.Id || center.id} has number: ${number}`);
-    return number;
+    return parseInt(center["Damage center Number"] || center.number || 0);
   });
   
   const highestNumber = Math.max(...numbers);
-  const nextNumber = Math.max(1, highestNumber + 1);
-  console.log(`🔢 DEBUG: Highest number: ${highestNumber}, next number: ${nextNumber}`);
-  
-  return nextNumber;
+  return Math.max(1, highestNumber + 1);
 };
 
 window.syncDamageAssessmentCenters = function() {

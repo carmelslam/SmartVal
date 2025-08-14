@@ -2069,39 +2069,30 @@
     }
     
     function restoreLocationData(helper) {
-      console.log('🔄 DEBUG: restoreLocationData called with helper:', helper);
-      
       // ✅ FIXED: Check for active damage center first, then wizard temp
       let currentCenterData = null;
       
       // First check if we have an active damage center ID
       const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-      console.log('🔄 DEBUG: Active center ID:', activeCenterId);
       
       if (activeCenterId) {
         // Check in helper.centers array (where data is actually stored)
         if (helper.centers && Array.isArray(helper.centers)) {
           currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
-          console.log('🔄 DEBUG: Found in helper.centers:', currentCenterData);
         }
         
         // Also check helper.damage_centers for backward compatibility
         if (!currentCenterData && helper.damage_centers) {
           currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
-          console.log('🔄 DEBUG: Found in helper.damage_centers:', currentCenterData);
         }
       }
       
       // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
         currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
-        console.log('🔄 DEBUG: Using fallback data:', currentCenterData);
       }
       
-      if (!currentCenterData) {
-        console.log('🔄 DEBUG: No current center data found for location restoration');
-        return;
-      }
+      if (!currentCenterData) return;
       
       const locationSelect = document.getElementById('locationSelect');
       const otherLocationInput = document.getElementById('otherLocationInput');
@@ -2137,39 +2128,30 @@
     }
     
     function restoreDescriptionData(helper) {
-      console.log('📝 DEBUG: restoreDescriptionData called with helper:', helper);
-      
       // ✅ FIXED: Check for active damage center first, then wizard temp
       let currentCenterData = null;
       
       // First check if we have an active damage center ID
       const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-      console.log('📝 DEBUG: Active center ID:', activeCenterId);
       
       if (activeCenterId) {
         // Check in helper.centers array (where data is actually stored)
         if (helper.centers && Array.isArray(helper.centers)) {
           currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
-          console.log('📝 DEBUG: Found in helper.centers:', currentCenterData);
         }
         
         // Also check helper.damage_centers for backward compatibility
         if (!currentCenterData && helper.damage_centers) {
           currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
-          console.log('📝 DEBUG: Found in helper.damage_centers:', currentCenterData);
         }
       }
       
       // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
       if (!currentCenterData) {
         currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
-        console.log('📝 DEBUG: Using fallback data:', currentCenterData);
       }
       
-      if (!currentCenterData) {
-        console.log('📝 DEBUG: No current center data found for description restoration');
-        return;
-      }
+      if (!currentCenterData) return;
       
       const descriptionTextarea = document.getElementById('damageDescription');
       
@@ -3028,11 +3010,11 @@
             
             showUserNotification(`מוקד נזק ${damageCenterData.number} נשמר בהצלחה!`, 'success', 3000);
             
-            // Update dropdown immediately
+            // ✅ PERFORMANCE FIX: Auto-refresh to prevent wizard from becoming heavy
             setTimeout(() => {
-              populateExistingDamageCenters(true);
-              console.log('🔄 Updated damage centers dropdown after save');
-            }, 100);
+              showUserNotification('מרענן דף לשיפור ביצועים...', 'info', 1000);
+              location.reload();
+            }, 2000);
             
           } else {
             console.error('❌ No current_damage_center to save!');
@@ -3281,11 +3263,7 @@
     
     // ✅ NEW: Update work data and send to wizard
     window.updateWorkData = function() {
-      console.log(`🔧 DEBUG: updateWorkData() called - checking work rows...`);
-      
       const workRows = document.querySelectorAll('.work-row');
-      console.log(`🔧 DEBUG: Found ${workRows.length} work rows`);
-      
       const works = [];
       let total = 0;
       
@@ -3294,17 +3272,9 @@
         const costElement = row.querySelector('.work-cost');
         const commentsElement = row.querySelector('.work-comments');
         
-        console.log(`🔧 DEBUG: Row ${index}:`, {
-          typeElement: typeElement ? 'found' : 'missing',
-          costElement: costElement ? 'found' : 'missing',
-          commentsElement: commentsElement ? 'found' : 'missing'
-        });
-        
         const type = typeElement ? typeElement.value : '';
         const cost = costElement ? (parseFloat(costElement.value) || 0) : 0;
         const comments = commentsElement ? commentsElement.value.trim() : '';
-        
-        console.log(`🔧 DEBUG: Row ${index} values:`, {type, cost, comments});
         
         if (type || cost > 0) {
           works.push({
@@ -3318,8 +3288,6 @@
         }
       });
       
-      console.log(`🔧 DEBUG: Calculated total: ${total}, Works count: ${works.length}`);
-      
       // Update module data
       moduleData.works = works;
       moduleData.takana389 = document.getElementById('takana389Work')?.value || '';
@@ -3327,11 +3295,6 @@
       // ✅ FIXED: Update both internal display and wizard subtotal consistently
       const totalDisplay = document.getElementById('workTotalDisplay');
       const totalAmount = document.getElementById('workTotalAmount');
-      
-      console.log(`🔧 DEBUG: Display elements:`, {
-        totalDisplay: totalDisplay ? 'found' : 'missing',
-        totalAmount: totalAmount ? 'found' : 'missing'
-      });
       
       if (totalDisplay && totalAmount) {
         if (total > 0) {
@@ -3347,20 +3310,14 @@
           }
           
           totalDisplay.style.display = 'block';
-          console.log(`🔧 DEBUG: Set iframe total display to block - Without VAT: ₪${total.toLocaleString()}, With VAT: ₪${totalWithVat.toLocaleString()}`);
         } else {
           totalDisplay.style.display = 'none';
-          console.log(`🔧 DEBUG: Hidden iframe total display (total is 0)`);
         }
       }
       
       // Update wizard subtotal and recalculate main totals
-      console.log(`🔧 DEBUG: About to call updateWorkSubtotal with total: ${total}`);
       updateWorkSubtotal(total);
-      console.log(`🔧 DEBUG: About to call calculateTotals()`);
       calculateTotals();
-      
-      console.log(`🔧 Work data updated: ${works.length} items, total: ₪${total}`);
     };
     
     function loadPartsModule() {
@@ -4732,27 +4689,15 @@
     }
     
     function clearAllModuleDisplays() {
-      console.log('🧹 CRITICAL: clearAllModuleDisplays() called!');
-      console.trace('🧹 TRACE: Call stack for clearAllModuleDisplays()');
-      
       // Clear work module displays
       const worksList = document.getElementById('worksList');
-      if (worksList) {
-        console.log('🧹 DEBUG: Clearing worksList innerHTML');
-        worksList.innerHTML = '';
-      }
+      if (worksList) worksList.innerHTML = '';
       
       const workTotalDisplay = document.getElementById('workTotalDisplay');
-      if (workTotalDisplay) {
-        console.log('🧹 DEBUG: Hiding workTotalDisplay');
-        workTotalDisplay.style.display = 'none';
-      }
+      if (workTotalDisplay) workTotalDisplay.style.display = 'none';
       
       const workSubtotal = document.getElementById('workSubtotal');
-      if (workSubtotal) {
-        console.log('🧹 DEBUG: Hiding workSubtotal - THIS MIGHT BE THE ISSUE!');
-        workSubtotal.style.display = 'none';
-      }
+      if (workSubtotal) workSubtotal.style.display = 'none';
       
       // Clear parts module - reset iframe
       const partsModuleFrame = document.getElementById('partsModuleFrame');
