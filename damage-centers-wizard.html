@@ -3216,14 +3216,30 @@
     
     // ✅ NEW: Update work data and send to wizard
     window.updateWorkData = function() {
+      console.log(`🔧 DEBUG: updateWorkData() called - checking work rows...`);
+      
       const workRows = document.querySelectorAll('.work-row');
+      console.log(`🔧 DEBUG: Found ${workRows.length} work rows`);
+      
       const works = [];
       let total = 0;
       
-      workRows.forEach(row => {
-        const type = row.querySelector('.work-type').value;
-        const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
-        const comments = row.querySelector('.work-comments').value.trim();
+      workRows.forEach((row, index) => {
+        const typeElement = row.querySelector('.work-type');
+        const costElement = row.querySelector('.work-cost');
+        const commentsElement = row.querySelector('.work-comments');
+        
+        console.log(`🔧 DEBUG: Row ${index}:`, {
+          typeElement: typeElement ? 'found' : 'missing',
+          costElement: costElement ? 'found' : 'missing',
+          commentsElement: commentsElement ? 'found' : 'missing'
+        });
+        
+        const type = typeElement ? typeElement.value : '';
+        const cost = costElement ? (parseFloat(costElement.value) || 0) : 0;
+        const comments = commentsElement ? commentsElement.value.trim() : '';
+        
+        console.log(`🔧 DEBUG: Row ${index} values:`, {type, cost, comments});
         
         if (type || cost > 0) {
           works.push({
@@ -3237,6 +3253,8 @@
         }
       });
       
+      console.log(`🔧 DEBUG: Calculated total: ${total}, Works count: ${works.length}`);
+      
       // Update module data
       moduleData.works = works;
       moduleData.takana389 = document.getElementById('takana389Work')?.value || '';
@@ -3245,14 +3263,21 @@
       const totalDisplay = document.getElementById('workTotalDisplay');
       const totalAmount = document.getElementById('workTotalAmount');
       
+      console.log(`🔧 DEBUG: Display elements:`, {
+        totalDisplay: totalDisplay ? 'found' : 'missing',
+        totalAmount: totalAmount ? 'found' : 'missing'
+      });
+      
       if (totalDisplay && totalAmount) {
         if (total > 0) {
           const vatAmount = total * (vatPercentage / 100);
           const totalWithVat = total + vatAmount;
           totalAmount.textContent = `₪${total.toLocaleString()} (כולל מע"מ: ₪${totalWithVat.toLocaleString()})`;
           totalDisplay.style.display = 'block';
+          console.log(`🔧 DEBUG: Set iframe total display to block with: ${totalAmount.textContent}`);
         } else {
           totalDisplay.style.display = 'none';
+          console.log(`🔧 DEBUG: Hidden iframe total display (total is 0)`);
         }
       }
       
@@ -4627,17 +4652,27 @@
     }
     
     function clearAllModuleDisplays() {
-      console.log('🧹 Clearing all module displays and subtotals...');
+      console.log('🧹 CRITICAL: clearAllModuleDisplays() called!');
+      console.trace('🧹 TRACE: Call stack for clearAllModuleDisplays()');
       
       // Clear work module displays
       const worksList = document.getElementById('worksList');
-      if (worksList) worksList.innerHTML = '';
+      if (worksList) {
+        console.log('🧹 DEBUG: Clearing worksList innerHTML');
+        worksList.innerHTML = '';
+      }
       
       const workTotalDisplay = document.getElementById('workTotalDisplay');
-      if (workTotalDisplay) workTotalDisplay.style.display = 'none';
+      if (workTotalDisplay) {
+        console.log('🧹 DEBUG: Hiding workTotalDisplay');
+        workTotalDisplay.style.display = 'none';
+      }
       
       const workSubtotal = document.getElementById('workSubtotal');
-      if (workSubtotal) workSubtotal.style.display = 'none';
+      if (workSubtotal) {
+        console.log('🧹 DEBUG: Hiding workSubtotal - THIS MIGHT BE THE ISSUE!');
+        workSubtotal.style.display = 'none';
+      }
       
       // Clear parts module - reset iframe
       const partsModuleFrame = document.getElementById('partsModuleFrame');
