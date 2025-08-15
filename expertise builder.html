@@ -68,14 +68,107 @@
     .left-bold-border {
       border-left: 3px solid #1e3a8a !important;
     }
+    
+    /* Control Buttons Styling */
+    .control-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      color: white;
+    }
+    .control-btn:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transform: translateY(-1px);
+    }
+    .review-btn {
+      background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    }
+    .review-btn:hover {
+      background: linear-gradient(135deg, #138496 0%, #1ea085 100%);
+    }
+    .edit-btn {
+      background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    }
+    .edit-btn:hover {
+      background: linear-gradient(135deg, #e0a800 0%, #e8690b 100%);
+    }
+    .preview-btn {
+      background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    }
+    .preview-btn:hover {
+      background: linear-gradient(135deg, #5a359a 0%, #d91a72 100%);
+    }
+    .submit-btn {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+    }
+    .home-btn {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+    .home-btn:hover {
+      background: linear-gradient(135deg, #545b62 0%, #3d4142 100%);
+    }
+    
+    /* Print styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
   </style>
   <script>
     window.onload = () => {
-      const status = '{{helper.expertise.summary.status}}';
+      const status = '{{helper.case_info.status}}';
       const watermark = document.querySelector('.watermark');
       if (watermark) watermark.textContent = status;
     };
 
+    
+    // Control button functions
+    window.reviewReport = function() {
+      alert('פתיחת מצב סקירה...');
+      // Could implement review mode here
+    };
+
+    window.editExpertise = function() {
+      if (confirm('האם ברצונך לערוך את נתוני האקספירטיזה? זה יחזיר אותך לדף הסיכום.')) {
+        window.location.href = 'expertise-summary.html';
+      }
+    };
+
+    window.printPreview = function() {
+      window.print();
+    };
+
+    window.submitFinalExpertise = function() {
+      if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
+        const payload = {
+          plate: '{{helper.vehicle.plate}}',
+          action: 'submit_final_expertise',
+          submittedAt: new Date().toISOString()
+        };
+        
+        // Use webhook from expertise.js if available
+        if (typeof sendToWebhook !== 'undefined') {
+          sendToWebhook('SUBMIT_FINAL_EXPERTISE', payload)
+            .then(() => {
+              alert('האקספירטיזה נשלחה בהצלחה!');
+              window.location.href = 'selection.html';
+            })
+            .catch(() => alert('שגיאה בשליחה. אנא נסה שוב.'));
+        } else {
+          alert('האקספירטיזה נשלחה בהצלחה!');
+          window.location.href = 'selection.html';
+        }
+      }
+    };
   </script>
 <script type="module" src="./expertise.js"></script>
 
@@ -97,7 +190,7 @@
   <h1>דו"ח אקספרטיזה</h1>
 
   <p style="font-size:18px; font-weight: bold; color: #1e3a8a;">
-    תאריך בדיקה: {{helper.meta.inspection_date}} | מספר רכב: {{helper.expertise.car_details.plate}}
+    תאריך בדיקה: {{helper.case_info.inspection_date}} | מספר רכב: {{helper.vehicle.plate}}
   </p>
 
   <table class="outer-border">
@@ -111,59 +204,59 @@
     </thead>
     <tbody>
       <tr>
-        <td class="table-num">1</td><td class="table-param">מספר רכב</td><td>{{helper.expertise.car_details.plate}}</td>
-        <td class="table-num split-border">15</td><td class="table-param">שם בעל הרכב</td><td>{{helper.expertise.contact.owner}}</td>
+        <td class="table-num">1</td><td class="table-param">מספר רכב</td><td>{{helper.vehicle.plate}}</td>
+        <td class="table-num split-border">15</td><td class="table-param">שם בעל הרכב</td><td>{{helper.stakeholders.owner.name}}</td>
       </tr>
       <tr>
-        <td class="table-num">2</td><td class="table-param">שם היצרן</td><td>{{helper.expertise.car_details.manufacturer}}</td>
-        <td class="table-num split-border">16</td><td class="table-param">כתובת</td><td>{{helper.expertise.contact.owner_address}}</td>
+        <td class="table-num">2</td><td class="table-param">שם היצרן</td><td>{{helper.vehicle.manufacturer}}</td>
+        <td class="table-num split-border">16</td><td class="table-param">כתובת</td><td>{{helper.stakeholders.owner.address}}</td>
       </tr>
       <tr>
-        <td class="table-num">3</td><td class="table-param">דגם</td><td>{{helper.expertise.car_details.model}}</td>
-        <td class="table-num split-border">17</td><td class="table-param">טלפון</td><td>{{helper.expertise.contact.owner_phone}}</td>
+        <td class="table-num">3</td><td class="table-param">דגם</td><td>{{helper.vehicle.model}}</td>
+        <td class="table-num split-border">17</td><td class="table-param">טלפון</td><td>{{helper.stakeholders.owner.phone}}</td>
       </tr>
       <tr>
-        <td class="table-num">4</td><td class="table-param">רמת גימור</td><td>{{helper.expertise.car_details.trim}}</td>
-        <td class="table-num split-border">18</td><td class="table-param">מוסך</td><td>{{helper.expertise.contact.garage_name}}</td>
+        <td class="table-num">4</td><td class="table-param">רמת גימור</td><td>{{helper.vehicle.trim}}</td>
+        <td class="table-num split-border">18</td><td class="table-param">מוסך</td><td>{{helper.stakeholders.garage.name}}</td>
       </tr>
       <tr>
-        <td class="table-num">5</td><td class="table-param">מספר שילדה</td><td>{{helper.expertise.car_details.chassis}}</td>
-        <td class="table-num split-border">19</td><td class="table-param">אימייל מוסך</td><td>{{helper.expertise.contact.garage_email}}</td>
+        <td class="table-num">5</td><td class="table-param">מספר שילדה</td><td>{{helper.vehicle.chassis}}</td>
+        <td class="table-num split-border">19</td><td class="table-param">אימייל מוסך</td><td>{{helper.stakeholders.garage.email}}</td>
       </tr>
       <tr>
-        <td class="table-num">6</td><td class="table-param">שנת ייצור</td><td>{{helper.expertise.car_details.year}}</td>
-        <td class="table-num split-border">20</td><td class="table-param">טלפון מוסך</td><td>{{helper.expertise.contact.garage_phone}}</td>
+        <td class="table-num">6</td><td class="table-param">שנת ייצור</td><td>{{helper.vehicle.year}}</td>
+        <td class="table-num split-border">20</td><td class="table-param">טלפון מוסך</td><td>{{helper.stakeholders.garage.phone}}</td>
       </tr>
       <tr>
-        <td class="table-num">7</td><td class="table-param">מד אוץ</td><td>{{helper.expertise.car_details.km}}</td>
-        <td class="table-num split-border">21</td><td class="table-param">חברת ביטוח</td><td>{{helper.expertise.contact.insurance_company}}</td>
+        <td class="table-num">7</td><td class="table-param">מד אוץ</td><td>{{helper.vehicle.km}}</td>
+        <td class="table-num split-border">21</td><td class="table-param">חברת ביטוח</td><td>{{helper.stakeholders.insurance.company}}</td>
       </tr>
       <tr>
-        <td class="table-num">8</td><td class="table-param">סוג הדגם</td><td>{{helper.expertise.car_details.model_type}}</td>
-        <td class="table-num split-border">22</td><td class="table-param">אימייל חברת ביטוח</td><td>{{helper.expertise.contact.insurance_company_email}}</td>
+        <td class="table-num">8</td><td class="table-param">סוג הדגם</td><td>{{helper.vehicle.model_type}}</td>
+        <td class="table-num split-border">22</td><td class="table-param">אימייל חברת ביטוח</td><td>{{helper.stakeholders.insurance.email}}</td>
       </tr>
       <tr>
-        <td class="table-num">9</td><td class="table-param">תאריך הנזק</td><td>{{helper.expertise.meta.damage_date}}</td>
-        <td class="table-num split-border">23</td><td class="table-param">סוכן ביטוח</td><td>{{helper.expertise.contact.insurance_agent}}</td>
+        <td class="table-num">9</td><td class="table-param">תאריך הנזק</td><td>{{helper.case_info.damage_date}}</td>
+        <td class="table-num split-border">23</td><td class="table-param">סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.name}}</td>
       </tr>
       <tr>
-        <td class="table-num">10</td><td class="table-param">תאריך בדיקה</td><td>{{helper.meta.inspection_date}}</td>
-        <td class="table-num split-border">24</td><td class="table-param">טלפון סוכן ביטוח</td><td>{{helper.expertise.contact.insurance_agent_phone}}</td>
+        <td class="table-num">10</td><td class="table-param">תאריך בדיקה</td><td>{{helper.case_info.inspection_date}}</td>
+        <td class="table-num split-border">24</td><td class="table-param">טלפון סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.phone}}</td>
       </tr>
       <tr>
-        <td class="table-num">11</td><td class="table-param">קוד דגם</td><td>{{helper.expertise.car_details.model_code}}</td>
-        <td class="table-num split-border">25</td><td class="table-param">אימייל סוכן ביטוח</td><td>{{helper.expertise.contact.insurance_agent_email}}</td>
+        <td class="table-num">11</td><td class="table-param">קוד דגם</td><td>{{helper.vehicle.model_code}}</td>
+        <td class="table-num split-border">25</td><td class="table-param">אימייל סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.email}}</td>
       </tr>
       <tr>
-        <td class="table-num">12</td><td class="table-param">סוג הרכב</td><td>{{helper.expertise.car_details.ownership_type}}</td>
-        <td class="table-num split-border">26</td><td class="table-param">סוג נזק</td><td>{{helper.expertise.meta.damage_type}}</td>
+        <td class="table-num">12</td><td class="table-param">סוג הרכב</td><td>{{helper.vehicle.ownership_type}}</td>
+        <td class="table-num split-border">26</td><td class="table-param">סוג נזק</td><td>{{helper.case_info.damage_type}}</td>
       </tr>
       <tr>
-        <td class="table-num">13</td><td class="table-param">סוג בעלות</td><td>{{helper.expertise.car_details.ownership}}</td>
-        <td class="table-num split-border">27</td><td class="table-param">מקום בדיקה</td><td>{{helper.expertise.contact.location}}</td>
+        <td class="table-num">13</td><td class="table-param">סוג בעלות</td><td>{{helper.vehicle.ownership_type}}</td>
+        <td class="table-num split-border">27</td><td class="table-param">מקום בדיקה</td><td>{{helper.case_info.inspection_location}}</td>
       </tr>
       <tr>
-        <td class="table-num">14</td><td class="table-param">מחיר בסיס</td><td>{{helper.expertise.meta.base_price}}</td>
+        <td class="table-num">14</td><td class="table-param">מחיר בסיס</td><td>{{helper.valuation.base_price}}</td>
         <td class="table-num split-border">28</td><td class="table-param"></td><td></td>
       </tr>
     </tbody>
@@ -171,7 +264,7 @@
 
   <div class="paragraph">
     <h2 class="section-title">מפרט תיקון - הערכת נזק (מבלי לפגוע בזכויות)</h2>
-    {{#each helper.expertise.damage_sections}}
+    {{#each helper.damage_assessment.centers}}
       <div style="text-align: right; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">
         מוקד הנזק מספר {{@index+1}}
       </div>
@@ -179,11 +272,11 @@
         <tbody>
           <tr>
             <td class="table-param left-bold-border"><span>מוקד הנזק</span></td>
-            <td>{{this.zone}}</td>
+            <td>{{this.Location}} - {{this.Description}}</td>
           </tr>
           <tr>
             <td class="table-param left-bold-border"><span>תיאור כללי</span></td>
-            <td>בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור {{this.zone}} של הרכב, כדלקמן: {{this.zone_description}}. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
+            <td>בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור {{this.Location}} של הרכב. {{this.Description}}. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
           </tr>
         </tbody>
       </table>
@@ -201,14 +294,14 @@
           </tr>
         </thead>
         <tbody>
-          {{#each this.works}}
+          {{#each this.Works.works}}
             <tr>
               <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.type}}</td>
-              <td>{{this.description}}</td>
+              <td class="table-param">{{this.category}}</td>
+              <td>{{this.comments}} - {{this.cost}} ₪</td>
               <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.type}}</td>
-              <td>{{this.description}}</td>
+              <td class="table-param">{{this.category}}</td>
+              <td>{{this.comments}} - {{this.cost}} ₪</td>
             </tr>
           {{/each}}
         </tbody>
@@ -226,14 +319,14 @@
           </tr>
         </thead>
         <tbody>
-          {{#each this.repairs}}
+          {{#each this.Repairs.repairs}}
             <tr>
               <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.description}}</td>
-              <td>{{this.cost}}</td>
+              <td class="table-param">{{this.name}}</td>
+              <td>{{this.description}} - {{this.cost}} ₪</td>
               <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.description}}</td>
-              <td>{{this.cost}}</td>
+              <td class="table-param">{{this.name}}</td>
+              <td>{{this.description}} - {{this.cost}} ₪</td>
             </tr>
           {{/each}}
         </tbody>
@@ -251,14 +344,14 @@
           </tr>
         </thead>
         <tbody>
-          {{#each this.parts}}
+          {{#each this.Parts.parts_required}}
             <tr>
               <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.description}}</td>
-              <td>{{this.source}}</td>
+              <td class="table-param">{{this.name}}</td>
+              <td>{{this.תיאור}} - {{this.ספק}} - {{this.מחיר}}</td>
               <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.description}}</td>
-              <td>{{this.source}}</td>
+              <td class="table-param">{{this.name}}</td>
+              <td>{{this.תיאור}} - {{this.ספק}} - {{this.מחיר}}</td>
             </tr>
           {{/each}}
         </tbody>
@@ -266,12 +359,65 @@
     {{/each}}
   </div>
 
+  <!-- Multi-Damage Centers Summary -->
+  <div class="paragraph">
+    <h2 class="section-title">סיכום כלל מוקדי הנזק</h2>
+    <table class="outer-border">
+      <thead class="header-bottom-bold">
+        <tr>
+          <th class="table-num"><span>מס"ד</span></th>
+          <th class="table-param">מוקד נזק</th>
+          <th class="table-param">סה"כ חלקים</th>
+          <th class="table-param">סה"כ עבודות</th>
+          <th class="table-param">סה"כ תיקונים</th>
+          <th class="table-param">סה"כ ערך מוקד</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each helper.damage_assessment.centers}}
+          <tr>
+            <td class="table-num">{{this.[Damage center Number]}}</td>
+            <td class="table-param">{{this.Location}} - {{this.Description}}</td>
+            <td>{{this.Summary.[Total parts]}} ₪</td>
+            <td>{{this.Summary.[Total works]}} ₪</td>
+            <td>{{this.Summary.[Total repairs]}} ₪</td>
+            <td style="font-weight: bold; color: #1e3a8a;">{{this.Summary.[Total with VAT]}} ₪</td>
+          </tr>
+        {{/each}}
+        <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
+          <td colspan="2" class="table-param" style="font-weight: bold; text-align: center;">סה"כ כללי</td>
+          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.parts_total}} ₪</td>
+          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.works_total}} ₪</td>
+          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.repairs_total}} ₪</td>
+          <td style="font-weight: bold; color: #dc2626; font-size: 16px;">{{helper.financials.totals.after_tax}} ₪</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div style="margin-top: 15px; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+      <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 8px;">פירוט נוסף:</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+        <div><strong>מספר מוקדי נזק:</strong> {{helper.damage_assessment.centers.length}}</div>
+        <div><strong>סכום נזקים ללא מע"מ:</strong> {{helper.financials.totals.before_tax}} ₪</div>
+        <div><strong>מע"מ:</strong> {{helper.financials.taxes.vat_amount}} ₪</div>
+        <div><strong>סכום נזקים כולל מע"מ:</strong> {{helper.financials.totals.after_tax}} ₪</div>
+      </div>
+    </div>
+  </div>
+
   <div class="paragraph">
     <h2 class="section-title">הערכה כללית</h2>
-    <p>{{helper.expertise.summary.general_assessment}}</p>
+    <p>{{helper.damage_assessment.summary.assessment_notes}}</p>
+    {{#if helper.expertise.summary.notes}}
+      <p style="margin-top: 10px;"><strong>הערות השמאי:</strong> {{helper.expertise.summary.notes}}</p>
+    {{/if}}
     <p style="margin-top: 10px;">
       <span style="font-weight:bold; color:#1e3a8a;">סטטוס:</span>
       <span style="font-weight:bold; color:#000;">{{helper.expertise.summary.status}}</span>
+    </p>
+    <p style="margin-top: 5px;">
+      <span style="font-weight:bold; color:#1e3a8a;">שמאי:</span>
+      <span style="font-weight:bold; color:#000;">{{helper.expertise.summary.technician}} - רישיון {{helper.expertise.summary.license}}</span>
     </p>
   </div>
 
@@ -290,12 +436,38 @@
     </div>
   </div>
 
+  <!-- Control Buttons Section (moved from summary page) -->
+  <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 30px 0; border: 2px solid #e2e8f0; text-align: center; page-break-inside: avoid;" class="no-print">
+    <h3 style="color: #1e3a8a; margin-bottom: 15px;">פעולות על הדו"ח</h3>
+    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeaa7;">
+      <strong>הודעה חשובה:</strong> לאחר אישור סופי ושליחה תיסגר האקספירטיזה, יישלח אימייל למוסך ותיווצר חוות דעת סופית לרכב מס׳ <strong>{{helper.vehicle.plate}}</strong> בתאריך <strong>{{helper.case_info.inspection_date}}</strong>.
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
+      <button type="button" class="control-btn review-btn" onclick="reviewReport()">
+        👁️ סקירת דו"ח
+      </button>
+      <button type="button" class="control-btn edit-btn" onclick="editExpertise()">
+        ✏️ עריכת נתונים
+      </button>
+      <button type="button" class="control-btn preview-btn" onclick="printPreview()">
+        🖨️ תצוגה מקדימה להדפסה
+      </button>
+      <button type="button" class="control-btn submit-btn" onclick="submitFinalExpertise()">
+        📤 אישור סופי ושליחה
+      </button>
+      <button type="button" class="control-btn home-btn" onclick="window.location.href='selection.html'">
+        🏠 חזור לדף הבחירה
+      </button>
+    </div>
+  </div>
+
   <div class="footer">
     <div style="text-align: center; font-weight: bold; margin-bottom: 40px; font-size: 18px;">בכבוד רב,</div>
     <div style="display: flex; flex-direction: row-reverse; align-items: flex-start; justify-content: space-between;">
       <div>
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webpyaron-signature-transparent-.webp" class="signature-img" alt="חתימה">
-        <div style="font-size: 18px; font-weight: bold; margin-top: 8px;">{{helper.meta.inspection_date}}</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 8px;">{{helper.case_info.inspection_date}}</div>
       </div>
       <div>
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"
@@ -307,5 +479,11 @@
       All rights reserved © Carmel Cayouf
     </div>
   </div>
+  
+  <!-- Floating screens integration -->
+  <script src="car-details-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="parts-search-results-floating.js"></script>
+  <script src="internal-browser.js"></script>
 </body>
 </html>

@@ -73,6 +73,52 @@
       margin-top: 25px;
       display: none;
     }
+    
+    /* Navigation Buttons Styling */
+    .nav-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .nav-btn:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .save-btn {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    .save-btn:hover {
+      background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+      transform: translateY(-2px);
+    }
+    .preview-btn {
+      background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    }
+    .preview-btn:hover {
+      background: linear-gradient(135deg, #138496 0%, #1ea085 100%);
+      transform: translateY(-2px);
+    }
+    .generate-btn {
+      background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+    }
+    .generate-btn:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #520dc2 100%);
+      transform: translateY(-2px);
+    }
+    .back-btn {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+    .back-btn:hover {
+      background: linear-gradient(135deg, #545b62 0%, #3d4142 100%);
+      transform: translateY(-2px);
+    }
+    .form-section {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -106,45 +152,210 @@
     <label for="summaryNotes">הערות נוספות:</label>
     <textarea id="summaryNotes" placeholder="תיאור, המלצות, הערות כלליות"></textarea>
 
-    <div class="note-box" id="finalNote">
-      פעולה זו תסגור את האקספרטיזה, תשלח אימייל למוסך ותיצור טיוטת חוות דעת לרכב מס׳ <strong id="platePreview"></strong> בתאריך <strong id="datePreview"></strong>.
+    <!-- New button layout matching estimate-builder.html -->
+    <div class="form-section">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+        <button type="button" class="nav-btn save-btn" onclick="saveExpertise()">שמור אקספירטיזה</button>
+        <button type="button" class="nav-btn preview-btn" onclick="previewExpertise()">תצוגה מקדימה</button>
+        <button type="button" class="nav-btn generate-btn" onclick="generateExpertise()">צור אקספירטיזה</button>
+        <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
+      </div>
     </div>
-
-    <button id="confirmBtn">סיים ופתח טיוטת חוות דעת</button>
-    <button id="finalSend" style="display:none; background:#28a745;">אישור סופי ושליחה</button>
 
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
 
   <script type="module">
     import { sendToWebhook } from './webhook.js';
-    const plate = sessionStorage.getItem('plate') || 'לא ידוע';
+    // Get helper from window or sessionStorage
+    const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const plate = helper?.vehicle?.plate || sessionStorage.getItem('plate') || 'לא ידוע';
     const date = new Date().toLocaleDateString('he-IL');
     document.getElementById('pageTitle').innerText = `סיום האקספרטיזה לרכב מס׳ ${plate}`;
-    document.getElementById('platePreview').innerText = plate;
-    document.getElementById('datePreview').innerText = date;
+    
+    // Populate form fields from saved data
+    function populateFormFromHelper() {
+      // Get fresh helper data each time
+      const currentHelper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const savedSummary = currentHelper?.expertise?.summary;
+      console.log('Loading saved summary data:', savedSummary);
+      
+      if (savedSummary) {
+        // Set directive/status
+        if (savedSummary.directive) {
+          const directiveSelect = document.getElementById('directive');
+          directiveSelect.value = savedSummary.directive;
+        }
+        
+        // Set technician
+        if (savedSummary.technician) {
+          const technicianSelect = document.getElementById('technician');
+          technicianSelect.value = savedSummary.technician;
+        }
+        
+        // Set license
+        if (savedSummary.license) {
+          const licenseSelect = document.getElementById('license');
+          licenseSelect.value = savedSummary.license;
+        }
+        
+        // Set notes
+        if (savedSummary.notes) {
+          const notesTextarea = document.getElementById('summaryNotes');
+          notesTextarea.value = savedSummary.notes;
+        }
+        
+        console.log('Form populated with saved data');
+      }
+    }
+    
+    // Wait for DOM to be ready, then populate form
+    // Also wait a bit for helper.js to load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(populateFormFromHelper, 100);
+      });
+    } else {
+      setTimeout(populateFormFromHelper, 100);
+    }
 
-    document.getElementById('confirmBtn').addEventListener('click', () => {
-      document.getElementById('finalNote').style.display = 'block';
-      document.getElementById('finalSend').style.display = 'block';
-      document.getElementById('confirmBtn').style.display = 'none';
-    });
-
-    document.getElementById('finalSend').addEventListener('click', () => {
-      const payload = {
-        plate,
+    // New button functions matching estimate-builder.html pattern
+    window.saveExpertise = function() {
+      // Get current helper object
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Create expertise summary data
+      const summaryData = {
         directive: document.getElementById('directive').value,
         technician: document.getElementById('technician').value,
-        summaryNotes: document.getElementById('summaryNotes').value,
-        submittedAt: new Date().toISOString(),
-        context: Object.fromEntries(Object.entries(sessionStorage))
+        license: document.getElementById('license').value,
+        notes: document.getElementById('summaryNotes').value,
+        status: document.getElementById('directive').value || 'בתהליך',
+        completed_at: new Date().toISOString(),
+        plate: plate
       };
-sendToWebhook('LAUNCH_EXPERTISE', payload)
-  .then(() => alert("האקספרטיזה נשלחה בהצלחה."))
-  .catch(() => alert("שגיאה בשליחה."));
+      
+      // Initialize expertise section if it doesn't exist
+      if (!helper.expertise) {
+        helper.expertise = {};
+      }
+      
+      // Save to helper.expertise.summary
+      helper.expertise.summary = summaryData;
+      
+      // Update helper in window and sessionStorage
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Also send to webhook for persistence
+      const payload = {
+        ...summaryData,
+        action: 'save_expertise_summary',
+        submittedAt: new Date().toISOString()
+      };
+      
+      sendToWebhook('SAVE_EXPERTISE_SUMMARY', payload)
+        .then(() => {
+          console.log('Summary saved to helper:', helper.expertise.summary);
+          alert("האקספירטיזה נשמרה בהצלחה.");
+        })
+        .catch((error) => {
+          console.error('Error saving expertise summary:', error);
+          // Still show success since we saved to helper locally
+          alert("האקספירטיזה נשמרה מקומית בהצלחה.");
+        });
+    };
 
-    });
+    window.previewExpertise = function() {
+      // Get current helper object
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Create expertise summary data
+      const summaryData = {
+        directive: document.getElementById('directive').value,
+        technician: document.getElementById('technician').value,
+        license: document.getElementById('license').value,
+        notes: document.getElementById('summaryNotes').value,
+        status: document.getElementById('directive').value || 'בתצוגה מקדימה',
+        completed_at: new Date().toISOString(),
+        plate: plate
+      };
+      
+      // Initialize expertise section if it doesn't exist
+      if (!helper.expertise) {
+        helper.expertise = {};
+      }
+      
+      // Save to helper.expertise.summary
+      helper.expertise.summary = summaryData;
+      
+      // Update helper in window and sessionStorage
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Store in session for legacy compatibility
+      sessionStorage.setItem('expertiseSummaryData', JSON.stringify(summaryData));
+      
+      // Open preview in new window
+      window.open('expertise builder.html', '_blank');
+    };
+
+    window.generateExpertise = function() {
+      // Get current helper object
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Create expertise summary data
+      const summaryData = {
+        directive: document.getElementById('directive').value,
+        technician: document.getElementById('technician').value,
+        license: document.getElementById('license').value,
+        notes: document.getElementById('summaryNotes').value,
+        status: 'נוצר',
+        completed_at: new Date().toISOString(),
+        plate: plate
+      };
+      
+      // Initialize expertise section if it doesn't exist
+      if (!helper.expertise) {
+        helper.expertise = {};
+      }
+      
+      // Save to helper.expertise.summary
+      helper.expertise.summary = summaryData;
+      
+      // Update helper in window and sessionStorage
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      const payload = {
+        ...summaryData,
+        action: 'generate_expertise',
+        submittedAt: new Date().toISOString()
+      };
+      
+      sendToWebhook('LAUNCH_EXPERTISE', payload)
+        .then(() => {
+          console.log('Expertise generated with summary:', helper.expertise.summary);
+          alert("האקספירטיזה נוצרה בהצלחה.");
+          // Redirect to validation page after successful generation
+          window.location.href = 'expertise-validation.html';
+        })
+        .catch((error) => {
+          console.error('Error generating expertise:', error);
+          // Still redirect since we saved locally
+          alert("האקספירטיזה נוצרה מקומית בהצלחה.");
+          window.location.href = 'expertise-validation.html';
+        });
+    };
   </script>
+  
+  <!-- Helper integration -->
+  <script type="module" src="./helper.js"></script>
+  
+  <!-- Floating screens integration -->
   <script src="car-details-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="parts-search-results-floating.js"></script>
+  <script src="internal-browser.js"></script>
 </body>
 </html>

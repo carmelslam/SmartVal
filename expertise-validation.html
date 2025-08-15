@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>אימות אקספרטיזה - ירון כיוף שמאות</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  
+  <!-- OneSignal Push -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "3b924b99-c302-4919-a97e-baf909394696",
+      });
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f6fb;
+      margin: 0;
+      min-height: 100vh;
+      padding: 0;
+      padding-top: 100px;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .container {
+      max-width: 1000px;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      margin: 20px;
+    }
+    .logo img {
+      width: 120px;
+      margin-bottom: 40px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 5px;
+      color: #1e3a8a;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 22px;
+      color: #1e3a8a;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .validation-section {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    .validation-section.completed {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .validation-section.current {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .validation-section.error {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    .validation-section.warning {
+      border-color: #f59e0b;
+      background: #fefbf2;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+    .section-status {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-current {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .status-completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .status-error {
+      background: #fecaca;
+      color: #991b1b;
+    }
+    .status-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .section-content {
+      color: #475569;
+      line-height: 1.6;
+    }
+    .validation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .validation-item:last-child {
+      border-bottom: none;
+    }
+    .validation-label {
+      font-weight: 500;
+      flex: 1;
+    }
+    .validation-status {
+      font-size: 18px;
+      font-weight: bold;
+      min-width: 30px;
+      text-align: center;
+    }
+    .validation-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      flex: 1;
+      min-width: 120px;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-validate {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-validate:hover:not(:disabled) {
+      background: #2563eb;
+    }
+    .btn-edit {
+      background: #f59e0b;
+      color: white;
+    }
+    .btn-edit:hover:not(:disabled) {
+      background: #d97706;
+    }
+    .btn-success {
+      background: #16a34a;
+      color: white;
+    }
+    .btn-success:hover:not(:disabled) {
+      background: #15803d;
+    }
+    .user-validation-section {
+      background: #f0f9ff;
+      border: 2px solid #0ea5e9;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 30px 0;
+    }
+    .user-validation-header {
+      font-size: 20px;
+      font-weight: bold;
+      color: #0c4a6e;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .final-actions {
+      background: #f8fafc;
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 25px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .cost-summary {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .cost-summary-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .cost-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .cost-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .cost-label {
+      color: #475569;
+      font-weight: 500;
+    }
+    .cost-value {
+      color: #1e3a8a;
+      font-weight: bold;
+    }
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 40px;
+      padding: 20px 0;
+      border-top: 1px solid #e2e8f0;
+    }
+    .floating-button {
+      position: fixed;
+      z-index: 1000;
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #64748b;
+      transition: all 0.3s ease;
+    }
+    .floating-button:hover {
+      background: #f8fafc;
+      border-color: #3b82f6;
+      color: #3b82f6;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+    /* FLOATING SCREENS STYLING - COPIED FROM FINAL-REPORT-BUILDER */
+    .floating-toggles-top {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .toggle-square {
+      width: 80px;
+      height: 70px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .toggle-square:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .toggle-square.active {
+      border-color: #fbbf24;
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+    }
+
+    .toggle-icon {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .toggle-text {
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    @media (max-width: 768px) {
+      .floating-toggles-top {
+        top: 5px;
+        gap: 4px;
+        padding: 6px;
+      }
+      .toggle-square {
+        width: 65px;
+        height: 60px;
+      }
+      .toggle-icon {
+        font-size: 16px;
+      }
+      .toggle-text {
+        font-size: 9px;
+      }
+    }
+    #alerts {
+      position: fixed;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      width: 90%;
+      max-width: 500px;
+    }
+    .alert {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #16a34a;
+    }
+    .alert-error {
+      background: #fecaca;
+      color: #991b1b;
+      border: 1px solid #dc2626;
+    }
+    .alert-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+    
+    /* Enhanced Validation Items Styles */
+    .validation-item-enhanced {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      padding: 12px;
+      transition: all 0.2s ease;
+    }
+    .validation-item-enhanced:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .validation-label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .validation-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .current-value {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+    .current-value.data-match {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #16a34a;
+    }
+    .current-value.data-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+    .current-value.data-error {
+      background: #fecaca;
+      color: #991b1b;
+      border-color: #dc2626;
+    }
+    .stored-value {
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-radius: 6px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+    }
+    .action-buttons button {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .edit-inline {
+      background: #3b82f6;
+      color: white;
+    }
+    .edit-inline:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+    .inline-edit-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #3b82f6;
+      border-radius: 6px;
+      font-weight: 600;
+      color: #1e3a8a;
+      background: white;
+      font-size: 14px;
+    }
+    .inline-edit-input:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .ignore {
+      background: #6b7280;
+      color: white;
+    }
+    .ignore:hover {
+      background: #374151;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="alerts"></div>
+  
+  <div class="container">
+    <div class="logo">
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo">
+    </div>
+    <div class="title">ירון כיוף - פורטל שמאות</div>
+    <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
+    
+    <h1>אימות נתוני האקספרטיזה</h1>
+
+    <!-- FLOATING SCREEN TOGGLES - TOP OF PAGE -->
+    <div class="floating-toggles-top">
+      <div class="toggle-square" onclick="toggleFloatingScreen('leviReport')">
+        <div class="toggle-icon">📊</div>
+        <div class="toggle-text">דו"ח לוי יצחק</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('carDetails')">
+        <div class="toggle-icon">🚗</div>
+        <div class="toggle-text">פרטי רכב</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('partsSearchResults')">
+        <div class="toggle-icon">🔧</div>
+        <div class="toggle-text">תוצאות חלקים</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('internalBrowser')">
+        <div class="toggle-icon">🌐</div>
+        <div class="toggle-text">דפדפן פנימי</div>
+      </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+      <div style="text-align: center; font-weight: bold; color: #1e3a8a; margin-bottom: 10px;">
+        התקדמות אימות האקספרטיזה
+      </div>
+      <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+        <div id="progress-bar" style="background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+      </div>
+      <div style="text-align: center; color: #64748b; margin-top: 8px; font-size: 14px;">
+        <span id="progress-text">0 מתוך 5 שלבים הושלמו</span>
+      </div>
+    </div>
+
+    <!-- Phase 1: Vehicle and Case Details -->
+    <div class="validation-section current" id="section-vehicle">
+      <div class="section-header">
+        <div class="section-title">פרטי רכב ומקרה</div>
+        <div class="section-status status-current">בבדיקה</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
+        </div>
+        
+        <div id="vehicle-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('vehicle')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('vehicle')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('vehicle')" disabled>אימות פרטי רכב</button>
+      </div>
+    </div>
+
+    <!-- Phase 2: Levi Report Validation -->
+    <div class="validation-section" id="section-levi">
+      <div class="section-header">
+        <div class="section-title">דו"ח לוי יצחק - שווי רכב</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> אימות נתוני השווי מדו"ח לוי יצחק | בדיקת התאמות מחיר וחישוב שווי סופי
+        </div>
+        
+        <div class="validation-item">
+          <span class="validation-label">קובץ דו"ח לוי</span>
+          <span class="validation-status" id="levi-file-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">נתוני רכב</span>
+          <span class="validation-status" id="levi-vehicle-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">נתוני שווי</span>
+          <span class="validation-status" id="levi-valuation-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">התאמות מחיר</span>
+          <span class="validation-status" id="levi-adjustments-status">⏳</span>
+        </div>
+        
+        <!-- Valuation Summary -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">סיכום שווי הרכב</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">מחיר בסיס:</span>
+              <span class="cost-value" id="levi-base-price">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">מחיר שוק סופי:</span>
+              <span class="cost-value" id="levi-market-price">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">שינויי מחיר:</span>
+              <span class="cost-value" id="levi-adjustments-total">₪0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('levi')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('levi')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('levi')" disabled>אימות דו"ח לוי</button>
+      </div>
+    </div>
+
+    <!-- Phase 3: Damage Centers and Expertise -->
+    <div class="validation-section" id="section-damage">
+      <div class="section-header">
+        <div class="section-title">מוקדי נזק ואקספרטיזה</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+          <strong>הנחיות:</strong> בדיקת מוקדי הנזק שהוגדרו ונתוני האקספרטיזה | אימות עלויות ותכולת עבודות
+        </div>
+        
+        <div class="validation-item">
+          <span class="validation-label">מספר מוקדי נזק</span>
+          <span class="validation-status" id="damage-centers-count-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">תיאור נזקים</span>
+          <span class="validation-status" id="damage-descriptions-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">חלקים נדרשים</span>
+          <span class="validation-status" id="required-parts-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">עבודות נדרשות</span>
+          <span class="validation-status" id="required-works-status">⏳</span>
+        </div>
+        <div class="validation-item">
+          <span class="validation-label">תיקונים נדרשים</span>
+          <span class="validation-status" id="required-repairs-status">⏳</span>
+        </div>
+        
+        <!-- Damage Centers Display Container -->
+        <div id="damage-centers-container">
+          <!-- Will be populated dynamically -->
+        </div>
+        
+        <!-- Total Damage Cost Summary -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">סיכום עלויות נזקים</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">סה"כ עבודות:</span>
+              <span class="cost-value" id="damage-total-works">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ חלקים:</span>
+              <span class="cost-value" id="damage-total-parts">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ תיקונים:</span>
+              <span class="cost-value" id="damage-total-repairs">₪0</span>
+            </div>
+            <div class="cost-item" style="border-top: 2px solid #3b82f6; padding-top: 10px; margin-top: 10px;">
+              <span class="cost-label" style="font-weight: bold;">סה"כ נזקים ללא מע"מ:</span>
+              <span class="cost-value" style="font-size: 18px; color: #dc2626;" id="damage-total-before-vat">₪0</span>
+            </div>
+            <div class="cost-item" style="padding-top: 10px;">
+              <span class="cost-label" style="font-weight: bold;">סה"כ נזקים כולל מע"מ:</span>
+              <span class="cost-value" style="font-size: 18px; color: #16a34a;" id="damage-total-with-vat">₪0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('damage')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('damage')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('damage')" disabled>אימות מוקדי נזק</button>
+      </div>
+    </div>
+
+    <!-- Phase 4: Summary and Assessor Validation -->
+    <div class="validation-section" id="section-summary">
+      <div class="section-header">
+        <div class="section-title">סיכום אקספרטיזה והנחיות תיק</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> אימות נתוני השמאי והוראות סיום התיק | בדיקת הנחיית תיק וסטטוס
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
+        </div>
+        
+        <div id="summary-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+        <!-- Summary Display -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">סיכום הנחיות תיק</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">הנחיית תיק:</span>
+              <span class="cost-value" id="summary-directive">לא מוגדר</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">שמאי מבצע:</span>
+              <span class="cost-value" id="summary-assessor">לא מוגדר</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">מספר רישיון:</span>
+              <span class="cost-value" id="summary-license">לא מוגדר</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">תאריך השלמה:</span>
+              <span class="cost-value" id="summary-completion">לא מוגדר</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('summary')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('summary')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('summary')" disabled>אימות סיכום</button>
+      </div>
+    </div>
+
+    <!-- Phase 5: User Level Validation -->
+    <div class="user-validation-section">
+      <div class="user-validation-header">אימות ברמת המשתמש - סקירה ידנית</div>
+      <div style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
+        <p><strong>בדוק את כל הנתונים לעיל ותקן במידת הצורך.</strong> המערכת ביצעה בדיקות אוטומטיות, אך נדרשת הסקירה הידנית שלך.</p>
+        
+        <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <strong>אזהרה חשובה:</strong> שינויים שתבצע כאן יהפכו לאמת המערכת ויורשמו באקספרטיזה הסופית. ודא שכל הנתונים נכונים לפני האישור הסופי.
+        </div>
+        
+        <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <strong>הנחיות לאימות:</strong>
+          <ul style="margin: 10px 0; padding-right: 20px;">
+            <li>ודא שכל הנתונים הכספיים נכונים ועקביים</li>
+            <li>בדוק שנתוני השווי מתאימים לדו"ח לוי יצחק</li>
+            <li>וודא שפרטי הרכב והבעלים נכונים</li>
+            <li>בדוק שמוקדי הנזק משקפים את המצב בפועל</li>
+            <li>אמת שסיכום העלויות תואם את נתוני האקספרטיזה</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="validation-buttons">
+        <button class="btn btn-edit" onclick="requestManualReview()">דרוש סקירה נוספת</button>
+        <button class="btn btn-validate" onclick="saveValidationData()">שמור שינויים</button>
+      </div>
+    </div>
+
+    <!-- Phase 5: Final Actions -->
+    <div class="final-actions">
+      <div style="font-size: 18px; font-weight: bold; color: #1e3a8a; margin-bottom: 20px;">
+        פעולות סיום
+      </div>
+      <div style="color: #64748b; margin-bottom: 25px;">
+        לאחר האישור הסופי תיווצר האקספרטיזה ותישלח לעיבוד. לא ניתן יהיה לערוך את הנתונים לאחר מכן.
+      </div>
+      <div class="validation-buttons" style="justify-content: center; max-width: 600px; margin: 0 auto;">
+        <button class="btn btn-edit" onclick="window.location.href='expertise-summary.html'">
+          ⬅️ חזור לעריכה
+        </button>
+        <button class="btn btn-validate" onclick="saveValidationData()">
+          💾 שמור אימות
+        </button>
+        <button class="btn btn-success" id="final-approve-btn" onclick="generateFinalExpertise()" disabled>
+          📋 יצירת אקספרטיזה סופית
+        </button>
+      </div>
+    </div>
+    
+    <div class="footer">All rights reserved © Carmel Cayouf</div>
+  </div>
+  
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
+    
+    // Global state management
+    let validationState = {
+      vehicle: { status: 'pending', approved: false },
+      levi: { status: 'pending', approved: false },
+      damage: { status: 'pending', approved: false }
+    };
+    
+    // Helper data loading
+    function loadExpertiseData() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const plate = helper?.vehicle?.plate || sessionStorage.getItem('plate') || 'לא ידוע';
+      console.log('Loading expertise validation data for plate:', plate);
+      console.log('Helper object:', helper);
+      
+      // Initialize first section validation
+      setTimeout(() => {
+        validateSection('vehicle');
+      }, 500);
+    }
+    
+    // Auto-trigger validation system
+    window.validateSection = async function(sectionName) {
+      console.log('Validating section:', sectionName);
+      
+      const section = document.getElementById(`section-${sectionName}`);
+      const statusElement = section.querySelector('.section-status');
+      
+      // Update section status to current
+      section.classList.remove('pending', 'completed', 'error');
+      section.classList.add('current');
+      statusElement.textContent = 'בבדיקה';
+      statusElement.className = 'section-status status-current';
+      
+      let validationResults = [];
+      
+      try {
+        switch(sectionName) {
+          case 'vehicle':
+            validationResults = await validateVehicleSection();
+            break;
+          case 'levi':
+            validationResults = await validateLeviSection();
+            break;
+          case 'damage':
+            validationResults = await validateDamageSection();
+            break;
+          case 'summary':
+            validationResults = await validateSummarySection();
+            break;
+        }
+        
+        // Process validation results
+        const hasErrors = validationResults.some(result => !result.valid);
+        
+        setTimeout(() => {
+          if (hasErrors) {
+            section.classList.remove('current');
+            section.classList.add('error');
+            statusElement.textContent = 'שגיאות';
+            statusElement.className = 'section-status status-error';
+            showAlert(`נמצאו שגיאות בסעיף ${getSectionTitle(sectionName)}`, 'error');
+          } else {
+            section.classList.remove('current');
+            section.classList.add('completed');
+            statusElement.textContent = 'הושלם';
+            statusElement.className = 'section-status status-completed';
+            
+            // Enable approve button
+            const approveBtn = section.querySelector('.btn-success');
+            if (approveBtn) approveBtn.disabled = false;
+            
+            showAlert(`סעיף ${getSectionTitle(sectionName)} עבר את האימות בהצלחה`, 'success');
+          }
+          
+          // Update status indicators
+          validationResults.forEach(result => {
+            const indicator = document.getElementById(result.id);
+            if (indicator) {
+              indicator.textContent = result.valid ? '✅' : '❌';
+            }
+          });
+          
+          validationState[sectionName].status = hasErrors ? 'error' : 'completed';
+        }, 1500);
+        
+      } catch (error) {
+        console.error(`Validation error for ${sectionName}:`, error);
+        section.classList.remove('current');
+        section.classList.add('error');
+        statusElement.textContent = 'שגיאה';
+        statusElement.className = 'section-status status-error';
+        showAlert('שגיאה בתהליך האימות', 'error');
+      }
+    };
+    
+    // Individual validation functions
+    async function validateVehicleSection() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Essential validation items for vehicle section only
+      const vehicleValidationItems = [
+        // Vehicle Details
+        { field: 'plate', label: 'מספר רכב', helperPath: 'vehicle.plate', currentPath: 'vehicle.plate' },
+        { field: 'manufacturer', label: 'יצרן', helperPath: 'vehicle.manufacturer', currentPath: 'vehicle.manufacturer' },
+        { field: 'model', label: 'דגם', helperPath: 'vehicle.model', currentPath: 'vehicle.model' },
+        { field: 'year', label: 'שנת ייצור', helperPath: 'vehicle.year', currentPath: 'vehicle.year' },
+        
+        // Owner Information
+        { field: 'owner_name', label: 'שם בעלים', helperPath: 'stakeholders.owner.name', currentPath: 'stakeholders.owner.name' },
+        { field: 'owner_phone', label: 'טלפון בעלים', helperPath: 'stakeholders.owner.phone', currentPath: 'stakeholders.owner.phone' },
+        
+        // Garage Information
+        { field: 'garage_name', label: 'שם מוסך', helperPath: 'stakeholders.garage.name', currentPath: 'stakeholders.garage.name' },
+        { field: 'garage_email', label: 'אימייל מוסך', helperPath: 'stakeholders.garage.email', currentPath: 'stakeholders.garage.email' },
+        
+        // Insurance Information
+        { field: 'insurance_company', label: 'חברת ביטוח', helperPath: 'stakeholders.insurance.company', currentPath: 'stakeholders.insurance.company' },
+        
+        // Case Information
+        { field: 'damage_date', label: 'תאריך נזק', helperPath: 'case_info.damage_date', currentPath: 'case_info.damage_date' },
+        { field: 'inspection_date', label: 'תאריך בדיקה', helperPath: 'case_info.inspection_date', currentPath: 'case_info.inspection_date' }
+      ];
+      
+      populateEnhancedValidationItems('vehicle-validation-items', vehicleValidationItems, helper);
+      
+      return [
+        { id: 'vehicle-details-status', valid: !!(helper?.vehicle?.plate && helper?.vehicle?.manufacturer && helper?.vehicle?.model), message: 'פרטי רכב' },
+        { id: 'owner-details-status', valid: !!helper?.stakeholders?.owner?.name, message: 'פרטי בעלים' },
+        { id: 'garage-details-status', valid: !!helper?.stakeholders?.garage?.name, message: 'פרטי מוסך' },
+        { id: 'insurance-details-status', valid: !!helper?.stakeholders?.insurance?.company, message: 'פרטי ביטוח' },
+        { id: 'dates-status', valid: !!(helper?.case_info?.damage_date && helper?.case_info?.inspection_date), message: 'תאריכים' }
+      ];
+    }
+    
+    async function validateLeviSection() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const hasLeviData = helper?.valuation?.base_price || helper?.valuation?.final_price;
+      const hasAdjustments = helper?.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0;
+      
+      // Update display values
+      if (helper?.valuation) {
+        const basePrice = helper.valuation.base_price || 0;
+        const marketPrice = helper.valuation.market_value || helper.valuation.final_price || 0;
+        const adjustments = marketPrice - basePrice;
+        
+        document.getElementById('levi-base-price').textContent = `₪${basePrice.toLocaleString()}`;
+        document.getElementById('levi-market-price').textContent = `₪${marketPrice.toLocaleString()}`;
+        document.getElementById('levi-adjustments-total').textContent = `₪${adjustments.toLocaleString()}`;
+      }
+      
+      return [
+        { id: 'levi-file-status', valid: !!hasLeviData, message: 'קובץ דו"ח לוי' },
+        { id: 'levi-vehicle-status', valid: !!hasLeviData, message: 'נתוני רכב' },
+        { id: 'levi-valuation-status', valid: !!hasLeviData, message: 'נתוני שווי' },
+        { id: 'levi-adjustments-status', valid: !!hasAdjustments, message: 'התאמות מחיר' }
+      ];
+    }
+    
+    async function validateDamageSection() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Get damage centers from damage_assessment section
+      const damageAssessment = helper?.damage_assessment || {};
+      const damageCentersData = damageAssessment?.damage_centers_summary || {};
+      
+      console.log('Validating damage assessment:', damageAssessment);
+      console.log('Damage centers data:', damageCentersData);
+      
+      // Count actual damage centers dynamically
+      const centerKeys = Object.keys(damageCentersData).filter(key => key.startsWith('Damage center'));
+      const damageCount = centerKeys.length;
+      
+      console.log(`Found ${damageCount} damage centers:`, centerKeys);
+      
+      const hasDamageCenters = damageCount > 0;
+      
+      // Check for valid structure in damage assessment
+      const hasValidStructure = hasDamageCenters && centerKeys.some(key => {
+        const center = damageCentersData[key];
+        return center && (center.Works || center.Parts || center.Repairs);
+      });
+      
+      // Check for works data
+      const hasWorks = hasDamageCenters && centerKeys.some(key => {
+        const center = damageCentersData[key];
+        return center?.Works !== undefined;
+      });
+      
+      // Check for parts data  
+      const hasParts = hasDamageCenters && centerKeys.some(key => {
+        const center = damageCentersData[key];
+        return center?.Parts !== undefined;
+      });
+      
+      // Check for repairs data
+      const hasRepairs = hasDamageCenters && centerKeys.some(key => {
+        const center = damageCentersData[key];
+        return center?.Repairs !== undefined;
+      });
+      
+      // Update damage centers display with assessment data
+      updateDamageCentersDisplay(damageCentersData, centerKeys);
+      
+      // Calculate and display totals from damage_assessment.totals
+      const totals = calculateTotalsFromAssessment(damageAssessment);
+      document.getElementById('damage-total-works').textContent = `₪${totals.works.toLocaleString()}`;
+      document.getElementById('damage-total-parts').textContent = `₪${totals.parts.toLocaleString()}`;  
+      document.getElementById('damage-total-repairs').textContent = `₪${totals.repairs.toLocaleString()}`;
+      document.getElementById('damage-total-before-vat').textContent = `₪${totals.beforeVat.toLocaleString()}`;
+      document.getElementById('damage-total-with-vat').textContent = `₪${totals.withVat.toLocaleString()}`;
+      
+      return [
+        { id: 'damage-centers-count-status', valid: !!hasDamageCenters, message: `${damageCount} מוקדי נזק`, count: damageCount },
+        { id: 'damage-descriptions-status', valid: !!hasValidStructure, message: 'תיאור נזקים' },
+        { id: 'required-parts-status', valid: !!hasParts, message: 'חלקים נדרשים' },
+        { id: 'required-works-status', valid: !!hasWorks, message: 'עבודות נדרשות' },
+        { id: 'required-repairs-status', valid: !!hasRepairs, message: 'תיקונים נדרשים' }
+      ];
+    }
+    
+    // Summary validation function
+    async function validateSummarySection() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Create comprehensive validation items for summary section
+      const summaryValidationItems = [
+        // Expertise summary from final_report
+        { field: 'directive', label: 'הנחיית תיק', helperPath: 'final_report.type', currentPath: 'final_report.type' },
+        { field: 'report_title', label: 'כותרת דו"ח', helperPath: 'final_report.report_title', currentPath: 'final_report.report_title' },
+        { field: 'notes', label: 'הערות משפטיות', helperPath: 'final_report.legal_text', currentPath: 'final_report.legal_text' },
+        { field: 'attachments', label: 'קבצים מצורפים', helperPath: 'final_report.attachments', currentPath: 'final_report.attachments' },
+        
+        // Assessor information from meta
+        { field: 'assessor_name', label: 'שם השמאי', helperPath: 'meta.assessor_name', currentPath: 'meta.assessor_name' },
+        { field: 'assessor_license', label: 'מספר רישיון', helperPath: 'meta.assessor_license', currentPath: 'meta.assessor_license' },
+        { field: 'completion_date', label: 'תאריך השלמה', helperPath: 'meta.completion_date', currentPath: 'meta.completion_date' },
+        
+        // Case status
+        { field: 'status', label: 'סטטוס תיק', helperPath: 'case_info.status', currentPath: 'case_info.status' },
+        { field: 'case_id', label: 'מספר תיק', helperPath: 'case_info.case_id', currentPath: 'case_info.case_id' },
+        
+        // Financial totals summary
+        { field: 'works_total', label: 'סה"כ עבודות', helperPath: 'financials.costs.works_total', currentPath: 'financials.costs.works_total' },
+        { field: 'parts_total', label: 'סה"כ חלקים', helperPath: 'financials.costs.parts_total', currentPath: 'financials.costs.parts_total' },
+        { field: 'repairs_total', label: 'סה"כ תיקונים', helperPath: 'financials.costs.repairs_total', currentPath: 'financials.costs.repairs_total' },
+        { field: 'fees_total', label: 'סה"כ עמלות', helperPath: 'financials.fees.subtotal', currentPath: 'financials.fees.subtotal' },
+        { field: 'subtotal_before_vat', label: 'סה"כ לפני מע"מ', helperPath: 'financials.totals.before_tax', currentPath: 'financials.totals.before_tax' },
+        { field: 'total_with_vat', label: 'סה"כ כולל מע"מ', helperPath: 'financials.totals.after_tax', currentPath: 'financials.totals.after_tax' }
+      ];
+      
+      populateEnhancedValidationItems('summary-validation-items', summaryValidationItems, helper);
+      
+      // Update summary display values
+      const summaryData = helper?.expertise?.summary || {};
+      document.getElementById('summary-directive').textContent = summaryData.directive || 'לא מוגדר';
+      document.getElementById('summary-assessor').textContent = summaryData.assessor_name || 'לא מוגדר';
+      document.getElementById('summary-license').textContent = summaryData.assessor_license || 'לא מוגדר';
+      document.getElementById('summary-completion').textContent = summaryData.completion_date || 'לא מוגדר';
+      
+      return [
+        { id: 'directive-status', valid: !!summaryData.directive, message: 'הנחיית תיק' },
+        { id: 'assessor-status', valid: !!summaryData.assessor_name, message: 'פרטי שמאי' },
+        { id: 'license-status', valid: !!summaryData.assessor_license, message: 'מספר רישיון' },
+        { id: 'completion-status', valid: !!summaryData.completion_date, message: 'תאריך השלמה' }
+      ];
+    }
+    
+    // Enhanced validation items population
+    function populateEnhancedValidationItems(containerId, validationItems, helper) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      container.innerHTML = validationItems.map(item => {
+        const currentValue = getNestedValue(helper, item.currentPath);
+        const storedValue = getNestedValue(helper, item.helperPath);
+        
+        const hasCurrentData = currentValue !== null && currentValue !== undefined && currentValue !== '';
+        const hasStoredData = storedValue !== null && storedValue !== undefined && storedValue !== '';
+        
+        const cleanCurrent = hasCurrentData ? String(currentValue) : 'לא זמין';
+        const cleanStored = hasStoredData ? String(storedValue) : 'לא קיים בעזר';
+        
+        // Determine status
+        let statusClass = 'data-error';
+        let isMatch = false;
+        
+        if (hasCurrentData && hasStoredData) {
+          isMatch = String(currentValue).trim() === String(storedValue).trim();
+          statusClass = isMatch ? 'data-match' : 'data-warning';
+        } else if (hasCurrentData && !hasStoredData) {
+          statusClass = 'data-warning';
+        } else if (!hasCurrentData && hasStoredData) {
+          statusClass = 'data-warning';
+        }
+        
+        return `
+          <div class="validation-item-enhanced" data-field="${item.field}">
+            <div class="validation-label">${item.label}</div>
+            <div class="validation-columns">
+              <div class="current-value ${statusClass}">${hasCurrentData ? cleanCurrent : 'לא זמין'}</div>
+              <div class="stored-value">${hasStoredData ? cleanStored : 'לא קיים בעזר'}</div>
+              <div class="action-buttons">
+                <button class="edit-inline" onclick="startInlineEdit('${item.field}')" title="עריכה מהירה">✏️</button>
+                ${!isMatch ? `<button class="ignore" onclick="ignoreDiscrepancy('${item.field}')" title="התעלם מאי התאמה">🚫</button>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Helper function to get nested object values
+    function getNestedValue(obj, path) {
+      if (!obj || !path) return null;
+      return path.split('.').reduce((current, key) => {
+        return current && current[key] !== undefined ? current[key] : null;
+      }, obj);
+    }
+    
+    // Interactive edit functions
+    window.startInlineEdit = function(fieldKey) {
+      const item = document.querySelector(`[data-field="${fieldKey}"]`);
+      if (!item) return;
+      
+      const currentValueDiv = item.querySelector('.current-value');
+      const currentText = currentValueDiv.textContent.trim();
+      const originalValue = currentText === 'לא זמין' ? '' : currentText;
+      
+      // Create inline input
+      currentValueDiv.innerHTML = `
+        <input type="text" class="inline-edit-input" value="${originalValue}" 
+               onblur="saveInlineEdit('${fieldKey}', this.value)" 
+               onkeypress="if(event.key==='Enter') saveInlineEdit('${fieldKey}', this.value)"
+               data-original="${originalValue}" />
+      `;
+      
+      // Focus and select the input
+      const input = currentValueDiv.querySelector('.inline-edit-input');
+      input.focus();
+      input.select();
+    };
+    
+    // Save inline edit function
+    window.saveInlineEdit = function(fieldKey, newValue) {
+      const item = document.querySelector(`[data-field="${fieldKey}"]`);
+      if (!item) return;
+      
+      const currentValueDiv = item.querySelector('.current-value');
+      const input = currentValueDiv.querySelector('.inline-edit-input');
+      const originalValue = input ? input.dataset.original : '';
+      
+      try {
+        if (newValue !== originalValue) {
+          // Update helper data
+          updateHelperValue(fieldKey, newValue);
+          
+          // Update display
+          currentValueDiv.innerHTML = newValue || 'לא זמין';
+          currentValueDiv.className = 'current-value data-match';
+          
+          // Remove ignore button if it exists
+          const actionButtons = item.querySelector('.action-buttons');
+          const ignoreBtn = actionButtons.querySelector('.ignore');
+          if (ignoreBtn) {
+            ignoreBtn.remove();
+          }
+          
+          showAlert(`השדה "${getFieldLabel(fieldKey)}" עודכן בהצלחה`, 'success');
+          
+          // Trigger re-validation after a delay
+          setTimeout(() => {
+            const sectionId = item.closest('.validation-section').id;
+            const sectionName = sectionId.replace('section-', '');
+            validateSection(sectionName);
+          }, 500);
+        } else {
+          // Restore original value if no change
+          currentValueDiv.innerHTML = originalValue || 'לא זמין';
+        }
+      } catch (error) {
+        console.error('Error saving inline edit:', error);
+        currentValueDiv.innerHTML = originalValue || 'לא זמין';
+        showAlert('שגיאה בשמירת השינוי', 'error');
+      }
+    };
+    
+    // Get field label function
+    function getFieldLabel(fieldKey) {
+      const labels = {
+        // Vehicle information
+        'plate': 'מספר רכב',
+        'manufacturer': 'יצרן', 
+        'model': 'דגם',
+        'year': 'שנת ייצור',
+        'engine_volume': 'נפח מנוע',
+        'fuel_type': 'סוג דלק',
+        'chassis': 'מספר שילדה',
+        'transmission': 'תיבת הילוכים',
+        'km': 'קילומטראז\'',
+        
+        // Owner information
+        'owner_name': 'שם בעלים',
+        'owner_phone': 'טלפון בעלים',
+        'owner_address': 'כתובת בעלים',
+        'owner_email': 'אימייל בעלים',
+        
+        // Garage information
+        'garage_name': 'שם מוסך',
+        'garage_contact': 'איש קשר במוסך',
+        'garage_phone': 'טלפון מוסך',
+        'garage_email': 'אימייל מוסך',
+        'garage_address': 'כתובת מוסך',
+        
+        // Insurance information
+        'insurance_company': 'חברת ביטוח',
+        'insurance_policy': 'מספר פוליסה',
+        'insurance_claim': 'מספר תביעה',
+        'insurance_agent_name': 'שם סוכן ביטוח',
+        'insurance_agent_phone': 'טלפון סוכן ביטוח',
+        
+        // Case information
+        'damage_date': 'תאריך נזק',
+        'inspection_date': 'תאריך בדיקה',
+        'damage_type': 'סוג נזק',
+        'inspection_location': 'מקום בדיקה',
+        
+        // Levi valuation
+        'levi_base_price': 'מחיר בסיס לוי',
+        'levi_final_price': 'מחיר סופי לוי',
+        'levi_code': 'קוד לוי',
+        'levi_report_date': 'תאריך דו"ח לוי',
+        
+        // Expertise summary
+        'directive': 'הנחיית תיק',
+        'report_title': 'כותרת דו"ח',
+        'attachments': 'קבצים מצורפים',
+        'assessor_name': 'שם השמאי',
+        'assessor_license': 'מספר רישיון',
+        'completion_date': 'תאריך השלמה',
+        'status': 'סטטוס תיק',
+        'case_id': 'מספר תיק',
+        'notes': 'הערות משפטיות',
+        
+        // Financial totals
+        'works_total': 'סה"כ עבודות',
+        'parts_total': 'סה"כ חלקים',
+        'repairs_total': 'סה"כ תיקונים',
+        'fees_total': 'סה"כ עמלות',
+        'subtotal_before_vat': 'סה"כ לפני מע"מ',
+        'total_with_vat': 'סה"כ כולל מע"מ'
+      };
+      return labels[fieldKey] || fieldKey;
+    }
+    
+    
+    window.ignoreDiscrepancy = function(fieldKey) {
+      try {
+        const item = document.querySelector(`[data-field="${fieldKey}"]`);
+        if (!item) {
+          console.error('Field item not found:', fieldKey);
+          return;
+        }
+        
+        const currentValue = item.querySelector('.current-value');
+        if (currentValue) {
+          currentValue.className = 'current-value data-match';
+        }
+        
+        // Remove ignore button
+        const actionButtons = item.querySelector('.action-buttons');
+        const ignoreBtn = actionButtons.querySelector('.ignore');
+        if (ignoreBtn) {
+          ignoreBtn.remove();
+        }
+        
+        showAlert(`אי ההתאמה עבור "${getFieldLabel(fieldKey)}" התעלמה`, 'warning');
+        
+        console.log('✅ Discrepancy ignored for field:', fieldKey);
+      } catch (error) {
+        console.error('❌ Error ignoring discrepancy:', error);
+        showAlert('שגיאה בהתעלמות מאי ההתאמה', 'error');
+      }
+    };
+    
+    // Helper function to update helper data
+    function updateHelperValue(fieldKey, value) {
+      try {
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Comprehensive field mappings based on helper data structure
+        const fieldMappings = {
+          // Vehicle information
+          'plate': 'vehicle.plate',
+          'manufacturer': 'vehicle.manufacturer',
+          'model': 'vehicle.model',
+          'year': 'vehicle.year',
+          'engine_volume': 'vehicle.engine_volume',
+          'fuel_type': 'vehicle.fuel_type',
+          'chassis': 'vehicle.chassis',
+          'transmission': 'vehicle.transmission',
+          'km': 'vehicle.km',
+          
+          // Stakeholders - Owner
+          'owner_name': 'stakeholders.owner.name',
+          'owner_phone': 'stakeholders.owner.phone',
+          'owner_address': 'stakeholders.owner.address',
+          'owner_email': 'stakeholders.owner.email',
+          
+          // Stakeholders - Garage
+          'garage_name': 'stakeholders.garage.name',
+          'garage_contact': 'stakeholders.garage.contact_person',
+          'garage_phone': 'stakeholders.garage.phone',
+          'garage_email': 'stakeholders.garage.email',
+          'garage_address': 'stakeholders.garage.address',
+          
+          // Stakeholders - Insurance
+          'insurance_company': 'stakeholders.insurance.company',
+          'insurance_policy': 'stakeholders.insurance.policy_number',
+          'insurance_claim': 'stakeholders.insurance.claim_number',
+          'insurance_agent_name': 'stakeholders.insurance.agent.name',
+          'insurance_agent_phone': 'stakeholders.insurance.agent.phone',
+          
+          // Case information
+          'damage_date': 'case_info.damage_date',
+          'inspection_date': 'case_info.inspection_date',
+          'damage_type': 'case_info.damage_type',
+          'inspection_location': 'case_info.inspection_location',
+          
+          // Levi valuation data
+          'levi_base_price': 'valuation.base_price',
+          'levi_final_price': 'valuation.final_price',
+          'levi_code': 'valuation.levi_code',
+          'levi_report_date': 'valuation.report_date',
+          
+          // Expertise summary
+          'directive': 'final_report.type',
+          'assessor_name': 'meta.assessor_name',
+          'assessor_license': 'meta.assessor_license',
+          'completion_date': 'meta.completion_date',
+          'status': 'case_info.status',
+          'notes': 'final_report.legal_text',
+          
+          // Financial totals
+          'works_total': 'financials.costs.works_total',
+          'parts_total': 'financials.costs.parts_total',
+          'repairs_total': 'financials.costs.repairs_total',
+          'fees_total': 'financials.fees.subtotal',
+          'subtotal_before_vat': 'financials.totals.before_tax',
+          'total_with_vat': 'financials.totals.after_tax'
+        };
+        
+        const path = fieldMappings[fieldKey];
+        if (path) {
+          setNestedValue(helper, path, value);
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Updated ${fieldKey} (${path}) to:`, value);
+        } else {
+          console.warn(`⚠️ No mapping found for field: ${fieldKey}`);
+        }
+      } catch (error) {
+        console.error('❌ Error updating helper value:', error);
+      }
+    }
+    
+    // Helper function to set nested object values
+    function setNestedValue(obj, path, value) {
+      const keys = path.split('.');
+      let current = obj;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!current[keys[i]]) {
+          current[keys[i]] = {};
+        }
+        current = current[keys[i]];
+      }
+      
+      current[keys[keys.length - 1]] = value;
+    };
+    
+    // Helper functions
+    function updateDamageCentersDisplay(damageCentersData, centerKeys) {
+      const container = document.getElementById('damage-centers-container');
+      if (!container) return;
+      
+      if (!centerKeys || centerKeys.length === 0) {
+        container.innerHTML = `
+          <div style="margin: 20px 0; padding: 15px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
+            <h4 style="color: #dc2626; margin-bottom: 10px;">⚠️ לא נמצאו מוקדי נזק</h4>
+            <p style="color: #991b1b; margin: 0;">יש להוסיף מוקדי נזק במערכת</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 8px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">מוקדי הנזק (${centerKeys.length})</h4>
+          ${centerKeys.map((centerKey, index) => {
+            const center = damageCentersData[centerKey];
+            
+            // Extract costs from damage assessment data
+            const works = center?.Works || 0;
+            const parts = center?.Parts || 0;
+            const repairs = center?.Repairs || 0;
+            const totalWithVat = center?.['Total with VAT'] || 0;
+            const totalWithoutVat = center?.['Total without VAT'] || 0;
+            
+            return `
+              <div style="background: white; padding: 15px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                <div style="margin-bottom: 8px;">
+                  <strong>${centerKey}:</strong> 
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px; color: #64748b; margin-bottom: 8px;">
+                  <div>🔧 עבודות: ₪${works.toLocaleString()}</div>
+                  <div>⚙️ חלקים: ₪${parts.toLocaleString()}</div>
+                  <div>🛠️ תיקונים: ₪${repairs.toLocaleString()}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 11px; color: #374151; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+                  <div><strong>ללא מע"מ:</strong> ₪${totalWithoutVat.toLocaleString()}</div>
+                  <div><strong>כולל מע"מ:</strong> ₪${totalWithVat.toLocaleString()}</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+    
+    function calculateDamageTotals(damageCenters) {
+      let works = 0, parts = 0, repairs = 0;
+      
+      damageCenters.forEach(center => {
+        // Works calculation
+        if (center.Works?.works) {
+          works += center.Works.works.reduce((sum, work) => sum + (work.cost || 0), 0);
+        } else if (center.Summary && center.Summary['Total works']) {
+          works += parseFloat(center.Summary['Total works']) || 0;
+        }
+        
+        // Parts calculation  
+        if (center.Parts?.parts_required) {
+          parts += center.Parts.parts_required.reduce((sum, part) => sum + (part.price || 0), 0);
+        } else if (center.Summary && center.Summary['Total parts']) {
+          parts += parseFloat(center.Summary['Total parts']) || 0;
+        }
+        
+        // Repairs calculation
+        if (center.Repairs?.repairs) {
+          repairs += center.Repairs.repairs.reduce((sum, repair) => sum + (repair.cost || 0), 0);
+        } else if (center.Summary && center.Summary['Total repairs']) {
+          repairs += parseFloat(center.Summary['Total repairs']) || 0;
+        }
+      });
+      
+      const beforeVat = works + parts + repairs;
+      const withVat = beforeVat * 1.18; // 18% VAT
+      
+      return { works, parts, repairs, beforeVat, withVat };
+    }
+
+    // New function to calculate totals from damage_assessment.totals
+    function calculateTotalsFromAssessment(damageAssessment) {
+      console.log('Calculating totals from damage assessment:', damageAssessment);
+      
+      // Call the new aggregation function to calculate totals
+      if (window.calculateDamageAssessmentTotals) {
+        const aggregatedTotals = window.calculateDamageAssessmentTotals();
+        if (aggregatedTotals) {
+          console.log('Using aggregated totals from helper function:', aggregatedTotals);
+          
+          const works = aggregatedTotals.category_totals?.works?.without_vat || 0;
+          const parts = aggregatedTotals.category_totals?.parts?.without_vat || 0;
+          const repairs = aggregatedTotals.category_totals?.repairs?.without_vat || 0;
+          const beforeVat = aggregatedTotals.all_centers_subtotal || 0;
+          const withVat = aggregatedTotals.all_centers_total || 0;
+          
+          console.log(`🧮 Assessment totals from aggregation:
+            Works: ₪${works.toLocaleString()}
+            Parts: ₪${parts.toLocaleString()}
+            Repairs: ₪${repairs.toLocaleString()}
+            Before VAT: ₪${beforeVat.toLocaleString()}
+            With VAT: ₪${withVat.toLocaleString()}`);
+          
+          return { works, parts, repairs, beforeVat, withVat };
+        }
+      }
+      
+      // Fallback to original calculation if aggregation function is not available
+      console.log('Fallback: Using original calculation method');
+      
+      // Get totals from damage_assessment.totals section
+      const totalsData = damageAssessment?.totals || {};
+      
+      console.log('Totals data from assessment:', totalsData);
+      
+      // Map totals directly from assessment data (from screenshots)
+      const beforeVat = parseFloat(totalsData['Total without VAT']) || 0;
+      const withVat = parseFloat(totalsData['Total with VAT']) || 0;
+      
+      // Calculate category totals by aggregating from individual damage centers
+      const damageCentersData = damageAssessment?.damage_centers_summary || {};
+      const centerKeys = Object.keys(damageCentersData).filter(key => key.startsWith('Damage center'));
+      
+      let works = 0, parts = 0, repairs = 0;
+      
+      centerKeys.forEach(centerKey => {
+        const center = damageCentersData[centerKey];
+        works += parseFloat(center?.Works) || 0;
+        parts += parseFloat(center?.Parts) || 0;
+        repairs += parseFloat(center?.Repairs) || 0;
+      });
+      
+      console.log(`🧮 Assessment totals (fallback):
+        Works: ₪${works.toLocaleString()}
+        Parts: ₪${parts.toLocaleString()}
+        Repairs: ₪${repairs.toLocaleString()}
+        Before VAT: ₪${beforeVat.toLocaleString()}
+        With VAT: ₪${withVat.toLocaleString()}`);
+      
+      return { works, parts, repairs, beforeVat, withVat };
+    }
+
+    // Legacy function for backward compatibility
+    function calculateDamageTotalsFromCenters(centers) {
+      let works = 0, parts = 0, repairs = 0;
+      
+      if (!Array.isArray(centers) || centers.length === 0) {
+        console.log('No centers data available for calculation');
+        return { works: 0, parts: 0, repairs: 0, beforeVat: 0, withVat: 0 };
+      }
+      
+      centers.forEach((center, index) => {
+        console.log(`Calculating totals for center ${index + 1}:`, center);
+        
+        // Calculate works from work_items
+        if (center.work_items && Array.isArray(center.work_items)) {
+          const centerWorks = center.work_items.reduce((sum, work) => {
+            const cost = parseFloat(work.cost) || parseFloat(work.total_cost) || 0;
+            return sum + cost;
+          }, 0);
+          works += centerWorks;
+          console.log(`Center ${index + 1} works total: ₪${centerWorks}`);
+        }
+        
+        // Calculate parts from parts_items
+        if (center.parts_items && Array.isArray(center.parts_items)) {
+          const centerParts = center.parts_items.reduce((sum, part) => {
+            const cost = parseFloat(part.price) || parseFloat(part.total_price) || 0;
+            return sum + cost;
+          }, 0);
+          parts += centerParts;
+          console.log(`Center ${index + 1} parts total: ₪${centerParts}`);
+        }
+        
+        // Calculate repairs from repairs_items
+        if (center.repairs_items && Array.isArray(center.repairs_items)) {
+          const centerRepairs = center.repairs_items.reduce((sum, repair) => {
+            const cost = parseFloat(repair.cost) || parseFloat(repair.total_cost) || 0;
+            return sum + cost;
+          }, 0);
+          repairs += centerRepairs;
+          console.log(`Center ${index + 1} repairs total: ₪${centerRepairs}`);
+        }
+        
+        // Also try to get totals from calculations.subtotal_before_vat if available
+        if (center.calculations?.subtotal_before_vat) {
+          const centerTotal = parseFloat(center.calculations.subtotal_before_vat) || 0;
+          console.log(`Center ${index + 1} has pre-calculated subtotal: ₪${centerTotal}`);
+        }
+      });
+      
+      const beforeVat = works + parts + repairs;
+      const withVat = beforeVat * 1.18; // 18% VAT
+      
+      console.log(`🧮 Total calculations:
+        Works: ₪${works.toLocaleString()}
+        Parts: ₪${parts.toLocaleString()}
+        Repairs: ₪${repairs.toLocaleString()}
+        Before VAT: ₪${beforeVat.toLocaleString()}
+        With VAT: ₪${withVat.toLocaleString()}`);
+      
+      return { works, parts, repairs, beforeVat, withVat };
+    }
+    
+    // Section approval system
+    window.approveSection = function(sectionName) {
+      const section = document.getElementById(`section-${sectionName}`);
+      const approveBtn = section.querySelector('.btn-success');
+      
+      // Mark as approved
+      validationState[sectionName].approved = true;
+      approveBtn.disabled = true;
+      approveBtn.textContent = '✅ אושר';
+      
+      // Trigger next section validation
+      const nextSection = getNextSection(sectionName);
+      if (nextSection) {
+        setTimeout(() => {
+          validateSection(nextSection);
+        }, 500);
+      } else {
+        // All sections completed - enable final approval
+        const finalBtn = document.getElementById('final-approve-btn');
+        if (finalBtn) finalBtn.disabled = false;
+      }
+      
+      updateProgress();
+      showAlert(`סעיף ${getSectionTitle(sectionName)} אושר בהצלחה`, 'success');
+    };
+    
+    function getNextSection(currentSection) {
+      const sections = ['vehicle', 'levi', 'damage'];
+      const currentIndex = sections.indexOf(currentSection);
+      return currentIndex < sections.length - 1 ? sections[currentIndex + 1] : null;
+    }
+    
+    function updateProgress() {
+      const approvedCount = Object.values(validationState).filter(s => s.approved).length;
+      const totalSections = Object.keys(validationState).length;
+      const percentage = (approvedCount / totalSections) * 100;
+      
+      document.getElementById('progress-bar').style.width = `${percentage}%`;
+      document.getElementById('progress-text').textContent = `${approvedCount} מתוך ${totalSections} שלבים הושלמו`;
+    }
+    
+    function getSectionTitle(sectionName) {
+      const titles = {
+        'vehicle': 'פרטי רכב ומקרה',
+        'levi': 'דו"ח לוי יצחק',
+        'damage': 'מוקדי נזק ואקספרטיזה'
+      };
+      return titles[sectionName] || sectionName;
+    }
+    
+    // Manual edit functions
+    window.editSection = function(sectionName) {
+      // Enable editing mode for the section
+      const section = document.getElementById(`section-${sectionName}`);
+      section.classList.add('editing-mode');
+      
+      // Show all edit buttons
+      const editButtons = section.querySelectorAll('.edit-inline, .edit-builder');
+      editButtons.forEach(btn => btn.style.display = 'block');
+      
+      // Add override all button
+      const buttonsDiv = section.querySelector('.validation-buttons');
+      if (!buttonsDiv.querySelector('.override-all')) {
+        const overrideBtn = document.createElement('button');
+        overrideBtn.className = 'btn btn-success override-all';
+        overrideBtn.textContent = 'דריסת כל השגיאות';
+        overrideBtn.onclick = () => overrideAllErrors(sectionName);
+        buttonsDiv.appendChild(overrideBtn);
+      }
+    };
+    
+    // Override all errors in a section
+    window.overrideAllErrors = function(sectionName) {
+      const section = document.getElementById(`section-${sectionName}`);
+      const errorItems = section.querySelectorAll('.current-value.data-error, .current-value.data-warning');
+      
+      errorItems.forEach(item => {
+        item.className = 'current-value data-match';
+      });
+      
+      // Remove all ignore buttons
+      const ignoreButtons = section.querySelectorAll('.ignore');
+      ignoreButtons.forEach(btn => btn.remove());
+      
+      // Enable approve button
+      const approveBtn = section.querySelector('.btn-success:not(.override-all)');
+      if (approveBtn) approveBtn.disabled = false;
+      
+      // Remove override button
+      const overrideBtn = section.querySelector('.override-all');
+      if (overrideBtn) overrideBtn.remove();
+      
+      section.classList.remove('editing-mode');
+    };
+    
+    // Final actions
+    window.generateFinalExpertise = function() {
+      const finalBtn = document.getElementById('final-approve-btn');
+      finalBtn.disabled = true;
+      finalBtn.textContent = 'מכין אקספרטיזה...';
+      
+      const payload = {
+        plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
+        validationState,
+        action: 'generate_final_expertise',
+        submittedAt: new Date().toISOString()
+      };
+      
+      sendToWebhook('GENERATE_FINAL_EXPERTISE', payload)
+        .then(() => {
+          showAlert('האקספרטיזה נוצרה בהצלחה!', 'success');
+          setTimeout(() => {
+            window.open('expertise builder.html', '_blank');
+          }, 2000);
+        })
+        .catch(error => {
+          console.error('Error generating expertise:', error);
+          finalBtn.disabled = false;
+          finalBtn.textContent = '📋 יצירת אקספרטיזה סופית';
+          showAlert('שגיאה ביצירת האקספירטיזה: ' + error.message, 'error');
+        });
+    };
+    
+    window.saveValidationData = function() {
+      const payload = {
+        plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
+        validationState,
+        action: 'save_validation'
+      };
+      
+      sendToWebhook('SAVE_EXPERTISE_VALIDATION', payload)
+        .then(() => showAlert('נתוני האימות נשמרו בהצלחה', 'success'))
+        .catch(() => showAlert('שגיאה בשמירת נתוני האימות', 'error'));
+    };
+    
+    window.requestManualReview = function() {
+      showAlert('בקשה לסקירה ידנית נשלחה', 'success');
+    };
+    
+    // Enhanced alert system with error handling
+    function showAlert(message, type = 'success') {
+      try {
+        console.log('📢 Showing alert:', message, 'type:', type);
+        const alertsContainer = document.getElementById('alerts');
+        
+        if (!alertsContainer) {
+          console.error('❌ Alerts container not found');
+          return;
+        }
+        
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} show`;
+        alert.textContent = message;
+        alertsContainer.appendChild(alert);
+        
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.remove();
+          }
+        }, 5000);
+        
+        console.log('✅ Alert shown successfully');
+      } catch (error) {
+        console.error('❌ Error showing alert:', error);
+        // Fallback to console log if alert system fails
+        console.log(`Alert [${type}]: ${message}`);
+      }
+    }
+    
+    // Floating screen toggles - copied from final-report-builder
+    window.toggleFloatingScreen = function(screenType) {
+      console.log('Toggling floating screen:', screenType);
+      
+      const toggleButton = document.querySelector(`[onclick="toggleFloatingScreen('${screenType}')"]`);
+      
+      const screens = {
+        leviReport: () => {
+          if (window.toggleLeviReport) {
+            window.toggleLeviReport();
+            toggleButton?.classList.toggle('active');
+          } else {
+            console.log('Levi report floating screen not available');
+            showAlert('דו"ח לוי לא זמין', 'warning');
+          }
+        },
+        carDetails: () => {
+          if (window.toggleCarDetails) {
+            window.toggleCarDetails();
+            toggleButton?.classList.toggle('active');
+          } else {
+            console.log('Car details floating screen not available');
+            showAlert('פרטי רכב לא זמינים', 'warning');
+          }
+        },
+        partsSearchResults: () => {
+          if (window.togglePartsSearchResults) {
+            window.togglePartsSearchResults();
+            toggleButton?.classList.toggle('active');
+          } else {
+            console.log('Parts search results floating screen not available');
+            showAlert('תוצאות חלקים לא זמינות', 'warning');
+          }
+        },
+        internalBrowser: () => {
+          if (window.showBrowserMenuUnderToggle) {
+            window.showBrowserMenuUnderToggle();
+            toggleButton?.classList.toggle('active');
+          } else {
+            console.log('Internal browser not available');
+            showAlert('דפדפן פנימי לא זמין', 'warning');
+          }
+        }
+      };
+
+      const screenFunction = screens[screenType];
+      if (screenFunction) {
+        screenFunction();
+      } else {
+        console.log('Unknown screen type:', screenType);
+        showAlert('מסך לא ידוע', 'warning');
+      }
+    };
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', loadExpertiseData);
+  </script>
+  
+  <!-- Helper integration -->
+  <script type="module" src="./helper.js"></script>
+  
+  <!-- Floating screens integration -->
+  <script src="car-details-floating.js"></script>
+  <script src="levi-floating.js"></script>
+  <script src="parts-search-results-floating.js"></script>
+  <script src="internal-browser.js"></script>
+</body>
+</html>
