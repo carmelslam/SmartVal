@@ -828,7 +828,39 @@
       setTimeout(() => {
         validateSection('vehicle');
         validateSection('summary');  // Also validate summary section on load
+        
+        // FORCE UPDATE ALL DISPLAYS WITH HELPER DATA
+        forceUpdateDisplays();
       }, 500);
+    }
+    
+    // FORCE UPDATE SUMMARY SECTION ONLY
+    function forceUpdateDisplays() {
+      console.log('🔥 FORCE UPDATE SUMMARY ONLY');
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔥 Helper data for summary update:', helper);
+      
+      // ONLY UPDATE SUMMARY SECTION
+      const summaryData = helper?.expertise?.summary || {};
+      
+      const directive = summaryData.directive || helper?.final_report?.type || 'לתיקון';
+      const assessorName = summaryData.assessor_name || helper?.meta?.assessor_name || 'ירון כיוף';
+      const assessorLicense = summaryData.assessor_license || helper?.meta?.assessor_license || 'רישיון 12345';
+      const completionDate = summaryData.completion_date || helper?.meta?.completion_date || new Date().toLocaleDateString('he-IL');
+      
+      console.log('🔥 Summary values:', { directive, assessorName, assessorLicense, completionDate });
+      
+      const directiveEl = document.getElementById('summary-directive');
+      const assessorEl = document.getElementById('summary-assessor');
+      const licenseEl = document.getElementById('summary-license');
+      const completionEl = document.getElementById('summary-completion');
+      
+      if (directiveEl) directiveEl.textContent = directive;
+      if (assessorEl) assessorEl.textContent = assessorName;
+      if (licenseEl) licenseEl.textContent = assessorLicense;
+      if (completionEl) completionEl.textContent = completionDate;
+      
+      console.log('🔥 SUMMARY UPDATE COMPLETE');
     }
     
     // Auto-trigger validation system
