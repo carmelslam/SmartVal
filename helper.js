@@ -555,6 +555,42 @@ window.calculateAllDamageCentersTotals = function() {
   return window.helper.damage_assessment.totals;
 };
 
+// 🔧 VALUATION ADJUSTMENTS CALCULATION
+/**
+ * Calculates adjustments_value (final_price - base_price) and updates helper
+ */
+window.calculateValuationAdjustments = function() {
+  console.log('🔢 Calculating valuation adjustments...');
+  
+  if (!window.helper?.valuation) {
+    console.warn('⚠️ No valuation data found');
+    return;
+  }
+  
+  // Parse base_price and final_price (remove currency symbols)
+  const basePriceStr = String(window.helper.valuation.base_price || '0');
+  const finalPriceStr = String(window.helper.valuation.final_price || '0');
+  
+  const basePrice = parseFloat(basePriceStr.replace(/[₪,\s]/g, '')) || 0;
+  const finalPrice = parseFloat(finalPriceStr.replace(/[₪,\s]/g, '')) || 0;
+  
+  // Calculate adjustments
+  const adjustmentsValue = finalPrice - basePrice;
+  
+  // Update helper
+  window.helper.valuation.adjustments_value = adjustmentsValue;
+  
+  console.log(`✅ Valuation adjustments calculated:
+    Base Price: ₪${basePrice.toLocaleString()}
+    Final Price: ₪${finalPrice.toLocaleString()}
+    Adjustments: ₪${adjustmentsValue.toLocaleString()}`);
+  
+  // Save to storage
+  saveHelperToAllStorageLocations();
+  
+  return adjustmentsValue;
+};
+
 // ============================================================================
 // 🆕 DAMAGE CENTERS WIZARD FUNCTIONS
 // ============================================================================
