@@ -813,7 +813,8 @@
     let validationState = {
       vehicle: { status: 'pending', approved: false },
       levi: { status: 'pending', approved: false },
-      damage: { status: 'pending', approved: false }
+      damage: { status: 'pending', approved: false },
+      summary: { status: 'pending', approved: false }
     };
     
     // Helper data loading
@@ -960,12 +961,19 @@
       if (helper?.valuation) {
         const basePrice = parseFloat(String(helper.valuation.base_price || 0).replace(/[₪,\s]/g, '')) || 0;
         const finalPrice = parseFloat(String(helper.valuation.final_price || 0).replace(/[₪,\s]/g, '')) || 0;
-        const adjustments = helper.valuation.adjustments_value || (finalPrice - basePrice);
+        
+        // Use the adjustments_value from helper (calculated by calculateValuationAdjustments)
+        const adjustments = helper.valuation.adjustments_value || 0;
         
         // Fix single currency symbol display
         document.getElementById('levi-base-price').textContent = `₪${basePrice.toLocaleString()}`;
         document.getElementById('levi-market-price').textContent = `₪${finalPrice.toLocaleString()}`;
         document.getElementById('levi-adjustments-total').textContent = `₪${adjustments.toLocaleString()}`;
+        
+        console.log(`💰 Displaying valuation values:
+          Base Price: ₪${basePrice.toLocaleString()}
+          Final Price: ₪${finalPrice.toLocaleString()}  
+          Adjustments Value: ₪${adjustments.toLocaleString()}`);
       }
       
       return [
