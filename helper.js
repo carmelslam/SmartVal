@@ -2196,6 +2196,7 @@ window.helper = existingHelper || {
     valuation_date: '',
     base_price: 0,
     final_price: 0,
+    adjustments_value: 0,  // Calculated: final_price - base_price
     currency: 'ILS',
     levi_code: '',             // CRITICAL: Store Levi code separately from vehicle model code
     levi_model_code: '',       // Alternative Levi code field
