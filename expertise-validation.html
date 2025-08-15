@@ -716,21 +716,33 @@
         <div class="cost-summary">
           <div class="cost-summary-title">סיכום הנחיות תיק</div>
           <div class="cost-grid">
-            <div class="cost-item">
+            <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">הנחיית תיק:</span>
-              <span class="cost-value" id="summary-directive">לא מוגדר</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="cost-value" id="summary-directive">לא מוגדר</span>
+                <button class="edit-inline" onclick="startSummaryEdit('directive')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+              </div>
             </div>
-            <div class="cost-item">
+            <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">שמאי מבצע:</span>
-              <span class="cost-value" id="summary-assessor">לא מוגדר</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="cost-value" id="summary-assessor">לא מוגדר</span>
+                <button class="edit-inline" onclick="startSummaryEdit('assessor_name')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+              </div>
             </div>
-            <div class="cost-item">
+            <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">מספר רישיון:</span>
-              <span class="cost-value" id="summary-license">לא מוגדר</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="cost-value" id="summary-license">לא מוגדר</span>
+                <button class="edit-inline" onclick="startSummaryEdit('assessor_license')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+              </div>
             </div>
-            <div class="cost-item">
+            <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">תאריך השלמה:</span>
-              <span class="cost-value" id="summary-completion">לא מוגדר</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="cost-value" id="summary-completion">לא מוגדר</span>
+                <button class="edit-inline" onclick="startSummaryEdit('completion_date')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1044,6 +1056,89 @@
         { id: 'license-status', valid: !!summaryData.assessor_license, message: 'מספר רישיון' },
         { id: 'completion-status', valid: !!summaryData.completion_date, message: 'תאריך השלמה' }
       ];
+    }
+    
+    // Summary inline edit functions
+    window.startSummaryEdit = function(fieldKey) {
+      const elementId = getSummaryElementId(fieldKey);
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const currentText = element.textContent.trim();
+      const originalValue = currentText === 'לא מוגדר' ? '' : currentText;
+      
+      // Create inline input
+      element.innerHTML = `
+        <input type="text" class="inline-edit-input" value="${originalValue}" 
+               onblur="saveSummaryEdit('${fieldKey}', this.value)" 
+               onkeypress="if(event.key==='Enter') saveSummaryEdit('${fieldKey}', this.value)"
+               data-original="${originalValue}" 
+               style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+      `;
+      
+      // Focus and select the input
+      const input = element.querySelector('.inline-edit-input');
+      input.focus();
+      input.select();
+    };
+    
+    window.saveSummaryEdit = function(fieldKey, newValue) {
+      const elementId = getSummaryElementId(fieldKey);
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const input = element.querySelector('.inline-edit-input');
+      const originalValue = input ? input.dataset.original : '';
+      
+      try {
+        if (newValue !== originalValue) {
+          // Update helper data
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (!helper.expertise) helper.expertise = {};
+          if (!helper.expertise.summary) helper.expertise.summary = {};
+          
+          helper.expertise.summary[fieldKey] = newValue;
+          
+          // Save to storage
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          
+          // Update display
+          element.innerHTML = newValue || 'לא מוגדר';
+          
+          showAlert(`השדה "${getSummaryFieldLabel(fieldKey)}" עודכן בהצלחה`, 'success');
+          
+          // Trigger re-validation
+          setTimeout(() => validateSection('summary'), 500);
+        } else {
+          // Restore original value if no change
+          element.innerHTML = originalValue || 'לא מוגדר';
+        }
+      } catch (error) {
+        console.error('Error saving summary edit:', error);
+        element.innerHTML = originalValue || 'לא מוגדר';
+        showAlert('שגיאה בשמירת השינוי', 'error');
+      }
+    };
+    
+    function getSummaryElementId(fieldKey) {
+      const mapping = {
+        'directive': 'summary-directive',
+        'assessor_name': 'summary-assessor',
+        'assessor_license': 'summary-license',
+        'completion_date': 'summary-completion'
+      };
+      return mapping[fieldKey];
+    }
+    
+    function getSummaryFieldLabel(fieldKey) {
+      const labels = {
+        'directive': 'הנחיית תיק',
+        'assessor_name': 'שמאי מבצע',
+        'assessor_license': 'מספר רישיון',
+        'completion_date': 'תאריך השלמה'
+      };
+      return labels[fieldKey];
     }
     
     // Enhanced validation items population
