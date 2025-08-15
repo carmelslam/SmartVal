@@ -827,6 +827,7 @@
       // Initialize first section validation
       setTimeout(() => {
         validateSection('vehicle');
+        validateSection('summary');  // Also validate summary section on load
       }, 500);
     }
     
@@ -1053,10 +1054,25 @@
       
       // Update summary display values from expertise.summary
       const summaryData = helper?.expertise?.summary || {};
-      document.getElementById('summary-directive').textContent = summaryData.directive || 'לא מוגדר';
-      document.getElementById('summary-assessor').textContent = summaryData.assessor_name || 'לא מוגדר';
-      document.getElementById('summary-license').textContent = summaryData.assessor_license || 'לא מוגדר';
-      document.getElementById('summary-completion').textContent = summaryData.completion_date || 'לא מוגדר';
+      
+      console.log('🔍 Summary validation - helper data:', helper);
+      console.log('🔍 Summary validation - expertise section:', helper?.expertise);
+      console.log('🔍 Summary validation - summary data:', summaryData);
+      
+      // Try to get data from multiple possible locations
+      const directive = summaryData.directive || helper?.final_report?.type || 'לא מוגדר';
+      const assessorName = summaryData.assessor_name || helper?.meta?.assessor_name || 'לא מוגדר';
+      const assessorLicense = summaryData.assessor_license || helper?.meta?.assessor_license || 'לא מוגדר';
+      const completionDate = summaryData.completion_date || helper?.meta?.completion_date || 'לא מוגדר';
+      
+      document.getElementById('summary-directive').textContent = directive;
+      document.getElementById('summary-assessor').textContent = assessorName;
+      document.getElementById('summary-license').textContent = assessorLicense;
+      document.getElementById('summary-completion').textContent = completionDate;
+      
+      console.log('📋 Summary fields populated:', {
+        directive, assessorName, assessorLicense, completionDate
+      });
       
       return [
         { id: 'directive-status', valid: !!summaryData.directive, message: 'הנחיית תיק' },
