@@ -116,44 +116,625 @@
       background: linear-gradient(135deg, #545b62 0%, #3d4142 100%);
     }
     
+    /* A4 Layout and Print Optimization */
+    @page {
+      size: A4;
+      margin: 15mm 20mm 15mm 20mm;
+    }
+    
+    body {
+      max-width: 210mm;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    /* Page break control */
+    .page-break-before {
+      page-break-before: always;
+    }
+    
+    .page-break-after {
+      page-break-after: always;
+    }
+    
+    .page-break-inside-avoid {
+      page-break-inside: avoid;
+    }
+    
+    .keep-together {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
     /* Print styles */
     @media print {
       .no-print {
         display: none !important;
       }
+      
+      body {
+        font-size: 10px;
+        margin: 0;
+        padding: 10mm;
+        background: white !important;
+        color: black !important;
+      }
+      
+      .banner {
+        border: 2px solid #d4af37 !important;
+        height: 100px !important;
+        margin-bottom: 15px !important;
+        page-break-inside: avoid;
+      }
+      
+      .watermark {
+        font-size: 4rem !important;
+        opacity: 0.05 !important;
+      }
+      
+      h1 {
+        font-size: 18px !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+      }
+      
+      .section-title {
+        font-size: 14px !important;
+        margin-top: 20px !important;
+        margin-bottom: 8px !important;
+        page-break-after: avoid;
+      }
+      
+      table {
+        margin-bottom: 12px !important;
+        page-break-inside: avoid;
+      }
+      
+      th, td {
+        padding: 4px 6px !important;
+        font-size: 9px !important;
+      }
+      
+      .paragraph {
+        margin-top: 15px !important;
+        page-break-inside: avoid;
+      }
+      
+      .damage-centers-container > div {
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+      }
+      
+      .footer {
+        page-break-inside: avoid;
+        margin-top: 20px !important;
+      }
+      
+      .signature-img {
+        width: 150px !important;
+      }
+      
+      /* Force page breaks for better layout */
+      .damage-centers-container {
+        page-break-before: always;
+      }
+      
+      .section-title:contains('סיכום כלל מוקדי הנזק') {
+        page-break-before: always;
+      }
+    }
+    
+    /* Screen optimization for better preview */
+    @media screen {
+      body {
+        max-width: 210mm;
+        margin: 0 auto;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        background: white;
+      }
     }
   </style>
   <script>
+    let helper = {};
+    
     window.onload = () => {
-      const status = '{{helper.case_info.status}}';
-      const watermark = document.querySelector('.watermark');
-      if (watermark) watermark.textContent = status;
+      loadHelperData();
+      populateExpertiseData();
     };
+    
+    function loadHelperData() {
+      try {
+        const helperData = sessionStorage.getItem('helper');
+        if (helperData) {
+          helper = JSON.parse(helperData);
+          console.log('Helper data loaded:', helper);
+        } else {
+          console.warn('No helper data found in sessionStorage');
+          helper = {};
+        }
+      } catch (error) {
+        console.error('Error loading helper data:', error);
+        helper = {};
+      }
+    }
+    
+    function populateExpertiseData() {
+      // Update watermark
+      const watermark = document.querySelector('.watermark');
+      if (watermark && helper.case_info?.status) {
+        watermark.textContent = helper.case_info.status;
+      }
+      
+      // Update inspection date and plate in header
+      const headerInfo = document.querySelector('.header-info');
+      if (headerInfo && helper.case_info?.inspection_date && helper.vehicle?.plate) {
+        headerInfo.innerHTML = `תאריך בדיקה: ${formatDate(helper.case_info.inspection_date)} | מספר רכב: ${helper.vehicle.plate}`;
+      }
+      
+      // Populate main data table
+      populateMainDataTable();
+      
+      // Generate damage centers sections
+      generateDamageCenters();
+      
+      // Update footer signature date
+      const signatureDate = document.querySelector('.signature-date');
+      if (signatureDate && helper.case_info?.inspection_date) {
+        signatureDate.textContent = formatDate(helper.case_info.inspection_date);
+      }
+      
+      // Update final warning plate number
+      const warningPlate = document.querySelector('.warning-plate');
+      if (warningPlate && helper.vehicle?.plate) {
+        warningPlate.textContent = helper.vehicle.plate;
+      }
+      
+      // Update final warning date
+      const warningDate = document.querySelector('.warning-date');
+      if (warningDate && helper.case_info?.inspection_date) {
+        warningDate.textContent = formatDate(helper.case_info.inspection_date);
+      }
+      
+      // Update general assessment section
+      updateGeneralAssessment();
+    }
+    
+    function populateMainDataTable() {
+      const dataFields = {
+        'plate-1': helper.vehicle?.plate,
+        'plate-2': helper.vehicle?.plate,
+        'manufacturer': helper.vehicle?.manufacturer,
+        'model': helper.vehicle?.model,
+        'trim': helper.vehicle?.trim,
+        'chassis': helper.vehicle?.chassis,
+        'year': helper.vehicle?.year,
+        'km': helper.vehicle?.km,
+        'model-type': helper.vehicle?.model_type,
+        'damage-date': helper.case_info?.damage_date ? formatDate(helper.case_info.damage_date) : '',
+        'inspection-date': helper.case_info?.inspection_date ? formatDate(helper.case_info.inspection_date) : '',
+        'model-code': helper.vehicle?.model_code,
+        'vehicle-type': helper.vehicle?.vehicle_type || helper.vehicle?.ownership_type,
+        'ownership-type': helper.vehicle?.ownership_type,
+        'base-price': helper.valuation?.base_price || helper.vehicle?.base_price,
+        'owner-name': helper.stakeholders?.owner?.name,
+        'owner-address': helper.stakeholders?.owner?.address,
+        'owner-phone': helper.stakeholders?.owner?.phone,
+        'garage-name': helper.stakeholders?.garage?.name,
+        'garage-email': helper.stakeholders?.garage?.email,
+        'garage-phone': helper.stakeholders?.garage?.phone,
+        'insurance-company': helper.stakeholders?.insurance?.company,
+        'insurance-email': helper.stakeholders?.insurance?.email,
+        'insurance-agent-name': helper.stakeholders?.insurance?.agent?.name,
+        'insurance-agent-phone': helper.stakeholders?.insurance?.agent?.phone,
+        'insurance-agent-email': helper.stakeholders?.insurance?.agent?.email,
+        'damage-type': helper.case_info?.damage_type,
+        'inspection-location': helper.case_info?.inspection_location
+      };
+      
+      Object.entries(dataFields).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element && value) {
+          element.textContent = value;
+        }
+      });
+    }
+    
+    function generateDamageCenters() {
+      const container = document.querySelector('.damage-centers-container');
+      if (!container || !helper.centers || !Array.isArray(helper.centers)) {
+        console.warn('No damage centers data found or container missing');
+        return;
+      }
+      
+      container.innerHTML = ''; // Clear existing content
+      
+      helper.centers.forEach((center, index) => {
+        const centerHtml = createDamageCenterSection(center, index);
+        container.innerHTML += centerHtml;
+      });
+      
+      // Update summary table
+      updateDamageSummaryTable();
+    }
+    
+    function createDamageCenterSection(center, index) {
+      const centerNumber = center['Damage center Number'] || (index + 1);
+      const location = center.Location || 'לא צוין';
+      const description = center.Description || '';
+      
+      return `
+        <div class="keep-together" style="margin-bottom: 30px;">
+          <div style="text-align: right; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">
+            מוקד הנזק מספר ${centerNumber}
+          </div>
+          <table class="outer-border keep-together">
+            <tbody>
+              <tr>
+                <td class="table-param left-bold-border"><span>מוקד הנזק</span></td>
+                <td>${location} - ${description}</td>
+              </tr>
+              <tr>
+                <td class="table-param left-bold-border"><span>תיאור כללי</span></td>
+                <td>בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור ${location} של הרכב. ${description}. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
+              </tr>
+            </tbody>
+          </table>
+          <h2 class="section-title">לזמן שמאי לאחר פירוקים ולפני צבע</h2>
+          ${generateWorksTable(center.Works)}
+          ${generateRepairsTable(center.Repairs)}
+          ${generatePartsTable(center.Parts)}
+        </div>
+      `;
+    }
+    
+    function generateWorksTable(works) {
+      if (!works || !works.works || !Array.isArray(works.works) || works.works.length === 0) {
+        return '<p>אין עבודות מוגדרות</p>';
+      }
+      
+      let tableHtml = `
+        <h3>עבודות</h3>
+        <table class="outer-border keep-together">
+          <thead class="header-bottom-bold">
+            <tr>
+              <th class="table-num"><span>מס"ד</span></th>
+              <th class="table-param">סוג עבודה</th>
+              <th class="table-param">תיאור / עלות</th>
+              <th class="table-num split-border"><span>מס"ד</span></th>
+              <th class="table-param">סוג עבודה</th>
+              <th class="table-param">תיאור / עלות</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      works.works.forEach((work, index) => {
+        const rowNum = index + 1;
+        const category = work.category || '';
+        const comments = work.comments || '';
+        const cost = work.cost || 0;
+        
+        tableHtml += `
+          <tr>
+            <td class="table-num">${rowNum}</td>
+            <td class="table-param">${category}</td>
+            <td>${comments} - ${cost} ₪</td>
+            <td class="table-num split-border">${rowNum}</td>
+            <td class="table-param">${category}</td>
+            <td>${comments} - ${cost} ₪</td>
+          </tr>
+        `;
+      });
+      
+      tableHtml += '</tbody></table>';
+      return tableHtml;
+    }
+    
+    function generateRepairsTable(repairs) {
+      if (!repairs || !repairs.repairs || !Array.isArray(repairs.repairs) || repairs.repairs.length === 0) {
+        return '<p>אין תיקונים מוגדרים</p>';
+      }
+      
+      let tableHtml = `
+        <h3>תיקונים</h3>
+        <table class="outer-border keep-together">
+          <thead>
+            <tr>
+              <th class="table-num"><span>מס"ד</span></th>
+              <th class="table-param">תיאור</th>
+              <th class="table-param">עלות</th>
+              <th class="table-num split-border"><span>מס"ד</span></th>
+              <th class="table-param">תיאור</th>
+              <th class="table-param">עלות</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      repairs.repairs.forEach((repair, index) => {
+        const rowNum = index + 1;
+        const name = repair.name || '';
+        const description = repair.description || '';
+        const cost = repair.cost || 0;
+        
+        tableHtml += `
+          <tr>
+            <td class="table-num">${rowNum}</td>
+            <td class="table-param">${name}</td>
+            <td>${description} - ${cost} ₪</td>
+            <td class="table-num split-border">${rowNum}</td>
+            <td class="table-param">${name}</td>
+            <td>${description} - ${cost} ₪</td>
+          </tr>
+        `;
+      });
+      
+      tableHtml += '</tbody></table>';
+      return tableHtml;
+    }
+    
+    function generatePartsTable(parts) {
+      if (!parts || !parts.parts_required || !Array.isArray(parts.parts_required) || parts.parts_required.length === 0) {
+        return '<p>אין חלקים מוגדרים</p>';
+      }
+      
+      let tableHtml = `
+        <h3>חלקים</h3>
+        <table class="outer-border keep-together">
+          <thead>
+            <tr>
+              <th class="table-num"><span>מס"ד</span></th>
+              <th class="table-param">תיאור החלק</th>
+              <th class="table-param">מקור</th>
+              <th class="table-num split-border"><span>מס"ד</span></th>
+              <th class="table-param">תיאור החלק</th>
+              <th class="table-param">מקור</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      parts.parts_required.forEach((part, index) => {
+        const rowNum = index + 1;
+        const name = part.name || '';
+        const description = part.תיאור || part.description || '';
+        const supplier = part.ספק || part.supplier || '';
+        const price = part.מחיר || part.price || '';
+        
+        tableHtml += `
+          <tr>
+            <td class="table-num">${rowNum}</td>
+            <td class="table-param">${name}</td>
+            <td>${description} - ${supplier} - ${price}</td>
+            <td class="table-num split-border">${rowNum}</td>
+            <td class="table-param">${name}</td>
+            <td>${description} - ${supplier} - ${price}</td>
+          </tr>
+        `;
+      });
+      
+      tableHtml += '</tbody></table>';
+      return tableHtml;
+    }
+    
+    function updateDamageSummaryTable() {
+      const summaryContainer = document.querySelector('.damage-summary-table');
+      if (!summaryContainer || !helper.centers) return;
+      
+      let summaryHtml = '';
+      let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalWithVat = 0;
+      
+      helper.centers.forEach((center, index) => {
+        const centerNumber = center['Damage center Number'] || (index + 1);
+        const location = center.Location || 'לא צוין';
+        const description = center.Description || '';
+        const summary = center.Summary || {};
+        
+        const partsTotal = summary['Total parts'] || 0;
+        const worksTotal = summary['Total works'] || 0;
+        const repairsTotal = summary['Total repairs'] || 0;
+        const centerTotal = summary['Total with VAT'] || 0;
+        
+        totalParts += partsTotal;
+        totalWorks += worksTotal;
+        totalRepairs += repairsTotal;
+        totalWithVat += centerTotal;
+        
+        summaryHtml += `
+          <tr>
+            <td class="table-num">${centerNumber}</td>
+            <td class="table-param">${location} - ${description}</td>
+            <td>${partsTotal} ₪</td>
+            <td>${worksTotal} ₪</td>
+            <td>${repairsTotal} ₪</td>
+            <td style="font-weight: bold; color: #1e3a8a;">${centerTotal} ₪</td>
+          </tr>
+        `;
+      });
+      
+      summaryHtml += `
+        <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
+          <td colspan="2" class="table-param" style="font-weight: bold; text-align: center;">סה"כ כללי</td>
+          <td style="font-weight: bold; color: #1e3a8a;">${totalParts} ₪</td>
+          <td style="font-weight: bold; color: #1e3a8a;">${totalWorks} ₪</td>
+          <td style="font-weight: bold; color: #1e3a8a;">${totalRepairs} ₪</td>
+          <td style="font-weight: bold; color: #dc2626; font-size: 16px;">${totalWithVat} ₪</td>
+        </tr>
+      `;
+      
+      summaryContainer.innerHTML = summaryHtml;
+      
+      // Update financial summary
+      updateFinancialSummary();
+    }
+    
+    function updateFinancialSummary() {
+      // Calculate totals from centers if financials not available
+      let centersCount = 0;
+      let totalParts = 0;
+      let totalWorks = 0;
+      let totalRepairs = 0;
+      let totalWithVat = 0;
+      
+      if (helper.centers && Array.isArray(helper.centers)) {
+        centersCount = helper.centers.length;
+        helper.centers.forEach(center => {
+          const summary = center.Summary || {};
+          totalParts += parseFloat(summary['Total parts']) || 0;
+          totalWorks += parseFloat(summary['Total works']) || 0;
+          totalRepairs += parseFloat(summary['Total repairs']) || 0;
+          totalWithVat += parseFloat(summary['Total with VAT']) || 0;
+        });
+      }
+      
+      const elements = {
+        'centers-count': centersCount,
+        'before-tax': helper.financials?.totals?.before_tax || (totalWithVat / 1.17), // Estimate before tax
+        'vat-amount': helper.financials?.taxes?.vat_amount || (totalWithVat - (totalWithVat / 1.17)), // Estimate VAT
+        'after-tax': helper.financials?.totals?.after_tax || totalWithVat
+      };
+      
+      Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+          if (id === 'centers-count') {
+            element.textContent = value;
+          } else {
+            element.textContent = Math.round(value) + ' ₪';
+          }
+        }
+      });
+    }
+    
+    function updateGeneralAssessment() {
+      // Update assessment notes - try multiple possible paths
+      const assessmentNotes = document.getElementById('assessment-notes');
+      if (assessmentNotes) {
+        const notes = helper.damage_assessment?.summary?.assessment_notes || 
+                     helper.assessment?.notes || 
+                     'בבדיקת הרכב נמצאו נזקים תאונתיים הדורשים תיקון על פי הפירוט לעיל.';
+        assessmentNotes.textContent = notes;
+      }
+      
+      // Update appraiser notes (show only if exists)
+      const appraiserNotes = document.getElementById('appraiser-notes');
+      const notesContent = document.getElementById('notes-content');
+      if (helper.expertise?.summary?.notes) {
+        appraiserNotes.style.display = 'block';
+        notesContent.textContent = helper.expertise.summary.notes;
+      } else {
+        appraiserNotes.style.display = 'none';
+      }
+      
+      // Update status
+      const statusText = document.getElementById('status-text');
+      if (statusText) {
+        const status = helper.expertise?.summary?.status || helper.case_info?.status || 'בתהליך';
+        statusText.textContent = status;
+      }
+      
+      // Update technician info
+      const technicianInfo = document.getElementById('technician-info');
+      if (technicianInfo) {
+        const technician = helper.expertise?.summary?.technician || 'ירון כיוף';
+        const license = helper.expertise?.summary?.license || '1097';
+        technicianInfo.textContent = `${technician} - רישיון ${license}`;
+      }
+    }
+    
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch (error) {
+        return dateString;
+      }
+    }
 
     
     // Control button functions
     window.reviewReport = function() {
-      alert('פתיחת מצב סקירה...');
-      // Could implement review mode here
+      // Toggle review mode - highlight important sections
+      const reviewMode = document.body.classList.toggle('review-mode');
+      
+      if (reviewMode) {
+        // Add review styling
+        const style = document.createElement('style');
+        style.id = 'review-style';
+        style.textContent = `
+          .review-mode .section-title {
+            background: #fff3cd !important;
+            padding: 8px !important;
+            border-radius: 4px !important;
+          }
+          .review-mode table {
+            border: 2px solid #ffc107 !important;
+          }
+          .review-mode .paragraph {
+            border-left: 4px solid #17a2b8 !important;
+            padding-left: 10px !important;
+          }
+        `;
+        document.head.appendChild(style);
+        alert('מצב סקירה הופעל - חלקים חשובים מודגשים');
+      } else {
+        // Remove review styling
+        const reviewStyle = document.getElementById('review-style');
+        if (reviewStyle) {
+          reviewStyle.remove();
+        }
+        alert('מצב סקירה בוטל');
+      }
     };
 
     window.editExpertise = function() {
-      if (confirm('האם ברצונך לערוך את נתוני האקספירטיזה? זה יחזיר אותך לדף הסיכום.')) {
-        window.location.href = 'expertise-summary.html';
+      if (confirm('האם ברצונך לערוך את נתוני האקספירטיזה? זה יחזיר אותך לדף האימות.')) {
+        // Go back to validation page where user can edit data
+        window.location.href = 'expertise-validation.html';
       }
     };
 
     window.printPreview = function() {
+      // Hide control buttons before printing
+      const controlSection = document.querySelector('.no-print');
+      if (controlSection) {
+        controlSection.style.display = 'none';
+      }
+      
+      // Add print-specific title
+      const originalTitle = document.title;
+      const plateNumber = helper.vehicle?.plate || 'ללא מספר';
+      document.title = `אקספרטיזה - ${plateNumber}`;
+      
+      // Print
       window.print();
+      
+      // Restore original state
+      document.title = originalTitle;
+      if (controlSection) {
+        controlSection.style.display = '';
+      }
     };
 
     window.submitFinalExpertise = function() {
       if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
         const payload = {
-          plate: '{{helper.vehicle.plate}}',
+          plate: helper.vehicle?.plate || '',
           action: 'submit_final_expertise',
           submittedAt: new Date().toISOString()
         };
+        
+        // Update helper status to submitted
+        if (helper.expertise && helper.expertise.summary) {
+          helper.expertise.summary.status = 'הוגש';
+          helper.expertise.summary.submitted_at = new Date().toISOString();
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // Use webhook from expertise.js if available
         if (typeof sendToWebhook !== 'undefined') {
@@ -189,11 +770,11 @@
 
   <h1>דו"ח אקספרטיזה</h1>
 
-  <p style="font-size:18px; font-weight: bold; color: #1e3a8a;">
-    תאריך בדיקה: {{helper.case_info.inspection_date}} | מספר רכב: {{helper.vehicle.plate}}
+  <p class="header-info" style="font-size:18px; font-weight: bold; color: #1e3a8a;">
+    תאריך בדיקה: <span id="header-date"></span> | מספר רכב: <span id="header-plate"></span>
   </p>
 
-  <table class="outer-border">
+  <table class="outer-border keep-together">
     <thead>
       <tr>
         <th class="table-num"><span>מס"ד</span></th>
@@ -204,165 +785,75 @@
     </thead>
     <tbody>
       <tr>
-        <td class="table-num">1</td><td class="table-param">מספר רכב</td><td>{{helper.vehicle.plate}}</td>
-        <td class="table-num split-border">15</td><td class="table-param">שם בעל הרכב</td><td>{{helper.stakeholders.owner.name}}</td>
+        <td class="table-num">1</td><td class="table-param">מספר רכב</td><td id="plate-1"></td>
+        <td class="table-num split-border">15</td><td class="table-param">שם בעל הרכב</td><td id="owner-name"></td>
       </tr>
       <tr>
-        <td class="table-num">2</td><td class="table-param">שם היצרן</td><td>{{helper.vehicle.manufacturer}}</td>
-        <td class="table-num split-border">16</td><td class="table-param">כתובת</td><td>{{helper.stakeholders.owner.address}}</td>
+        <td class="table-num">2</td><td class="table-param">שם היצרן</td><td id="manufacturer"></td>
+        <td class="table-num split-border">16</td><td class="table-param">כתובת</td><td id="owner-address"></td>
       </tr>
       <tr>
-        <td class="table-num">3</td><td class="table-param">דגם</td><td>{{helper.vehicle.model}}</td>
-        <td class="table-num split-border">17</td><td class="table-param">טלפון</td><td>{{helper.stakeholders.owner.phone}}</td>
+        <td class="table-num">3</td><td class="table-param">דגם</td><td id="model"></td>
+        <td class="table-num split-border">17</td><td class="table-param">טלפון</td><td id="owner-phone"></td>
       </tr>
       <tr>
-        <td class="table-num">4</td><td class="table-param">רמת גימור</td><td>{{helper.vehicle.trim}}</td>
-        <td class="table-num split-border">18</td><td class="table-param">מוסך</td><td>{{helper.stakeholders.garage.name}}</td>
+        <td class="table-num">4</td><td class="table-param">רמת גימור</td><td id="trim"></td>
+        <td class="table-num split-border">18</td><td class="table-param">מוסך</td><td id="garage-name"></td>
       </tr>
       <tr>
-        <td class="table-num">5</td><td class="table-param">מספר שילדה</td><td>{{helper.vehicle.chassis}}</td>
-        <td class="table-num split-border">19</td><td class="table-param">אימייל מוסך</td><td>{{helper.stakeholders.garage.email}}</td>
+        <td class="table-num">5</td><td class="table-param">מספר שילדה</td><td id="chassis"></td>
+        <td class="table-num split-border">19</td><td class="table-param">אימייל מוסך</td><td id="garage-email"></td>
       </tr>
       <tr>
-        <td class="table-num">6</td><td class="table-param">שנת ייצור</td><td>{{helper.vehicle.year}}</td>
-        <td class="table-num split-border">20</td><td class="table-param">טלפון מוסך</td><td>{{helper.stakeholders.garage.phone}}</td>
+        <td class="table-num">6</td><td class="table-param">שנת ייצור</td><td id="year"></td>
+        <td class="table-num split-border">20</td><td class="table-param">טלפון מוסך</td><td id="garage-phone"></td>
       </tr>
       <tr>
-        <td class="table-num">7</td><td class="table-param">מד אוץ</td><td>{{helper.vehicle.km}}</td>
-        <td class="table-num split-border">21</td><td class="table-param">חברת ביטוח</td><td>{{helper.stakeholders.insurance.company}}</td>
+        <td class="table-num">7</td><td class="table-param">מד אוץ</td><td id="km"></td>
+        <td class="table-num split-border">21</td><td class="table-param">חברת ביטוח</td><td id="insurance-company"></td>
       </tr>
       <tr>
-        <td class="table-num">8</td><td class="table-param">סוג הדגם</td><td>{{helper.vehicle.model_type}}</td>
-        <td class="table-num split-border">22</td><td class="table-param">אימייל חברת ביטוח</td><td>{{helper.stakeholders.insurance.email}}</td>
+        <td class="table-num">8</td><td class="table-param">סוג הדגם</td><td id="model-type"></td>
+        <td class="table-num split-border">22</td><td class="table-param">אימייל חברת ביטוח</td><td id="insurance-email"></td>
       </tr>
       <tr>
-        <td class="table-num">9</td><td class="table-param">תאריך הנזק</td><td>{{helper.case_info.damage_date}}</td>
-        <td class="table-num split-border">23</td><td class="table-param">סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.name}}</td>
+        <td class="table-num">9</td><td class="table-param">תאריך הנזק</td><td id="damage-date"></td>
+        <td class="table-num split-border">23</td><td class="table-param">סוכן ביטוח</td><td id="insurance-agent-name"></td>
       </tr>
       <tr>
-        <td class="table-num">10</td><td class="table-param">תאריך בדיקה</td><td>{{helper.case_info.inspection_date}}</td>
-        <td class="table-num split-border">24</td><td class="table-param">טלפון סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.phone}}</td>
+        <td class="table-num">10</td><td class="table-param">תאריך בדיקה</td><td id="inspection-date"></td>
+        <td class="table-num split-border">24</td><td class="table-param">טלפון סוכן ביטוח</td><td id="insurance-agent-phone"></td>
       </tr>
       <tr>
-        <td class="table-num">11</td><td class="table-param">קוד דגם</td><td>{{helper.vehicle.model_code}}</td>
-        <td class="table-num split-border">25</td><td class="table-param">אימייל סוכן ביטוח</td><td>{{helper.stakeholders.insurance.agent.email}}</td>
+        <td class="table-num">11</td><td class="table-param">קוד דגם</td><td id="model-code"></td>
+        <td class="table-num split-border">25</td><td class="table-param">אימייל סוכן ביטוח</td><td id="insurance-agent-email"></td>
       </tr>
       <tr>
-        <td class="table-num">12</td><td class="table-param">סוג הרכב</td><td>{{helper.vehicle.ownership_type}}</td>
-        <td class="table-num split-border">26</td><td class="table-param">סוג נזק</td><td>{{helper.case_info.damage_type}}</td>
+        <td class="table-num">12</td><td class="table-param">סוג הרכב</td><td id="vehicle-type"></td>
+        <td class="table-num split-border">26</td><td class="table-param">סוג נזק</td><td id="damage-type"></td>
       </tr>
       <tr>
-        <td class="table-num">13</td><td class="table-param">סוג בעלות</td><td>{{helper.vehicle.ownership_type}}</td>
-        <td class="table-num split-border">27</td><td class="table-param">מקום בדיקה</td><td>{{helper.case_info.inspection_location}}</td>
+        <td class="table-num">13</td><td class="table-param">סוג בעלות</td><td id="ownership-type"></td>
+        <td class="table-num split-border">27</td><td class="table-param">מקום בדיקה</td><td id="inspection-location"></td>
       </tr>
       <tr>
-        <td class="table-num">14</td><td class="table-param">מחיר בסיס</td><td>{{helper.valuation.base_price}}</td>
+        <td class="table-num">14</td><td class="table-param">מחיר בסיס</td><td id="base-price"></td>
         <td class="table-num split-border">28</td><td class="table-param"></td><td></td>
       </tr>
     </tbody>
   </table>
 
-  <div class="paragraph">
+  <div class="paragraph page-break-before">
     <h2 class="section-title">מפרט תיקון - הערכת נזק (מבלי לפגוע בזכויות)</h2>
-    {{#each helper.damage_assessment.centers}}
-      <div style="text-align: right; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">
-        מוקד הנזק מספר {{@index+1}}
-      </div>
-      <table class="outer-border">
-        <tbody>
-          <tr>
-            <td class="table-param left-bold-border"><span>מוקד הנזק</span></td>
-            <td>{{this.Location}} - {{this.Description}}</td>
-          </tr>
-          <tr>
-            <td class="table-param left-bold-border"><span>תיאור כללי</span></td>
-            <td>בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור {{this.Location}} של הרכב. {{this.Description}}. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
-          </tr>
-        </tbody>
-      </table>
-      <h2 class="section-title">לזמן שמאי לאחר פירוקים ולפני צבע</h2>
-      <h3>עבודות</h3>
-      <table class="outer-border">
-        <thead class="header-bottom-bold">
-          <tr>
-            <th class="table-num"><span>מס"ד</span></th>
-            <th class="table-param">סוג עבודה</th>
-            <th class="table-param">תיאור / עלות</th>
-            <th class="table-num split-border"><span>מס"ד</span></th>
-            <th class="table-param">סוג עבודה</th>
-            <th class="table-param">תיאור / עלות</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each this.Works.works}}
-            <tr>
-              <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.category}}</td>
-              <td>{{this.comments}} - {{this.cost}} ₪</td>
-              <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.category}}</td>
-              <td>{{this.comments}} - {{this.cost}} ₪</td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
-      <h3>תיקונים</h3>
-      <table class="outer-border">
-        <thead>
-          <tr>
-            <th class="table-num"><span>מס"ד</span></th>
-            <th class="table-param">תיאור</th>
-            <th class="table-param">עלות</th>
-            <th class="table-num split-border"><span>מס"ד</span></th>
-            <th class="table-param">תיאור</th>
-            <th class="table-param">עלות</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each this.Repairs.repairs}}
-            <tr>
-              <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.name}}</td>
-              <td>{{this.description}} - {{this.cost}} ₪</td>
-              <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.name}}</td>
-              <td>{{this.description}} - {{this.cost}} ₪</td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
-      <h3>חלקים</h3>
-      <table class="outer-border">
-        <thead>
-          <tr>
-            <th class="table-num"><span>מס"ד</span></th>
-            <th class="table-param">תיאור החלק</th>
-            <th class="table-param">מקור</th>
-            <th class="table-num split-border"><span>מס"ד</span></th>
-            <th class="table-param">תיאור החלק</th>
-            <th class="table-param">מקור</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each this.Parts.parts_required}}
-            <tr>
-              <td class="table-num">{{@index+1}}</td>
-              <td class="table-param">{{this.name}}</td>
-              <td>{{this.תיאור}} - {{this.ספק}} - {{this.מחיר}}</td>
-              <td class="table-num split-border">{{@index+1}}</td>
-              <td class="table-param">{{this.name}}</td>
-              <td>{{this.תיאור}} - {{this.ספק}} - {{this.מחיר}}</td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
-    {{/each}}
+    <div class="damage-centers-container">
+      <!-- Damage centers will be populated by JavaScript -->
+    </div>
   </div>
 
   <!-- Multi-Damage Centers Summary -->
-  <div class="paragraph">
+  <div class="paragraph page-break-before">
     <h2 class="section-title">סיכום כלל מוקדי הנזק</h2>
-    <table class="outer-border">
+    <table class="outer-border keep-together">
       <thead class="header-bottom-bold">
         <tr>
           <th class="table-num"><span>מס"ד</span></th>
@@ -373,55 +864,37 @@
           <th class="table-param">סה"כ ערך מוקד</th>
         </tr>
       </thead>
-      <tbody>
-        {{#each helper.damage_assessment.centers}}
-          <tr>
-            <td class="table-num">{{this.[Damage center Number]}}</td>
-            <td class="table-param">{{this.Location}} - {{this.Description}}</td>
-            <td>{{this.Summary.[Total parts]}} ₪</td>
-            <td>{{this.Summary.[Total works]}} ₪</td>
-            <td>{{this.Summary.[Total repairs]}} ₪</td>
-            <td style="font-weight: bold; color: #1e3a8a;">{{this.Summary.[Total with VAT]}} ₪</td>
-          </tr>
-        {{/each}}
-        <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
-          <td colspan="2" class="table-param" style="font-weight: bold; text-align: center;">סה"כ כללי</td>
-          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.parts_total}} ₪</td>
-          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.works_total}} ₪</td>
-          <td style="font-weight: bold; color: #1e3a8a;">{{helper.financials.costs.repairs_total}} ₪</td>
-          <td style="font-weight: bold; color: #dc2626; font-size: 16px;">{{helper.financials.totals.after_tax}} ₪</td>
-        </tr>
+      <tbody class="damage-summary-table">
+        <!-- Summary rows will be populated by JavaScript -->
       </tbody>
     </table>
     
     <div style="margin-top: 15px; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
       <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 8px;">פירוט נוסף:</div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
-        <div><strong>מספר מוקדי נזק:</strong> {{helper.damage_assessment.centers.length}}</div>
-        <div><strong>סכום נזקים ללא מע"מ:</strong> {{helper.financials.totals.before_tax}} ₪</div>
-        <div><strong>מע"מ:</strong> {{helper.financials.taxes.vat_amount}} ₪</div>
-        <div><strong>סכום נזקים כולל מע"מ:</strong> {{helper.financials.totals.after_tax}} ₪</div>
+        <div><strong>מספר מוקדי נזק:</strong> <span id="centers-count"></span></div>
+        <div><strong>סכום נזקים ללא מע"מ:</strong> <span id="before-tax"></span></div>
+        <div><strong>מע"מ:</strong> <span id="vat-amount"></span></div>
+        <div><strong>סכום נזקים כולל מע"מ:</strong> <span id="after-tax"></span></div>
       </div>
     </div>
   </div>
 
-  <div class="paragraph">
+  <div class="paragraph page-break-inside-avoid">
     <h2 class="section-title">הערכה כללית</h2>
-    <p>{{helper.damage_assessment.summary.assessment_notes}}</p>
-    {{#if helper.expertise.summary.notes}}
-      <p style="margin-top: 10px;"><strong>הערות השמאי:</strong> {{helper.expertise.summary.notes}}</p>
-    {{/if}}
+    <p id="assessment-notes"></p>
+    <p id="appraiser-notes" style="margin-top: 10px; display: none;"><strong>הערות השמאי:</strong> <span id="notes-content"></span></p>
     <p style="margin-top: 10px;">
       <span style="font-weight:bold; color:#1e3a8a;">סטטוס:</span>
-      <span style="font-weight:bold; color:#000;">{{helper.expertise.summary.status}}</span>
+      <span style="font-weight:bold; color:#000;" id="status-text"></span>
     </p>
     <p style="margin-top: 5px;">
       <span style="font-weight:bold; color:#1e3a8a;">שמאי:</span>
-      <span style="font-weight:bold; color:#000;">{{helper.expertise.summary.technician}} - רישיון {{helper.expertise.summary.license}}</span>
+      <span style="font-weight:bold; color:#000;" id="technician-info"></span>
     </p>
   </div>
 
-  <div class="paragraph">
+  <div class="paragraph page-break-inside-avoid">
     <h2 class="section-title">הצהרה</h2>
     <div style="background: #ffcccc; border: 1px solid #ccc; padding: 2px 12px; font-weight: bold; text-align: center; display: flex; align-items: flex-end; justify-content: center; height: 36px;">
       כדי למנוע אי הבנה- שים לב להערות הר״מ:
@@ -440,7 +913,7 @@
   <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 30px 0; border: 2px solid #e2e8f0; text-align: center; page-break-inside: avoid;" class="no-print">
     <h3 style="color: #1e3a8a; margin-bottom: 15px;">פעולות על הדו"ח</h3>
     <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeaa7;">
-      <strong>הודעה חשובה:</strong> לאחר אישור סופי ושליחה תיסגר האקספירטיזה, יישלח אימייל למוסך ותיווצר חוות דעת סופית לרכב מס׳ <strong>{{helper.vehicle.plate}}</strong> בתאריך <strong>{{helper.case_info.inspection_date}}</strong>.
+      <strong>הודעה חשובה:</strong> לאחר אישור סופי ושליחה תיסגר האקספירטיזה, יישלח אימייל למוסך ותיווצר חוות דעת סופית לרכב מס׳ <strong class="warning-plate"></strong> בתאריך <strong class="warning-date"></strong>.
     </div>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
@@ -462,12 +935,12 @@
     </div>
   </div>
 
-  <div class="footer">
+  <div class="footer page-break-inside-avoid">
     <div style="text-align: center; font-weight: bold; margin-bottom: 40px; font-size: 18px;">בכבוד רב,</div>
     <div style="display: flex; flex-direction: row-reverse; align-items: flex-start; justify-content: space-between;">
       <div>
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webpyaron-signature-transparent-.webp" class="signature-img" alt="חתימה">
-        <div style="font-size: 18px; font-weight: bold; margin-top: 8px;">{{helper.case_info.inspection_date}}</div>
+        <div class="signature-date" style="font-size: 18px; font-weight: bold; margin-top: 8px;"></div>
       </div>
       <div>
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"
