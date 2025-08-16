@@ -699,17 +699,6 @@
         <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
           <strong>הנחיות:</strong> אימות נתוני השמאי והוראות סיום התיק | בדיקת הנחיית תיק וסטטוס
         </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
-          <div>שדה</div>
-          <div style="text-align: center;">ערך נוכחי</div>
-          <div style="text-align: center;">נתונים מאוחסנים</div>
-          <div style="text-align: center;">פעולות</div>
-        </div>
-        
-        <div id="summary-validation-items">
-          <!-- Will be populated by JavaScript -->
-        </div>
 
         <!-- Summary Display -->
         <div class="cost-summary">
@@ -826,7 +815,7 @@
       // Initialize first section validation
       setTimeout(() => {
         validateSection('vehicle');
-        validateSection('summary');  // Also validate summary section on load
+        // Don't validate summary on load - it should validate after damage section
         
         // FORCE UPDATE ALL DISPLAYS WITH HELPER DATA
         forceUpdateDisplays();
@@ -849,10 +838,13 @@
       
       // Format the date if it exists
       let formattedDate = completedAt;
-      if (completedAt) {
+      if (completedAt && completedAt !== 'לא מוגדר') {
         try {
           const date = new Date(completedAt);
-          formattedDate = date.toLocaleDateString('he-IL');
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          formattedDate = `${day}/${month}/${year}`;
         } catch (e) {
           formattedDate = completedAt;
         }
@@ -1101,17 +1093,6 @@
       console.log('🔍 Summary validation - expertise section:', helper?.expertise);
       console.log('🔍 Summary validation - summary data:', summaryData);
       
-      // Define validation items for summary section
-      const summaryValidationItems = [
-        { field: 'directive', label: 'הנחיית תיק', helperPath: 'expertise.summary.directive', currentPath: 'expertise.summary.directive' },
-        { field: 'technician', label: 'שמאי מבצע', helperPath: 'expertise.summary.technician', currentPath: 'expertise.summary.technician' },
-        { field: 'license', label: 'מספר רישיון', helperPath: 'expertise.summary.license', currentPath: 'expertise.summary.license' },
-        { field: 'completed_at', label: 'תאריך השלמה', helperPath: 'expertise.summary.completed_at', currentPath: 'expertise.summary.completed_at' }
-      ];
-      
-      // Populate the validation items display
-      populateEnhancedValidationItems('summary-validation-items', summaryValidationItems, helper);
-      
       // Get data from expertise.summary with correct field names
       const directive = summaryData.directive || helper?.final_report?.type || 'לא מוגדר';
       const technician = summaryData.technician || helper?.meta?.assessor_name || 'לא מוגדר';
@@ -1123,7 +1104,10 @@
       if (completedAt && completedAt !== 'לא מוגדר') {
         try {
           const date = new Date(completedAt);
-          formattedDate = date.toLocaleDateString('he-IL');
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          formattedDate = `${day}/${month}/${year}`;
         } catch (e) {
           formattedDate = completedAt;
         }
@@ -1774,7 +1758,7 @@
     };
     
     function getNextSection(currentSection) {
-      const sections = ['vehicle', 'levi', 'damage'];
+      const sections = ['vehicle', 'levi', 'damage', 'summary'];
       const currentIndex = sections.indexOf(currentSection);
       return currentIndex < sections.length - 1 ? sections[currentIndex + 1] : null;
     }
@@ -1792,7 +1776,8 @@
       const titles = {
         'vehicle': 'פרטי רכב ומקרה',
         'levi': 'דו"ח לוי יצחק',
-        'damage': 'מוקדי נזק ואקספרטיזה'
+        'damage': 'מוקדי נזק ואקספרטיזה',
+        'summary': 'סיכום אקספרטיזה והנחיות תיק'
       };
       return titles[sectionName] || sectionName;
     }
