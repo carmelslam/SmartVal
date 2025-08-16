@@ -104,11 +104,16 @@
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%) rotate(-30deg);
-      font-size: 5rem;
-      color: rgba(30, 58, 138, 0.05);
+      font-size: 8rem;
+      color: rgba(59, 130, 246, 0.08);
       z-index: 0;
       white-space: nowrap;
       pointer-events: none;
+      font-weight: bold;
+      max-width: 90vw;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .paragraph { margin-top: 20px; line-height: 1.6; white-space: pre-line; }
     .signature-img { width: 220px; display: block; }
@@ -702,14 +707,38 @@
         const directive = helper.expertise?.summary?.directive || 'לתיקון';
         directiveText.textContent = directive;
       }
+      
+      // Update additional notes (show only if exists)
+      const additionalNotes = document.getElementById('additional-notes');
+      const additionalNotesContent = document.getElementById('additional-notes-content');
+      if (helper.expertise?.summary?.notes) {
+        additionalNotes.style.display = 'block';
+        additionalNotesContent.textContent = helper.expertise.summary.notes;
+      } else {
+        additionalNotes.style.display = 'none';
+      }
     }
     
     function updateAdditionalMappings() {
-      // Update watermark with directive
+      // Update watermark with directive and dynamic sizing
       const watermark = document.querySelector('.watermark');
       if (watermark) {
         const directive = helper.expertise?.summary?.directive || 'לתיקון';
         watermark.textContent = directive;
+        
+        // Dynamic font sizing based on text length
+        const textLength = directive.length;
+        let fontSize = '8rem';
+        
+        if (textLength > 10) {
+          fontSize = '6rem';
+        } else if (textLength > 15) {
+          fontSize = '5rem';
+        } else if (textLength > 20) {
+          fontSize = '4rem';
+        }
+        
+        watermark.style.fontSize = fontSize;
       }
     }
     
@@ -954,15 +983,21 @@
     <h2 class="section-title" style="font-size: 24px; font-weight: bold; text-align: center;">הערכה כללית</h2>
     <p id="assessment-notes" style="font-size: 18px; line-height: 1.6; margin: 15px 0; text-align: justify;"></p>
     <p id="appraiser-notes" style="margin-top: 15px; display: none; font-size: 15px;"><strong>הערות השמאי:</strong> <span id="notes-content"></span></p>
-    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 2px solid #e2e8f0;">
-      <p style="margin: 8px 0; font-size: 16px; text-align: center;">
+    <div style="text-align: center; margin: 20px 0;">
+      <div style="background: #f8fafc; padding: 10px 15px; border-radius: 8px; border: 2px solid #e2e8f0; display: inline-block; min-width: 300px; max-width: 80%;">
+      <p style="margin: 6px 0; font-size: 16px; text-align: center;">
         <span style="font-weight:bold; color:#1e3a8a;">הנחיית תיק:</span>
-        <span style="font-weight:bold; color:#dc2626; font-size: 18px;" id="directive-text"></span>
+        <span style="font-weight:bold; color:#dc2626; font-size: 20px;" id="directive-text"></span>
+      </p>
+      <p id="additional-notes" style="margin: 8px 0; font-size: 15px; display: none;">
+        <span style="font-weight:bold; color:#1e3a8a;">הערות נוספות:</span>
+        <span style="font-weight:bold; color:#000;" id="additional-notes-content"></span>
       </p>
       <p style="margin: 8px 0; font-size: 15px;">
         <span style="font-weight:bold; color:#1e3a8a;">שמאי:</span>
         <span style="font-weight:bold; color:#000;" id="technician-info"></span>
       </p>
+      </div>
     </div>
   </div>
 
