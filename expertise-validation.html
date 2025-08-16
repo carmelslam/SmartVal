@@ -571,27 +571,20 @@
       </div>
       <div class="section-content">
         <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
-          <strong>הנחיות:</strong> אימות נתוני השווי מדו"ח לוי יצחק | בדיקת התאמות מחיר וחישוב שווי סופי
+          <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
         </div>
         
-        <div class="validation-item">
-          <span class="validation-label">קובץ דו"ח לוי</span>
-          <span class="validation-status" id="levi-file-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">נתוני רכב</span>
-          <span class="validation-status" id="levi-vehicle-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">נתוני שווי</span>
-          <span class="validation-status" id="levi-valuation-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">התאמות מחיר</span>
-          <span class="validation-status" id="levi-adjustments-status">⏳</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
         </div>
         
-        
+        <div id="levi-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
         <!-- Valuation Summary -->
         <div class="cost-summary">
           <div class="cost-summary-title">סיכום שווי הרכב</div>
@@ -625,30 +618,21 @@
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
-          <strong>הנחיות:</strong> בדיקת מוקדי הנזק שהוגדרו ונתוני האקספרטיזה | אימות עלויות ותכולת עבודות
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">הזנת מוקדי נזק</span>
-          <span class="validation-status" id="damage-centers-count-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">תיאור נזקים</span>
-          <span class="validation-status" id="damage-descriptions-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">חלקים נדרשים</span>
-          <span class="validation-status" id="required-parts-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">עבודות נדרשות</span>
-          <span class="validation-status" id="required-works-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">תיקונים נדרשים</span>
-          <span class="validation-status" id="required-repairs-status">⏳</span>
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> עמודת "ערך נוכחי" מציגה את הנתונים המוצגים | עמודת "נתונים מאוחסנים" מציגה את הנתונים בעזר | ניתן לערוך או להתעלם מאי התאמות
         </div>
         
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
+        </div>
+        
+        <div id="damage-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
         <!-- Damage Centers Display Container -->
         <div id="damage-centers-container">
           <!-- Will be populated dynamically -->
@@ -984,6 +968,17 @@
       const hasLeviData = helper?.valuation?.base_price || helper?.valuation?.final_price;
       const hasAdjustments = helper?.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0;
       
+      // Define validation items for Levi section
+      const leviValidationItems = [
+        { field: 'levi_base_price', label: 'מחיר בסיס לוי', helperPath: 'valuation.base_price', currentPath: 'valuation.base_price' },
+        { field: 'levi_final_price', label: 'מחיר סופי לוי', helperPath: 'valuation.final_price', currentPath: 'valuation.final_price' },
+        { field: 'levi_code', label: 'קוד לוי', helperPath: 'valuation.levi_code', currentPath: 'valuation.levi_code' },
+        { field: 'levi_adjustments_value', label: 'שינויי מחיר', helperPath: 'valuation.adjustments_value', currentPath: 'valuation.adjustments_value' }
+      ];
+      
+      // Populate the validation items display
+      populateEnhancedValidationItems('levi-validation-items', leviValidationItems, helper);
+      
       // Calculate adjustments_value and update helper using the helper function
       if (helper?.valuation && (helper.valuation.base_price || helper.valuation.final_price)) {
         if (window.calculateValuationAdjustments) {
@@ -1028,6 +1023,19 @@
       
       console.log('Validating damage assessment:', damageAssessment);
       console.log('Damage centers data:', damageCentersData);
+      
+      // Define validation items for Damage section
+      const damageValidationItems = [
+        { field: 'damage_centers_count', label: 'מספר מוקדי נזק', helperPath: 'centers.length', currentPath: 'centers.length' },
+        { field: 'damage_total_works', label: 'סה"כ עבודות', helperPath: 'damage_assessment.totals.Total works', currentPath: 'damage_assessment.totals.Total works' },
+        { field: 'damage_total_parts', label: 'סה"כ חלקים', helperPath: 'damage_assessment.totals.Total parts', currentPath: 'damage_assessment.totals.Total parts' },
+        { field: 'damage_total_repairs', label: 'סה"כ תיקונים', helperPath: 'damage_assessment.totals.Total repairs', currentPath: 'damage_assessment.totals.Total repairs' },
+        { field: 'damage_total_without_vat', label: 'סה"כ ללא מע"מ', helperPath: 'damage_assessment.totals.Total without VAT', currentPath: 'damage_assessment.totals.Total without VAT' },
+        { field: 'damage_total_with_vat', label: 'סה"כ כולל מע"מ', helperPath: 'damage_assessment.totals.Total with VAT', currentPath: 'damage_assessment.totals.Total with VAT' }
+      ];
+      
+      // Populate the validation items display
+      populateEnhancedValidationItems('damage-validation-items', damageValidationItems, helper);
       
       // Count actual damage centers dynamically
       const centerKeys = Object.keys(damageCentersData).filter(key => key.startsWith('Damage center'));
@@ -1377,6 +1385,7 @@
         'levi_final_price': 'מחיר סופי לוי',
         'levi_code': 'קוד לוי',
         'levi_report_date': 'תאריך דו"ח לוי',
+        'levi_adjustments_value': 'שינויי מחיר',
         
         // Expertise summary
         'directive': 'הנחיית תיק',
@@ -1388,6 +1397,14 @@
         'status': 'סטטוס תיק',
         'case_id': 'מספר תיק',
         'notes': 'הערות משפטיות',
+        
+        // Damage assessment
+        'damage_centers_count': 'מספר מוקדי נזק',
+        'damage_total_works': 'סה"כ עבודות נזק',
+        'damage_total_parts': 'סה"כ חלקים נזק',
+        'damage_total_repairs': 'סה"כ תיקונים נזק',
+        'damage_total_without_vat': 'סה"כ נזקים ללא מע"מ',
+        'damage_total_with_vat': 'סה"כ נזקים כולל מע"מ',
         
         // Financial totals
         'works_total': 'סה"כ עבודות',
@@ -1479,6 +1496,7 @@
           'levi_final_price': 'valuation.final_price',
           'levi_code': 'valuation.levi_code',
           'levi_report_date': 'valuation.report_date',
+          'levi_adjustments_value': 'valuation.adjustments_value',
           
           // Expertise summary
           'directive': 'final_report.type',
@@ -1487,6 +1505,14 @@
           'completion_date': 'meta.completion_date',
           'status': 'case_info.status',
           'notes': 'final_report.legal_text',
+          
+          // Damage assessment data
+          'damage_centers_count': 'centers.length',
+          'damage_total_works': 'damage_assessment.totals.Total works',
+          'damage_total_parts': 'damage_assessment.totals.Total parts',
+          'damage_total_repairs': 'damage_assessment.totals.Total repairs',
+          'damage_total_without_vat': 'damage_assessment.totals.Total without VAT',
+          'damage_total_with_vat': 'damage_assessment.totals.Total with VAT',
           
           // Financial totals
           'works_total': 'financials.costs.works_total',
