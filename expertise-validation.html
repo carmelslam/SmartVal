@@ -1911,15 +1911,27 @@
     };
     
     window.saveValidationData = function() {
-      const payload = {
-        plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
-        validationState,
-        action: 'save_validation'
-      };
-      
-      sendToWebhook('SAVE_EXPERTISE_VALIDATION', payload)
-        .then(() => showAlert('נתוני האימות נשמרו בהצלחה', 'success'))
-        .catch(() => showAlert('שגיאה בשמירת נתוני האימות', 'error'));
+      try {
+        // Save validation state to sessionStorage
+        const validationData = {
+          validationState,
+          timestamp: new Date().toISOString(),
+          plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע'
+        };
+        
+        sessionStorage.setItem('validationData', JSON.stringify(validationData));
+        
+        // Also ensure helper is saved
+        if (window.helper) {
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        }
+        
+        showAlert('נתוני האימות נשמרו בהצלחה', 'success');
+        console.log('✅ Validation data saved locally:', validationData);
+      } catch (error) {
+        console.error('❌ Error saving validation data:', error);
+        showAlert('שגיאה בשמירת נתוני האימות', 'error');
+      }
     };
     
     window.requestManualReview = function() {
