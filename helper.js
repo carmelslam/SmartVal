@@ -4687,17 +4687,21 @@ if (document.readyState === 'loading') {
 // export { populateAllFormsWithRetry };
 
 // Data getter functions
-// export function getDamageData() {
-//   return window.helper?.damage_assessment || {};
-// }
+export function getDamageData() {
+  return window.helper?.damage_assessment || {};
+}
 
-// export function getValuationData() {
-//   return window.helper?.valuation || {};
-// }
+export function getValuationData() {
+  return window.helper?.valuation || {};
+}
 
-// export function getFinancialData() {
-//   return window.helper?.financials || {};
-// }
+export function getFinancialData() {
+  return window.helper?.financials || {};
+}
+
+export function getVehicleData() {
+  return window.helper?.vehicle || {};
+}
 
 // export function syncVehicleData() {
 //   console.log('Syncing vehicle data...');
