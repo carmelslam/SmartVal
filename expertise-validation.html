@@ -1935,7 +1935,63 @@
     };
     
     window.requestManualReview = function() {
-      showAlert('בקשה לסקירה ידנית נשלחה', 'success');
+      try {
+        // Reset all validation states
+        validationState = {
+          vehicle: { status: 'pending', approved: false },
+          levi: { status: 'pending', approved: false },
+          damage: { status: 'pending', approved: false },
+          summary: { status: 'pending', approved: false }
+        };
+        
+        // Reset all section statuses to pending
+        const sections = ['vehicle', 'levi', 'damage', 'summary'];
+        sections.forEach(sectionName => {
+          const section = document.getElementById(`section-${sectionName}`);
+          if (section) {
+            // Reset section classes
+            section.classList.remove('current', 'completed', 'error', 'warning');
+            section.classList.add('validation-section');
+            
+            // Reset status display
+            const statusElement = section.querySelector('.section-status');
+            if (statusElement) {
+              statusElement.textContent = 'ממתין';
+              statusElement.className = 'section-status status-pending';
+            }
+            
+            // Reset approve button
+            const approveBtn = section.querySelector('.btn-success');
+            if (approveBtn) {
+              approveBtn.disabled = true;
+              approveBtn.textContent = approveBtn.textContent.replace('✅ אושר', '').replace('אושר', '').trim();
+              if (approveBtn.textContent.includes('פרטי רכב')) approveBtn.textContent = 'אימות פרטי רכב';
+              if (approveBtn.textContent.includes('דו"ח לוי')) approveBtn.textContent = 'אימות דו"ח לוי';
+              if (approveBtn.textContent.includes('מוקדי נזק')) approveBtn.textContent = 'אימות מוקדי נזק';
+              if (approveBtn.textContent.includes('סיכום')) approveBtn.textContent = 'אימות סיכום';
+            }
+          }
+        });
+        
+        // Reset progress bar
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-text').textContent = '0 מתוך 4 שלבים הושלמו';
+        
+        // Disable final approval button
+        const finalBtn = document.getElementById('final-approve-btn');
+        if (finalBtn) finalBtn.disabled = true;
+        
+        // Re-run validation starting from vehicle section
+        setTimeout(() => {
+          validateSection('vehicle');
+        }, 500);
+        
+        showAlert('האימות אופס - מתחיל סקירה מחדש', 'warning');
+        console.log('🔄 Manual review requested - validation reset');
+      } catch (error) {
+        console.error('❌ Error requesting manual review:', error);
+        showAlert('שגיאה באיפוס האימות', 'error');
+      }
     };
     
     // Enhanced alert system with error handling
