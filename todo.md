@@ -3647,7 +3647,7 @@ The "פתח אתר car-part לחיפוש" button in `parts search.html` (line 15
 
 **FLOATING SCREENS ENHANCEMENTS**
 
-Goal: restyle your existing floating screens to a YouTube‑style PiP with a glass effect, keep all current data flow untouched, remove the icon dock, and open external links inside an in‑app browser on mobile. Only CSS + thin JS. No changes to your data scripts.
+Goal: restyle the existing floating screens to a YouTube‑style PiP with a glass effect, keep all current data flow untouched, remove the icon dock, and open external links inside an in‑app browser on mobile. Only CSS + thin JS. No changes to the data scripts.
 What Claude must do in Cursor
 0) Identify the floating screen root
 Find the element that currently renders the floating screen content. Examples in your codebase might be #floatingPanel, #floatScreen, .floating-screen, etc. Use that single root as the PiP container.
@@ -3658,7 +3658,7 @@ Create three files:
 public/css/pip.css
 public/js/pip.js
 public/js/inapp-browser.js
-Adjust paths to match your project layout.
+Adjust paths to match the project layout.
 2) Wire them in once
 In the HTML that is common to pages showing the floating screen (your main layout), add:
 

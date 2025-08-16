@@ -726,21 +726,21 @@
               <span class="cost-label">שמאי מבצע:</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="cost-value" id="summary-assessor">לא מוגדר</span>
-                <button class="edit-inline" onclick="startSummaryEdit('assessor_name')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+                <button class="edit-inline" onclick="startSummaryEdit('technician')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
               </div>
             </div>
             <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">מספר רישיון:</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="cost-value" id="summary-license">לא מוגדר</span>
-                <button class="edit-inline" onclick="startSummaryEdit('assessor_license')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+                <button class="edit-inline" onclick="startSummaryEdit('license')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
               </div>
             </div>
             <div class="cost-item" style="display: flex; align-items: center; justify-content: space-between;">
               <span class="cost-label">תאריך השלמה:</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="cost-value" id="summary-completion">לא מוגדר</span>
-                <button class="edit-inline" onclick="startSummaryEdit('completion_date')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
+                <button class="edit-inline" onclick="startSummaryEdit('completed_at')" title="עריכה מהירה" style="background: none; border: none; cursor: pointer; font-size: 14px;">✏️</button>
               </div>
             </div>
           </div>
@@ -843,11 +843,22 @@
       const summaryData = helper?.expertise?.summary || {};
       
       const directive = summaryData.directive || helper?.final_report?.type || 'לתיקון';
-      const assessorName = summaryData.assessor_name || helper?.meta?.assessor_name || 'ירון כיוף';
-      const assessorLicense = summaryData.assessor_license || helper?.meta?.assessor_license || 'רישיון 12345';
-      const completionDate = summaryData.completion_date || helper?.meta?.completion_date || new Date().toLocaleDateString('he-IL');
+      const technician = summaryData.technician || helper?.meta?.assessor_name || 'ירון כיוף';
+      const license = summaryData.license || helper?.meta?.assessor_license || 'רישיון 12345';
+      const completedAt = summaryData.completed_at || helper?.meta?.completion_date || new Date().toISOString();
       
-      console.log('🔥 Summary values:', { directive, assessorName, assessorLicense, completionDate });
+      // Format the date if it exists
+      let formattedDate = completedAt;
+      if (completedAt) {
+        try {
+          const date = new Date(completedAt);
+          formattedDate = date.toLocaleDateString('he-IL');
+        } catch (e) {
+          formattedDate = completedAt;
+        }
+      }
+      
+      console.log('🔥 Summary values:', { directive, technician, license, completedAt: formattedDate });
       
       const directiveEl = document.getElementById('summary-directive');
       const assessorEl = document.getElementById('summary-assessor');
@@ -855,9 +866,9 @@
       const completionEl = document.getElementById('summary-completion');
       
       if (directiveEl) directiveEl.textContent = directive;
-      if (assessorEl) assessorEl.textContent = assessorName;
-      if (licenseEl) licenseEl.textContent = assessorLicense;
-      if (completionEl) completionEl.textContent = completionDate;
+      if (assessorEl) assessorEl.textContent = technician;
+      if (licenseEl) licenseEl.textContent = license;
+      if (completionEl) completionEl.textContent = formattedDate;
       
       console.log('🔥 SUMMARY UPDATE COMPLETE');
     }
@@ -1090,26 +1101,48 @@
       console.log('🔍 Summary validation - expertise section:', helper?.expertise);
       console.log('🔍 Summary validation - summary data:', summaryData);
       
-      // Try to get data from multiple possible locations
+      // Define validation items for summary section
+      const summaryValidationItems = [
+        { field: 'directive', label: 'הנחיית תיק', helperPath: 'expertise.summary.directive', currentPath: 'expertise.summary.directive' },
+        { field: 'technician', label: 'שמאי מבצע', helperPath: 'expertise.summary.technician', currentPath: 'expertise.summary.technician' },
+        { field: 'license', label: 'מספר רישיון', helperPath: 'expertise.summary.license', currentPath: 'expertise.summary.license' },
+        { field: 'completed_at', label: 'תאריך השלמה', helperPath: 'expertise.summary.completed_at', currentPath: 'expertise.summary.completed_at' }
+      ];
+      
+      // Populate the validation items display
+      populateEnhancedValidationItems('summary-validation-items', summaryValidationItems, helper);
+      
+      // Get data from expertise.summary with correct field names
       const directive = summaryData.directive || helper?.final_report?.type || 'לא מוגדר';
-      const assessorName = summaryData.assessor_name || helper?.meta?.assessor_name || 'לא מוגדר';
-      const assessorLicense = summaryData.assessor_license || helper?.meta?.assessor_license || 'לא מוגדר';
-      const completionDate = summaryData.completion_date || helper?.meta?.completion_date || 'לא מוגדר';
+      const technician = summaryData.technician || helper?.meta?.assessor_name || 'לא מוגדר';
+      const license = summaryData.license || helper?.meta?.assessor_license || 'לא מוגדר';
+      const completedAt = summaryData.completed_at || helper?.meta?.completion_date || 'לא מוגדר';
+      
+      // Format the date if it exists
+      let formattedDate = completedAt;
+      if (completedAt && completedAt !== 'לא מוגדר') {
+        try {
+          const date = new Date(completedAt);
+          formattedDate = date.toLocaleDateString('he-IL');
+        } catch (e) {
+          formattedDate = completedAt;
+        }
+      }
       
       document.getElementById('summary-directive').textContent = directive;
-      document.getElementById('summary-assessor').textContent = assessorName;
-      document.getElementById('summary-license').textContent = assessorLicense;
-      document.getElementById('summary-completion').textContent = completionDate;
+      document.getElementById('summary-assessor').textContent = technician;
+      document.getElementById('summary-license').textContent = license;
+      document.getElementById('summary-completion').textContent = formattedDate;
       
       console.log('📋 Summary fields populated:', {
-        directive, assessorName, assessorLicense, completionDate
+        directive, technician, license, completedAt: formattedDate
       });
       
       return [
         { id: 'directive-status', valid: !!summaryData.directive, message: 'הנחיית תיק' },
-        { id: 'assessor-status', valid: !!summaryData.assessor_name, message: 'פרטי שמאי' },
-        { id: 'license-status', valid: !!summaryData.assessor_license, message: 'מספר רישיון' },
-        { id: 'completion-status', valid: !!summaryData.completion_date, message: 'תאריך השלמה' }
+        { id: 'assessor-status', valid: !!summaryData.technician, message: 'פרטי שמאי' },
+        { id: 'license-status', valid: !!summaryData.license, message: 'מספר רישיון' },
+        { id: 'completion-status', valid: !!summaryData.completed_at, message: 'תאריך השלמה' }
       ];
     }
     
@@ -1179,9 +1212,9 @@
     function getSummaryElementId(fieldKey) {
       const mapping = {
         'directive': 'summary-directive',
-        'assessor_name': 'summary-assessor',
-        'assessor_license': 'summary-license',
-        'completion_date': 'summary-completion'
+        'technician': 'summary-assessor',
+        'license': 'summary-license',
+        'completed_at': 'summary-completion'
       };
       return mapping[fieldKey];
     }
@@ -1189,9 +1222,9 @@
     function getSummaryFieldLabel(fieldKey) {
       const labels = {
         'directive': 'הנחיית תיק',
-        'assessor_name': 'שמאי מבצע',
-        'assessor_license': 'מספר רישיון',
-        'completion_date': 'תאריך השלמה'
+        'technician': 'שמאי מבצע',
+        'license': 'מספר רישיון',
+        'completed_at': 'תאריך השלמה'
       };
       return labels[fieldKey];
     }
