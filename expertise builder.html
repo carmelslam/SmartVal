@@ -107,13 +107,16 @@
       font-size: 8rem;
       color: rgba(59, 130, 246, 0.08);
       z-index: 0;
-      white-space: nowrap;
+      white-space: normal;
       pointer-events: none;
       font-weight: bold;
-      max-width: 90vw;
+      max-width: 70vw;
+      width: auto;
       text-align: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 0.9;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
     }
     .paragraph { margin-top: 20px; line-height: 1.6; white-space: pre-line; }
     .signature-img { width: 220px; display: block; }
@@ -717,16 +720,20 @@
         const directive = helper.expertise?.summary?.directive || 'לתיקון';
         watermark.textContent = directive;
         
-        // Dynamic font sizing based on text length
+        // Dynamic font sizing based on text length and word count
         const textLength = directive.length;
+        const wordCount = directive.split(' ').length;
         let fontSize = '8rem';
         
-        if (textLength > 10) {
-          fontSize = '6rem';
-        } else if (textLength > 15) {
-          fontSize = '5rem';
-        } else if (textLength > 20) {
+        // More aggressive sizing for longer text
+        if (wordCount >= 5 || textLength > 25) {
+          fontSize = '3rem';
+        } else if (wordCount >= 4 || textLength > 20) {
           fontSize = '4rem';
+        } else if (wordCount >= 3 || textLength > 15) {
+          fontSize = '5rem';
+        } else if (textLength > 10) {
+          fontSize = '6rem';
         }
         
         watermark.style.fontSize = fontSize;
