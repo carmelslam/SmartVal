@@ -8,8 +8,21 @@
   <link rel="shortcut icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 20px; background: white; }
-    .banner { width: 100%; display: block; margin-bottom: 0; }
+    body { 
+      font-family: 'Arial', 'Hebrew', sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      background: white;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .banner { 
+      width: 100%; 
+      display: block; 
+      margin-bottom: 0;
+      padding: 8px 16px;
+      box-sizing: border-box;
+    }
     h1, h2, h3, h4, h5, h6,
     .business-title,
     .section-title,
@@ -18,12 +31,49 @@
       font-weight: bold;
       color: #1e3a8a !important;
     }
-    h1 { text-align: center; font-size: 26px; margin-top: 0; margin-bottom: 5px; }
-    .business-title { text-align: center; font-size: 16px; margin-bottom: 20px; }
-    .section-title { font-size: 20px; margin-top: 40px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+    h1 { 
+      text-align: center; 
+      font-size: 18px; 
+      margin-top: 10px; 
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    .business-title { 
+      text-align: center; 
+      font-size: 14px; 
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .section-title { 
+      font-size: 14px; 
+      font-weight: bold;
+      margin-top: 25px; 
+      margin-bottom: 10px;
+      border-bottom: 2px solid #1e3a8a; 
+      padding-bottom: 5px;
+      color: #1e3a8a !important;
+    }
+    h3 {
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 8px;
+      color: #1e3a8a !important;
+    }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 8px; }
-    th, td { border: 1px solid #64748b; padding: 6px 10px; text-align: center; vertical-align: middle; }
-    th { text-align: center; }
+    th, td { 
+      border: 1px solid #64748b; 
+      padding: 8px 10px; 
+      text-align: center; 
+      vertical-align: middle;
+      font-size: 11px;
+    }
+    th { 
+      text-align: center;
+      font-weight: bold;
+      background: #f8fafc;
+      font-size: 11px;
+    }
     .table-param {
       font-weight: bold;
       color: #1e3a8a;
@@ -211,16 +261,26 @@
       }
       
       .signature-img {
-        width: 150px !important;
+        width: 120px !important;
+        height: auto !important;
       }
       
-      /* Force page breaks for better layout */
+      /* Smart page breaks - avoid unnecessary breaks */
       .damage-centers-container {
-        page-break-before: always;
+        page-break-before: auto;
       }
       
-      .section-title:contains('סיכום כלל מוקדי הנזק') {
-        page-break-before: always;
+      /* Only break before summary if needed */
+      .summary-section {
+        page-break-before: auto;
+        page-break-inside: avoid;
+      }
+      
+      /* Avoid orphaned titles */
+      h2, h3, .section-title {
+        page-break-after: avoid;
+        orphans: 3;
+        widows: 3;
       }
     }
     
@@ -266,10 +326,14 @@
         watermark.textContent = helper.case_info.status;
       }
       
-      // Update inspection date and plate in header
-      const headerInfo = document.querySelector('.header-info');
-      if (headerInfo && helper.case_info?.inspection_date && helper.vehicle?.plate) {
-        headerInfo.innerHTML = `תאריך בדיקה: ${formatDate(helper.case_info.inspection_date)} | מספר רכב: ${helper.vehicle.plate}`;
+      // Update header info with proper centering
+      const headerDate = document.getElementById('header-date');
+      const headerPlate = document.getElementById('header-plate');
+      if (headerDate && helper.case_info?.inspection_date) {
+        headerDate.textContent = formatDate(helper.case_info.inspection_date);
+      }
+      if (headerPlate && helper.vehicle?.plate) {
+        headerPlate.textContent = helper.vehicle.plate;
       }
       
       // Populate main data table
@@ -298,6 +362,9 @@
       
       // Update general assessment section
       updateGeneralAssessment();
+      
+      // Update additional data mappings
+      updateAdditionalMappings();
     }
     
     function populateMainDataTable() {
@@ -328,8 +395,8 @@
         'insurance-agent-name': helper.stakeholders?.insurance?.agent?.name,
         'insurance-agent-phone': helper.stakeholders?.insurance?.agent?.phone,
         'insurance-agent-email': helper.stakeholders?.insurance?.agent?.email,
-        'damage-type': helper.case_info?.damage_type,
-        'inspection-location': helper.case_info?.inspection_location
+        'damage-type': helper.case_info?.damage_type || helper.damage_assessment?.summary?.damage_type || 'תאונתי',
+        'inspection-location': helper.case_info?.inspection_location || helper.meta?.inspection_location
       };
       
       Object.entries(dataFields).forEach(([id, value]) => {
@@ -364,23 +431,19 @@
       const description = center.Description || '';
       
       return `
-        <div class="keep-together" style="margin-bottom: 30px;">
-          <div style="text-align: right; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">
-            מוקד הנזק מספר ${centerNumber}
+        <div class="keep-together" style="margin-bottom: 30px; page-break-inside: avoid;">
+          <div style="text-align: right; font-weight: bold; color: #1e3a8a; margin-bottom: 8px; font-size: 14px;">
+            מוקד הנזק מספר ${centerNumber} - ${location}
           </div>
-          <table class="outer-border keep-together">
+          <table class="outer-border keep-together" style="margin-bottom: 15px;">
             <tbody>
               <tr>
-                <td class="table-param left-bold-border"><span>מוקד הנזק</span></td>
-                <td>${location} - ${description}</td>
-              </tr>
-              <tr>
-                <td class="table-param left-bold-border"><span>תיאור כללי</span></td>
-                <td>בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור ${location} של הרכב. ${description}. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
+                <td class="table-param left-bold-border" style="width: 25%; font-weight: bold;"><span>תיאור כללי</span></td>
+                <td style="text-align: right; padding: 10px;">בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור ${location} של הרכב. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
               </tr>
             </tbody>
           </table>
-          <h2 class="section-title">לזמן שמאי לאחר פירוקים ולפני צבע</h2>
+          <h3 style="font-size: 13px; color: #1e3a8a; margin: 15px 0 8px 0;">לזמן שמאי לאחר פירוקים ולפני צבע</h3>
           ${generateWorksTable(center.Works)}
           ${generateRepairsTable(center.Repairs)}
           ${generatePartsTable(center.Parts)}
@@ -390,20 +453,17 @@
     
     function generateWorksTable(works) {
       if (!works || !works.works || !Array.isArray(works.works) || works.works.length === 0) {
-        return '<p>אין עבודות מוגדרות</p>';
+        return '<p style="font-style: italic; color: #666; margin: 10px 0;">אין עבודות מוגדרות</p>';
       }
       
       let tableHtml = `
-        <h3>עבודות</h3>
-        <table class="outer-border keep-together">
+        <h4 style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin: 10px 0 5px 0;">עבודות</h4>
+        <table class="outer-border keep-together" style="margin-bottom: 15px;">
           <thead class="header-bottom-bold">
             <tr>
-              <th class="table-num"><span>מס"ד</span></th>
-              <th class="table-param">סוג עבודה</th>
-              <th class="table-param">תיאור / עלות</th>
-              <th class="table-num split-border"><span>מס"ד</span></th>
-              <th class="table-param">סוג עבודה</th>
-              <th class="table-param">תיאור / עלות</th>
+              <th class="table-num" style="width: 8%;"><span>מס"ד</span></th>
+              <th class="table-param" style="width: 30%;">סוג עבודה</th>
+              <th class="table-param" style="width: 62%;">תיאור ועלות</th>
             </tr>
           </thead>
           <tbody>
@@ -418,11 +478,8 @@
         tableHtml += `
           <tr>
             <td class="table-num">${rowNum}</td>
-            <td class="table-param">${category}</td>
-            <td>${comments} - ${cost} ₪</td>
-            <td class="table-num split-border">${rowNum}</td>
-            <td class="table-param">${category}</td>
-            <td>${comments} - ${cost} ₪</td>
+            <td class="table-param" style="text-align: right;">${category}</td>
+            <td style="text-align: right; padding: 8px;">${comments} - <strong>${cost} ₪</strong></td>
           </tr>
         `;
       });
@@ -433,20 +490,17 @@
     
     function generateRepairsTable(repairs) {
       if (!repairs || !repairs.repairs || !Array.isArray(repairs.repairs) || repairs.repairs.length === 0) {
-        return '<p>אין תיקונים מוגדרים</p>';
+        return '<p style="font-style: italic; color: #666; margin: 10px 0;">אין תיקונים מוגדרים</p>';
       }
       
       let tableHtml = `
-        <h3>תיקונים</h3>
-        <table class="outer-border keep-together">
+        <h4 style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin: 10px 0 5px 0;">תיקונים</h4>
+        <table class="outer-border keep-together" style="margin-bottom: 15px;">
           <thead>
             <tr>
-              <th class="table-num"><span>מס"ד</span></th>
-              <th class="table-param">תיאור</th>
-              <th class="table-param">עלות</th>
-              <th class="table-num split-border"><span>מס"ד</span></th>
-              <th class="table-param">תיאור</th>
-              <th class="table-param">עלות</th>
+              <th class="table-num" style="width: 8%;"><span>מס"ד</span></th>
+              <th class="table-param" style="width: 30%;">שם התיקון</th>
+              <th class="table-param" style="width: 62%;">תיאור ועלות</th>
             </tr>
           </thead>
           <tbody>
@@ -461,11 +515,8 @@
         tableHtml += `
           <tr>
             <td class="table-num">${rowNum}</td>
-            <td class="table-param">${name}</td>
-            <td>${description} - ${cost} ₪</td>
-            <td class="table-num split-border">${rowNum}</td>
-            <td class="table-param">${name}</td>
-            <td>${description} - ${cost} ₪</td>
+            <td class="table-param" style="text-align: right;">${name}</td>
+            <td style="text-align: right; padding: 8px;">${description} - <strong>${cost} ₪</strong></td>
           </tr>
         `;
       });
@@ -476,20 +527,17 @@
     
     function generatePartsTable(parts) {
       if (!parts || !parts.parts_required || !Array.isArray(parts.parts_required) || parts.parts_required.length === 0) {
-        return '<p>אין חלקים מוגדרים</p>';
+        return '<p style="font-style: italic; color: #666; margin: 10px 0;">אין חלקים מוגדרים</p>';
       }
       
       let tableHtml = `
-        <h3>חלקים</h3>
-        <table class="outer-border keep-together">
+        <h4 style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin: 10px 0 5px 0;">חלקים</h4>
+        <table class="outer-border keep-together" style="margin-bottom: 15px;">
           <thead>
             <tr>
-              <th class="table-num"><span>מס"ד</span></th>
-              <th class="table-param">תיאור החלק</th>
-              <th class="table-param">מקור</th>
-              <th class="table-num split-border"><span>מס"ד</span></th>
-              <th class="table-param">תיאור החלק</th>
-              <th class="table-param">מקור</th>
+              <th class="table-num" style="width: 8%;"><span>מס"ד</span></th>
+              <th class="table-param" style="width: 25%;">שם החלק</th>
+              <th class="table-param" style="width: 67%;">תיאור, ספק ומחיר</th>
             </tr>
           </thead>
           <tbody>
@@ -505,11 +553,8 @@
         tableHtml += `
           <tr>
             <td class="table-num">${rowNum}</td>
-            <td class="table-param">${name}</td>
-            <td>${description} - ${supplier} - ${price}</td>
-            <td class="table-num split-border">${rowNum}</td>
-            <td class="table-param">${name}</td>
-            <td>${description} - ${supplier} - ${price}</td>
+            <td class="table-param" style="text-align: right;">${name}</td>
+            <td style="text-align: right; padding: 8px;">${description} - ${supplier} - <strong>${price}</strong></td>
           </tr>
         `;
       });
@@ -641,6 +686,22 @@
         const license = helper.expertise?.summary?.license || '1097';
         technicianInfo.textContent = `${technician} - רישיון ${license}`;
       }
+      
+      // Update directive from helper.expertise.summary
+      const directiveText = document.getElementById('directive-text');
+      if (directiveText) {
+        const directive = helper.expertise?.summary?.directive || 'לתיקון';
+        directiveText.textContent = directive;
+      }
+    }
+    
+    function updateAdditionalMappings() {
+      // Update watermark with status
+      const watermark = document.querySelector('.watermark');
+      if (watermark) {
+        const status = helper.expertise?.summary?.status || helper.case_info?.status || 'סטטוס';
+        watermark.textContent = status;
+      }
     }
     
     function formatDate(dateString) {
@@ -770,8 +831,8 @@
 
   <h1>דו"ח אקספרטיזה</h1>
 
-  <p class="header-info" style="font-size:18px; font-weight: bold; color: #1e3a8a;">
-    תאריך בדיקה: <span id="header-date"></span> | מספר רכב: <span id="header-plate"></span>
+  <p class="header-info" style="font-size:14px; font-weight: bold; color: #1e3a8a; text-align: center; margin: 15px 0;">
+    תאריך בדיקה: <span id="header-date"></span> | מספר רכב: <span id="header-plate" style="color: #dc2626; font-weight: bold;"></span>
   </p>
 
   <table class="outer-border keep-together">
@@ -843,7 +904,7 @@
     </tbody>
   </table>
 
-  <div class="paragraph page-break-before">
+  <div class="paragraph">
     <h2 class="section-title">מפרט תיקון - הערכת נזק (מבלי לפגוע בזכויות)</h2>
     <div class="damage-centers-container">
       <!-- Damage centers will be populated by JavaScript -->
@@ -851,8 +912,8 @@
   </div>
 
   <!-- Multi-Damage Centers Summary -->
-  <div class="paragraph page-break-before">
-    <h2 class="section-title">סיכום כלל מוקדי הנזק</h2>
+  <div class="paragraph summary-section">
+    <h2 class="section-title" style="font-size: 14px; text-align: center; color: #dc2626; font-weight: bold;">סיכום כלל מוקדי הנזק</h2>
     <table class="outer-border keep-together">
       <thead class="header-bottom-bold">
         <tr>
@@ -870,7 +931,7 @@
     </table>
     
     <div style="margin-top: 15px; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
-      <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 8px;">פירוט נוסף:</div>
+      <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 8px; font-size: 13px;">פירוט נוסף:</div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
         <div><strong>מספר מוקדי נזק:</strong> <span id="centers-count"></span></div>
         <div><strong>סכום נזקים ללא מע"מ:</strong> <span id="before-tax"></span></div>
@@ -881,30 +942,36 @@
   </div>
 
   <div class="paragraph page-break-inside-avoid">
-    <h2 class="section-title">הערכה כללית</h2>
-    <p id="assessment-notes"></p>
-    <p id="appraiser-notes" style="margin-top: 10px; display: none;"><strong>הערות השמאי:</strong> <span id="notes-content"></span></p>
-    <p style="margin-top: 10px;">
-      <span style="font-weight:bold; color:#1e3a8a;">סטטוס:</span>
-      <span style="font-weight:bold; color:#000;" id="status-text"></span>
-    </p>
-    <p style="margin-top: 5px;">
-      <span style="font-weight:bold; color:#1e3a8a;">שמאי:</span>
-      <span style="font-weight:bold; color:#000;" id="technician-info"></span>
-    </p>
+    <h2 class="section-title" style="font-size: 14px; font-weight: bold;">הערכה כללית</h2>
+    <p id="assessment-notes" style="font-size: 12px; line-height: 1.5; margin: 10px 0;"></p>
+    <p id="appraiser-notes" style="margin-top: 10px; display: none; font-size: 12px;"><strong>הערות השמאי:</strong> <span id="notes-content"></span></p>
+    <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin: 15px 0;">
+      <p style="margin: 5px 0; font-size: 12px;">
+        <span style="font-weight:bold; color:#1e3a8a;">סטטוס:</span>
+        <span style="font-weight:bold; color:#dc2626; text-align: center;" id="status-text"></span>
+      </p>
+      <p style="margin: 5px 0; font-size: 12px;">
+        <span style="font-weight:bold; color:#1e3a8a;">שמאי:</span>
+        <span style="font-weight:bold; color:#000;" id="technician-info"></span>
+      </p>
+      <p style="margin: 5px 0; font-size: 12px; text-align: center;">
+        <span style="font-weight:bold; color:#1e3a8a;">הנחיית תיק:</span>
+        <span style="font-weight:bold; color:#dc2626;" id="directive-text"></span>
+      </p>
+    </div>
   </div>
 
   <div class="paragraph page-break-inside-avoid">
     <h2 class="section-title">הצהרה</h2>
-    <div style="background: #ffcccc; border: 1px solid #ccc; padding: 2px 12px; font-weight: bold; text-align: center; display: flex; align-items: flex-end; justify-content: center; height: 36px;">
-      כדי למנוע אי הבנה- שים לב להערות הר״מ:
+    <div style="background: #ffcccc; border: 1px solid #ccc; padding: 8px 12px; font-weight: bold; text-align: center; font-size: 13px; margin: 15px 0;">
+      כדי למנוע אי הבנה - שים לב להערות הר״מ:
     </div>
-    <div style="border: 2px solid #475569; padding: 6px 10px; background: #f8fafc; margin-top: 10px;">
-      <ol style="margin: 0; padding-right: 20px;">
-        <li>יש להודיע לשמאי על כל נזק נוסף.</li>
-        <li>הצעת תיקון זו כפופה לעיון בטופס התביעה.</li>
-        <li>החלקים שיפורקו מהרכב יעמדו לרשות חברת הביטוח.</li>
-        <li>הצעה זו אינה מחייבת את חברת הביטוח לתשלום כלשהו.</li>
+    <div style="border: 2px solid #475569; padding: 12px 15px; background: #f8fafc; margin-top: 10px; border-radius: 6px;">
+      <ol style="margin: 0; padding-right: 20px; font-size: 12px; line-height: 1.6;">
+        <li style="margin-bottom: 8px;">יש להודיע לשמאי על כל נזק נוסף.</li>
+        <li style="margin-bottom: 8px;">הצעת תיקון זו כפופה לעיון בטופס התביעה.</li>
+        <li style="margin-bottom: 8px;">החלקים שיפורקו מהרכב יעמדו לרשות חברת הביטוח.</li>
+        <li style="margin-bottom: 8px;">הצעה זו אינה מחייבת את חברת הביטוח לתשלום כלשהו.</li>
       </ol>
     </div>
   </div>
@@ -939,8 +1006,8 @@
     <div style="text-align: center; font-weight: bold; margin-bottom: 40px; font-size: 18px;">בכבוד רב,</div>
     <div style="display: flex; flex-direction: row-reverse; align-items: flex-start; justify-content: space-between;">
       <div>
-        <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webpyaron-signature-transparent-.webp" class="signature-img" alt="חתימה">
-        <div class="signature-date" style="font-size: 18px; font-weight: bold; margin-top: 8px;"></div>
+        <img src="https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp" class="signature-img" alt="חתימה" style="width: 180px; height: auto;">
+        <div class="signature-date" style="font-size: 14px; font-weight: bold; margin-top: 8px; text-align: center;"></div>
       </div>
       <div>
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"
@@ -948,8 +1015,8 @@
              style="height: 250px; margin-left: 0; margin-right: 16px; display: block;">
       </div>
     </div>
-    <div style="text-align: center; font-size: 14px; color: #64748b; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-      כל הזכויות שמורות @ ירון כיוף - שמאות והערכת נזקי רכב ורכוש 
+    <div style="text-align: center; font-size: 12px; color: #64748b; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-weight: bold;">
+      כל הזכויות שמורות © ירון כיוף - שמאות והערכת נזקי רכב ורכוש
     </div>
   </div>
   
