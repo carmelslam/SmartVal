@@ -1884,30 +1884,40 @@
     
     // Final actions
     window.generateFinalExpertise = function() {
-      const finalBtn = document.getElementById('final-approve-btn');
-      finalBtn.disabled = true;
-      finalBtn.textContent = 'מכין אקספרטיזה...';
-      
-      const payload = {
-        plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
-        validationState,
-        action: 'generate_final_expertise',
-        submittedAt: new Date().toISOString()
-      };
-      
-      sendToWebhook('GENERATE_FINAL_EXPERTISE', payload)
-        .then(() => {
-          showAlert('האקספרטיזה נוצרה בהצלחה!', 'success');
-          setTimeout(() => {
-            window.open('expertise builder.html', '_blank');
-          }, 2000);
-        })
-        .catch(error => {
-          console.error('Error generating expertise:', error);
+      try {
+        const finalBtn = document.getElementById('final-approve-btn');
+        finalBtn.disabled = true;
+        finalBtn.textContent = 'מכין אקספרטיזה...';
+        
+        // Save final validation data with completion timestamp
+        const finalValidationData = {
+          validationState,
+          completedAt: new Date().toISOString(),
+          plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
+          status: 'validation_completed'
+        };
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('validationData', JSON.stringify(finalValidationData));
+        sessionStorage.setItem('helper', JSON.stringify(window.helper || {}));
+        
+        showAlert('האימות הושלם - מעבר לבניית האקספרטיזה', 'success');
+        
+        // Redirect to expertise builder after short delay
+        setTimeout(() => {
+          window.location.href = 'expertise builder.html';
+        }, 1500);
+        
+        console.log('✅ Validation completed, redirecting to expertise builder');
+      } catch (error) {
+        console.error('❌ Error completing validation:', error);
+        const finalBtn = document.getElementById('final-approve-btn');
+        if (finalBtn) {
           finalBtn.disabled = false;
           finalBtn.textContent = '📋 יצירת אקספרטיזה סופית';
-          showAlert('שגיאה ביצירת האקספירטיזה: ' + error.message, 'error');
-        });
+        }
+        showAlert('שגיאה במעבר לבניית האקספרטיזה', 'error');
+      }
     };
     
     window.saveValidationData = function() {
