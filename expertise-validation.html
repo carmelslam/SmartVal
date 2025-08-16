@@ -1061,8 +1061,8 @@
         return center?.Repairs !== undefined;
       });
       
-      // Update damage centers display with assessment data
-      updateDamageCentersDisplay(damageCentersData, centerKeys);
+      // Update damage centers display with assessment data and helper for location names
+      updateDamageCentersDisplay(damageCentersData, centerKeys, helper);
       
       // Calculate and display totals from damage_assessment.totals
       const totals = calculateTotalsFromAssessment(damageAssessment);
@@ -1527,7 +1527,7 @@
     };
     
     // Helper functions
-    function updateDamageCentersDisplay(damageCentersData, centerKeys) {
+    function updateDamageCentersDisplay(damageCentersData, centerKeys, helper) {
       const container = document.getElementById('damage-centers-container');
       if (!container) return;
       
@@ -1547,6 +1547,16 @@
           ${centerKeys.map((centerKey, index) => {
             const center = damageCentersData[centerKey];
             
+            // Extract center index from key (e.g., "Damage center 1" -> 0)
+            const centerMatch = centerKey.match(/Damage center (\d+)/);
+            const centerIndex = centerMatch ? parseInt(centerMatch[1]) - 1 : index;
+            
+            // Get location name from helper.centers
+            let locationName = centerKey; // fallback to original key
+            if (helper?.centers && helper.centers[centerIndex] && helper.centers[centerIndex].location) {
+              locationName = helper.centers[centerIndex].location;
+            }
+            
             // Extract costs from damage assessment data
             const works = center?.Works || 0;
             const parts = center?.Parts || 0;
@@ -1557,7 +1567,7 @@
             return `
               <div style="background: white; padding: 15px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #3b82f6;">
                 <div style="margin-bottom: 8px;">
-                  <strong>${centerKey}:</strong> 
+                  <strong>מוקד נזק: ${locationName}</strong> 
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px; color: #64748b; margin-bottom: 8px;">
                   <div>🔧 עבודות: ₪${works.toLocaleString()}</div>
