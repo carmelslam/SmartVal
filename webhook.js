@@ -15,6 +15,7 @@ export const WEBHOOKS = {
 
 LAUNCH_EXPERTISE: 'https://hook.eu2.make.com/lvlni0nc6dmas8mjdvd39jcbx4rlsxon',
 EXPERTISE_HTML: 'https://hook.eu2.make.com/7e78v6idlf5j4glq7tesn4bidws2rfkh',
+FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp',
   SUBMIT_FINAL_REPORT: 'https://hook.eu2.make.com/humgj4nyifchtnivuatdrh6u9slj8xrh',
   OCR_INVOICES: 'https://hook.eu2.make.com/9xs0avqydq7uyq944189dyt584ccknmh',
   FILL_FINAL_REPORT: 'https://hook.eu2.make.com/bd81gxcw37qavq62avte893czvgjuwr5',
@@ -28,6 +29,7 @@ EXPERTISE_HTML: 'https://hook.eu2.make.com/7e78v6idlf5j4glq7tesn4bidws2rfkh',
 
   // Estimate and Case Management Webhooks
   SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
+  SUBMIT_ESTIMATE_DRAFT:'https://hook.eu2.make.com/g3ew34k2nunnodlp91eb1a0kpntnr5x3'
   
   // Helper export on logout - sends complete helper data with plate_helper_timestamp format
   HELPER_EXPORT: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p',
