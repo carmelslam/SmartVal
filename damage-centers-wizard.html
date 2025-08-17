@@ -1412,7 +1412,7 @@
         
         <!-- ✅ Save Current Damage Center Before Actions -->
         <div style="margin-top: 25px; text-align: center; padding: 15px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; border: 1px solid #10b981;">
-          <button type="button" onclick="saveCurrentStep()" style="
+          <button type="button" id="saveBtn" onclick="saveCurrentStep()" style="
             background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); 
             color: white; 
             border: none; 
@@ -1477,7 +1477,7 @@
       <div class="navigation">
         <button class="nav-button" onclick="window.location.href='selection.html'" style="background-color: #6c757d;">חזור לבחירה</button>
         <button class="nav-button" id="prevBtn" onclick="previousStep()" style="display:none; background-color: #6c757d;">הקודם</button>
-        <button class="nav-button" id="saveBtn" onclick="saveCurrentStep()" style="background-color: #28a745; position: relative; z-index: 10;">שמור נתונים</button>
+        <!-- Save button removed - now positioned in step 7 content -->
         <div id="stepInfo">שלב 1 מתוך 7</div>
         <button class="nav-button" id="nextBtn" onclick="nextStep()">הבא</button>
       </div>
@@ -1988,10 +1988,70 @@
       saveBtn.disabled = true;
       
       try {
-        // ✅ CRITICAL FIX: Call the same logic as saveCurrentStepData() but for save button
-        console.log('🔄 Calling saveCurrentStepData() from save button...');
-        saveCurrentStepData();
-        console.log('✅ saveCurrentStepData() completed from save button');
+        // ✅ STEP 7 SPECIAL HANDLING: In step 7, we need different save logic
+        if (currentStep === 7) {
+          console.log('🔄 Step 7 save - updating existing damage center in summary...');
+          
+          // Get the helper data
+          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          if (!helper.centers || helper.centers.length === 0) {
+            throw new Error('No damage centers found to save');
+          }
+          
+          // For step 7, we save all current data to the most recent damage center
+          const lastCenter = helper.centers[helper.centers.length - 1];
+          
+          // Update with any current form data
+          if (damageCenterData.location) lastCenter.Location = damageCenterData.location;
+          if (damageCenterData.description) lastCenter.Description = damageCenterData.description;
+          
+          // Update with current module data
+          if (moduleData.works && moduleData.works.length > 0) {
+            lastCenter.Works.works = moduleData.works;
+            lastCenter.Works.works_meta.total_cost = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+          }
+          
+          if (moduleData.parts && moduleData.parts.length > 0) {
+            lastCenter.Parts.parts_required = moduleData.parts;
+            lastCenter.Parts.parts_meta.total_cost = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+          }
+          
+          if (moduleData.repairs && moduleData.repairs.length > 0) {
+            lastCenter.Repairs.repairs = moduleData.repairs;
+            lastCenter.Repairs.repairs_meta.total_cost = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+          }
+          
+          // Update summary totals
+          const worksTotal = lastCenter.Works?.works_meta?.total_cost || 0;
+          const partsTotal = lastCenter.Parts?.parts_meta?.total_cost || 0;
+          const repairsTotal = lastCenter.Repairs?.repairs_meta?.total_cost || 0;
+          const subtotal = worksTotal + partsTotal + repairsTotal;
+          const vatAmount = subtotal * 0.17; // 17% VAT
+          const totalWithVat = subtotal + vatAmount;
+          
+          lastCenter.Summary = {
+            "Total works": worksTotal,
+            "Total parts": partsTotal,
+            "Total repairs": repairsTotal,
+            "Total without VAT": subtotal,
+            "Total with VAT": totalWithVat
+          };
+          
+          // Save back to sessionStorage
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Refresh the summary display
+          updateSummary();
+          
+          console.log('✅ Step 7 damage center updated successfully');
+          
+        } else {
+          // For other steps, use the original save logic
+          console.log('🔄 Calling saveCurrentStepData() from save button...');
+          saveCurrentStepData();
+          console.log('✅ saveCurrentStepData() completed from save button');
+        }
         
         // ✅ Show success feedback
         saveBtn.textContent = '✅ נשמר';
@@ -1999,7 +2059,7 @@
         
         setTimeout(() => {
           saveBtn.textContent = originalText;
-          saveBtn.style.background = '#28a745';
+          saveBtn.style.background = '#16a34a';
           saveBtn.disabled = false;
         }, 2000);
         
@@ -2010,7 +2070,7 @@
         
         setTimeout(() => {
           saveBtn.textContent = originalText;
-          saveBtn.style.background = '#28a745';
+          saveBtn.style.background = '#16a34a';
           saveBtn.disabled = false;
         }, 3000);
       }
@@ -2353,13 +2413,13 @@
         prevBtn.style.display = 'inline-block';
       }
       
-      // Update next button text for final step
+      // Hide next button in final step since we have action buttons in step 7
       if (currentStep === totalSteps) {
-        nextBtn.textContent = 'סיום ומעבר לסיכום אקספרטיזה';
-        nextBtn.style.background = '#059669'; // Green for completion
+        nextBtn.style.display = 'none';
       } else {
         nextBtn.textContent = 'הבא';
         nextBtn.style.background = '#3b82f6'; // Default blue
+        nextBtn.style.display = 'inline-block';
       }
     }
     
