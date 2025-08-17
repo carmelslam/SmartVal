@@ -871,27 +871,42 @@
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           console.log('✅ Helper data loaded, size:', JSON.stringify(currentHelper).length);
           
-          console.log('⏱️ Creating complete payload...');
-          // Send complete helper data
+          console.log('⏱️ Creating optimized payload...');
+          
+          // Create optimized payload without duplicates
           const payload = {
-            // Core fields
-            plate: currentHelper.vehicle?.plate || currentHelper.car_details?.plate || 'test-plate',
+            // Core webhook fields
+            plate: currentHelper.car_details?.plate || currentHelper.vehicle?.plate || currentHelper.meta?.plate || 'unknown',
             action: 'LAUNCH_EXPERTISE',
             submittedAt: new Date().toISOString(),
             
-            // Complete helper object
-            helper: currentHelper,
-            
-            // Individual sections for direct access
-            vehicle: currentHelper.vehicle || currentHelper.car_details || {},
+            // PROTECTED SECTIONS - Send as-is (source of truth)
+            car_details: currentHelper.car_details || {},
+            case_info: currentHelper.case_info || {},
             centers: currentHelper.centers || [],
+            current_damage_center: currentHelper.current_damage_center || {},
             damage_assessment: currentHelper.damage_assessment || {},
-            calculations: currentHelper.calculations || {},
+            damage_info: currentHelper.damage_info || {},
             expertise: currentHelper.expertise || {},
-            financials: currentHelper.financials || {},
-            valuation: currentHelper.valuation || {},
+            general: currentHelper.general || {},
+            levisummary: currentHelper.levisummary || {},
+            meta: currentHelper.meta || {},
+            parts_search: currentHelper.parts_search || {},
+            raw_webhook_data: currentHelper.raw_webhook_data || {},
             stakeholders: currentHelper.stakeholders || {},
-            case_info: currentHelper.case_info || {}
+            valuation: currentHelper.valuation || {},
+            vehicle: currentHelper.vehicle || {},
+            
+            // OTHER SECTIONS - Evaluate for importance
+            calculations: currentHelper.calculations || {},
+            documents: currentHelper.documents || {},
+            estimate: currentHelper.estimate || {},
+            final_report: currentHelper.final_report || {},
+            levi_data: currentHelper.levi_data || {},
+            
+            // SKIP DUPLICATE/REDUNDANT SECTIONS
+            // Skip: system sections, duplicated vehicle data, technical fields
+            // Note: Complete helper object NOT included to avoid duplicates
           };
           
           console.log('✅ Payload created:', payload);
