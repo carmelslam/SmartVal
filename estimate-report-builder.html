@@ -562,6 +562,7 @@
       }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
 </head>
 <body>
@@ -2068,18 +2069,130 @@
       testPrintPreview();
     };
     
+    // Smart validation dependencies based on access mode
+    function checkAccessMode() {
+      const currentUrl = window.location.href;
+      const referrer = document.referrer;
+      const workflowMode = sessionStorage.getItem('workflowMode');
+      
+      // If accessed from estimate workflow, require validation
+      if (referrer.includes('estimate-') || workflowMode === 'estimate_builder') {
+        return 'builder'; // Requires validation
+      }
+      
+      // If accessed from expertise draft buttons, show read-only
+      if (referrer.includes('expertise') || workflowMode === 'draft_view') {
+        return 'draft'; // No validation required, read-only with watermark
+      }
+      
+      // Default to draft mode for safety
+      return 'draft';
+    }
+    
+    // Real-time helper data watcher
+    function startEstimateHelperWatcher() {
+      let lastHelperData = sessionStorage.getItem('helper') || '{}';
+      
+      setInterval(() => {
+        try {
+          const currentHelperData = sessionStorage.getItem('helper') || '{}';
+          
+          if (currentHelperData !== lastHelperData) {
+            console.log('🔄 Helper data changed, updating estimate report...');
+            lastHelperData = currentHelperData;
+            
+            // Only auto-update if in draft mode
+            const accessMode = checkAccessMode();
+            if (accessMode === 'draft') {
+              injectEstimateHTML();
+            }
+          }
+        } catch (error) {
+          console.warn('Error watching helper data:', error);
+        }
+      }, 1000);
+      
+      // Listen for helper update events
+      window.addEventListener('helperUpdated', () => {
+        console.log('📡 Helper update event received, refreshing estimate report');
+        const accessMode = checkAccessMode();
+        if (accessMode === 'draft') {
+          injectEstimateHTML();
+        }
+      });
+    }
+    
+    // Add draft watermark
+    function addDraftWatermark() {
+      const accessMode = checkAccessMode();
+      if (accessMode === 'draft') {
+        const watermark = document.createElement('div');
+        watermark.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          font-size: 6rem;
+          color: rgba(220, 38, 38, 0.1);
+          z-index: 1000;
+          pointer-events: none;
+          font-weight: bold;
+          white-space: nowrap;
+        `;
+        watermark.textContent = 'טיוטה';
+        document.body.appendChild(watermark);
+        
+        // Also disable edit buttons in draft mode
+        const buttons = document.querySelectorAll('.control-buttons button');
+        buttons.forEach(button => {
+          if (button.textContent.includes('ערוך') || button.textContent.includes('הפק')) {
+            button.style.display = 'none';
+          }
+        });
+      }
+    }
+    
     // Initialize on page load
     window.addEventListener('DOMContentLoaded', () => {
       console.log('🔄 Estimate Report Builder loaded and ready');
       
-      // Run validation on load
-      setTimeout(() => {
-        const validation = validateEstimateData();
-        if (validation.errors.length > 0) {
-          console.warn('⚠️ Data validation errors found:', validation.errors);
+      const accessMode = checkAccessMode();
+      console.log('🔍 Access mode detected:', accessMode);
+      
+      if (accessMode === 'builder') {
+        // Builder mode: require validation
+        const validationCompleted = sessionStorage.getItem('estimateValidationCompleted');
+        if (!validationCompleted) {
+          console.warn('⚠️ Validation required for builder mode, redirecting...');
+          alert('יש להשלים תחילה את תהליך האימות');
+          window.location.href = 'estimate-validation.html';
+          return;
         }
-        if (validation.warnings.length > 0) {
-          console.warn('⚠️ Data validation warnings:', validation.warnings);
+      }
+      
+      // Add draft watermark if in draft mode
+      addDraftWatermark();
+      
+      // Start real-time helper watcher
+      startEstimateHelperWatcher();
+      
+      // Run validation and injection on load
+      setTimeout(() => {
+        if (accessMode === 'builder') {
+          const validation = validateEstimateData();
+          if (validation.errors.length > 0) {
+            console.warn('⚠️ Data validation errors found:', validation.errors);
+          }
+          if (validation.warnings.length > 0) {
+            console.warn('⚠️ Data validation warnings:', validation.warnings);
+          }
+          
+          // Always inject in builder mode after validation
+          injectEstimateHTML();
+        } else {
+          // Draft mode: always show content without strict validation
+          console.log('📄 Draft mode: showing content without validation');
+          injectEstimateHTML();
         }
       }, 1000);
     });

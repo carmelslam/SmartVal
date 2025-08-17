@@ -79,8 +79,37 @@ function getReplacementMap() {
   };
 }
 
-// --- Render Handlerbar-like Tokens ---
-import { renderHTMLBlock, sanitizeHTML } from "./render-html-block.js";
+// --- Handlebars Helpers ---
+function setupHandlebarsHelpers() {
+  if (typeof Handlebars !== 'undefined') {
+    // Money formatter helper
+    Handlebars.registerHelper('money', function(value) {
+      const num = parseFloat(value) || 0;
+      return new Handlebars.SafeString(`${num.toLocaleString('he-IL')} ₪`);
+    });
+    
+    // Percent formatter helper
+    Handlebars.registerHelper('percent', function(value) {
+      const num = parseFloat(value) || 0;
+      return new Handlebars.SafeString(`${num}%`);
+    });
+    
+    // Lookup helper for vault texts
+    Handlebars.registerHelper('lookup', function(obj, key, options) {
+      return obj && obj[key] ? obj[key] : '';
+    });
+    
+    // Each helper with greater than check
+    Handlebars.registerHelper('gt', function(a, b) {
+      return a > b;
+    });
+    
+    // Length helper
+    Handlebars.registerHelper('length', function(arr) {
+      return Array.isArray(arr) ? arr.length : 0;
+    });
+  }
+}
 
 // --- Watermark Handling ---
 function applyDraftWatermark(html) {
@@ -95,12 +124,87 @@ function getReportTitle() {
   return vault[reportType]?.title || 'חוות דעת';
 }
 
+// --- Transform Helper Data for Template ---
+function transformHelperDataForTemplate(rawHelper) {
+  // Ensure basic structure exists
+  const transformed = {
+    vehicle: rawHelper.vehicle || rawHelper.car_details || {},
+    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
+    meta: rawHelper.meta || {},
+    damage: rawHelper.damage || rawHelper.damage_assessment || {},
+    calculations: rawHelper.calculations || rawHelper.financials?.calculations || {},
+    depreciation: rawHelper.depreciation || rawHelper.valuation?.depreciation || {},
+    levi: rawHelper.levi || rawHelper.valuation || {},
+    expertise: rawHelper.expertise || {},
+    damage_assessment: rawHelper.damage_assessment || {}
+  };
+  
+  // Fill missing meta fields from other sources
+  if (!transformed.meta.client_name) {
+    transformed.meta.client_name = rawHelper.stakeholders?.owner?.name || 
+                                 rawHelper.client?.name || 
+                                 rawHelper.car_details?.owner || '';
+  }
+  
+  if (!transformed.meta.address) {
+    transformed.meta.address = rawHelper.stakeholders?.owner?.address || 
+                              rawHelper.client?.address || '';
+  }
+  
+  if (!transformed.meta.phone_number) {
+    transformed.meta.phone_number = rawHelper.stakeholders?.owner?.phone || 
+                                   rawHelper.client?.phone || '';
+  }
+  
+  if (!transformed.meta.plate) {
+    transformed.meta.plate = rawHelper.vehicle?.plate || 
+                            rawHelper.car_details?.plate || 
+                            rawHelper.case_info?.plate || '';
+  }
+  
+  if (!transformed.meta.inspection_date) {
+    transformed.meta.inspection_date = rawHelper.case_info?.inspection_date || 
+                                      new Date().toLocaleDateString('he-IL');
+  }
+  
+  if (!transformed.meta.location) {
+    transformed.meta.location = rawHelper.case_info?.inspection_location || '';
+  }
+  
+  if (!transformed.meta.damage) {
+    transformed.meta.damage = rawHelper.case_info?.damage_type || 'תאונתי';
+  }
+  
+  if (!transformed.meta.today) {
+    transformed.meta.today = new Date().toLocaleDateString('he-IL');
+  }
+  
+  if (!transformed.meta.case_id) {
+    transformed.meta.case_id = rawHelper.case_info?.case_id || 
+                              `YC-${transformed.meta.plate}-2025`;
+  }
+  
+  if (!transformed.meta.report_type_display) {
+    transformed.meta.report_type_display = 'חוות דעת שמאי פרטית';
+  }
+  
+  // Ensure damage description exists
+  if (!transformed.damage.description) {
+    transformed.damage.description = 'בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים הדורשים תיקון על פי הפירוט להלן.';
+  }
+  
+  return transformed;
+}
+
 // --- Inject Final Report ---
 function injectReportHTML() {
   const container = document.getElementById("report-output");
   if (!container) return;
 
-  if (!helper || !helper.meta) {
+  // Setup Handlebars helpers
+  setupHandlebarsHelpers();
+
+  if (!helper) {
     container.innerHTML = `
       <div style="border: 2px solid red; padding: 20px; font-size: 18px; color: red; text-align: center;">
         ⚠️ אין נתונים זמינים להצגת הדו"ח.<br>
@@ -110,14 +214,66 @@ function injectReportHTML() {
     return;
   }
 
-  const htmlTemplate = document.getElementById("template-html").innerHTML;
-  const vaultBlocks = buildVaultBlocks();
-  const feeSummary = buildFeeSummary();
-  const map = { helper, vault: vaultBlocks, meta: helper.meta, title: getReportTitle(), fees: feeSummary };
+  // Check if we have minimal required data
+  if (!helper.vehicle && !helper.centers && !helper.meta && !helper.car_details) {
+    container.innerHTML = `
+      <div style="border: 2px solid orange; padding: 20px; font-size: 16px; color: orange; text-align: center;">
+        📋 נתונים אלו ימולאו לאחר סיום בניית חוות הדעת<br>
+        <small>אנא השלם את תהליך האקספרטיזה כדי לראות את הדו"ח המלא</small>
+      </div>
+    `;
+    return;
+  }
 
-  const rendered = renderHTMLBlock(htmlTemplate, map);
-  const safeHTML = sanitizeHTML(rendered);
-  container.innerHTML = applyDraftWatermark(safeHTML);
+  try {
+    const templateElement = document.getElementById("template-html");
+    if (!templateElement) {
+      container.innerHTML = '<div style="color: red;">Template not found</div>';
+      return;
+    }
+
+    const htmlTemplate = templateElement.innerHTML;
+    
+    // Transform helper data for template compatibility
+    const transformedHelper = transformHelperDataForTemplate(helper);
+    
+    // Build template data
+    const vaultBlocks = buildVaultBlocks();
+    const feeSummary = buildFeeSummary();
+    const templateData = { 
+      helper: transformedHelper, 
+      vault: vaultBlocks, 
+      meta: transformedHelper.meta, 
+      title: getReportTitle(), 
+      fees: feeSummary 
+    };
+
+    console.log('📊 Template data prepared:', templateData);
+
+    // Use Handlebars to compile and render
+    if (typeof Handlebars !== 'undefined') {
+      const template = Handlebars.compile(htmlTemplate);
+      const rendered = template(templateData);
+      container.innerHTML = applyDraftWatermark(rendered);
+    } else {
+      // Fallback to simple replacement if Handlebars failed to load
+      container.innerHTML = `
+        <div style="border: 2px solid red; padding: 20px; text-align: center;">
+          ❌ Handlebars library failed to load<br>
+          <small>Please refresh the page</small>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error rendering final report:', error);
+    console.error('Helper data:', helper);
+    container.innerHTML = `
+      <div style="border: 2px solid red; padding: 20px; color: red; text-align: center;">
+        ❌ שגיאה בהצגת הדו"ח: ${error.message}<br>
+        <small>פרטים נוספים בקונסול</small>
+      </div>
+    `;
+  }
 }
 
 
@@ -152,10 +308,52 @@ function printReport() {
   window.print();
 }
 
+// --- Real-time Helper Data Binding ---
+function startHelperWatcher() {
+  // Watch for helper changes in sessionStorage
+  let lastHelperData = JSON.stringify(helper);
+  
+  setInterval(() => {
+    try {
+      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const currentHelperString = JSON.stringify(currentHelper);
+      
+      if (currentHelperString !== lastHelperData) {
+        console.log('🔄 Helper data changed, updating final report...');
+        helper = currentHelper;
+        lastHelperData = currentHelperString;
+        injectReportHTML();
+      }
+    } catch (error) {
+      console.warn('Error watching helper data:', error);
+    }
+  }, 1000); // Check every second
+  
+  // Also listen for helper update events
+  window.addEventListener('helperUpdated', () => {
+    console.log('📡 Helper update event received, refreshing final report');
+    helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    injectReportHTML();
+  });
+}
+
+// --- Initialize on page load ---
+function initializeFinalReport() {
+  // Load current helper data
+  helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  
+  // Start watching for changes
+  startHelperWatcher();
+  
+  // Initial render
+  injectReportHTML();
+}
+
 window.finalReport = {
   inject: injectReportHTML,
   export: exportFinalReport,
-  print: printReport
+  print: printReport,
+  init: initializeFinalReport
 };
 
 console.log('✅ final_report.js loaded with session logic, fees, watermark, and vault rendering');
