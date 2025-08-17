@@ -5455,7 +5455,10 @@
       try {
         // Use the new helper API if available
         if (typeof window.deleteDamageCenter === 'function') {
+          console.log('🔧 Attempting to delete damage center using helper API:', selectedValue);
           const success = window.deleteDamageCenter(selectedValue);
+          console.log('🔧 Helper API delete result:', success);
+          
           if (success) {
             console.log('✅ Damage center deleted successfully using helper API');
             
@@ -5487,9 +5490,11 @@
             
             return;
           } else {
-            alert('שגיאה במחיקת מוקד הנזק');
-            return;
+            console.log('❌ Helper API delete failed, falling back to legacy method');
+            // Don't return here - fall through to legacy method
           }
+        } else {
+          console.log('🔧 Helper API deleteDamageCenter not available, using legacy method');
         }
         
         // Fallback to legacy deletion method
@@ -5795,7 +5800,14 @@
         
         if (typeof window.getDamageCenterById === 'function') {
           centerToEdit = window.getDamageCenterById(selectedValue);
-          console.log('✅ Found damage center using helper API:', centerToEdit);
+          console.log('✅ Helper API result for damage center:', centerToEdit);
+          
+          // ✅ CRITICAL FIX: Check if helper API returned null
+          if (!centerToEdit) {
+            console.log('❌ Helper API returned null for selectedValue:', selectedValue);
+            alert('מוקד הנזק הנבחר לא נמצא באמצעות Helper API');
+            return;
+          }
         } else {
           // Fallback to legacy method
           console.log('🔍 Using fallback method - calling getDamageCentersFromHelper');
@@ -5833,6 +5845,13 @@
             alert('מוקד הנזק הנבחר לא נמצא');
             return;
           }
+        }
+        
+        // ✅ ADDITIONAL SAFETY CHECK: Final validation before using centerToEdit
+        if (!centerToEdit) {
+          console.error('❌ CRITICAL: centerToEdit is null after all search methods');
+          alert('שגיאה: לא ניתן למצוא את מוקד הנזק הנבחר');
+          return;
         }
         
         // Load center data into wizard

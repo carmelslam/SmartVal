@@ -3855,7 +3855,7 @@ Confirm no data flows or event handlers changed by comparing saved state before/
 **html background setup**
 the pdf creation from teh html is handled via a server hetzner
 the server ip is 157.90.125.220
-we need to imbed teh background in teh html 
+we need to embed teh background in teh html 
 Do exactly this in each HTML. Two small edits.
 1) Paste into <head> (inline CSS)
 <meta charset="utf-8">
@@ -3880,3 +3880,5 @@ Either wrap once or add the class to your top wrapper.
 </body>
 That’s it. No other setup.
 To switch backgrounds per template, change the src filename (e.g., bg-invoice.png).
+
+*end of background embed*
