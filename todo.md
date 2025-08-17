@@ -3855,7 +3855,7 @@ Confirm no data flows or event handlers changed by comparing saved state before/
 **html background setup**
 the pdf creation from the html is handled via a server hetzner
 the server ip is 157.90.125.220
-we need to embed the background in the html 
+we need to embed a background in the html so it shows on print
 
 chatgpt explinations what needs to be done :
 Do exactly this in each HTML. Two small edits.
