@@ -3885,3 +3885,25 @@ That’s it. No other setup.
 To switch backgrounds per template, change the src filename (e.g., bg-invoice.png).
 
 *end of background embed*
+
+**draft reprots**
+
+Final report and estimate report drafts :
+1. Parallel to the expertise report population the system will also populate the following reports builder:( those are the report builders not the builders pages- not to confuse) 
+    1. The final report builder : final-report-template-builder.html
+    2. The estimate report builder : estimate-report-builder.html
+The expertise builder will have a new button : צפייה בחוות דעת טיוטה and צפייה באומדן טיוטה 
+The final report builder and the estimate report builder html templates both need to match the Same damage centers structure and tables we modified in the expertise report. 
+What happens when the user approves the expertise report : 
+        1. Build a final report and estimate report drafts based on the report builders of each workflow
+        2. The templates are  in the final-report-template-builder.html and estimate-report-builder.html
+        3. The draft needs to have a visible watermark -טיוטה . 
+        the water mark will be deleted once the actual builder module of that specific report is filled and the report itself is autherized by user before sending to make.com
+        4. The drafts will be sent as html with the expertise export - that means the export expertise button needs to send 2 files : expertise and draft 
+        5. Remap the final report builder html and the estimate report builder . The final report builder :  in the deprecation sections and summary - since it empty the place holder needs to be : נתונים אלו ימולאו לאחר סיום בניית חוות הדעת ( or something similar).  explanation: the final report and the estimate report both rely on the expertise workflow, all the data accumulated in the expertise work flow will auto populate those reports with what data is available ,HOWEVER, each report on those two has its own workflow and builder, the purpose of the specific builder are 3:
+            1. Validate data
+            2. Fill unique report data
+            3. Update data
+        6. Once the builder is finalized in each report workflow, data will be added to the helper and fills the report, any updates of data in those builders overrides the helper , new added fields add an entry to the helper in the specific helper section and subsection.
+        7. Then a final version of each report : final report and estimate will be generated 
+        8. All three reports sent to make will be converted to pdf and can be called for display in the builders with a special button ( the button exists the function not so sure works ) 
