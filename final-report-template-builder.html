@@ -100,10 +100,6 @@
   <div class="page">
   <div id="report-output"></div>
 
-  <div class="buttons">
-    <button onclick="finalReport.print()">🖨️ הדפס</button>
-    <button onclick="finalReport.export()">📤 שלח דו"ח</button>
-  </div>
 
   <template id="template-html">
    
@@ -243,16 +239,73 @@
 
   <!-- Section 4 -->
   <div class="section">
-    {{#each helper.damage_blocks}}
+    {{#each helper.centers}}
       <div class="car-details">
-        <div class="car-details-title">מוקד {{this.label}}</div>
-        {{{this.table}}}
+        <div class="car-details-title">מוקד הנזק מספר {{this.['Damage center Number']}} - {{this.Location}}</div>
+        
+        {{#if this.Works.works}}
+        <h4>עבודות</h4>
+        <table class="car-details-table">
+          <thead>
+            <tr><th>מס"ד</th><th>סוג עבודה</th><th>עלות משוערת</th><th>תיאור</th></tr>
+          </thead>
+          <tbody>
+            {{#each this.Works.works}}
+            <tr>
+              <td>{{@index}}</td>
+              <td>{{this.category}}</td>
+              <td>{{this.cost}} ₪</td>
+              <td>{{this.comments}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        {{/if}}
+        
+        {{#if this.Parts.parts_required}}
+        <h4>חלקים</h4>
+        <table class="car-details-table">
+          <thead>
+            <tr><th>מס"ד</th><th>שם החלק</th><th>עלות משוערת</th><th>מקור</th><th>תיאור</th></tr>
+          </thead>
+          <tbody>
+            {{#each this.Parts.parts_required}}
+            <tr>
+              <td>{{@index}}</td>
+              <td>{{this.name}}</td>
+              <td>{{this.price}} ₪</td>
+              <td>{{this.source}}</td>
+              <td>{{this.description}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        {{/if}}
+        
+        {{#if this.Repairs.repairs}}
+        <h4>תיקונים</h4>
+        <table class="car-details-table">
+          <thead>
+            <tr><th>מס"ד</th><th>שם התיקון</th><th>עלות משוערת</th><th>תיאור עלות</th></tr>
+          </thead>
+          <tbody>
+            {{#each this.Repairs.repairs}}
+            <tr>
+              <td>{{@index}}</td>
+              <td>{{this.name}}</td>
+              <td>{{this.cost}} ₪</td>
+              <td>{{this.description}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        {{/if}}
       </div>
     {{/each}}
   </div>
 
  
-  {{#if (gt (length helper.damage_blocks) 1)}}
+  {{#if (gt (length helper.centers) 1)}}
   <div class="section">
     <div class="car-details">
       <div class="car-details-title">חלוקה למוקדים</div>
@@ -264,15 +317,15 @@
           </tr>
         </thead>
         <tbody>
-          {{#each helper.damage_summary}}
+          {{#each helper.centers}}
           <tr>
-            <td>{{this.label}}</td>
-            <td>{{money this.total}}</td>
+            <td>מוקד {{this.['Damage center Number']}} - {{this.Location}}</td>
+            <td>{{money this.Summary.['Total with VAT']}}</td>
           </tr>
           {{/each}}
           <tr>
             <td><strong>סה"כ כלל המוקדים כולל מע"מ</strong></td>
-            <td><strong>{{money helper.damage_total}}</strong></td>
+            <td><strong>{{money helper.damage_assessment.totals.['Total with VAT']}}</strong></td>
           </tr>
         </tbody>
       </table>
@@ -318,12 +371,13 @@
       </p>
       <table class="car-details-table">
         <tr><th>מוקד נזק</th><th>עבודות / תיקונים</th></tr>
-        {{#each helper.damage_blocks}}
+        {{#each helper.centers}}
           <tr>
-            <td>{{this.center}}</td>
+            <td>מוקד {{this.['Damage center Number']}} - {{this.Location}}</td>
             <td>
-              {{#each this.repairs}}{{this}}, {{/each}}
-              {{#each this.works}}{{this}}, {{/each}}
+              {{#each this.Works.works}}{{this.category}}, {{/each}}
+              {{#each this.Parts.parts_required}}{{this.name}}, {{/each}}
+              {{#each this.Repairs.repairs}}{{this.name}}, {{/each}}
             </td>
           </tr>
         {{/each}}
