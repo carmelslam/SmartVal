@@ -5799,17 +5799,50 @@
         let centerToEdit = null;
         
         if (typeof window.getDamageCenterById === 'function') {
+          // First try with the selected value (damage center number)
           centerToEdit = window.getDamageCenterById(selectedValue);
-          console.log('✅ Helper API result for damage center:', centerToEdit);
+          console.log('🔍 Helper API result for damage center number:', selectedValue, '->', centerToEdit);
           
-          // ✅ CRITICAL FIX: Check if helper API returned null
+          // ✅ NEW: If not found by number, try to find by actual ID
           if (!centerToEdit) {
-            console.log('❌ Helper API returned null for selectedValue:', selectedValue);
-            alert('מוקד הנזק הנבחר לא נמצא באמצעות Helper API');
-            return;
+            console.log('🔍 Helper API returned null for number, trying to find by actual ID...');
+            
+            // Get all centers and find the one with matching number, then use its actual ID
+            const allCenters = getDamageCentersFromHelper();
+            console.log('🔍 All available centers for ID lookup:', allCenters);
+            
+            const centerWithMatchingNumber = allCenters.find(center => {
+              const centerNum = center["Damage center Number"] || center.number || center.center_number;
+              const match = String(centerNum) === String(selectedValue);
+              console.log('🔍 Checking center for ID lookup:', {
+                centerNum,
+                selectedValue,
+                actualId: center.Id || center.id,
+                match
+              });
+              return match;
+            });
+            
+            if (centerWithMatchingNumber) {
+              const actualId = centerWithMatchingNumber.Id || centerWithMatchingNumber.id || centerWithMatchingNumber.center_id;
+              console.log('🔍 Found center with matching number, trying helper API with actual ID:', actualId);
+              
+              if (actualId) {
+                centerToEdit = window.getDamageCenterById(actualId);
+                console.log('🔍 Helper API result with actual ID:', actualId, '->', centerToEdit);
+              }
+            }
           }
-        } else {
-          // Fallback to legacy method
+          
+          // ✅ IMPROVED: Only show error if still null after trying both approaches
+          if (!centerToEdit) {
+            console.log('❌ Helper API failed with both number and ID approaches, falling back to legacy method');
+            // Fall through to legacy method instead of returning
+          }
+        }
+        
+        // ✅ If helper API didn't work, use fallback method 
+        if (!centerToEdit) {
           console.log('🔍 Using fallback method - calling getDamageCentersFromHelper');
           let existingCenters = [];
           try {
