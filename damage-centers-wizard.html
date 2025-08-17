@@ -5040,9 +5040,14 @@
               const currentCenter = helper.damage_assessment?.centers?.find(center => 
                 center.id === currentCenterId || center.current_center_id === currentCenterId
               );
-              contextData.selectedParts = currentCenter?.parts_items || moduleData.parts || [];
+              // ✅ FIX: Filter out empty/invalid parts to prevent auto-adding empty fields
+              const rawParts = currentCenter?.parts_items || moduleData.parts || [];
+              contextData.selectedParts = rawParts.filter(part => 
+                part && 
+                (part.name || part.description || part.part_number || part.price > 0)
+              );
               contextData.partsBank = window.PARTS_BANK || {};
-              console.log(`🎯 Sending ${contextData.selectedParts.length} parts for current center ${currentCenterId} (edit mode: ${!!damageCenterData.mode})`);
+              console.log(`🎯 Sending ${contextData.selectedParts.length} valid parts for current center ${currentCenterId} (edit mode: ${!!damageCenterData.mode})`);
               break;
               
             case 'work':
@@ -6241,9 +6246,17 @@
           }, 500);
         }
         
-        // Recalculate wizard totals
+        // Force display of totals (don't recalculate, just show existing)
         setTimeout(() => {
-          calculateTotals();
+          const workTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+          updateModuleSubtotals(workTotal, null, null);
+          
+          // Show the subtotal display
+          const worksSubtotal = document.getElementById('workSubtotal');
+          if (worksSubtotal && workTotal > 0) {
+            worksSubtotal.style.display = 'block';
+          }
+          
           showUserNotification('מודול עבודות עודכן!', 'success', 2000);
         }, 1000);
         
@@ -6309,9 +6322,17 @@
           }, 500);
         }
         
-        // Recalculate wizard totals
+        // Force display of totals (don't recalculate, just show existing)
         setTimeout(() => {
-          calculateTotals();
+          const partsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+          updateModuleSubtotals(null, partsTotal, null);
+          
+          // Show the subtotal display
+          const partsSubtotal = document.getElementById('partsSubtotal');
+          if (partsSubtotal && partsTotal > 0) {
+            partsSubtotal.style.display = 'block';
+          }
+          
           showUserNotification('בחירת חלפים עודכנה!', 'success', 2000);
         }, 1000);
         
@@ -6346,9 +6367,17 @@
           }, 500);
         }
         
-        // Recalculate wizard totals
+        // Force display of totals (don't recalculate, just show existing)
         setTimeout(() => {
-          calculateTotals();
+          const repairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+          updateModuleSubtotals(null, null, repairsTotal);
+          
+          // Show the subtotal display
+          const repairsSubtotal = document.getElementById('repairsSubtotal');
+          if (repairsSubtotal && repairsTotal > 0) {
+            repairsSubtotal.style.display = 'block';
+          }
+          
           showUserNotification('מודול תיקונים עודכן!', 'success', 2000);
         }, 1000);
         
