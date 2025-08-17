@@ -4819,8 +4819,13 @@
               
             case 'parts':
               contextData.searchResults = helper.parts_search?.current_session?.results || [];
-              contextData.selectedParts = helper.parts_search?.selected_parts || [];
+              // ✅ FIX: Only send parts from CURRENT damage center, not all centers
+              const currentCenter = helper.damage_assessment?.centers?.find(center => 
+                center.id === currentCenterId || center.current_center_id === currentCenterId
+              );
+              contextData.selectedParts = currentCenter?.parts_items || [];
               contextData.partsBank = window.PARTS_BANK || {};
+              console.log(`🎯 Sending ${contextData.selectedParts.length} parts for current center ${currentCenterId} (not global selected_parts)`);
               break;
               
             case 'work':
