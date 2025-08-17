@@ -162,11 +162,11 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
     
     // Calculations - get from centers and damage_assessment totals
-    'helper.calculations.total_damage': getValue(rawHelper, ['damage_assessment.totals.Total with VAT', 'calculations.total_damage'], 0),
-    'helper.calculations.vehicle_value_gross': getValue(rawHelper, ['levisummary.final_price', 'valuation.final_price'], 0),
-    'helper.calculations.damage_percent': getValue(rawHelper, ['calculations.damage_percent'], '0%'),
-    'helper.calculations.market_value': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
-    'helper.calculations.total_compensation': getValue(rawHelper, ['calculations.total_compensation'], 0),
+    'helper.calculations.total_damage': rawHelper.damage_assessment?.totals?.['Total with VAT'] || rawHelper.calculations?.total_damage || 0,
+    'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.damage_percent': rawHelper.calculations?.damage_percent || '0%',
+    'helper.calculations.market_value': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
     
     // Levi/Valuation - get from levisummary  
     'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
