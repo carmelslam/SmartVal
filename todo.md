@@ -3853,9 +3853,11 @@ Confirm no data flows or event handlers changed by comparing saved state before/
  *end of floating screen enhancments*
 
 **html background setup**
-the pdf creation from teh html is handled via a server hetzner
+the pdf creation from the html is handled via a server hetzner
 the server ip is 157.90.125.220
-we need to embed teh background in teh html 
+we need to embed the background in the html 
+
+chatgpt explinations what needs to be done :
 Do exactly this in each HTML. Two small edits.
 1) Paste into <head> (inline CSS)
 <meta charset="utf-8">

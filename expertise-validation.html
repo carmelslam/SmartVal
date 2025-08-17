@@ -1047,48 +1047,47 @@
     async function validateDamageSection() {
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get damage centers from damage_assessment section
+      // ✅ FIX: Get damage centers from the actual centers array instead of stale summary
+      const actualCenters = helper?.centers || [];
+      const damageCount = actualCenters.length;
+      
+      console.log('✅ Validating damage centers from actual centers array:', actualCenters);
+      console.log(`✅ Found ${damageCount} actual damage centers`);
+      
+      // Also get damage_centers_summary for compatibility (for totals calculation)
       const damageAssessment = helper?.damage_assessment || {};
       const damageCentersData = damageAssessment?.damage_centers_summary || {};
       
-      console.log('Validating damage assessment:', damageAssessment);
-      console.log('Damage centers data:', damageCentersData);
-      
-      
-      // Count actual damage centers dynamically
+      // Count actual damage centers dynamically from ACTUAL centers, not summary
       const centerKeys = Object.keys(damageCentersData).filter(key => key.startsWith('Damage center'));
-      const damageCount = centerKeys.length;
+      console.log(`📊 Summary has ${centerKeys.length} entries, but actual centers: ${damageCount}`);
       
       console.log(`Found ${damageCount} damage centers:`, centerKeys);
       
       const hasDamageCenters = damageCount > 0;
       
-      // Check for valid structure in damage assessment
-      const hasValidStructure = hasDamageCenters && centerKeys.some(key => {
-        const center = damageCentersData[key];
+      // ✅ FIX: Check for valid structure using actual centers
+      const hasValidStructure = hasDamageCenters && actualCenters.some(center => {
         return center && (center.Works || center.Parts || center.Repairs);
       });
       
-      // Check for works data
-      const hasWorks = hasDamageCenters && centerKeys.some(key => {
-        const center = damageCentersData[key];
+      // ✅ FIX: Check for works data using actual centers
+      const hasWorks = hasDamageCenters && actualCenters.some(center => {
         return center?.Works !== undefined;
       });
       
-      // Check for parts data  
-      const hasParts = hasDamageCenters && centerKeys.some(key => {
-        const center = damageCentersData[key];
+      // ✅ FIX: Check for parts data using actual centers
+      const hasParts = hasDamageCenters && actualCenters.some(center => {
         return center?.Parts !== undefined;
       });
       
-      // Check for repairs data
-      const hasRepairs = hasDamageCenters && centerKeys.some(key => {
-        const center = damageCentersData[key];
+      // ✅ FIX: Check for repairs data using actual centers
+      const hasRepairs = hasDamageCenters && actualCenters.some(center => {
         return center?.Repairs !== undefined;
       });
       
-      // Update damage centers display with assessment data and helper for location names
-      updateDamageCentersDisplay(damageCentersData, centerKeys, helper);
+      // ✅ FIX: Update damage centers display using actual centers, not stale summary
+      updateDamageCentersDisplay(actualCenters, helper);
       
       // Calculate and display totals from damage_assessment.totals
       const totals = calculateTotalsFromAssessment(damageAssessment);
@@ -1571,11 +1570,11 @@
     };
     
     // Helper functions
-    function updateDamageCentersDisplay(damageCentersData, centerKeys, helper) {
+    function updateDamageCentersDisplay(actualCenters, helper) {
       const container = document.getElementById('damage-centers-container');
       if (!container) return;
       
-      if (!centerKeys || centerKeys.length === 0) {
+      if (!actualCenters || actualCenters.length === 0) {
         container.innerHTML = `
           <div style="margin: 20px 0; padding: 15px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
             <h4 style="color: #dc2626; margin-bottom: 10px;">⚠️ לא נמצאו מוקדי נזק</h4>
@@ -1587,27 +1586,22 @@
       
       container.innerHTML = `
         <div style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 8px;">
-          <h4 style="color: #1e3a8a; margin-bottom: 10px;">מוקדי הנזק (${centerKeys.length})</h4>
-          ${centerKeys.map((centerKey, index) => {
-            const center = damageCentersData[centerKey];
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">מוקדי הנזק (${actualCenters.length})</h4>
+          ${actualCenters.map((center, index) => {
+            // Use sequential numbering (index + 1) since we've renumbered them
+            const centerNumber = index + 1;
             
-            // Extract center index from key (e.g., "Damage center 1" -> 0)
-            const centerMatch = centerKey.match(/Damage center (\d+)/);
-            const centerIndex = centerMatch ? parseInt(centerMatch[1]) - 1 : index;
+            // Get location name from actual center data
+            const locationName = center?.Location ? 
+              `מוקד נזק ${centerNumber} - ${center.Location}` : 
+              `מוקד נזק ${centerNumber}`;
             
-            // Get location name from helper.centers
-            let locationName = `מוקד נזק ${centerIndex + 1}`; // fallback
-            
-            if (helper?.centers && helper.centers[centerIndex] && helper.centers[centerIndex].Location) {
-              locationName = `מוקד נזק ${centerIndex + 1} - ${helper.centers[centerIndex].Location}`;
-            }
-            
-            // Extract costs from damage assessment data
-            const works = center?.Works || 0;
-            const parts = center?.Parts || 0;
-            const repairs = center?.Repairs || 0;
-            const totalWithVat = center?.['Total with VAT'] || 0;
-            const totalWithoutVat = center?.['Total without VAT'] || 0;
+            // Extract costs from actual center data
+            const works = center?.Works?.works_meta?.total_cost || 0;
+            const parts = center?.Parts?.parts_meta?.total_cost || 0;
+            const repairs = center?.Repairs?.repairs_meta?.total_cost || 0;
+            const totalWithVat = center?.Summary?.['Total with VAT'] || 0;
+            const totalWithoutVat = center?.Summary?.['Total without VAT'] || 0;
             
             return `
               <div style="background: white; padding: 15px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #3b82f6;">

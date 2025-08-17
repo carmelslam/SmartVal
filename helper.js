@@ -675,6 +675,13 @@ window.deleteDamageCenter = function(centerId) {
     sessionStorage.setItem('helper', JSON.stringify(window.helper));
   }
   
+  // Rebuild comprehensive damage assessment to update summary data
+  if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+    console.log('🔄 Rebuilding comprehensive damage assessment after deletion...');
+    window.buildComprehensiveDamageAssessment();
+    console.log('✅ Damage assessment rebuilt with updated center numbers');
+  }
+  
   // Recalculate totals
   if (typeof window.calculateAllDamageCentersTotals === 'function') {
     window.calculateAllDamageCentersTotals();
