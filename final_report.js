@@ -246,6 +246,21 @@ function injectReportHTML() {
       hasHTMLEntities: htmlTemplate !== decodedTemplate
     });
     
+    // Debug line 112 specifically
+    const templateLines = decodedTemplate.split('\n');
+    if (templateLines.length >= 112) {
+      console.log('🐛 Line 112 content:', templateLines[111]); // 0-indexed
+      console.log('🐛 Lines 110-115:', templateLines.slice(109, 115));
+    }
+    
+    // Check for remaining HTML entities
+    const hasRemainingEntities = /&[a-zA-Z]+;/.test(decodedTemplate);
+    if (hasRemainingEntities) {
+      console.log('⚠️ Template still contains HTML entities after decoding');
+      const matches = decodedTemplate.match(/&[a-zA-Z]+;/g);
+      console.log('🔍 Remaining entities:', matches);
+    }
+    
     // Transform helper data for template compatibility
     const transformedHelper = transformHelperDataForTemplate(helper);
     
@@ -264,9 +279,38 @@ function injectReportHTML() {
 
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
-      const template = Handlebars.compile(decodedTemplate);
-      const rendered = template(templateData);
-      container.innerHTML = applyDraftWatermark(rendered);
+      try {
+        console.log('🔧 Attempting to compile template...');
+        const template = Handlebars.compile(decodedTemplate);
+        console.log('✅ Template compiled successfully');
+        const rendered = template(templateData);
+        console.log('✅ Template rendered successfully');
+        container.innerHTML = applyDraftWatermark(rendered);
+      } catch (compileError) {
+        console.error('💥 Handlebars compilation error:', compileError);
+        console.error('💥 Error details:', {
+          message: compileError.message,
+          line: compileError.line,
+          column: compileError.column
+        });
+        
+        // Show specific template section around the error
+        if (compileError.line) {
+          const errorLineIndex = compileError.line - 1;
+          const templateLines = decodedTemplate.split('\n');
+          const contextStart = Math.max(0, errorLineIndex - 3);
+          const contextEnd = Math.min(templateLines.length, errorLineIndex + 4);
+          console.error('💥 Template context around error:', templateLines.slice(contextStart, contextEnd));
+        }
+        
+        container.innerHTML = `
+          <div style="border: 2px solid red; padding: 20px; text-align: center;">
+            ❌ Template compilation error<br>
+            <small>${compileError.message}</small>
+          </div>
+        `;
+        return;
+      }
     } else {
       // Fallback to simple replacement if Handlebars failed to load
       container.innerHTML = `
