@@ -3815,24 +3815,26 @@
       }
     }
 
-    // ✅ FIX: Navigate to damage centers summary page
+    // ✅ FIX: Navigate to step 7 (wizard summary) instead of separate page
     function goToSummary() {
-      console.log('📊 Quick navigation to summary requested');
+      console.log('📊 Quick navigation to wizard step 7 summary requested');
       
       // Check if there are any damage centers to show
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const damageCenters = helper.centers || [];
+      const damageCenters = helper.damage_assessment?.centers || helper.centers || [];
       
       if (damageCenters.length === 0) {
         showUserNotification('אין מוקדי נזק ליצור סיכום. צור מוקד נזק ראשון.', 'warning', 3000);
         return;
       }
       
-      // Navigate to damage centers summary page
-      window.location.href = 'damage-centers-summary.html';
+      // Navigate to step 7 within the wizard (not external page)
+      currentStep = 7;
+      showStep(7);
+      populateDamageCentersSummary();
       
       showUserNotification(`מציג סיכום של ${damageCenters.length} מוקדי נזק`, 'info', 2000);
-      console.log(`✅ Navigated to summary with ${damageCenters.length} damage centers`);
+      console.log(`✅ Navigated to wizard step 7 with ${damageCenters.length} damage centers`);
     }
     
     // ✅ NEW: Generate detailed cost breakdowns for official form
@@ -4339,10 +4341,83 @@
     
     // New function for finishing and going to expertise summary
     function finishAndGoToSummary() {
-      showUserNotification('מסיים ועובר לסיכום האקספרטיזה...', 'info', 2000);
+      showUserNotification('שומר נתונים ומציג סיכום סופי...', 'info', 2000);
+      
+      // Save all current data first
+      saveCurrentStep();
+      
+      // Generate and display final summary
       setTimeout(() => {
-        window.location.href = "expertise-summary.html";
+        generateFinalSummary();
+        showUserNotification('סיכום האקספרטיזה מוכן!', 'success', 3000);
       }, 1500);
+    }
+    
+    function generateFinalSummary() {
+      console.log('📋 Generating final damage centers summary...');
+      
+      // Update the damage centers container in step 7
+      populateDamageCentersSummary();
+      
+      // Add options to continue to next phase
+      const summaryContainer = document.getElementById('damageCentersContainer');
+      if (summaryContainer) {
+        // Add completion actions at the end
+        const completionActions = document.createElement('div');
+        completionActions.style.cssText = `
+          margin-top: 30px; 
+          padding: 25px; 
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
+          color: white; 
+          border-radius: 15px; 
+          text-align: center;
+          box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+        `;
+        
+        completionActions.innerHTML = `
+          <h3 style="margin-bottom: 20px; color: white;">🎉 מוקדי הנזק הושלמו בהצלחה!</h3>
+          <p style="margin-bottom: 25px; font-size: 16px; opacity: 0.9;">
+            כל מוקדי הנזק נשמרו במערכת. אתה יכול להמשיך לשלבים הבאים באקספרטיזה.
+          </p>
+          
+          <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" onclick="window.location.href='expertise-summary.html'" style="
+              background: rgba(255,255,255,0.2); 
+              color: white; 
+              border: 2px solid white; 
+              padding: 12px 24px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-weight: bold;
+              font-size: 16px;
+              transition: all 0.3s ease;
+            " 
+            onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
+            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+              📋 עבור לסיכום האקספרטיזה
+            </button>
+            <button type="button" onclick="window.location.href='selection.html'" style="
+              background: white; 
+              color: #16a34a; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              font-weight: bold;
+              font-size: 16px;
+              transition: all 0.3s ease;
+            " 
+            onmouseover="this.style.background='#f9fafb'" 
+            onmouseout="this.style.background='white'">
+              🏠 חזור לתפריט הראשי
+            </button>
+          </div>
+        `;
+        
+        summaryContainer.appendChild(completionActions);
+      }
+      
+      console.log('✅ Final summary generated successfully');
     }
     
     function saveDamageCenterToHelper() {
