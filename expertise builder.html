@@ -863,62 +863,45 @@
     };
 
     window.submitFinalExpertise = function() {
+      console.log('🔄 Starting submit process...');
+      
       if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
-        // Skip HTML capture for now to avoid performance issues
-        // const controlSection = document.querySelector('.no-print');
-        // const htmlContent = document.documentElement.outerHTML;
-        
-        // Ensure we have the latest helper data
-        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Create comprehensive payload with complete helper data
-        const payload = {
-          // Send complete helper as nested object
-          helper: currentHelper,
+        try {
+          console.log('⏱️ Getting helper data...');
+          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log('✅ Helper data loaded, size:', JSON.stringify(currentHelper).length);
           
-          // Explicit core fields for easy Make.com mapping
-          plate: currentHelper.vehicle?.plate || currentHelper.car_details?.plate || currentHelper.case_info?.plate || 'לא צוין',
-          action: 'LAUNCH_EXPERTISE',
-          submittedAt: new Date().toISOString(),
+          console.log('⏱️ Creating simple payload...');
+          // Start with minimal payload to test
+          const payload = {
+            plate: currentHelper.vehicle?.plate || currentHelper.car_details?.plate || 'test-plate',
+            action: 'LAUNCH_EXPERTISE',
+            submittedAt: new Date().toISOString(),
+            test: 'simple_payload'
+          };
           
-          // Individual sections for direct access
-          vehicle: currentHelper.vehicle || currentHelper.car_details || {},
-          centers: currentHelper.centers || [],
-          damage_assessment: currentHelper.damage_assessment || {},
-          calculations: currentHelper.calculations || {},
-          expertise: currentHelper.expertise || {},
-          financials: currentHelper.financials || {},
-          valuation: currentHelper.valuation || {},
-          stakeholders: currentHelper.stakeholders || {},
-          case_info: currentHelper.case_info || {},
+          console.log('✅ Payload created:', payload);
+        
+          console.log('⏱️ Sending webhook...');
+          // Use webhook from expertise.js if available
+          if (typeof sendToWebhook !== 'undefined') {
+            sendToWebhook('LAUNCH_EXPERTISE', payload)
+              .then(() => {
+                console.log('✅ Webhook sent successfully');
+                alert('האקספירטיזה נשלחה בהצלחה!');
+              })
+              .catch((error) => {
+                console.error('❌ Webhook failed:', error);
+                alert('שגיאה בשליחה. אנא נסה שוב.');
+              });
+          } else {
+            console.error('❌ sendToWebhook not available');
+            alert('שגיאה: פונקציית שליחה לא זמינה');
+          }
           
-          // HTML temporarily disabled for performance
-          // html: htmlContent
-        };
-        
-        console.log('📤 Complete helper data being sent:', currentHelper);
-        console.log('📤 Payload structure:', Object.keys(payload));
-        console.log('📤 Vehicle data:', currentHelper.vehicle || currentHelper.car_details);
-        console.log('📤 Centers data:', currentHelper.centers?.length || 0, 'centers');
-        
-        // Update helper status to submitted
-        if (helper.expertise && helper.expertise.summary) {
-          helper.expertise.summary.status = 'הוגש';
-          helper.expertise.summary.submitted_at = new Date().toISOString();
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-        }
-        
-        // Use webhook from expertise.js if available
-        if (typeof sendToWebhook !== 'undefined') {
-          sendToWebhook('LAUNCH_EXPERTISE', payload)
-            .then(() => {
-              alert('האקספירטיזה נשלחה בהצלחה!');
-              // Don't redirect - stay on page for further actions
-            })
-            .catch(() => alert('שגיאה בשליחה. אנא נסה שוב.'));
-        } else {
-          alert('האקספירטיזה נשלחה בהצלחה!');
-          // Don't redirect - stay on page for further actions
+        } catch (error) {
+          console.error('❌ Submit process failed:', error);
+          alert('שגיאה בעיבוד הנתונים: ' + error.message);
         }
       }
     };
