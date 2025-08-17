@@ -31,6 +31,9 @@ class SecurityManager {
     this.auditLog = [];
     this.securityEvents = [];
     
+    // Store original console.log to avoid recursion
+    this.originalConsoleLog = console.log;
+    
     // Initialize direct references for easier access
     this.csrfTokens = this.securityConfig.csrfTokens;
     this.rateLimiting = this.securityConfig.rateLimiting;
@@ -595,13 +598,12 @@ class SecurityManager {
     }, 5000);
     
     // Monitor for console access
-    const originalConsoleLog = console.log;
     console.log = (...args) => {
       this.logSecurityEvent('console_access', {
         args: args.map(arg => typeof arg === 'object' ? '[Object]' : String(arg)),
         timestamp: new Date()
       });
-      originalConsoleLog.apply(console, args);
+      this.originalConsoleLog.apply(console, args);
     };
   }
 
@@ -695,8 +697,8 @@ class SecurityManager {
       timestamp: new Date()
     });
     
-    // Log to console for debugging
-    console.log('🔒 Security Event:', type, data);
+    // Log to console for debugging (use original console to avoid recursion)
+    this.originalConsoleLog('🔒 Security Event:', type, data);
     
     // Send to server for centralized logging (if available)
     this.sendSecurityEventToServer(event);
