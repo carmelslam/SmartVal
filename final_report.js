@@ -122,7 +122,7 @@ function injectReportHTML() {
 
 
 // --- Export Report ---
-function exportFinalReport() {
+async function exportFinalReport() {
   if (sessionEngine.isFinalized()) return alert('הדו"ח כבר ננעל לשינויים.');
 
   const html = document.getElementById("report-output").innerHTML;
