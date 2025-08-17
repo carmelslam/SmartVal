@@ -142,27 +142,27 @@ function createComprehensiveFieldMapping(rawHelper) {
     'meta.case_id': getValue(rawHelper, ['case_info.case_id', 'meta.case_id'], placeholder),
     'meta.damage': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage'], placeholder),
     
-    // Vehicle fields
-    'helper.vehicle.model': getValue(rawHelper, ['vehicle.model', 'car_details.model', 'levisummary.full_model'], placeholder),
-    'helper.vehicle.chassis': getValue(rawHelper, ['vehicle.chassis', 'car_details.chassis'], placeholder),
-    'helper.vehicle.year': getValue(rawHelper, ['vehicle.year', 'car_details.year'], placeholder),
-    'helper.vehicle.km': getValue(rawHelper, ['vehicle.km', 'car_details.km'], placeholder),
-    'helper.vehicle.ownership_type': getValue(rawHelper, ['vehicle.ownership_type', 'car_details.ownership_type'], placeholder),
-    'helper.vehicle.manufacturer': getValue(rawHelper, ['vehicle.manufacturer', 'car_details.manufacturer'], placeholder),
+    // Vehicle fields - prioritize levisummary and car_details
+    'helper.vehicle.model': getValue(rawHelper, ['levisummary.full_model', 'car_details.model', 'vehicle.model'], placeholder),
+    'helper.vehicle.chassis': getValue(rawHelper, ['car_details.chassis', 'vehicle.chassis'], placeholder),
+    'helper.vehicle.year': getValue(rawHelper, ['car_details.year', 'vehicle.year'], placeholder),
+    'helper.vehicle.km': getValue(rawHelper, ['car_details.km', 'vehicle.km'], placeholder),
+    'helper.vehicle.ownership_type': getValue(rawHelper, ['car_details.ownership_type', 'vehicle.ownership_type'], placeholder),
+    'helper.vehicle.manufacturer': getValue(rawHelper, ['car_details.manufacturer', 'vehicle.manufacturer'], placeholder),
     
-    // Damage fields  
+    // Damage fields - get from centers data
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
     
-    // Calculations
-    'helper.calculations.total_damage': getValue(rawHelper, ['calculations.total_damage', 'damage_assessment.totals.Total with VAT'], 0),
-    'helper.calculations.vehicle_value_gross': getValue(rawHelper, ['calculations.vehicle_value_gross', 'valuation.final_price'], 0),
+    // Calculations - get from centers and damage_assessment totals
+    'helper.calculations.total_damage': getValue(rawHelper, ['damage_assessment.totals.Total with VAT', 'calculations.total_damage'], 0),
+    'helper.calculations.vehicle_value_gross': getValue(rawHelper, ['levisummary.final_price', 'valuation.final_price'], 0),
     'helper.calculations.damage_percent': getValue(rawHelper, ['calculations.damage_percent'], '0%'),
-    'helper.calculations.market_value': getValue(rawHelper, ['calculations.market_value', 'valuation.base_price'], 0),
+    'helper.calculations.market_value': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
     'helper.calculations.total_compensation': getValue(rawHelper, ['calculations.total_compensation'], 0),
     
-    // Levi/Valuation
-    'helper.vehicle_value_base': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], placeholder),
-    'helper.levi.adjustments': getValue(rawHelper, ['valuation.adjustments', 'levi_data.adjustments'], []),
+    // Levi/Valuation - get from levisummary
+    'helper.vehicle_value_base': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
+    'helper.levi.adjustments': getValue(rawHelper, ['levisummary.adjustments', 'levi_data.adjustments'], []),
     
     // Depreciation
     'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
@@ -170,8 +170,8 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
     
     // Additional mappings for commonly missed fields
-    'base_car_price': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], placeholder),
-    'damage_location': getValue(rawHelper, ['damage_info.location', 'case_info.damage_location'], placeholder)
+    'base_car_price': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
+    'damage_location': getValue(rawHelper, ['centers.0.Location', 'damage_info.location'], placeholder)
   };
   
   console.log('🔍 Field mapping created:', fieldMappings);
