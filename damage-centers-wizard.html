@@ -4964,9 +4964,9 @@
               const currentCenter = helper.damage_assessment?.centers?.find(center => 
                 center.id === currentCenterId || center.current_center_id === currentCenterId
               );
-              contextData.selectedParts = currentCenter?.parts_items || [];
+              contextData.selectedParts = currentCenter?.parts_items || moduleData.parts || [];
               contextData.partsBank = window.PARTS_BANK || {};
-              console.log(`🎯 Sending ${contextData.selectedParts.length} parts for current center ${currentCenterId} (not global selected_parts)`);
+              console.log(`🎯 Sending ${contextData.selectedParts.length} parts for current center ${currentCenterId} (edit mode: ${!!damageCenterData.mode})`);
               break;
               
             case 'work':
@@ -4980,14 +4980,33 @@
               break;
           }
           
+          // ✅ NEW: Add edit mode flag to inform iframes they should recalculate totals
+          if (damageCenterData.mode === 'edit_existing') {
+            contextData.editMode = true;
+            contextData.shouldRecalculateTotals = true;
+            console.log(`📝 Informing ${moduleType} iframe that it's in EDIT MODE and should recalculate totals`);
+          }
+          
           // Send enhanced context to the module
           iframe.contentWindow.postMessage(contextData, '*');
           
           console.log(`📤 Sent enhanced context to ${moduleType} module:`, {
             centerId: currentCenterId,
             step: currentStep,
-            dataKeys: Object.keys(contextData)
+            dataKeys: Object.keys(contextData),
+            editMode: contextData.editMode
           });
+          
+          // ✅ NEW: In edit mode, request immediate totals recalculation from iframe
+          if (contextData.editMode) {
+            setTimeout(() => {
+              iframe.contentWindow.postMessage({
+                type: 'requestTotalsRecalculation',
+                reason: 'edit_mode_load'
+              }, '*');
+              console.log(`🧮 Requested totals recalculation from ${moduleType} iframe in edit mode`);
+            }, 500);
+          }
         }
       }, 1500); // Increased timeout for better reliability
     }
@@ -5920,12 +5939,29 @@
         }
         
         // Show status and start wizard
-        updateStatusMessage(`עורך מוקד נזק ${centerToEdit.number || centerToEdit.center_number}`, 'edit');
+        const centerNumber = centerToEdit["Damage center Number"] || centerToEdit.number || centerToEdit.center_number || 'לא זוהה';
+        const centerLocation = centerToEdit.Location || centerToEdit.location || 'מיקום לא צוין';
+        updateStatusMessage(`עורך מוקד נזק ${centerNumber} - ${centerLocation}`, 'edit');
         currentStep = 1;
         showStep(1);
         updateProgress(); // ✅ FIX: Update progress bar when loading center for editing
         
         console.log('✅ Damage center loaded for editing:', centerToEdit);
+        
+        // ✅ CRITICAL FIX: Trigger total calculations after loading all data
+        // This ensures that both iframe totals AND wizard page totals are calculated and displayed
+        setTimeout(() => {
+          console.log('🧮 Recalculating totals after edit data load...');
+          calculateTotals();
+          
+          // Also update individual module subtotals to ensure wizard displays are in sync
+          const workTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+          const partsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+          const repairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+          
+          updateModuleSubtotals(workTotal, partsTotal, repairsTotal);
+          console.log('✅ Edit mode: totals recalculated and wizard displays updated');
+        }, 300);
         
       } catch (error) {
         console.error('❌ Error loading damage center for editing:', error);
