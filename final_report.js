@@ -124,6 +124,72 @@ function getReportTitle() {
   return vault[reportType]?.title || 'חוות דעת';
 }
 
+// --- Comprehensive Field Mapping System ---
+function createComprehensiveFieldMapping(rawHelper) {
+  const placeholder = "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת";
+  
+  // Define all final report field mappings
+  const fieldMappings = {
+    // Meta fields
+    'meta.report_type_display': getValue(rawHelper, ['final_report.type', 'meta.report_type', 'report_type'], 'דו"ח סופי'),
+    'meta.client_name': getValue(rawHelper, ['stakeholders.owner.name', 'general.owner_name', 'meta.client_name'], placeholder),
+    'meta.address': getValue(rawHelper, ['stakeholders.owner.address', 'general.owner_address', 'meta.address'], placeholder),
+    'meta.today': getValue(rawHelper, ['meta.today', 'case_info.inspection_date'], new Date().toLocaleDateString('he-IL')),
+    'meta.plate': getValue(rawHelper, ['meta.plate', 'vehicle.plate', 'car_details.plate'], placeholder),
+    'meta.phone_number': getValue(rawHelper, ['stakeholders.owner.phone', 'general.owner_phone', 'meta.phone_number'], placeholder),
+    'meta.inspection_date': getValue(rawHelper, ['case_info.inspection_date', 'meta.inspection_date'], placeholder),
+    'meta.location': getValue(rawHelper, ['meta.location', 'case_info.location'], placeholder),
+    'meta.case_id': getValue(rawHelper, ['case_info.case_id', 'meta.case_id'], placeholder),
+    'meta.damage': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage'], placeholder),
+    
+    // Vehicle fields
+    'helper.vehicle.model': getValue(rawHelper, ['vehicle.model', 'car_details.model', 'levisummary.full_model'], placeholder),
+    'helper.vehicle.chassis': getValue(rawHelper, ['vehicle.chassis', 'car_details.chassis'], placeholder),
+    'helper.vehicle.year': getValue(rawHelper, ['vehicle.year', 'car_details.year'], placeholder),
+    'helper.vehicle.km': getValue(rawHelper, ['vehicle.km', 'car_details.km'], placeholder),
+    'helper.vehicle.ownership_type': getValue(rawHelper, ['vehicle.ownership_type', 'car_details.ownership_type'], placeholder),
+    'helper.vehicle.manufacturer': getValue(rawHelper, ['vehicle.manufacturer', 'car_details.manufacturer'], placeholder),
+    
+    // Damage fields  
+    'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
+    
+    // Calculations
+    'helper.calculations.total_damage': getValue(rawHelper, ['calculations.total_damage', 'damage_assessment.totals.Total with VAT'], 0),
+    'helper.calculations.vehicle_value_gross': getValue(rawHelper, ['calculations.vehicle_value_gross', 'valuation.final_price'], 0),
+    'helper.calculations.damage_percent': getValue(rawHelper, ['calculations.damage_percent'], '0%'),
+    'helper.calculations.market_value': getValue(rawHelper, ['calculations.market_value', 'valuation.base_price'], 0),
+    'helper.calculations.total_compensation': getValue(rawHelper, ['calculations.total_compensation'], 0),
+    
+    // Levi/Valuation
+    'helper.vehicle_value_base': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], 0),
+    'helper.levi.adjustments': getValue(rawHelper, ['valuation.adjustments', 'levi_data.adjustments'], []),
+    
+    // Depreciation
+    'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
+    'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
+    'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], [])
+  };
+  
+  console.log('🔍 Field mapping created:', fieldMappings);
+  return fieldMappings;
+}
+
+function getValue(obj, paths, defaultValue) {
+  for (const path of paths) {
+    const value = getNestedValue(obj, path);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return defaultValue;
+}
+
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((current, key) => {
+    return current && current[key] !== undefined ? current[key] : undefined;
+  }, obj);
+}
+
 // --- Transform Helper Data for Template ---
 function transformHelperDataForTemplate(rawHelper) {
   // Debug centers data mapping
@@ -134,25 +200,65 @@ function transformHelperDataForTemplate(rawHelper) {
     has_damage_assessment_centers: !!(rawHelper.damage_assessment?.centers && rawHelper.damage_assessment.centers.length > 0)
   });
 
-  // Ensure basic structure exists
+  // Create comprehensive field mapping
+  const fieldMappings = createComprehensiveFieldMapping(rawHelper);
+
+  // Ensure basic structure exists with mapped values
   const transformed = {
-    vehicle: rawHelper.vehicle || rawHelper.car_details || {},
+    vehicle: {
+      model: fieldMappings['helper.vehicle.model'],
+      chassis: fieldMappings['helper.vehicle.chassis'],
+      year: fieldMappings['helper.vehicle.year'],
+      km: fieldMappings['helper.vehicle.km'],
+      ownership_type: fieldMappings['helper.vehicle.ownership_type'],
+      manufacturer: fieldMappings['helper.vehicle.manufacturer']
+    },
     centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
-    meta: rawHelper.meta || {},
-    damage: rawHelper.damage || rawHelper.damage_assessment || {},
-    calculations: rawHelper.calculations || rawHelper.financials?.calculations || {},
-    depreciation: rawHelper.depreciation || rawHelper.valuation?.depreciation || {},
-    levi: rawHelper.levi || rawHelper.valuation || {},
-    expertise: rawHelper.expertise || {},
+    meta: {
+      report_type_display: fieldMappings['meta.report_type_display'],
+      client_name: fieldMappings['meta.client_name'],
+      address: fieldMappings['meta.address'],
+      today: fieldMappings['meta.today'],
+      plate: fieldMappings['meta.plate'],
+      phone_number: fieldMappings['meta.phone_number'],
+      inspection_date: fieldMappings['meta.inspection_date'],
+      location: fieldMappings['meta.location'],
+      case_id: fieldMappings['meta.case_id'],
+      damage: fieldMappings['meta.damage']
+    },
+    damage: {
+      description: fieldMappings['helper.damage.description']
+    },
+    calculations: {
+      total_damage: fieldMappings['helper.calculations.total_damage'],
+      vehicle_value_gross: fieldMappings['helper.calculations.vehicle_value_gross'],
+      damage_percent: fieldMappings['helper.calculations.damage_percent'],
+      market_value: fieldMappings['helper.calculations.market_value'],
+      total_compensation: fieldMappings['helper.calculations.total_compensation']
+    },
+    vehicle_value_base: fieldMappings['helper.vehicle_value_base'],
+    levi: {
+      adjustments: fieldMappings['helper.levi.adjustments']
+    },
+    depreciation: {
+      global_percent: fieldMappings['helper.depreciation.global_percent'],
+      global_amount: fieldMappings['helper.depreciation.global_amount']
+    },
+    expertise: {
+      depreciation: {
+        centers: fieldMappings['helper.expertise.depreciation.centers']
+      }
+    },
     damage_assessment: rawHelper.damage_assessment || {}
   };
   
-  // Fill missing meta fields from other sources
-  if (!transformed.meta.client_name) {
-    transformed.meta.client_name = rawHelper.stakeholders?.owner?.name || 
-                                 rawHelper.client?.name || 
-                                 rawHelper.car_details?.owner || '';
-  }
+  // Field mapping completed via comprehensive system above
+  console.log('✅ Comprehensive field mapping applied:', {
+    mappedFields: Object.keys(fieldMappings).length,
+    placeholderFields: Object.values(fieldMappings).filter(v => v === "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת").length
+  });
+  
+  return transformed;
   
   if (!transformed.meta.address) {
     transformed.meta.address = rawHelper.stakeholders?.owner?.address || 
