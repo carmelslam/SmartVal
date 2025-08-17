@@ -5040,12 +5040,28 @@
               const currentCenter = helper.damage_assessment?.centers?.find(center => 
                 center.id === currentCenterId || center.current_center_id === currentCenterId
               );
-              // ✅ FIX: Filter out empty/invalid parts to prevent auto-adding empty fields
+              // ✅ FIX: Filter out empty/invalid parts and ensure proper field mapping
               const rawParts = currentCenter?.parts_items || moduleData.parts || [];
-              contextData.selectedParts = rawParts.filter(part => 
-                part && 
-                (part.name || part.description || part.part_number || part.price > 0)
-              );
+              contextData.selectedParts = rawParts
+                .filter(part => 
+                  part && 
+                  (part.name || part.description || part.part_number || part.price > 0)
+                )
+                .map(part => ({
+                  // ✅ Map to expected field names for parts-required iframe
+                  name: part.name || part.description || part.part_name || '',
+                  description: part.description || part.name || '',
+                  part_number: part.part_number || part.partNumber || '',
+                  price: parseFloat(part.price) || 0,
+                  quantity: parseInt(part.quantity) || 1,
+                  source: part.source || '',
+                  // Keep original data
+                  ...part
+                }));
+              
+              // ✅ NEW: Add flag to prevent auto-adding empty fields in parts iframe
+              contextData.preventAutoAddField = true;
+              contextData.isEditMode = !!damageCenterData.mode;
               contextData.partsBank = window.PARTS_BANK || {};
               console.log(`🎯 Sending ${contextData.selectedParts.length} valid parts for current center ${currentCenterId} (edit mode: ${!!damageCenterData.mode})`);
               break;
@@ -5099,6 +5115,18 @@
               }, '*');
               console.log(`📊 Requested current totals from ${moduleType} iframe for wizard sync`);
             }, 1000);
+            
+            // ✅ SPECIFIC FIX: Tell parts-required iframe not to auto-add empty fields
+            if (moduleType === 'parts') {
+              setTimeout(() => {
+                iframe.contentWindow.postMessage({
+                  type: 'preventAutoAddField',
+                  reason: 'edit_mode_with_existing_data',
+                  hasExistingData: contextData.selectedParts && contextData.selectedParts.length > 0
+                }, '*');
+                console.log(`🚫 Told parts iframe to prevent auto-adding empty fields (has ${contextData.selectedParts.length} existing parts)`);
+              }, 300);
+            }
           }
         }
       }, 1500); // Increased timeout for better reliability
