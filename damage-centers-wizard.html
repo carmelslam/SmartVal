@@ -3610,12 +3610,24 @@
       console.log('📋 === UPDATE SUMMARY CALLED ===');
       
       try {
-        // Get all damage centers from helper
+        // Get all damage centers from helper - check multiple possible locations
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const damageCenters = helper.centers || [];
         
-        console.log('📊 Helper data:', helper);
-        console.log(`📊 Found ${damageCenters.length} damage centers for summary:`, damageCenters);
+        // ✅ FIX: Check all possible damage center storage locations
+        let damageCenters = [];
+        if (helper.centers && Array.isArray(helper.centers)) {
+          damageCenters = helper.centers;
+          console.log('📊 Found damage centers in helper.centers:', damageCenters.length);
+        } else if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+          damageCenters = helper.damage_centers;
+          console.log('📊 Found damage centers in helper.damage_centers:', damageCenters.length);
+        } else if (helper.damage_assessment?.centers && Array.isArray(helper.damage_assessment.centers)) {
+          damageCenters = helper.damage_assessment.centers;
+          console.log('📊 Found damage centers in helper.damage_assessment.centers:', damageCenters.length);
+        }
+        
+        console.log('📊 Helper data keys:', Object.keys(helper));
+        console.log(`📊 Final damage centers count: ${damageCenters.length}`, damageCenters);
         
         const container = document.getElementById('damageCentersContainer');
         console.log('🎯 Container element:', container);
@@ -3832,7 +3844,7 @@
       currentStep = 7;
       showStep(7);
       updateProgress(); // ✅ FIX: Update progress bar to show step 7
-      populateDamageCentersSummary();
+      updateSummary();
       
       showUserNotification(`מציג סיכום של ${damageCenters.length} מוקדי נזק`, 'info', 2000);
       console.log(`✅ Navigated to wizard step 7 with ${damageCenters.length} damage centers`);
@@ -4358,7 +4370,7 @@
       console.log('📋 Generating final damage centers summary...');
       
       // Update the damage centers container in step 7
-      populateDamageCentersSummary();
+      updateSummary();
       
       // Add options to continue to next phase
       const summaryContainer = document.getElementById('damageCentersContainer');
@@ -4492,7 +4504,7 @@
             // ✅ FIX: Refresh step 7 summary list when damage center is saved
             if (currentStep === 7 || document.getElementById('step7')?.classList.contains('active')) {
               console.log('🔄 Refreshing step 7 summary after saving damage center');
-              populateDamageCentersSummary();
+              updateSummary();
             }
             
             return true;
@@ -4715,7 +4727,7 @@
           // ✅ FIX: Also refresh step 7 summary list when damage center is saved (fallback method)
           if (currentStep === 7 || document.getElementById('step7')?.classList.contains('active')) {
             console.log('🔄 Refreshing step 7 summary after saving damage center (fallback)');
-            populateDamageCentersSummary();
+            updateSummary();
           }
         }, 100);
         
