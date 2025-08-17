@@ -207,10 +207,12 @@ class ForceFormPopulator {
     if (helperData.stakeholders) {
       if (helperData.stakeholders.owner) {
         if (!mappings.owner) mappings.owner = helperData.stakeholders.owner.name;
-        // Only restore owner phone if it was manually entered by user
+        // ✅ FIX: Restore owner phone if it exists and looks like a real phone number
         if (helperData.stakeholders.owner.phone && 
-            helperData.financials?.overrides?.some(o => o.fieldId === 'owner_phone' && o.origin === 'general_info')) {
-          mappings.ownerPhone = helperData.stakeholders.owner.phone;
+            helperData.stakeholders.owner.phone.trim() !== '' &&
+            helperData.stakeholders.owner.phone !== helperData.stakeholders.owner.name) {
+          mappings.owner_phone = helperData.stakeholders.owner.phone;
+          console.log('📞 Restored owner phone:', helperData.stakeholders.owner.phone);
         }
         mappings.ownerAddress = helperData.stakeholders.owner.address;
       }
