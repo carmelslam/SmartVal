@@ -3564,6 +3564,7 @@ window.populateAllForms = function() {
     // SIMPLE: Exclude damage_date_independent from auto-population - user must enter manually
     // 'damage_date_independent': window.helper.case_info?.damage_date, // DISABLED
     'damage_type': window.helper.case_info?.damage_type,
+    'damageType': window.helper.case_info?.damage_type,
     
     // Case info (inspection details only - NOT damage date)
     'inspectionDate': window.helper.case_info?.inspection_date,
@@ -3638,6 +3639,21 @@ window.populateAllForms = function() {
               element.value = parseFloat(newValue.replace('%', '')) || 0;
             } else {
               element.value = newValue;
+            }
+            
+            // Special handling for damageType select
+            if (fieldId === 'damageType' && element.tagName === 'SELECT') {
+              // Check if the value exists in the select options
+              const optionExists = Array.from(element.options).some(option => option.value === newValue);
+              if (!optionExists && newValue) {
+                // If value doesn't exist in options, set to "אחר" and populate other field
+                element.value = 'אחר';
+                const otherField = document.getElementById('otherDamageType');
+                if (otherField) {
+                  otherField.value = newValue;
+                  otherField.style.display = 'block';
+                }
+              }
             }
           }
           
