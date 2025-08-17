@@ -864,7 +864,23 @@
 
     window.submitFinalExpertise = function() {
       if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
+        // Hide control buttons before capturing HTML
+        const controlSection = document.querySelector('.no-print');
+        if (controlSection) {
+          controlSection.style.display = 'none';
+        }
+        
+        // Capture the complete HTML content
+        const htmlContent = document.documentElement.outerHTML;
+        
+        // Restore control buttons
+        if (controlSection) {
+          controlSection.style.display = '';
+        }
+        
         const payload = {
+          html_content: htmlContent,
+          helper_data: helper,
           plate: helper.vehicle?.plate || '',
           action: 'submit_final_expertise',
           submittedAt: new Date().toISOString()
@@ -879,7 +895,7 @@
         
         // Use webhook from expertise.js if available
         if (typeof sendToWebhook !== 'undefined') {
-          sendToWebhook('SUBMIT_FINAL_EXPERTISE', payload)
+          sendToWebhook('LAUNCH_EXPERTISE', payload)
             .then(() => {
               alert('האקספירטיזה נשלחה בהצלחה!');
               window.location.href = 'selection.html';
