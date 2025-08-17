@@ -629,12 +629,58 @@ window.deleteDamageCenter = function(centerId) {
   if (!window.helper || !window.helper.centers) {
     return false;
   }
-  const centerIndex = window.helper.centers.findIndex(center => center.id === centerId);
+  
+  const centerIndex = window.helper.centers.findIndex(center => center.id === centerId || center.Id === centerId);
   if (centerIndex === -1) {
     return false;
   }
+  
+  console.log(`🗑️ Deleting damage center at index ${centerIndex} with ID ${centerId}`);
+  
+  // Remove the center
   window.helper.centers.splice(centerIndex, 1);
-  window.calculateAllDamageCentersTotals();
+  
+  // ✅ SEQUENTIAL RENUMBERING: Renumber remaining centers to maintain sequential order
+  console.log('🔢 Renumbering remaining damage centers sequentially...');
+  window.helper.centers.forEach((center, index) => {
+    const newNumber = (index + 1).toString();
+    const oldNumber = center["Damage center Number"] || center.number;
+    
+    if (oldNumber !== newNumber) {
+      console.log(`📝 Renumbering center: ${oldNumber} → ${newNumber}`);
+      
+      // Update the damage center number field (both possible field names)
+      if (center["Damage center Number"]) {
+        center["Damage center Number"] = newNumber;
+      }
+      if (center.number) {
+        center.number = newNumber;
+      }
+      
+      // Also update any ID that includes the number (optional)
+      if (center.Id && center.Id.includes(`_${oldNumber}`)) {
+        center.Id = center.Id.replace(`_${oldNumber}`, `_${newNumber}`);
+        console.log(`📝 Updated center ID: ${center.Id}`);
+      } else if (center.id && center.id.includes(`_${oldNumber}`)) {
+        center.id = center.id.replace(`_${oldNumber}`, `_${newNumber}`);
+        console.log(`📝 Updated center ID: ${center.id}`);
+      }
+    }
+  });
+  
+  // Save the updated helper data
+  if (typeof saveHelperToAllStorageLocations === 'function') {
+    saveHelperToAllStorageLocations();
+  } else {
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+  }
+  
+  // Recalculate totals
+  if (typeof window.calculateAllDamageCentersTotals === 'function') {
+    window.calculateAllDamageCentersTotals();
+  }
+  
+  console.log(`✅ Damage center deleted and ${window.helper.centers.length} remaining centers renumbered sequentially`);
   return true;
 };
 

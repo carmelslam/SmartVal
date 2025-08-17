@@ -5779,11 +5779,20 @@
               }
             }
             
-            alert('מוקד הנזק נמחק בהצלחה');
+            // Get remaining centers count for user notification
+            const remainingCenters = getDamageCentersFromHelper();
+            const remainingCount = remainingCenters.length;
+            
+            alert(`✅ מוקד הנזק נמחק בהצלחה!\n\nמוקדי הנזק נותרו ורומסרו מחדש ברצף: ${remainingCount} מוקדים`);
             
             // Reset dropdown selection and refresh
             select.value = '';
             populateExistingDamageCenters(true);
+            
+            // Also refresh step 7 summary if we're currently viewing it
+            if (currentStep === 7) {
+              updateSummary();
+            }
             
             // Clear wizard data if this center was being edited
             if (damageCenterData && damageCenterData.id === selectedValue) {
@@ -5863,6 +5872,34 @@
         // Remove the damage center from the array
         damageCenters.splice(centerIndex, 1);
         
+        // ✅ SEQUENTIAL RENUMBERING: Renumber remaining centers to maintain sequential order
+        console.log('🔢 Renumbering remaining damage centers sequentially (fallback method)...');
+        damageCenters.forEach((center, index) => {
+          const newNumber = (index + 1).toString();
+          const oldNumber = center["Damage center Number"] || center.number;
+          
+          if (oldNumber !== newNumber) {
+            console.log(`📝 Renumbering center: ${oldNumber} → ${newNumber}`);
+            
+            // Update the damage center number field (both possible field names)
+            if (center["Damage center Number"]) {
+              center["Damage center Number"] = newNumber;
+            }
+            if (center.number) {
+              center.number = newNumber;
+            }
+            
+            // Also update any ID that includes the number (optional)
+            if (center.Id && center.Id.includes(`_${oldNumber}`)) {
+              center.Id = center.Id.replace(`_${oldNumber}`, `_${newNumber}`);
+              console.log(`📝 Updated center ID: ${center.Id}`);
+            } else if (center.id && center.id.includes(`_${oldNumber}`)) {
+              center.id = center.id.replace(`_${oldNumber}`, `_${newNumber}`);
+              console.log(`📝 Updated center ID: ${center.id}`);
+            }
+          }
+        });
+        
         // Update the helper with the modified array
         // Save to canonical location if it exists
         if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
@@ -5909,7 +5946,7 @@
         select.value = '';
         
         // Show success message
-        alert(`✅ נתוני ${centerDescription} נמחקו בהצלחה!\n\nנותרו ${damageCenters.length} מוקדי נזק במערכת.`);
+        alert(`✅ נתוני ${centerDescription} נמחקו בהצלחה!\n\nמוקדי הנזק נותרו ורומסרו מחדש ברצף: ${damageCenters.length} מוקדים`);
         
         // ✅ FIXED: Reset wizard state after deletion
         resetWizard();
