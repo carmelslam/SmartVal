@@ -1381,7 +1381,7 @@
       <div class="navigation">
         <button class="nav-button" onclick="window.location.href='selection.html'" style="background-color: #6c757d;">חזור לבחירה</button>
         <button class="nav-button" id="prevBtn" onclick="previousStep()" style="display:none; background-color: #6c757d;">הקודם</button>
-        <button class="nav-button" id="saveBtn" onclick="saveCurrentStep()" style="background-color: #28a745;">שמור נתונים</button>
+        <button class="nav-button" id="saveBtn" onclick="saveCurrentStep()" style="background-color: #28a745; position: relative; z-index: 10;">שמור נתונים</button>
         <div id="stepInfo">שלב 1 מתוך 7</div>
         <button class="nav-button" id="nextBtn" onclick="nextStep()">הבא</button>
       </div>
@@ -4005,6 +4005,21 @@
     }
     
     function calculateTotals() {
+      console.log('🧮 === CALCULATE TOTALS START ===');
+      console.log('🔍 Current damage center data:', damageCenterData);
+      console.log('🔍 Current module data:', moduleData);
+      
+      // ✅ CRITICAL FIX: Ensure we're only calculating for CURRENT damage center data
+      const currentWorkTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+      const currentPartsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+      const currentRepairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+      
+      console.log('🧮 CURRENT CENTER ONLY totals:', {
+        works: currentWorkTotal,
+        parts: currentPartsTotal, 
+        repairs: currentRepairsTotal
+      });
+      
       // Use helper API for calculation if available
       if (typeof window.calculateDamageCenterTotals === 'function' && damageCenterData.id) {
         const totals = window.calculateDamageCenterTotals(damageCenterData.id);
@@ -4033,14 +4048,18 @@
         }
       }
       
-      // Fallback to manual calculation
-      const workTotal = moduleData.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
-      const partsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
-      const repairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+      // ✅ FIXED: Use current center calculated totals (not accumulated)
+      const workTotal = currentWorkTotal;
+      const partsTotal = currentPartsTotal;
+      const repairsTotal = currentRepairsTotal;
       
       const subtotal = workTotal + partsTotal + repairsTotal;
       const vatAmount = subtotal * (vatPercentage / 100);
       const totalWithVat = subtotal + vatAmount;
+      
+      console.log('🧮 FINAL CALCULATED totals (current center only):', {
+        workTotal, partsTotal, repairsTotal, subtotal, totalWithVat
+      });
       
       // Update display (with null checks)
       const totalAmountEl = document.getElementById('totalAmount');
@@ -4062,11 +4081,11 @@
       damageCenterData.vatAmount = vatAmount;
       damageCenterData.totalWithVat = totalWithVat;
       
-      // ✅ FIXED: Also save totals to helper.damage_assessment.totals
+      // ✅ FIXED: Also save totals to helper.damage_assessment.totals for CURRENT center only
       try {
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         helper.damage_assessment = helper.damage_assessment || {};
-        helper.damage_assessment.totals = {
+        helper.damage_assessment.current_center_totals = {
           work_total: workTotal,
           parts_total: partsTotal,
           repairs_total: repairsTotal,
@@ -4075,15 +4094,16 @@
           total_with_vat: totalWithVat,
           vat_percentage: vatPercentage,
           calculated_at: new Date().toISOString(),
-          damage_center_id: damageCenterData.id || `center_${Date.now()}`
+          damage_center_id: damageCenterData.id || `center_${Date.now()}`,
+          center_number: damageCenterData.number
         };
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Saved cost totals to helper.damage_assessment.totals');
+        console.log('✅ Saved CURRENT CENTER cost totals to helper.damage_assessment.current_center_totals');
       } catch (error) {
         console.error('❌ Failed to save totals to helper:', error);
       }
       
-      console.log('🧮 Calculated totals:', { workTotal, partsTotal, repairsTotal, subtotal, totalWithVat });
+      console.log('🧮 === CALCULATE TOTALS END ===');
     }
     
     function updateModuleSubtotals(workTotal, partsTotal, repairsTotal) {
@@ -5421,6 +5441,8 @@
       const select = document.getElementById('existingDamageCenterSelect');
       const selectedValue = select.value;
       
+      console.log('🗑️ Delete damage center requested, selectedValue:', selectedValue, typeof selectedValue);
+      
       if (!selectedValue) {
         alert('אנא בחר מוקד נזק למחיקה');
         return;
@@ -5479,19 +5501,32 @@
         }
         
         const helper = JSON.parse(helperString);
-        const damageCenters = getDamageCentersFromHelper();
+        let damageCenters = [];
+        try {
+          damageCenters = getDamageCentersFromHelper();
+          console.log('🔍 Available centers for deletion:', damageCenters);
+        } catch (helperError) {
+          console.error('❌ Error calling getDamageCentersFromHelper for deletion:', helperError);
+          throw new Error(`Failed to load damage centers for deletion: ${helperError.message}`);
+        }
         
         if (damageCenters.length === 0) {
           alert('לא נמצאו מוקדי נזק למחיקה');
           return;
         }
         
-        // Find the damage center to delete - FIXED: Search by number instead of ID
-        const centerIndex = damageCenters.findIndex(center => 
-          center["Damage center Number"] === selectedValue ||
-          center.number === selectedValue ||
-          center.center_number === selectedValue
-        );
+        // Find the damage center to delete - FIXED: Search by number with type conversion
+        const centerIndex = damageCenters.findIndex(center => {
+          const centerNum = center["Damage center Number"] || center.number || center.center_number;
+          console.log('🔍 Delete comparing center:', {
+            centerNum,
+            centerNumString: String(centerNum),
+            selectedValue,
+            selectedValueString: String(selectedValue),
+            match: String(centerNum) === String(selectedValue)
+          });
+          return String(centerNum) === String(selectedValue);
+        });
         
         if (centerIndex === -1) {
           alert('מוקד הנזק הנבחר לא נמצא');
@@ -5579,7 +5614,14 @@
         
       } catch (error) {
         console.error('❌ Error clearing damage center data:', error);
-        alert('שגיאה במחיקת נתוני מוקד הנזק');
+        console.error('❌ Delete error details:', {
+          message: error.message,
+          stack: error.stack,
+          selectedValue,
+          helperAPIAvailable: typeof window.deleteDamageCenter === 'function',
+          existingCentersCount: getDamageCentersFromHelper().length
+        });
+        alert(`שגיאה במחיקת נתוני מוקד הנזק: ${error.message}`);
       }
     }
     
@@ -5733,6 +5775,8 @@
       const select = document.getElementById('existingDamageCenterSelect');
       const selectedValue = select.value;
       
+      console.log('🔧 Edit damage center requested, selectedValue:', selectedValue, typeof selectedValue);
+      
       if (!selectedValue) {
         alert('אנא בחר מוקד נזק לעריכה');
         return;
@@ -5754,25 +5798,41 @@
           console.log('✅ Found damage center using helper API:', centerToEdit);
         } else {
           // Fallback to legacy method
-          const existingCenters = getDamageCentersFromHelper();
-          
+          console.log('🔍 Using fallback method - calling getDamageCentersFromHelper');
+          let existingCenters = [];
+          try {
+            existingCenters = getDamageCentersFromHelper();
+            console.log('🔍 Available centers for editing:', existingCenters);
+          } catch (helperError) {
+            console.error('❌ Error calling getDamageCentersFromHelper:', helperError);
+            throw new Error(`Failed to load damage centers: ${helperError.message}`);
+          }
           
           // FIXED: Search by damage center number with type conversion
           centerToEdit = existingCenters.find(center => {
             const centerNum = center["Damage center Number"] || center.number || center.center_number;
-            return centerNum && (centerNum.toString() === selectedValue.toString());
+            console.log('🔍 Comparing center:', {
+              centerNum,
+              centerNumString: String(centerNum),
+              selectedValue,
+              selectedValueString: String(selectedValue),
+              match: String(centerNum) === String(selectedValue)
+            });
+            return centerNum && (String(centerNum) === String(selectedValue));
           });
-        }
-        
-        if (!centerToEdit) {
-          console.log('🔍 SEARCH FAILED - selectedValue:', selectedValue);
-          console.log('🔍 SEARCH FAILED - available centers:', existingCenters.map(c => ({
-            index: existingCenters.indexOf(c),
-            damageNumber: c["Damage center Number"],
-            id: c.Id
-          })));
-          alert('מוקד הנזק הנבחר לא נמצא');
-          return;
+          
+          if (!centerToEdit) {
+            console.log('🔍 SEARCH FAILED - selectedValue:', selectedValue);
+            console.log('🔍 SEARCH FAILED - available centers:', existingCenters.map(c => ({
+              index: existingCenters.indexOf(c),
+              damageNumber: c["Damage center Number"],
+              id: c.Id,
+              centerNumber: c.number,
+              centerNum: c.center_number
+            })));
+            alert('מוקד הנזק הנבחר לא נמצא');
+            return;
+          }
         }
         
         // Load center data into wizard
@@ -5817,7 +5877,14 @@
         
       } catch (error) {
         console.error('❌ Error loading damage center for editing:', error);
-        alert('שגיאה בטעינת מוקד הנזק לעריכה');
+        console.error('❌ Error details:', {
+          message: error.message,
+          stack: error.stack,
+          selectedValue,
+          helperAPIAvailable: typeof window.getDamageCenterById === 'function',
+          existingCentersCount: getDamageCentersFromHelper().length
+        });
+        alert(`שגיאה בטעינת מוקד הנזק לעריכה: ${error.message}`);
       }
     }
     

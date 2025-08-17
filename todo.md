@@ -3852,3 +3852,31 @@ Confirm no data flows or event handlers changed by comparing saved state before/
 
  *end of floating screen enhancments*
 
+**html background setup**
+the pdf creation from teh html is handled via a server hetzner
+the server ip is 157.90.125.220
+we need to imbed teh background in teh html 
+Do exactly this in each HTML. Two small edits.
+1) Paste into <head> (inline CSS)
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 0 }
+  body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+        font-family:"Noto Sans Hebrew", Arial, sans-serif }
+  .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
+  .page{ position:relative; z-index:1; padding:12mm }
+</style>
+Also ensure <html dir="rtl" lang="he">.
+2) Insert as the first child of <body>
+<img class="bg" src="http://157.90.125.220:8080/assets/bg-report.png" alt="">
+
+3) Put your whole content in a .page container
+Either wrap once or add the class to your top wrapper.
+<body>
+  <img class="bg" src="http://157.90.125.220:8080/assets/bg-report.png" alt="">
+  <div class="page">
+    <!-- existing content -->
+  </div>
+</body>
+That’s it. No other setup.
+To switch backgrounds per template, change the src filename (e.g., bg-invoice.png).
