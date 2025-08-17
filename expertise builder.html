@@ -878,16 +878,28 @@
           controlSection.style.display = '';
         }
         
+        // Ensure we have the latest helper data
+        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Create comprehensive payload with all helper data
         const payload = {
-          html: htmlContent,
-          helper_data: helper,
-          plate: helper.vehicle?.plate || helper.car_details?.plate || helper.case_info?.plate || 'לא צוין',
+          // Complete helper object with all sections
+          ...currentHelper,
+          
+          // Explicit core fields for easy Make.com mapping
+          plate: currentHelper.vehicle?.plate || currentHelper.car_details?.plate || currentHelper.case_info?.plate || 'לא צוין',
           action: 'LAUNCH_EXPERTISE',
-          submittedAt: new Date().toISOString()
+          submittedAt: new Date().toISOString(),
+          
+          // Keep HTML separate for now
+          html: htmlContent
         };
         
-        console.log('📤 Sending payload with HTML length:', htmlContent?.length || 0);
-        console.log('📤 Payload keys:', Object.keys(payload));
+        console.log('📤 Complete helper data being sent:', currentHelper);
+        console.log('📤 Payload structure:', Object.keys(payload));
+        console.log('📤 Vehicle data:', currentHelper.vehicle || currentHelper.car_details);
+        console.log('📤 Centers data:', currentHelper.centers?.length || 0, 'centers');
+        console.log('📤 HTML length:', htmlContent?.length || 0);
         
         // Update helper status to submitted
         if (helper.expertise && helper.expertise.summary) {
