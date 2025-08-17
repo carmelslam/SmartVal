@@ -169,14 +169,14 @@ const testFormPopulation = () => {
     'manufacturer': 'טויוטה',
     'model': 'קאמרי',
     'year': '2020',
-    'owner': 'בדיקה test'
+    'owner': ''
   };
   
   window.helper.vehicle.plate = testData.plate;
   window.helper.vehicle.manufacturer = testData.manufacturer;
   window.helper.vehicle.model = testData.model;
   window.helper.vehicle.year = testData.year;
-  window.helper.stakeholders.owner.name = testData.owner;
+  // Removed test owner data to prevent default 'בדיקה test' value
   
   // Trigger form population
   if (window.refreshAllModuleForms) {

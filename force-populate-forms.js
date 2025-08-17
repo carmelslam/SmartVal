@@ -207,7 +207,11 @@ class ForceFormPopulator {
     if (helperData.stakeholders) {
       if (helperData.stakeholders.owner) {
         if (!mappings.owner) mappings.owner = helperData.stakeholders.owner.name;
-        // mappings.ownerPhone = helperData.stakeholders.owner.phone; // DISABLED - should not auto-populate
+        // Only restore owner phone if it was manually entered by user
+        if (helperData.stakeholders.owner.phone && 
+            helperData.financials?.overrides?.some(o => o.fieldId === 'owner_phone' && o.origin === 'general_info')) {
+          mappings.ownerPhone = helperData.stakeholders.owner.phone;
+        }
         mappings.ownerAddress = helperData.stakeholders.owner.address;
       }
       

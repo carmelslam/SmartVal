@@ -626,14 +626,14 @@ window.getDamageCenterById = function(centerId) {
 };
 
 window.deleteDamageCenter = function(centerId) {
-  if (!window.helper || !window.helper.damage_centers) {
+  if (!window.helper || !window.helper.centers) {
     return false;
   }
-  const centerIndex = window.helper.damage_centers.findIndex(center => center.id === centerId);
+  const centerIndex = window.helper.centers.findIndex(center => center.id === centerId);
   if (centerIndex === -1) {
     return false;
   }
-  window.helper.damage_centers.splice(centerIndex, 1);
+  window.helper.centers.splice(centerIndex, 1);
   window.calculateAllDamageCentersTotals();
   return true;
 };
@@ -3563,7 +3563,6 @@ window.populateAllForms = function() {
     
     // SIMPLE: Exclude damage_date_independent from auto-population - user must enter manually
     // 'damage_date_independent': window.helper.case_info?.damage_date, // DISABLED
-    'damageType': window.helper.case_info?.damage_type,
     'damage_type': window.helper.case_info?.damage_type,
     
     // Case info (inspection details only - NOT damage date)
@@ -4215,7 +4214,6 @@ window.setupUniversalInputCapture = function() {
     // Case fields
     'damageDate': 'case_info.damage_date',
     'damage_date': 'case_info.damage_date',
-    'damageType': 'case_info.damage_type',
     'damage_type': 'case_info.damage_type',
     'location': 'case_info.inspection_location',
     'inspection_location': 'case_info.inspection_location'

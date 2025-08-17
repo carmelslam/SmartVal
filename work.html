@@ -347,7 +347,7 @@
     <form id="workForm">
       <div>
         <label for="takana389"><strong>האם תקנה 389 חלה?</strong></label>
-        <select id="takana389" required>
+        <select id="takana389">
           <option value="">בחר</option>
           <option>כן</option>
           <option>לא</option>
@@ -419,6 +419,32 @@ function addWorkRow() {
 }
 
 addWorkRow(); // first default
+
+// ✅ FIX: Restore takana389 field value on page load
+function restoreTakana389Field() {
+  try {
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const activeCenterId = helper.damage_assessment?.current_center_id || 
+                          helper.damage_centers?.current_center_id ||
+                          sessionStorage.getItem('active_damage_center_id');
+    
+    if (activeCenterId && helper.damage_assessment?.centers) {
+      const activeCenter = helper.damage_assessment.centers.find(c => c.id === activeCenterId);
+      if (activeCenter && activeCenter.takana389) {
+        const takanaField = document.getElementById('takana389');
+        if (takanaField) {
+          takanaField.value = activeCenter.takana389;
+          console.log('✅ Restored takana389 field value:', activeCenter.takana389);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error restoring takana389 field:', error);
+  }
+}
+
+// Restore field value when page loads
+restoreTakana389Field();
 
 // Save work data to helper without navigation
 function saveWorkData() {

@@ -1651,6 +1651,10 @@
         // Restore to appropriate step
         currentStep = previousSession.last_step || 1;
         console.log('📝 Restored edit mode to step:', currentStep);
+      } else if (previousSession.session_active && previousSession.last_step) {
+        // ✅ FIX: Restore regular wizard session (non-edit mode)
+        currentStep = previousSession.last_step;
+        console.log(`🔄 Restored wizard session to step: ${currentStep}`);
       } else {
         // Always start new centers at step 1
         currentStep = 1;
@@ -1677,6 +1681,27 @@
       loadStepModule(currentStep);
       
       console.log(`✅ Wizard session restored to step ${currentStep}`);
+    }
+    
+    // ✅ FIX: Save current step for page refresh recovery
+    function saveCurrentStepToSession() {
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (!helper.current_damage_center) {
+          helper.current_damage_center = {};
+        }
+        
+        // Save current step and other session info
+        helper.current_damage_center.last_step = currentStep;
+        helper.current_damage_center.session_active = true;
+        helper.current_damage_center.last_updated = new Date().toISOString();
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log(`💾 Saved current step ${currentStep} to session`);
+      } catch (error) {
+        console.error('❌ Failed to save current step to session:', error);
+      }
     }
     
     function generateDamageCenterNumber() {
@@ -1806,6 +1831,10 @@
           // Move to next step
           console.log('🔍 Moving to next step...');
           currentStep++;
+          
+          // ✅ FIX: Save current step to session for page refresh recovery
+          saveCurrentStepToSession();
+          
           showStep(currentStep);
           updateProgress();
           
@@ -3785,7 +3814,7 @@
       }
     }
 
-    // ✅ NEW: Quick navigation to summary page
+    // ✅ FIX: Navigate to damage centers summary page
     function goToSummary() {
       console.log('📊 Quick navigation to summary requested');
       
@@ -3798,13 +3827,8 @@
         return;
       }
       
-      // Navigate directly to step 7
-      currentStep = 7;
-      showStep(currentStep);
-      updateProgress();
-      
-      // Load the summary
-      loadStepModule(currentStep);
+      // Navigate to damage centers summary page
+      window.location.href = 'damage-centers-summary.html';
       
       showUserNotification(`מציג סיכום של ${damageCenters.length} מוקדי נזק`, 'info', 2000);
       console.log(`✅ Navigated to summary with ${damageCenters.length} damage centers`);
@@ -4688,6 +4712,12 @@
         if (helper.wizard_temp) {
           delete helper.wizard_temp.current_damage_center;
           console.log('🧹 Wizard temporary data cleared');
+        }
+        
+        // ✅ FIX: Also clear current_damage_center to prevent parts carryover
+        if (helper.current_damage_center) {
+          delete helper.current_damage_center;
+          console.log('🧹 Current damage center data cleared to prevent parts carryover');
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
