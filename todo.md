@@ -3853,12 +3853,13 @@ Confirm no data flows or event handlers changed by comparing saved state before/
  *end of floating screen enhancments*
 
 **html background setup**
+PDF CREATION 
 the pdf creation from the html is handled via a server hetzner
 the server ip is 157.90.125.220
 we need to embed a background in the html so it shows on print
 
 chatgpt explinations what needs to be done :
-Do exactly this in each HTML. Two small edits.
+Do exactly this in each report HTML: expertise report, estimate report and final report report. 
 1) Paste into <head> (inline CSS)
 <meta charset="utf-8">
 <style>
