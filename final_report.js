@@ -299,6 +299,9 @@ function injectReportHTML() {
         const rendered = template(templateData);
         console.log('✅ Template rendered successfully');
         container.innerHTML = applyDraftWatermark(rendered);
+        
+        // Generate dynamic damage centers after template rendering
+        generateDamageCentersForFinalReport(helper);
       } catch (compileError) {
         console.error('💥 Handlebars compilation error:', compileError);
         console.error('💥 Error details:', {
@@ -416,6 +419,144 @@ function initializeFinalReport() {
   
   // Initial render
   injectReportHTML();
+}
+
+// --- Dynamic Damage Centers Generation (Same logic as expertise report) ---
+function generateDamageCentersForFinalReport(helper) {
+  const container = document.querySelector('.damage-centers-container');
+  if (!container || !helper.centers || !Array.isArray(helper.centers)) {
+    console.warn('No damage centers data found or container missing for final report');
+    return;
+  }
+  
+  console.log('🔧 Generating dynamic damage centers for final report:', helper.centers.length);
+  
+  container.innerHTML = ''; // Clear existing content
+  
+  helper.centers.forEach((center, index) => {
+    const centerHtml = createDamageCenterSectionForFinalReport(center, index);
+    container.innerHTML += centerHtml;
+  });
+  
+  console.log('✅ Dynamic damage centers generated successfully');
+}
+
+function createDamageCenterSectionForFinalReport(center, index) {
+  const centerNumber = center['Damage center Number'] || (index + 1);
+  const location = center.Location || 'לא צוין';
+  
+  return `
+    <div class="car-details">
+      <div class="car-details-title">מוקד הנזק מספר ${centerNumber} - ${location}</div>
+      ${generateWorksTableForFinalReport(center.Works)}
+      ${generatePartsTableForFinalReport(center.Parts)}
+      ${generateRepairsTableForFinalReport(center.Repairs)}
+    </div>
+  `;
+}
+
+function generateWorksTableForFinalReport(works) {
+  if (!works || !works.works || !Array.isArray(works.works) || works.works.length === 0) {
+    return '<p style="font-style: italic; color: #666; margin: 15px 0;">אין עבודות מוגדרות</p>';
+  }
+  
+  let tableHtml = `
+    <h4>עבודות</h4>
+    <table class="car-details-table">
+      <thead>
+        <tr><th>מס"ד</th><th>סוג עבודה</th><th>עלות משוערת</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+  `;
+  
+  works.works.forEach((work, index) => {
+    const rowNum = index + 1;
+    const category = work.category || '';
+    const comments = work.comments || '';
+    const cost = work.cost || 0;
+    
+    tableHtml += `
+      <tr>
+        <td>${rowNum}</td>
+        <td>${category}</td>
+        <td>${cost} ₪</td>
+        <td>${comments}</td>
+      </tr>
+    `;
+  });
+  
+  tableHtml += '</tbody></table>';
+  return tableHtml;
+}
+
+function generatePartsTableForFinalReport(parts) {
+  if (!parts || !parts.parts_required || !Array.isArray(parts.parts_required) || parts.parts_required.length === 0) {
+    return '<p style="font-style: italic; color: #666; margin: 15px 0;">אין חלקים מוגדרים</p>';
+  }
+  
+  let tableHtml = `
+    <h4>חלקים</h4>
+    <table class="car-details-table">
+      <thead>
+        <tr><th>מס"ד</th><th>שם החלק</th><th>עלות משוערת</th><th>מקור</th><th>תיאור</th></tr>
+      </thead>
+      <tbody>
+  `;
+  
+  parts.parts_required.forEach((part, index) => {
+    const rowNum = index + 1;
+    const name = part.name || '';
+    const price = part.price || 0;
+    const source = part.source || '';
+    const description = part.description || '';
+    
+    tableHtml += `
+      <tr>
+        <td>${rowNum}</td>
+        <td>${name}</td>
+        <td>${price} ₪</td>
+        <td>${source}</td>
+        <td>${description}</td>
+      </tr>
+    `;
+  });
+  
+  tableHtml += '</tbody></table>';
+  return tableHtml;
+}
+
+function generateRepairsTableForFinalReport(repairs) {
+  if (!repairs || !repairs.repairs || !Array.isArray(repairs.repairs) || repairs.repairs.length === 0) {
+    return '<p style="font-style: italic; color: #666; margin: 15px 0;">אין תיקונים מוגדרים</p>';
+  }
+  
+  let tableHtml = `
+    <h4>תיקונים</h4>
+    <table class="car-details-table">
+      <thead>
+        <tr><th>מס"ד</th><th>שם התיקון</th><th>עלות משוערת</th><th>תיאור עלות</th></tr>
+      </thead>
+      <tbody>
+  `;
+  
+  repairs.repairs.forEach((repair, index) => {
+    const rowNum = index + 1;
+    const name = repair.name || '';
+    const cost = repair.cost || 0;
+    const description = repair.description || '';
+    
+    tableHtml += `
+      <tr>
+        <td>${rowNum}</td>
+        <td>${name}</td>
+        <td>${cost} ₪</td>
+        <td>${description}</td>
+      </tr>
+    `;
+  });
+  
+  tableHtml += '</tbody></table>';
+  return tableHtml;
 }
 
 window.finalReport = {
