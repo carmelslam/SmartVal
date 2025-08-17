@@ -126,6 +126,14 @@ function getReportTitle() {
 
 // --- Transform Helper Data for Template ---
 function transformHelperDataForTemplate(rawHelper) {
+  // Debug centers data mapping
+  console.log('🔄 Transforming helper data:', {
+    rawHelper_centers: rawHelper.centers,
+    rawHelper_damage_assessment_centers: rawHelper.damage_assessment?.centers,
+    has_centers: !!(rawHelper.centers && rawHelper.centers.length > 0),
+    has_damage_assessment_centers: !!(rawHelper.damage_assessment?.centers && rawHelper.damage_assessment.centers.length > 0)
+  });
+
   // Ensure basic structure exists
   const transformed = {
     vehicle: rawHelper.vehicle || rawHelper.car_details || {},
@@ -276,6 +284,11 @@ function injectReportHTML() {
     };
 
     console.log('📊 Template data prepared:', templateData);
+    console.log('🔍 Centers data structure:', {
+      helper_centers: helper.centers,
+      centers_length: helper.centers ? helper.centers.length : 'undefined',
+      first_center: helper.centers && helper.centers[0] ? helper.centers[0] : 'none'
+    });
 
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
