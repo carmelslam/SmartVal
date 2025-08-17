@@ -128,7 +128,15 @@ function getReportTitle() {
 function createComprehensiveFieldMapping(rawHelper) {
   const placeholder = "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת";
   
-  // Define all final report field mappings
+  // DEBUG: Log the actual helper structure
+  console.log('🔍 ACTUAL HELPER STRUCTURE:', rawHelper);
+  console.log('🔍 Helper keys:', Object.keys(rawHelper));
+  console.log('🔍 Centers:', rawHelper.centers);
+  console.log('🔍 Levisummary:', rawHelper.levisummary);
+  console.log('🔍 Car details:', rawHelper.car_details);
+  console.log('🔍 Damage assessment:', rawHelper.damage_assessment);
+  
+  // Define all final report field mappings based on REAL structure
   const fieldMappings = {
     // Meta fields
     'meta.report_type_display': getValue(rawHelper, ['final_report.type', 'meta.report_type', 'report_type'], 'דו"ח סופי'),
