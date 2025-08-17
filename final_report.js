@@ -168,18 +168,18 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.calculations.market_value': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
     'helper.calculations.total_compensation': getValue(rawHelper, ['calculations.total_compensation'], 0),
     
-    // Levi/Valuation - get from levisummary
-    'helper.vehicle_value_base': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
-    'helper.levi.adjustments': getValue(rawHelper, ['levisummary.adjustments', 'levi_data.adjustments'], []),
+    // Levi/Valuation - get from levisummary  
+    'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    'helper.levi.adjustments': rawHelper.levisummary?.adjustments || rawHelper.levi_data?.adjustments || [],
     
     // Depreciation
     'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
     'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
     'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
     
-    // Additional mappings for commonly missed fields
-    'base_car_price': getValue(rawHelper, ['levisummary.base_price', 'valuation.base_price'], 0),
-    'damage_location': getValue(rawHelper, ['centers.0.Location', 'damage_info.location'], placeholder)
+    // Additional mappings for commonly missed fields  
+    'base_car_price': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    'damage_location': rawHelper.centers?.[0]?.Location || rawHelper.damage_info?.location || placeholder
   };
   
   console.log('🔍 Field mapping created:', fieldMappings);
@@ -190,16 +190,28 @@ function getValue(obj, paths, defaultValue) {
   for (const path of paths) {
     const value = getNestedValue(obj, path);
     if (value !== undefined && value !== null && value !== '') {
+      console.log(`✅ Found value for ${path}:`, value);
       return value;
+    } else {
+      console.log(`❌ No value found for ${path}`);
     }
   }
+  console.log(`🔄 Using default value for ${paths.join(', ')}:`, defaultValue);
   return defaultValue;
 }
 
 function getNestedValue(obj, path) {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined ? current[key] : undefined;
-  }, obj);
+  const keys = path.split('.');
+  let current = obj;
+  
+  for (let i = 0; i < keys.length; i++) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    current = current[keys[i]];
+  }
+  
+  return current;
 }
 
 // --- Transform Helper Data for Template ---
