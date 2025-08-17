@@ -881,15 +881,26 @@
         // Ensure we have the latest helper data
         const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Create comprehensive payload with all helper data
+        // Create comprehensive payload with complete helper data
         const payload = {
-          // Complete helper object with all sections
-          ...currentHelper,
+          // Send complete helper as nested object
+          helper: currentHelper,
           
           // Explicit core fields for easy Make.com mapping
           plate: currentHelper.vehicle?.plate || currentHelper.car_details?.plate || currentHelper.case_info?.plate || 'לא צוין',
           action: 'LAUNCH_EXPERTISE',
           submittedAt: new Date().toISOString(),
+          
+          // Individual sections for direct access
+          vehicle: currentHelper.vehicle || currentHelper.car_details || {},
+          centers: currentHelper.centers || [],
+          damage_assessment: currentHelper.damage_assessment || {},
+          calculations: currentHelper.calculations || {},
+          expertise: currentHelper.expertise || {},
+          financials: currentHelper.financials || {},
+          valuation: currentHelper.valuation || {},
+          stakeholders: currentHelper.stakeholders || {},
+          case_info: currentHelper.case_info || {},
           
           // Keep HTML separate for now
           html: htmlContent
