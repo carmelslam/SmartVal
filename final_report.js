@@ -234,6 +234,18 @@ function injectReportHTML() {
 
     const htmlTemplate = templateElement.innerHTML;
     
+    // Decode HTML entities that might interfere with Handlebars
+    const decodedTemplate = htmlTemplate
+      .replace(/&gt;/g, '>')
+      .replace(/&lt;/g, '<')
+      .replace(/&amp;/g, '&');
+    
+    console.log('🔧 Template debugging:', { 
+      originalLength: htmlTemplate.length,
+      decodedLength: decodedTemplate.length,
+      hasHTMLEntities: htmlTemplate !== decodedTemplate
+    });
+    
     // Transform helper data for template compatibility
     const transformedHelper = transformHelperDataForTemplate(helper);
     
@@ -252,7 +264,7 @@ function injectReportHTML() {
 
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
-      const template = Handlebars.compile(htmlTemplate);
+      const template = Handlebars.compile(decodedTemplate);
       const rendered = template(templateData);
       container.innerHTML = applyDraftWatermark(rendered);
     } else {
