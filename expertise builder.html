@@ -3,11 +3,25 @@
 <head>
   <meta charset="utf-8">
   <style>
-    @page { size: A4; margin: 0 }
+    @page { size: A4; margin: 10mm; }
     body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
-          font-family:"Noto Sans Hebrew", Arial, sans-serif }
+          font-family:"Noto Sans Hebrew", Arial, sans-serif; max-width: 210mm; }
     .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
-    .page{ position:relative; z-index:1; padding:12mm }
+    .page{ position:relative; z-index:1; padding:5mm; width:100%; box-sizing:border-box; }
+    
+    /* Draft watermark styles */
+    .draft-watermark { 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%) rotate(-45deg); 
+      font-size: 80px; 
+      color: rgba(255, 0, 0, 0.1); 
+      font-weight: bold; 
+      z-index: 999; 
+      pointer-events: none;
+      white-space: nowrap;
+    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ירון כיוף שמאות - פורטל - דו"ח אקספרטיזה</title>
@@ -328,9 +342,38 @@
   <script>
     let helper = {};
     
+    // Add draft watermark if expertise is in draft status
+    function addDraftWatermarkIfNeeded() {
+      try {
+        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const isExpertiseDraft = currentHelper.expertise?.summary?.status !== 'הוגש';
+        
+        if (isExpertiseDraft) {
+          // Remove existing watermark first
+          const existingWatermark = document.querySelector('.draft-watermark');
+          if (existingWatermark) {
+            existingWatermark.remove();
+          }
+          
+          // Add draft watermark
+          const watermark = document.createElement('div');
+          watermark.className = 'draft-watermark';
+          watermark.textContent = 'טיוטה בלבד';
+          document.body.appendChild(watermark);
+          
+          console.log('✅ Draft watermark added - expertise not yet submitted');
+        } else {
+          console.log('ℹ️ No watermark needed - expertise already submitted');
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not determine draft status:', error);
+      }
+    }
+
     window.onload = () => {
       loadHelperData();
       populateExpertiseData();
+      addDraftWatermarkIfNeeded();
     };
     
     function loadHelperData() {
