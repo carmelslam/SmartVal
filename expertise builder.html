@@ -932,31 +932,23 @@
           import('./webhook.js').then(({ sendToWebhook }) => {
             console.log('✅ Webhook module loaded');
             
-            // Prepare minimal test payload first
-            const testPayload = {
-              plate: payload.plate,
-              action: 'TEST_SIMPLE',
-              timestamp: new Date().toISOString(),
-              test: true
-            };
-            
-            console.log('🧪 Testing with minimal payload first:', testPayload);
-            
-            // Prepare different payloads for each webhook  
+            // Prepare different payloads for each webhook
             const htmlContent = document.documentElement.outerHTML;
             const htmlPayload = {
               plate: payload.plate,
               action: 'EXPERTISE_HTML',
               submittedAt: new Date().toISOString(),
               html: htmlContent,
-              case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`
+              case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`,
+              callbackUrl: null
             };
             
             const helperExportPayload = {
               ...payload,
               action: 'HELPER_EXPORT',
               export_type: 'expertise_submission',
-              backup_timestamp: new Date().toISOString()
+              backup_timestamp: new Date().toISOString(),
+              callbackUrl: null
             };
             
             // Send all 3 webhooks sequentially for better reliability
