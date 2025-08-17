@@ -425,6 +425,10 @@
       
       container.innerHTML = ''; // Clear existing content
       
+      // Add general description section first
+      const generalDescriptionHtml = createGeneralDescriptionSection();
+      container.innerHTML += generalDescriptionHtml;
+      
       helper.centers.forEach((center, index) => {
         const centerHtml = createDamageCenterSection(center, index);
         container.innerHTML += centerHtml;
@@ -432,6 +436,28 @@
       
       // Update summary table
       updateDamageSummaryTable();
+    }
+    
+    function createGeneralDescriptionSection() {
+      if (!helper.centers || !Array.isArray(helper.centers)) {
+        return '';
+      }
+      
+      // Create list of all locations
+      const locations = helper.centers.map(center => center.Location || 'לא צוין');
+      const locationsList = locations.map(location => `${location}`).join('\n');
+      
+      return `
+        <div class="keep-together" style="margin-bottom: 25px; page-break-inside: avoid;">
+          <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 2px solid #e2e8f0; text-align: justify; line-height: 1.6;">
+            <p style="margin: 0; font-size: 14px; color: #374151;">
+              בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באיזורים הבאים:<br><br>
+              <span style="font-weight: bold; color: #1e3a8a;">${locationsList.replace(/\n/g, '<br>')}</span><br><br>
+              כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.
+            </p>
+          </div>
+        </div>
+      `;
     }
     
     function createDamageCenterSection(center, index) {
@@ -448,7 +474,7 @@
             <tbody>
               <tr>
                 <td class="table-param left-bold-border" style="width: 25%; font-weight: bold;"><span>תיאור כללי</span></td>
-                <td style="text-align: right; padding: 10px;">בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור ${location} של הרכב. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.</td>
+                <td style="text-align: right; padding: 10px;">${description || `בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים באזור ${location} של הרכב. כתוצאה מכך, חלקים אלה נמצאו ניזוקים וטעונים תיקון.`}</td>
               </tr>
             </tbody>
           </table>
@@ -755,40 +781,6 @@
 
     
     // Control button functions
-    window.reviewReport = function() {
-      // Toggle review mode - highlight important sections
-      const reviewMode = document.body.classList.toggle('review-mode');
-      
-      if (reviewMode) {
-        // Add review styling
-        const style = document.createElement('style');
-        style.id = 'review-style';
-        style.textContent = `
-          .review-mode .section-title {
-            background: #fff3cd !important;
-            padding: 8px !important;
-            border-radius: 4px !important;
-          }
-          .review-mode table {
-            border: 2px solid #ffc107 !important;
-          }
-          .review-mode .paragraph {
-            border-left: 4px solid #17a2b8 !important;
-            padding-left: 10px !important;
-          }
-        `;
-        document.head.appendChild(style);
-        alert('מצב סקירה הופעל - חלקים חשובים מודגשים');
-      } else {
-        // Remove review styling
-        const reviewStyle = document.getElementById('review-style');
-        if (reviewStyle) {
-          reviewStyle.remove();
-        }
-        alert('מצב סקירה בוטל');
-      }
-    };
-
     window.editExpertise = function() {
       if (confirm('האם ברצונך לערוך את נתוני האקספירטיזה? זה יחזיר אותך לדף האימות.')) {
         // Go back to validation page where user can edit data
@@ -846,6 +838,16 @@
           window.location.href = 'selection.html';
         }
       }
+    };
+
+    window.viewDraftOpinion = function() {
+      // Navigate to final report builder for draft opinion
+      window.location.href = 'final-report-builder.html';
+    };
+
+    window.viewDraftEstimate = function() {
+      // Navigate to estimate builder for draft estimate
+      window.location.href = 'estimate-builder.html';
     };
   </script>
 <script type="module" src="./expertise.js"></script>
@@ -1021,9 +1023,6 @@
     </div>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
-      <button type="button" class="control-btn review-btn" onclick="reviewReport()">
-        👁️ סקירת דו"ח
-      </button>
       <button type="button" class="control-btn edit-btn" onclick="editExpertise()">
         ✏️ עריכת נתונים
       </button>
@@ -1035,6 +1034,12 @@
       </button>
       <button type="button" class="control-btn home-btn" onclick="window.location.href='selection.html'">
         🏠 חזור לדף הבחירה
+      </button>
+      <button type="button" class="control-btn draft-opinion-btn" onclick="viewDraftOpinion()">
+        📄 צפייה בחוות דעת טיוטה
+      </button>
+      <button type="button" class="control-btn draft-estimate-btn" onclick="viewDraftEstimate()">
+        📊 צפייה באומדן טיוטה
       </button>
     </div>
   </div>
