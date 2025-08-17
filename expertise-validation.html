@@ -836,6 +836,13 @@
       console.log('Loading expertise validation data for plate:', plate);
       console.log('Helper object:', helper);
       
+      // ✅ CRITICAL FIX: Force rebuild assessment on page load to prevent stale data
+      console.log('🔄 Force rebuilding damage assessment on validation page load...');
+      if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+        window.buildComprehensiveDamageAssessment();
+        console.log('✅ Damage assessment rebuilt on page load');
+      }
+      
       // Initialize first section validation
       setTimeout(() => {
         validateSection('vehicle');
@@ -1656,64 +1663,38 @@
       return { works, parts, repairs, beforeVat, withVat };
     }
 
-    // New function to calculate totals from damage_assessment.totals
+    // ✅ FIX: Force rebuild assessment before calculating totals
     function calculateTotalsFromAssessment(damageAssessment) {
-      console.log('Calculating totals from damage assessment:', damageAssessment);
+      console.log('🔄 Calculating totals from damage assessment...');
       
-      // Call the new aggregation function to calculate totals
-      if (window.calculateDamageAssessmentTotals) {
-        const aggregatedTotals = window.calculateDamageAssessmentTotals();
-        if (aggregatedTotals) {
-          console.log('Using aggregated totals from helper function:', aggregatedTotals);
-          
-          const works = aggregatedTotals.category_totals?.works?.without_vat || 0;
-          const parts = aggregatedTotals.category_totals?.parts?.without_vat || 0;
-          const repairs = aggregatedTotals.category_totals?.repairs?.without_vat || 0;
-          const beforeVat = aggregatedTotals.all_centers_subtotal || 0;
-          const withVat = aggregatedTotals.all_centers_total || 0;
-          
-          console.log(`🧮 Assessment totals from aggregation:
-            Works: ₪${works.toLocaleString()}
-            Parts: ₪${parts.toLocaleString()}
-            Repairs: ₪${repairs.toLocaleString()}
-            Before VAT: ₪${beforeVat.toLocaleString()}
-            With VAT: ₪${withVat.toLocaleString()}`);
-          
-          return { works, parts, repairs, beforeVat, withVat };
-        }
+      // ✅ FORCE REBUILD: Ensure we have fresh data
+      if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+        console.log('🔄 Force rebuilding damage assessment before calculating totals...');
+        window.buildComprehensiveDamageAssessment();
+        // Refresh the helper data after rebuild
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        damageAssessment = helper?.damage_assessment || {};
       }
       
-      // Fallback to original calculation if aggregation function is not available
-      console.log('Fallback: Using original calculation method');
+      console.log('📊 Using damage assessment:', damageAssessment);
       
-      // Get totals from damage_assessment.totals section
+      // ✅ FIX: Use the corrected totals from damage_assessment.totals
       const totalsData = damageAssessment?.totals || {};
+      console.log('📊 Totals data:', totalsData);
       
-      console.log('Totals data from assessment:', totalsData);
+      const works = parseFloat(totalsData["Total works"] || 0);
+      const parts = parseFloat(totalsData["Total parts"] || 0);
+      const repairs = parseFloat(totalsData["Total repairs"] || 0);
+      const beforeVat = parseFloat(totalsData["Total without VAT"] || 0);
+      const withVat = parseFloat(totalsData["Total with VAT"] || 0);
       
-      // Map totals directly from assessment data (from screenshots)
-      const beforeVat = parseFloat(totalsData['Total without VAT']) || 0;
-      const withVat = parseFloat(totalsData['Total with VAT']) || 0;
-      
-      // Calculate category totals by aggregating from individual damage centers
-      const damageCentersData = damageAssessment?.damage_centers_summary || {};
-      const centerKeys = Object.keys(damageCentersData).filter(key => key.startsWith('Damage center'));
-      
-      let works = 0, parts = 0, repairs = 0;
-      
-      centerKeys.forEach(centerKey => {
-        const center = damageCentersData[centerKey];
-        works += parseFloat(center?.Works) || 0;
-        parts += parseFloat(center?.Parts) || 0;
-        repairs += parseFloat(center?.Repairs) || 0;
-      });
-      
-      console.log(`🧮 Assessment totals (fallback):
+      console.log(`✅ Corrected totals calculated:
         Works: ₪${works.toLocaleString()}
         Parts: ₪${parts.toLocaleString()}
         Repairs: ₪${repairs.toLocaleString()}
         Before VAT: ₪${beforeVat.toLocaleString()}
-        With VAT: ₪${withVat.toLocaleString()}`);
+        With VAT: ₪${withVat.toLocaleString()}
+      `);
       
       return { works, parts, repairs, beforeVat, withVat };
     }

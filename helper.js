@@ -687,6 +687,15 @@ window.deleteDamageCenter = function(centerId) {
     window.calculateAllDamageCentersTotals();
   }
   
+  // ✅ FORCE SAVE: Ensure updated data is immediately saved to storage
+  console.log('💾 Force saving updated helper data after deletion and rebuild...');
+  if (typeof saveHelperToAllStorageLocations === 'function') {
+    saveHelperToAllStorageLocations();
+  } else {
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+  }
+  console.log('✅ Helper data force saved to storage');
+  
   console.log(`✅ Damage center deleted and ${window.helper.centers.length} remaining centers renumbered sequentially`);
   return true;
 };
@@ -718,24 +727,99 @@ window.syncDamageAssessmentCenters = function() {
 
 window.buildComprehensiveDamageAssessment = function() {
   try {
+    console.log('🏗️ Building comprehensive damage assessment...');
     const allCenters = window.getDamageCenters();
+    
+    // Initialize damage_assessment structure
+    window.helper.damage_assessment = window.helper.damage_assessment || {};
+    
     if (allCenters.length === 0) {
+      console.log('📊 No centers found - clearing assessment');
+      window.helper.damage_assessment.damage_centers_summary = {};
+      window.helper.damage_assessment.totals = { 
+        "Total works": 0, 
+        "Total parts": 0, 
+        "Total repairs": 0,
+        "Total without VAT": 0, 
+        "Total with VAT": 0 
+      };
       return { centers: [], totals: { all_centers_total: 0 }, summary: { total_centers: 0 } };
     }
+    
+    // ✅ CRITICAL FIX: Clear old damage_centers_summary completely
+    console.log('🧹 Clearing old damage_centers_summary...');
+    window.helper.damage_assessment.damage_centers_summary = {};
+    
+    // Initialize totals
+    let totalWorks = 0, totalParts = 0, totalRepairs = 0;
+    let totalWithoutVAT = 0, totalWithVAT = 0;
+    
+    // ✅ REBUILD: Create fresh damage_centers_summary with sequential numbering
+    console.log(`📝 Rebuilding summary for ${allCenters.length} centers...`);
+    allCenters.forEach((center, index) => {
+      const centerNumber = index + 1; // Sequential numbering (1, 2, 3, 4...)
+      const centerKey = `Damage center ${centerNumber}`;
+      
+      // Extract totals from center data
+      const works = parseFloat(center.Works?.works_meta?.total_cost || 0);
+      const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);
+      const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
+      const subtotal = works + parts + repairs;
+      const vat = subtotal * 0.17; // 17% VAT
+      const total = subtotal + vat;
+      
+      // Add to summary with sequential numbering
+      window.helper.damage_assessment.damage_centers_summary[centerKey] = {
+        "Works": works,
+        "Parts": parts,
+        "Repairs": repairs,
+        "Total without VAT": subtotal,
+        "Total with VAT": total
+      };
+      
+      // Add to grand totals
+      totalWorks += works;
+      totalParts += parts;
+      totalRepairs += repairs;
+      totalWithoutVAT += subtotal;
+      totalWithVAT += total;
+      
+      console.log(`✅ Added ${centerKey}: Works=${works}, Parts=${parts}, Repairs=${repairs}, Total=${total}`);
+    });
+    
+    // ✅ UPDATE: Store corrected totals
+    window.helper.damage_assessment.totals = {
+      "Total works": totalWorks,
+      "Total parts": totalParts,
+      "Total repairs": totalRepairs,
+      "Total without VAT": totalWithoutVAT,
+      "Total with VAT": totalWithVAT
+    };
+    
+    // Build comprehensive assessment structure
     const assessment = {
       centers: allCenters,
-      totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
-      summary: { total_centers: allCenters.length, completed_centers: allCenters.filter(c => c.status === 'completed').length },
+      totals: { 
+        all_centers_subtotal: totalWithoutVAT, 
+        all_centers_vat: totalWithVAT - totalWithoutVAT, 
+        all_centers_total: totalWithVAT 
+      },
+      summary: { 
+        total_centers: allCenters.length, 
+        completed_centers: allCenters.filter(c => c.status === 'completed').length 
+      },
       metadata: { generated_at: new Date().toISOString(), version: '2.0.0' }
     };
-    allCenters.forEach(center => {
-      const centerTotal = parseFloat(center.Summary?.["Total with VAT"] || center.total_with_vat || 0);
-      assessment.totals.all_centers_total += centerTotal;
-    });
-    window.helper.damage_assessment = window.helper.damage_assessment || {};
+    
     window.helper.damage_assessment.comprehensive = assessment;
-    window.helper.damage_assessment.totals = assessment.totals;
     window.helper.damage_assessment.last_updated = new Date().toISOString();
+    
+    console.log('✅ Comprehensive damage assessment rebuilt:', {
+      centersCount: allCenters.length,
+      totalWithVAT: totalWithVAT,
+      summaryKeys: Object.keys(window.helper.damage_assessment.damage_centers_summary)
+    });
+    
     return assessment;
   } catch (error) {
     console.error('❌ Error building comprehensive damage assessment:', error);
