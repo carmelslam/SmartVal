@@ -161,13 +161,17 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.calculations.total_compensation': getValue(rawHelper, ['calculations.total_compensation'], 0),
     
     // Levi/Valuation
-    'helper.vehicle_value_base': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], 0),
+    'helper.vehicle_value_base': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], placeholder),
     'helper.levi.adjustments': getValue(rawHelper, ['valuation.adjustments', 'levi_data.adjustments'], []),
     
     // Depreciation
     'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
     'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
-    'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], [])
+    'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
+    
+    // Additional mappings for commonly missed fields
+    'base_car_price': getValue(rawHelper, ['valuation.base_price', 'levisummary.base_value'], placeholder),
+    'damage_location': getValue(rawHelper, ['damage_info.location', 'case_info.damage_location'], placeholder)
   };
   
   console.log('🔍 Field mapping created:', fieldMappings);
@@ -249,7 +253,11 @@ function transformHelperDataForTemplate(rawHelper) {
         centers: fieldMappings['helper.expertise.depreciation.centers']
       }
     },
-    damage_assessment: rawHelper.damage_assessment || {}
+    damage_assessment: rawHelper.damage_assessment || {},
+    
+    // Additional fields for complete mapping
+    base_car_price: fieldMappings['base_car_price'],
+    damage_location: fieldMappings['damage_location']
   };
   
   // Field mapping completed via comprehensive system above
