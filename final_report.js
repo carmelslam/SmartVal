@@ -506,9 +506,9 @@ function generatePartsTableForFinalReport(parts) {
   parts.parts_required.forEach((part, index) => {
     const rowNum = index + 1;
     const name = part.name || '';
-    const price = part.price || 0;
+    const price = part.מחיר || part.price || 0;
     const source = part.source || '';
-    const description = part.description || '';
+    const description = part.תיאור || part.description || '';
     
     tableHtml += `
       <tr>
