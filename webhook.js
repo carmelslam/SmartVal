@@ -29,7 +29,7 @@ FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp'
 
   // Estimate and Case Management Webhooks
   SUBMIT_ESTIMATE: 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l',
-  SUBMIT_ESTIMATE_DRAFT:'https://hook.eu2.make.com/g3ew34k2nunnodlp91eb1a0kpntnr5x3'
+  SUBMIT_ESTIMATE_DRAFT: 'https://hook.eu2.make.com/g3ew34k2nunnodlp91eb1a0kpntnr5x3',
   
   // Helper export on logout - sends complete helper data with plate_helper_timestamp format
   HELPER_EXPORT: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p',
