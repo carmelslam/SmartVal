@@ -5002,10 +5002,22 @@
             setTimeout(() => {
               iframe.contentWindow.postMessage({
                 type: 'requestTotalsRecalculation',
-                reason: 'edit_mode_load'
+                reason: 'edit_mode_load',
+                respondWithTotals: true,
+                moduleType: moduleType
               }, '*');
               console.log(`🧮 Requested totals recalculation from ${moduleType} iframe in edit mode`);
             }, 500);
+            
+            // ✅ Also request current totals immediately
+            setTimeout(() => {
+              iframe.contentWindow.postMessage({
+                type: 'requestCurrentTotals',
+                moduleType: moduleType,
+                reason: 'wizard_sync'
+              }, '*');
+              console.log(`📊 Requested current totals from ${moduleType} iframe for wizard sync`);
+            }, 1000);
           }
         }
       }, 1500); // Increased timeout for better reliability
@@ -5033,6 +5045,12 @@
           break;
         case 'moduleError':
           handleModuleError(event.data);
+          break;
+        case 'totalsUpdate':
+          handleTotalsUpdate(event.data);
+          break;
+        case 'iframeTotalsCalculated':
+          handleIframeTotalsCalculated(event.data);
           break;
       }
     });
@@ -5293,6 +5311,89 @@
       } catch (error) {
         console.error('❌ Failed to update parts selection:', error);
       }
+    }
+    
+    // ✅ NEW: Handle iframe totals updates
+    function handleTotalsUpdate(data) {
+      console.log('🧮 Received totals update from iframe:', data);
+      
+      try {
+        // Update moduleData with the iframe's calculated totals
+        if (data.moduleType === 'parts' && data.total !== undefined) {
+          console.log(`🔧 Updating parts total from iframe: ₪${data.total}`);
+          // Update parts total in wizard display
+          const partsAmount = document.getElementById('partsAmount');
+          const partsAmountWithVat = document.getElementById('partsAmountWithVat');
+          if (partsAmount) partsAmount.textContent = `₪${data.total.toLocaleString()}`;
+          if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          
+          // Update parts display visibility
+          const partsSubtotal = document.getElementById('partsSubtotal');
+          if (partsSubtotal) partsSubtotal.style.display = data.total > 0 ? 'block' : 'none';
+        }
+        
+        if (data.moduleType === 'repairs' && data.total !== undefined) {
+          console.log(`⚙️ Updating repairs total from iframe: ₪${data.total}`);
+          // Update repairs total in wizard display
+          const repairsAmount = document.getElementById('repairsAmount');
+          const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
+          if (repairsAmount) repairsAmount.textContent = `₪${data.total.toLocaleString()}`;
+          if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          
+          // Update repairs display visibility
+          const repairsSubtotal = document.getElementById('repairsSubtotal');
+          if (repairsSubtotal) repairsSubtotal.style.display = data.total > 0 ? 'block' : 'none';
+        }
+        
+        if (data.moduleType === 'works' && data.total !== undefined) {
+          console.log(`🔨 Updating works total from iframe: ₪${data.total}`);
+          // Update works total in wizard display
+          const worksAmount = document.getElementById('worksAmount');
+          const worksAmountWithVat = document.getElementById('worksAmountWithVat');
+          if (worksAmount) worksAmount.textContent = `₪${data.total.toLocaleString()}`;
+          if (worksAmountWithVat) worksAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          
+          // Update works display visibility
+          const worksSubtotal = document.getElementById('worksSubtotal');
+          if (worksSubtotal) worksSubtotal.style.display = data.total > 0 ? 'block' : 'none';
+        }
+        
+        // Trigger main totals recalculation
+        setTimeout(() => {
+          calculateTotals();
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Failed to handle totals update:', error);
+      }
+    }
+    
+    // ✅ NEW: Handle iframe totals calculated event
+    function handleIframeTotalsCalculated(data) {
+      console.log('🧮 Iframe finished calculating totals:', data);
+      
+      if (data.parts && data.parts.total !== undefined) {
+        // Update moduleData.parts with actual total
+        moduleData.parts = moduleData.parts || [];
+        console.log(`🔧 Parts iframe calculated total: ₪${data.parts.total}`);
+      }
+      
+      if (data.repairs && data.repairs.total !== undefined) {
+        // Update moduleData.repairs with actual total
+        moduleData.repairs = moduleData.repairs || [];
+        console.log(`⚙️ Repairs iframe calculated total: ₪${data.repairs.total}`);
+      }
+      
+      if (data.works && data.works.total !== undefined) {
+        // Update moduleData.works with actual total
+        moduleData.works = moduleData.works || [];
+        console.log(`🔨 Works iframe calculated total: ₪${data.works.total}`);
+      }
+      
+      // Force wizard totals recalculation with iframe data
+      setTimeout(() => {
+        calculateTotals();
+      }, 200);
     }
     
     // ✅ ENHANCED: Handle module errors with better user feedback
