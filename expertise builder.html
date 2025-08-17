@@ -883,21 +883,20 @@
           console.log('✅ Payload created:', payload);
         
           console.log('⏱️ Sending webhook...');
-          // Use webhook from expertise.js if available
-          if (typeof sendToWebhook !== 'undefined') {
-            sendToWebhook('LAUNCH_EXPERTISE', payload)
-              .then(() => {
-                console.log('✅ Webhook sent successfully');
-                alert('האקספירטיזה נשלחה בהצלחה!');
-              })
-              .catch((error) => {
-                console.error('❌ Webhook failed:', error);
-                alert('שגיאה בשליחה. אנא נסה שוב.');
-              });
-          } else {
-            console.error('❌ sendToWebhook not available');
-            alert('שגיאה: פונקציית שליחה לא זמינה');
-          }
+          
+          // Import and use sendToWebhook
+          import('./webhook.js').then(({ sendToWebhook }) => {
+            console.log('✅ Webhook module loaded');
+            return sendToWebhook('LAUNCH_EXPERTISE', payload);
+          })
+          .then(() => {
+            console.log('✅ Webhook sent successfully');
+            alert('האקספירטיזה נשלחה בהצלחה!');
+          })
+          .catch((error) => {
+            console.error('❌ Webhook failed:', error);
+            alert('שגיאה בשליחה: ' + error.message);
+          });
           
         } catch (error) {
           console.error('❌ Submit process failed:', error);
