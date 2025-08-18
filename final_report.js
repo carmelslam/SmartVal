@@ -212,6 +212,9 @@ function createComprehensiveFieldMapping(rawHelper) {
   console.log('🔍 Helper keys:', Object.keys(rawHelper));
   console.log('🔍 Centers:', rawHelper.centers);
   console.log('🔍 Levisummary:', rawHelper.levisummary);
+  console.log('🔍 Levisummary base_price:', rawHelper.levisummary?.base_price);
+  console.log('🔍 Levisummary final_price:', rawHelper.levisummary?.final_price);
+  console.log('🔍 Levisummary adjustments:', rawHelper.levisummary?.adjustments);
   console.log('🔍 Car details:', rawHelper.car_details);
   console.log('🔍 Damage assessment:', rawHelper.damage_assessment);
   
@@ -240,16 +243,16 @@ function createComprehensiveFieldMapping(rawHelper) {
     // Damage fields - get from centers data
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
     
-    // Calculations - get from centers and damage_assessment totals
+    // Calculations - get from centers and damage_assessment totals (consumers, not feeders)
     'helper.calculations.total_damage': rawHelper.damage_assessment?.totals?.['Total with VAT'] || rawHelper.calculations?.total_damage || 0,
-    'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
     'helper.calculations.damage_percent': rawHelper.calculations?.damage_percent || '0%',
-    'helper.calculations.market_value': rawHelper.calculations?.market_value || rawHelper.expertise?.calculations?.market_value || rawHelper.levisummary?.final_price || rawHelper.valuation?.final_price || 0,
-    'helper.calculations.base_market_value': rawHelper.calculations?.base_market_value || rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    'helper.calculations.market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.base_market_value': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
     'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
     
-    // Levi/Valuation - get from levisummary  
-    'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    // Levi/Valuation - PRIMARY SOURCE for all valuation data
+    'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
     'helper.levi.adjustments': rawHelper.levisummary?.adjustments || rawHelper.levi_data?.adjustments || [],
     
     // Depreciation
@@ -257,8 +260,8 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
     'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
     
-    // Custom adjustments for market value table
-    'helper.custom_adjustments.full_market_adjustments': rawHelper.custom_adjustments?.full_market_adjustments || [],
+    // Custom adjustments for market value table - PRIORITIZE LEVI SUMMARY
+    'helper.custom_adjustments.full_market_adjustments': rawHelper.levisummary?.adjustments || rawHelper.custom_adjustments?.full_market_adjustments || rawHelper.levi_data?.adjustments || [],
     
     // Dynamic legal text and attachments
     'helper.final_report_legal_text': rawHelper.final_report_legal_text || '',
