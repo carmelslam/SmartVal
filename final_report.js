@@ -3,6 +3,7 @@
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
 import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
+import { vaultLoader } from './vault-loader.js';
 
 const vault = window.vaultTexts || {};
 import { sessionEngine } from './session.js';
@@ -111,6 +112,11 @@ function setupHandlebarsHelpers() {
       return a > b;
     });
     
+    // Equality check helper
+    Handlebars.registerHelper('eq', function(a, b) {
+      return a === b;
+    });
+    
     // Length helper
     Handlebars.registerHelper('length', function(arr) {
       return Array.isArray(arr) ? arr.length : 0;
@@ -129,6 +135,72 @@ function applyDraftWatermark(html) {
 function getReportTitle() {
   if (isDraft) return 'טיוטת חוות דעת';
   return vault[reportType]?.title || 'חוות דעת';
+}
+
+// --- Legal Text Generation ---
+function generateLegalText(helper) {
+  // Get legal text from builder first, then fallback to vault
+  const builderLegalText = helper.final_report_legal_text || '';
+  
+  // If builder has text, use it
+  if (builderLegalText) {
+    return builderLegalText;
+  }
+  
+  // Fallback to vault system
+  const finalReportType = helper.final_report_type || helper.report_type || 'default';
+  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+  
+  const legalText = helper.legal_texts?.[`final_${finalReportType}`] || 
+                   helper.legal_texts?.final_default ||
+                   vaultTexts[`final_${finalReportType}`]?.text ||
+                   vaultTexts.final_default?.text ||
+                   'חוות דעת זו מבוססת על בדיקה מקצועית ומחירי שוק עדכניים. הדו״ח מהווה הערכה מקצועית ועצמאית.';
+  
+  // Add assessor credentials from vault
+  const assessorCredentials = vaultTexts.assessor_introduction || 
+                             'ירון כיוף, שמאי מוסמך מספר רישיון 1097, בעל ותק של מעל 15 שנה בתחום הערכת נזקי רכב ורכוש.';
+  
+  return legalText + '\n\n' + assessorCredentials;
+}
+
+function getAttachmentsList(helper) {
+  // Get attachments from helper (saved from final-report-builder)
+  let attachmentsText = helper.final_report_attachments || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nחיפוש חלפים משומשים\nצילום רישיון הרכב\nשכר טרחה';
+  
+  // Convert plain text to HTML for display
+  attachmentsText = attachmentsText
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  
+  return attachmentsText;
+}
+
+// --- Populate Dynamic Content ---
+function populateDynamicContent(helper) {
+  // Populate dynamic legal text
+  const legalTextElement = document.getElementById('dynamic-legal-text');
+  if (legalTextElement) {
+    const legalText = generateLegalText(helper);
+    // Convert newlines to HTML breaks and format
+    const formattedLegalText = legalText
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    
+    legalTextElement.innerHTML = `
+      <strong>הערות:</strong><br>
+      ${formattedLegalText}<br><br>
+      <strong>הצהרת שמאי:</strong><br>
+      ${formattedLegalText}
+    `;
+  }
+  
+  // Populate dynamic attachments
+  const attachmentsElement = document.getElementById('dynamic-attachments');
+  if (attachmentsElement) {
+    const attachmentsList = getAttachmentsList(helper);
+    attachmentsElement.innerHTML = attachmentsList;
+  }
 }
 
 // --- Comprehensive Field Mapping System ---
@@ -172,7 +244,8 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.calculations.total_damage': rawHelper.damage_assessment?.totals?.['Total with VAT'] || rawHelper.calculations?.total_damage || 0,
     'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.valuation?.final_price || 0,
     'helper.calculations.damage_percent': rawHelper.calculations?.damage_percent || '0%',
-    'helper.calculations.market_value': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+    'helper.calculations.market_value': rawHelper.calculations?.market_value || rawHelper.expertise?.calculations?.market_value || rawHelper.levisummary?.final_price || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.base_market_value': rawHelper.calculations?.base_market_value || rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
     'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
     
     // Levi/Valuation - get from levisummary  
@@ -183,6 +256,14 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
     'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
     'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
+    
+    // Custom adjustments for market value table
+    'helper.custom_adjustments.full_market_adjustments': rawHelper.custom_adjustments?.full_market_adjustments || [],
+    
+    // Dynamic legal text and attachments
+    'helper.final_report_legal_text': rawHelper.final_report_legal_text || '',
+    'helper.final_report_type': rawHelper.final_report_type || rawHelper.report_type || 'default',
+    'helper.final_report_attachments': rawHelper.final_report_attachments || '',
     
     // Additional mappings for commonly missed fields  
     'base_car_price': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
@@ -265,7 +346,11 @@ function transformHelperDataForTemplate(rawHelper) {
       vehicle_value_gross: fieldMappings['helper.calculations.vehicle_value_gross'],
       damage_percent: fieldMappings['helper.calculations.damage_percent'],
       market_value: fieldMappings['helper.calculations.market_value'],
+      base_market_value: fieldMappings['helper.calculations.base_market_value'],
       total_compensation: fieldMappings['helper.calculations.total_compensation']
+    },
+    custom_adjustments: {
+      full_market_adjustments: fieldMappings['helper.custom_adjustments.full_market_adjustments']
     },
     vehicle_value_base: fieldMappings['helper.vehicle_value_base'],
     levi: {
@@ -281,6 +366,11 @@ function transformHelperDataForTemplate(rawHelper) {
       }
     },
     damage_assessment: rawHelper.damage_assessment || {},
+    
+    // Dynamic legal text and attachments
+    final_report_legal_text: fieldMappings['helper.final_report_legal_text'],
+    final_report_type: fieldMappings['helper.final_report_type'],  
+    final_report_attachments: fieldMappings['helper.final_report_attachments'],
     
     // Additional fields for complete mapping
     base_car_price: fieldMappings['base_car_price'],
@@ -443,6 +533,9 @@ function injectReportHTML() {
         
         // Generate dynamic damage centers after template rendering
         generateDamageCentersForFinalReport(helper);
+        
+        // Populate dynamic legal text and attachments
+        populateDynamicContent(transformedHelper);
       } catch (compileError) {
         console.error('💥 Handlebars compilation error:', compileError);
         console.error('💥 Error details:', {
@@ -555,14 +648,25 @@ function startHelperWatcher() {
 
 // --- Initialize on page load ---
 function initializeFinalReport() {
-  // Load current helper data
-  helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-  
-  // Start watching for changes
-  startHelperWatcher();
-  
-  // Initial render
-  injectReportHTML();
+  // Initialize vault loader first
+  vaultLoader.init().then(() => {
+    console.log('✅ Final Report: Vault loader initialized');
+    
+    // Load current helper data
+    helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    
+    // Start watching for changes
+    startHelperWatcher();
+    
+    // Initial render
+    injectReportHTML();
+  }).catch(error => {
+    console.warn('⚠️ Final Report: Vault loader initialization failed:', error);
+    // Continue without vault - use fallback text
+    helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    startHelperWatcher();
+    injectReportHTML();
+  });
 }
 
 // --- Dynamic Damage Centers Generation (Same logic as expertise report) ---

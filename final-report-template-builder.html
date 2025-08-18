@@ -410,10 +410,29 @@
   {{/if}}
 
 
-  <!-- Section 5 - Levi Adjustments (bulk two) -->
+  <!-- Section 4.5 - Vehicle Value for Gross Damage -->
   <div class="section">
     <div class="car-details">
-      <div class="car-details-title">אחוז הנזק הגולמי</div>
+      <div class="car-details-title">ערך הרכב לנזק גולמי</div>
+      <table class="car-details-table">
+        <tr><th>מרכיב</th><th>תוספת \ פחתה</th><th>ערך</th></tr>
+        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>-</td><td>{{money helper.calculations.base_market_value}}</td></tr>
+        {{#each helper.custom_adjustments.full_market_adjustments}}
+          <tr>
+            <td>{{this.description}}</td>
+            <td>{{#if this.percentage}}{{#if (eq this.type 'plus')}}+{{else}}-{{/if}}{{this.percentage}}%{{else}}-{{/if}}</td>
+            <td>{{money this.value}}</td>
+          </tr>
+        {{/each}}
+        <tr><td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 5 - Damage Percentage Calculation -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">חישוב אחוז הנזק</div>
       <table class="car-details-table">
         <tr><th>תיאור</th><th>ערך</th></tr>
         <tr><td>סה"כ הנזק כולל מע"מ</td><td>{{money helper.calculations.total_damage}}</td></tr>
@@ -423,17 +442,24 @@
     </div>
   </div>
 
-  <!-- Section 5 - Levi Adjustments (bulk three) -->
+  <!-- Section 6 - Market Value Calculation -->
   <div class="section">
     <div class="car-details">
       <div class="car-details-title">חישוב ערך השוק של הרכב</div>
       <table class="car-details-table">
-        <tr><th>תיאור</th><th>ערך</th></tr>
-        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>{{money helper.vehicle_value_base}}</td></tr>
-        {{#each helper.levi.adjustments}}
-          <tr><td>{{this.label}}</td><td>{{money this.amount}}</td></tr>
+        <tr><th>תיאור</th><th>התאמה</th><th>ערך</th></tr>
+        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>-</td><td>{{money helper.calculations.base_market_value}}</td></tr>
+        {{#each helper.custom_adjustments.full_market_adjustments}}
+          <tr>
+            <td>{{this.description}}</td>
+            <td>{{#if this.percentage}}{{#if (eq this.type 'plus')}}+{{else}}-{{/if}}{{this.percentage}}%{{else}}-{{/if}}</td>
+            <td>{{#if (eq this.type 'minus')}}-{{/if}}{{money this.value}}</td>
+          </tr>
         {{/each}}
-        <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
+        {{#each helper.levi.adjustments}}
+          <tr><td>{{this.label}}</td><td>{{this.percent}}%</td><td>{{money this.amount}}</td></tr>
+        {{/each}}
+        <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>{{money helper.calculations.market_value}}</strong></td></tr>
       </table>
     </div>
   </div>
@@ -516,23 +542,15 @@
 <!-- Section 7 – Final Legal Paragraph -->
 <div class="section">
   <div style="font-size: 16px; line-height: 1.8;">
-    <strong>הערות:</strong><br>
-    {{lookup vault.legal_summary.private 'final'
-      percent=helper.depreciation.global_percent
-      work_days=helper.depreciation.work_days
-    }}<br><br>
-
-    <strong>הצהרת שמאי:</strong><br>
-    {{lookup vault.legal_declaration 'final'}}<br><br>
-
-    <strong>לוטה:</strong><br>
-    תצלומי הרכב הניזוק<br>
-    חשבוניות תיקון<br>
-    ערך רכב ממוחשב<br>
-    חיפוש חלפים משומשים<br>
-    צילום רישיון הרכב<br>
-    שכר טרחה  
-  
+    <div id="dynamic-legal-text">
+      <!-- Dynamic legal text will be populated here -->
+    </div>
+    
+    <br><br>
+    
+    <div id="dynamic-attachments">
+      <!-- Dynamic attachments will be populated here -->
+    </div>
   </div>
 
   <div class="signature-stamp" style="margin-top: 40px;">
