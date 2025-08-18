@@ -622,11 +622,20 @@
         return;
       }
 
-      if (!validationCompleted) {
+      // Check if we should skip validation (coming from expertise)
+      const urlParams = new URLSearchParams(window.location.search);
+      const skipValidation = urlParams.get('skipValidation') === 'true';
+      const fromExpertise = urlParams.get('from') === 'expertise';
+      
+      if (!validationCompleted && !skipValidation && !fromExpertise) {
         console.warn('⚠️ Validation not completed, redirecting to validation');
         alert('יש להשלים תחילה את תהליך האימות');
         window.location.href = 'estimate-validation.html';
         return;
+      }
+      
+      if (skipValidation || fromExpertise) {
+        console.log('✅ Validation skipped - accessed from expertise report');
       }
 
       console.log('✅ Estimate Report Builder: All validations passed');
