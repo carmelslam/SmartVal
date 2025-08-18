@@ -2052,7 +2052,7 @@ window.protectPlateNumber = function(plateNumber, source = 'manual') {
  * Validates incoming plate number against protected original
  */
 window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
-  if (!window.helper.meta.plate_locked || !window.helper.meta.original_plate) {
+  if (!window.helper.meta?.plate_locked || !window.helper.meta?.original_plate) {
     return { valid: true, action: 'accept' };
   }
   
@@ -3818,7 +3818,7 @@ window.populateAllForms = function() {
   console.log(`✅ Form population completed: ${updated} fields updated`);
   
   // Update helper timestamp
-  window.helper.meta.last_updated = new Date().toISOString();
+  if (window.helper.meta) window.helper.meta.last_updated = new Date().toISOString();
   saveHelperToAllStorageLocations();
   
   // 🔧 PHASE 3 FIX: Return success info for retry logic
@@ -3970,8 +3970,8 @@ window.updateHelper = function(field, value) {
     if (plateValue) {
       const currentYear = new Date().getFullYear();
       const dynamicCaseId = `YC-${plateValue}-${currentYear}`;
-      window.helper.meta.case_id = dynamicCaseId;
-      window.helper.case_info.case_id = dynamicCaseId;
+      if (window.helper.meta) window.helper.meta.case_id = dynamicCaseId;
+      if (window.helper.case_info) window.helper.case_info.case_id = dynamicCaseId;
       console.log(`✅ Auto-updated case_id to: ${dynamicCaseId}`);
     }
   }
