@@ -2038,21 +2038,20 @@
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          // Final report date - completely separate, use today's date as default
-          const finalReportDate = helper.final_report?.report_date || new Date().toISOString().split('T')[0];
+          // ✅ FIX: Final report date - always use today's date as default (clear any old wrong dates)
+          const todaysDate = new Date().toISOString().split('T')[0];
+          const finalReportDate = todaysDate; // Force today's date
           const topDateField = document.getElementById('finalReportDate');
           const summaryDateField = document.getElementById('finalReportDateSummary');
           
           if (topDateField) topDateField.value = convertToDateInputFormat(finalReportDate);
           if (summaryDateField) summaryDateField.value = convertToDateInputFormat(finalReportDate);
           
-          // Initialize final report section if it doesn't exist
-          if (!helper.final_report) {
-            helper.final_report = {};
-            helper.final_report.report_date = finalReportDate;
-            helper.final_report.generated_date = new Date().toISOString();
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-          }
+          // Initialize/update final report section with today's date
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.report_date = finalReportDate;
+          helper.final_report.generated_date = new Date().toISOString();
+          sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};

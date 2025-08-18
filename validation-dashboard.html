@@ -2452,8 +2452,12 @@
       console.log(`🔍 Drilling down into damage data: ${type}`);
       
       try {
-        const damageData = helper?.damage || {};
-        const centers = damageData.centers || helper?.damage_sections || [];
+        // ✅ FIX: Use getCentersForDisplay for proper location mapping
+        const centers = (typeof window.getCentersForDisplay === 'function') 
+          ? window.getCentersForDisplay() 
+          : (helper?.centers || helper?.damage?.centers || helper?.damage_sections || []);
+        
+        console.log('🔍 Debug centers data:', centers);
         
         let content = '';
         let title = '';
@@ -2465,10 +2469,8 @@
               content = '<p style="text-align: center; color: #666;">לא נמצאו מוקדי נזק</p>';
             } else {
               content = centers.map((center, index) => {
-                // Enhanced location mapping to handle multiple field names
-                const location = center.location || center.area || center.center_name || 
-                                center.damage_center_name || center.name || center.zone || 
-                                center.damage_location || `מוקד נזק ${index + 1}`;
+                // ✅ FIX: Use location from getCentersForDisplay (already mapped)
+                const location = center.location || `מוקד נזק ${index + 1}`;
                 
                 // Enhanced description mapping
                 const description = center.description || center.damage_description || 
