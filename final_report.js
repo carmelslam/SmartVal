@@ -121,7 +121,7 @@ function setupHandlebarsHelpers() {
 // --- Watermark Handling ---
 function applyDraftWatermark(html) {
   if (!isDraft) return html;
-  const watermark = '<div style="position:fixed; top:100px; left:100px; transform:rotate(-45deg); font-size:4em; opacity:0.1; z-index:9999;">טיוטה בלבד</div>';
+  const watermark = '<div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) rotate(-45deg); font-size:6rem; color:rgba(220, 38, 38, 0.2); z-index:9999; pointer-events:none; font-weight:bold;">טיוטה בלבד</div>';
   return watermark + html;
 }
 
