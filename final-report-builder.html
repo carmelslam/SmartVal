@@ -224,22 +224,26 @@
       }
       
       #depreciationBulkTable .dep-row > div:nth-child(1)::before {
-        content: "החלק הניזוק:";
+        content: "מס' מוקד:";
       }
       
       #depreciationBulkTable .dep-row > div:nth-child(2)::before {
-        content: "מהות התיקון:";
+        content: "החלק הניזוק:";
       }
       
       #depreciationBulkTable .dep-row > div:nth-child(3)::before {
-        content: "% ירידת ערך:";
+        content: "מהות התיקון:";
       }
       
       #depreciationBulkTable .dep-row > div:nth-child(4)::before {
-        content: "ערך ב-₪:";
+        content: "% ירידת ערך:";
       }
       
       #depreciationBulkTable .dep-row > div:nth-child(5)::before {
+        content: "ערך ב-₪:";
+      }
+      
+      #depreciationBulkTable .dep-row > div:nth-child(6)::before {
         content: "פעולות:";
       }
       
@@ -1229,7 +1233,8 @@
     <!-- DEPRECIATION CALCULATION SECTION -->
     <div class="form-section" id="depreciationSection">
       <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
+      <div style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
+        <div><label>מס' מוקד:</label></div>
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
         <div><label>% ירידת ערך:</label></div>
@@ -1257,45 +1262,21 @@
       </div>
   </div>
     </div>
-   <!-- הפרשים SECTION (BEFORE SUMMARY) -->
-     <div class="form-section" id="differentialsSection">
+    <!-- הפרשים SECTION -->
+    <div class="form-section">
       <h3>הפרשים</h3>
       <label style="margin-bottom:5px;">האם קיימים הפרשים?
-        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable()">
+        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentials()">
       </label>
       
-      <div id="differentialsTable" style="display:none; margin-top: 16px;">
-        <div style="background: #f8fafc; border-radius: 8px; padding: 16px;">
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 120px 120px 120px 80px; gap:14px; font-weight:600; margin-bottom:12px; color: #374151; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
-            <div>חלק</div>
-            <div>מהות ההפרש</div>
-            <div>סיבת ההפרש</div>
-            <div>מחיר ללא מע"מ</div>
-            <div>ערך מע"מ</div>
-            <div>מחיר עם מע"מ</div>
-            <div>פעולות</div>
-          </div>
-          <div id="differentialsRows"></div>
-          <button type="button" onclick="addDifferentialRow()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 12px;">הוסף הפרש</button>
-          
-          <!-- Differentials Summary Table -->
-          <div style="margin-top: 20px; padding: 16px; background: #e0f2fe; border-radius: 8px;">
-            <h4>סיכום הפרשים</h4>
-            <div class="form-grid" style="margin-bottom: 10px;">
-              <div><label>סה"כ הפרשי חלקים:</label><div class="readonly-box" id="totalDifferentialsParts">0</div></div>
-              <div><label>סה"כ הפרשי מע"מ:</label><div class="readonly-box" id="totalDifferentialsVat">0</div></div>
-              <div><label>סה"כ הפרשים:</label><div class="readonly-box" id="totalDifferentials">0</div></div>
-            </div>
-            <hr style="margin: 15px 0;">
-            <div class="form-grid">
-              <div><label>סה"כ תביעה:</label><div class="readonly-box" id="totalClaimDiff">יוצג אוטומטית</div></div>
-              <div><label>סה"כ הפרשים:</label><div class="readonly-box" id="totalDifferentialsSummary">0</div></div>
-              <div><label>סה"כ נזק שנתבע:</label><div class="readonly-box" id="totalAuthorizedDamage">יחושב אוטומטית</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <div id="differentialsTable" style="display:none; margin-top:15px;">
+        <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr 120px 120px 120px 80px; gap:10px; font-weight:600; margin-bottom:10px; background:#f8f9fa; padding:10px; border-radius:6px;">
+          <div><label>חלק:</label></div>
+          <div><label>מהות ההפרש:</label></div>
+          <div><label>סיבת ההפרש:</label></div>
+          <div><label>מחיר ללא מע"מ:</label></div>
+          <div><label>ערך מע"מ:</label></div>
+          <div><label>מחיר עם מע"מ:</label></div>
           <div><label>פעולות:</label></div>
         </div>
         <div id="differentialsRows"></div>
@@ -1317,6 +1298,7 @@
           </div>
         </div>
       </div>
+    </div>
     <br><br>
 
     <!-- SUMMARY SECTION - PROPER FINAL REPORT VERSION -->
@@ -2393,15 +2375,26 @@
           // If no saved depreciation data, populate from damage centers
           const damageCenterNames = [];
           
-          // Try multiple possible data structures for damage centers
-          console.log('🔍 Full helper structure:', JSON.stringify(helper, null, 2));
-          console.log('🔍 Checking helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
-          console.log('🔍 Checking helper.damage_blocks:', helper.damage_blocks);
-          console.log('🔍 Checking helper.expertise?.damage_centers:', helper.expertise?.damage_centers);
-          console.log('🔍 Checking helper.damage_centers:', helper.damage_centers);
+          // Primary source: helper.centers (from damage center wizard)
+          console.log('🔍 Checking helper.centers:', helper.centers);
+          console.log('🔍 Fallback - helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
           
-          // Extract damage center names from helper data - try multiple structures
-          if (helper.expertise?.damage_blocks) {
+          // Extract damage center names from helper data - prioritize centers helper
+          if (helper.centers && helper.centers.length > 0) {
+            console.log('🔍 Found centers in helper.centers');
+            helper.centers.forEach((center, index) => {
+              const centerName = center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`;
+              const centerNumber = center["Damage center Number"] || (index + 1);
+              console.log(`🔍 Center ${centerNumber}: ${centerName}`);
+              if (centerName && !damageCenterNames.includes(centerName)) {
+                damageCenterNames.push({
+                  name: centerName,
+                  number: centerNumber,
+                  description: center.Description || ''
+                });
+              }
+            });
+          } else if (helper.expertise?.damage_blocks) {
             console.log('🔍 Found damage_blocks in expertise');
             helper.expertise.damage_blocks.forEach(block => {
               console.log('🔍 Processing damage block:', block);
@@ -2463,11 +2456,16 @@
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
-        if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+        // Load from centers helper (primary source) with fallback to expertise damage_blocks
+        const damageCenters = helper.centers || helper.expertise?.damage_blocks || [];
+        
+        if (damageCenters && damageCenters.length > 0) {
           let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
           
-          helper.expertise.damage_blocks.forEach((block, index) => {
-            summaryHTML += createEditableDamageCenterCard(block, index);
+          damageCenters.forEach((center, index) => {
+            // Adapt centers data structure to damage block structure for compatibility
+            const adaptedCenter = adaptCenterToBlock(center, index);
+            summaryHTML += createEditableDamageCenterCard(adaptedCenter, index);
           });
           
           summaryHTML += '</div>';
@@ -2483,6 +2481,23 @@
         console.error('Error loading damage centers summary:', error);
         document.getElementById('damageCentersContent').innerHTML = '<div style="color: #dc3545; text-align: center;">שגיאה בטעינת נתוני מוקדי נזק</div>';
       }
+    }
+
+    // Adapt centers data structure to damage block structure for compatibility
+    function adaptCenterToBlock(center, index) {
+      // Centers structure (from wizard) vs damage_blocks structure (from expertise)
+      return {
+        damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
+        damage_center_number: center["Damage center Number"] || center.damage_center_number || (index + 1),
+        description: center.Description || center.description || '',
+        works: center.Works?.works || center.works || [],
+        parts: center.Parts?.parts || center.parts || [],
+        repairs: center.Repairs?.repairs || center.repairs || [],
+        works_meta: center.Works?.works_meta || center.works_meta || { total_cost: 0 },
+        parts_meta: center.Parts?.parts_meta || center.parts_meta || { total_cost: 0 },
+        repairs_meta: center.Repairs?.repairs_meta || center.repairs_meta || { total_cost: 0 },
+        total_cost: center.Summary?.["Total with VAT"] || center.total_cost || 0
+      };
     }
 
     // CREATE EDITABLE DAMAGE CENTER CARD
@@ -6699,15 +6714,20 @@
         console.log('🧹 Cleared depreciation table');
         
         // Add a row for each damage center
-        damageCenterNames.forEach(centerName => {
-          console.log('🔄 Adding depreciation row for:', centerName);
+        damageCenterNames.forEach(centerData => {
+          // Handle both old string format and new object format
+          const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
+          const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
+          const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
+          console.log('🔄 Adding depreciation row for:', centerName, 'Number:', centerNumber);
           const row = document.createElement('div');
           row.className = 'dep-row';
-          row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
+          row.style.cssText = 'display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
+            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
             <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="מהות התיקון" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
             <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
             <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
@@ -9387,11 +9407,19 @@
     function toggleDifferentialsTable() {
       const checkbox = document.getElementById('hasDifferentials');
       const table = document.getElementById('differentialsTable');
+      const summary = document.getElementById('differentialsSummary');
       
       if (checkbox.checked) {
         table.style.display = 'block';
+        summary.style.display = 'block';
+        // Add first row automatically
+        const container = document.getElementById('differentialsRows');
+        if (container && container.children.length === 0) {
+          addDifferentialRow();
+        }
       } else {
         table.style.display = 'none';
+        summary.style.display = 'none';
         // Clear all differential rows when hiding
         const container = document.getElementById('differentialsRows');
         if (container) {
@@ -9399,6 +9427,28 @@
           updateDifferentialsSummary();
         }
       }
+      
+      // Update summary sections to show/hide differentials impact
+      updateSummaryWithDifferentials();
+    }
+    
+    // Alias for toggleDifferentialsTable to match HTML onclick
+    function toggleDifferentials() {
+      return toggleDifferentialsTable();
+    }
+    
+    // Update summary sections to show/hide differentials impact
+    function updateSummaryWithDifferentials() {
+      const hasDifferentials = document.getElementById('hasDifferentials')?.checked || false;
+      
+      // Show/hide differentials final fields in each summary type
+      const summaryTypes = ['private', 'global', 'damage', 'totalLoss', 'legalLoss'];
+      summaryTypes.forEach(type => {
+        const afterDiffElement = document.getElementById(`sumTotalAfterDifferentials-${type}`);
+        if (afterDiffElement) {
+          afterDiffElement.style.display = hasDifferentials ? 'block' : 'none';
+        }
+      });
     }
     
     function addDifferentialRow() {
@@ -9440,25 +9490,45 @@
         if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
       }
       
-      // Update main summary calculations
+      // Update main summary calculations - show הפרשים in summary
       updateMainSummaryWithDifferentials(totalWithVat);
+      
+      // Save to helper for final report
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.expertise) helper.expertise = {};
+      helper.expertise.differentials = {
+        has_differentials: rows.length > 0,
+        total_amount: totalAmount,
+        total_vat: totalVat,
+        total_with_vat: totalWithVat
+      };
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log(`✅ הפרשים updated and connected to summary: ${totalWithVat}`);
     }
     
     function updateMainSummaryWithDifferentials(differencesTotal) {
-      // Get base total before differences
-      const sumTotalField = document.getElementById('sumTotalClaim');
-      const currentTotal = parseFloat(sumTotalField?.value?.replace(/[₪,]/g, '') || '0');
+      // Show differentials impact in all summary types
+      const summaryTypes = [
+        { finalId: 'sumTotalFinal', beforeId: 'sumTotal' },
+        { finalId: 'sumTotalFinalGlobal', beforeId: 'sumTotalGlobal' },
+        { finalId: 'afterSaleDamageFinal', beforeId: 'afterSaleDamage' },
+        { finalId: 'afterSaleTotalFinal', beforeId: 'afterSaleTotal' },
+        { finalId: 'afterSaleLegalFinal', beforeId: 'afterSaleLegal' }
+      ];
       
-      // The differences reduce the total (they are deductions)
-      const finalTotal = currentTotal - differencesTotal;
+      summaryTypes.forEach(({ finalId, beforeId }) => {
+        const finalElement = document.getElementById(finalId);
+        const beforeElement = document.getElementById(beforeId);
+        
+        if (finalElement && beforeElement) {
+          const beforeValue = parseFloat(beforeElement.value) || 0;
+          const finalValue = beforeValue - differencesTotal; // Subtract הפרשים
+          finalElement.value = finalValue.toFixed(2);
+        }
+      });
       
-      // Update the final total field if it exists
-      const finalTotalField = document.getElementById('sumFinalTotal');
-      if (finalTotalField) {
-        finalTotalField.value = finalTotal > 0 ? `₪${Math.round(finalTotal).toLocaleString()}` : '₪0';
-      }
-      
-      console.log(`Updated summary: Base: ₪${currentTotal.toLocaleString()}, Differences: ₪${differencesTotal.toLocaleString()}, Final: ₪${finalTotal.toLocaleString()}`);
+      console.log(`✅ הפרשים field now appears in summary: -${differencesTotal}`);
     }
     
 
@@ -9944,6 +10014,9 @@
     window.addDifferentialRow = addDifferentialRow;
     window.updateDifferentialsSummary = updateDifferentialsSummary;
     window.toggleDifferentials = toggleDifferentials;
+    window.toggleDifferentialsTable = toggleDifferentialsTable;
+    window.updateSummaryWithDifferentials = updateSummaryWithDifferentials;
+    window.updateMainSummaryWithDifferentials = updateMainSummaryWithDifferentials;
     window.saveAndRefresh = saveAndRefresh;
     window.saveAndRefreshComplete = saveAndRefreshComplete;
     window.refreshSummary = refreshSummary;
