@@ -632,10 +632,7 @@
       updates.valuation.final_price = parseFloat(changes['levi-final-price'].replace(/[₪,]/g, '')) || 0;
     }
     if (changes['levi-report-date']) {
-      // Update both valuation.report_date and levi_report.report_date
       updates.valuation.report_date = changes['levi-report-date'];
-      if (!updates.levi_report) updates.levi_report = {};
-      updates.levi_report.report_date = changes['levi-report-date'];
     }
 
     // Map vehicle fields
@@ -978,14 +975,13 @@
     document.getElementById("levi-base-price").textContent = formatPrice(basePrice);
     document.getElementById("levi-final-price").textContent = formatPrice(finalPrice);
     
-    // Levi report date - get from helper.levi_report.report_date (primary source)
-    const leviReportDate = helper.levi_report?.report_date || 
-                          helper.valuation?.report_date ||
-                          result['תאריך'] ||
-                          result.levi_report_date ||
-                          result.report_date ||
-                          '-';
-    document.getElementById("levi-report-date").textContent = formatValue(leviReportDate);
+    // Levi report date - separate from inspection and damage dates  
+    document.getElementById("levi-report-date").textContent = formatValue(
+      result['תאריך'] ||
+      result.levi_report_date ||
+      result.report_date ||
+      '-'
+    );
 
     // FIXED: Registration adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-registration").textContent = formatValue(

@@ -1007,8 +1007,8 @@
           <input type="text" id="carMarketValue" onchange="updateHelperFromVehicleField(this);" />
         </div>
         <div>
-          <label>תאריך חוות הדעת:</label>
-          <input type="date" id="carReportDate" onchange="updateHelperFromVehicleField(this);" />
+          <label>תאריך חוות הדעת (דוח סופי):</label>
+          <input type="date" id="finalReportDate" onchange="updateFinalReportDate(this);" />
         </div>
       </div>
     </div>
@@ -2028,9 +2028,17 @@
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          // Final report date - use car_details.report_date or today's date, NOT levi_report date
-          const finalReportDate = helper.car_details?.report_date || new Date().toISOString().split('T')[0];
-          document.getElementById('carReportDate').value = convertToDateInputFormat(finalReportDate);
+          // Final report date - completely separate, use today's date as default
+          const finalReportDate = helper.final_report?.report_date || new Date().toISOString().split('T')[0];
+          document.getElementById('finalReportDate').value = convertToDateInputFormat(finalReportDate);
+          
+          // Initialize final report section if it doesn't exist
+          if (!helper.final_report) {
+            helper.final_report = {};
+            helper.final_report.report_date = finalReportDate;
+            helper.final_report.generated_date = new Date().toISOString();
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};
@@ -10006,6 +10014,22 @@
       console.log(`✅ Custom field added to ${summaryType}`);
     }
 
+    // NEW: Handle final report date completely separate from everything else
+    function updateFinalReportDate(element) {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const value = element.value;
+      
+      // Create final report section if it doesn't exist
+      if (!helper.final_report) helper.final_report = {};
+      
+      // Store ONLY in final report - NO connection to Levi or car details
+      helper.final_report.report_date = value;
+      helper.final_report.generated_date = new Date().toISOString();
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Final report date updated (separate from Levi):', value);
+    }
+
     // New workflow functions
     function saveDepreciationData() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -10064,6 +10088,7 @@
     window.toggleDifferentialsTable = toggleDifferentialsTable;
     window.updateSummaryWithDifferentials = updateSummaryWithDifferentials;
     window.updateMainSummaryWithDifferentials = updateMainSummaryWithDifferentials;
+    window.updateFinalReportDate = updateFinalReportDate;
     window.saveDepreciationData = saveDepreciationData;
     window.continueToValidation = continueToValidation;
     window.saveAndRefresh = saveAndRefresh;
