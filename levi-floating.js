@@ -632,11 +632,7 @@
       updates.valuation.final_price = parseFloat(changes['levi-final-price'].replace(/[₪,]/g, '')) || 0;
     }
     if (changes['levi-report-date']) {
-      // ✅ FIX: Update the correct date field in helper, NOT the wrong webhook date
       updates.valuation.report_date = changes['levi-report-date'];
-      // Also update inspection date if this is a date change
-      if (!updates.case_info) updates.case_info = {};
-      updates.case_info.inspection_date = new Date(changes['levi-report-date']).toISOString();
     }
 
     // Map vehicle fields
@@ -979,13 +975,13 @@
     document.getElementById("levi-base-price").textContent = formatPrice(basePrice);
     document.getElementById("levi-final-price").textContent = formatPrice(finalPrice);
     
-    // ✅ FIX: Levi report date - use correct inspection date, NOT wrong webhook date
-    const helper = window.helper || {};
-    const correctDate = helper.case_info?.inspection_date ? 
-      new Date(helper.case_info.inspection_date).toLocaleDateString('he-IL') :
-      (helper.meta?.damage_date || helper.case_info?.damage_date || '-');
-    
-    document.getElementById("levi-report-date").textContent = formatValue(correctDate);
+    // Levi report date - separate from inspection and damage dates  
+    document.getElementById("levi-report-date").textContent = formatValue(
+      result['תאריך'] ||
+      result.levi_report_date ||
+      result.report_date ||
+      '-'
+    );
 
     // FIXED: Registration adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
     document.getElementById("levi-registration").textContent = formatValue(
