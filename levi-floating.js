@@ -897,8 +897,15 @@
     };
 
     const formatPrice = (value) => {
-      if (!value || value === '₪0' || value === 0) return "₪0";
-      if (typeof value === 'string' && value.includes('₪')) return value; // Already formatted
+      // FIXED: Handle undefined, null, and empty values properly
+      if (value === undefined || value === null || value === '' || value === '₪0' || value === 0) return "₪0";
+      
+      // Handle string values that might contain "undefined" or "null"
+      if (typeof value === 'string') {
+        if (value.trim() === 'undefined' || value.trim() === 'null' || value.trim() === '') return "₪0";
+        if (value.includes('₪')) return value; // Already formatted
+      }
+      
       const num = parseCurrency(value);
       return num !== 0 ? `₪${num.toLocaleString()}` : "₪0";
     };
@@ -908,8 +915,15 @@
     };
 
     const formatPercent = (value) => {
-      if (!value || value.toString().trim() === '') return "0%";
-      const strValue = value.toString().trim();
+      // FIXED: Handle undefined, null, and empty values properly
+      if (value === undefined || value === null || value === '' || value === 0) return "0%";
+      
+      // Convert to string safely
+      const strValue = String(value).trim();
+      
+      // Return 0% for empty or invalid strings
+      if (strValue === '' || strValue === 'undefined' || strValue === 'null') return "0%";
+      
       // If already has %, don't add another one
       if (strValue.endsWith('%')) return strValue;
       return `${strValue}%`;
