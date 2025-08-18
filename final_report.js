@@ -37,7 +37,14 @@ function buildFeeSummary() {
 
 // --- Determine Report Type and Draft Mode ---
 const reportType = helper.meta?.report_type || 'unknown';
-const isDraft = helper.meta?.status === 'draft';
+
+// Check URL parameters for expertise access (should always show draft watermark until finalized)
+const urlParams = new URLSearchParams(window.location.search);
+const fromExpertise = urlParams.get('from') === 'expertise';
+const skipValidation = urlParams.get('skipValidation') === 'true';
+
+// Draft mode: either explicitly set as draft, coming from expertise, or not finalized
+const isDraft = helper.meta?.status === 'draft' || fromExpertise || skipValidation || !helper.meta?.finalized;
 const isInvoiceOverride = helper.invoice_uploaded === true;
 
 // --- Vault Placeholder Replacer ---
@@ -496,6 +503,9 @@ async function exportFinalReport() {
   // Use proper helper update function instead of direct sessionStorage
   const { updateHelper } = await import('./helper.js');
   updateHelper(helper);
+  
+  // Also update sessionStorage directly for immediate effect
+  sessionStorage.setItem('helper', JSON.stringify(helper));
 
   sendToWebhook('SUBMIT_FINAL_REPORT', {
     html,
