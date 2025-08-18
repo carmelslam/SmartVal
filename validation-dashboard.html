@@ -2464,15 +2464,32 @@
             if (centers.length === 0) {
               content = '<p style="text-align: center; color: #666;">לא נמצאו מוקדי נזק</p>';
             } else {
-              content = centers.map((center, index) => `
+              content = centers.map((center, index) => {
+                // Enhanced location mapping to handle multiple field names
+                const location = center.location || center.area || center.center_name || 
+                                center.damage_center_name || center.name || center.zone || 
+                                center.damage_location || `מוקד נזק ${index + 1}`;
+                
+                // Enhanced description mapping
+                const description = center.description || center.damage_description || 
+                                  center.general_description || center.desc || 'לא הוזן';
+                
+                // Enhanced parts count
+                const partsCount = center.parts?.length || center.part_list?.length || 0;
+                
+                // Enhanced repairs/works count  
+                const repairsCount = center.repairs?.length || center.works?.length || 
+                                   center.work_list?.length || 0;
+                
+                return `
                 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0;">
                   <h4 style="color: #667eea; margin-bottom: 10px;">מוקד נזק ${index + 1}</h4>
-                  <p><strong>מיקום:</strong> ${center.location || center.area || 'לא הוזן'}</p>
-                  <p><strong>תיאור:</strong> ${center.description || center.damage_description || 'לא הוזן'}</p>
-                  <p><strong>חלקים:</strong> ${center.parts?.length || 0}</p>
-                  <p><strong>תיקונים:</strong> ${center.repairs?.length || center.works?.length || 0}</p>
-                </div>
-              `).join('');
+                  <p><strong>שם מוקד הנזק:</strong> ${location}</p>
+                  <p><strong>תיאור:</strong> ${description}</p>
+                  <p><strong>חלקים:</strong> ${partsCount}</p>
+                  <p><strong>תיקונים:</strong> ${repairsCount}</p>
+                </div>`;
+              }).join('');
             }
             break;
             

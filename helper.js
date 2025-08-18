@@ -5080,6 +5080,40 @@ export const processIncomingData = window.processIncomingData;
 export const refreshAllModuleForms = window.refreshAllModuleForms;
 export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
 
+// ✅ ENHANCED CENTER MAPPING: Get centers with proper location mapping
+window.getCentersForDisplay = function() {
+  const helper = window.helper;
+  if (!helper) return [];
+  
+  // Try different possible locations for centers data
+  const centers = helper.centers || helper.damage_centers || 
+                  helper.expertise?.damage_blocks || 
+                  helper.damage_assessment?.centers || [];
+  
+  // ✅ FIX: Ensure each center has proper location mapping
+  return centers.map((center, index) => {
+    return {
+      ...center,
+      // Enhanced location mapping - try all possible field names
+      location: center.location || center.area || center.center_name || 
+               center.damage_center_name || center.name || center.zone || 
+               center.damage_location || center.description?.zone || 
+               `מוקד נזק ${index + 1}`,
+      
+      // Enhanced description mapping
+      description: center.description || center.damage_description || 
+                  center.general_description || center.desc || '',
+      
+      // Ensure center number is properly set
+      number: center.number || center["Damage center Number"] || (index + 1),
+      
+      // Enhanced parts and repairs mapping
+      parts: center.parts || center.part_list || [],
+      repairs: center.repairs || center.works || center.work_list || []
+    };
+  });
+};
+
 // ✅ SAFETY CHECK: Ensure window.helper is always available
 if (!window.helper) {
   console.log('🔧 Safety check: window.helper not found, initializing...');
