@@ -960,6 +960,13 @@
             <option value="yes">כן</option>
           </select>
         </div>
+        <div>
+          <label for="inAgreement">סטטוס הסדר:</label>
+          <select id="inAgreement">
+            <option value="yes">בהסדר</option>
+            <option value="no">לא בהסדר</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -1002,6 +1009,34 @@
       </div>
     </div>
 
+    <!-- COLLAPSIBLE PRICE DATA -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
+      <div id="priceData" style="display:none;">
+        <div class="form-grid">
+          <div>
+            <label>סה״כ תביעה (סכום מוקדי נזק):</label>
+            <div class="readonly-box" id="totalClaim">0</div>
+          </div>
+          <div>
+            <label>חישוב הערך לנזק גולמי:</label>
+            <div class="readonly-box" id="grossDamageValue">יחושב אוטומטית מהתאמות לוי</div>
+          </div>
+          <div>
+            <label>חישוב האחוז הגולמי:</label>
+            <div class="readonly-box" id="grossPercentage">יחושב אוטומטית</div>
+          </div>
+          <div>
+            <label>מחיר שוק (בסיס + התאמות):</label>
+            <div class="readonly-box" id="marketPriceCalculated">יחושב אוטומטית</div>
+          </div>
+          <div>
+            <label>ערך השוק של הרכב:</label>
+            <div class="readonly-box" id="finalMarketValue">יחושב מהתאמות לוי</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- COLLAPSIBLE CONTACT DATA -->
     <div class="form-section">
@@ -1016,6 +1051,9 @@
           <div><label>סוכן ביטוח:</label><input type="text" id="insuranceAgent" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
           <div><label>טלפון סוכן ביטוח:</label><input type="text" id="agentPhone" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
           <div><label>אימייל סוכן ביטוח:</label><input type="text" id="agentEmail" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>שם מוסך:</label><input type="text" id="garageName" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>טלפון מוסך:</label><input type="text" id="garagePhone" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>אימייל מוסך:</label><input type="text" id="garageEmail" onchange="updateHelperFromContactField(this);" /></div>
         </div>
       </div>
     </div>
@@ -1223,30 +1261,41 @@
      <div class="form-section" id="differentialsSection">
       <h3>הפרשים</h3>
       <label style="margin-bottom:5px;">האם קיימים הפרשים?
-        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;">
+        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable()">
       </label>
       
       <div id="differentialsTable" style="display:none; margin-top: 16px;">
         <div style="background: #f8fafc; border-radius: 8px; padding: 16px;">
-          <div style="display:grid; grid-template-columns:1fr 120px 120px 120px 80px; gap:14px; font-weight:600; margin-bottom:12px; color: #374151; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
-            <div>תיאור הפרש</div>
-            <div>סכום (ש"ח)</div>
-            <div>מע"מ</div>
-            <div>סה"כ כולל מע"מ</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 120px 120px 120px 80px; gap:14px; font-weight:600; margin-bottom:12px; color: #374151; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+            <div>חלק</div>
+            <div>מהות ההפרש</div>
+            <div>סיבת ההפרש</div>
+            <div>מחיר ללא מע"מ</div>
+            <div>ערך מע"מ</div>
+            <div>מחיר עם מע"מ</div>
             <div>פעולות</div>
           </div>
           <div id="differentialsRows"></div>
           <button type="button" onclick="addDifferentialRow()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 12px;">הוסף הפרש</button>
+          
+          <!-- Differentials Summary Table -->
+          <div style="margin-top: 20px; padding: 16px; background: #e0f2fe; border-radius: 8px;">
+            <h4>סיכום הפרשים</h4>
+            <div class="form-grid" style="margin-bottom: 10px;">
+              <div><label>סה"כ הפרשי חלקים:</label><div class="readonly-box" id="totalDifferentialsParts">0</div></div>
+              <div><label>סה"כ הפרשי מע"מ:</label><div class="readonly-box" id="totalDifferentialsVat">0</div></div>
+              <div><label>סה"כ הפרשים:</label><div class="readonly-box" id="totalDifferentials">0</div></div>
+            </div>
+            <hr style="margin: 15px 0;">
+            <div class="form-grid">
+              <div><label>סה"כ תביעה:</label><div class="readonly-box" id="totalClaimDiff">יוצג אוטומטית</div></div>
+              <div><label>סה"כ הפרשים:</label><div class="readonly-box" id="totalDifferentialsSummary">0</div></div>
+              <div><label>סה"כ נזק שנתבע:</label><div class="readonly-box" id="totalAuthorizedDamage">יחושב אוטומטית</div></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    
-      <div id="differentialsTable" style="display:none;">
-        <div style="display:grid; grid-template-columns:1fr 120px 120px 120px 80px; gap:14px; margin-top:15px; margin-bottom:10px;">
-          <div><label>תיאור הפרש:</label></div>
-          <div><label>סכום (ש"ח):</label></div>
-          <div><label>מע"מ:</label></div>
-          <div><label>סה"כ כולל מע"מ:</label></div>
           <div><label>פעולות:</label></div>
         </div>
         <div id="differentialsRows"></div>
@@ -2054,7 +2103,12 @@
         document.getElementById('agentPhone').value = getNestedValue(helper, 'stakeholders.insurance.agent.phone') || helper.client?.insurance_agent_phone || '';
         document.getElementById('agentEmail').value = getNestedValue(helper, 'stakeholders.insurance.agent.email') || helper.client?.insurance_agent_email || '';
         
-        console.log('✅ All contact fields populated FROM helper structure');
+        // Load garage data from stakeholders helper
+        document.getElementById('garageName').value = getNestedValue(helper, 'stakeholders.garage.name') || helper.garage?.name || '';
+        document.getElementById('garagePhone').value = getNestedValue(helper, 'stakeholders.garage.phone') || helper.garage?.phone || '';
+        document.getElementById('garageEmail').value = getNestedValue(helper, 'stakeholders.garage.email') || helper.garage?.email || '';
+        
+        console.log('✅ All contact fields populated FROM helper structure (including garage data)');
           
         // Sync data to both standardized and legacy structures for compatibility
         helper.car_details = helper.car_details || {};
@@ -8825,6 +8879,9 @@
           'insuranceAgent': 'stakeholders.insurance.agent.name',
           'agentPhone': 'stakeholders.insurance.agent.phone',
           'agentEmail': 'stakeholders.insurance.agent.email',
+          'garageName': 'stakeholders.garage.name',
+          'garagePhone': 'stakeholders.garage.phone',
+          'garageEmail': 'stakeholders.garage.email',
           'carReportDate': 'case_info.issue_date'
         };
         
@@ -9115,6 +9172,8 @@
       const summarySection = document.getElementById('summaryPrivate');
       if (summarySection) {
         summarySection.style.display = 'block';
+        // Update the summary content based on report type
+        updateSummaryContent(reportType);
       }
 
       // Control depreciation section visibility
@@ -9145,6 +9204,113 @@
       }
     }
     
+    // Dynamic summary content based on report type
+    function updateSummaryContent(reportType) {
+      const summaryContent = document.querySelector('#summaryPrivate .form-grid');
+      if (!summaryContent) return;
+      
+      // Clear existing content
+      summaryContent.innerHTML = '';
+      
+      // Create different summary structures based on report type
+      switch(reportType) {
+        case 'חוות דעת פרטית':
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+          break;
+          
+        case 'חוות דעת גלובלית':
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+          break;
+          
+        case 'חוות דעת טוטלוסט':
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+          break;
+          
+        case 'חוות דעת מכירה מצבו הניזוק':
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+          break;
+          
+        case 'חוות דעת אובדן להלכה':
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+          break;
+          
+        default:
+          // Default to private report structure
+          summaryContent.innerHTML = `
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+          `;
+      }
+      
+      // Recalculate totals after content change
+      setTimeout(calculateSummaryTotals, 100);
+    }
+    
+    // Calculate summary totals based on current report type
+    function calculateSummaryTotals() {
+      const reportType = document.getElementById('reportType')?.value || 'חוות דעת פרטית';
+      const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value || 0);
+      
+      switch(reportType) {
+        case 'חוות דעת פרטית':
+        case 'חוות דעת גלובלית':
+          const claim = parseFloat(document.getElementById('sumClaim')?.value || 0);
+          const depreciation = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
+          const adjustments = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
+          const total = claim + depreciation + adjustments;
+          const totalField = document.getElementById('sumTotal');
+          if (totalField) totalField.value = total.toFixed(2);
+          break;
+          
+        case 'חוות דעת טוטלוסט':
+          const scrapValue = parseFloat(document.getElementById('sumScrapValue')?.value || 0);
+          const towingStorage = parseFloat(document.getElementById('sumTowingStorage')?.value || 0);
+          const totalTotalLoss = marketValue - scrapValue + towingStorage;
+          const totalFieldTL = document.getElementById('sumTotal');
+          if (totalFieldTL) totalFieldTL.value = totalTotalLoss.toFixed(2);
+          break;
+          
+        case 'חוות דעת מכירה מצבו הניזוק':
+          const damagedSaleValue = parseFloat(document.getElementById('sumDamagedSaleValue')?.value || 0);
+          const totalDamaged = marketValue - damagedSaleValue;
+          const totalFieldDS = document.getElementById('sumTotal');
+          if (totalFieldDS) totalFieldDS.value = totalDamaged.toFixed(2);
+          break;
+          
+        case 'חוות דעת אובדן להלכה':
+          const totalFieldLegal = document.getElementById('sumTotal');
+          if (totalFieldLegal) totalFieldLegal.value = marketValue.toFixed(2);
+          break;
+      }
+    }
+    
     // Depreciation functionality 
     function addDepreciationRow() {
       alert('הוסף שורת ירידת ערך - יטען עם מודול depreciation_module.js');
@@ -9155,7 +9321,7 @@
       const div = document.createElement('div');
       div.className = 'differential-row';
       div.style.display = 'grid';
-      div.style.gridTemplateColumns = '1fr 120px 120px 120px 80px';
+      div.style.gridTemplateColumns = '1fr 1fr 1fr 120px 120px 120px 80px';
       div.style.gap = '14px';
       div.style.marginBottom = '10px';
       div.style.padding = '10px';
@@ -9170,16 +9336,22 @@
       
       div.innerHTML = `
         <div>
-          <input type="text" class="diff-desc" placeholder="תיאור הפרש" value="${data.desc || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+          <input type="text" class="diff-part" placeholder="חלק" value="${data.part || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
         </div>
         <div>
-          <input type="number" class="diff-amount" placeholder="סכום" value="${amount}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+          <input type="text" class="diff-nature" placeholder="מהות ההפרש" value="${data.nature || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
         </div>
         <div>
-          <input type="number" class="diff-vat" placeholder="מע״מ" value="${vat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
+          <input type="text" class="diff-reason" placeholder="סיבת ההפרש" value="${data.reason || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
         </div>
         <div>
-          <input type="number" class="diff-total" placeholder="סה״כ" value="${totalWithVat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
+          <input type="number" class="diff-amount" placeholder="מחיר ללא מע״מ" value="${amount}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        </div>
+        <div>
+          <input type="number" class="diff-vat" placeholder="ערך מע״מ" value="${vat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
+        </div>
+        <div>
+          <input type="number" class="diff-total" placeholder="מחיר עם מע״מ" value="${totalWithVat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
         </div>
         <div>
           <button type="button" class="btn-remove" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">✕</button>
@@ -9210,6 +9382,23 @@
       });
       
       return div;
+    }
+    
+    function toggleDifferentialsTable() {
+      const checkbox = document.getElementById('hasDifferentials');
+      const table = document.getElementById('differentialsTable');
+      
+      if (checkbox.checked) {
+        table.style.display = 'block';
+      } else {
+        table.style.display = 'none';
+        // Clear all differential rows when hiding
+        const container = document.getElementById('differentialsRows');
+        if (container) {
+          container.innerHTML = '';
+          updateDifferentialsSummary();
+        }
+      }
     }
     
     function addDifferentialRow() {

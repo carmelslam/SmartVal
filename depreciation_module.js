@@ -1,5 +1,5 @@
 // depreciation_module.js - Fixed implementation with proper functionality
-import { helper, updateHelper, updateCalculations, saveHelperToStorage, getVehicleData, getDamageData, getValuationData, syncLeviData } from './helper.js';
+import { helper, updateHelper, saveHelperToStorage, getVehicleData, getDamageData, getValuationData } from './helper.js';
 import { MathEngine } from './math.js';
 
 function $(id) {
@@ -865,7 +865,6 @@ function saveAndRefresh() {
   }
   
   saveHelperToStorage();
-  updateCalculations();
   refreshSummary();
   updateDifferentialsSummary();
 }
