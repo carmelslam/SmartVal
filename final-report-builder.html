@@ -1007,7 +1007,7 @@
           <input type="text" id="carMarketValue" onchange="updateHelperFromVehicleField(this);" />
         </div>
         <div>
-          <label>תאריך הפקה:</label>
+          <label>תאריך חוות הדעת:</label>
           <input type="date" id="carReportDate" onchange="updateHelperFromVehicleField(this);" />
         </div>
       </div>
@@ -1477,13 +1477,11 @@
 
     <!-- Navigation Buttons -->
     <div class="form-section">
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
-        <button type="button" class="nav-btn save-btn" onclick="saveEstimate()">שמור חוות דעת</button>
-        <button type="button" class="nav-btn preview-btn" onclick="previewEstimate()">תצוגה מקדימה</button>
-        <button type="button" class="nav-btn generate-btn" onclick="generateEstimate()">צור דו"ח חוות דעת</button>
-        <button type="button" class="nav-btn" style="background: #28a745;" onclick="continueToFeeModule()">
-          <span style="margin-left: 5px;">🧮</span>
-          המשך למודול שכר טרחה
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <button type="button" class="nav-btn save-btn" onclick="saveDepreciationData()">שמור נתונים</button>
+        <button type="button" class="nav-btn" style="background: #059669;" onclick="continueToValidation()">
+          <span style="margin-left: 5px;">✅</span>
+          המשך לאימות ויצירת דוח
         </button>
         <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
       </div>
@@ -2030,9 +2028,9 @@
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          // Issue date from standardized case_info structure (with legacy fallback)
-          const issueDate = helper.case_info?.issue_date || helper.car_details?.report_date || helper.levi_report?.report_date || '';
-          document.getElementById('carReportDate').value = convertToDateInputFormat(issueDate);
+          // Final report date - use car_details.report_date or today's date, NOT levi_report date
+          const finalReportDate = helper.car_details?.report_date || new Date().toISOString().split('T')[0];
+          document.getElementById('carReportDate').value = convertToDateInputFormat(finalReportDate);
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};
@@ -7432,7 +7430,7 @@
           carModelCode: helper.car_details?.model_code || helper.vehicle?.model_code || '',
           carBasePrice: helper.levi_report?.base_price || helper.expertise?.levi_report?.base_price || '',
           carMarketValue: helper.car_details?.market_value || helper.vehicle?.market_value || helper.levi_report?.final_price || '',
-          carReportDate: convertToDateInputFormat(helper.car_details?.report_date || helper.levi_report?.report_date || '')
+          carReportDate: convertToDateInputFormat(helper.car_details?.report_date || new Date().toISOString().split('T')[0])
         };
         
         Object.entries(carFields).forEach(([fieldId, value]) => {
@@ -9026,7 +9024,7 @@
           },
           'carReportDate': () => {
             helper.car_details.report_date = value;
-            helper.levi_report.report_date = value;
+            // Do NOT update levi_report.report_date - this is for final report only
           }
         };
         
@@ -10008,6 +10006,55 @@
       console.log(`✅ Custom field added to ${summaryType}`);
     }
 
+    // New workflow functions
+    function saveDepreciationData() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Save current depreciation module data
+      if (!helper.expertise) helper.expertise = {};
+      helper.expertise.depreciation_module_completed = true;
+      helper.expertise.last_modified = new Date().toISOString();
+      
+      // Collect all current form data
+      const formData = {
+        report_type: document.getElementById('reportType')?.value,
+        company_client: document.getElementById('isCompanyClient')?.value,
+        agreement_status: document.getElementById('inAgreement')?.value,
+        garage_days: document.getElementById('garageDays')?.value,
+        additional_notes: document.getElementById('additional-notes')?.value
+      };
+      
+      helper.expertise.depreciation_form = formData;
+      
+      // Save differentials if they exist
+      const hasDifferentials = document.getElementById('hasDifferentials')?.checked;
+      if (hasDifferentials) {
+        helper.expertise.differentials = collectDifferentials();
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Depreciation data saved');
+      
+      alert('נתוני ירידת הערך נשמרו בהצלחה!');
+    }
+    
+    function continueToValidation() {
+      // Save all current data before proceeding
+      saveDepreciationData();
+      
+      // Set workflow state
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.workflow) helper.workflow = {};
+      helper.workflow.current_stage = 'validation';
+      helper.workflow.from_builder = true;
+      helper.workflow.report_type = document.getElementById('reportType')?.value || 'חוות דעת פרטית';
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Navigate to validation workflow
+      window.location.href = 'validation-workflow.html';
+    }
+
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.addDepreciationRow = addDepreciationRow;
@@ -10017,6 +10064,8 @@
     window.toggleDifferentialsTable = toggleDifferentialsTable;
     window.updateSummaryWithDifferentials = updateSummaryWithDifferentials;
     window.updateMainSummaryWithDifferentials = updateMainSummaryWithDifferentials;
+    window.saveDepreciationData = saveDepreciationData;
+    window.continueToValidation = continueToValidation;
     window.saveAndRefresh = saveAndRefresh;
     window.saveAndRefreshComplete = saveAndRefreshComplete;
     window.refreshSummary = refreshSummary;
