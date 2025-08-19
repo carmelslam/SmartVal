@@ -4549,8 +4549,20 @@
     function finishAndGoToSummary() {
       showUserNotification('שומר נתונים ומציג סיכום סופי...', 'info', 2000);
       
-      // Save all current data first
-      saveCurrentStep();
+      // ✅ FIX: Check if there's a current damage center to save before calling saveCurrentStep
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Only save if there's a current damage center with data to transfer
+        if (helper.current_damage_center && helper.current_damage_center.Id) {
+          console.log('📦 Current damage center found, saving before finishing...');
+          saveCurrentStep();
+        } else {
+          console.log('ℹ️ No current damage center to save, proceeding to summary...');
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not check current damage center, proceeding to summary:', error);
+      }
       
       // Generate and display final summary
       setTimeout(() => {
