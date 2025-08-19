@@ -1051,11 +1051,24 @@
           console.log('⏱️ Sending multiple webhooks...');
           
           // Import and use sendToWebhook for multiple webhooks
-          import('./webhook.js').then(({ sendToWebhook }) => {
+          import('./webhook.js').then(async ({ sendToWebhook }) => {
             console.log('✅ Webhook module loaded');
             
             // Prepare different payloads for each webhook
-            const htmlContent = document.documentElement.outerHTML;
+            // Make sure expertise data is fully populated before capturing HTML
+            populateExpertiseData();
+            
+            // Wait a moment for DOM updates, then capture clean HTML
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Clone document and remove no-print elements for clean PDF
+            const clonedDoc = document.cloneNode(true);
+            const controlSection = clonedDoc.querySelector('.no-print');
+            if (controlSection) {
+              controlSection.remove();
+            }
+            
+            const htmlContent = clonedDoc.documentElement.outerHTML;
             const htmlPayload = {
               plate: payload.plate,
               action: 'EXPERTISE_HTML',
@@ -1073,22 +1086,73 @@
               callbackUrl: null
             };
             
-            // Function to fetch HTML content from draft reports
+            // Function to fetch HTML content from draft reports with proper data population
             async function fetchDraftHTML(reportType) {
               const reportUrl = reportType === 'estimate' 
                 ? 'estimate-report-builder.html?from=expertise&skipValidation=true'
                 : 'final-report-template-builder.html?from=expertise&skipValidation=true';
               
               try {
-                const response = await fetch(reportUrl);
-                if (!response.ok) {
-                  throw new Error(`HTTP ${response.status}`);
-                }
-                const html = await response.text();
-                return html;
+                console.log(`🔄 Opening ${reportType} report in hidden iframe to populate data...`);
+                
+                // Create a hidden iframe to load and populate the report
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.style.position = 'absolute';
+                iframe.style.left = '-9999px';
+                document.body.appendChild(iframe);
+                
+                return new Promise((resolve, reject) => {
+                  iframe.onload = () => {
+                    try {
+                      console.log(`📄 ${reportType} report loaded, waiting for data population...`);
+                      
+                      // Wait for the report to populate with data
+                      setTimeout(() => {
+                        try {
+                          // Get the populated HTML from the iframe
+                          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                          
+                          // Remove any no-print elements from the iframe content
+                          const noPrintElements = iframeDoc.querySelectorAll('.no-print');
+                          noPrintElements.forEach(el => el.remove());
+                          
+                          const populatedHTML = iframeDoc.documentElement.outerHTML;
+                          
+                          // Clean up
+                          document.body.removeChild(iframe);
+                          
+                          console.log(`✅ ${reportType} HTML captured successfully`);
+                          resolve(populatedHTML);
+                        } catch (captureError) {
+                          console.error(`❌ Failed to capture ${reportType} HTML:`, captureError);
+                          document.body.removeChild(iframe);
+                          
+                          // Fallback: return simple template
+                          const fallbackHTML = `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p><p>Data population failed, using fallback template.</p></body></html>`;
+                          resolve(fallbackHTML);
+                        }
+                      }, 3000); // Wait 3 seconds for data to populate
+                    } catch (loadError) {
+                      console.error(`❌ Error processing ${reportType} iframe:`, loadError);
+                      document.body.removeChild(iframe);
+                      reject(loadError);
+                    }
+                  };
+                  
+                  iframe.onerror = (error) => {
+                    console.error(`❌ Failed to load ${reportType} report:`, error);
+                    document.body.removeChild(iframe);
+                    reject(error);
+                  };
+                  
+                  // Load the report URL
+                  iframe.src = reportUrl;
+                });
+                
               } catch (error) {
                 console.warn(`⚠️ Could not fetch ${reportType} draft HTML:`, error);
-                return `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p></body></html>`;
+                return `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p><p>Error: ${error.message}</p></body></html>`;
               }
             }
             
