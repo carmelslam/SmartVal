@@ -988,7 +988,19 @@
     window.submitFinalExpertise = function() {
       console.log('🔄 Starting submit process...');
       
+      // Get submit button and disable it to prevent multiple submissions
+      const submitButton = document.querySelector('.submit-btn');
+      if (submitButton.disabled) {
+        console.log('❌ Submit already in progress, ignoring click');
+        return;
+      }
+      
       if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
+        // Disable button and change text to show it's processing
+        submitButton.disabled = true;
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '⏳ שולח... אנא המתן';
+        submitButton.style.opacity = '0.6';
         try {
           console.log('⏱️ Getting helper data...');
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -1060,38 +1072,64 @@
               callbackUrl: null
             };
             
-            // Send all 3 webhooks sequentially for better reliability
-            console.log('📤 1/3 Sending EXPERTISE_HTML...');
+            // Send all 5 webhooks sequentially for better reliability
+            console.log('📤 1/5 Sending EXPERTISE_HTML...');
             return sendToWebhook('EXPERTISE_HTML', htmlPayload)
               .then(() => {
-                console.log('✅ 1/3 EXPERTISE_HTML sent successfully');
-                console.log('📤 2/3 Sending LAUNCH_EXPERTISE...');
+                console.log('✅ 1/5 EXPERTISE_HTML sent successfully');
+                console.log('📤 2/5 Sending LAUNCH_EXPERTISE...');
                 return sendToWebhook('LAUNCH_EXPERTISE', payload);
               })
               .then(() => {
-                console.log('✅ 2/3 LAUNCH_EXPERTISE sent successfully');
-                console.log('📤 3/3 Sending HELPER_EXPORT...');
+                console.log('✅ 2/5 LAUNCH_EXPERTISE sent successfully');
+                console.log('📤 3/5 Sending HELPER_EXPORT...');
                 return sendToWebhook('HELPER_EXPORT', helperExportPayload);
               })
               .then(() => {
-                console.log('✅ 3/3 HELPER_EXPORT sent successfully');
-                console.log('🎉 All 3 webhooks sent successfully');
-                return { success: true, webhooks_sent: 3 };
+                console.log('✅ 3/5 HELPER_EXPORT sent successfully');
+                console.log('📤 4/5 Sending SUBMIT_ESTIMATE_DRAFT...');
+                return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', payload);
+              })
+              .then(() => {
+                console.log('✅ 4/5 SUBMIT_ESTIMATE_DRAFT sent successfully');
+                console.log('📤 5/5 Sending FINAL_REPORT_DRAFT...');
+                return sendToWebhook('FINAL_REPORT_DRAFT', payload);
+              })
+              .then(() => {
+                console.log('✅ 5/5 FINAL_REPORT_DRAFT sent successfully');
+                console.log('🎉 All 5 webhooks sent successfully');
+                return { success: true, webhooks_sent: 5 };
               });
           })
           .then(() => {
             console.log('✅ All webhooks completed successfully');
-            alert('האקספירטיזה נשלחה בהצלחה! (3 webhooks sent)');
+            alert('האקספירטיזה נשלחה בהצלחה! (5 webhooks sent)');
+            // Keep button disabled after successful submission
+            submitButton.innerHTML = '✅ נשלח בהצלחה';
+            submitButton.style.backgroundColor = '#059669';
           })
           .catch((error) => {
             console.error('❌ Webhook sequence failed:', error);
             alert('שגיאה בשליחה: ' + error.message);
+            // Re-enable button on error so user can retry
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            submitButton.style.opacity = '1';
+            submitButton.style.backgroundColor = '';
           });
           
         } catch (error) {
           console.error('❌ Submit process failed:', error);
           alert('שגיאה בעיבוד הנתונים: ' + error.message);
+          // Re-enable button on error
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalText;
+          submitButton.style.opacity = '1';
+          submitButton.style.backgroundColor = '';
         }
+      } else {
+        // User cancelled the confirmation dialog
+        console.log('ℹ️ User cancelled submission');
       }
     };
 
