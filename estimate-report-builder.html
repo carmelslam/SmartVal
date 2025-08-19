@@ -615,17 +615,18 @@
       const selectedReportType = sessionStorage.getItem('selectedReportType');
       const validationCompleted = sessionStorage.getItem('estimateValidationCompleted');
       
-      if (!helperData || selectedReportType !== 'estimate') {
+      // Check if we should skip validation (coming from expertise) FIRST
+      const urlParams = new URLSearchParams(window.location.search);
+      const skipValidation = urlParams.get('skipValidation') === 'true';
+      const fromExpertise = urlParams.get('from') === 'expertise';
+      
+      // Allow access if coming from expertise or skipping validation, even without selectedReportType
+      if (!helperData || (!skipValidation && !fromExpertise && selectedReportType !== 'estimate')) {
         console.error('❌ Missing required data for estimate report builder');
         alert('שגיאה: נתונים חסרים לבניית אומדן. חוזר לדף הבחירה...');
         window.location.href = 'selection.html';
         return;
       }
-
-      // Check if we should skip validation (coming from expertise)
-      const urlParams = new URLSearchParams(window.location.search);
-      const skipValidation = urlParams.get('skipValidation') === 'true';
-      const fromExpertise = urlParams.get('from') === 'expertise';
       
       if (!validationCompleted && !skipValidation && !fromExpertise) {
         console.warn('⚠️ Validation not completed, redirecting to validation');

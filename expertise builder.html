@@ -1114,7 +1114,30 @@
                     timeoutId = setTimeout(() => {
                       try {
                         // Get the populated HTML from the iframe
-                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        let iframeDoc;
+                        try {
+                          iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                        } catch (docError) {
+                          console.warn(`⚠️ ${reportType} iframe document access failed:`, docError);
+                          // Clean up and provide fallback
+                          if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                          }
+                          const accessErrorHTML = `<html><body><h1>${reportType} Report - Access Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Could not access iframe document (security/CORS issue)</p></body></html>`;
+                          resolve(accessErrorHTML);
+                          return;
+                        }
+                        
+                        if (!iframeDoc || !iframeDoc.body) {
+                          console.warn(`⚠️ ${reportType} iframe document or body is null`);
+                          // Clean up and provide fallback
+                          if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                          }
+                          const nullDocHTML = `<html><body><h1>${reportType} Report - Document Null</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Iframe document or body was null</p></body></html>`;
+                          resolve(nullDocHTML);
+                          return;
+                        }
                         
                         // Check if the page has populated content (not just empty template)
                         const hasContent = iframeDoc.body.innerHTML.length > 5000; // Basic content check
@@ -1133,7 +1156,9 @@
                         const populatedHTML = iframeDoc.documentElement.outerHTML;
                         
                         // Cleanup
-                        document.body.removeChild(iframe);
+                        if (iframe.parentNode) {
+                          document.body.removeChild(iframe);
+                        }
                         
                         if (hasContent || hasPlateNumber) {
                           console.log(`✅ ${reportType} HTML captured successfully (${populatedHTML.length} chars)`);
@@ -1146,7 +1171,14 @@
                         
                       } catch (captureError) {
                         console.error(`❌ Failed to capture ${reportType} HTML:`, captureError);
-                        document.body.removeChild(iframe);
+                        // Clean up safely
+                        try {
+                          if (iframe && iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                          }
+                        } catch (cleanupError) {
+                          console.warn('Cleanup error:', cleanupError);
+                        }
                         
                         const errorHTML = `<html><body><h1>${reportType} Report - Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Error: ${captureError.message}</p></body></html>`;
                         resolve(errorHTML);
