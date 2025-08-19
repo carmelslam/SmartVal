@@ -1012,6 +1012,7 @@
           const payload = {
             // Core webhook fields
             plate: currentHelper.car_details?.plate || currentHelper.vehicle?.plate || currentHelper.meta?.plate || 'unknown',
+            owner_name: currentHelper.stakeholders?.owner?.name || currentHelper.vehicle?.owner || 'לא צוין',
             action: 'LAUNCH_EXPERTISE',
             submittedAt: new Date().toISOString(),
             callbackUrl: null,
@@ -1072,6 +1073,25 @@
               callbackUrl: null
             };
             
+            // Function to fetch HTML content from draft reports
+            async function fetchDraftHTML(reportType) {
+              const reportUrl = reportType === 'estimate' 
+                ? 'estimate-report-builder.html?from=expertise&skipValidation=true'
+                : 'final-report-template-builder.html?from=expertise&skipValidation=true';
+              
+              try {
+                const response = await fetch(reportUrl);
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}`);
+                }
+                const html = await response.text();
+                return html;
+              } catch (error) {
+                console.warn(`⚠️ Could not fetch ${reportType} draft HTML:`, error);
+                return `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p></body></html>`;
+              }
+            }
+            
             // Send all 5 webhooks sequentially for better reliability
             console.log('📤 1/5 Sending EXPERTISE_HTML...');
             return sendToWebhook('EXPERTISE_HTML', htmlPayload)
@@ -1085,15 +1105,37 @@
                 console.log('📤 3/5 Sending HELPER_EXPORT...');
                 return sendToWebhook('HELPER_EXPORT', helperExportPayload);
               })
-              .then(() => {
+              .then(async () => {
                 console.log('✅ 3/5 HELPER_EXPORT sent successfully');
                 console.log('📤 4/5 Sending SUBMIT_ESTIMATE_DRAFT...');
-                return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', payload);
+                // Fetch estimate draft HTML and send
+                const estimateHTML = await fetchDraftHTML('estimate');
+                const estimateDraftPayload = {
+                  plate: payload.plate,
+                  owner_name: payload.owner_name,
+                  action: 'SUBMIT_ESTIMATE_DRAFT',
+                  submittedAt: new Date().toISOString(),
+                  html: estimateHTML,
+                  case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`,
+                  callbackUrl: null
+                };
+                return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', estimateDraftPayload);
               })
-              .then(() => {
+              .then(async () => {
                 console.log('✅ 4/5 SUBMIT_ESTIMATE_DRAFT sent successfully');
                 console.log('📤 5/5 Sending FINAL_REPORT_DRAFT...');
-                return sendToWebhook('FINAL_REPORT_DRAFT', payload);
+                // Fetch final report draft HTML and send
+                const finalReportHTML = await fetchDraftHTML('final_report');
+                const finalReportDraftPayload = {
+                  plate: payload.plate,
+                  owner_name: payload.owner_name,
+                  action: 'FINAL_REPORT_DRAFT',
+                  submittedAt: new Date().toISOString(),
+                  html: finalReportHTML,
+                  case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`,
+                  callbackUrl: null
+                };
+                return sendToWebhook('FINAL_REPORT_DRAFT', finalReportDraftPayload);
               })
               .then(() => {
                 console.log('✅ 5/5 FINAL_REPORT_DRAFT sent successfully');
