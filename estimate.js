@@ -17,9 +17,13 @@ const EstimateEngine = {
   isPostSession: false,
 
   init() {
-    // Check if this is post-session mode (from URL parameters)
+    // Check URL parameters for different modes and access types
     const urlParams = new URLSearchParams(window.location.search);
     this.isPostSession = urlParams.get('mode') === 'post-session';
+    
+    // ✅ FIX: Check if validation should be skipped (coming from expertise)
+    const skipValidation = urlParams.get('skipValidation') === 'true';
+    const fromExpertise = urlParams.get('from') === 'expertise';
 
     if (this.isPostSession) {
       // For post-session mode, redirect to estimate-builder.html
@@ -32,10 +36,15 @@ const EstimateEngine = {
     if (!raw) return alert('❌ No base data found (helper missing)');
     this.helper = JSON.parse(raw);
 
-    // Validate required data exists
-    if (!this.validateBaseData()) {
-      alert('❌ חסרים נתונים בסיסיים לצורך יצירת אומדן');
-      return;
+    // ✅ FIX: Skip validation if coming from expertise or explicitly bypassed
+    if (!skipValidation && !fromExpertise) {
+      // Validate required data exists only for normal workflow
+      if (!this.validateBaseData()) {
+        alert('❌ חסרים נתונים בסיסיים לצורך יצירת אומדן');
+        return;
+      }
+    } else {
+      console.log('✅ Estimate validation skipped - accessed from expertise or skipValidation=true');
     }
 
     // If already estimated, load modified view
@@ -536,6 +545,17 @@ const EstimateEngine = {
   },
 
   validateEstimate() {
+    // ✅ FIX: Check if validation should be skipped (coming from expertise)
+    const urlParams = new URLSearchParams(window.location.search);
+    const skipValidation = urlParams.get('skipValidation') === 'true';
+    const fromExpertise = urlParams.get('from') === 'expertise';
+    
+    // Skip validation if coming from expertise
+    if (skipValidation || fromExpertise) {
+      console.log('✅ Estimate generation validation skipped - accessed from expertise');
+      return true;
+    }
+    
     const required = [
       'car_details.plate',
       'car_details.manufacturer', 
