@@ -1086,78 +1086,108 @@
               callbackUrl: null
             };
             
-            // Function to fetch HTML content from draft reports with proper data population
-            async function fetchDraftHTML(reportType) {
-              const reportUrl = reportType === 'estimate' 
-                ? 'estimate-report-builder.html?from=expertise&skipValidation=true'
-                : 'final-report-template-builder.html?from=expertise&skipValidation=true';
-              
+            // Function to fetch populated HTML from report URLs
+            async function fetchReportHTML(reportUrl, reportType) {
               try {
-                console.log(`🔄 Opening ${reportType} report in hidden iframe to populate data...`);
+                console.log(`🔄 Fetching ${reportType} HTML from: ${reportUrl}`);
                 
-                // Create a hidden iframe to load and populate the report
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.style.position = 'absolute';
-                iframe.style.left = '-9999px';
-                document.body.appendChild(iframe);
-                
+                // First, ensure the target page has access to current helper data
+                // We'll open the URL in a hidden iframe and wait for it to load and populate
                 return new Promise((resolve, reject) => {
+                  const iframe = document.createElement('iframe');
+                  iframe.style.display = 'none';
+                  iframe.style.position = 'absolute';
+                  iframe.style.left = '-9999px';
+                  iframe.style.width = '1px';
+                  iframe.style.height = '1px';
+                  document.body.appendChild(iframe);
+                  
+                  let timeoutId;
+                  
                   iframe.onload = () => {
-                    try {
-                      console.log(`📄 ${reportType} report loaded, waiting for data population...`);
-                      
-                      // Wait for the report to populate with data
-                      setTimeout(() => {
-                        try {
-                          // Get the populated HTML from the iframe
-                          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                          
-                          // Remove any no-print elements from the iframe content
-                          const noPrintElements = iframeDoc.querySelectorAll('.no-print');
-                          noPrintElements.forEach(el => el.remove());
-                          
-                          const populatedHTML = iframeDoc.documentElement.outerHTML;
-                          
-                          // Clean up
-                          document.body.removeChild(iframe);
-                          
-                          console.log(`✅ ${reportType} HTML captured successfully`);
+                    console.log(`📄 ${reportType} iframe loaded, waiting for data population...`);
+                    
+                    // Clear any existing timeout
+                    if (timeoutId) clearTimeout(timeoutId);
+                    
+                    // Wait longer for the report to fully populate with data
+                    timeoutId = setTimeout(() => {
+                      try {
+                        // Get the populated HTML from the iframe
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        
+                        // Check if the page has populated content (not just empty template)
+                        const hasContent = iframeDoc.body.innerHTML.length > 5000; // Basic content check
+                        const hasPlateNumber = payload.plate && iframeDoc.body.innerHTML.includes(payload.plate);
+                        
+                        console.log(`🔍 ${reportType} content check:`, { 
+                          contentLength: iframeDoc.body.innerHTML.length,
+                          hasPlateNumber,
+                          hasContent 
+                        });
+                        
+                        // Remove any no-print elements before capturing
+                        const noPrintElements = iframeDoc.querySelectorAll('.no-print, .control-buttons, .no-pdf');
+                        noPrintElements.forEach(el => el.remove());
+                        
+                        const populatedHTML = iframeDoc.documentElement.outerHTML;
+                        
+                        // Cleanup
+                        document.body.removeChild(iframe);
+                        
+                        if (hasContent || hasPlateNumber) {
+                          console.log(`✅ ${reportType} HTML captured successfully (${populatedHTML.length} chars)`);
                           resolve(populatedHTML);
-                        } catch (captureError) {
-                          console.error(`❌ Failed to capture ${reportType} HTML:`, captureError);
-                          document.body.removeChild(iframe);
-                          
-                          // Fallback: return simple template
-                          const fallbackHTML = `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p><p>Data population failed, using fallback template.</p></body></html>`;
+                        } else {
+                          console.warn(`⚠️ ${reportType} HTML seems empty, using fallback`);
+                          const fallbackHTML = `<html><body><h1>${reportType} Report</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Note: Template did not populate properly</p></body></html>`;
                           resolve(fallbackHTML);
                         }
-                      }, 3000); // Wait 3 seconds for data to populate
-                    } catch (loadError) {
-                      console.error(`❌ Error processing ${reportType} iframe:`, loadError);
-                      document.body.removeChild(iframe);
-                      reject(loadError);
-                    }
+                        
+                      } catch (captureError) {
+                        console.error(`❌ Failed to capture ${reportType} HTML:`, captureError);
+                        document.body.removeChild(iframe);
+                        
+                        const errorHTML = `<html><body><h1>${reportType} Report - Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Error: ${captureError.message}</p></body></html>`;
+                        resolve(errorHTML);
+                      }
+                    }, 5000); // Wait 5 seconds for data population
                   };
                   
                   iframe.onerror = (error) => {
-                    console.error(`❌ Failed to load ${reportType} report:`, error);
+                    console.error(`❌ Failed to load ${reportType} iframe:`, error);
+                    if (timeoutId) clearTimeout(timeoutId);
                     document.body.removeChild(iframe);
-                    reject(error);
+                    
+                    const errorHTML = `<html><body><h1>${reportType} Report - Load Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Failed to load: ${reportUrl}</p></body></html>`;
+                    resolve(errorHTML); // Don't reject, provide fallback
                   };
+                  
+                  // Set a maximum timeout
+                  setTimeout(() => {
+                    if (iframe.parentNode) {
+                      console.warn(`⏱️ ${reportType} iframe timeout, using fallback`);
+                      document.body.removeChild(iframe);
+                      const timeoutHTML = `<html><body><h1>${reportType} Report - Timeout</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>URL timed out: ${reportUrl}</p></body></html>`;
+                      resolve(timeoutHTML);
+                    }
+                  }, 10000); // 10 second maximum timeout
                   
                   // Load the report URL
                   iframe.src = reportUrl;
                 });
                 
               } catch (error) {
-                console.warn(`⚠️ Could not fetch ${reportType} draft HTML:`, error);
-                return `<html><body><h1>Draft ${reportType} report for ${payload.plate}</h1><p>Generated on: ${new Date().toLocaleString()}</p><p>Error: ${error.message}</p></body></html>`;
+                console.error(`❌ Error setting up ${reportType} fetch:`, error);
+                return `<html><body><h1>${reportType} Report - Setup Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Setup error: ${error.message}</p></body></html>`;
               }
             }
             
             // Send all 5 webhooks sequentially for better reliability
             console.log('📤 1/5 Sending EXPERTISE_HTML...');
+            console.log('🔍 DEBUG: EXPERTISE_HTML payload size:', JSON.stringify(htmlPayload).length, 'characters');
+            console.log('🔍 DEBUG: HTML content preview:', htmlPayload.html.substring(0, 500) + '...');
+            console.log('🔍 DEBUG: HTML contains populated data?', htmlPayload.html.includes(payload.plate), htmlPayload.html.includes('דו"ח אקספרטיזה'));
             return sendToWebhook('EXPERTISE_HTML', htmlPayload)
               .then(() => {
                 console.log('✅ 1/5 EXPERTISE_HTML sent successfully');
@@ -1172,9 +1202,14 @@
               .then(async () => {
                 console.log('✅ 3/5 HELPER_EXPORT sent successfully');
                 console.log('📤 4/5 Sending SUBMIT_ESTIMATE_DRAFT...');
-                // Fetch estimate draft HTML and send
-                const estimateHTML = await fetchDraftHTML('estimate');
-                const estimateDraftPayload = {
+                
+                // Fetch estimate HTML from the actual report URL
+                const estimateHTML = await fetchReportHTML(
+                  'https://yaron-cayouf-portal.netlify.app/estimate-report-builder.html?from=expertise&skipValidation=true',
+                  'Estimate'
+                );
+                
+                const estimatePayload = {
                   plate: payload.plate,
                   owner_name: payload.owner_name,
                   action: 'SUBMIT_ESTIMATE_DRAFT',
@@ -1183,14 +1218,20 @@
                   case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`,
                   callbackUrl: null
                 };
-                return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', estimateDraftPayload);
+                
+                return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', estimatePayload);
               })
               .then(async () => {
                 console.log('✅ 4/5 SUBMIT_ESTIMATE_DRAFT sent successfully');
                 console.log('📤 5/5 Sending FINAL_REPORT_DRAFT...');
-                // Fetch final report draft HTML and send
-                const finalReportHTML = await fetchDraftHTML('final_report');
-                const finalReportDraftPayload = {
+                
+                // Fetch final report HTML from the actual report URL
+                const finalReportHTML = await fetchReportHTML(
+                  'https://yaron-cayouf-portal.netlify.app/final-report-template-builder.html?from=expertise&skipValidation=true',
+                  'Final Report'
+                );
+                
+                const finalReportPayload = {
                   plate: payload.plate,
                   owner_name: payload.owner_name,
                   action: 'FINAL_REPORT_DRAFT',
@@ -1199,7 +1240,8 @@
                   case_id: payload.meta?.case_id || `YC-${payload.plate}-2025`,
                   callbackUrl: null
                 };
-                return sendToWebhook('FINAL_REPORT_DRAFT', finalReportDraftPayload);
+                
+                return sendToWebhook('FINAL_REPORT_DRAFT', finalReportPayload);
               })
               .then(() => {
                 console.log('✅ 5/5 FINAL_REPORT_DRAFT sent successfully');
