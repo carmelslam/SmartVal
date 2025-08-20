@@ -2443,32 +2443,30 @@
         console.log('🔄 loadDepreciationData called with helper:', helper);
         console.log('🔄 helper.final_report.depreciation:', helper.final_report?.depreciation);
         
-        // ✅ 2-WAY DATA FLOW: Load depreciation data from multiple possible sources (in order of preference)
-        // 1. manual_depreciation (most recent UI save) 2. main depreciation 3. final_report depreciation
-        const depreciationData = helper.manual_depreciation || helper.depreciation || helper.final_report?.depreciation || null;
+        // ✅ 2-WAY DATA FLOW: Load depreciation data from helper.depreciation (single source of truth)
+        // Depreciation is ONLY for final report and estimate workflows, NOT expertise
+        const depreciationData = helper.depreciation || helper.final_report?.depreciation || null;
         
         if (depreciationData) {
           console.log('✅ Found depreciation data, loading from helper.depreciation:', depreciationData);
           
-          // Load global depreciation fields with full backward compatibility
+          // Load global depreciation fields with backward compatibility
           document.getElementById('globalDep1').value = depreciationData.global_percentage?.toString() || 
                                                         depreciationData.global_percent || '';
           document.getElementById('globalDepValue').value = depreciationData.global_amount ? 
                                                            `₪${depreciationData.global_amount.toLocaleString()}` :
                                                            depreciationData.global_value || '';
-          document.getElementById('garageDays').value = depreciationData.work_days_impact || 
-                                                       depreciationData.workDaysImpact || '';
+          document.getElementById('garageDays').value = depreciationData.work_days_impact || '';
           
-          // Load bulk depreciation table - check both bulk_items and depreciationRows
-          const bulkData = depreciationData.bulk_items || depreciationData.depreciationRows || [];
-          if (bulkData && Array.isArray(bulkData)) {
+          // Load bulk depreciation table
+          if (depreciationData.bulk_items && Array.isArray(depreciationData.bulk_items)) {
             // Clear existing rows to prevent duplication
             const depreciationContainer = document.getElementById('depreciationBulkTable');
             if (depreciationContainer) {
               depreciationContainer.innerHTML = '';
             }
             
-            bulkData.forEach(item => {
+            depreciationData.bulk_items.forEach(item => {
               console.log('🔄 Loading depreciation item:', item);
               addDepField(item);
             });
@@ -8475,117 +8473,10 @@
       }
     }
     
-    // Generic refresh function for any section
+    // Refresh system - SIMPLE VERSION: Just reload page
     function refreshSectionData(sectionId) {
-      const config = sectionConfig[sectionId];
-      if (!config) {
-        console.error(`Unknown section: ${sectionId}`);
-        return;
-      }
-      
-      try {
-        // 🔧 FIX: Save current UI state BEFORE refreshing to prevent data loss
-        console.log(`🔄 Refreshing section ${sectionId} - first saving current state...`);
-        
-        // Save current state for critical sections before refreshing
-        if (sectionId === 'depreciation') {
-          saveDepreciationData(); // Save current depreciation state
-        } else if (sectionId === 'damage-centers') {
-          saveDamageCenterChanges(); // Save current damage center state if function exists
-        }
-        
-        // Get helper data from sessionStorage (single source of truth) 
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log(`🔄 Refreshing section ${sectionId} with helper data:`, helper);
-        
-        // Check if we have manual save data
-        const manualData = helper[config.helperKey];
-        if (manualData && manualData.isManualSave) {
-          // Load from manual save
-          config.fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field && manualData[fieldId] !== undefined) {
-              field.value = manualData[fieldId];
-            }
-          });
-          
-          // Handle special cases for dynamic content
-          if (sectionId === 'final-report-type' && manualData.finalReportType) {
-            const radioButton = document.querySelector(`input[name="final-report-type"][value="${manualData.finalReportType}"]`);
-            if (radioButton) radioButton.checked = true;
-          } else if (sectionId === 'damage-centers' && manualData.damageCenters) {
-            // Restore damage centers data from manual save
-            if (typeof restoreDamageCentersData === 'function') {
-              restoreDamageCentersData(manualData.damageCenters);
-            } else {
-              // Fallback: load from helper
-              loadDamageCentersFromHelper(helper);
-            }
-          } else if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
-            restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
-            restoreAdjustmentData('#registrationAdjustmentsList', manualData.registrationAdjustments);
-          } else if (sectionId === 'full-market-value' && manualData.allAdjustments) {
-            restoreAdjustmentData('#allAdjustmentsList', manualData.allAdjustments);
-          } else if (sectionId === 'depreciation' && manualData.depreciationRows) {
-            restoreDepreciationData('#depreciationBulkTable', manualData.depreciationRows);
-          }
-          
-          showSectionMessage(sectionId, `↻ ${config.name} נטען מהשמירה האחרונה`, 'info');
-        } else {
-          // Load from helper data (original functionality) 
-          console.log(`🔄 Loading ${sectionId} from helper, available data:`, Object.keys(helper));
-          
-          if (window[config.loadFunction]) {
-            console.log(`✅ Found load function ${config.loadFunction} for section ${sectionId}`);
-            window[config.loadFunction](helper);
-            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
-          } else if (sectionId === 'depreciation') {
-            // Special handling for depreciation section - check multiple locations
-            console.log('🔄 Loading depreciation data, checking helper.depreciation, manual_depreciation, and helper.expertise.depreciation');
-            console.log('📊 Available depreciation sources:', {
-              main_depreciation: !!helper.depreciation,
-              manual_depreciation: !!helper.manual_depreciation, 
-              expertise_depreciation: !!(helper.expertise && helper.expertise.depreciation)
-            });
-            
-            if (helper.depreciation || helper.manual_depreciation || (helper.expertise && helper.expertise.depreciation)) {
-              loadDepreciationData(helper);
-              showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
-            } else {
-              console.warn('⚠️ No depreciation data found in any location - keeping current UI state');
-              showSectionMessage(sectionId, `⚠️ נשמרו הנתונים הנוכחיים`, 'info');
-            }
-          } else if (sectionId === 'damage-centers') {
-            // Special handling for damage-centers section - check multiple locations
-            console.log('🔄 Loading damage centers, checking helper.damage_assessment.centers and helper.damage_centers');
-            if ((helper.damage_assessment && helper.damage_assessment.centers) || helper.damage_centers) {
-              loadDamageCentersFromHelper(helper);
-              showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
-            } else {
-              console.warn('⚠️ No damage centers data found in helper');
-              showSectionMessage(sectionId, `⚠️ לא נמצאו נתוני מרכזי נזק`, 'warning');
-            }
-          } else {
-            console.warn(`Load function ${config.loadFunction} not found for section ${sectionId}`);
-            showSectionMessage(sectionId, `⚠️ לא ניתן לטעון ${config.name}`, 'warning');
-          }
-        }
-        
-        // Trigger calculations if needed
-        if (sectionId === 'gross-calculation') {
-          updateGrossMarketValueCalculation();
-        } else if (sectionId === 'full-market-value') {
-          updateFullMarketValueCalculation();
-        } else if (sectionId === 'depreciation') {
-          updateDepreciationCalculation();
-        }
-        
-        console.log(`↻ Section ${sectionId} refreshed successfully`);
-        
-      } catch (error) {
-        console.error(`Error refreshing section ${sectionId}:`, error);
-        showSectionMessage(sectionId, `❌ שגיאה בטעינת ${config.name}`, 'error');
-      }
+      console.log(`🔄 Refreshing section ${sectionId} by reloading page...`);
+      window.location.reload();
     }
     
     // Helper function to collect adjustment data from dynamic tables
