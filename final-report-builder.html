@@ -1161,7 +1161,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossPercentageResult')">אחוז הנזק הגולמי - בסיס הרכב בלבד (הצג/הסתר)</button>
       <div id="grossPercentageResult" style="display:none;">
         <div class="form-grid">
-          <div><label>סה״כ עלות נזקים:</label><input type="text" id="totalClaim" style="background: #f8f9fa;" readonly /></div>
+          <div><label>סה״כ עלות נזקים:</label><input type="text" id="totalClaimGross" style="background: #f8f9fa;" readonly /></div>
           <div><label>ערך הרכב לנזק גולמי:</label><input type="text" id="leviPriceList" style="background: #f8f9fa;" readonly /></div>
         </div>
         
@@ -2147,8 +2147,18 @@
         const claimsData = helper.claims_data || {};
         
         // Load with priority: manual input (claims_data) > calculated data (expertise.calculations)
-        document.getElementById('totalClaim').value = claimsData.total_claim || 
+        // Update main total claim field (div element uses innerText)
+        const totalClaimDiv = document.getElementById('totalClaim');
+        const formattedClaim = claimsData.total_claim || 
           (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+        if (totalClaimDiv) {
+          totalClaimDiv.innerText = formattedClaim;
+        }
+        // Also update gross section total claim field (input element uses value)
+        const totalClaimGrossInput = document.getElementById('totalClaimGross');
+        if (totalClaimGrossInput) {
+          totalClaimGrossInput.value = formattedClaim;
+        }
         document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
           (helper.calculations?.vehicle_value_gross ? `₪${helper.calculations.vehicle_value_gross.toLocaleString()}` : '') ||
           (helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '');
@@ -7189,8 +7199,16 @@
         if (sumClaimField) {
           sumClaimField.value = formattedAmount;
         }
-        if (totalClaimField) {
+        // Update main total claim field (div element)
+        if (totalClaimField && totalClaimField.tagName === 'DIV') {
+          totalClaimField.innerText = formattedAmount;
+        } else if (totalClaimField) {
           totalClaimField.value = formattedAmount;
+        }
+        // Also update gross section total claim field
+        const totalClaimGrossField = document.getElementById('totalClaimGross');
+        if (totalClaimGrossField) {
+          totalClaimGrossField.value = formattedAmount;
         }
         
         console.log(`💰 Updated total claim with VAT: ${totalClaimBeforeVAT.toLocaleString()} → ${totalClaimWithVAT.toLocaleString()}`);
@@ -10086,6 +10104,17 @@
         const field = document.getElementById(id);
         if (field) field.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
       });
+      
+      // Update main totalClaim field with formatting
+      const totalClaimDiv = document.getElementById('totalClaim');
+      if (totalClaimDiv) {
+        totalClaimDiv.innerText = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+      }
+      // Update gross section totalClaim field with formatting
+      const totalClaimGrossInput = document.getElementById('totalClaimGross');
+      if (totalClaimGrossInput) {
+        totalClaimGrossInput.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+      }
       
       const depFields = [
         'depCompensation', 'depCompensationGlobal'
