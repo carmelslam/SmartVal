@@ -166,7 +166,12 @@ class LegalTextEngine {
    * @returns {string} Text with replaced placeholders
    */
   replacePlaceholders(text, values = {}) {
-    let processedText = text;
+    // First, decode escaped characters from JSON
+    let processedText = text
+      .replace(/\\n/g, '\n')     // Convert \n to actual newlines
+      .replace(/\\t/g, '\t')     // Convert \t to actual tabs
+      .replace(/\\"/g, '"')      // Convert \" to actual quotes
+      .replace(/\\\\/g, '\\');   // Convert \\ to actual backslash
     
     // Standard placeholder mapping
     const defaultPlaceholders = {
@@ -221,6 +226,13 @@ class LegalTextEngine {
         // Fallback to private attachments
         attachments = vaultData.private.attachments;
       }
+      
+      // Decode escaped characters from JSON
+      attachments = attachments
+        .replace(/\\n/g, '\n')     // Convert \n to actual newlines
+        .replace(/\\t/g, '\t')     // Convert \t to actual tabs
+        .replace(/\\"/g, '"')      // Convert \" to actual quotes
+        .replace(/\\\\/g, '\\');   // Convert \\ to actual backslash
       
       console.log(`📎 Loaded attachments for ${reportType}:`, attachments.substring(0, 50) + '...');
       return attachments;
