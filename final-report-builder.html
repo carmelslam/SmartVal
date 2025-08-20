@@ -6721,14 +6721,18 @@
     // SAVE DAMAGE CENTER CHANGES TO HELPER
     function saveDamageCenterChanges() {
       try {
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
+        // 🔧 2-WAY DATA FLOW: Save back to helper.centers (the source of truth)
         const helper = window.helper || {};
         
-        // Initialize expertise.damage_blocks if not exists
+        // Initialize centers if not exists
+        if (!helper.centers) helper.centers = [];
+        
+        // Also maintain expertise.damage_blocks for backward compatibility
         if (!helper.expertise) helper.expertise = {};
         if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
         
-        // Clear existing damage blocks
+        // Clear both structures
+        helper.centers = [];
         helper.expertise.damage_blocks = [];
         
         // Store damage center names for depreciation section
@@ -6769,7 +6773,7 @@
             }
             
             if (type) {
-              works.push({ type, note, cost });
+              works.push({ category: type, comments: note, cost });
             }
           });
           
@@ -6790,10 +6794,46 @@
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
           
+          // Create center object in helper.centers format (source of truth)
+          const centerObject = {
+            Id: `dc_${Date.now()}_${index + 1}`, // Generate unique ID
+            "Damage center Number": centerNumber || (index + 1),
+            Location: centerLocation,
+            Description: centerDescription,
+            Parts: {
+              parts_required: parts,
+              parts_meta: {
+                total_items: parts.length,
+                total_cost: partsCost
+              }
+            },
+            Works: {
+              works: works,
+              works_meta: {
+                total_items: works.length,
+                total_cost: workCost
+              }
+            },
+            Repairs: {
+              repairs: repairs,
+              repairs_meta: {
+                total_items: repairs.length,
+                total_cost: repairsCost
+              }
+            },
+            Summary: {
+              "Total with VAT": totalCost * 1.18
+            }
+          };
+          
+          // Save to helper.centers (primary source)
+          helper.centers.push(centerObject);
+          
+          // Also save to damage_blocks for backward compatibility
           helper.expertise.damage_blocks.push({
-            damage_center_name: centerLocation, // This is the location/description
+            damage_center_name: centerLocation,
             damage_center_number: index + 1,
-            center_header: centerNumber, // The display header
+            center_header: centerNumber,
             description: centerDescription,
             parts,
             works,
