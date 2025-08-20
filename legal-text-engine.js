@@ -59,7 +59,10 @@ class LegalTextEngine {
       };
       
       // Cache the texts
-      this.cachedTexts = legalTexts;
+      this.cachedTexts = {
+        ...legalTexts,
+        vaultData: vaultData  // Store original vault data for attachments
+      };
       this.lastModified = new Date();
       
       console.log('✅ Legal texts cached successfully');
@@ -196,6 +199,35 @@ class LegalTextEngine {
     
     console.log('🔄 Placeholders replaced in legal text');
     return processedText;
+  }
+
+  /**
+   * Get attachments for a specific report type
+   * @param {string} reportType - Report type identifier
+   * @returns {Promise<string>} Attachments text
+   */
+  async getAttachments(reportType) {
+    try {
+      await this.loadFromVault();
+      
+      const vaultKey = this.getVaultKey(reportType);
+      const vaultData = this.cachedTexts?.vaultData || {};
+      
+      let attachments = '';
+      
+      if (vaultData[vaultKey]?.attachments) {
+        attachments = vaultData[vaultKey].attachments;
+      } else if (vaultData.private?.attachments) {
+        // Fallback to private attachments
+        attachments = vaultData.private.attachments;
+      }
+      
+      console.log(`📎 Loaded attachments for ${reportType}:`, attachments.substring(0, 50) + '...');
+      return attachments;
+    } catch (error) {
+      console.error('❌ Error loading attachments:', error);
+      return '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+    }
   }
 
   /**
