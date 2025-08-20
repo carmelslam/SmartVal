@@ -2608,6 +2608,8 @@
 
     // CREATE EDITABLE DAMAGE CENTER CARD
     function createEditableDamageCenterCard(block, index) {
+      console.log(`🏗️ Creating damage center card ${index} with block:`, block);
+      
       const centerNum = block.damage_center_number || (index + 1);
       const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
       const workCosts = block.work_cost || 0;
@@ -2619,6 +2621,10 @@
       const parts = block.parts || [];
       const works = block.works || [];
       const repairs = block.repairs || [];
+      
+      console.log(`🔧 Card ${index} data - Parts: ${parts.length}, Works: ${works.length}, Repairs: ${repairs.length}`);
+      console.log(`📋 Parts content:`, parts);
+      console.log(`🔨 Works content:`, works);
       
       return `
         <div class="editable-damage-card" data-center-index="${index}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -7599,14 +7605,28 @@
           }
         });
         
+        // DEBUGGING: Check all possible damage center data locations
+        console.log('🔍 DEBUG: Checking all damage center data sources...');
+        console.log('helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
+        console.log('helper.centers:', helper.centers);
+        console.log('helper.damage_centers:', helper.damage_centers);
+        console.log('helper.damage_assessment?.centers:', helper.damage_assessment?.centers);
+        
         // Load damage centers from helper - normalize data structure first
         if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+          console.log('🔄 Loading from helper.expertise.damage_blocks');
           const normalizedBlocks = helper.expertise.damage_blocks.map((center, index) => adaptCenterToBlock(center, index));
           loadDamageCentersFromHelper(normalizedBlocks);
         } else if (helper.centers && helper.centers.length > 0) {
-          // Fallback to centers helper if available
+          console.log('🔄 Loading from helper.centers');
           const normalizedBlocks = helper.centers.map((center, index) => adaptCenterToBlock(center, index));
           loadDamageCentersFromHelper(normalizedBlocks);
+        } else if (helper.damage_centers && helper.damage_centers.length > 0) {
+          console.log('🔄 Loading from helper.damage_centers');
+          const normalizedBlocks = helper.damage_centers.map((center, index) => adaptCenterToBlock(center, index));
+          loadDamageCentersFromHelper(normalizedBlocks);
+        } else {
+          console.log('❌ No damage center data found in any location');
         }
         
         console.log('✅ Helper data loaded successfully');
