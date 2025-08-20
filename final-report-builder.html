@@ -1632,11 +1632,11 @@
       const rowId = 'depRow_' + Date.now();
       const newRow = `
         <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" class="dep-center" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" /></div>
-          <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" class="dep-percent" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" class="dep-value" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1665,15 +1665,6 @@
         valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
         
         // Save data after calculation
-        saveDepreciationData();
-      });
-      
-      // Add blur events for extra persistence
-      percentInput.addEventListener('blur', function() {
-        saveDepreciationData();
-      });
-      
-      valueInput.addEventListener('blur', function() {
         saveDepreciationData();
       });
     }
@@ -2241,9 +2232,6 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
-        // Load vehicle data from helper
-        loadVehicleData(helper);
-        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -2486,12 +2474,7 @@
             // Add auto-calculation to all existing rows after loading
             setTimeout(() => {
               addAutoCalculationToExistingRows();
-              // Force a save to ensure data is properly persisted
-              saveDepreciationData();
-              console.log('✅ Depreciation fields reloaded with auto-calculation');
-            }, 150);
-          } else {
-            console.log('❌ No bulk_items found, populating from damage centers...');
+            }, 100);
           }
           
           console.log('✅ Depreciation data loaded successfully from helper.depreciation');
@@ -2508,15 +2491,14 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔍 Found centers in helper.centers');
             helper.centers.forEach((center, index) => {
+              const centerName = center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`;
               const centerNumber = center["Damage center Number"] || (index + 1);
-              // Create clean, simple name without duplication
-              const centerName = `מוקד נזק מס' ${centerNumber}`;
               const centerDescription = center.Description || '';
               console.log(`🔍 Center ${centerNumber}: ${centerName} - Description: ${centerDescription}`);
               
               // Check if this center already exists (avoid duplicates)
               const existingCenter = damageCenterNames.find(item => 
-                (typeof item === 'object' ? item.number : null) === centerNumber
+                (typeof item === 'object' ? item.name : item) === centerName
               );
               
               if (!existingCenter) {
@@ -6481,16 +6463,12 @@
       }
     }
 
-    // TRIGGER GLOBAL DEPRECIATION CALCULATION (Final Report Builder Version)
+    // TRIGGER GLOBAL DEPRECIATION CALCULATION
     function triggerGlobalDepreciationCalc() {
-      try {
-        // Use final report builder's own depreciation calculation logic
-        calculateGlobalDepreciationValue();
-        updateDepreciationTable();
-        saveDepreciationData();
-        console.log('✅ Global depreciation recalculated');
-      } catch (error) {
-        console.error('Error in triggerGlobalDepreciationCalc:', error);
+      const globalDepInput = document.getElementById('globalDep1');
+      if (globalDepInput && globalDepInput.value) {
+        const event = new Event('input', { bubbles: true });
+        globalDepInput.dispatchEvent(event);
       }
     }
 
@@ -6503,29 +6481,6 @@
       setTimeout(() => {
         loadDataFromHelper();
         loadAttachmentsData();
-        // Ensure depreciation data persistence on page refresh
-        setTimeout(() => {
-          console.log('🔄 Double-checking depreciation data persistence...');
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          if (helper.depreciation && helper.depreciation.bulk_items) {
-            console.log('✅ Depreciation data found, ensuring proper field values...');
-            const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-            depRows.forEach((row, index) => {
-              if (helper.depreciation.bulk_items[index]) {
-                const item = helper.depreciation.bulk_items[index];
-                const percentInput = row.querySelector('.dep-percent');
-                const valueInput = row.querySelector('.dep-value');
-                if (percentInput && item.percent) {
-                  percentInput.value = item.percent;
-                }
-                if (valueInput && item.value) {
-                  valueInput.value = item.value;
-                }
-              }
-            });
-            console.log('✅ Depreciation field values restored from helper data');
-          }
-        }, 300);
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
       }, 100);
@@ -6972,10 +6927,9 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔄 Getting fresh data from helper.centers');
             helper.centers.forEach((center, index) => {
-              const centerNumber = center["Damage center Number"] || (index + 1);
               damageCenterNames.push({
-                name: `מוקד נזק מס' ${centerNumber}`,
-                number: centerNumber,
+                name: center.Location || `מוקד נזק ${index + 1}`,
+                number: center["Damage center Number"] || (index + 1),
                 description: center.Description || ''
               });
             });
@@ -7000,21 +6954,17 @@
           const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
           const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
           const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
-          
-          // Create clean, concise damage center label
-          const cleanCenterName = `מוקד נזק מס' ${centerNumber || ''}`.trim();
-          
-          console.log('🔄 Adding depreciation row for:', cleanCenterName, 'Number:', centerNumber);
+          console.log('🔄 Adding depreciation row for:', centerName, 'Number:', centerNumber);
           const row = document.createElement('div');
           row.className = 'dep-row';
           row.style.cssText = 'display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
-            <div><input type="text" class="dep-center" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
-            <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${cleanCenterName}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" class="dep-percent" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" class="dep-value" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
+            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
+            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
           `;
           
@@ -8830,55 +8780,6 @@
     }
     
     
-    // Helper function to load vehicle data from helper
-    function loadVehicleData(helper) {
-      try {
-        console.log('🔄 Loading vehicle data from helper:', helper);
-        
-        if (!helper) {
-          console.log('❌ No helper data provided to loadVehicleData');
-          return;
-        }
-        
-        // Load vehicle data from multiple possible sources in helper
-        const vehicleData = {
-          plate: helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '',
-          manufacturer: helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '',
-          model: helper.car_details?.model || helper.vehicle?.model || '',
-          year: helper.car_details?.year || helper.vehicle?.year || '',
-          modelCode: helper.car_details?.model_code || helper.vehicle?.model_code || '',
-          basePrice: helper.car_details?.base_price || helper.levi_report?.base_price || helper.expertise?.levi_report?.base_price || '',
-          marketValue: helper.car_details?.market_value || helper.vehicle?.market_value || helper.levi_report?.final_price || '',
-          reportDate: helper.car_details?.report_date || helper.final_report?.generated_date || ''
-        };
-        
-        // Populate form fields
-        const fieldMapping = {
-          'carPlate': vehicleData.plate,
-          'carManufacturer': vehicleData.manufacturer,
-          'carModel': vehicleData.model,
-          'carYear': vehicleData.year,
-          'carModelCode': vehicleData.modelCode,
-          'carBasePrice': vehicleData.basePrice,
-          'carMarketValue': vehicleData.marketValue,
-          'carReportDate': vehicleData.reportDate
-        };
-        
-        Object.keys(fieldMapping).forEach(fieldId => {
-          const field = document.getElementById(fieldId);
-          if (field && fieldMapping[fieldId]) {
-            field.value = fieldMapping[fieldId];
-            console.log(`✅ Loaded ${fieldId}: ${fieldMapping[fieldId]}`);
-          }
-        });
-        
-        console.log('✅ Vehicle data loaded successfully');
-        
-      } catch (error) {
-        console.error('❌ Error loading vehicle data:', error);
-      }
-    }
-
     // Helper function to show section messages
     function showSectionMessage(sectionId, message, type) {
       const messageId = `section-message-${sectionId}`;
@@ -9797,7 +9698,6 @@
       if (dep.work_days && workDays) {
         workDays.value = dep.work_days;
       }
-      
       if (dep.is_agreement !== undefined && isAgreement) {
         isAgreement.checked = !!dep.is_agreement;
       }
@@ -9888,7 +9788,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9898,7 +9798,7 @@
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9907,7 +9807,7 @@
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotalAfterScraps" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9915,14 +9815,14 @@
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalAfterSale" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9933,7 +9833,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
           `;
       }
       
@@ -10243,15 +10143,10 @@
     // Collect differentials data
     function collectDifferentials() {
       return Array.from(document.querySelectorAll('#differentialsRows .differential-row')).map(row => {
-        const amountEl = row.querySelector('.diff-amount');
-        const vatEl = row.querySelector('.diff-vat');
-        const totalEl = row.querySelector('.diff-total');
-        const descEl = row.querySelector('.diff-desc');
-        
-        const amount = amountEl ? (parseFloat(amountEl.value) || 0) : 0;
-        const vat = vatEl ? (parseFloat(vatEl.value) || 0) : 0;
-        const total = totalEl ? (parseFloat(totalEl.value) || 0) : 0;
-        const description = descEl ? descEl.value.trim() : '';
+        const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
+        const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
+        const total = parseFloat(row.querySelector('.diff-total').value) || 0;
+        const description = row.querySelector('.diff-desc').value.trim();
         
         return {
           desc: description,
@@ -10551,15 +10446,15 @@
       console.log(`Global depreciation calculated: ${depPercent}% of ₪${marketValue.toLocaleString()} = ₪${globalAmount.toLocaleString()}`);
     }
 
-    // Final report builder depreciation calculation (replaces legacy MathEngine)
+    // Trigger MathEngine calculation
     function triggerMathCalculation() {
-      try {
-        // Use the final report builder's own depreciation calculation logic
-        calculateGlobalDepreciationValue();
-        updateDepreciationTable();
-        console.log('✅ Final report depreciation calculation triggered');
-      } catch (error) {
-        console.error('❌ Error triggering depreciation calculation:', error);
+      if (typeof MathEngine !== 'undefined' && MathEngine.calculateAll) {
+        try {
+          MathEngine.calculateAll();
+          console.log('✅ MathEngine calculation triggered');
+        } catch (error) {
+          console.error('❌ Error triggering MathEngine calculation:', error);
+        }
       }
     }
 
@@ -10877,6 +10772,7 @@
   </script>
   
   <script type="module" src="./helper-events.js"></script>
+  <script type="module" src="./depreciation_module.js"></script>
   
   <!-- Floating PDF Display Component -->
   <div id="floatingPdfOverlay" class="floating-pdf-overlay" style="display: none;">

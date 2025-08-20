@@ -4701,6 +4701,7 @@ report_date
 this field shows the wrong levi reort date 
 in the levisummary there is a correct reoort date : levisummary/ report date , the wrong field needs to take from the correct field 
 
+20.8.25 TASKS DONE :
 
 **reports stylying problems and attempts**
 
