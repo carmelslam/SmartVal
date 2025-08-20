@@ -2590,8 +2590,8 @@
 
     // CREATE EDITABLE DAMAGE CENTER CARD
     function createEditableDamageCenterCard(block, index) {
-      const centerNum = index + 1;
-      const centerName = block.damage_center_name || `מוקד נזק ${centerNum}`;
+      const centerNum = block.damage_center_number || (index + 1);
+      const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
       const workCosts = block.work_cost || 0;
       const partsCosts = block.parts_cost || 0;
       const repairsCosts = workCosts + partsCosts;
@@ -2606,14 +2606,14 @@
         <div class="editable-damage-card" data-center-index="${index}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Card Header -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <input type="text" value="${centerName}" class="damage-center-name" style="font-weight: bold; color: #1e3a8a; font-size: 16px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; width: 70%;" />
+            <input type="text" value="מוקד נזק מס' ${centerNum}" class="damage-center-number" style="font-weight: bold; color: #1e3a8a; font-size: 16px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; width: 70%;" />
             <button onclick="removeDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
           </div>
           
-          <!-- Damage Center Name Field -->
+          <!-- Damage Center Location Field -->
           <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">שם מוקד הנזק:</label>
-            <input type="text" class="damage-center-area-name" style="width: 100%; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px;" placeholder="הזן שם/איזור מוקד הנזק (לדוגמה: פגוש קדמי, דלת נהג, וכו')" value="${block.area_name || block.center || block.location || ''}" />
+            <input type="text" class="damage-center-location" style="width: 100%; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px;" placeholder="הזן שם/איזור מוקד הנזק (לדוגמה: פגוש קדמי, דלת נהג, וכו')" value="${centerLocation}" />
           </div>
           
           <!-- Damage Description Field -->
@@ -6500,6 +6500,15 @@
       const reportTypeSelect = document.getElementById('reportType');
       if (reportTypeSelect) {
         reportTypeSelect.addEventListener('change', function() {
+          const selectedType = this.value;
+          
+          // Save dropdown selection to helper
+          const helper = window.helper || {};
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.dropdown_type = selectedType;
+          window.helper = helper;
+          console.log('💾 Saved dropdown report type to helper:', selectedType);
+          
           updateReportType();
           loadLegalText().catch(console.error);
         });
@@ -6700,8 +6709,8 @@
         
         // Collect data from all damage center cards
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
-          const centerName = card.querySelector('.damage-center-name').value;
-          const centerAreaName = card.querySelector('.damage-center-area-name').value;
+          const centerNumber = card.querySelector('.damage-center-number').value;
+          const centerLocation = card.querySelector('.damage-center-location').value;
           const centerDescription = card.querySelector('.damage-center-description').value;
           
           // Collect parts
@@ -6755,8 +6764,9 @@
           const totalCost = partsCost + workCost + repairsCost;
           
           helper.expertise.damage_blocks.push({
-            damage_center_name: centerName,
-            area_name: centerAreaName,
+            damage_center_name: centerLocation, // This is the location/description
+            damage_center_number: index + 1,
+            center_header: centerNumber, // The display header
             description: centerDescription,
             parts,
             works,
@@ -6767,8 +6777,8 @@
           });
           
           // Store damage center name for depreciation section
-          if (centerName.trim()) {
-            damageCenterNames.push(centerName.trim());
+          if (centerLocation.trim()) {
+            damageCenterNames.push(centerLocation.trim());
           }
           
           // Update cost display for this card
@@ -7443,6 +7453,36 @@
         const helper = window.helper || {};
         
         console.log('📥 Loading helper data:', helper);
+        
+        // Load report type selection from helper
+        const savedReportType = helper.final_report?.type || helper.manual_final_report_type?.finalReportType;
+        if (savedReportType) {
+          const radioButton = document.querySelector(`input[name="final-report-type"][value="${savedReportType}"]`);
+          if (radioButton) {
+            radioButton.checked = true;
+            console.log('📋 Loaded report type from helper:', savedReportType);
+            // Trigger change event to update legal text and attachments
+            setTimeout(() => {
+              loadLegalText().catch(console.error);
+              loadAttachmentsFromVault();
+            }, 100);
+          }
+        }
+        
+        // Load dropdown report type selection from helper
+        const savedDropdownType = helper.final_report?.dropdown_type || helper.reportType;
+        if (savedDropdownType) {
+          const dropdown = document.getElementById('reportType');
+          if (dropdown) {
+            dropdown.value = savedDropdownType;
+            console.log('📋 Loaded dropdown report type from helper:', savedDropdownType);
+            // Trigger change to update summary visibility and legal text
+            setTimeout(() => {
+              updateReportType();
+              loadLegalText().catch(console.error);
+            }, 150);
+          }
+        }
         
         // Auto-fill basic price field from helper - ENHANCED
         const basicPriceField = document.getElementById('basicPrice');
@@ -9156,6 +9196,14 @@
         reportTypeSelect.addEventListener('change', function() {
           const selectedType = this.value;
           console.log('Report type changed to:', selectedType);
+          
+          // Save dropdown selection to helper
+          const helper = window.helper || {};
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.dropdown_type = selectedType;
+          window.helper = helper;
+          console.log('💾 Saved dropdown report type to helper:', selectedType);
+          
           updateReportType();
           loadLegalText().catch(console.error); // Update legal text when report type changes
           loadAttachmentsFromVault(); // Update attachments when report type changes
