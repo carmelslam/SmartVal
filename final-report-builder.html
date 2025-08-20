@@ -1667,6 +1667,15 @@
         // Save data after calculation
         saveDepreciationData();
       });
+      
+      // Add blur events for extra persistence
+      percentInput.addEventListener('blur', function() {
+        saveDepreciationData();
+      });
+      
+      valueInput.addEventListener('blur', function() {
+        saveDepreciationData();
+      });
     }
 
     // ✅ REAL-TIME 2-WAY DATA FLOW: Update helper.depreciation immediately when UI fields change
@@ -9866,7 +9875,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9876,7 +9885,7 @@
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9885,7 +9894,7 @@
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotalAfterScraps" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9893,14 +9902,14 @@
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalAfterSale" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -9911,7 +9920,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalTechnical" style="background: white; color: #333;" readonly /></div>
           `;
       }
       
@@ -10221,10 +10230,15 @@
     // Collect differentials data
     function collectDifferentials() {
       return Array.from(document.querySelectorAll('#differentialsRows .differential-row')).map(row => {
-        const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
-        const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
-        const total = parseFloat(row.querySelector('.diff-total').value) || 0;
-        const description = row.querySelector('.diff-desc').value.trim();
+        const amountEl = row.querySelector('.diff-amount');
+        const vatEl = row.querySelector('.diff-vat');
+        const totalEl = row.querySelector('.diff-total');
+        const descEl = row.querySelector('.diff-desc');
+        
+        const amount = amountEl ? (parseFloat(amountEl.value) || 0) : 0;
+        const vat = vatEl ? (parseFloat(vatEl.value) || 0) : 0;
+        const total = totalEl ? (parseFloat(totalEl.value) || 0) : 0;
+        const description = descEl ? descEl.value.trim() : '';
         
         return {
           desc: description,
