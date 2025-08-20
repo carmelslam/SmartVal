@@ -1243,6 +1243,7 @@
       </div>
       <div id="depreciationBulkTable"></div>
       <button class="btn add" type="button" onclick="addDepField()">הוסף שדה</button>
+      <button class="btn refresh" type="button" onclick="forceCleanDepreciationData()" style="background:#dc3545; color:white; margin-right:10px;">נקה וטען מחדש</button>
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
@@ -1722,6 +1723,36 @@
       }
     }
 
+    // FORCE CLEAN AND REGENERATE DEPRECIATION DATA
+    function forceCleanDepreciationData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Clear all depreciation data
+        if (helper.depreciation) {
+          delete helper.depreciation.bulk_items;
+        }
+        if (helper.final_report && helper.final_report.depreciation) {
+          delete helper.final_report.depreciation.bulk_items;
+        }
+        if (helper.manual_depreciation) {
+          delete helper.manual_depreciation.depreciationRows;
+        }
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('🧹 Forced clean of depreciation data completed');
+        
+        // Reload depreciation data with clean labels
+        setTimeout(() => {
+          loadDepreciationData(helper);
+          console.log('✅ Depreciation data regenerated with clean labels');
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Error in forceCleanDepreciationData:', error);
+      }
+    }
+
     // SAVE DEPRECIATION DATA TO HELPER
     function saveDepreciationData() {
       try {
@@ -1852,6 +1883,7 @@
     window.addDepField = addDepField;
     window.removeDepField = removeDepField;
     window.saveDepreciationData = saveDepreciationData;
+    window.forceCleanDepreciationData = forceCleanDepreciationData;
 
     // BUTTON FUNCTIONS - NO DEBUG ALERTS
     window.saveEstimate = function() {
@@ -2497,6 +2529,14 @@
           console.log('✅ Depreciation data loaded successfully from helper.depreciation');
         } else {
           console.log('❌ No saved depreciation data, trying to populate from damage centers');
+          // FORCE CLEAR AND REGENERATE - If we have centers but bad depreciation data, clear it
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.depreciation && helper.depreciation.bulk_items) {
+            console.log('🧹 Clearing existing depreciation data to regenerate with clean labels');
+            delete helper.depreciation.bulk_items;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+          
           // If no saved depreciation data, populate from damage centers
           const damageCenterNames = [];
           
