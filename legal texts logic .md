@@ -112,7 +112,7 @@ Each of these types has a dedicated explanatory/legal text stored in this vault 
 }
 
 ```
-
+**the assessor_credentials text needs to be embedded in teh correct location in each report, usually its in teh first page afetr the table, but the reports templates show exactlt where**
 This structure allows:
 
 * Editing directly via `dev_text_modular`
