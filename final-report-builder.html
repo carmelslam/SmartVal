@@ -3894,16 +3894,23 @@
       const reportTypeSelect = document.getElementById('reportType');
       const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
       
-      // Map all 5 report types to legal text types
+      // Map all 5 report types to legal text types with proper mapping
       let selectedType;
       if (reportType.includes('אובדן להלכה')) {
         selectedType = 'אובדן_להלכה';
-      } else if (reportType.includes('טוטלוסט') || reportType.includes('מכירה מצבו הניזוק')) {
-        selectedType = 'טוטלוס';
+      } else if (reportType.includes('טוטלוסט')) {
+        selectedType = 'טוטלוס'; 
+      } else if (reportType.includes('מכירה מצבו הניזוק')) {
+        selectedType = 'מכירה_מצבו_הניזוק';
+      } else if (reportType.includes('גלובלית')) {
+        selectedType = 'גלובלית';
+      } else if (reportType.includes('פרטית')) {
+        selectedType = 'פרטית';
       } else {
-        // For פרטית and גלובלית, use אובדן_להלכה as default
-        selectedType = 'אובדן_להלכה';
+        selectedType = 'פרטית'; // Default fallback
       }
+      
+      console.log('🔄 Loading legal text for report type:', reportType, '→', selectedType);
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Legal text vault from final report legal texts vault.md - EXACT COPY
@@ -3940,10 +3947,30 @@
 
 הערכת נזקים מבוססת על הנתונים שנמסרו ע״י בעל הרכב, אשר לדבריו.
 
-הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט. הדין של חוות דעת זו הוא כדין עדות בשבועה.`,
+
+        // Add missing final report types
+        'פרטית': `ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
+הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
+הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב אשר לדבריו.
+
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט.`,
+
+        'גלובלית': `חוות דעת גלובלית זו מתבססת על בדיקה כוללת של מצב הרכב הכללי.
+ההערכה מושתתת על בחינת מכלול הנזקים והשפעתם על ערך הרכב הכולל.
+הערכה זו כוללת התחשבות בגורמי ירידת ערך מקיפים ובמצב הרכב לאחר התיקון.
+
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט.`,
+
+        'מכירה_מצבו_הניזוק': `הערכה זו מבוססת על שווי מכירת הרכב במצבו הניזוק הקיים.
+השווי נקבע בהתחשב במצב הנזקים הקיימים ללא ביצוע תיקונים.
+הערכת שווי זו מתבססת על מצב השוק הקיים ועל מחירי מכירה דומים.
+
+הצהרה: אני החת״מ: ירון כיוף, תעודת שמאי מס' 1097. הנני נותן את חוות דעתי זו במקום עדות בשבועה בבית משפט.`
       };
       
-      let legalText = legalTextsVault[selectedType] || legalTextsVault['אובדן_להלכה'];
+      let legalText = legalTextsVault[selectedType] || legalTextsVault['פרטית'];
+      console.log('✅ Selected legal text for type:', selectedType, legalText ? '(found)' : '(not found)');
       
       // Enhanced placeholder mapping to actual field values - Fixed for exact vault text matching
       const placeholders = {
@@ -3977,7 +4004,13 @@
         legalText = legalText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
       }
       
-      document.getElementById('legal-text-content').value = legalText;
+      const legalTextElement = document.getElementById('legal-text-content');
+      if (legalTextElement) {
+        legalTextElement.value = legalText;
+        console.log('✅ Legal text populated successfully for', selectedType);
+      } else {
+        console.error('❌ Legal text element not found: legal-text-content');
+      }
     }
 
     // LOAD LEGAL TEXT FROM VAULT - SEPARATE FUNCTION FOR BUTTON
