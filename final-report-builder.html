@@ -6468,10 +6468,35 @@
 
     // TRIGGER GLOBAL DEPRECIATION CALCULATION
     function triggerGlobalDepreciationCalc() {
-      const globalDepInput = document.getElementById('globalDep1');
-      if (globalDepInput && globalDepInput.value) {
-        const event = new Event('input', { bubbles: true });
-        globalDepInput.dispatchEvent(event);
+      try {
+        const globalDepInput = document.getElementById('globalDep1');
+        if (globalDepInput && globalDepInput.value) {
+          // Check if we have valid depreciation rows with proper structure before triggering
+          const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+          let hasValidRows = false;
+          
+          for (const row of depRows) {
+            const partInput = row.querySelector('.dep-part');
+            const repairInput = row.querySelector('.dep-repair');
+            const percentInput = row.querySelector('.dep-percent');
+            const valueInput = row.querySelector('.dep-value');
+            
+            if (partInput && repairInput && percentInput && valueInput) {
+              hasValidRows = true;
+              break;
+            }
+          }
+          
+          // Only trigger if we have valid rows or no rows at all (to avoid breaking calculations)
+          if (hasValidRows || depRows.length === 0) {
+            const event = new Event('input', { bubbles: true });
+            globalDepInput.dispatchEvent(event);
+          } else {
+            console.log('⚠️ Skipping depreciation calculation - invalid row structure detected');
+          }
+        }
+      } catch (error) {
+        console.error('Error in triggerGlobalDepreciationCalc:', error);
       }
     }
 
@@ -6963,11 +6988,11 @@
           row.style.cssText = 'display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
-            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
-            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
+            <div><input type="text" class="dep-center" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
+            <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" class="dep-percent" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" class="dep-value" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
           `;
           
@@ -10825,7 +10850,6 @@
   </script>
   
   <script type="module" src="./helper-events.js"></script>
-  <script type="module" src="./depreciation_module.js"></script>
   
   <!-- Floating PDF Display Component -->
   <div id="floatingPdfOverlay" class="floating-pdf-overlay" style="display: none;">

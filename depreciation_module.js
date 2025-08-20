@@ -163,12 +163,19 @@ function init() {
 }
 
 function collectDepCenters() {
-  return Array.from(document.querySelectorAll('#depreciationBulkTable .dep-row')).map(row => ({
-    part: row.querySelector('.dep-part').value.trim(),
-    repair: row.querySelector('.dep-repair').value.trim(),
-    percent: parseFloat(row.querySelector('.dep-percent').value) || 0,
-    value: parseFloat(row.querySelector('.dep-value').value) || 0
-  }));
+  return Array.from(document.querySelectorAll('#depreciationBulkTable .dep-row')).map(row => {
+    const partEl = row.querySelector('.dep-part');
+    const repairEl = row.querySelector('.dep-repair');
+    const percentEl = row.querySelector('.dep-percent');
+    const valueEl = row.querySelector('.dep-value');
+    
+    return {
+      part: partEl ? partEl.value.trim() : '',
+      repair: repairEl ? repairEl.value.trim() : '',
+      percent: percentEl ? (parseFloat(percentEl.value) || 0) : 0,
+      value: valueEl ? (parseFloat(valueEl.value) || 0) : 0
+    };
+  });
 }
 
 function renderDepTable(list) {
