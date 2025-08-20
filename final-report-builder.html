@@ -2232,6 +2232,9 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
+        // Load vehicle data from helper
+        loadVehicleData(helper);
+        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -8780,6 +8783,55 @@
     }
     
     
+    // Helper function to load vehicle data from helper
+    function loadVehicleData(helper) {
+      try {
+        console.log('🔄 Loading vehicle data from helper:', helper);
+        
+        if (!helper) {
+          console.log('❌ No helper data provided to loadVehicleData');
+          return;
+        }
+        
+        // Load vehicle data from multiple possible sources in helper
+        const vehicleData = {
+          plate: helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '',
+          manufacturer: helper.car_details?.manufacturer || helper.vehicle?.manufacturer || '',
+          model: helper.car_details?.model || helper.vehicle?.model || '',
+          year: helper.car_details?.year || helper.vehicle?.year || '',
+          modelCode: helper.car_details?.model_code || helper.vehicle?.model_code || '',
+          basePrice: helper.car_details?.base_price || helper.levi_report?.base_price || helper.expertise?.levi_report?.base_price || '',
+          marketValue: helper.car_details?.market_value || helper.vehicle?.market_value || helper.levi_report?.final_price || '',
+          reportDate: helper.car_details?.report_date || helper.final_report?.generated_date || ''
+        };
+        
+        // Populate form fields
+        const fieldMapping = {
+          'carPlate': vehicleData.plate,
+          'carManufacturer': vehicleData.manufacturer,
+          'carModel': vehicleData.model,
+          'carYear': vehicleData.year,
+          'carModelCode': vehicleData.modelCode,
+          'carBasePrice': vehicleData.basePrice,
+          'carMarketValue': vehicleData.marketValue,
+          'carReportDate': vehicleData.reportDate
+        };
+        
+        Object.keys(fieldMapping).forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field && fieldMapping[fieldId]) {
+            field.value = fieldMapping[fieldId];
+            console.log(`✅ Loaded ${fieldId}: ${fieldMapping[fieldId]}`);
+          }
+        });
+        
+        console.log('✅ Vehicle data loaded successfully');
+        
+      } catch (error) {
+        console.error('❌ Error loading vehicle data:', error);
+      }
+    }
+
     // Helper function to show section messages
     function showSectionMessage(sectionId, message, type) {
       const messageId = `section-message-${sectionId}`;
