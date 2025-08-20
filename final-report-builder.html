@@ -2486,7 +2486,12 @@
             // Add auto-calculation to all existing rows after loading
             setTimeout(() => {
               addAutoCalculationToExistingRows();
-            }, 100);
+              // Force a save to ensure data is properly persisted
+              saveDepreciationData();
+              console.log('✅ Depreciation fields reloaded with auto-calculation');
+            }, 150);
+          } else {
+            console.log('❌ No bulk_items found, populating from damage centers...');
           }
           
           console.log('✅ Depreciation data loaded successfully from helper.depreciation');
@@ -6475,35 +6480,14 @@
       }
     }
 
-    // TRIGGER GLOBAL DEPRECIATION CALCULATION
+    // TRIGGER GLOBAL DEPRECIATION CALCULATION (Final Report Builder Version)
     function triggerGlobalDepreciationCalc() {
       try {
-        const globalDepInput = document.getElementById('globalDep1');
-        if (globalDepInput && globalDepInput.value) {
-          // Check if we have valid depreciation rows with proper structure before triggering
-          const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-          let hasValidRows = false;
-          
-          for (const row of depRows) {
-            const partInput = row.querySelector('.dep-part');
-            const repairInput = row.querySelector('.dep-repair');
-            const percentInput = row.querySelector('.dep-percent');
-            const valueInput = row.querySelector('.dep-value');
-            
-            if (partInput && repairInput && percentInput && valueInput) {
-              hasValidRows = true;
-              break;
-            }
-          }
-          
-          // Only trigger if we have valid rows or no rows at all (to avoid breaking calculations)
-          if (hasValidRows || depRows.length === 0) {
-            const event = new Event('input', { bubbles: true });
-            globalDepInput.dispatchEvent(event);
-          } else {
-            console.log('⚠️ Skipping depreciation calculation - invalid row structure detected');
-          }
-        }
+        // Use final report builder's own depreciation calculation logic
+        calculateGlobalDepreciationValue();
+        updateDepreciationTable();
+        saveDepreciationData();
+        console.log('✅ Global depreciation recalculated');
       } catch (error) {
         console.error('Error in triggerGlobalDepreciationCalc:', error);
       }
@@ -6518,6 +6502,29 @@
       setTimeout(() => {
         loadDataFromHelper();
         loadAttachmentsData();
+        // Ensure depreciation data persistence on page refresh
+        setTimeout(() => {
+          console.log('🔄 Double-checking depreciation data persistence...');
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.depreciation && helper.depreciation.bulk_items) {
+            console.log('✅ Depreciation data found, ensuring proper field values...');
+            const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+            depRows.forEach((row, index) => {
+              if (helper.depreciation.bulk_items[index]) {
+                const item = helper.depreciation.bulk_items[index];
+                const percentInput = row.querySelector('.dep-percent');
+                const valueInput = row.querySelector('.dep-value');
+                if (percentInput && item.percent) {
+                  percentInput.value = item.percent;
+                }
+                if (valueInput && item.value) {
+                  valueInput.value = item.value;
+                }
+              }
+            });
+            console.log('✅ Depreciation field values restored from helper data');
+          }
+        }, 300);
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
       }, 100);
@@ -10538,15 +10545,15 @@
       console.log(`Global depreciation calculated: ${depPercent}% of ₪${marketValue.toLocaleString()} = ₪${globalAmount.toLocaleString()}`);
     }
 
-    // Trigger MathEngine calculation
+    // Final report builder depreciation calculation (replaces legacy MathEngine)
     function triggerMathCalculation() {
-      if (typeof MathEngine !== 'undefined' && MathEngine.calculateAll) {
-        try {
-          MathEngine.calculateAll();
-          console.log('✅ MathEngine calculation triggered');
-        } catch (error) {
-          console.error('❌ Error triggering MathEngine calculation:', error);
-        }
+      try {
+        // Use the final report builder's own depreciation calculation logic
+        calculateGlobalDepreciationValue();
+        updateDepreciationTable();
+        console.log('✅ Final report depreciation calculation triggered');
+      } catch (error) {
+        console.error('❌ Error triggering depreciation calculation:', error);
       }
     }
 
