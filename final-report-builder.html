@@ -7035,6 +7035,9 @@
       
       // Update summary section totals
       updateSummaryTotalsFromDamageCenters();
+      
+      // Update damage centers subtotal
+      updateDamageCentersSubtotal();
     }
 
     function updateSummaryTotalsFromDamageCenters() {
@@ -7639,6 +7642,91 @@
       }
     }
     
+    // UPDATE DAMAGE CENTERS SUBTOTAL DISPLAY
+    function updateDamageCentersSubtotal() {
+      let totalWorks = 0;
+      let totalParts = 0;
+      let totalRepairs = 0;
+      
+      // Calculate totals from all damage center cards
+      document.querySelectorAll('.editable-damage-card').forEach(card => {
+        // Sum parts costs
+        card.querySelectorAll('.part-row').forEach(row => {
+          const price = parseFloat(row.querySelector('.part-price').value) || 0;
+          totalParts += price;
+        });
+        
+        // Sum work costs
+        card.querySelectorAll('.work-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+          totalWorks += cost;
+        });
+        
+        // Sum repair costs
+        card.querySelectorAll('.repair-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
+          totalRepairs += cost;
+        });
+      });
+      
+      const totalWithoutVat = totalWorks + totalParts + totalRepairs;
+      const totalWithVat = totalWithoutVat * 1.18;
+      
+      // Update subtotal display elements
+      const totalWorksElement = document.getElementById('totalWorksSubtotal');
+      const totalPartsElement = document.getElementById('totalPartsSubtotal');
+      const totalRepairsElement = document.getElementById('totalRepairsSubtotal');
+      const totalWithoutVatElement = document.getElementById('totalWithoutVatSubtotal');
+      const totalWithVatElement = document.getElementById('totalWithVatSubtotal');
+      
+      if (totalWorksElement) totalWorksElement.textContent = `₪${totalWorks.toLocaleString()}`;
+      if (totalPartsElement) totalPartsElement.textContent = `₪${totalParts.toLocaleString()}`;
+      if (totalRepairsElement) totalRepairsElement.textContent = `₪${totalRepairs.toLocaleString()}`;
+      if (totalWithoutVatElement) totalWithoutVatElement.textContent = `₪${Math.round(totalWithoutVat).toLocaleString()}`;
+      if (totalWithVatElement) totalWithVatElement.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+      
+      console.log('💰 Updated damage centers subtotal:', {
+        works: totalWorks,
+        parts: totalParts,
+        repairs: totalRepairs,
+        withoutVat: totalWithoutVat,
+        withVat: totalWithVat
+      });
+    }
+    
+    // CREATE DAMAGE CENTERS SUBTOTAL SECTION
+    function createDamageCentersSubtotal() {
+      return `
+        <div id="damageCentersSubtotal" style="background: #f8f9fa; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin-top: 20px;">
+          <h3 style="margin: 0 0 15px 0; color: #28a745; text-align: center; font-size: 18px; font-weight: bold;">🧮 סיכום כללי - מרכזי נזק</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+            <div style="background: #17a2b8; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 24px; font-weight: bold;" id="totalWorksSubtotal">₪0</div>
+              <div style="font-size: 12px; opacity: 0.9;">סה"כ עבודות</div>
+            </div>
+            <div style="background: #28a745; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 24px; font-weight: bold;" id="totalPartsSubtotal">₪0</div>
+              <div style="font-size: 12px; opacity: 0.9;">סה"כ חלקים</div>
+            </div>
+            <div style="background: #ffc107; color: #212529; padding: 15px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 24px; font-weight: bold;" id="totalRepairsSubtotal">₪0</div>
+              <div style="font-size: 12px; opacity: 0.9;">סה"כ תיקונים</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="background: #6c757d; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 26px; font-weight: bold;" id="totalWithoutVatSubtotal">₪0</div>
+              <div style="font-size: 14px; opacity: 0.9;">סה"כ ללא מע"מ</div>
+            </div>
+            <div style="background: #dc3545; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 26px; font-weight: bold;" id="totalWithVatSubtotal">₪0</div>
+              <div style="font-size: 14px; opacity: 0.9;">סה"כ כולל מע"מ</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
     // LOAD DAMAGE CENTERS FROM HELPER
     function loadDamageCentersFromHelper(damageBlocks) {
       try {
@@ -7653,6 +7741,10 @@
           const newCardHTML = createEditableDamageCenterCard(block, index);
           document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
         });
+        
+        // Add subtotal section
+        const subtotalHTML = createDamageCentersSubtotal();
+        document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', subtotalHTML);
         
         // Add event listeners
         setTimeout(() => {
