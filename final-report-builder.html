@@ -1254,12 +1254,6 @@
         <label>ימי מוסך משוערים:</label>
         <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" onchange="updateHelperDepreciationField(this, 'work_days_impact');" />
       </div>
-      <br><br>
-      <div style="display:flex; align-items:end;">
-        <label style="margin-bottom:2px;">
-          <input type="checkbox" id="isAgreement" style="width:auto; margin-left:6px;"> בהסדר/לא בהסדר
-        </label>
-      </div>
   </div>
     </div>
     <!-- הפרשים SECTION -->
@@ -2234,6 +2228,19 @@
         
         // Load vehicle data from helper
         loadVehicleData(helper);
+        
+        // Load final report dropdown values
+        if (helper.final_report) {
+          const companyClientField = document.getElementById('isCompanyClient');
+          if (companyClientField && helper.final_report.is_company_client) {
+            companyClientField.value = helper.final_report.is_company_client;
+          }
+          
+          const inAgreementField = document.getElementById('inAgreement');
+          if (inAgreementField && helper.final_report.in_agreement) {
+            inAgreementField.value = helper.final_report.in_agreement;
+          }
+        }
         
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
@@ -9672,6 +9679,15 @@
       if (companySelect) {
         companySelect.addEventListener('change', function() {
           console.log('Company selection changed:', this.value);
+          
+          // Save to helper.final_report as independent entry
+          const helper = window.helper || {};
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.is_company_client = this.value;
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('💾 Saved is_company_client to helper.final_report:', this.value);
+          
           saveAndRefreshComplete();
         });
       }
@@ -9696,11 +9712,20 @@
         });
       }
       
-      // Initialize agreement checkbox
-      const isAgreement = document.getElementById('isAgreement');
-      if (isAgreement) {
-        isAgreement.addEventListener('change', function() {
-          console.log('Agreement checkbox changed:', this.checked);
+      // Initialize agreement dropdown
+      const inAgreement = document.getElementById('inAgreement');
+      if (inAgreement) {
+        inAgreement.addEventListener('change', function() {
+          console.log('Agreement dropdown changed:', this.value);
+          
+          // Save to helper.final_report as independent entry
+          const helper = window.helper || {};
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.in_agreement = this.value;
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('💾 Saved in_agreement to helper.final_report:', this.value);
+          
           saveAndRefreshComplete();
         });
       }
@@ -9750,8 +9775,11 @@
       if (dep.work_days && workDays) {
         workDays.value = dep.work_days;
       }
-      if (dep.is_agreement !== undefined && isAgreement) {
-        isAgreement.checked = !!dep.is_agreement;
+      
+      // Load agreement dropdown value
+      const inAgreement = document.getElementById('inAgreement');
+      if (dep.is_agreement !== undefined && inAgreement) {
+        inAgreement.value = dep.is_agreement ? 'yes' : 'no';
       }
       if (dep.has_differentials !== undefined && differentialsCheckbox) {
         differentialsCheckbox.checked = !!dep.has_differentials;
@@ -10523,7 +10551,7 @@
       const isCompanyClient = document.getElementById('isCompanyClient')?.value;
       const globalDep1 = document.getElementById('globalDep1')?.value;
       const workDays = document.getElementById('workDays')?.value;
-      const isAgreement = document.getElementById('isAgreement')?.checked;
+      const inAgreement = document.getElementById('inAgreement')?.value;
       const hasDifferentials = document.getElementById('hasDifferentials')?.checked;
       
       // Update helper with form data
@@ -10531,7 +10559,7 @@
       if (isCompanyClient) helper.client = { ...helper.client, is_company_client: isCompanyClient === 'yes' };
       if (globalDep1) helper.expertise.depreciation.global_percent = parseFloat(globalDep1);
       if (workDays) helper.expertise.depreciation.work_days = parseInt(workDays);
-      helper.expertise.depreciation.is_agreement = !!isAgreement;
+      helper.expertise.depreciation.is_agreement = (inAgreement === 'yes');
       helper.expertise.depreciation.has_differentials = !!hasDifferentials;
       
       // Collect differentials
