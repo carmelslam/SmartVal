@@ -2482,12 +2482,19 @@
             helper.centers.forEach((center, index) => {
               const centerName = center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`;
               const centerNumber = center["Damage center Number"] || (index + 1);
-              console.log(`🔍 Center ${centerNumber}: ${centerName}`);
-              if (centerName && !damageCenterNames.includes(centerName)) {
+              const centerDescription = center.Description || '';
+              console.log(`🔍 Center ${centerNumber}: ${centerName} - Description: ${centerDescription}`);
+              
+              // Check if this center already exists (avoid duplicates)
+              const existingCenter = damageCenterNames.find(item => 
+                (typeof item === 'object' ? item.name : item) === centerName
+              );
+              
+              if (!existingCenter) {
                 damageCenterNames.push({
                   name: centerName,
                   number: centerNumber,
-                  description: center.Description || ''
+                  description: centerDescription
                 });
               }
             });
@@ -6864,9 +6871,13 @@
             repairs_cost: repairsCost
           });
           
-          // Store damage center name for depreciation section
+          // Store damage center data for depreciation section (complete object)
           if (centerLocation.trim()) {
-            damageCenterNames.push(centerLocation.trim());
+            damageCenterNames.push({
+              name: centerLocation.trim(),
+              number: centerNumber || (index + 1),
+              description: centerDescription || ''
+            });
           }
           
           // Update cost display for this card
