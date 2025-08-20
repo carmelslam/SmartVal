@@ -2508,14 +2508,15 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔍 Found centers in helper.centers');
             helper.centers.forEach((center, index) => {
-              const centerName = center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`;
               const centerNumber = center["Damage center Number"] || (index + 1);
+              // Create clean, simple name without duplication
+              const centerName = `מוקד נזק מס' ${centerNumber}`;
               const centerDescription = center.Description || '';
               console.log(`🔍 Center ${centerNumber}: ${centerName} - Description: ${centerDescription}`);
               
               // Check if this center already exists (avoid duplicates)
               const existingCenter = damageCenterNames.find(item => 
-                (typeof item === 'object' ? item.name : item) === centerName
+                (typeof item === 'object' ? item.number : null) === centerNumber
               );
               
               if (!existingCenter) {
@@ -6971,9 +6972,10 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔄 Getting fresh data from helper.centers');
             helper.centers.forEach((center, index) => {
+              const centerNumber = center["Damage center Number"] || (index + 1);
               damageCenterNames.push({
-                name: center.Location || `מוקד נזק ${index + 1}`,
-                number: center["Damage center Number"] || (index + 1),
+                name: `מוקד נזק מס' ${centerNumber}`,
+                number: centerNumber,
                 description: center.Description || ''
               });
             });
@@ -6998,14 +7000,18 @@
           const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
           const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
           const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
-          console.log('🔄 Adding depreciation row for:', centerName, 'Number:', centerNumber);
+          
+          // Create clean, concise damage center label
+          const cleanCenterName = `מוקד נזק מס' ${centerNumber || ''}`.trim();
+          
+          console.log('🔄 Adding depreciation row for:', cleanCenterName, 'Number:', centerNumber);
           const row = document.createElement('div');
           row.className = 'dep-row';
           row.style.cssText = 'display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
             <div><input type="text" class="dep-center" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
-            <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
+            <div><input type="text" class="dep-part" placeholder="החלק הניזוק" value="${cleanCenterName}" onchange="saveDepreciationData()" /></div>
             <div><input type="text" class="dep-repair" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
             <div><input type="text" class="dep-percent" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
             <div><input type="text" class="dep-value" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
