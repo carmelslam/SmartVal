@@ -8482,8 +8482,9 @@
       }
       
       try {
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
+        // 🔧 FIX: Get helper data from sessionStorage (single source of truth) instead of window.helper
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log(`🔄 Refreshing section ${sectionId} with helper data:`, helper);
         
         // Check if we have manual save data
         const manualData = helper[config.helperKey];
@@ -8519,18 +8520,33 @@
           
           showSectionMessage(sectionId, `↻ ${config.name} נטען מהשמירה האחרונה`, 'info');
         } else {
-          // Load from helper data (original functionality)
+          // Load from helper data (original functionality) 
+          console.log(`🔄 Loading ${sectionId} from helper, available data:`, Object.keys(helper));
+          
           if (window[config.loadFunction]) {
+            console.log(`✅ Found load function ${config.loadFunction} for section ${sectionId}`);
             window[config.loadFunction](helper);
             showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
           } else if (sectionId === 'depreciation') {
-            // Special handling for depreciation section
-            loadDepreciationData(helper);
-            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+            // Special handling for depreciation section - check both locations
+            console.log('🔄 Loading depreciation data, checking helper.depreciation and helper.expertise.depreciation');
+            if (helper.depreciation || (helper.expertise && helper.expertise.depreciation)) {
+              loadDepreciationData(helper);
+              showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+            } else {
+              console.warn('⚠️ No depreciation data found in helper');
+              showSectionMessage(sectionId, `⚠️ לא נמצאו נתוני ירידת ערך`, 'warning');
+            }
           } else if (sectionId === 'damage-centers') {
-            // Special handling for damage-centers section  
-            loadDamageCentersFromHelper(helper);
-            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+            // Special handling for damage-centers section - check multiple locations
+            console.log('🔄 Loading damage centers, checking helper.damage_assessment.centers and helper.damage_centers');
+            if ((helper.damage_assessment && helper.damage_assessment.centers) || helper.damage_centers) {
+              loadDamageCentersFromHelper(helper);
+              showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+            } else {
+              console.warn('⚠️ No damage centers data found in helper');
+              showSectionMessage(sectionId, `⚠️ לא נמצאו נתוני מרכזי נזק`, 'warning');
+            }
           } else {
             console.warn(`Load function ${config.loadFunction} not found for section ${sectionId}`);
             showSectionMessage(sectionId, `⚠️ לא ניתן לטעון ${config.name}`, 'warning');
