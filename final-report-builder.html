@@ -1632,11 +1632,11 @@
       const rowId = 'depRow_' + Date.now();
       const newRow = `
         <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" style="text-align: center;" /></div>
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1767,8 +1767,19 @@
         if (!helper.final_report) helper.final_report = {};
         helper.final_report.depreciation = helper.depreciation;
         
+        // Also save to manual depreciation section for refresh functionality
+        helper.manual_depreciation = {
+          global_percentage: globalPercent,
+          global_value: globalValue,
+          work_days_impact: document.getElementById('garageDays')?.value || '',
+          depreciationRows: depreciationData.bulk_items,
+          lastSaved: new Date().toISOString(),
+          isManualSave: true
+        };
+        
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('✅ Depreciation data saved to helper.depreciation:', helper.depreciation);
+        console.log('✅ Depreciation data saved to manual_depreciation for refresh:', helper.manual_depreciation);
         
         console.log('💾 Depreciation data saved to helper:', depreciationData);
         
@@ -6908,6 +6919,25 @@
       try {
         console.log('🔄 updateDepreciationFromDamageCenters called with:', damageCenterNames);
         
+        // If no data provided, get current data from helper.centers
+        if (!damageCenterNames || damageCenterNames.length === 0) {
+          const helper = window.helper || {};
+          damageCenterNames = [];
+          
+          if (helper.centers && helper.centers.length > 0) {
+            console.log('🔄 Getting fresh data from helper.centers');
+            helper.centers.forEach((center, index) => {
+              damageCenterNames.push({
+                name: center.Location || `מוקד נזק ${index + 1}`,
+                number: center["Damage center Number"] || (index + 1),
+                description: center.Description || ''
+              });
+            });
+          }
+        }
+        
+        console.log('🔄 Final damageCenterNames for depreciation:', damageCenterNames);
+        
         const depreciationTable = document.getElementById('depreciationBulkTable');
         if (!depreciationTable) {
           console.log('❌ depreciationBulkTable not found');
@@ -7905,6 +7935,9 @@
         setTimeout(() => {
           addDamageCenterEventListeners();
           updateAllCostDisplays();
+          
+          // Also update depreciation table when damage centers are loaded/refreshed
+          updateDepreciationFromDamageCenters([]);
         }, 100);
         
         console.log('✅ Damage centers loaded from helper:', damageBlocks.length);
@@ -8468,7 +8501,13 @@
             const radioButton = document.querySelector(`input[name="final-report-type"][value="${manualData.finalReportType}"]`);
             if (radioButton) radioButton.checked = true;
           } else if (sectionId === 'damage-centers' && manualData.damageCenters) {
-            restoreDamageCentersData(manualData.damageCenters);
+            // Restore damage centers data from manual save
+            if (typeof restoreDamageCentersData === 'function') {
+              restoreDamageCentersData(manualData.damageCenters);
+            } else {
+              // Fallback: load from helper
+              loadDamageCentersFromHelper(helper);
+            }
           } else if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
             restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
             restoreAdjustmentData('#registrationAdjustmentsList', manualData.registrationAdjustments);
@@ -8488,6 +8527,13 @@
             // Special handling for depreciation section
             loadDepreciationData(helper);
             showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+          } else if (sectionId === 'damage-centers') {
+            // Special handling for damage-centers section  
+            loadDamageCentersFromHelper(helper);
+            showSectionMessage(sectionId, `↻ ${config.name} נטען מהמערכת`, 'info');
+          } else {
+            console.warn(`Load function ${config.loadFunction} not found for section ${sectionId}`);
+            showSectionMessage(sectionId, `⚠️ לא ניתן לטעון ${config.name}`, 'warning');
           }
         }
         
@@ -8536,20 +8582,33 @@
       const container = document.querySelector(containerSelector);
       if (!container) return [];
       
+      console.log('🔄 Collecting depreciation data from container:', containerSelector);
       const depreciations = [];
       container.querySelectorAll('div[class*="dep-row"], div[id*="depRow_"]').forEach(row => {
         const inputs = row.querySelectorAll('input');
         
-        if (inputs.length >= 4) {
+        // Depreciation rows have 5 inputs: center_number, damaged_part, repair_type, percent, value
+        if (inputs.length >= 5) {
           depreciations.push({
-            damagedPart: inputs[0].value,
-            repairType: inputs[1].value,
-            percentage: inputs[2].value,
+            center_number: inputs[0].value,
+            damaged_part: inputs[1].value,
+            repair_type: inputs[2].value,
+            percent: inputs[3].value,
+            value: inputs[4].value
+          });
+        } else if (inputs.length >= 4) {
+          // Fallback for older format (missing center_number)
+          depreciations.push({
+            center_number: '',
+            damaged_part: inputs[0].value,
+            repair_type: inputs[1].value,
+            percent: inputs[2].value,
             value: inputs[3].value
           });
         }
       });
       
+      console.log('🔄 Collected depreciation data:', depreciations);
       return depreciations;
     }
     
@@ -8607,6 +8666,57 @@
       return damageCenters;
     }
     
+    // Helper function to restore damage centers data from manual save
+    function restoreDamageCentersData(damageCenters) {
+      try {
+        console.log('🔄 Restoring damage centers data from manual save:', damageCenters);
+        
+        if (!damageCenters || !Array.isArray(damageCenters)) {
+          console.log('❌ No valid damage centers data to restore');
+          return;
+        }
+        
+        const container = document.getElementById('damageCentersContent');
+        if (!container) {
+          console.error('❌ Damage centers container not found');
+          return;
+        }
+        
+        // Clear existing content
+        container.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
+        const editableContainer = document.getElementById('editableDamageCenters');
+        
+        // Restore each damage center
+        damageCenters.forEach((centerData, index) => {
+          // Create simplified damage center structure for restoration
+          const adaptedCenter = {
+            damage_center_name: centerData.name || `מוקד נזק ${index + 1}`,
+            damage_center_number: index + 1,
+            description: '',
+            parts: centerData.parts || [],
+            works: centerData.works || [],
+            repairs: centerData.repairs || []
+          };
+          
+          // Use existing function to create the card
+          const newCardHTML = createEditableDamageCenterCard(adaptedCenter, index);
+          editableContainer.insertAdjacentHTML('beforeend', newCardHTML);
+        });
+        
+        // Add event listeners and update calculations
+        setTimeout(() => {
+          addDamageCenterEventListeners();
+          updateAllCostDisplays();
+          updateDepreciationFromDamageCenters([]);
+        }, 100);
+        
+        console.log('✅ Damage centers data restored successfully');
+        
+      } catch (error) {
+        console.error('❌ Error restoring damage centers data:', error);
+      }
+    }
+    
     // Helper function to restore adjustment data to dynamic tables
     function restoreAdjustmentData(containerSelector, adjustments) {
       const container = document.querySelector(containerSelector);
@@ -8642,35 +8752,33 @@
     
     // Helper function to restore depreciation data
     function restoreDepreciationData(containerSelector, depreciations) {
-      const container = document.querySelector(containerSelector);
-      if (!container) return;
-      
-      // Clear existing rows
-      container.innerHTML = '';
-      
-      // Add each depreciation
-      depreciations.forEach(dep => {
-        addDepField(dep);
-      });
+      try {
+        console.log('🔄 Restoring depreciation data:', depreciations);
+        
+        const container = document.querySelector(containerSelector);
+        if (!container) {
+          console.error('❌ Depreciation container not found:', containerSelector);
+          return;
+        }
+        
+        // Clear existing rows
+        container.innerHTML = '';
+        
+        // Add each depreciation
+        if (Array.isArray(depreciations)) {
+          depreciations.forEach(dep => {
+            console.log('🔄 Restoring depreciation item:', dep);
+            addDepField(dep);
+          });
+        }
+        
+        console.log('✅ Depreciation data restored successfully');
+        
+      } catch (error) {
+        console.error('❌ Error restoring depreciation data:', error);
+      }
     }
     
-    // Helper function to restore damage centers data
-    function restoreDamageCentersData(damageCenters) {
-      const container = document.getElementById('damageCentersContent');
-      if (!container || !Array.isArray(damageCenters)) return;
-
-      // Prepare container for editable cards
-      container.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
-      const wrapper = container.querySelector('#editableDamageCenters');
-
-      damageCenters.forEach((center, index) => {
-        const cardHTML = createEditableDamageCenterCard(center, index);
-        wrapper.insertAdjacentHTML('beforeend', cardHTML);
-      });
-
-      addDamageCenterEventListeners();
-      updateAllCostDisplays();
-    }
     
     // Helper function to show section messages
     function showSectionMessage(sectionId, message, type) {
