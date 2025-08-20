@@ -1502,6 +1502,9 @@
 </div>
 
   
+  <!-- Load Legal Text Engine -->
+  <script src="legal-text-engine.js"></script>
+  
   <script>
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
     window.toggleFloatingScreen = function(screenType) {
@@ -3823,7 +3826,7 @@
         }
         
         // Update legal text with new data
-        loadLegalText();
+        loadLegalText().catch(console.error);
         
         // Special handling for salvage value changes
         if (fieldId === 'salvageValue') {
@@ -3889,155 +3892,28 @@
     }
 
 
-    // LOAD LEGAL TEXT FROM VAULT SYSTEM
-    function loadLegalText() {
+    // LOAD LEGAL TEXT USING CENTRALIZED ENGINE
+    async function loadLegalText() {
       const reportTypeSelect = document.getElementById('reportType');
       const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
       
-      // Map all 5 report types to legal text types with proper mapping to vault keys
-      let selectedType;
-      if (reportType.includes('אובדן להלכה')) {
-        selectedType = 'אובדן_להלכה';
-      } else if (reportType.includes('טוטלוסט')) {
-        selectedType = 'total_loss'; 
-      } else if (reportType.includes('מכירה מצבו הניזוק')) {
-        selectedType = 'מכירה_מצבו_הניזוק';
-      } else if (reportType.includes('גלובלית')) {
-        selectedType = 'גלובלית';
-      } else if (reportType.includes('פרטית')) {
-        selectedType = 'פרטית';
-      } else {
-        selectedType = 'פרטית'; // Default fallback
-      }
-      
-      console.log('🔄 Loading legal text for report type:', reportType, '→', selectedType);
+      console.log('🔄 Loading legal text for report type:', reportType);
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Legal text vault from legal texts logic.md - OFFICIAL VAULT TEXTS ONLY
-      const legalTextsVault = {
-        'פרטית': `מטרת מסמך זה - חוות דעת פרטית 
-:1. ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
-2. מחירי החלפים נבדקו על ידינו בתוכנת מולטיקט חלפים.
-3. חוות דעתינו כוללת סעיף י"ע בשיעור %ירידת_ערך% מערך הרכב המצויין לעיל בגין הבדלי גוון צבע באירוע הנדון.
-4. הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו , ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב אשר לדבריו, לא ידוע לנו נסיבות המקרה.
-5. להערכתינו זמן השהייה במוסך לצורך תיקון %ימי_מוסך% ימי עבודה.
-
----
-
-הצהרה:
-
-אני החת"מ : ירון כיוף תעודת שמאי מס' 1097.
-נותן על פי בקשתך / כם חוות דעתי במקום עדות בשבועה בבית משפט. הנני מצהיר כי ידוע לי היטב על פי הוראות החוק הפלילי בדבר מתן עדות שקר בבית משפט. דין חוות דעת זו כשהיא חתומה על ידי, כדין עדות בשבועה בבית משפט.
-
-לוטה:
-- תצלומי הרכב הניזוק
-- חשבוניות תיקון
-- ערך רכב ממוחשב
-- צילום רישיון הרכב
-- חשכ"ט
-
-
-       בכבוד רב,`,
-
-        'גלובלית': `מטרת מסמך זה - חוות דעת גלובלית :
- בהתאם לבקשה סיכמנו את חוות דעתנו בטרם קבלת חשבנות התיקון, (גלובאלי).
-
-הערכת הנזקים אינה כוללת נזקים בלתי נראים מראש העלולים להתגלות במהלך פירוק.
-
-מחירי החלפים נבדקו על ידינו בתוכנת מולטיקט חלפים.
-
-ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
-
-מאחר ובעלי הרכב מעוניין בתיקון רכבו בכוחות עצמו, ובתאום עם בעלי הרכב. התביעה הנ"ל נסגירה על בסיס גלובאלי בסך %שווי_פיצוי% ש"ח כולל מע"מ. את הרכב יתקנו הבעלים בכוחות עצמם.
-
-חוות דעתינו כוללת סעיף י"ע בשיעור %ירידת_ערך%% מערך הרכב המצויין לעיל בגין הפגיעה באירוע הנדון.
-
-אושר מע"מ בהתאם לפסקי דין רלוונטיים.
-
-הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב אשר לדבריו.
-
-לטענת בעל הרכב %מספר_מוקדים% מוקדי הנזק מאירוע הנדון.
-
-אנו מערכים שהיית הרכב במוסך לצורך תיקונים בכ %ימי_מוסך% ימים.`,
-
-        'total_loss': `מטרת מסמך זה - חוות דעת טוטאל-לוסט :
- חוות דעתינו בוצעה בטרם בוצעו התיקונים בפועל ואינה כוללת את הנזקים הסמויים בשלב זה של הבדיקה.
-
-בהתאם לבדיקתנו הנזק ברכב הדון הינו מעל 60% מערך הרכב, ובהתאם לתקנות התעבורה סעיף 9 לצו הפיקוח על המצרכים והשירותים סעיף ב, הוכרז הרכב הנ"ל כניזוק ב "אובדן גמור (טוטאלוס)".
-
-מאחר וערך הנזק הראשוני הינו מעל 60% מערך הרכב הנ"ל, ואין כל כדאיות כלכלית ו/או בטיחותית בתיקון הרכב, לכן הרכב הוכרז כניזוק ב "אובדן גמור (טוטאלוס)" ויועד לפירוק בלבד.
-
-רשיון הרכב בוטל על ידי משרדינו בהתאם להנחיית משרד התחבורה.
-
-שרידי הרכב לפירוק הוערכו על ידינו בסך %שווי_שרידים% ש"ח.
-
-מחירי החלפים נבדקו על ידינו בתוכנת מולטיקט חלפים.
-
-אנו ממלצים לפצות את המבוטח על בסיס אובדן גמור (טוטאלוס).
-
-רשיון הרכב בצירוף טופס 587 נשלח למשרד הרישוי. שרדי הרכב נשארו בידי המבוטח לפירוק בלבד.
-
-בדיקותינו העלו כי מספר השלדה אשר נבדק על ידנו ברכב תואם רישיון הרכב.`,
-
-        'מכירה_מצבו_הניזוק': `מטרת מסמך זה - חוות דעת למכירה במצבו הניזוק :
- בהתאם לבקשה סיכמנו את חוות דעתנו בטרם תיקון הרכב, זאת בהתייחסות לעוצמת הפגיעה נמכר הרכב במצבו הניזוק.
-
-הרכב נמכר ע"י בעליו.
-
-הרכב במצבו הניזוק נמכר בסך %מחיר_מכירה% ש"ח, %שיטת_תשלום%. מצורף זיכרון דברים בין שני הצדדים, והעברת בעלות.
-
-ערך הרכב המצוין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר ואירוע תאונתי.
-
-מחירי החלפים נבדקו על ידינו בתוכנת מולטיקט חלפים.
-
-הערכת הנזקים אינה כוללת נזקים בלתי נראים מראש העלולים להתגלות במהלך הפירוק.
-
-מצו"ב צילום זיכרון דברים בגין מכירת הרכב.
-
-ירידת ערך צפויה לרכב הנ"ל %ירידת_ערך%% מערך הרכב הנ"ל באירוע הנדון.
-
-אנו מערכים את משך שהיית הרכב במוסך לצורך תיקונים ב / כ %ימי_מוסך% ימי עבודה.`,
-
-        'אובדן_להלכה': `מטרת מסמך זה - חוות דעת אובדן להלכה :
- ערך הרכב המצויין לעיל בהתאם למחירון ואינו מתייחס למקוריות הרכב בעבר וארוע תאונתי.
-
-הצעה זו אינה סופית ויתכן שינויים במהלך תיקון הרכב.
-
-הערכתנו מתייחסת לנזקים כפי שהוצגו בפנינו, ולנסיבות המקרה כפי שתוארו לנו ע"י בעל הרכב אשר לדבריו.
-
-קוד דגם רישיון הרכב נבדק בהתאם לטבלת המרה של לוי יצחק ונמצא %קוד_דגם%.
-
-אחוז הנזק ברכב הנ"ל הוא %אחוז_נזק% מערך הרכב.
-
-הצעה זו אינה כוללת נזקים בלתי נראים מראש העלולים להתגלות במהלך פירוק ו/או תיקון.
-
-להערכתינו ירידת ערך צפויה כ %ירידת_ערך% מערך הרכב הנ"ל מאירוע הנדון.
-
-לטענת בעל הרכב %מוקדי_נזק% מוקדי הנזק מאירוע הנדון.
-
-לאור היקף הנזקים אנו ממלצים לסלק את התביעה הנ"ל על בסיס "אובדן להלכה" ללא תיקון בפועל.
-
-להערכתינו זמן השהייה במוסך לצורך תיקון %ימי_מוסך% ימי עבודה.`
-      };
-      
-      let legalText = legalTextsVault[selectedType] || legalTextsVault['פרטית'];
-      console.log('✅ Selected legal text for type:', selectedType, legalText ? '(found)' : '(not found)');
-      
-      // Enhanced placeholder mapping to actual field values - Official vault placeholders
-      const placeholders = {
-        '%מספר_רכב%': document.getElementById('carPlate')?.value || helper.meta?.plate || '[מספר רכב]',
-        '%תוצרת%': document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer || '[תוצרת]',
-        '%דגם%': document.getElementById('carModel')?.value || helper.car_details?.model || '[דגם]',
-        '%שנה%': document.getElementById('carYear')?.value || helper.car_details?.year || '[שנה]',
-        '%בעל_רכב%': document.getElementById('ownerName')?.value || helper.client?.name || '[שם בעל הרכב]',
-        '%קוד_דגם%': document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code || '[קוד דגם]',
-        '%אחוז_נזק%': document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent || '[אחוז נזק]',
-        '%ירידת_ערך%': document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent || '[ירידת ערך]',
-        '%מוקדי_נזק%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
-        '%מספר_מוקדים%': helper.expertise?.damage_blocks?.length || '[מספר מוקדים]',
-        '%ימי_מוסך%': document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days || '[ימי מוסך]',
-        '%שווי_רכב%': document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : '[שווי רכב]'),
-        '%שווי_שרידים%': (() => {
+      // Collect values for placeholder replacement
+      const placeholderValues = {
+        plate: document.getElementById('carPlate')?.value || helper.meta?.plate,
+        manufacturer: document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer,
+        model: document.getElementById('carModel')?.value || helper.car_details?.model,
+        year: document.getElementById('carYear')?.value || helper.car_details?.year,
+        ownerName: document.getElementById('ownerName')?.value || helper.client?.name,
+        modelCode: document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code,
+        damagePercent: document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent,
+        depreciation: document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent,
+        damageCenters: helper.expertise?.damage_blocks?.length,
+        garageDays: document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days,
+        carValue: document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : undefined),
+        salvageValue: (() => {
           const salvageInput = document.getElementById('salvageValue')?.value;
           const helperSalvage = helper.final_report?.summary?.salvage_value || helper.final_report?.salvage_value;
           
@@ -4045,32 +3921,40 @@
             return salvageInput;
           } else if (helperSalvage && helperSalvage !== '₪0') {
             return helperSalvage;
-          } else {
-            return '[שווי שרידים]';
           }
+          return undefined;
         })(),
-        '%שווי_פיצוי%': document.getElementById('depCompensation')?.value || helper.final_report?.summary?.dep_compensation || '[שווי פיצוי]',
-        '%מחיר_מכירה%': '[מחיר מכירה]', // This would be filled by user input for damaged sale type
-        '%שיטת_תשלום%': '[שיטת תשלום]' // This would be filled by user input for damaged sale type
+        compensation: document.getElementById('depCompensation')?.value || helper.final_report?.summary?.dep_compensation
       };
       
-      // Replace placeholders
-      for (const [placeholder, value] of Object.entries(placeholders)) {
-        legalText = legalText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
-      }
-      
-      const legalTextElement = document.getElementById('legal-text-content');
-      if (legalTextElement) {
-        legalTextElement.value = legalText;
-        console.log('✅ Legal text populated successfully for', selectedType);
-      } else {
-        console.error('❌ Legal text element not found: legal-text-content');
+      try {
+        // Use the centralized legal text engine
+        const legalText = await window.LegalTextEngine.getProcessedText(
+          reportType, 
+          placeholderValues, 
+          'final_report'
+        );
+        
+        const legalTextElement = document.getElementById('legal-text-content');
+        if (legalTextElement) {
+          legalTextElement.value = legalText;
+          console.log('✅ Legal text loaded successfully from vault for:', reportType);
+        } else {
+          console.error('❌ Legal text element not found: legal-text-content');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error loading legal text:', error);
+        const legalTextElement = document.getElementById('legal-text-content');
+        if (legalTextElement) {
+          legalTextElement.value = 'שגיאה בטעינת טקסט משפטי מהכספת - אנא בדוק את החיבור';
+        }
       }
     }
 
     // LOAD LEGAL TEXT FROM VAULT - SEPARATE FUNCTION FOR BUTTON
     function loadLegalTextFromVault() {
-      loadLegalText();
+      loadLegalText().catch(console.error);
       
       // Save the legal text to helper for the final report
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -6540,7 +6424,7 @@
       setTimeout(() => {
         loadDataFromHelper();
         loadAttachmentsData();
-        loadLegalText();
+        loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
       }, 100);
       
@@ -6617,7 +6501,7 @@
       if (reportTypeSelect) {
         reportTypeSelect.addEventListener('change', function() {
           updateReportType();
-          loadLegalText();
+          loadLegalText().catch(console.error);
         });
       }
     });
@@ -7817,7 +7701,7 @@
         document.querySelectorAll('input[name="final-report-type"]').forEach(radio => {
           radio.addEventListener('change', function() {
             updateReportType();
-            loadLegalText();
+            loadLegalText().catch(console.error);
           });
         });
         
@@ -9273,7 +9157,7 @@
           const selectedType = this.value;
           console.log('Report type changed to:', selectedType);
           updateReportType();
-          loadLegalText(); // Update legal text when report type changes
+          loadLegalText().catch(console.error); // Update legal text when report type changes
           loadAttachmentsFromVault(); // Update attachments when report type changes
           saveAndRefreshComplete(); // Save and refresh calculations
         });
