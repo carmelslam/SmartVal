@@ -4703,6 +4703,62 @@ in the levisummary there is a correct reoort date : levisummary/ report date , t
 
 20.8.25 TASKS DONE :
 
+## Session Summary - Hebrew Vehicle Damage Assessment Platform Final Report Builder
+
+### ✅ **COMPLETED TASKS:**
+
+1. **Fixed Legacy Depreciation Module Console Errors:**
+   - Removed all calls to legacy `depreciation_module.js` that were causing "Cannot read properties of null" errors
+   - Replaced `triggerMathCalculation()` function to use final report builder's native depreciation logic instead of calling `MathEngine.calculateAll()`
+   - Updated `triggerGlobalDepreciationCalc()` to use final report builder's own calculation functions
+   - Eliminated all references to `collectDepCenters` function from legacy module
+
+2. **Enhanced Depreciation Data Persistence on Page Refresh:**
+   - Fixed issue where depreciation table percentage inputs and calculated values were clearing on page refresh
+   - Added double-check mechanism during page initialization to restore field values from helper data
+   - Enhanced `loadDepreciationData()` with additional persistence checks and forced saves
+   - Added timeout-based field restoration to handle async loading issues
+   - Improved auto-calculation event handling with proper blur events
+
+3. **Improved Damage Center Name Generation Logic:**
+   - Modified damage center name creation to generate clean labels: "מוקד נזק מס' 1", "מוקד נזק מס' 2", etc.
+   - Updated both `loadDepreciationData()` and `updateDepreciationTable()` functions to use consistent naming
+   - Fixed duplication check logic to prevent duplicate center entries
+
+### ❌ **FAILED/REVERTED TASKS:**
+
+4. **Damage Center Label Duplication Fix (REVERTED):**
+   - **Problem:** Depreciation table showing "מוקד נזק מס' מוקד נזק מס' 1" instead of "מוקד נזק מס' 1"
+   - **Attempted Solution:** Added `forceCleanDepreciationData()` function and "נקה וטען מחדש" button to clear existing data and regenerate with clean labels
+   - **Result:** BROKE THE PAGE - depreciation section disappeared completely
+   - **Action:** Full git revert to 10 commits ago to restore functionality
+   - **Status:** UNRESOLVED - duplicate labels still exist
+
+### 📊 **TECHNICAL CHANGES MADE:**
+- `final-report-builder.html:10542-10551` - Replaced legacy MathEngine calls with native functions
+- `final-report-builder.html:6479-6489` - Updated global depreciation calculation trigger
+- `final-report-builder.html:2487-2495` - Enhanced depreciation loading with persistence checks
+- `final-report-builder.html:6506-6527` - Added double-check mechanism for field restoration
+- `final-report-builder.html:2513 & 6977` - Modified center name generation logic
+
+### 🔧 **REMAINING ISSUES:**
+1. **Damage center labels still showing duplicated text** - "מוקד נזק מס' מוקד נזק מס' 1" instead of clean "מוקד נזק מס' 1"
+2. **Existing saved depreciation data contains the duplicated labels** - needs manual cleanup or migration
+3. **Field width issues** - labels too long to fit properly in depreciation table columns
+
+### 💡 **RECOMMENDATIONS FOR NEXT SESSION:**
+1. **Investigate existing helper.depreciation.bulk_items data structure** to understand why duplicated labels are being saved
+2. **Create data migration script** to clean existing saved data without breaking the page
+3. **Test changes in isolation** before applying to main codebase
+4. **Consider alternative approach** - modify display logic instead of data generation
+
+### ⚠️ **SESSION OUTCOME:**
+- **Console errors fixed** ✅
+- **Data persistence improved** ✅  
+- **Label duplication issue** ❌ (still unresolved, caused page break when attempted)
+- **Overall system stability maintained** after revert
+
+
 **reports stylying problems and attempts**
 
 ## Problem Background & Context
