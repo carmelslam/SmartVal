@@ -4082,6 +4082,26 @@ What happens when the user approves the expertise report :
 
   **the final report workflow** 
   general instructions :
+  We are working on the final report workflow.
+This is the most important workflow in regards of the system purpose.
+Though its crucial importance, this workflow does not stand alone and its fundamentally based on all the previous system workflows mainly the expertise and the independent modules such as parts search module, invoices module and others.
+Fo you, that means that all the data generated in those workflows are automatically populated in the final report workflow mainly builder and template builder - all theses data is stored dynamically and gradually in the helper, 
+The helper is built from sections that should follow the different modules , UI  and webhook responses inputs 
+Basically when arrive to the final builder after working through he expertise, estimate , parts search , invoices, image uploads and all the modules that come before the final report workflow in the process flow, most of the final report builder UI, should be already populated and filled from the helper data - this requires a very precise and accurate  mapping.
+The final report builder contribution to the case is concentrated just in the :
+1. depreciation section that the user needs to decide what percentage of deprecation each damage center deserves and the global depreciation for the whole case 
+2. The final report summary that evaluates what compensation the client is entitled of 
+3. Other small data as L is it a company report or is it associated with an agreement
+4. The user also decides what type of final report the case is all about, a selection of a report type dynamically changes and adjusts the fields of the UI, legal texts , attachments and disclaimers.
+5. The fee module that also has fields that need to be filled automatically and a designated Ui for fee inputs - the assessor’s fee from the client 
+The workflow  starts with the final report builder after that the fee module after that  the validation page and lastly the report template builder that actually generates the report itself.
+You need to go through the whole system to understand it, to really dig deep the documentation folder , the helper instruction folder, the todo.md and the final report related explanations and documentations 
+In todo.md, after you read it all, you need to learn the task - you need to read todo.md from. line 4016  this will give you the scope of the task.
+You are not allowed to work on any other modules, touch any section in the helper other than the final report related sections, and non of the floating screens or any other working modules.
+EACH ACTION YOU MAKE NEES TO BE PURLY ON THE FINAL REPORT SECTION , YOU CANNOT TOUCH ANY OTHER MODULES, HELPER SECTIONS OR LOGIC, WHERE CONFLICT ARRISES ASK ME AN GET CONFIRMATION FIRST.
+Review the current final report  workflow, the builders, the validation page and the fee module , understand what bugs there are , anomalies, conflicts , wrong mapping , inconsistencies and wrong math implementations .Make a detailed plan with small tasks to address all the issues.
+We will need to work methodically and not just to add codes, most of the code if not all is already good especially in the report builder.
+
 
 Final Report Workflow:
 
