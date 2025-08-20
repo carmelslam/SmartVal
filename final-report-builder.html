@@ -5534,11 +5534,25 @@
     // Calculate and update GROSS PRICE (car properties only: base + features + registration)
     function updateGrossMarketValueCalculation() {
       try {
-        // Get basic price directly from the field in this section (ערך הרכב ע"פ מחירון כולל מע"מ)
-        const basicPriceField = document.getElementById('basicPrice');
-        const basicPrice = parseFloat(basicPriceField?.value?.replace(/[₪,]/g, '') || '0') || 0;
+        // Get base price from proper sources - NO CIRCULAR DEPENDENCIES
+        let basicPrice = 0;
         
-        console.log('🔍 DEBUG: Basic price from basicPrice field:', basicPrice, 'Field value:', basicPriceField?.value);
+        // Priority 1: Helper valuation base price (truth source)
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.valuation?.base_price) {
+          basicPrice = parseFloat(helper.valuation.base_price) || 0;
+          console.log('🔍 Using helper.valuation.base_price:', basicPrice);
+        }
+        // Priority 2: Full market value section field (ערך הרכב ע"פ מחירון כולל מע"מ)
+        else {
+          const fullBasicPriceField = document.getElementById('fullBasicPrice');
+          if (fullBasicPriceField?.value) {
+            basicPrice = parseFloat(fullBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
+            console.log('🔍 Using fullBasicPrice field:', basicPrice);
+          }
+        }
+        
+        console.log('🔍 DEBUG: Final basic price for calculation:', basicPrice);
         
         // Collect features adjustments (car properties)
         const featuresAdjustments = [];
