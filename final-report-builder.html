@@ -1292,7 +1292,7 @@
           </div>
           <div id="ownersAdjustments">
             <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><label>תיאور:</label></div>
+              <div><label>תיאור:</label></div>
               <div><label>סוג:</label></div>
               <div><label>אחוז:</label></div>
               <div><label>ערך:</label></div>
@@ -6314,8 +6314,19 @@
               const isValueNegative = inputs[3].value.includes('-');
               const isTypeNegative = type === 'minus';
               
-              // FIX: Determine actual sign properly
-              const isNegativeAdjustment = isTypeNegative || isPercentNegative || isValueNegative;
+              // CRITICAL FIX: Features should be positive (+9%), the others negative
+              // Based on user specification: Features +9%, Km -26.88%, Ownership -17%, Owners -2%
+              let isNegativeAdjustment;
+              if (name === 'תוספות מאפיינים') {
+                // Features are always positive additions (like 9%)
+                isNegativeAdjustment = false;
+              } else if (name === 'עליה לכביש') {
+                // Registration is always positive additions (like +4000)
+                isNegativeAdjustment = false;
+              } else {
+                // All others (Km, Ownership, Owners) are negative deductions
+                isNegativeAdjustment = true;
+              }
               
               if (percentage !== 0 || value !== 0) {
                 let adjustmentValue = value;
