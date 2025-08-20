@@ -1233,7 +1233,7 @@
     <!-- DEPRECIATION CALCULATION SECTION -->
     <div class="form-section" id="depreciationSection">
       <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
-      <div style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
+      <div style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;">
         <div><label>מס' מוקד:</label></div>
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
@@ -1631,12 +1631,12 @@
       
       const rowId = 'depRow_' + Date.now();
       const newRow = `
-        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" /></div>
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" /></div>
+        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || ''}" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" /></div>
+          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}%" /></div>
+          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="₪${data.value || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1645,6 +1645,14 @@
       
       // Add auto-calculation functionality to the percentage field
       const row = document.getElementById(rowId);
+      
+      // Add tooltip update listeners to all input fields
+      const inputs = row.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.addEventListener('input', function() {
+          this.title = this.value;
+        });
+      });
       const percentInput = row.querySelector('input[placeholder="%"]');
       const valueInput = row.querySelector('input[placeholder="₪"]');
       
@@ -2501,7 +2509,12 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔍 Found centers in helper.centers');
             helper.centers.forEach((center, index) => {
-              const centerName = center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`;
+              // Clean center name to avoid duplication
+              let centerName = center.Location || center.damage_center_name || `מוקד נזק מס' ${index + 1}`;
+              // If centerName already contains "מוקד נזק מס'", use it as is, otherwise add the prefix
+              if (!centerName.includes('מוקד נזק מס\'')) {
+                centerName = `מוקד נזק מס' ${index + 1}`;
+              }
               const centerNumber = center["Damage center Number"] || (index + 1);
               const centerDescription = center.Description || '';
               console.log(`🔍 Center ${centerNumber}: ${centerName} - Description: ${centerDescription}`);
@@ -6941,8 +6954,15 @@
           if (helper.centers && helper.centers.length > 0) {
             console.log('🔄 Getting fresh data from helper.centers');
             helper.centers.forEach((center, index) => {
+              // Clean center name to avoid duplication
+              let centerName = center.Location || center.damage_center_name || `מוקד נזק מס' ${index + 1}`;
+              // If centerName already contains "מוקד נזק מס'", use it as is, otherwise add the prefix
+              if (!centerName.includes('מוקד נזק מס\'')) {
+                centerName = `מוקד נזק מס' ${index + 1}`;
+              }
+              
               damageCenterNames.push({
-                name: center.Location || `מוקד נזק ${index + 1}`,
+                name: centerName,
                 number: center["Damage center Number"] || (index + 1),
                 description: center.Description || ''
               });
@@ -6971,18 +6991,26 @@
           console.log('🔄 Adding depreciation row for:', centerName, 'Number:', centerNumber);
           const row = document.createElement('div');
           row.className = 'dep-row';
-          row.style.cssText = 'display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
+          row.style.cssText = 'display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
-            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" /></div>
-            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" /></div>
-            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
+            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" title="${centerNumber || ''}" /></div>
+            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" title="${centerName}" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" title="${centerDescription}" /></div>
+            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" title="" /></div>
+            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" title="" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
           `;
           
           depreciationTable.appendChild(row);
+          
+          // Add tooltip update listeners to all input fields
+          const inputs = row.querySelectorAll('input');
+          inputs.forEach(input => {
+            input.addEventListener('input', function() {
+              this.title = this.value;
+            });
+          });
           
           // Add calculation listener to the percentage field
           const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
