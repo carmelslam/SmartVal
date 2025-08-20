@@ -4713,13 +4713,24 @@
       }
       console.log('📊 Base price for calculations:', basePrice);
       
-      // Clear existing auto-populated adjustments
-      const container = document.getElementById('allAdjustmentsList');
-      if (container) {
-        // Remove only Levi market adjustments
-        const leviRows = container.querySelectorAll('div[data-source="levi"]');
-        leviRows.forEach(row => row.remove());
-      }
+      // Clear existing auto-populated adjustments from ALL containers
+      const containers = [
+        'fullFeaturesAdjustmentsList',
+        'fullRegistrationAdjustmentsList', 
+        'mileageAdjustmentsList',
+        'ownershipAdjustmentsList',
+        'ownersAdjustmentsList',
+        'allAdjustmentsList'
+      ];
+      
+      containers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+          const leviRows = container.querySelectorAll('div[data-source="levi"]');
+          leviRows.forEach(row => row.remove());
+          console.log(`🧹 Cleared ${leviRows.length} Levi rows from ${containerId}`);
+        }
+      });
       
       // Auto-populate adjustments in CORRECT ORDER as per user requirements:
       // 1. Features → 2. Registration → 3. Mileage → 4. Ownership → 5. Owners
@@ -4733,101 +4744,85 @@
       
       adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
         const adjData = adjustments[key];
-        if (adjData) {
-          // Extract percentage - handle both "9%" string format and numeric
+        console.log(`🔍 Processing ${key}:`, adjData);
+        
+        if (adjData && (adjData.percent || adjData.percentage || adjData.amount)) {
+          // Extract percentage - handle "9%" string format and negative values
           let percent = 0;
           if (adjData.percent) {
             const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
             percent = parseFloat(percentStr) || 0;
           } else if (adjData.percentage) {
-            percent = parseFloat(adjData.percentage) || 0;
+            const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
           }
           
-          // Extract amount - handle various formats
+          // Extract amount - handle "ש 29,588" format
           let amount = 0;
           if (adjData.amount) {
             const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
             amount = parseFloat(amountStr) || 0;
-          } else if (adjData.value) {
-            const valueStr = String(adjData.value).replace(/[₪,\sש]/g, '');
-            amount = parseFloat(valueStr) || 0;
           }
           
-          // Get ACTUAL description from helper data, not generic labels
-          const description = adjData.description || adjData.reason || 
-                             adjData.feature_name || adjData.details || 
-                             label; // fallback to generic label only if no specific data
+          // Use VALUE field for description as per user requirements
+          const description = adjData.value || adjData.description || label;
           
-          // Determine if this is a reduction (הפחתה) or addition (תוספת)
-          const isReduction = percent < 0 || amount < 0 || 
-                             (description && description.includes('הפחתה')) ||
-                             (adjData.type && adjData.type.includes('הפחתה'));
+          // Determine if this is a reduction (negative percent or amount)
+          const isReduction = percent < 0 || amount < 0;
           
-          // Only populate if there's actual data (percent or amount)
-          if (percent !== 0 || amount !== 0) {
-            console.log(`📝 Populating ${key} adjustment with ACTUAL data:`, {
-              key,
-              description,
-              percent,
-              amount,
-              isReduction,
-              rawData: adjData
-            });
-            
-            // Add the adjustment row using the appropriate function
-            addFunction();
-            
-            const container = document.getElementById(containerId);
-            const rows = container.querySelectorAll('div.adjustment-row');
-            const lastRow = rows[rows.length - 1];
-            
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input, select');
-              if (inputs.length >= 4) {
-                // Set ACTUAL description from helper data
-                inputs[0].value = description;
-                
-                // Set type (plus/minus based on value and description)
-                inputs[1].value = isReduction ? 'minus' : 'plus';
-                
-                // Set percentage WITH SIGN for proper display
-                if (percent !== 0) {
-                  const displayPercent = isReduction ? `-${Math.abs(percent)}` : `${Math.abs(percent)}`;
-                  inputs[2].value = displayPercent;
-                }
-                
-                // Set amount WITH SIGN for proper display
-                let displayAmount = amount;
-                if (amount === 0 && percent !== 0 && basePrice > 0) {
-                  // Calculate from percentage if amount not provided
-                  displayAmount = Math.abs((basePrice * percent) / 100);
-                }
-                
-                if (displayAmount > 0) {
-                  const displayAmountWithSign = isReduction ? 
-                    `-₪${Math.round(Math.abs(displayAmount)).toLocaleString()}` : 
-                    `₪${Math.round(Math.abs(displayAmount)).toLocaleString()}`;
-                  inputs[3].value = displayAmountWithSign;
-                }
-                
-                // Mark as Levi data with distinctive styling
-                lastRow.setAttribute('data-source', 'levi');
-                lastRow.style.background = '#f0f8ff';
-                lastRow.style.border = '1px solid #4a90e2';
-                
-                console.log(`✅ Successfully populated ${key}:`, {
-                  description: inputs[0].value,
-                  type: inputs[1].value,
-                  percent: inputs[2].value,
-                  amount: inputs[3].value
-                });
+          console.log(`📝 Importing ${key}:`, {
+            description,
+            percent,
+            amount,
+            isReduction
+          });
+          
+          // Add the adjustment row
+          addFunction();
+          
+          const container = document.getElementById(containerId);
+          const rows = container.querySelectorAll('div.adjustment-row');
+          const lastRow = rows[rows.length - 1];
+          
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              // Set description from .value field
+              inputs[0].value = description;
+              
+              // Set type based on sign
+              inputs[1].value = isReduction ? 'minus' : 'plus';
+              
+              // Set percentage with proper sign
+              if (percent !== 0) {
+                inputs[2].value = percent.toString(); // Keep original sign
               }
+              
+              // Set amount with proper sign and currency
+              if (amount !== 0) {
+                inputs[3].value = amount < 0 ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${amount.toLocaleString()}`;
+              } else if (percent !== 0 && basePrice > 0) {
+                // Calculate amount from percentage
+                const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
+                const sign = percent < 0 ? '-' : '';
+                inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
+              }
+              
+              // Mark as Levi data
+              lastRow.setAttribute('data-source', 'levi');
+              lastRow.style.background = '#f0f8ff';
+              lastRow.style.border = '1px solid #4a90e2';
+              
+              console.log(`✅ Populated ${key}:`, {
+                description: inputs[0].value,
+                type: inputs[1].value,
+                percent: inputs[2].value,
+                amount: inputs[3].value
+              });
             }
-          } else {
-            console.log(`⚠️ No data to populate for ${key}:`, adjData);
           }
         } else {
-          console.log(`⚠️ No ${key} data found in helper.valuation.adjustments`);
+          console.log(`⚠️ No valid data for ${key}:`, adjData);
         }
       });
       
