@@ -7864,10 +7864,29 @@
     }
     
     // LOAD DAMAGE CENTERS FROM HELPER
-    function loadDamageCentersFromHelper(damageBlocks) {
+    function loadDamageCentersFromHelper(damageBlocksOrHelper) {
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         if (!damageCentersContent) return;
+        
+        // Handle two cases: called with damageBlocks array OR helper object (from refresh)
+        let damageBlocks;
+        if (Array.isArray(damageBlocksOrHelper)) {
+          // Called with damage blocks directly
+          damageBlocks = damageBlocksOrHelper;
+        } else {
+          // Called with helper object (from refresh system) - extract and normalize damage centers
+          const helper = damageBlocksOrHelper || {};
+          if (helper.centers && helper.centers.length > 0) {
+            damageBlocks = helper.centers.map((center, index) => adaptCenterToBlock(center, index));
+          } else if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+            damageBlocks = helper.expertise.damage_blocks.map((center, index) => adaptCenterToBlock(center, index));
+          } else {
+            damageBlocks = [];
+          }
+        }
+        
+        console.log('🔄 loadDamageCentersFromHelper: Loading', damageBlocks.length, 'damage centers');
         
         // Clear existing content
         damageCentersContent.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
