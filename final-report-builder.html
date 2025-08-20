@@ -1196,11 +1196,68 @@
           <div></div>
         </div>
         
-        <!-- Usage Factors Section -->
+        <!-- Mileage Adjustments -->
         <div style="margin-top: 20px;">
-          <h4 style="color: #1e3a8a; margin-bottom: 10px;">גורמי שימוש (ק"מ, סוג בעלות, מספר בעלים):</h4>
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">מס ק"מ:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
-            💡 התאמות המבוססות על שימוש בפועל ברכב - לא על תכונות הרכב עצמו
+            🚗 התאמות בגין ק"מ של הרכב
+          </div>
+          <div id="mileageAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="mileageAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addMileageAdjustment()">הוסף התאמת מס ק"מ</button>
+          </div>
+        </div>
+        
+        <!-- Ownership Type Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">סוג בעלות:</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            🏢 התאמות בגין סוג בעלות (פרטי, חברה, ליסינג)
+          </div>
+          <div id="ownershipAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="ownershipAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addOwnershipAdjustment()">הוסף התאמת סוג בעלות</button>
+          </div>
+        </div>
+        
+        <!-- Number of Owners Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">מספר בעלים:</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            👥 התאמות בגין מספר בעלים קודמים
+          </div>
+          <div id="ownersAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="ownersAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addOwnersAdjustment()">הוסף התאמת מספר בעלים</button>
+          </div>
+        </div>
+        
+        <!-- Additional Market Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות שוק נוספות:</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            💡 התאמות נוספות בגין שווי שוק
           </div>
           <div id="allAdjustments">
             <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
@@ -1213,7 +1270,7 @@
             <div id="allAdjustmentsList">
               <!-- This will be populated from helper data -->
             </div>
-            <button class="btn add" type="button" onclick="addFullMarketAdjustment()">הוסף התאמה</button>
+            <button class="btn add" type="button" onclick="addFullMarketAdjustment()">הוסף התאמה נוספת</button>
           </div>
         </div>
         
@@ -4626,16 +4683,14 @@
         leviRows.forEach(row => row.remove());
       }
       
-      // Auto-populate adjustments in proper order: features, registration, mileage, ownership, owners
-      const adjustmentOrder = [
-        { key: 'features', label: 'תוספות מאפיינים' },
-        { key: 'registration', label: 'עליה לכביש' },
-        { key: 'mileage', label: 'מס ק"מ' },
-        { key: 'ownership', label: 'סוג בעלות' },
-        { key: 'owners', label: 'מספר בעלים' }
+      // Auto-populate adjustments in proper sections
+      const adjustmentMapping = [
+        { key: 'mileage', label: 'מס ק"מ', containerId: 'mileageAdjustmentsList', addFunction: addMileageAdjustment },
+        { key: 'ownership', label: 'סוג בעלות', containerId: 'ownershipAdjustmentsList', addFunction: addOwnershipAdjustment },
+        { key: 'owners', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment }
       ];
       
-      adjustmentOrder.forEach(({ key, label }) => {
+      adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
         const adjData = adjustments[key];
         if (adjData) {
           const percent = parseFloat(adjData.percent || adjData.percentage) || 0;
@@ -4648,43 +4703,49 @@
                              (adjData.type && adjData.type.includes('הפחתה'));
           
           if (percent !== 0 || amount !== 0) {
-            console.log(`📝 Adding ${key} adjustment:`, {
+            console.log(`📝 Adding ${key} adjustment to ${containerId}:`, {
               description,
               percent: Math.abs(percent),
               amount: Math.abs(amount),
               isReduction
             });
             
-            // Add the adjustment row
-            if (typeof addFullMarketAdjustment === 'function') {
-              addFullMarketAdjustment();
-              
-              const rows = document.querySelectorAll('#allAdjustmentsList > div');
-              const lastRow = rows[rows.length - 1];
-              if (lastRow) {
-                const inputs = lastRow.querySelectorAll('input, select');
-                if (inputs.length >= 4) {
-                  // Set description
-                  inputs[0].value = description;
-                  
-                  // Set type (plus/minus based on value and description)
-                  inputs[1].value = isReduction ? 'minus' : 'plus';
-                  
-                  // Set percentage (always positive in UI, sign handled by type)
-                  inputs[2].value = percent !== 0 ? Math.abs(percent).toString() : '';
-                  
-                  // Set amount (always positive in UI, sign handled by type)
-                  const displayAmount = amount !== 0 ? Math.abs(amount) : 
-                                      (percent !== 0 && basePrice > 0 ? Math.abs((basePrice * percent) / 100) : 0);
-                  inputs[3].value = displayAmount > 0 ? `₪${Math.round(displayAmount).toLocaleString()}` : '';
-                  
-                  // Mark as Levi data
-                  lastRow.setAttribute('data-source', 'levi');
-                  lastRow.style.background = '#f0f8ff';
-                  lastRow.style.border = '1px solid #4a90e2';
-                  
-                  console.log(`✅ Added ${key} adjustment: ${isReduction ? '-' : '+'}${Math.abs(percent)}% / ${isReduction ? '-' : '+'}₪${Math.abs(displayAmount).toLocaleString()}`);
+            // Add the adjustment row using the appropriate function
+            addFunction();
+            
+            const container = document.getElementById(containerId);
+            const rows = container.querySelectorAll('div.adjustment-row');
+            const lastRow = rows[rows.length - 1];
+            
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                // Set description
+                inputs[0].value = description;
+                
+                // Set type (plus/minus based on value and description)
+                inputs[1].value = isReduction ? 'minus' : 'plus';
+                
+                // Set percentage WITH SIGN for proper display
+                if (percent !== 0) {
+                  const displayPercent = isReduction ? `-${Math.abs(percent)}` : `${Math.abs(percent)}`;
+                  inputs[2].value = displayPercent;
                 }
+                
+                // Set amount WITH SIGN for proper display
+                const displayAmount = amount !== 0 ? Math.abs(amount) : 
+                                    (percent !== 0 && basePrice > 0 ? Math.abs((basePrice * percent) / 100) : 0);
+                if (displayAmount > 0) {
+                  const displayAmountWithSign = isReduction ? `-₪${Math.round(displayAmount).toLocaleString()}` : `₪${Math.round(displayAmount).toLocaleString()}`;
+                  inputs[3].value = displayAmountWithSign;
+                }
+                
+                // Mark as Levi data
+                lastRow.setAttribute('data-source', 'levi');
+                lastRow.style.background = '#f0f8ff';
+                lastRow.style.border = '1px solid #4a90e2';
+                
+                console.log(`✅ Added ${key} adjustment: ${isReduction ? '-' : '+'}${Math.abs(percent)}% / ${isReduction ? '-' : '+'}₪${Math.abs(displayAmount).toLocaleString()}`);
               }
             }
           }
@@ -5868,20 +5929,87 @@
     // FULL MARKET VALUE CALCULATION FUNCTIONS
     
     // Add full market adjustment row
+    // Add Mileage Adjustment
+    function addMileageAdjustment() {
+      const container = document.getElementById('mileageAdjustmentsList');
+      const rowId = 'mileageAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור מס ק"מ" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
+    // Add Ownership Type Adjustment
+    function addOwnershipAdjustment() {
+      const container = document.getElementById('ownershipAdjustmentsList');
+      const rowId = 'ownershipAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור סוג בעלות" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
+    // Add Number of Owners Adjustment
+    function addOwnersAdjustment() {
+      const container = document.getElementById('ownersAdjustmentsList');
+      const rowId = 'ownersAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור מספר בעלים" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
+    // Add General Full Market Adjustment (additional)
     function addFullMarketAdjustment() {
       const container = document.getElementById('allAdjustmentsList');
       const rowId = 'fullAdj_' + Date.now();
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור ההתאמה" onchange="updateFullMarketValueCalculation()" /></div>
+          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation()" /></div>
           <div><select onchange="updateFullMarketValueCalculation()">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="number" step="0.01" placeholder="%" oninput="calculateFullMarketAdjustmentValue(this);" onchange="updateFullMarketValueCalculation();" /></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation();" /></div>
           <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation()" /></div>
-          <div><button class="btn remove" onclick="removeFullMarketAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
       
@@ -6026,29 +6154,49 @@
           }
         });
         
-        // Also process any manual adjustments from the UI
-        const adjustmentRows = document.querySelectorAll('#allAdjustmentsList > div');
-        adjustmentRows.forEach((row, index) => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const description = inputs[0].value;
-            const type = inputs[1].value; // plus/minus
-            const percentage = parseFloat(inputs[2].value) || 0;
-            const value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            // Only process if not already handled by helper.valuation.adjustments
-            const isHelperAdjustment = description.includes('מס ק"מ') || description.includes('בעלות') || description.includes('בעלים');
-            
-            if (!isHelperAdjustment && value !== 0) {
-              console.log(`🔧 Manual adjustment ${index + 1}:`, { description, type, percentage, value });
+        // Process adjustments from all sections
+        const allSections = [
+          { selector: '#mileageAdjustmentsList > div.adjustment-row', name: 'מס ק"מ' },
+          { selector: '#ownershipAdjustmentsList > div.adjustment-row', name: 'סוג בעלות' },
+          { selector: '#ownersAdjustmentsList > div.adjustment-row', name: 'מספר בעלים' },
+          { selector: '#allAdjustmentsList > div.adjustment-row', name: 'נוספות' }
+        ];
+        
+        allSections.forEach(({ selector, name }) => {
+          const adjustmentRows = document.querySelectorAll(selector);
+          adjustmentRows.forEach((row, index) => {
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const description = inputs[0].value;
+              const type = inputs[1].value; // plus/minus
+              let percentage = parseFloat(inputs[2].value.replace(/[%+-]/g, '')) || 0;
+              let value = parseFloat(inputs[3].value.replace(/[₪,+-]/g, '')) || 0;
               
-              if (type === 'minus') {
-                currentValue -= value;
-              } else {
-                currentValue += value;
+              // Handle negative signs in percentage and value fields
+              const isPercentNegative = inputs[2].value.includes('-');
+              const isValueNegative = inputs[3].value.includes('-');
+              const isTypeNegative = type === 'minus';
+              
+              // Determine actual sign based on type and field values
+              const isNegativeAdjustment = isTypeNegative || isPercentNegative || isValueNegative;
+              
+              if (value !== 0) {
+                console.log(`🔧 ${name} adjustment ${index + 1}:`, { 
+                  description, 
+                  type, 
+                  percentage, 
+                  value,
+                  isNegativeAdjustment
+                });
+                
+                if (isNegativeAdjustment) {
+                  currentValue -= value;
+                } else {
+                  currentValue += value;
+                }
               }
             }
-          }
+          });
         });
         
         // Update result field
