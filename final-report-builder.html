@@ -6879,6 +6879,9 @@
         // Update depreciation section with damage center names
         updateDepreciationFromDamageCenters(damageCenterNames);
         
+        // Update/recreate damage_assessment summary sections with current data
+        updateDamageAssessmentSummary(helper);
+        
         // Trigger floating screen refresh
         triggerFloatingScreenRefresh();
         
@@ -7699,6 +7702,68 @@
         
       } catch (error) {
         console.error('Error loading helper data:', error);
+      }
+    }
+    
+    // UPDATE DAMAGE ASSESSMENT SUMMARY SECTIONS
+    function updateDamageAssessmentSummary(helper) {
+      try {
+        // Calculate current totals from helper.centers
+        let totalWorks = 0;
+        let totalParts = 0; 
+        let totalRepairs = 0;
+        let totalCenters = 0;
+        
+        if (helper.centers && helper.centers.length > 0) {
+          totalCenters = helper.centers.length;
+          
+          helper.centers.forEach(center => {
+            // Sum from parts_required
+            if (center.Parts?.parts_required) {
+              center.Parts.parts_required.forEach(part => {
+                totalParts += parseFloat(part.price) || 0;
+              });
+            }
+            
+            // Sum from works
+            if (center.Works?.works) {
+              center.Works.works.forEach(work => {
+                totalWorks += parseFloat(work.cost) || 0;
+              });
+            }
+            
+            // Sum from repairs
+            if (center.Repairs?.repairs) {
+              center.Repairs.repairs.forEach(repair => {
+                totalRepairs += parseFloat(repair.cost) || 0;
+              });
+            }
+          });
+        }
+        
+        const totalWithoutVAT = totalWorks + totalParts + totalRepairs;
+        const totalWithVAT = totalWithoutVAT * 1.18;
+        
+        // Update or create damage_assessment section
+        if (!helper.damage_assessment) helper.damage_assessment = {};
+        
+        helper.damage_assessment = {
+          total_centers: totalCenters,
+          total_items: totalCenters,
+          summary: {
+            total_works: totalWorks,
+            total_parts: totalParts,
+            total_repairs: totalRepairs,
+            total_without_vat: Math.round(totalWithoutVAT),
+            total_with_vat: Math.round(totalWithVAT)
+          },
+          last_updated: new Date().toISOString()
+        };
+        
+        console.log('✅ Updated damage_assessment summary:', helper.damage_assessment);
+        
+      } catch (error) {
+        console.error('❌ Error updating damage assessment summary:', error);
       }
     }
     
