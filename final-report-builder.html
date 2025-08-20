@@ -6314,18 +6314,19 @@
               const isValueNegative = inputs[3].value.includes('-');
               const isTypeNegative = type === 'minus';
               
-              // CRITICAL FIX: Features should be positive (+9%), the others negative
-              // Based on user specification: Features +9%, Km -26.88%, Ownership -17%, Owners -2%
+              // SIMPLE FIX: Treat values exactly as they are
+              // If percentage field has a minus sign = negative, otherwise = positive
+              // If type dropdown is "minus" = negative, otherwise = positive
               let isNegativeAdjustment;
-              if (name === 'תוספות מאפיינים') {
-                // Features are always positive additions (like 9%)
-                isNegativeAdjustment = false;
-              } else if (name === 'עליה לכביש') {
-                // Registration is always positive additions (like +4000)
-                isNegativeAdjustment = false;
+              
+              if (percentage !== 0) {
+                // For percentage values, check if the original input has a minus sign
+                isNegativeAdjustment = isPercentNegative || isTypeNegative;
+              } else if (value !== 0) {
+                // For value amounts, check if the original input has a minus sign  
+                isNegativeAdjustment = isValueNegative || isTypeNegative;
               } else {
-                // All others (Km, Ownership, Owners) are negative deductions
-                isNegativeAdjustment = true;
+                isNegativeAdjustment = isTypeNegative;
               }
               
               if (percentage !== 0 || value !== 0) {
