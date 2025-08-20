@@ -1489,9 +1489,9 @@
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
         <button type="button" class="nav-btn save-btn" onclick="saveDepreciationData()">שמור נתונים</button>
-        <button type="button" class="nav-btn" style="background: #059669;" onclick="continueToFeeModule()">
-          <span style="margin-left: 5px;">💰</span>
-          המשך למודול עמלות
+        <button type="button" class="nav-btn" style="background: #059669;" onclick="continueToValidation()">
+          <span style="margin-left: 5px;">✅</span>
+          המשך לאימות ויצירת דוח
         </button>
         <button type="button" class="nav-btn back-btn" onclick="window.location.href='selection.html'">חזור לדף הבחירה</button>
       </div>
@@ -1628,7 +1628,8 @@
       
       const rowId = 'depRow_' + Date.now();
       const newRow = `
-        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:2fr 2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:80px 1fr 1fr 120px 120px 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" style="text-align: center;" /></div>
           <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" /></div>
           <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" /></div>
           <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" /></div>
@@ -1696,12 +1697,13 @@
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
         depRows.forEach(row => {
           const inputs = row.querySelectorAll('input');
-          if (inputs.length >= 4) {
+          if (inputs.length >= 5) {
             const item = {
-              damaged_part: inputs[0].value,
-              repair_type: inputs[1].value,
-              percent: inputs[2].value,
-              value: inputs[3].value
+              center_number: inputs[0].value,
+              damaged_part: inputs[1].value,
+              repair_type: inputs[2].value,
+              percent: inputs[3].value,
+              value: inputs[4].value
             };
             console.log('💾 Saving depreciation item:', item);
             depreciationData.bulk_items.push(item);
@@ -1811,12 +1813,13 @@
       const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
       depRows.forEach(row => {
         const inputs = row.querySelectorAll('input');
-        if (inputs.length >= 4) {
+        if (inputs.length >= 5) {
           depreciationData.bulk_items.push({
-            damaged_part: inputs[0].value,
-            repair_type: inputs[1].value,
-            percent: inputs[2].value,
-            value: inputs[3].value
+            center_number: inputs[0].value,
+            damaged_part: inputs[1].value,
+            repair_type: inputs[2].value,
+            percent: inputs[3].value,
+            value: inputs[4].value
           });
         }
       });
@@ -2475,8 +2478,11 @@
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
-        // Load from centers helper (primary source) with fallback to expertise damage_blocks
-        const damageCenters = helper.centers || helper.expertise?.damage_blocks || [];
+        // Load from damage centers helper (primary source) with fallbacks
+        const damageCenters = helper.damage_assessment?.centers || 
+                             helper.damage_centers || 
+                             helper.centers || 
+                             helper.expertise?.damage_blocks || [];
         
         if (damageCenters && damageCenters.length > 0) {
           let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
@@ -3781,9 +3787,45 @@
 
     // UPDATE REPORT TYPE
     function updateReportType() {
-      const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
-      const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
-      document.getElementById('reportType').value = reportTypeText;
+      const reportTypeSelect = document.getElementById('reportType');
+      const selectedType = reportTypeSelect?.value || 'חוות דעת פרטית';
+      
+      console.log('🔄 Updating report type to:', selectedType);
+      
+      // Hide all summary sections first
+      const summaryBlocks = document.querySelectorAll('.summary-block');
+      summaryBlocks.forEach(block => block.style.display = 'none');
+      
+      // Show the correct summary section based on selected type
+      let summaryId = '';
+      switch(selectedType) {
+        case 'חוות דעת פרטית':
+          summaryId = 'summaryPrivate';
+          break;
+        case 'חוות דעת גלובלית':
+          summaryId = 'summaryGlobal';
+          break;
+        case 'חוות דעת מכירה מצבו הניזוק':
+          summaryId = 'summaryDamage';
+          break;
+        case 'חוות דעת טוטלוסט':
+          summaryId = 'summaryTotalLoss';
+          break;
+        case 'חוות דעת אובדן להלכה':
+          summaryId = 'summaryLegalLoss';
+          break;
+        default:
+          summaryId = 'summaryPrivate';
+      }
+      
+      // Show the selected summary section
+      const selectedSummary = document.getElementById(summaryId);
+      if (selectedSummary) {
+        selectedSummary.style.display = 'block';
+        console.log('✅ Showing summary section:', summaryId);
+      } else {
+        console.warn('⚠️ Summary section not found:', summaryId);
+      }
     }
 
 
@@ -6426,7 +6468,7 @@
       const reportTypeSelect = document.getElementById('reportType');
       if (reportTypeSelect) {
         reportTypeSelect.addEventListener('change', function() {
-          updateSummaryVisibility();
+          updateReportType();
           loadLegalText();
         });
       }
@@ -9076,7 +9118,7 @@
         reportTypeSelect.addEventListener('change', function() {
           const selectedType = this.value;
           console.log('Report type changed to:', selectedType);
-          updateSummaryVisibility();
+          updateReportType();
           loadLegalText(); // Update legal text when report type changes
           loadAttachmentsFromVault(); // Update attachments when report type changes
           saveAndRefreshComplete(); // Save and refresh calculations
@@ -10133,10 +10175,19 @@
       }
     };
 
-    window.continueToFeeModule = function() {
-      // Save current data before continuing
-      saveEstimate();
-      window.location.href = 'fee-module.html';
+    window.continueToValidation = function() {
+      // Save current data before continuing to validation
+      saveDepreciationData();
+      
+      // Set up helper for validation workflow
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.workflow) helper.workflow = {};
+      helper.workflow.current_stage = 'validation';
+      helper.workflow.from_builder = true;
+      helper.workflow.report_type = document.getElementById('reportType')?.value || 'חוות דעת פרטית';
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.location.href = 'validation-workflow.html';
     };
 
     window.saveData = function() {
