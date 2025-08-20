@@ -1196,7 +1196,45 @@
           <div></div>
         </div>
         
-        <!-- Mileage Adjustments -->
+        <!-- Features Adjustments (תוספות מאפיינים) -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">תוספות מאפיינים (תכונות הרכב):</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            🏗️ תוספות הקשורות לתכונות פיזיות של הרכב עצמו
+          </div>
+          <div id="fullFeaturesAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="fullFeaturesAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addFullFeaturesAdjustment()">הוסף תוספת מאפיין</button>
+          </div>
+        </div>
+        
+        <!-- Registration Adjustments (עליה לכביש) -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">עליה לכביש (תאריך רישום):</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            📅 התאמות בגין תאריך רישום הרכב (מאפיין קבוע של הרכב)
+          </div>
+          <div id="fullRegistrationAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="fullRegistrationAdjustmentsList"></div>
+            <button class="btn add" type="button" onclick="addFullRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
+          </div>
+        </div>
+        
+        <!-- Mileage Adjustments (מס ק"מ) -->
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">מס ק"מ:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
@@ -1215,7 +1253,7 @@
           </div>
         </div>
         
-        <!-- Ownership Type Adjustments -->
+        <!-- Ownership Type Adjustments (סוג בעלות) -->
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">סוג בעלות:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
@@ -1234,7 +1272,7 @@
           </div>
         </div>
         
-        <!-- Number of Owners Adjustments -->
+        <!-- Number of Owners Adjustments (מספר בעלים) -->
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">מספר בעלים:</h4>
           <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
@@ -4683,8 +4721,11 @@
         leviRows.forEach(row => row.remove());
       }
       
-      // Auto-populate adjustments in proper sections
+      // Auto-populate adjustments in CORRECT ORDER as per user requirements:
+      // 1. Features → 2. Registration → 3. Mileage → 4. Ownership → 5. Owners
       const adjustmentMapping = [
+        { key: 'features', label: 'תוספות מאפיינים', containerId: 'fullFeaturesAdjustmentsList', addFunction: addFullFeaturesAdjustment },
+        { key: 'registration', label: 'עליה לכביש', containerId: 'fullRegistrationAdjustmentsList', addFunction: addFullRegistrationAdjustment },
         { key: 'mileage', label: 'מס ק"מ', containerId: 'mileageAdjustmentsList', addFunction: addMileageAdjustment },
         { key: 'ownership', label: 'סוג בעלות', containerId: 'ownershipAdjustmentsList', addFunction: addOwnershipAdjustment },
         { key: 'owners', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment }
@@ -5929,6 +5970,50 @@
     // FULL MARKET VALUE CALCULATION FUNCTIONS
     
     // Add full market adjustment row
+    // Add Full Features Adjustment
+    function addFullFeaturesAdjustment() {
+      const container = document.getElementById('fullFeaturesAdjustmentsList');
+      const rowId = 'fullFeaturesAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור תוספת מאפיין" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
+    // Add Full Registration Adjustment
+    function addFullRegistrationAdjustment() {
+      const container = document.getElementById('fullRegistrationAdjustmentsList');
+      const rowId = 'fullRegistrationAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="%" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateFullMarketValueCalculation();
+    }
+    
     // Add Mileage Adjustment
     function addMileageAdjustment() {
       const container = document.getElementById('mileageAdjustmentsList');
@@ -6154,15 +6239,18 @@
           }
         });
         
-        // Process adjustments from all sections
+        // Process adjustments from all sections in SEQUENTIAL ORDER
+        // CRITICAL: Must follow calculation order: features → registration → mileage → ownership → owners → additional
         const allSections = [
-          { selector: '#mileageAdjustmentsList > div.adjustment-row', name: 'מס ק"מ' },
-          { selector: '#ownershipAdjustmentsList > div.adjustment-row', name: 'סוג בעלות' },
-          { selector: '#ownersAdjustmentsList > div.adjustment-row', name: 'מספר בעלים' },
-          { selector: '#allAdjustmentsList > div.adjustment-row', name: 'נוספות' }
+          { selector: '#fullFeaturesAdjustmentsList > div.adjustment-row', name: 'תוספות מאפיינים', calcFromBase: true },
+          { selector: '#fullRegistrationAdjustmentsList > div.adjustment-row', name: 'עליה לכביש', calcFromBase: true },
+          { selector: '#mileageAdjustmentsList > div.adjustment-row', name: 'מס ק"מ', calcFromBase: false },
+          { selector: '#ownershipAdjustmentsList > div.adjustment-row', name: 'סוג בעלות', calcFromBase: false },
+          { selector: '#ownersAdjustmentsList > div.adjustment-row', name: 'מספר בעלים', calcFromBase: false },
+          { selector: '#allAdjustmentsList > div.adjustment-row', name: 'נוספות', calcFromBase: false }
         ];
         
-        allSections.forEach(({ selector, name }) => {
+        allSections.forEach(({ selector, name, calcFromBase }) => {
           const adjustmentRows = document.querySelectorAll(selector);
           adjustmentRows.forEach((row, index) => {
             const inputs = row.querySelectorAll('input, select');
@@ -6180,13 +6268,30 @@
               // Determine actual sign based on type and field values
               const isNegativeAdjustment = isTypeNegative || isPercentNegative || isValueNegative;
               
+              // SEQUENTIAL CALCULATION LOGIC:
+              // Features & Registration: calculated from BASE price
+              // Mileage, Ownership, Owners: calculated from CURRENT value (cumulative)
+              
+              if (percentage !== 0 && calcFromBase) {
+                // Calculate percentage from BASE price (features, registration)
+                const adjustmentValue = (basePrice * Math.abs(percentage)) / 100;
+                value = Math.round(adjustmentValue);
+                console.log(`🔧 ${name}: ${percentage}% from base ₪${basePrice.toLocaleString()} = ₪${adjustmentValue.toLocaleString()}`);
+              } else if (percentage !== 0 && !calcFromBase) {
+                // Calculate percentage from CURRENT value (mileage, ownership, owners)
+                const adjustmentValue = (currentValue * Math.abs(percentage)) / 100;
+                value = Math.round(adjustmentValue);
+                console.log(`🔧 ${name}: ${percentage}% from current ₪${currentValue.toLocaleString()} = ₪${adjustmentValue.toLocaleString()}`);
+              }
+              
               if (value !== 0) {
                 console.log(`🔧 ${name} adjustment ${index + 1}:`, { 
                   description, 
                   type, 
                   percentage, 
                   value,
-                  isNegativeAdjustment
+                  isNegativeAdjustment,
+                  beforeValue: currentValue
                 });
                 
                 if (isNegativeAdjustment) {
@@ -6194,6 +6299,8 @@
                 } else {
                   currentValue += value;
                 }
+                
+                console.log(`🎯 After ${name}: ₪${currentValue.toLocaleString()}`);
               }
             }
           });
