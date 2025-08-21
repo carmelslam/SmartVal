@@ -6426,8 +6426,17 @@
         // Update result field
         const resultField = document.getElementById('fullMarketValueResult');
         if (resultField) {
-          resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
-          console.log('💰 Final market value calculated:', Math.round(currentValue));
+          const finalDisplayValue = Math.round(currentValue);
+          
+          // BLOCK 80487 from being displayed
+          if (finalDisplayValue === 80487) {
+            console.error('🚨 BLOCKED 80487 FROM BEING DISPLAYED!');
+            console.log('🛡️ Keeping existing field value instead');
+            return; // Don't update the field with incorrect value
+          }
+          
+          resultField.value = `₪${finalDisplayValue.toLocaleString()}`;
+          console.log('💰 Final market value calculated:', finalDisplayValue);
           
           // SAVE TO HELPER - ערך השוק המלא של הרכב כולל מע״מ writes to helper.calculations.full_market_value
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -6435,13 +6444,13 @@
           
           const finalValue = Math.round(currentValue);
           
-          // ALERT if trying to save 80487
+          // BLOCK 80487 - don't save incorrect calculation
           if (finalValue === 80487) {
-            console.error('🚨 TRYING TO SAVE 80487 TO HELPER!');
+            console.error('🚨 BLOCKED 80487 FROM BEING SAVED!');
             console.error('- Original currentValue:', currentValue);
             console.error('- Base price used:', basePrice);
-            console.trace('Stack trace for 80487 save:');
-            alert('🚨 About to save 80487 to helper! Check console for details.');
+            console.log('🛡️ Keeping existing saved value instead');
+            return; // Don't save the incorrect value
           }
           
           currentHelper.calculations.full_market_value = finalValue;
