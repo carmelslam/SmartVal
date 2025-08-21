@@ -1339,7 +1339,7 @@
     <div class="form-section" id="differentialsSection">
       <h3>הפרשים</h3>
       <label style="margin-bottom:5px;">האם קיימים הפרשים?
-        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable()">
+        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable(); saveDifferentialsToHelper();">
       </label>
       
       <div id="differentialsTable" style="display:none; margin-top:15px;">
@@ -10711,6 +10711,22 @@
           container.innerHTML = '';
           updateDifferentialsSummary();
         }
+        // Save the unchecked state
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.final_report) helper.final_report = {};
+        helper.final_report.differential = {
+          has_differentials: false,
+          items: [],
+          summary: {
+            total_amount_without_vat: 0,
+            total_vat: 0,
+            total_amount_with_vat: 0,
+            currency: '₪'
+          },
+          last_updated: new Date().toISOString()
+        };
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('💾 Saved unchecked differential state');
       }
       
       // Update summary sections to show/hide differentials impact
