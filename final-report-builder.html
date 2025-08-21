@@ -5727,85 +5727,35 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
         
-        // Load features adjustments from helper.valuation.adjustments (PRIORITY 1)
-        const allAdjustmentSources = [
-          helper.valuation?.adjustments,
-          helper.levi_report?.adjustments,
-          helper.expertise?.levi_report?.adjustments
-        ].filter(Boolean);
+        // Load features adjustments from helper.valuation.adjustments.features
+        if (helper.valuation?.adjustments?.features) {
+          helper.valuation.adjustments.features.forEach(adj => {
+            addFeatureAdjustment();
+            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input[type="text"]');
+              inputs[0].value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
+              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
+        }
         
-        allAdjustmentSources.forEach(adjustmentSource => {
-          if (Array.isArray(adjustmentSource)) {
-            const featuresAdjustments = adjustmentSource.filter(adj => {
-              const desc = adj.description?.toLowerCase() || '';
-              return adj.type === 'features' || adj.category === 'features' ||
-                     desc.includes('מאפיינים') || 
-                     desc.includes('features') ||
-                     desc.includes('אבזור') ||
-                     desc.includes('ציוד');
-            });
-          
-            console.log('🔧 Loading features adjustments:', featuresAdjustments);
-            
-            featuresAdjustments.forEach(adj => {
-              addFeatureAdjustment();
-              // Populate the last added row with data
-              const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-              if (lastRow) {
-                const inputs = lastRow.querySelectorAll('input[type="text"]');
-                inputs[0].value = adj.description || '';
-                lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-                inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
-                inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
-                
-                // Trigger calculation for the percentage field
-                const percentInput = inputs[1];
-                if (percentInput && percentInput.value) {
-                  setTimeout(() => {
-                    calculateAdjustmentValue(percentInput);
-                  }, 100);
-                }
-              }
-            });
-          }
-        });
-        
-        // Load registration adjustments from all sources (PRIORITY: helper.valuation.adjustments)
-        allAdjustmentSources.forEach(adjustmentSource => {
-          if (Array.isArray(adjustmentSource)) {
-            const registrationAdjustments = adjustmentSource.filter(adj => {
-              const desc = adj.description?.toLowerCase() || '';
-              return adj.type === 'registration' || adj.category === 'registration' ||
-                     desc.includes('עליה לכביש') || 
-                     desc.includes('registration') ||
-                     desc.includes('רישום') ||
-                     desc.includes('העליה לכביש');
-            });
-          
-            console.log('🔧 Loading registration adjustments:', registrationAdjustments);
-            
-            registrationAdjustments.forEach(adj => {
-              addRegistrationAdjustment();
-              // Populate the last added row with data
-              const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
-              if (lastRow) {
-                const inputs = lastRow.querySelectorAll('input[type="text"]');
-                inputs[0].value = adj.description || '';
-                lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-                inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
-                inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
-                
-                // Trigger calculation for the percentage field
-                const percentInput = inputs[1];
-                if (percentInput && percentInput.value) {
-                  setTimeout(() => {
-                    calculateAdjustmentValue(percentInput);
-                  }, 100);
-                }
-              }
-            });
-          }
-        });
+        // Load registration adjustments from helper.valuation.adjustments.registration
+        if (helper.valuation?.adjustments?.registration) {
+          helper.valuation.adjustments.registration.forEach(adj => {
+            addRegistrationAdjustment();
+            const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input[type="text"]');
+              inputs[0].value = adj.description || '';
+              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
+              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
+              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
+            }
+          });
+        }
         
         // Also check for direct registration fields in levi_report (structured data)
         if (helper.expertise?.levi_report?.adjustments?.registration) {
