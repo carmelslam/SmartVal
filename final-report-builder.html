@@ -2292,7 +2292,19 @@
         
         // 4. מחיר שוק (בסיס + התאמות) - Market price CORRECTED MAPPING
         const marketPriceDiv = document.getElementById('marketPriceCalculated');
-        const marketPrice = helper.final_report?.summary?.sumMarketValue || 0;
+        let marketPrice = helper.final_report?.summary?.sumMarketValue || 0;
+        
+        // Handle string values that need parsing
+        if (typeof marketPrice === 'string') {
+          marketPrice = parseFloat(marketPrice.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        console.log('🔍 DEBUG sumMarketValue mapping:', {
+          raw: helper.final_report?.summary?.sumMarketValue,
+          parsed: marketPrice,
+          type: typeof marketPrice
+        });
+        
         if (marketPriceDiv && marketPrice > 0) {
           marketPriceDiv.innerText = `₪${marketPrice.toLocaleString()}`;
         } else if (marketPriceDiv) {
