@@ -935,7 +935,7 @@
       <div class="form-grid">
         <div>
           <label for="reportType">בחר סוג חוות דעת:</label>
-          <select id="reportType" onchange="updateSummaryVisibility()">
+          <select id="reportType" onchange="updateSummaryVisibility(); loadLegalText(); saveLegalTextAfterChange();">
             <option>חוות דעת פרטית</option>
             <option>חוות דעת גלובלית</option>
             <option>חוות דעת מכירה מצבו הניזוק</option>
@@ -4185,6 +4185,28 @@
           console.log('Legal text loaded from vault and saved to final report');
         }, 100);
       }).catch(console.error);
+    }
+
+    // Save legal text after report type or other changes
+    function saveLegalTextAfterChange() {
+      // Wait for legal text to be loaded, then save to helper
+      setTimeout(() => {
+        const legalTextArea = document.getElementById('legal-text-content');
+        if (legalTextArea && legalTextArea.value && legalTextArea.value.trim() !== '') {
+          const helper = window.helper || {};
+          
+          // Initialize final_report object if it doesn't exist
+          if (!helper.final_report) {
+            helper.final_report = {};
+          }
+          helper.final_report.legal_text = legalTextArea.value;
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          updateBuilderCurrentState('final_report.legal_text', legalTextArea.value);
+          
+          console.log('✅ Legal text updated and saved to helper after report type change');
+        }
+      }, 1500); // Wait longer for legal text engine to load new content
     }
 
     // RESET LEGAL TEXT
