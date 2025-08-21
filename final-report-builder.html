@@ -5622,12 +5622,24 @@
         // USE EXACT SAME LOGIC AS WORKING updateFullMarketValueCalculation
         let currentValue = basicPrice;
         
-        // Process features section (same logic as full market value)
+        // Process features section - CORRECTED CALCULATION LOGIC
         const grossFeaturesRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         grossFeaturesRows.forEach(row => {
           const type = row.querySelector('select')?.value;
-          const valueInput = row.querySelectorAll('input[type="text"]')[2];
-          if (valueInput && valueInput.value) {
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1]; // Percentage field
+          const valueInput = inputs[2];   // Value field
+          
+          if (percentInput && percentInput.value) {
+            // Calculate percentage of BASE price (not cumulative)
+            const percent = parseFloat(percentInput.value) || 0;
+            if (percent > 0) {
+              const adjustment = basicPrice * (percent / 100); // ₪118,000 × 9% = ₪10,620
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
+              currentValue += signedAdjustment; // Add to cumulative: ₪118,000 + ₪10,620 = ₪128,620
+            }
+          } else if (valueInput && valueInput.value) {
+            // Fallback: use direct value if percentage not available
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
@@ -5644,7 +5656,7 @@
           }
         }
         
-        // Process registration section (same logic as full market value)
+        // Process registration section - Add fixed values to cumulative
         const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         grossRegistrationRows.forEach(row => {
           const type = row.querySelector('select')?.value;
@@ -5652,7 +5664,7 @@
           if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
+            currentValue += signedValue; // Add to cumulative: ₪128,620 + ₪4,000 = ₪132,620
           }
         });
         
@@ -5674,7 +5686,8 @@
         
         const grossPrice = currentValue;
         
-        console.log(`🏠 GROSS PRICE (Car Properties Only): ${basicPrice} + adjustments = ${grossPrice}`);
+        console.log(`🏠 GROSS PRICE CALCULATION: Base ₪${basicPrice.toLocaleString()} → Final ₪${grossPrice.toLocaleString()}`);
+        console.log('✅ Corrected calculation: Base + (Base × Features%) + Registration = Final');
         console.log('📋 Features adjustments:', featuresAdjustments);
         console.log('📋 Registration adjustments:', registrationAdjustments);
         
