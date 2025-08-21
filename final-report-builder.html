@@ -1496,11 +1496,11 @@
       <div class="form-grid" style="margin-top:16px;">
         <div>
           <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
-          <input type="text" id="afterSaleTotal" readonly />
+          <input type="text" id="afterSaleTotal" style="background: white; color: #333;" />
         </div>
         <div id="sumTotalAfterDifferentials-totalLoss" style="display:none;">
           <label>סה״כ סופי (לאחר הפרשים):</label>
-          <input type="text" id="afterSaleTotalFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
+          <input type="text" id="afterSaleTotalFinal" style="background: white; border:2px solid #28a745; font-weight:bold; color: #333;" />
         </div>
       </div>
     </div>
@@ -1520,11 +1520,11 @@
       <div class="form-grid" style="margin-top:16px;">
         <div>
           <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
-          <input type="text" id="afterSaleLegal" readonly />
+          <input type="text" id="afterSaleLegal" style="background: white; color: #333;" />
         </div>
         <div id="sumTotalAfterDifferentials-legalLoss" style="display:none;">
           <label>סה״כ סופי (לאחר הפרשים):</label>
-          <input type="text" id="afterSaleLegalFinal" readonly style="background:#e8f5e8; border:2px solid #28a745; font-weight:bold;" />
+          <input type="text" id="afterSaleLegalFinal" style="background: white; border:2px solid #28a745; font-weight:bold; color: #333;" />
         </div>
       </div>
     </div>
@@ -2428,35 +2428,76 @@
         const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
         document.getElementById('reportType').value = reportTypeText;
         
-        // Check if we have saved summary data first
-        if (helper.final_report?.summary) {
-          document.getElementById('sumMarketValue').value = helper.final_report.summary.market_value || '';
-          document.getElementById('sumClaim').value = helper.final_report.summary.total_claim || '';
-          document.getElementById('sumVAT').value = helper.final_report.summary.vat || '';
-          document.getElementById('sumTotalClaim').value = helper.final_report.summary.total_with_vat || '';
-          document.getElementById('depCompensation').value = helper.final_report.summary.dep_compensation || '';
-          document.getElementById('salvageValue').value = helper.final_report.summary.salvage_value || '';
-        } else {
-          // Load from helper calculations if no saved summary
-          const marketValue = helper.expertise?.calculations?.market_value || 0;
-          const totalClaim = helper.expertise?.calculations?.total_damage || 0;
-          
-          // Set market value and claim
-          document.getElementById('sumMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          document.getElementById('sumClaim').value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
-          
-          // Calculate VAT based on company selection
+        // Always use helper.calculations.full_market_value for market values
+        const marketValue = helper.calculations?.full_market_value || 0;
+        const formattedMarketValue = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+        
+        // Populate all market value fields with the same standardized value
+        const marketValueFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
+        marketValueFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) field.value = formattedMarketValue;
+        });
+        
+        // Load all summary fields from helper data with proper mapping
+        
+        // Claims data - from damage centers or manual input
+        const totalClaim = helper.damage_centers_summary?.total_cost || 
+                          helper.expertise?.calculations?.total_damage || 
+                          helper.final_report?.summary?.total_claim || 0;
+        const claimField = document.getElementById('sumClaim');
+        if (claimField && totalClaim > 0) {
+          claimField.value = `₪${totalClaim.toLocaleString()}`;
+        }
+        
+        // Compensation data from helper calculations or UI capture
+        const compensation = helper.expertise?.calculations?.depreciation_compensation ||
+                               helper.final_report?.summary?.dep_compensation || 0;
+        const depCompensationField = document.getElementById('depCompensation');
+        if (depCompensationField && compensation > 0) {
+          depCompensationField.value = `₪${compensation.toLocaleString()}`;
+        }
+        
+        // Salvage values for different summary types
+        const salvageValue = helper.final_report?.summary?.salvage_value || 
+                           helper.expertise?.calculations?.salvage_value || 0;
+        const salvageFields = ['salvageValueTotal', 'salvageValueLegal'];
+        salvageFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field && salvageValue > 0) {
+            field.value = `₪${salvageValue.toLocaleString()}`;
+          }
+        });
+        
+        // Sale value for damaged state summary
+        const saleValue = helper.final_report?.summary?.damaged_sale_value || 0;
+        const saleValueField = document.getElementById('saleValueDamage');
+        if (saleValueField && saleValue > 0) {
+          saleValueField.value = `₪${saleValue.toLocaleString()}`;
+        }
+        
+        // Storage/towing value for total loss
+        const storageValue = helper.final_report?.summary?.storage_value || 0;
+        const storageValueField = document.getElementById('storageValueTotal');
+        if (storageValueField && storageValue > 0) {
+          storageValueField.value = `₪${storageValue.toLocaleString()}`;
+        }
+        
+        // Calculate VAT and totals if we have claim data
+        if (totalClaim > 0) {
           const vatRate = getVatRate();
           const vat = totalClaim * vatRate;
-          document.getElementById('sumVAT').value = vat ? `₪${Math.round(vat).toLocaleString()}` : '';
           
-          // Calculate total with VAT
+          const vatField = document.getElementById('sumVAT');
+          if (vatField) {
+            vatField.value = `₪${Math.round(vat).toLocaleString()}`;
+          }
+          
           const totalWithVAT = totalClaim + vat;
-          document.getElementById('sumTotalClaim').value = totalWithVAT ? `₪${Math.round(totalWithVAT).toLocaleString()}` : '';
-          
-          // Set depreciation compensation
-          const depCompensation = helper.expertise?.calculations?.depreciation_compensation || 0;
-          document.getElementById('depCompensation').value = depCompensation ? `₪${depCompensation.toLocaleString()}` : '';
+          const totalClaimField = document.getElementById('sumTotalClaim');
+          if (totalClaimField) {
+            totalClaimField.value = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+          }
         }
         
         // Load saved final report notes if available
@@ -10425,7 +10466,7 @@
           
         case 'חוות דעת גלובלית':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueGlobal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
@@ -10435,7 +10476,7 @@
           
         case 'חוות דעת טוטלוסט':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueTotal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotalTotalLoss" style="background: white; color: #333;" /></div>
@@ -10444,7 +10485,7 @@
           
         case 'חוות דעת מכירה מצבו הניזוק':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueDamage" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalDamagedSale" style="background: white; color: #333;" /></div>
           `;
@@ -10452,7 +10493,7 @@
           
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueLegal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalLegalLoss" style="background: white; color: #333;" /></div>
           `;
           break;
@@ -10475,45 +10516,65 @@
     // Calculate summary totals based on current report type
     function calculateSummaryTotals() {
       const reportType = document.getElementById('reportType')?.value || 'חוות דעת פרטית';
-      const marketValue = parseFloat(document.getElementById('sumMarketValue')?.value || 0);
+      
+      // Get market values from appropriate fields (uses standardized helper.calculations.full_market_value)
+      let marketValue = 0;
+      const marketFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
+      for (const fieldId of marketFields) {
+        const field = document.getElementById(fieldId);
+        if (field && field.value) {
+          marketValue = parseFloat(field.value.replace(/[₪,]/g, '')) || 0;
+          break;
+        }
+      }
       
       switch(reportType) {
         case 'חוות דעת פרטית':
-          const claimPrivate = parseFloat(document.getElementById('sumClaim')?.value || 0);
-          const depreciationPrivate = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
-          const adjustmentsPrivate = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
-          const totalPrivate = claimPrivate + depreciationPrivate + adjustmentsPrivate;
-          const totalFieldPrivate = document.getElementById('sumTotalPrivate');
-          if (totalFieldPrivate) totalFieldPrivate.value = totalPrivate.toFixed(2);
+          // Private: Claims + Compensation = Total (before differentials)
+          const claimPrivate = parseFloat(document.getElementById('sumClaim')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const compensationPrivate = parseFloat(document.getElementById('depCompensation')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const totalPrivate = claimPrivate + compensationPrivate;
+          
+          const totalFieldPrivate = document.getElementById('sumTotal1');
+          if (totalFieldPrivate) totalFieldPrivate.value = `₪${totalPrivate.toLocaleString()}`;
           break;
           
         case 'חוות דעת גלובלית':
-          const claimGlobal = parseFloat(document.getElementById('sumClaim')?.value || 0);
-          const depreciationGlobal = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
-          const adjustmentsGlobal = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
-          const totalGlobal = claimGlobal + depreciationGlobal + adjustmentsGlobal;
+          // Global: Similar to private logic
+          const claimGlobal = parseFloat(document.getElementById('sumClaim')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const compensationGlobal = parseFloat(document.getElementById('depCompensation')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const totalGlobal = claimGlobal + compensationGlobal;
+          
           const totalFieldGlobal = document.getElementById('sumTotalGlobal');
-          if (totalFieldGlobal) totalFieldGlobal.value = totalGlobal.toFixed(2);
+          if (totalFieldGlobal) totalFieldGlobal.value = `₪${totalGlobal.toLocaleString()}`;
           break;
           
         case 'חוות דעת טוטלוסט':
-          const scrapValue = parseFloat(document.getElementById('sumScrapValue')?.value || 0);
-          const towingStorage = parseFloat(document.getElementById('sumTowingStorage')?.value || 0);
-          const totalTotalLoss = marketValue - scrapValue + towingStorage;
-          const totalFieldTL = document.getElementById('sumTotalTotalLoss');
-          if (totalFieldTL) totalFieldTL.value = totalTotalLoss.toFixed(2);
+          // Total Loss: Market Value - Salvage Value + Storage/Towing = After Sale Total
+          const salvageValue = parseFloat(document.getElementById('salvageValueTotal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const storageValue = parseFloat(document.getElementById('storageValueTotal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const afterSaleTotal = marketValue - salvageValue + storageValue;
+          
+          const afterSaleField = document.getElementById('afterSaleTotal');
+          if (afterSaleField) afterSaleField.value = `₪${afterSaleTotal.toLocaleString()}`;
           break;
           
         case 'חוות דעת מכירה מצבו הניזוק':
-          const damagedSaleValue = parseFloat(document.getElementById('sumDamagedSaleValue')?.value || 0);
-          const totalDamaged = marketValue - damagedSaleValue;
-          const totalFieldDS = document.getElementById('sumTotalDamagedSale');
-          if (totalFieldDS) totalFieldDS.value = totalDamaged.toFixed(2);
+          // Damage Sale: Market Value - Sale Value = After Sale
+          const saleValue = parseFloat(document.getElementById('saleValueDamage')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const afterSaleDamage = marketValue - saleValue;
+          
+          const afterSaleDamageField = document.getElementById('afterSaleDamage');
+          if (afterSaleDamageField) afterSaleDamageField.value = `₪${afterSaleDamage.toLocaleString()}`;
           break;
           
         case 'חוות דעת אובדן להלכה':
-          const totalFieldLegal = document.getElementById('sumTotalLegalLoss');
-          if (totalFieldLegal) totalFieldLegal.value = marketValue.toFixed(2);
+          // Legal Loss: Market Value - Salvage Value = After Sale
+          const salvageValueLegal = parseFloat(document.getElementById('salvageValueLegal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+          const afterSaleLegal = marketValue - salvageValueLegal;
+          
+          const afterSaleLegalField = document.getElementById('afterSaleLegal');
+          if (afterSaleLegalField) afterSaleLegalField.value = `₪${afterSaleLegal.toLocaleString()}`;
           break;
           
         default:
@@ -10697,21 +10758,90 @@
         if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
       }
       
+      // Show/hide after differentials fields and calculate final totals
+      const reportType = document.getElementById('reportType')?.value || '';
+      const hasDifferentials = rows.length > 0;
+      
+      if (hasDifferentials) {
+        // Show after differentials fields for each summary type
+        const afterDifferentialsFields = [
+          'sumTotalAfterDifferentials-private',
+          'sumTotalAfterDifferentials-global', 
+          'sumTotalAfterDifferentials-damage',
+          'sumTotalAfterDifferentials-totalLoss',
+          'sumTotalAfterDifferentials-legalLoss'
+        ];
+        
+        afterDifferentialsFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) field.style.display = 'block';
+        });
+        
+        // Calculate after differentials totals
+        calculateAfterDifferentialsTotals(totalWithVat);
+      } else {
+        // Hide after differentials fields when no differentials
+        const afterDifferentialsFields = [
+          'sumTotalAfterDifferentials-private',
+          'sumTotalAfterDifferentials-global',
+          'sumTotalAfterDifferentials-damage', 
+          'sumTotalAfterDifferentials-totalLoss',
+          'sumTotalAfterDifferentials-legalLoss'
+        ];
+        
+        afterDifferentialsFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) field.style.display = 'none';
+        });
+      }
+      
       // Update main summary calculations - show הפרשים in summary
       updateMainSummaryWithDifferentials(totalWithVat);
+    }
+    
+    // Calculate after differentials totals for all summary types
+    function calculateAfterDifferentialsTotals(differentialsTotal) {
+      // Get the "before differentials" values and calculate "after differentials"
       
-      // Save to helper for final report
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!helper.expertise) helper.expertise = {};
-      helper.expertise.differentials = {
-        has_differentials: rows.length > 0,
-        total_amount: totalAmount,
-        total_vat: totalVat,
-        total_with_vat: totalWithVat
-      };
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      // Private summary
+      const sumTotal1 = parseFloat(document.getElementById('sumTotal1')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const sumTotalFinalField = document.getElementById('sumTotalFinal');
+      if (sumTotalFinalField) {
+        const finalValue = sumTotal1 - differentialsTotal;
+        sumTotalFinalField.value = `₪${finalValue.toLocaleString()}`;
+      }
       
-      console.log(`✅ הפרשים updated and connected to summary: ${totalWithVat}`);
+      // Global summary
+      const sumTotalGlobal = parseFloat(document.getElementById('sumTotalGlobal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const sumTotalFinalGlobalField = document.getElementById('sumTotalFinalGlobal');
+      if (sumTotalFinalGlobalField) {
+        const finalValueGlobal = sumTotalGlobal - differentialsTotal;
+        sumTotalFinalGlobalField.value = `₪${finalValueGlobal.toLocaleString()}`;
+      }
+      
+      // Damage summary
+      const afterSaleDamage = parseFloat(document.getElementById('afterSaleDamage')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const afterSaleDamageFinalField = document.getElementById('afterSaleDamageFinal');
+      if (afterSaleDamageFinalField) {
+        const finalValueDamage = afterSaleDamage - differentialsTotal;
+        afterSaleDamageFinalField.value = `₪${finalValueDamage.toLocaleString()}`;
+      }
+      
+      // Total Loss summary
+      const afterSaleTotal = parseFloat(document.getElementById('afterSaleTotal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const afterSaleTotalFinalField = document.getElementById('afterSaleTotalFinal');
+      if (afterSaleTotalFinalField) {
+        const finalValueTotal = afterSaleTotal - differentialsTotal;
+        afterSaleTotalFinalField.value = `₪${finalValueTotal.toLocaleString()}`;
+      }
+      
+      // Legal Loss summary
+      const afterSaleLegal = parseFloat(document.getElementById('afterSaleLegal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const afterSaleLegalFinalField = document.getElementById('afterSaleLegalFinal');
+      if (afterSaleLegalFinalField) {
+        const finalValueLegal = afterSaleLegal - differentialsTotal;
+        afterSaleLegalFinalField.value = `₪${finalValueLegal.toLocaleString()}`;
+      }
     }
     
     // Save differentials data with user feedback
