@@ -4296,32 +4296,40 @@
     }
 
     // LOAD ATTACHMENTS FROM VAULT
-    function loadAttachmentsFromVault() {
-      // Get selected type from dropdown
-      const reportTypeSelect = document.getElementById('reportType');
-      const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
-      
-      // Attachments vault - complete mapping for all 5 report types
-      const attachmentsVault = {
-        'חוות דעת פרטית': '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב',
-        'חוות דעת גלובלית': '**לוטה**\nתצלומי הרכב הניזוק\nחישובי ירידת ערך\nערך רכב ממוחשב\nצילום רישיון הרכב',
-        'חוות דעת מכירה מצבו הניזוק': '**לוטה**\nתצלומי הרכב הניזוק\nהערכת ערך במצב ניזוק\nצילום רישיון הרכב',
-        'חוות דעת טוטלוסט': '**לוטה**\nתצלומי הרכב הניזוק\nערך רכב ממוחשב\nצילום רישיון הרכב\nמכירת שרידים',
-        'חוות דעת אובדן להלכה': '**לוטה**\nתצלומי הרכב הניזוק\nערך רכב ממוחשב\nצילום רישיון הרכב'
-      };
-      
-      // Get attachments for selected type
-      const attachmentsText = attachmentsVault[reportType] || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
-      
-      document.getElementById('attachments-content').value = attachmentsText;
-      
-      // Save to helper and LOCK the selection
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.final_report.attachments = attachmentsText;
-      helper.final_report.attachments_locked = true; // Lock the selection
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      console.log('📎 Attachments loaded from vault for type:', reportType, 'and LOCKED');
+    async function loadAttachmentsFromVault() {
+      try {
+        // Get selected type from dropdown
+        const reportTypeSelect = document.getElementById('reportType');
+        const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
+        
+        console.log('📎 Loading attachments from vault for type:', reportType);
+        
+        // Use the legal text engine to get attachments from the actual vault
+        if (window.LegalTextEngine) {
+          const attachmentsText = await window.LegalTextEngine.getAttachments(reportType);
+          
+          document.getElementById('attachments-content').value = attachmentsText;
+          
+          // Save to helper and LOCK the selection
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.attachments = attachmentsText;
+          helper.final_report.attachments_locked = true; // Lock the selection
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log('✅ Attachments loaded from vault using LegalTextEngine and LOCKED');
+        } else {
+          console.error('❌ LegalTextEngine not available');
+          // Fallback to hardcoded with חשכ"ט
+          const fallbackText = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+          document.getElementById('attachments-content').value = fallbackText;
+        }
+      } catch (error) {
+        console.error('❌ Error loading attachments from vault:', error);
+        // Fallback to default with חשכ"ט
+        const fallbackText = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+        document.getElementById('attachments-content').value = fallbackText;
+      }
     }
 
     // RESET ATTACHMENTS
