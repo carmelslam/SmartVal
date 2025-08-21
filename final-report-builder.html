@@ -4169,20 +4169,22 @@
 
     // LOAD LEGAL TEXT FROM VAULT - SEPARATE FUNCTION FOR BUTTON
     function loadLegalTextFromVault() {
-      loadLegalText().catch(console.error);
-      
-      // Save the legal text to helper for the final report
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      
-      // Initialize final_report object if it doesn't exist
-      if (!helper.final_report) {
-        helper.final_report = {};
-      }
-      helper.final_report.legal_text = document.getElementById('legal-text-content').value;
-      
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      console.log('Legal text loaded from vault and saved to final report');
+      loadLegalText().then(() => {
+        // Save the legal text to helper after it's been loaded
+        setTimeout(() => {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Initialize final_report object if it doesn't exist
+          if (!helper.final_report) {
+            helper.final_report = {};
+          }
+          helper.final_report.legal_text = document.getElementById('legal-text-content').value;
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log('Legal text loaded from vault and saved to final report');
+        }, 100);
+      }).catch(console.error);
     }
 
     // RESET LEGAL TEXT
@@ -7068,21 +7070,35 @@
       // Add listener to legal text textarea to save changes
       const legalTextArea = document.getElementById('legal-text-content');
       if (legalTextArea) {
-        legalTextArea.addEventListener('input', function() {
-          // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
+        // Function to save legal text to helper
+        function saveLegalTextToHelper() {
+          const helper = window.helper || {};
           
           // Initialize final_report object if it doesn't exist
           if (!helper.final_report) {
             helper.final_report = {};
           }
-          helper.final_report.legal_text = this.value;
+          helper.final_report.legal_text = legalTextArea.value;
           
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
-          updateBuilderCurrentState('final_report.legal_text', this.value);
-        });
+          updateBuilderCurrentState('final_report.legal_text', legalTextArea.value);
+        }
+        
+        // Save on input
+        legalTextArea.addEventListener('input', saveLegalTextToHelper);
+        
+        // Save on change (when user finishes editing)
+        legalTextArea.addEventListener('change', saveLegalTextToHelper);
+        
+        // Initial save if there's already content (after page load)
+        setTimeout(() => {
+          if (legalTextArea.value && legalTextArea.value.trim() !== '') {
+            saveLegalTextToHelper();
+            console.log('✅ Initial legal text saved to helper:', legalTextArea.value.substring(0, 100) + '...');
+          }
+        }, 1000);
       }
       
       // AUTO-SAVE ATTACHMENTS ON INPUT
