@@ -5619,38 +5619,44 @@
           }
         });
         
-        // Calculate GROSS price using the original math logic
+        // Calculate GROSS price using existing system math logic - STEP BY STEP
+        let currentValue = basicPrice;
+        
+        // Step 1: Apply features adjustments to base price
         const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+        currentValue += featuresTotal;
+        
+        // Update features cumulative display
+        const grossFeaturesCumulativeEl = document.getElementById('grossFeaturesCumulative');
+        if (grossFeaturesCumulativeEl) {
+          const span = grossFeaturesCumulativeEl.querySelector('span');
+          if (span) {
+            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+            span.style.color = currentValue >= basicPrice ? '#28a745' : '#dc3545';
+          }
+        }
+        
+        // Step 2: Apply registration adjustments to features cumulative
         const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.value, 0);
-        const grossPrice = basicPrice + featuresTotal + registrationTotal;
+        currentValue += registrationTotal;
+        
+        // Update registration cumulative display
+        const grossRegistrationCumulativeEl = document.getElementById('grossRegistrationCumulative');
+        if (grossRegistrationCumulativeEl) {
+          const span = grossRegistrationCumulativeEl.querySelector('span');
+          if (span) {
+            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+            span.style.color = currentValue >= basicPrice ? '#28a745' : '#dc3545';
+          }
+        }
+        
+        // Final gross price is the cumulative result
+        const grossPrice = currentValue;
         
         // Update result field
         const resultField = document.getElementById('grossMarketValueResult');
         if (resultField) {
           resultField.value = `₪${grossPrice.toLocaleString()}`;
-        }
-        
-        // Update cumulative displays for gross section - FIXED IDs
-        // Features cumulative = base + features
-        const featuresCurrentValue = basicPrice + featuresTotal;
-        const grossFeaturesCumulativeEl = document.getElementById('grossFeaturesCumulative');
-        if (grossFeaturesCumulativeEl) {
-          const span = grossFeaturesCumulativeEl.querySelector('span');
-          if (span) {
-            span.textContent = `₪${Math.round(featuresCurrentValue).toLocaleString()}`;
-            span.style.color = featuresCurrentValue >= basicPrice ? '#28a745' : '#dc3545';
-          }
-        }
-        
-        // Registration cumulative = base + features + registration  
-        const registrationCurrentValue = basicPrice + featuresTotal + registrationTotal;
-        const grossRegistrationCumulativeEl = document.getElementById('grossRegistrationCumulative');
-        if (grossRegistrationCumulativeEl) {
-          const span = grossRegistrationCumulativeEl.querySelector('span');
-          if (span) {
-            span.textContent = `₪${Math.round(registrationCurrentValue).toLocaleString()}`;
-            span.style.color = registrationCurrentValue >= basicPrice ? '#28a745' : '#dc3545';
-          }
         }
         
         console.log(`🏠 GROSS PRICE (Car Properties Only): ${basicPrice} + adjustments = ${grossPrice}`);
