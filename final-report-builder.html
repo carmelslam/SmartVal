@@ -1374,7 +1374,7 @@
       
       <!-- Save button outside summary but inside differentials section -->
       <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
-        <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer;">שמור הפרשים</button>
+        <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer; position: relative; z-index: 10;">שמור הפרשים</button>
       </div>
     </div>
     <br><br>
@@ -10667,13 +10667,20 @@
         vatInput.value = newVat;
         totalInput.value = newTotal;
         
-        // Recalculate summary
+        // Recalculate summary and auto-save
         updateDifferentialsSummary();
+        saveDifferentialsToHelper();
       });
+      
+      // Add auto-save to text inputs
+      div.querySelector('.diff-part').addEventListener('input', saveDifferentialsToHelper);
+      div.querySelector('.diff-nature').addEventListener('input', saveDifferentialsToHelper);
+      div.querySelector('.diff-reason').addEventListener('input', saveDifferentialsToHelper);
       
       removeBtn.addEventListener('click', function() {
         div.remove();
         updateDifferentialsSummary();
+        saveDifferentialsToHelper();
       });
       
       return div;
@@ -10732,15 +10739,63 @@
     function addDifferentialRow() {
       const container = document.getElementById('differentialsRows');
       if (container) {
-        // FORCE CLEAR any corrupted rows first
-        container.innerHTML = '';
-        console.log('🧹 Cleared differentials container');
-        
         const newRow = createDifferentialRow();
         container.appendChild(newRow);
-        console.log('✅ Added new clean differential row');
+        console.log('✅ Added new differential row');
         updateDifferentialsSummary();
+        saveDifferentialsToHelper();
       }
+    }
+    
+    // Auto-save differential data to helper
+    function saveDifferentialsToHelper() {
+      const rows = document.querySelectorAll('#differentialsRows .differential-row');
+      const differentialsData = [];
+      let totalAmount = 0;
+      let totalVat = 0;
+      let totalWithVat = 0;
+      
+      rows.forEach((row, index) => {
+        const part = row.querySelector('.diff-part')?.value || '';
+        const nature = row.querySelector('.diff-nature')?.value || '';
+        const reason = row.querySelector('.diff-reason')?.value || '';
+        const amount = parseFloat(row.querySelector('.diff-amount')?.value) || 0;
+        const vat = parseFloat(row.querySelector('.diff-vat')?.value) || 0;
+        const total = parseFloat(row.querySelector('.diff-total')?.value) || 0;
+        
+        differentialsData.push({
+          id: index + 1,
+          part: part,
+          nature: nature,
+          reason: reason,
+          amount_without_vat: amount,
+          vat_amount: vat,
+          amount_with_vat: total
+        });
+        
+        totalAmount += amount;
+        totalVat += vat;
+        totalWithVat += total;
+      });
+      
+      // Save to helper.final_report.differential
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.final_report) helper.final_report = {};
+      
+      helper.final_report.differential = {
+        has_differentials: document.getElementById('hasDifferentials')?.checked || false,
+        items: differentialsData,
+        summary: {
+          total_amount_without_vat: totalAmount,
+          total_vat: totalVat,
+          total_amount_with_vat: totalWithVat,
+          currency: '₪'
+        },
+        last_updated: new Date().toISOString()
+      };
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('💾 Auto-saved differentials to helper:', helper.final_report.differential);
     }
     
     function updateDifferentialsSummary() {
