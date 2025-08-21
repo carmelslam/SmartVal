@@ -1397,6 +1397,7 @@
         </div>
         <div id="differentialsRows"></div>
         <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
+        <button class="btn save" type="button" onclick="saveDifferentials()" style="margin-right: 10px; background: #28a745; color: white;">שמור</button>
       </div>
       <div id="differentialsSummary" style="display:none; margin-top:15px;">
         <div class="form-grid">
@@ -10536,6 +10537,73 @@
       console.log(`✅ הפרשים updated and connected to summary: ${totalWithVat}`);
     }
     
+    // Save differentials data with user feedback
+    function saveDifferentials() {
+      // Collect all differential row data
+      const rows = document.querySelectorAll('#differentialsRows .differential-row');
+      const differentialsData = [];
+      let totalAmount = 0;
+      let totalVat = 0;
+      let totalWithVat = 0;
+      
+      rows.forEach((row, index) => {
+        const part = row.querySelector('.diff-part')?.value || '';
+        const nature = row.querySelector('.diff-nature')?.value || '';
+        const reason = row.querySelector('.diff-reason')?.value || '';
+        const amount = parseFloat(row.querySelector('.diff-amount')?.value) || 0;
+        const vat = parseFloat(row.querySelector('.diff-vat')?.value) || 0;
+        const total = parseFloat(row.querySelector('.diff-total')?.value) || 0;
+        
+        differentialsData.push({
+          id: index + 1,
+          part: part,
+          nature: nature,
+          reason: reason,
+          amount_without_vat: amount,
+          vat_amount: vat,
+          amount_with_vat: total
+        });
+        
+        totalAmount += amount;
+        totalVat += vat;
+        totalWithVat += total;
+      });
+      
+      // Save to helper.final_report.differential
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.final_report) helper.final_report = {};
+      
+      helper.final_report.differential = {
+        has_differentials: document.getElementById('hasDifferentials')?.checked || false,
+        items: differentialsData,
+        summary: {
+          total_amount_without_vat: totalAmount,
+          total_vat: totalVat,
+          total_amount_with_vat: totalWithVat,
+          currency: '₪'
+        },
+        last_updated: new Date().toISOString()
+      };
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Also update the legacy format for backward compatibility
+      updateDifferentialsSummary();
+      
+      // Show success message
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = '✓ נשמר';
+      button.style.background = '#28a745';
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = '#28a745';
+      }, 1500);
+      
+      console.log('✅ הפרשים saved successfully to helper.final_report.differential:', helper.final_report.differential);
+    }
+    
     function updateMainSummaryWithDifferentials(differencesTotal) {
       // Show differentials impact in all summary types
       const summaryTypes = [
@@ -11126,6 +11194,7 @@
     window.collectDifferentials = collectDifferentials;
     window.getVatRate = getVatRate;
     window.renderDifferentials = renderDifferentials;
+    window.saveDifferentials = saveDifferentials;
     window.createLeviAdjustmentRow = createLeviAdjustmentRow;
     window.calculateGlobalDepreciationValue = calculateGlobalDepreciationValue;
     window.triggerMathCalculation = triggerMathCalculation;

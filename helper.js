@@ -1491,6 +1491,17 @@ window.fixHelperStructure = function() {
             valuation_calculations: {},
             depreciation: {},
             legal_disclaimer: {}
+          },
+          differential: {
+            has_differentials: false,
+            items: [],
+            summary: {
+              total_amount_without_vat: 0,
+              total_vat: 0,
+              total_amount_with_vat: 0,
+              currency: '₪'
+            },
+            last_updated: ''
           }
         };
       } else if (section === 'expertise') {
@@ -2666,6 +2677,17 @@ window.helper = existingHelper || {
       valuation_calculations: {},
       depreciation: {},
       legal_disclaimer: {}
+    },
+    differential: {
+      has_differentials: false,
+      items: [],
+      summary: {
+        total_amount_without_vat: 0,
+        total_vat: 0,
+        total_amount_with_vat: 0,
+        currency: '₪'
+      },
+      last_updated: ''
     }
   },
   levi_data: {
