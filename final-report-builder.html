@@ -4236,22 +4236,36 @@
 
     // LOAD LEGAL TEXT FROM VAULT - SEPARATE FUNCTION FOR BUTTON
     function loadLegalTextFromVault() {
-      loadLegalText().then(() => {
-        // Save the legal text to helper after it's been loaded
-        setTimeout(() => {
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          
-          // Initialize final_report object if it doesn't exist
-          if (!helper.final_report) {
-            helper.final_report = {};
-          }
-          helper.final_report.legal_text = document.getElementById('legal-text-content').value;
-          
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          
-          console.log('Legal text loaded from vault and saved to final report');
-        }, 100);
-      }).catch(console.error);
+      try {
+        loadLegalText().then(() => {
+          // Save the legal text to helper after it's been loaded
+          setTimeout(() => {
+            try {
+              const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+              
+              // Initialize final_report object if it doesn't exist
+              if (!helper.final_report) {
+                helper.final_report = {};
+              }
+              
+              const legalTextElement = document.getElementById('legal-text-content');
+              if (legalTextElement && legalTextElement.value) {
+                helper.final_report.legal_text = legalTextElement.value;
+                sessionStorage.setItem('helper', JSON.stringify(helper));
+                console.log('✅ Legal text loaded from vault and saved to final report');
+              } else {
+                console.error('❌ Legal text element not found or empty');
+              }
+            } catch (error) {
+              console.error('❌ Error saving legal text to helper:', error);
+            }
+          }, 100);
+        }).catch(error => {
+          console.error('❌ Error loading legal text from vault:', error);
+        });
+      } catch (error) {
+        console.error('❌ Error in loadLegalTextFromVault:', error);
+      }
     }
 
     // Save legal text after report type or other changes
@@ -4334,16 +4348,22 @@
 
     // RESET ATTACHMENTS
     function resetAttachments() {
-      // Reset to default attachments
-      const defaultAttachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
-      document.getElementById('attachments-content').value = defaultAttachments;
-      
-      // Clear from helper
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      delete helper.final_report.attachments;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      console.log('Attachments reset');
+      try {
+        // Reset to default attachments
+        const defaultAttachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+        document.getElementById('attachments-content').value = defaultAttachments;
+        
+        // Clear from helper safely
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.final_report) helper.final_report = {};
+        delete helper.final_report.attachments;
+        delete helper.final_report.attachments_locked;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ Attachments reset to default list');
+      } catch (error) {
+        console.error('❌ Error resetting attachments:', error);
+      }
     }
 
     // LOAD ATTACHMENTS DATA FROM HELPER
