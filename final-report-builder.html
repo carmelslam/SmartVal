@@ -10376,6 +10376,9 @@
       const vat = Math.round(amount * vatRate);
       const totalWithVat = amount + vat;
       
+      // CORRECTED: Ensure we use the correct data structure - clear any wrong legacy data
+      console.log('🔍 Creating differential row with data:', data);
+      
       div.innerHTML = `
         <div>
           <input type="text" class="diff-part" placeholder="חלק" value="${data.part || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
@@ -10853,8 +10856,17 @@
       if (!container) return;
       
       container.innerHTML = '';
+      console.log('🔍 Loading differentials data:', list);
+      
       if (list && list.length > 0) {
-        list.forEach(item => {
+        // FILTER OUT CORRUPTED DATA - only load properly structured differential data
+        const validDifferentials = list.filter(item => {
+          return item && typeof item === 'object' && (item.part || item.nature || item.reason || item.amount);
+        });
+        
+        console.log('✅ Valid differentials after filter:', validDifferentials);
+        
+        validDifferentials.forEach(item => {
           const row = createDifferentialRow(item);
           container.appendChild(row);
         });
