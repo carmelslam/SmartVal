@@ -1397,7 +1397,6 @@
         </div>
         <div id="differentialsRows"></div>
         <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
-        <button class="btn save" type="button" onclick="saveDifferentials()" style="margin-right: 10px; background: #28a745; color: white;">שמור</button>
       </div>
       <div id="differentialsSummary" style="display:none; margin-top:15px;">
         <div class="form-grid">
@@ -1414,6 +1413,7 @@
             <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
           </div>
         </div>
+        <button class="btn save" type="button" onclick="saveDifferentials()">שמור</button>
       </div>
     </div>
     <br><br>
@@ -10619,6 +10619,54 @@
       }
     }
     
+    // Load differential data from helper on page load
+    function loadDifferentialData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const differentialData = helper.final_report?.differential;
+        
+        if (!differentialData || !differentialData.has_differentials) {
+          console.log('📝 No differential data found in helper');
+          return;
+        }
+        
+        console.log('📖 Loading differential data from helper:', differentialData);
+        
+        // Check the "has differentials" checkbox
+        const hasDiffCheckbox = document.getElementById('hasDifferentials');
+        if (hasDiffCheckbox) {
+          hasDiffCheckbox.checked = differentialData.has_differentials;
+          // Trigger the toggle to show the table
+          toggleDifferentials();
+        }
+        
+        // Load each differential item
+        const container = document.getElementById('differentialsRows');
+        if (container && differentialData.items) {
+          // Clear existing rows
+          container.innerHTML = '';
+          
+          // Add each differential item
+          differentialData.items.forEach(item => {
+            const row = createDifferentialRow({
+              part: item.part || '',
+              nature: item.nature || '',
+              reason: item.reason || '',
+              amount: item.amount_without_vat || 0
+            });
+            container.appendChild(row);
+          });
+          
+          // Update summary
+          updateDifferentialsSummary();
+        }
+        
+        console.log('✅ Differential data loaded successfully');
+      } catch (error) {
+        console.error('❌ Error loading differential data:', error);
+      }
+    }
+    
     function updateMainSummaryWithDifferentials(differencesTotal) {
       // Show differentials impact in all summary types
       const summaryTypes = [
@@ -11211,6 +11259,7 @@
     window.renderDifferentials = renderDifferentials;
     window.saveDifferentials = saveDifferentials;
     window.updateFinalReportField = updateFinalReportField;
+    window.loadDifferentialData = loadDifferentialData;
     window.createLeviAdjustmentRow = createLeviAdjustmentRow;
     window.calculateGlobalDepreciationValue = calculateGlobalDepreciationValue;
     window.triggerMathCalculation = triggerMathCalculation;
@@ -11328,6 +11377,12 @@
     
     // Expose refresh function globally
     window.refreshAllCalculations = refreshAllCalculations;
+    
+    // Load differential data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📖 Loading saved differential data...');
+      setTimeout(loadDifferentialData, 500); // Delay to ensure DOM is ready
+    });
     
     // Auto-trigger calculation refresh when key data changes
     document.addEventListener('DOMContentLoaded', function() {
