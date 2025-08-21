@@ -207,6 +207,23 @@ class LegalTextEngine {
   }
 
   /**
+   * Get vault key for a specific report type
+   * @param {string} reportType - Report type identifier
+   * @returns {string} Vault key
+   */
+  getVaultKey(reportType) {
+    const mapping = {
+      'חוות דעת פרטית': 'private',
+      'חוות דעת גלובלית': 'global', 
+      'חוות דעת טוטלוסט': 'total_loss',
+      'חוות דעת מכירה מצבו הניזוק': 'damaged_sale',
+      'חוות דעת אובדן להלכה': 'final report_אובדן_להלכה'
+    };
+    
+    return mapping[reportType] || 'private';
+  }
+
+  /**
    * Get attachments for a specific report type
    * @param {string} reportType - Report type identifier
    * @returns {Promise<string>} Attachments text
