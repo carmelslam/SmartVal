@@ -2246,8 +2246,31 @@
           }
           // Market value from standardized vehicle structure (with legacy fallback) 
           const rawMarketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
+          
+          // DEBUG: Track where 80487 comes from
+          if (helper.vehicle?.market_value) {
+            console.log('📍 Market value from helper.vehicle.market_value:', helper.vehicle.market_value);
+          }
+          if (helper.expertise?.calculations?.market_value) {
+            console.log('📍 Market value from helper.expertise.calculations.market_value:', helper.expertise.calculations.market_value);
+          }
+          if (helper.valuation?.market_value) {
+            console.log('📍 Market value from helper.valuation.market_value:', helper.valuation.market_value);
+          }
+          
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
+          
+          // ALERT if 80487 detected
+          if (marketValue === 80487) {
+            console.error('🚨 DETECTED 80487 IN MARKET VALUE LOADING:');
+            console.error('- helper.vehicle?.market_value:', helper.vehicle?.market_value);
+            console.error('- helper.expertise?.calculations?.market_value:', helper.expertise?.calculations?.market_value);
+            console.error('- helper.valuation?.market_value:', helper.valuation?.market_value);
+            console.error('- rawMarketValue used:', rawMarketValue);
+            alert('🚨 80487 detected in market value! Check console for source.');
+          }
+          
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
           // ✅ FIX: Final report date - always use today's date as default (clear any old wrong dates)
           const todaysDate = new Date().toISOString().split('T')[0];
@@ -6355,6 +6378,13 @@
           } else if (window.CalculationInterface && typeof window.CalculationInterface.getGrossMarketValue === 'function') {
             const calculationInterfaceValue = window.CalculationInterface.getGrossMarketValue();
             console.log('⚠️ Base price from CalculationInterface:', calculationInterfaceValue);
+            
+            // ALERT if 80487 detected from CalculationInterface
+            if (calculationInterfaceValue === 80487) {
+              console.error('🚨 DETECTED 80487 FROM CalculationInterface.getGrossMarketValue()');
+              alert('🚨 80487 detected from CalculationInterface! This is the source of the problem.');
+            }
+            
             // Only use CalculationInterface if it's reasonable (not the problematic 80487)
             if (calculationInterfaceValue !== 80487 && calculationInterfaceValue > 0) {
               basePrice = calculationInterfaceValue;
@@ -6510,10 +6540,22 @@
           // SAVE TO HELPER - ערך השוק המלא של הרכב כולל מע״מ writes to helper.calculations.full_market_value
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           if (!currentHelper.calculations) currentHelper.calculations = {};
-          currentHelper.calculations.full_market_value = Math.round(currentValue);
+          
+          const finalValue = Math.round(currentValue);
+          
+          // ALERT if trying to save 80487
+          if (finalValue === 80487) {
+            console.error('🚨 TRYING TO SAVE 80487 TO HELPER!');
+            console.error('- Original currentValue:', currentValue);
+            console.error('- Base price used:', basePrice);
+            console.trace('Stack trace for 80487 save:');
+            alert('🚨 About to save 80487 to helper! Check console for details.');
+          }
+          
+          currentHelper.calculations.full_market_value = finalValue;
           sessionStorage.setItem('helper', JSON.stringify(currentHelper));
           localStorage.setItem('helper', JSON.stringify(currentHelper));
-          console.log('💾 Saved ערך השוק המלא של הרכב to helper.calculations.full_market_value:', Math.round(currentValue));
+          console.log('💾 Saved ערך השוק המלא של הרכב to helper.calculations.full_market_value:', finalValue);
         }
         
         // Also update sumMarketValue for summary calculations
