@@ -7157,6 +7157,65 @@
         }, 1000);
       }
       
+      // Capture all summary fields to helper.final_report.summary
+      function captureSummaryFields() {
+        const helper = window.helper || {};
+        
+        // Initialize final_report object if it doesn't exist
+        if (!helper.final_report) {
+          helper.final_report = {};
+        }
+        if (!helper.final_report.summary) {
+          helper.final_report.summary = {};
+        }
+        
+        // Get all summary input fields from all summary blocks
+        const summaryInputs = document.querySelectorAll('.summary-block input[type="text"], .summary-block input[type="date"], .summary-block input[type="number"]');
+        
+        summaryInputs.forEach(input => {
+          if (input.id && input.value) {
+            helper.final_report.summary[input.id] = input.value;
+          }
+        });
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ Summary fields captured:', helper.final_report.summary);
+      }
+      
+      // Add event listeners to all summary fields
+      function addSummaryFieldListeners() {
+        const summaryInputs = document.querySelectorAll('.summary-block input[type="text"], .summary-block input[type="date"], .summary-block input[type="number"]');
+        
+        summaryInputs.forEach(input => {
+          // Save on input
+          input.addEventListener('input', captureSummaryFields);
+          // Save on change
+          input.addEventListener('change', captureSummaryFields);
+        });
+        
+        console.log(`✅ Added listeners to ${summaryInputs.length} summary fields`);
+      }
+      
+      // Initialize summary field listeners
+      setTimeout(() => {
+        addSummaryFieldListeners();
+        // Capture initial values
+        captureSummaryFields();
+      }, 1000);
+      
+      // Re-initialize listeners when report type changes (since summary blocks change)
+      const reportTypeSelect = document.getElementById('reportType');
+      if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', () => {
+          setTimeout(() => {
+            addSummaryFieldListeners();
+            captureSummaryFields();
+          }, 500); // Wait for summary blocks to update
+        });
+      }
+      
       // AUTO-SAVE ATTACHMENTS ON INPUT
       const attachmentsArea = document.getElementById('attachments-content');
       if (attachmentsArea) {
