@@ -2266,35 +2266,84 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
-        // Load claims data (now editable) - with fallback to manual input data
+        // Load claims data section fields - מיפוי נתוני תביעה
         const calc = helper.expertise?.calculations || {};
         const claimsData = helper.claims_data || {};
+        const leviData = helper.levi_report || helper.levisummary || {};
         
-        // Load with priority: manual input (claims_data) > calculated data (expertise.calculations)
-        // Update main total claim field (div element uses innerText)
+        // 1. סה״כ תביעה (סכום מוקדי נזק) - Total Claim from damage centers
         const totalClaimDiv = document.getElementById('totalClaim');
         const formattedClaim = claimsData.total_claim || 
-          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '') ||
+          (helper.damage_centers_summary?.total_cost ? `₪${helper.damage_centers_summary.total_cost.toLocaleString()}` : '');
         if (totalClaimDiv) {
           totalClaimDiv.innerText = formattedClaim;
         }
+        
         // Also update gross section total claim field (input element uses value)
         const totalClaimGrossInput = document.getElementById('totalClaimGross');
         if (totalClaimGrossInput) {
           totalClaimGrossInput.value = formattedClaim;
         }
-        document.getElementById('leviPriceList').value = claimsData.levi_price_list || 
-          (helper.calculations?.vehicle_value_gross ? `₪${helper.calculations.vehicle_value_gross.toLocaleString()}` : '') ||
-          (helper.levi_report?.final_price ? `₪${helper.levi_report.final_price.toLocaleString()}` : '');
-        document.getElementById('grossPercent').value = claimsData.gross_percent || 
+        
+        // 2. חישוב הערך לנזק גולמי - Gross damage value (from Levi adjustments)
+        const grossDamageValueDiv = document.getElementById('grossDamageValue');
+        const grossValue = helper.calculations?.vehicle_value_gross || 
+          leviData.final_price || 
+          (helper.valuation?.calculations?.gross_price?.total) || 0;
+        if (grossDamageValueDiv && grossValue > 0) {
+          grossDamageValueDiv.innerText = `₪${grossValue.toLocaleString()}`;
+        }
+        
+        // 3. חישוב האחוז הגולמי - Gross percentage calculation
+        const grossPercentageDiv = document.getElementById('grossPercentage');
+        const grossPercent = claimsData.gross_percent || 
           (helper.calculations?.damage_percent ? `${helper.calculations.damage_percent}%` : '') ||
           (calc.damage_percent ? `${calc.damage_percent}%` : '');
-        document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
-          (calc.total_damage ? `₪${calc.total_damage.toLocaleString()}` : '');
+        if (grossPercentageDiv) {
+          grossPercentageDiv.innerText = grossPercent;
+        }
+        
+        // 4. מחיר שוק (בסיס + התאמות) - Market price with adjustments  
+        const marketPriceDiv = document.getElementById('marketPriceCalculated');
+        const marketPrice = helper.valuation?.calculations?.market_price?.total ||
+          helper.calculations?.full_market_value ||
+          leviData.final_price || 0;
+        if (marketPriceDiv && marketPrice > 0) {
+          marketPriceDiv.innerText = `₪${marketPrice.toLocaleString()}`;
+        }
+        
+        // 5. ערך השוק של הרכב (לפי דו״ח לוי יצחק) - Final market value from Levi report
+        const finalMarketValueDiv = document.getElementById('finalMarketValue');
+        const finalMarketVal = leviData.final_price || 
+          helper.valuation?.final_price ||
+          helper.car_details?.market_value || 0;
+        if (finalMarketValueDiv && finalMarketVal > 0) {
+          finalMarketValueDiv.innerText = `₪${finalMarketVal.toLocaleString()}`;
+        }
+        
+        // Legacy field mappings for backward compatibility
+        const leviPriceListField = document.getElementById('leviPriceList');
+        if (leviPriceListField) {
+          leviPriceListField.value = grossValue > 0 ? `₪${grossValue.toLocaleString()}` : '';
+        }
+        
+        const grossPercentField = document.getElementById('grossPercent');
+        if (grossPercentField) {
+          grossPercentField.value = grossPercent;
+        }
+        
+        const authorizedClaimField = document.getElementById('authorizedClaim');
+        if (authorizedClaimField) {
+          authorizedClaimField.value = formattedClaim;
+        }
           
-        console.log('💰 Loaded claims data:', { 
-          from_claims_data: claimsData, 
-          from_calculations: calc 
+        console.log('💰 נתוני תביעה mapped successfully:', { 
+          totalClaim: formattedClaim,
+          grossDamageValue: grossValue,
+          grossPercentage: grossPercent,
+          marketPrice: marketPrice,
+          finalMarketValue: finalMarketVal
         });
         
         // Update gross market value field with calculated value
