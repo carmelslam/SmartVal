@@ -7205,17 +7205,6 @@
         captureSummaryFields();
       }, 1000);
       
-      // Re-initialize listeners when report type changes (since summary blocks change)
-      const reportTypeSelect = document.getElementById('reportType');
-      if (reportTypeSelect) {
-        reportTypeSelect.addEventListener('change', () => {
-          setTimeout(() => {
-            addSummaryFieldListeners();
-            captureSummaryFields();
-          }, 500); // Wait for summary blocks to update
-        });
-      }
-      
       // AUTO-SAVE ATTACHMENTS ON INPUT
       const attachmentsArea = document.getElementById('attachments-content');
       if (attachmentsArea) {
@@ -7230,7 +7219,7 @@
         });
       }
       
-      // Update legal text when report type changes
+      // Combined report type change handler
       const reportTypeSelect = document.getElementById('reportType');
       if (reportTypeSelect) {
         reportTypeSelect.addEventListener('change', function() {
@@ -7245,6 +7234,12 @@
           
           updateReportType();
           loadLegalText().catch(console.error);
+          
+          // Re-initialize summary field listeners after report type changes
+          setTimeout(() => {
+            addSummaryFieldListeners();
+            captureSummaryFields();
+          }, 500); // Wait for summary blocks to update
         });
       }
     });
