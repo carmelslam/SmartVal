@@ -1413,14 +1413,15 @@
             <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
           </div>
         </div>
-      </div>
-      
-      <!-- Save button outside summary but inside differentials section -->
+         <!-- Save button outside summary but inside differentials section -->
       <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
         <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer;">שמור הפרשים</button>
       </div>
     </div>
     <br><br>
+      </div>
+      
+      
 
     <!-- SUMMARY SECTION - PROPER FINAL REPORT VERSION -->
     <div class="form-section summary-block" id="summaryPrivate" style="background: linear-gradient(135deg, #0346a4 0%, #042676 100%); color: white; border-radius: 12px; padding: 20px;">
@@ -2260,6 +2261,16 @@
           helper.final_report.report_date = finalReportDate;
           helper.final_report.generated_date = new Date().toISOString();
           sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Load saved full market value from helper if it exists
+          const savedFullMarketValue = helper.calculations?.full_market_value;
+          if (savedFullMarketValue) {
+            const fullMarketValueField = document.getElementById('fullMarketValueResult');
+            if (fullMarketValueField) {
+              fullMarketValueField.value = `₪${savedFullMarketValue.toLocaleString()}`;
+              console.log('💾 Loaded saved full market value from helper:', savedFullMarketValue);
+            }
+          }
           
           // Ensure vehicle structure is populated on load
           helper.vehicle = helper.vehicle || {};
@@ -6334,14 +6345,20 @@
         
         // If no base price, try other sources
         if (basePrice === 0) {
-          if (window.CalculationInterface && typeof window.CalculationInterface.getGrossMarketValue === 'function') {
-            basePrice = window.CalculationInterface.getGrossMarketValue();
-            console.log('📊 Base price from CalculationInterface:', basePrice);
-          } else {
-            const grossResultField = document.getElementById('grossMarketValueResult');
-            if (grossResultField && grossResultField.value) {
-              basePrice = parseFloat(grossResultField.value.replace(/[₪,]/g, '')) || 0;
-              console.log('📊 Base price from grossMarketValueResult:', basePrice);
+          // First try grossMarketValueResult (more reliable than CalculationInterface)
+          const grossResultField = document.getElementById('grossMarketValueResult');
+          if (grossResultField && grossResultField.value) {
+            basePrice = parseFloat(grossResultField.value.replace(/[₪,]/g, '')) || 0;
+            console.log('📊 Base price from grossMarketValueResult:', basePrice);
+          } else if (window.CalculationInterface && typeof window.CalculationInterface.getGrossMarketValue === 'function') {
+            const calculationInterfaceValue = window.CalculationInterface.getGrossMarketValue();
+            console.log('⚠️ Base price from CalculationInterface:', calculationInterfaceValue);
+            // Only use CalculationInterface if it's reasonable (not the problematic 80487)
+            if (calculationInterfaceValue !== 80487 && calculationInterfaceValue > 0) {
+              basePrice = calculationInterfaceValue;
+              console.log('✅ Using CalculationInterface value:', basePrice);
+            } else {
+              console.log('🚨 Rejecting CalculationInterface value (80487 problem):', calculationInterfaceValue);
             }
           }
         }
