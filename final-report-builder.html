@@ -2190,14 +2190,14 @@
             basicPriceField.value = `₪${basePrice.toLocaleString()}`;
           }
           // Market value from standardized vehicle structure (with legacy fallback) 
-          const rawMarketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
+          const rawMarketValue = helper.calculations?.full_market_value || helper.vehicle?.market_value || helper.valuation?.market_value;
           
           // DEBUG: Track where 80487 comes from
           if (helper.vehicle?.market_value) {
             console.log('📍 Market value from helper.vehicle.market_value:', helper.vehicle.market_value);
           }
-          if (helper.expertise?.calculations?.market_value) {
-            console.log('📍 Market value from helper.expertise.calculations.market_value:', helper.expertise.calculations.market_value);
+          if (helper.calculations?.full_market_value) {
+            console.log('📍 Market value from helper.calculations.full_market_value:', helper.calculations.full_market_value);
           }
           if (helper.valuation?.market_value) {
             console.log('📍 Market value from helper.valuation.market_value:', helper.valuation.market_value);
@@ -2542,10 +2542,11 @@
 
       function calculateSummaryTotals() {
         try {
-          // Auto-fill market value from car details market price
-          const carMarketValue = document.getElementById('carMarketValue')?.value.replace(/[₪,]/g, '') || '0';
-          if (carMarketValue && carMarketValue !== '0' && sumMarketValueInput) {
-            sumMarketValueInput.value = `₪${parseFloat(carMarketValue).toLocaleString()}`;
+          // Auto-fill market value from helper.calculations.full_market_value (standardized)
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const helperMarketValue = helper.calculations?.full_market_value || 0;
+          if (helperMarketValue && helperMarketValue > 0 && sumMarketValueInput) {
+            sumMarketValueInput.value = `₪${helperMarketValue.toLocaleString()}`;
           }
           
           // AUTO-FILL SUMMARY CLAIM FROM CLAIMS SECTION
@@ -4179,7 +4180,7 @@
         depreciation: document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent,
         damageCenters: helper.expertise?.damage_blocks?.length,
         garageDays: document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days,
-        carValue: document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.expertise?.calculations?.market_value ? `₪${helper.expertise.calculations.market_value.toLocaleString()}` : undefined),
+        carValue: document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.calculations?.full_market_value ? `₪${helper.calculations.full_market_value.toLocaleString()}` : undefined),
         salvageValue: (() => {
           const salvageInput = document.getElementById('salvageValue')?.value;
           const helperSalvage = helper.final_report?.summary?.salvage_value || helper.final_report?.salvage_value;
@@ -8010,9 +8011,9 @@
       if (helper.levi_report?.final_price) {
         vehicleValueGross = parseFloat(helper.levi_report.final_price);
         console.log('🔧 Using levi_report.final_price as vehicleValueGross:', vehicleValueGross);
-      } else if (helper.expertise?.calculations?.market_value) {
-        vehicleValueGross = parseFloat(helper.expertise.calculations.market_value);
-        console.log('🔧 Using expertise.calculations.market_value as vehicleValueGross:', vehicleValueGross);
+      } else if (helper.calculations?.full_market_value) {
+        vehicleValueGross = parseFloat(helper.calculations.full_market_value);
+        console.log('🔧 Using calculations.full_market_value as vehicleValueGross:', vehicleValueGross);
       } else if (helper.levisummary?.final_price) {
         vehicleValueGross = parseFloat(helper.levisummary.final_price);
         console.log('🔧 Using levisummary.final_price as vehicleValueGross:', vehicleValueGross);
