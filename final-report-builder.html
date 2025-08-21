@@ -5727,37 +5727,71 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
         
-        // Load features adjustments from helper.valuation.adjustments.features
-        console.log('🔍 Debug helper.valuation:', helper.valuation);
-        console.log('🔍 Debug helper.valuation.adjustments:', helper.valuation?.adjustments);
+        // COPY EXACT MAPPING FROM WORKING FULL MARKET VALUE SECTION
+        const adjustments = helper.valuation?.adjustments || {};
         
-        if (helper.valuation?.adjustments?.features && Array.isArray(helper.valuation.adjustments.features)) {
-          helper.valuation.adjustments.features.forEach(adj => {
-            addFeatureAdjustment();
-            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input[type="text"]');
-              inputs[0].value = adj.description || '';
-              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
-              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
-            }
-          });
+        // Load features adjustments using EXACT working logic
+        const featuresData = adjustments['features'];
+        if (featuresData && (featuresData.percent || featuresData.percentage || featuresData.amount)) {
+          let percent = 0;
+          if (featuresData.percent) {
+            const percentStr = String(featuresData.percent).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          } else if (featuresData.percentage) {
+            const percentStr = String(featuresData.percentage).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          }
+          
+          let amount = 0;
+          if (featuresData.amount) {
+            const amountStr = String(featuresData.amount).replace(/[₪,\sש]/g, '');
+            amount = parseFloat(amountStr) || 0;
+          }
+          
+          const description = featuresData.value || featuresData.description || 'תוספות מאפיינים';
+          const isReduction = percent < 0 || amount < 0;
+          
+          addFeatureAdjustment();
+          const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input[type="text"]');
+            inputs[0].value = description;
+            lastRow.querySelector('select').value = isReduction ? 'minus' : 'plus';
+            inputs[1].value = percent ? `${Math.abs(percent)}%` : '';
+            inputs[2].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+          }
         }
         
-        // Load registration adjustments from helper.valuation.adjustments.registration
-        if (helper.valuation?.adjustments?.registration && Array.isArray(helper.valuation.adjustments.registration)) {
-          helper.valuation.adjustments.registration.forEach(adj => {
-            addRegistrationAdjustment();
-            const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input[type="text"]');
-              inputs[0].value = adj.description || '';
-              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
-              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
-            }
-          });
+        // Load registration adjustments using EXACT working logic
+        const registrationData = adjustments['registration'];
+        if (registrationData && (registrationData.percent || registrationData.percentage || registrationData.amount)) {
+          let percent = 0;
+          if (registrationData.percent) {
+            const percentStr = String(registrationData.percent).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          } else if (registrationData.percentage) {
+            const percentStr = String(registrationData.percentage).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          }
+          
+          let amount = 0;
+          if (registrationData.amount) {
+            const amountStr = String(registrationData.amount).replace(/[₪,\sש]/g, '');
+            amount = parseFloat(amountStr) || 0;
+          }
+          
+          const description = registrationData.value || registrationData.description || 'עליה לכביש';
+          const isReduction = percent < 0 || amount < 0;
+          
+          addRegistrationAdjustment();
+          const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input[type="text"]');
+            inputs[0].value = description;
+            lastRow.querySelector('select').value = isReduction ? 'minus' : 'plus';
+            inputs[1].value = percent ? `${Math.abs(percent)}%` : '';
+            inputs[2].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+          }
         }
         
         // Also check for direct registration fields in levi_report (structured data)
