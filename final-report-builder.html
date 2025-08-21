@@ -6375,8 +6375,9 @@
           }
         });
         
-        // Update features cumulative
+        // Update features cumulative - this shows currentValue after features
         updateCumulativeDisplay('תוספות מאפיינים', currentValue);
+        const afterFeatures = currentValue; // Store value after features
         
         // 2. Process Registration Adjustments
         const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
@@ -6390,9 +6391,9 @@
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
             if (percent !== 0) {
-              // Registration: Use base price for percentage calculation
+              // Registration: Use base price for percentage calculation, then add to cumulative
               const adjustment = basicPrice * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
               console.log(`📅 Registration: ${Math.abs(percent)}% ${type} of ₪${basicPrice.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
@@ -6404,8 +6405,9 @@
           }
         });
         
-        // Update registration cumulative
+        // Update registration cumulative - this shows currentValue after features + registration
         updateCumulativeDisplay('עליה לכביש', currentValue);
+        const afterRegistration = currentValue; // This is the GROSS price that subsequent calculations use
         
         // 3. Process Mileage Adjustments
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
@@ -6435,11 +6437,12 @@
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
             if (percent !== 0) {
-              // Mileage: Use CURRENT cumulative value for percentage calculation
-              const adjustment = currentValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
+              // Mileage: Calculate percentage of PREVIOUS cumulative (afterRegistration), then update cumulative
+              const previousValue = currentValue; // This is afterRegistration
+              const adjustment = previousValue * (Math.abs(percent) / 100);
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
-              console.log(`🚗 Mileage[${index}]: ${Math.abs(percent)}% ${type} of ₪${(currentValue - signedAdjustment).toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+              console.log(`🚗 Mileage[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
@@ -6451,8 +6454,9 @@
           }
         });
         
-        // Update mileage cumulative
+        // Update mileage cumulative - this shows currentValue after mileage
         updateCumulativeDisplay('מס ק"מ', currentValue);
+        const afterMileage = currentValue; // Store value after mileage
         
         // 4. Process Ownership Adjustments
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
@@ -6466,11 +6470,12 @@
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
             if (percent !== 0) {
-              // Ownership: Use CURRENT cumulative value for percentage calculation
-              const adjustment = currentValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
+              // Ownership: Calculate percentage of PREVIOUS cumulative (afterMileage), then update cumulative
+              const previousValue = currentValue; // This is afterMileage
+              const adjustment = previousValue * (Math.abs(percent) / 100);
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
-              console.log(`🏢 Ownership[${index}]: ${Math.abs(percent)}% ${type} of ₪${(currentValue - signedAdjustment).toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+              console.log(`🏢 Ownership[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
@@ -6482,8 +6487,9 @@
           }
         });
         
-        // Update ownership cumulative
+        // Update ownership cumulative - this shows currentValue after ownership
         updateCumulativeDisplay('סוג בעלות', currentValue);
+        const afterOwnership = currentValue; // Store value after ownership
         
         // 5. Process Owners Adjustments
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
@@ -6497,11 +6503,12 @@
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
             if (percent !== 0) {
-              // Owners: Use CURRENT cumulative value for percentage calculation
-              const adjustment = currentValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
+              // Owners: Calculate percentage of PREVIOUS cumulative (afterOwnership), then update cumulative
+              const previousValue = currentValue; // This is afterOwnership
+              const adjustment = previousValue * (Math.abs(percent) / 100);
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
-              console.log(`👥 Owners[${index}]: ${Math.abs(percent)}% ${type} of ₪${(currentValue - signedAdjustment).toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+              console.log(`👥 Owners[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
