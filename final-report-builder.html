@@ -1495,12 +1495,8 @@
       </div>
       <div class="form-grid" style="margin-top:16px;">
         <div>
-          <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
+          <label>סה״כ לאחר מכירת שרידים:</label>
           <input type="text" id="afterSaleTotal" style="background: white; color: #333;" />
-        </div>
-        <div id="sumTotalAfterDifferentials-totalLoss" style="display:none;">
-          <label>סה״כ סופי (לאחר הפרשים):</label>
-          <input type="text" id="afterSaleTotalFinal" style="background: white; border:2px solid #28a745; font-weight:bold; color: #333;" />
         </div>
       </div>
     </div>
@@ -1519,12 +1515,8 @@
       </div>
       <div class="form-grid" style="margin-top:16px;">
         <div>
-          <label>סה״כ לאחר מכירת שרידים (לפני הפרשים):</label>
+          <label>סה״כ לאחר מכירת שרידים:</label>
           <input type="text" id="afterSaleLegal" style="background: white; color: #333;" />
-        </div>
-        <div id="sumTotalAfterDifferentials-legalLoss" style="display:none;">
-          <label>סה״כ סופי (לאחר הפרשים):</label>
-          <input type="text" id="afterSaleLegalFinal" style="background: white; border:2px solid #28a745; font-weight:bold; color: #333;" />
         </div>
       </div>
     </div>
@@ -2292,7 +2284,19 @@
         
         // 4. מחיר שוק (בסיס + התאמות) - Market price CORRECTED MAPPING
         const marketPriceDiv = document.getElementById('marketPriceCalculated');
-        let marketPrice = helper.calculations?.full_market_value || 0;
+        let marketPrice = helper.calculations?.full_market_value || 
+                         helper.expertise?.calculations?.market_value || 
+                         helper.vehicle?.market_value || 
+                         helper.valuation?.market_value || 0;
+        
+        // DEBUG: Check what's in helper for market value
+        console.log('🔍 Market value debug:', {
+          'helper.calculations': helper.calculations,
+          'helper.calculations.full_market_value': helper.calculations?.full_market_value,
+          'helper.expertise?.calculations?.market_value': helper.expertise?.calculations?.market_value,
+          'helper.vehicle?.market_value': helper.vehicle?.market_value,
+          'marketPrice': marketPrice
+        });
         
         // Handle string values that need parsing
         if (typeof marketPrice === 'string') {
@@ -2307,7 +2311,17 @@
         
         // 5. ערך השוק של הרכב (לפי דו״ח לוי יצחק) - Final market value from Levi report
         const finalMarketValueDiv = document.getElementById('finalMarketValue');
-        let finalMarketVal = helper.levisummary?.final_price || 0;
+        let finalMarketVal = helper.levisummary?.final_price || 
+                            helper.levi_report?.final_price || 
+                            helper.expertise?.levi_report?.final_price || 0;
+        
+        // DEBUG: Check what's in helper for Levi data
+        console.log('🔍 Levi value debug:', {
+          'helper.levisummary': helper.levisummary,
+          'helper.levisummary?.final_price': helper.levisummary?.final_price,
+          'helper.levi_report?.final_price': helper.levi_report?.final_price,
+          'finalMarketVal': finalMarketVal
+        });
         
         // Handle string values that need parsing
         if (typeof finalMarketVal === 'string') {
