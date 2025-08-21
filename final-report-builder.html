@@ -7101,6 +7101,40 @@
         }, 1000);
       }
       
+      // Add listener to additional notes textarea to save comments
+      const additionalNotesArea = document.getElementById('additional-notes');
+      if (additionalNotesArea) {
+        // Function to save comments to helper
+        function saveCommentsToHelper() {
+          const helper = window.helper || {};
+          
+          // Initialize final_report object if it doesn't exist
+          if (!helper.final_report) {
+            helper.final_report = {};
+          }
+          helper.final_report.comments = additionalNotesArea.value;
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
+          updateBuilderCurrentState('final_report.comments', additionalNotesArea.value);
+        }
+        
+        // Save on input
+        additionalNotesArea.addEventListener('input', saveCommentsToHelper);
+        
+        // Save on change (when user finishes editing)
+        additionalNotesArea.addEventListener('change', saveCommentsToHelper);
+        
+        // Initial save if there's already content (after page load)
+        setTimeout(() => {
+          if (additionalNotesArea.value && additionalNotesArea.value.trim() !== '') {
+            saveCommentsToHelper();
+            console.log('✅ Initial comments saved to helper:', additionalNotesArea.value.substring(0, 50) + '...');
+          }
+        }, 1000);
+      }
+      
       // AUTO-SAVE ATTACHMENTS ON INPUT
       const attachmentsArea = document.getElementById('attachments-content');
       if (attachmentsArea) {
