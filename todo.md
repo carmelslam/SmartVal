@@ -4778,6 +4778,73 @@ in the levisummary there is a correct reoort date : levisummary/ report date , t
 - **Label duplication issue** ❌ (still unresolved, caused page break when attempted)
 - **Overall system stability maintained** after revert
 
+**plan of dividing the builder into 4 stages**
+
+## 4-Stage Final Report Builder Refactoring Plan
+
+### Overview
+Split the massive 11,767-line `final-report-builder.html` into 4 focused, manageable stages for better UX and maintainability.
+
+### Pre-Work: Backup & Safety
+1. **Create backup**: Copy `final-report-builder.html` → `legacy files/final-report-builder-backup.html`
+2. **Test existing system**: Ensure current functionality works before starting
+3. **Document current helper data flow**: Map existing helper.js integration points
+
+### 4-Stage Architecture
+
+#### **Stage 1: Case Setup & Basic Data**
+**File**: `final-report-stage1.html`
+**Content**:
+- Upload a case
+- Documents upload section
+- Title/header setup
+- בניית חוות דעת (report building basics)
+- נתוני רכב (vehicle data)
+- נתוני התקשרות (contact data - collapsible)
+- **Navigation**: → Stage 2 button
+
+#### **Stage 2: Damage Centers Summary**
+**File**: `final-report-stage2.html`  
+**Content**:
+- סיכום מוקדי נזק (damage centers summary)
+- All damage center data display and validation
+- **Navigation**: ← Stage 1 | Stage 3 → buttons
+
+#### **Stage 3: Market Value Calculations**
+**File**: `final-report-stage3.html`
+**Content**:
+- ערך הרכב לנזק גולמי - מאפיינים ועליה לכביש בלבד (collapsible)
+- אחוז הנזק הגולמי - בסיס הרכב בלבד (collapsible)  
+- ערך השוק המלא - כולל גורמי שימוש (collapsible)
+- **Navigation**: ← Stage 2 | Stage 4 → buttons
+
+#### **Stage 4: Final Calculations & Summary**
+**File**: `final-report-stage4.html`
+**Content**:
+- חישוב ירידת ערך לפי מוקדי נזק (depreciation calculations)
+- הפרשים (differentials)
+- נתוני תביעה (claims data - collapsible)
+- הערות נוספות לחוות דעת (additional notes)
+- סיכום (dynamic summary based on report type)
+- טקסט משפטי לחוות דעת (legal text)
+- רשימת נספחים (attachments list)
+- **Navigation**: ← Stage 3 | Submit Final Report → buttons
+
+### Implementation Timeline
+- **Phase 1**: Backup + Stage 1 (2-3 hours)
+- **Phase 2**: Stage 2 - Damage Centers (1-2 hours)
+- **Phase 3**: Stage 3 - Market Value Calculations (3-4 hours)
+- **Phase 4**: Stage 4 - Final Summary (2-3 hours)
+- **Phase 5**: Testing + Cleanup (1-2 hours)
+- **Total**: 9-14 hours for complete refactoring
+
+### Success Criteria
+✅ All stages navigate smoothly forward/backward
+✅ Helper data persists correctly across stages
+✅ Field mappings work without conflicts
+✅ All report types function correctly
+✅ File sizes are manageable (< 3000 lines each)
+✅ Existing fee-module.html → validation.html flow remains intact
 
 **reports stylying problems and attempts**
 
