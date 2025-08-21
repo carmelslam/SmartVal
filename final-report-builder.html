@@ -4816,6 +4816,11 @@
                 inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
               }
               
+              // Trigger onchange events to ensure handlers are active
+              inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+              if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+              if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
+              
               // Mark as Levi data
               lastRow.setAttribute('data-source', 'levi');
               lastRow.style.background = '#f0f8ff';
@@ -8746,6 +8751,35 @@
     window.updateGrossPercentageFromGrossValue = updateGrossPercentageFromGrossValue;
     window.updateFullMarketValueCalculation = updateFullMarketValueCalculation;
     window.testFullCalculation = updateFullMarketValueCalculation; // Easy test function
+    
+    // Test function to verify dropdown functionality
+    window.testDropdowns = function() {
+      console.log('🔧 Testing all dropdowns in FULL section...');
+      const containers = ['mileageAdjustmentsList', 'ownershipAdjustmentsList', 'ownersAdjustmentsList'];
+      
+      containers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+          const dropdowns = container.querySelectorAll('select');
+          dropdowns.forEach((dropdown, index) => {
+            console.log(`🔧 ${containerId} dropdown[${index}]:`, dropdown.value, 'onchange:', dropdown.onchange ? 'EXISTS' : 'MISSING');
+            
+            // Test changing the dropdown
+            const originalValue = dropdown.value;
+            const newValue = originalValue === 'plus' ? 'minus' : 'plus';
+            console.log(`🔧 Changing ${containerId} dropdown[${index}] from ${originalValue} to ${newValue}`);
+            dropdown.value = newValue;
+            dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Change it back
+            setTimeout(() => {
+              dropdown.value = originalValue;
+              dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+            }, 100);
+          });
+        }
+      });
+    };
     window.loadFullMarketValueData = loadFullMarketValueData;
     window.addFullMarketAdjustment = addFullMarketAdjustment;
     window.debugCalculations = debugCalculations;
