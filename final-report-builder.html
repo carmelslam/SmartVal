@@ -6434,15 +6434,20 @@
             valueValue: valueInput?.value
           });
           
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent !== 0) {
-              // Mileage: Calculate percentage of PREVIOUS cumulative (afterRegistration), then update cumulative
-              const previousValue = currentValue; // This is afterRegistration
-              const adjustment = previousValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-              console.log(`🚗 Mileage[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+          // Conditional logic: percentage vs direct value
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate from previous cumulative
+            const percent = parseFloat(percentInput.value);
+            const previousValue = currentValue; // This is the previous cumulative result
+            const adjustment = previousValue * (Math.abs(percent) / 100);
+            
+            // Apply dropdown selection
+            if (type === 'minus') {
+              currentValue = previousValue - adjustment;
+              console.log(`🚗 Mileage[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            } else {
+              currentValue = previousValue + adjustment;
+              console.log(`🚗 Mileage[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
@@ -6462,26 +6467,36 @@
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
         console.log(`🔍 Found ${ownershipRows.length} ownership rows for calculation`);
         ownershipRows.forEach((row, index) => {
-          const type = row.querySelector('select')?.value;
+          const select = row.querySelector('select');
+          const type = select?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
           const valueInput = inputs[2];   // Value field
           
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent !== 0) {
-              // Ownership: Calculate percentage of PREVIOUS cumulative (afterMileage), then update cumulative
-              const previousValue = currentValue; // This is afterMileage
-              const adjustment = previousValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-              console.log(`🏢 Ownership[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+          // Conditional logic: percentage vs direct value
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate from previous cumulative
+            const percent = parseFloat(percentInput.value);
+            const previousValue = currentValue; // This is the previous cumulative result
+            const adjustment = previousValue * (Math.abs(percent) / 100);
+            
+            // Apply dropdown selection
+            if (type === 'minus') {
+              currentValue = previousValue - adjustment;
+              console.log(`🏢 Ownership[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            } else {
+              currentValue = previousValue + adjustment;
+              console.log(`🏢 Ownership[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
-            console.log(`🏢 Ownership[${index}]: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
+            if (type === 'minus') {
+              currentValue = currentValue - value;
+              console.log(`🏢 Ownership[${index}]: ₪${value} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            } else {
+              currentValue = currentValue + value;
+              console.log(`🏢 Ownership[${index}]: ₪${value} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            }
           } else {
             console.log(`⚠️ Ownership[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
@@ -6495,26 +6510,36 @@
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
         console.log(`🔍 Found ${ownersRows.length} owners rows for calculation`);
         ownersRows.forEach((row, index) => {
-          const type = row.querySelector('select')?.value;
+          const select = row.querySelector('select');
+          const type = select?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
           const valueInput = inputs[2];   // Value field
           
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent !== 0) {
-              // Owners: Calculate percentage of PREVIOUS cumulative (afterOwnership), then update cumulative
-              const previousValue = currentValue; // This is afterOwnership
-              const adjustment = previousValue * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-              console.log(`👥 Owners[${index}]: ${Math.abs(percent)}% ${type} of ₪${previousValue.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
+          // Conditional logic: percentage vs direct value
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate from previous cumulative
+            const percent = parseFloat(percentInput.value);
+            const previousValue = currentValue; // This is the previous cumulative result
+            const adjustment = previousValue * (Math.abs(percent) / 100);
+            
+            // Apply dropdown selection
+            if (type === 'minus') {
+              currentValue = previousValue - adjustment;
+              console.log(`👥 Owners[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            } else {
+              currentValue = previousValue + adjustment;
+              console.log(`👥 Owners[${index}]: ${Math.abs(percent)}% of ₪${previousValue.toLocaleString()} = ₪${adjustment.toFixed(0)} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
-            console.log(`👥 Owners[${index}]: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
+            if (type === 'minus') {
+              currentValue = currentValue - value;
+              console.log(`👥 Owners[${index}]: ₪${value} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            } else {
+              currentValue = currentValue + value;
+              console.log(`👥 Owners[${index}]: ₪${value} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
+            }
           } else {
             console.log(`⚠️ Owners[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
