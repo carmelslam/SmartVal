@@ -959,14 +959,14 @@
         </div>
         <div>
           <label for="isCompanyClient">דו"ח לחברה:</label>
-          <select id="isCompanyClient">
+          <select id="isCompanyClient" onchange="updateFinalReportField('report_for_company', this.value === 'yes')">
             <option value="no">לא</option>
             <option value="yes">כן</option>
           </select>
         </div>
         <div>
           <label for="inAgreement">סטטוס הסדר:</label>
-          <select id="inAgreement">
+          <select id="inAgreement" onchange="updateFinalReportField('in_agreement', this.value === 'yes')">
             <option value="yes">בהסדר</option>
             <option value="no">לא בהסדר</option>
           </select>
@@ -10604,6 +10604,21 @@
       console.log('✅ הפרשים saved successfully to helper.final_report.differential:', helper.final_report.differential);
     }
     
+    // Update final report fields (agreement status and company report)
+    function updateFinalReportField(fieldName, value) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.final_report) helper.final_report = {};
+        
+        helper.final_report[fieldName] = value;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ Final report field updated: ${fieldName} = ${value}`);
+      } catch (error) {
+        console.error('❌ Error updating final report field:', error);
+      }
+    }
+    
     function updateMainSummaryWithDifferentials(differencesTotal) {
       // Show differentials impact in all summary types
       const summaryTypes = [
@@ -11195,6 +11210,7 @@
     window.getVatRate = getVatRate;
     window.renderDifferentials = renderDifferentials;
     window.saveDifferentials = saveDifferentials;
+    window.updateFinalReportField = updateFinalReportField;
     window.createLeviAdjustmentRow = createLeviAdjustmentRow;
     window.calculateGlobalDepreciationValue = calculateGlobalDepreciationValue;
     window.triggerMathCalculation = triggerMathCalculation;

@@ -1485,6 +1485,8 @@ window.fixHelperStructure = function() {
           report_title: '',
           generated: false,
           generated_date: '',
+          in_agreement: false,  // סטטוס הסדר
+          report_for_company: false,  // דו"ח לחברה
           report_sections: {
             vehicle_details: {},
             damage_assessment: {},
@@ -2671,6 +2673,8 @@ window.helper = existingHelper || {
     report_title: '',
     generated: false,
     generated_date: '',
+    in_agreement: false,  // סטטוס הסדר
+    report_for_company: false,  // דו"ח לחברה
     report_sections: {
       vehicle_details: {},
       damage_assessment: {},
