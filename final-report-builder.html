@@ -493,51 +493,6 @@
         content: "פעולות:";
       }
       
-      /* Mobile fixes for Estimate Adjustments section */
-      #allAdjustmentsRows-final-report .adjustment-row {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-        background: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        border: 1px solid #e9ecef;
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div::before {
-        font-weight: bold;
-        font-size: 12px;
-        color: #495057;
-        display: block;
-        margin-bottom: 4px;
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(1)::before {
-        content: "תיאור:";
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(2)::before {
-        content: "סוג:";
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(3)::before {
-        content: "אחוז:";
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(4)::before {
-        content: "ערך:";
-      }
-      
-      #allAdjustmentsRows-final-report .adjustment-row > div:nth-child(5)::before {
-        content: "פעולות:";
-      }
       
       /* Fix button spacing on mobile */
       .btn.add {
@@ -1137,30 +1092,6 @@
     </div>
 
     <!-- ESTIMATE ADJUSTMENTS SECTION -->
-    <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('finalReportAdjustments')">התאמות דוח סופי (הצג/הסתר)</button>
-      <div id="finalReportAdjustments" style="display:none;">
-        <div style="margin-top: 20px;">
-          <h4 style="color: #1e3a8a; margin-bottom: 10px;">התאמות אומדן נוספות:</h4>
-          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
-            📝 התאמות מותאמות אישית לאומדן זה
-          </div>
-          <div>
-            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><label>תיאור:</label></div>
-              <div><label>סוג:</label></div>
-              <div><label>אחוז:</label></div>
-              <div><label>ערך:</label></div>
-              <div><label>פעולות:</label></div>
-            </div>
-            <div id="allAdjustmentsRows-final-report">
-              <!-- This will be populated by JavaScript -->
-            </div>
-            <button class="btn add" type="button" onclick="addEstimateAdjustment()">הוסף התאמה נוספת</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- GROSS DAMAGE PERCENTAGE RESULT -->
     <div class="form-section">
@@ -2056,20 +1987,6 @@
         }
       });
       
-      // Collect final report adjustments (התאמות דוח סופי)
-      const finalReportRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
-      finalReportRows.forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const select = row.querySelector('select');
-        if (inputs.length >= 3) {
-          adjustmentsData.final_report.push({
-            description: inputs[0].value,
-            type: select?.value || 'plus',
-            percentage: parseFloat(inputs[1].value) || 0,
-            value: parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0
-          });
-        }
-      });
       
       // Collect full market adjustments (כל ההתאמות)
       const fullMarketRows = document.querySelectorAll('#allAdjustments > div');
@@ -3116,13 +3033,7 @@
     function loadAllAdjustmentsImmediate(helper) {
       try {
         console.log('🔄 Loading all adjustments (immediate)');
-        const adjustmentsContainer = document.getElementById('allAdjustmentsRows-final-report');
-        
-        // Add null check for DOM element
-        if (!adjustmentsContainer) {
-          console.warn('DOM element allAdjustmentsRows-final-report not found, skipping adjustments load');
-          return;
-        }
+        // Note: Final report adjustments section was removed - skipping that part
         
         // CRITICAL FIX: Clean up duplicate data in helper before loading
         helper = cleanupHelperDuplicates(helper);
@@ -3214,11 +3125,10 @@
         // Clear existing rows to prevent duplication
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
-        const finalReportContainer = document.getElementById('allAdjustmentsRows-final-report');
         
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
-        // Don't clear final report container here as it might have Levi data
+        // Note: Final report adjustments section was removed
         
         // Load feature adjustments (תוספות מאפיינים)
         if (helper.final_report.adjustments.features) {
@@ -3256,24 +3166,6 @@
           });
         }
         
-        // Load final report adjustments (התאמות דוח סופי)
-        if (helper.final_report.adjustments.final_report) {
-          helper.final_report.adjustments.final_report.forEach(adj => {
-            addEstimateAdjustment();
-            const rows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
-            const lastRow = rows[rows.length - 1];
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input');
-              const select = lastRow.querySelector('select');
-              if (inputs.length >= 3) {
-                inputs[0].value = adj.description || '';
-                if (select) select.value = adj.type || 'plus';
-                inputs[1].value = adj.percentage || '';
-                inputs[2].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
-              }
-            }
-          });
-        }
       }
       
       // Load saved legal text from final_report
@@ -6779,40 +6671,6 @@
     // ESTIMATE ADJUSTMENTS FUNCTIONS
     
     // Add final report adjustment row
-    function addEstimateAdjustment() {
-      const container = document.getElementById('allAdjustmentsRows-final-report');
-      if (!container) {
-        console.error('Container allAdjustmentsRows-final-report not found');
-        return;
-      }
-      
-      const rowId = 'estAdj_' + Date.now();
-      
-      const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; padding:8px; border:1px solid #e0e0e0; border-radius:4px;" data-source="custom" data-user-created="true">
-          <div><input type="text" placeholder="תיאור ההתאמה" onchange="updateEstimateAdjustments()" /></div>
-          <div><select onchange="updateEstimateAdjustments()">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="number" step="0.01" placeholder="אחוז" oninput="calculateEstimateAdjustmentValueSimple(this);" onchange="updateEstimateAdjustments();" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateEstimateAdjustments()" /></div>
-          <div><button class="btn remove" onclick="removeEstimateAdjustmentRow('${rowId}')">מחק</button></div>
-        </div>
-      `;
-      
-      container.insertAdjacentHTML('beforeend', newRow);
-      updateEstimateAdjustments();
-    }
-    
-    // Remove final report adjustment row
-    function removeEstimateAdjustmentRow(rowId) {
-      const row = document.getElementById(rowId);
-      if (row) {
-        row.remove();
-        updateEstimateAdjustments();
-      }
-    }
     
     // Calculate final report adjustment value from percentage
     function calculateEstimateAdjustmentValue(percentageInput) {
