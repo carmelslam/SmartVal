@@ -1075,7 +1075,7 @@
 
     <!-- GROSS DAMAGE PERCENTAGE CALCULATION -->
     <div class="form-section">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד (הצג/הסתר)</button>
+      <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">  ערך הרכב לנזק גולמי - מאפיינים ועליה לכביש בלבד (הצג/הסתר)</button>
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
           <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
@@ -5619,14 +5619,22 @@
           }
         });
         
-        // Calculate GROSS price using existing system math logic - STEP BY STEP
+        // USE EXACT SAME LOGIC AS WORKING updateFullMarketValueCalculation
         let currentValue = basicPrice;
         
-        // Step 1: Apply features adjustments to base price
-        const featuresTotal = featuresAdjustments.reduce((sum, adj) => sum + adj.value, 0);
-        currentValue += featuresTotal;
+        // Process features section (same logic as full market value)
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const type = row.querySelector('select')?.value;
+          const valueInput = row.querySelectorAll('input[type="text"]')[2];
+          if (valueInput && valueInput.value) {
+            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            const signedValue = (type === 'minus') ? -value : value;
+            currentValue += signedValue;
+          }
+        });
         
-        // Update features cumulative display
+        // Update features cumulative
         const grossFeaturesCumulativeEl = document.getElementById('grossFeaturesCumulative');
         if (grossFeaturesCumulativeEl) {
           const span = grossFeaturesCumulativeEl.querySelector('span');
@@ -5636,11 +5644,19 @@
           }
         }
         
-        // Step 2: Apply registration adjustments to features cumulative
-        const registrationTotal = registrationAdjustments.reduce((sum, adj) => sum + adj.value, 0);
-        currentValue += registrationTotal;
+        // Process registration section (same logic as full market value)
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const type = row.querySelector('select')?.value;
+          const valueInput = row.querySelectorAll('input[type="text"]')[2];
+          if (valueInput && valueInput.value) {
+            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            const signedValue = (type === 'minus') ? -value : value;
+            currentValue += signedValue;
+          }
+        });
         
-        // Update registration cumulative display
+        // Update registration cumulative
         const grossRegistrationCumulativeEl = document.getElementById('grossRegistrationCumulative');
         if (grossRegistrationCumulativeEl) {
           const span = grossRegistrationCumulativeEl.querySelector('span');
@@ -5650,14 +5666,13 @@
           }
         }
         
-        // Final gross price is the cumulative result
-        const grossPrice = currentValue;
-        
         // Update result field
         const resultField = document.getElementById('grossMarketValueResult');
         if (resultField) {
-          resultField.value = `₪${grossPrice.toLocaleString()}`;
+          resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
         }
+        
+        const grossPrice = currentValue;
         
         console.log(`🏠 GROSS PRICE (Car Properties Only): ${basicPrice} + adjustments = ${grossPrice}`);
         console.log('📋 Features adjustments:', featuresAdjustments);
