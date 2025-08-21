@@ -6312,6 +6312,22 @@
       try {
         console.log('🔄 Starting FULL market value calculation...');
         
+        // Debug: Check if all containers exist
+        const containers = [
+          'fullFeaturesAdjustmentsList',
+          'fullRegistrationAdjustmentsList', 
+          'mileageAdjustmentsList',
+          'ownershipAdjustmentsList',
+          'ownersAdjustmentsList',
+          'allAdjustmentsList'
+        ];
+        
+        containers.forEach(containerId => {
+          const container = document.getElementById(containerId);
+          const childCount = container ? container.children.length : 0;
+          console.log(`🔍 Container ${containerId}: ${container ? 'EXISTS' : 'MISSING'}, children: ${childCount}`);
+        });
+        
         // Get base price from fullBasicPrice field
         let basicPrice = 0;
         const fullBasicPriceField = document.getElementById('fullBasicPrice');
@@ -6329,8 +6345,9 @@
         let currentValue = basicPrice;
         
         // 1. Process Features Adjustments
-        const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div.adjustment-row');
-        fullFeaturesRows.forEach(row => {
+        const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+        console.log(`🔍 Found ${fullFeaturesRows.length} features rows for calculation`);
+        fullFeaturesRows.forEach((row, index) => {
           const type = row.querySelector('select')?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
@@ -6356,8 +6373,9 @@
         updateCumulativeDisplay('תוספות מאפיינים', currentValue);
         
         // 2. Process Registration Adjustments
-        const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div.adjustment-row');
-        fullRegistrationRows.forEach(row => {
+        const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+        console.log(`🔍 Found ${fullRegistrationRows.length} registration rows for calculation`);
+        fullRegistrationRows.forEach((row, index) => {
           const type = row.querySelector('select')?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
@@ -6386,10 +6404,26 @@
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
         console.log(`🔍 Found ${mileageRows.length} mileage rows for calculation`);
         mileageRows.forEach((row, index) => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
+          console.log(`🔍 DEBUG Mileage[${index}] - Row HTML:`, row.outerHTML.substring(0, 200) + '...');
+          const select = row.querySelector('select');
+          const type = select?.value;
+          console.log(`🔍 DEBUG Mileage[${index}] - Select element:`, select, 'value:', type);
+          
+          const allInputs = row.querySelectorAll('input');
+          const textInputs = row.querySelectorAll('input[type="text"]');
+          console.log(`🔍 DEBUG Mileage[${index}] - All inputs:`, allInputs.length, 'Text inputs:', textInputs.length);
+          
+          const inputs = textInputs;
           const percentInput = inputs[1]; // Percentage field
           const valueInput = inputs[2];   // Value field
+          
+          console.log(`🔍 DEBUG Mileage[${index}] - Input values:`, {
+            input0: inputs[0]?.value,
+            input1: inputs[1]?.value, 
+            input2: inputs[2]?.value,
+            percentValue: percentInput?.value,
+            valueValue: valueInput?.value
+          });
           
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
@@ -8708,6 +8742,7 @@
     window.updateGrossMarketValueCalculation = updateGrossMarketValueCalculation;
     window.updateGrossPercentageFromGrossValue = updateGrossPercentageFromGrossValue;
     window.updateFullMarketValueCalculation = updateFullMarketValueCalculation;
+    window.testFullCalculation = updateFullMarketValueCalculation; // Easy test function
     window.loadFullMarketValueData = loadFullMarketValueData;
     window.addFullMarketAdjustment = addFullMarketAdjustment;
     window.debugCalculations = debugCalculations;
