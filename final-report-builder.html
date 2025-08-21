@@ -6315,23 +6315,6 @@
     // Calculate full market value with cumulative updates
     function updateFullMarketValueCalculation() {
       try {
-        console.log('🔄 Starting FULL market value calculation...');
-        
-        // Debug: Check if all containers exist
-        const containers = [
-          'fullFeaturesAdjustmentsList',
-          'fullRegistrationAdjustmentsList', 
-          'mileageAdjustmentsList',
-          'ownershipAdjustmentsList',
-          'ownersAdjustmentsList',
-          'allAdjustmentsList'
-        ];
-        
-        containers.forEach(containerId => {
-          const container = document.getElementById(containerId);
-          const childCount = container ? container.children.length : 0;
-          console.log(`🔍 Container ${containerId}: ${container ? 'EXISTS' : 'MISSING'}, children: ${childCount}`);
-        });
         
         // Get base price from fullBasicPrice field
         let basicPrice = 0;
@@ -6343,15 +6326,11 @@
         // Fallback: Use 118000 if field is empty
         if (basicPrice === 0) {
           basicPrice = 118000;
-          console.log('🔍 FALLBACK: Using ₪118,000 as base price');
         }
-        
-        console.log('🔍 Base price for FULL calculation:', basicPrice);
         let currentValue = basicPrice;
         
         // 1. Process Features Adjustments
         const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
-        console.log(`🔍 Found ${fullFeaturesRows.length} features rows for calculation`);
         fullFeaturesRows.forEach((row, index) => {
           const type = row.querySelector('select')?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
@@ -6365,13 +6344,11 @@
               const adjustment = basicPrice * (Math.abs(percent) / 100);
               const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
               currentValue += signedAdjustment;
-              console.log(`📊 Features: ${Math.abs(percent)}% ${type} of ₪${basicPrice.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
-            console.log(`📊 Features: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
           }
         });
         
@@ -6381,7 +6358,6 @@
         
         // 2. Process Registration Adjustments
         const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
-        console.log(`🔍 Found ${fullRegistrationRows.length} registration rows for calculation`);
         fullRegistrationRows.forEach((row, index) => {
           const type = row.querySelector('select')?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
@@ -6395,13 +6371,11 @@
               const adjustment = basicPrice * (Math.abs(percent) / 100);
               const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
-              console.log(`📅 Registration: ${Math.abs(percent)}% ${type} of ₪${basicPrice.toLocaleString()} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
-            console.log(`📅 Registration: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
           }
         });
         
@@ -6411,28 +6385,12 @@
         
         // 3. Process Mileage Adjustments
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
-        console.log(`🔍 Found ${mileageRows.length} mileage rows for calculation`);
         mileageRows.forEach((row, index) => {
-          console.log(`🔍 DEBUG Mileage[${index}] - Row HTML:`, row.outerHTML.substring(0, 200) + '...');
           const select = row.querySelector('select');
           const type = select?.value;
-          console.log(`🔍 DEBUG Mileage[${index}] - Select element:`, select, 'value:', type);
-          
-          const allInputs = row.querySelectorAll('input');
-          const textInputs = row.querySelectorAll('input[type="text"]');
-          console.log(`🔍 DEBUG Mileage[${index}] - All inputs:`, allInputs.length, 'Text inputs:', textInputs.length);
-          
-          const inputs = textInputs;
+          const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
           const valueInput = inputs[2];   // Value field
-          
-          console.log(`🔍 DEBUG Mileage[${index}] - Input values:`, {
-            input0: inputs[0]?.value,
-            input1: inputs[1]?.value, 
-            input2: inputs[2]?.value,
-            percentValue: percentInput?.value,
-            valueValue: valueInput?.value
-          });
           
           // Conditional logic: percentage vs direct value
           if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
@@ -6444,18 +6402,18 @@
             // Apply dropdown selection to get final cumulative
             if (type === 'minus') {
               currentValue = previousCumulative - specificResult;
-              console.log(`🚗 Mileage[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} MINUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
             } else {
               currentValue = previousCumulative + specificResult;
-              console.log(`🚗 Mileage[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} PLUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
+            }
+            
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput) {
+              valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
-            console.log(`🚗 Mileage[${index}]: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
-          } else {
-            console.log(`⚠️ Mileage[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
         });
         
@@ -6465,7 +6423,6 @@
         
         // 4. Process Ownership Adjustments
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
-        console.log(`🔍 Found ${ownershipRows.length} ownership rows for calculation`);
         ownershipRows.forEach((row, index) => {
           const select = row.querySelector('select');
           const type = select?.value;
@@ -6483,22 +6440,21 @@
             // Apply dropdown selection to get final cumulative
             if (type === 'minus') {
               currentValue = previousCumulative - specificResult;
-              console.log(`🏢 Ownership[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} MINUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
             } else {
               currentValue = previousCumulative + specificResult;
-              console.log(`🏢 Ownership[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} PLUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
+            }
+            
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput) {
+              valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             if (type === 'minus') {
               currentValue = currentValue - value;
-              console.log(`🏢 Ownership[${index}]: ₪${value} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
             } else {
               currentValue = currentValue + value;
-              console.log(`🏢 Ownership[${index}]: ₪${value} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
             }
-          } else {
-            console.log(`⚠️ Ownership[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
         });
         
@@ -6508,7 +6464,6 @@
         
         // 5. Process Owners Adjustments
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
-        console.log(`🔍 Found ${ownersRows.length} owners rows for calculation`);
         ownersRows.forEach((row, index) => {
           const select = row.querySelector('select');
           const type = select?.value;
@@ -6526,22 +6481,21 @@
             // Apply dropdown selection to get final cumulative
             if (type === 'minus') {
               currentValue = previousCumulative - specificResult;
-              console.log(`👥 Owners[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} MINUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
             } else {
               currentValue = previousCumulative + specificResult;
-              console.log(`👥 Owners[${index}]: SPECIFIC ${Math.abs(percent)}% of ₪${previousCumulative.toLocaleString()} = ₪${specificResult.toFixed(0)} PLUS → CUMULATIVE: ₪${currentValue.toFixed(0)}`);
+            }
+            
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput) {
+              valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             if (type === 'minus') {
               currentValue = currentValue - value;
-              console.log(`👥 Owners[${index}]: ₪${value} MINUS → cumulative: ₪${currentValue.toFixed(0)}`);
             } else {
               currentValue = currentValue + value;
-              console.log(`👥 Owners[${index}]: ₪${value} PLUS → cumulative: ₪${currentValue.toFixed(0)}`);
             }
-          } else {
-            console.log(`⚠️ Owners[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
         });
         
@@ -6550,7 +6504,6 @@
         
         // 6. Process Additional Market Adjustments
         const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
-        console.log(`🔍 Found ${additionalRows.length} additional adjustment rows for calculation`);
         additionalRows.forEach((row, index) => {
           const type = row.querySelector('select')?.value;
           const inputs = row.querySelectorAll('input[type="text"]');
@@ -6563,15 +6516,11 @@
               const adjustment = basicPrice * (Math.abs(percent) / 100);
               const signedAdjustment = (type === 'minus' || percent < 0) ? -adjustment : adjustment;
               currentValue += signedAdjustment;
-              console.log(`💡 Additional[${index}]: ${percent}% ${type} = ${signedAdjustment.toFixed(0)}, cumulative: ${currentValue.toFixed(0)}`);
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
-            console.log(`💡 Additional[${index}]: ₪${value} ${type} = ${signedValue}, cumulative: ${currentValue.toFixed(0)}`);
-          } else {
-            console.log(`⚠️ Additional[${index}]: No valid data found - type: ${type}, percentValue: ${percentInput?.value}, valueValue: ${valueInput?.value}`);
           }
         });
         
@@ -6579,13 +6528,10 @@
         const resultField = document.getElementById('fullMarketValueResult');
         if (resultField) {
           resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
-          console.log(`✅ FULL market value result: ₪${Math.round(currentValue).toLocaleString()}`);
         }
         
-        console.log(`🏠 FULL MARKET VALUE CALCULATION: Base ₪${basicPrice.toLocaleString()} → Final ₪${Math.round(currentValue).toLocaleString()}`);
-        
       } catch (error) {
-        console.error('❌ Error in FULL market value calculation:', error);
+        console.error('Error in FULL market value calculation:', error);
       }
     }
     
@@ -6595,9 +6541,6 @@
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
         const helper = window.helper || {};
         
-        console.log('🔄 Loading full market value data...');
-        console.log('📊 Helper levi_report adjustments:', helper.levi_report?.adjustments);
-        console.log('📊 Helper custom full_market_adjustments:', helper.custom_adjustments?.full_market_adjustments);
         
         // Load basic price (same as gross calculation)
         const fullBasicPriceField = document.getElementById('fullBasicPrice');
@@ -6619,14 +6562,11 @@
           container.innerHTML = '';
           // Force DOM refresh
           container.offsetHeight;
-          console.log('🧹 Cleared allAdjustmentsList container, children count:', container.children.length);
           
           // Add a flag to prevent duplicate loading
           if (container.hasAttribute('data-loading')) {
-            console.log('⚠️ Container already being loaded, skipping duplicate load');
             return;
           }
-          console.log('🔄 Setting loading flag on container');
           container.setAttribute('data-loading', 'true');
         }
         
@@ -6648,9 +6588,6 @@
                 source: 'levi'
               });
               seenAdjustments.add(key);
-              console.log('✅ Added Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
-            } else {
-              console.log('⚠️ Skipped duplicate Levi adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
             }
           });
         }
@@ -6669,9 +6606,6 @@
                 source: 'custom'
               });
               seenAdjustments.add(key);
-              console.log('✅ Added custom adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
-            } else {
-              console.log('⚠️ Skipped duplicate custom adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
             }
           });
         }
@@ -6692,12 +6626,9 @@
           container.removeAttribute('data-loading');
         }
         
-        console.log('✅ Full market value data loading completed');
-        
         // Trigger calculation after data is loaded
         setTimeout(() => {
           updateFullMarketValueCalculation();
-          console.log('✅ Full market value calculation completed after data load');
         }, 200);
         
       } catch (error) {
@@ -6713,7 +6644,6 @@
     
     // FULL MARKET ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
     function calculateFullMarketAdjustmentValue(percentInput) {
-      console.log('🔄 calculateFullMarketAdjustmentValue called with:', percentInput.value);
       const percent = parseFloat(percentInput.value) || 0;
       const row = percentInput.closest('.adjustment-row');
       
