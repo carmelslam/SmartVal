@@ -10263,7 +10263,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalPrivate" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -10273,7 +10273,7 @@
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobal" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -10282,7 +10282,7 @@
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotalTotalLoss" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -10290,14 +10290,14 @@
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalDamagedSale" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalLegalLoss" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -10308,7 +10308,7 @@
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalDefault" style="background: white; color: #333;" readonly /></div>
           `;
       }
       
@@ -10323,33 +10323,50 @@
       
       switch(reportType) {
         case 'חוות דעת פרטית':
+          const claimPrivate = parseFloat(document.getElementById('sumClaim')?.value || 0);
+          const depreciationPrivate = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
+          const adjustmentsPrivate = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
+          const totalPrivate = claimPrivate + depreciationPrivate + adjustmentsPrivate;
+          const totalFieldPrivate = document.getElementById('sumTotalPrivate');
+          if (totalFieldPrivate) totalFieldPrivate.value = totalPrivate.toFixed(2);
+          break;
+          
         case 'חוות דעת גלובלית':
-          const claim = parseFloat(document.getElementById('sumClaim')?.value || 0);
-          const depreciation = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
-          const adjustments = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
-          const total = claim + depreciation + adjustments;
-          const totalField = document.getElementById('sumTotal');
-          if (totalField) totalField.value = total.toFixed(2);
+          const claimGlobal = parseFloat(document.getElementById('sumClaim')?.value || 0);
+          const depreciationGlobal = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
+          const adjustmentsGlobal = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
+          const totalGlobal = claimGlobal + depreciationGlobal + adjustmentsGlobal;
+          const totalFieldGlobal = document.getElementById('sumTotalGlobal');
+          if (totalFieldGlobal) totalFieldGlobal.value = totalGlobal.toFixed(2);
           break;
           
         case 'חוות דעת טוטלוסט':
           const scrapValue = parseFloat(document.getElementById('sumScrapValue')?.value || 0);
           const towingStorage = parseFloat(document.getElementById('sumTowingStorage')?.value || 0);
           const totalTotalLoss = marketValue - scrapValue + towingStorage;
-          const totalFieldTL = document.getElementById('sumTotal');
+          const totalFieldTL = document.getElementById('sumTotalTotalLoss');
           if (totalFieldTL) totalFieldTL.value = totalTotalLoss.toFixed(2);
           break;
           
         case 'חוות דעת מכירה מצבו הניזוק':
           const damagedSaleValue = parseFloat(document.getElementById('sumDamagedSaleValue')?.value || 0);
           const totalDamaged = marketValue - damagedSaleValue;
-          const totalFieldDS = document.getElementById('sumTotal');
+          const totalFieldDS = document.getElementById('sumTotalDamagedSale');
           if (totalFieldDS) totalFieldDS.value = totalDamaged.toFixed(2);
           break;
           
         case 'חוות דעת אובדן להלכה':
-          const totalFieldLegal = document.getElementById('sumTotal');
+          const totalFieldLegal = document.getElementById('sumTotalLegalLoss');
           if (totalFieldLegal) totalFieldLegal.value = marketValue.toFixed(2);
+          break;
+          
+        default:
+          const claimDefault = parseFloat(document.getElementById('sumClaim')?.value || 0);
+          const depreciationDefault = parseFloat(document.getElementById('sumDepreciation')?.value || 0);
+          const adjustmentsDefault = parseFloat(document.getElementById('sumAdjustments')?.value || 0);
+          const totalDefault = claimDefault + depreciationDefault + adjustmentsDefault;
+          const totalFieldDefault = document.getElementById('sumTotalDefault');
+          if (totalFieldDefault) totalFieldDefault.value = totalDefault.toFixed(2);
           break;
       }
     }
