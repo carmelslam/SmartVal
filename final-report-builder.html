@@ -2610,7 +2610,7 @@
           const subtotal = claimValue + depValue - salvageValue;
           
           // Automatic calculation with math.js - Calculate VAT (admin rate on subtotal)
-          const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100;
+          const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100;
           const vat = Math.round(subtotal * vatRate);
           
           // Calculate final total (subtotal + VAT) - automatic calculation with math.js
@@ -2915,7 +2915,7 @@
       const workCosts = block.work_cost || 0;
       const partsCosts = block.parts_cost || 0;
       const repairsCosts = workCosts + partsCosts;
-      const totalWithVAT = repairsCosts * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
+      const totalWithVAT = repairsCosts * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
       // Get existing parts, works, repairs from block
       const parts = block.parts || [];
@@ -3759,7 +3759,7 @@
           levi_total: leviTotal,
           damage_total: damageTotal,
           total_before_vat: leviTotal + damageTotal,
-          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)),
+          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100)),
           calculated_at: new Date().toISOString()
         };
         
@@ -7655,7 +7655,7 @@
               }
             },
             Summary: {
-              "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)
+              "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100)
             }
           };
           
@@ -7897,7 +7897,7 @@
 
     function updateCostDisplay(card, partsCost, workCost, repairsCost) {
       const totalCost = partsCost + workCost + repairsCost;
-      const totalWithVAT = totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
+      const totalWithVAT = totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
       // Update display elements
       const workDisplay = card.querySelector('.work-costs-display');
@@ -7981,7 +7981,7 @@
       });
       
       // Calculate total claim with VAT (admin configured rate)
-      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100));
+      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100));
       
       // Update summary fields
       const sumClaimField = document.getElementById('sumClaim');
@@ -8305,7 +8305,7 @@
           works: totalWorks,
           repairs: totalRepairs,
           total: totalParts + totalWorks + totalRepairs,
-          totalWithVAT: (totalParts + totalWorks + totalRepairs) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)
+          totalWithVAT: (totalParts + totalWorks + totalRepairs) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100)
         };
       },
       
@@ -8602,7 +8602,7 @@
         }
         
         const totalWithoutVAT = totalWorks + totalParts + totalRepairs;
-        const totalWithVAT = totalWithoutVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
+        const totalWithVAT = totalWithoutVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
         
         // Update or create damage_assessment section
         if (!helper.damage_assessment) helper.damage_assessment = {};
@@ -8655,7 +8655,7 @@
       });
       
       const totalWithoutVat = totalWorks + totalParts + totalRepairs;
-      const totalWithVat = totalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
+      const totalWithVat = totalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
       // Update subtotal display elements
       const totalWorksElement = document.getElementById('totalWorksSubtotal');
@@ -11145,7 +11145,7 @@
     // Get VAT rate based on company selection
     function getVatRate() {
       const isCompanyClient = document.getElementById('isCompanyClient')?.value;
-      return (isCompanyClient === 'yes') ? 0 : ((window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100); // 0% for companies, admin rate for private
+      return (isCompanyClient === 'yes') ? 0 : ((window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100); // 0% for companies, admin rate for private
     }
 
     // Toggle differentials display
