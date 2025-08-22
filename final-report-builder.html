@@ -2406,7 +2406,9 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          authorizedClaimField.value = formattedClaim;
+          // ✅ FIX: Load from damage_assessment.summary.total_with_vat instead of formattedClaim
+          const totalWithVAT = helper.damage_assessment?.summary?.total_with_vat || 0;
+          authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
           
         console.log('💰 נתוני תביעה mapped successfully:', { 
@@ -4116,7 +4118,7 @@
           helper.claims_data = helper.claims_data || {};
           const mapping = {
             'totalClaim': 'total_claim',
-            'authorizedClaim': 'authorized_claim'
+            'authorizedClaim': 'total_claim'  // ✅ FIX: authorizedClaim also writes to total_claim
           };
           helper.claims_data[mapping[fieldId]] = value;
           
