@@ -1050,7 +1050,12 @@
 
     <!-- DAMAGE CENTERS SUMMARY SECTION - EDITABLE -->
     <div class="form-section">
-      <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <h3 style="margin: 0;">סיכום מוקדי נזק (ניתן לעריכה)</h3>
+        <button type="button" class="btn" onclick="toggleDamageCentersSection()" style="background: #6c757d; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" id="damageCentersToggleBtn">
+          🔽 סגור
+        </button>
+      </div>
       <div id="damageCentersSummary">
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
@@ -1723,6 +1728,32 @@
         console.error(`Section with ID '${sectionId}' not found.`);
       }
     }
+
+    // DAMAGE CENTERS SECTION TOGGLE
+    function toggleDamageCentersSection() {
+      const section = document.getElementById('damageCentersSummary');
+      const toggleBtn = document.getElementById('damageCentersToggleBtn');
+      
+      if (section && toggleBtn) {
+        const isVisible = section.style.display !== 'none';
+        
+        if (isVisible) {
+          // Hide section
+          section.style.display = 'none';
+          toggleBtn.innerHTML = '🔼 פתח';
+          toggleBtn.style.background = '#28a745';
+        } else {
+          // Show section
+          section.style.display = 'block';
+          toggleBtn.innerHTML = '🔽 סגור';
+          toggleBtn.style.background = '#6c757d';
+        }
+        
+        // Save state to sessionStorage
+        sessionStorage.setItem('damageCentersSection', isVisible ? 'collapsed' : 'expanded');
+        console.log(`🔄 Damage centers section ${isVisible ? 'collapsed' : 'expanded'}`);
+      }
+    }
     
     // ADD DEPRECIATION FIELD FUNCTION
     function addDepField(data = {}) {
@@ -1951,6 +1982,7 @@
 
     // MAKE FUNCTIONS GLOBALLY ACCESSIBLE
     window.toggleSection = toggleSection;
+    window.toggleDamageCentersSection = toggleDamageCentersSection;
     window.addDepField = addDepField;
     window.removeDepField = removeDepField;
     window.saveDepreciationData = saveDepreciationData;
@@ -9797,6 +9829,19 @@
     document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => {
         addSectionButtons();
+        
+        // Restore damage centers section state
+        const damageCentersState = sessionStorage.getItem('damageCentersSection');
+        if (damageCentersState === 'collapsed') {
+          const section = document.getElementById('damageCentersSummary');
+          const toggleBtn = document.getElementById('damageCentersToggleBtn');
+          if (section && toggleBtn) {
+            section.style.display = 'none';
+            toggleBtn.innerHTML = '🔼 פתח';
+            toggleBtn.style.background = '#28a745';
+            console.log('🔄 Restored damage centers section as collapsed');
+          }
+        }
       }, 1000);
     });
     
