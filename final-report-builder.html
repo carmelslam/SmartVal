@@ -908,16 +908,16 @@
         <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
           הצג אקספירטיזה PDF
         </button>
-        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #06b6d4; color: white;">
-          הצג אומדן PDF
+        <button class="nav-btn" id="fetchFinalReportBtn" onclick="fetchFinalReportPDF()" style="background: #06b6d4; color: white;">
+          הצג חוות דעת PDF
         </button>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white;">
           בקש אקספירטיזה
         </button>
-        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #f59e0b; color: white;">
-          בקש אומדן
+        <button class="nav-btn" id="requestFinalReportBtn" onclick="requestFinalReport()" style="background: #f59e0b; color: white;">
+          בקש חוות דעת
         </button>
       </div>
       <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 14px; text-align: center; color: #92400e;">
@@ -966,23 +966,23 @@
       <div class="form-grid" id="vehicleData">
         <div>
           <label>מספר רכב:</label>
-          <input type="text" id="carPlate" />
+          <input type="text" id="carPlate" onchange="updateHelperFromField(event);" />
         </div>
         <div>
           <label>תוצרת:</label>
-          <input type="text" id="carManufacturer" />
+          <input type="text" id="carManufacturer" onchange="updateHelperFromField(event);" />
         </div>
         <div>
           <label>דגם:</label>
-          <input type="text" id="carModel" />
+          <input type="text" id="carModel" onchange="updateHelperFromField(event);" />
         </div>
         <div>
           <label>שנת ייצור:</label>
-          <input type="text" id="carYear" />
+          <input type="text" id="carYear" onchange="updateHelperFromField(event);" />
         </div>
         <div>
           <label>קוד דגם:</label>
-          <input type="text" id="carModelCode" />
+          <input type="text" id="carModelCode" onchange="updateHelperFromField(event);" />
         </div>
         <div>
           <label>מחיר בסיס:</label>
@@ -1524,7 +1524,7 @@
     <!-- ADDITIONAL NOTES -->
     <div class="form-section">
       <h3>הערות נוספות לחוות דעת</h3>
-      <textarea id="additional-notes" placeholder="הוסף הערות, המלצות או מידע נוסף לחוות דעת..." style="min-height: 80px;"></textarea>
+      <textarea id="additional-notes" placeholder="הוסף הערות, המלצות או מידע נוסף לחוות דעת..." style="min-height: 80px;" onchange="updateHelperFromField(event);"></textarea>
     </div>
 
     <!-- LEGAL TEXT SECTION - EDITABLE (MOVED BEFORE NAVIGATION) -->
@@ -1534,7 +1534,7 @@
         <button type="button" onclick="loadLegalTextFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
         <button type="button" onclick="resetLegalText()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס טקסט</button>
       </div>
-      <textarea id="legal-text-content" style="width: 100%; min-height: 200px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="הטקסט המשפטי יטען כאן עם הנתונים המעודכנים..."></textarea>
+      <textarea id="legal-text-content" style="width: 100%; min-height: 200px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="הטקסט המשפטי יטען כאן עם הנתונים המעודכנים..." onchange="updateHelperFromField(event);"></textarea>
       <div style="margin-top: 8px; font-size: 14px; color: #666;">
         💡 הטקסט ניתן לעריכה לצורך התאמה לדוח הספציפי. השינויים לא ישפיעו על הכספת המקורית.
       </div>
@@ -1928,7 +1928,7 @@
     window.saveDepreciationData = saveDepreciationData;
 
     // BUTTON FUNCTIONS - NO DEBUG ALERTS
-    window.saveEstimate = function() {
+    window.saveFinalReport = function() {
       const selectedTypeElement = document.querySelector('input[name="final-report-type"]:checked');
       if (!selectedTypeElement) {
         alert('אנא בחר סוג חוות דעת');
@@ -2057,25 +2057,25 @@
       updateBuilderCurrentState('final_report.adjustments', adjustmentsData);
       updateBuilderCurrentState('final_report.legal_text', legalText);
       
-      alert('חוות דעת נשמרה בהצלחה');
+      alert('חוות דעת סופית נשמרה בהצלחה');
     };
 
-    window.previewEstimate = function() {
+    window.previewFinalReport = function() {
       // First save all data
-      window.saveEstimate();
+      window.saveFinalReport();
       
       // Set report type and navigate
       sessionStorage.setItem('selectedReportType', 'final-report');
       window.location.href = 'final-report-validation.html';
     };
 
-    window.generateEstimate = function() {
+    window.generateFinalReport = function() {
       // First save all data
-      window.saveEstimate();
+      window.saveFinalReport();
       
-      // Set report type and navigate to final report generation
+      // Set report type and navigate to fee module
       sessionStorage.setItem('selectedReportType', 'final-report');
-      window.location.href = 'final-report-builder.html';
+      window.location.href = 'fee-module.html';
     };
 
     // Convert various date formats to YYYY-MM-DD for date input
@@ -2198,14 +2198,11 @@
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
           
-          // ALERT if 80487 detected
-          if (marketValue === 80487) {
-            console.error('🚨 DETECTED 80487 IN MARKET VALUE LOADING:');
-            console.error('- helper.vehicle?.market_value:', helper.vehicle?.market_value);
-            console.error('- helper.expertise?.calculations?.market_value:', helper.expertise?.calculations?.market_value);
-            console.error('- helper.valuation?.market_value:', helper.valuation?.market_value);
-            console.error('- rawMarketValue used:', rawMarketValue);
-            alert('🚨 80487 detected in market value! Check console for source.');
+          // Debug market value loading
+          if (marketValue && marketValue > 0) {
+            console.log('✅ Market value loaded successfully:', marketValue);
+          } else {
+            console.log('⚠️ No market value found in helper data');
           }
           
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
@@ -2584,8 +2581,8 @@
           // Calculate subtotal: claim + compensation - salvage value = subtotal (market price is separate)
           const subtotal = claimValue + depValue - salvageValue;
           
-          // Automatic calculation with math.js - Calculate VAT (18% on subtotal)
-          const vatRate = 0.18;
+          // Automatic calculation with math.js - Calculate VAT (admin rate on subtotal)
+          const vatRate = MathEngine.getVatRate() / 100;
           const vat = Math.round(subtotal * vatRate);
           
           // Calculate final total (subtotal + VAT) - automatic calculation with math.js
@@ -2656,7 +2653,7 @@
       
       // Add listeners for custom additions if they exist
       function addCustomFieldListeners() {
-        const customFields = document.querySelectorAll('#sumAdditionsGridEstimate input');
+        const customFields = document.querySelectorAll('#sumAdditionsGridFinalReport input');
         customFields.forEach(field => {
           field.addEventListener('input', calculateSummaryTotals);
         });
@@ -2890,7 +2887,7 @@
       const workCosts = block.work_cost || 0;
       const partsCosts = block.parts_cost || 0;
       const repairsCosts = workCosts + partsCosts;
-      const totalWithVAT = repairsCosts * 1.18;
+      const totalWithVAT = repairsCosts * (1 + MathEngine.getVatRate() / 100);
       
       // Get existing parts, works, repairs from block
       const parts = block.parts || [];
@@ -3734,7 +3731,7 @@
           levi_total: leviTotal,
           damage_total: damageTotal,
           total_before_vat: leviTotal + damageTotal,
-          total_with_vat: Math.round((leviTotal + damageTotal) * 1.18),
+          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + MathEngine.getVatRate() / 100)),
           calculated_at: new Date().toISOString()
         };
         
@@ -3769,13 +3766,13 @@
         let totalClaim = 0;
         let grossPercentage = 0;
         
-        if (window.EstimateCalculations && typeof window.EstimateCalculations === 'object') {
-          grossMarketValue = window.EstimateCalculations.getGrossMarketValue();
-          fullMarketValue = window.EstimateCalculations.getFullMarketValue();
-          totalClaim = window.EstimateCalculations.getTotalClaim();
-          grossPercentage = window.EstimateCalculations.getGrossPercentage();
+        if (window.FinalReportCalculations && typeof window.FinalReportCalculations === 'object') {
+          grossMarketValue = window.FinalReportCalculations.getGrossMarketValue();
+          fullMarketValue = window.FinalReportCalculations.getFullMarketValue();
+          totalClaim = window.FinalReportCalculations.getTotalClaim();
+          grossPercentage = window.FinalReportCalculations.getGrossPercentage();
         } else {
-          console.warn('EstimateCalculations not yet initialized, using fallback values');
+          console.warn('FinalReportCalculations not yet initialized, using fallback values');
           // Try to get values from DOM or helper as fallback
           grossMarketValue = parseFloat(document.getElementById('grossMarketValueResult')?.value.replace(/[₪,]/g, '') || '0') || 0;
           fullMarketValue = parseFloat(document.getElementById('fullMarketValueResult')?.value.replace(/[₪,]/g, '') || '0') || 0;
@@ -4115,8 +4112,8 @@
         const calculationFields = ['basicPrice', 'carBasePrice', 'carMarketValue', 'totalClaim'];
         if (calculationFields.includes(fieldId)) {
           setTimeout(() => {
-            if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
-              window.EstimateCalculations.refresh3BulkCalculations();
+            if (window.FinalReportCalculations && typeof window.FinalReportCalculations.refresh3BulkCalculations === 'function') {
+              window.FinalReportCalculations.refresh3BulkCalculations();
             }
           }, 100);
         }
@@ -4733,9 +4730,9 @@
       autoPopulationInProgress = true;
       console.log('🚀 Starting auto-population from Levi summary...');
       
-      // ENHANCED: Ensure EstimateCalculations is ready before proceeding
-      if (!window.EstimateCalculations) {
-        console.log('⏳ EstimateCalculations not ready, waiting...');
+      // ENHANCED: Ensure FinalReportCalculations is ready before proceeding
+      if (!window.FinalReportCalculations) {
+        console.log('⏳ FinalReportCalculations not ready, waiting...');
         setTimeout(() => {
           autoPopulationInProgress = false;
           autoPopulateFromLeviSummary();
@@ -4840,8 +4837,8 @@
         if (typeof updateHelperFromAdjustments === 'function') {
           updateHelperFromAdjustments();
         }
-        if (window.EstimateCalculations && typeof window.EstimateCalculations.refresh3BulkCalculations === 'function') {
-          window.EstimateCalculations.refresh3BulkCalculations();
+        if (window.FinalReportCalculations && typeof window.FinalReportCalculations.refresh3BulkCalculations === 'function') {
+          window.FinalReportCalculations.refresh3BulkCalculations();
         }
       }, 100);
       
@@ -5376,7 +5373,7 @@
     }
 
     // SIMPLE ESTIMATE ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
-    function calculateEstimateAdjustmentValueSimple(percentInput) {
+    function calculateFinalReportAdjustmentValueSimple(percentInput) {
       const percent = parseFloat(percentInput.value) || 0;
       const row = percentInput.closest('div');
       
@@ -5722,18 +5719,19 @@
         else {
           const allInputs = document.querySelectorAll('input[type="text"]');
           for (let input of allInputs) {
-            if (input.value && input.value.includes('118,000')) {
-              basicPrice = 118000;
-              console.log('🔍 Found ₪118,000 in field:', input.id || 'unknown');
+            const numericValue = parseFloat(input.value.replace(/[₪,]/g, ''));
+            if (numericValue > 0) {
+              basicPrice = numericValue;
+              console.log('🔍 Found price in field:', input.id || 'unknown', 'value:', basicPrice);
               break;
             }
           }
         }
         
-        // Fallback: Use 118000 if nothing found but we see it in the UI
+        // Fallback: Use helper base price or market value if available, otherwise 0
         if (basicPrice === 0) {
-          basicPrice = 118000;
-          console.log('🔍 FALLBACK: Using ₪118,000 as seen in UI');
+          basicPrice = helper.calculations?.base_market_value || helper.levisummary?.base_price || helper.valuation?.base_price || 0;
+          console.log('🔍 FALLBACK: Using helper base price:', basicPrice);
         }
         
         console.log('🔍 DEBUG: Final basic price for calculation:', basicPrice);
@@ -6453,7 +6451,8 @@
           const span = cumulativeElement.querySelector('span');
           if (span) {
             span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-            span.style.color = currentValue >= 118000 ? '#28a745' : '#dc3545';
+            const minExpectedValue = helper.calculations?.base_market_value || helper.levisummary?.base_price || 100000;
+            span.style.color = currentValue >= minExpectedValue ? '#28a745' : '#dc3545';
           }
         }
       }
@@ -6470,9 +6469,9 @@
           basicPrice = parseFloat(fullBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
         }
         
-        // Fallback: Use 118000 if field is empty
+        // Fallback: Use helper base price if field is empty
         if (basicPrice === 0) {
-          basicPrice = 118000;
+          basicPrice = helper.calculations?.base_market_value || helper.levisummary?.base_price || helper.valuation?.base_price || 0;
         }
         let currentValue = basicPrice;
         
@@ -6857,7 +6856,7 @@
     // Add final report adjustment row
     
     // Calculate final report adjustment value from percentage
-    function calculateEstimateAdjustmentValue(percentageInput) {
+    function calculateFinalReportAdjustmentValue(percentageInput) {
       const row = percentageInput.closest('div');
       let basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 0;
       const percentage = parseFloat(percentageInput.value) || 0;
@@ -6908,7 +6907,7 @@
     }
     
     // Update final report adjustments in helper
-    function updateEstimateAdjustments() {
+    function updateFinalReportAdjustments() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       // Final report container removed - will return empty NodeList
       const adjustmentRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"]');
@@ -7139,10 +7138,10 @@
 
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
-      // First initialize the EstimateCalculations object
-      console.log('🚀 Initializing EstimateCalculations object first');
+      // First initialize the FinalReportCalculations object
+      console.log('🚀 Initializing FinalReportCalculations object first');
       
-      // Then load data from helper after EstimateCalculations is available
+      // Then load data from helper after FinalReportCalculations is available
       setTimeout(() => {
         loadDataFromHelper();
         loadAttachmentsData();
@@ -7628,7 +7627,7 @@
               }
             },
             Summary: {
-              "Total with VAT": totalCost * 1.18
+              "Total with VAT": totalCost * (1 + MathEngine.getVatRate() / 100)
             }
           };
           
@@ -7870,7 +7869,7 @@
 
     function updateCostDisplay(card, partsCost, workCost, repairsCost) {
       const totalCost = partsCost + workCost + repairsCost;
-      const totalWithVAT = totalCost * 1.18;
+      const totalWithVAT = totalCost * (1 + MathEngine.getVatRate() / 100);
       
       // Update display elements
       const workDisplay = card.querySelector('.work-costs-display');
@@ -7953,8 +7952,8 @@
         totalClaimBeforeVAT += partsCost + workCost + repairsCost;
       });
       
-      // Calculate total claim with VAT (18%)
-      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * 1.18);
+      // Calculate total claim with VAT (admin configured rate)
+      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * (1 + MathEngine.getVatRate() / 100));
       
       // Update summary fields
       const sumClaimField = document.getElementById('sumClaim');
@@ -8140,7 +8139,7 @@
     window.forceManualCalculation = forceManualCalculation;
     
     // 🌍 GLOBAL CALCULATION INTERFACE FOR FINAL REPORT MODULES
-    window.EstimateCalculations = {
+    window.FinalReportCalculations = {
       // Main calculation functions
       updateGrossMarketValueField: updateGrossMarketValueField,
       updateGrossPercentageField: updateGrossPercentageField,
@@ -8278,7 +8277,7 @@
           works: totalWorks,
           repairs: totalRepairs,
           total: totalParts + totalWorks + totalRepairs,
-          totalWithVAT: (totalParts + totalWorks + totalRepairs) * 1.18
+          totalWithVAT: (totalParts + totalWorks + totalRepairs) * (1 + MathEngine.getVatRate() / 100)
         };
       },
       
@@ -8310,7 +8309,7 @@
               triggerFloatingScreenRefresh();
             }
             
-            console.log('✅ All 3-bulk calculations refreshed from EstimateCalculations interface');
+            console.log('✅ All 3-bulk calculations refreshed from FinalReportCalculations interface');
           } catch (error) {
             console.error('Error refreshing 3-bulk calculations:', error);
           }
@@ -8319,7 +8318,9 @@
     };
     
     // Make it also available via window for backward compatibility
-    window.getEstimateCalculations = () => window.EstimateCalculations;
+    window.getFinalReportCalculations = () => window.FinalReportCalculations;
+    // Maintain backward compatibility
+    window.getEstimateCalculations = () => window.FinalReportCalculations;
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {
@@ -8573,7 +8574,7 @@
         }
         
         const totalWithoutVAT = totalWorks + totalParts + totalRepairs;
-        const totalWithVAT = totalWithoutVAT * 1.18;
+        const totalWithVAT = totalWithoutVAT * (1 + MathEngine.getVatRate() / 100);
         
         // Update or create damage_assessment section
         if (!helper.damage_assessment) helper.damage_assessment = {};
@@ -8626,7 +8627,7 @@
       });
       
       const totalWithoutVat = totalWorks + totalParts + totalRepairs;
-      const totalWithVat = totalWithoutVat * 1.18;
+      const totalWithVat = totalWithoutVat * (1 + MathEngine.getVatRate() / 100);
       
       // Update subtotal display elements
       const totalWorksElement = document.getElementById('totalWorksSubtotal');
@@ -11116,7 +11117,7 @@
     // Get VAT rate based on company selection
     function getVatRate() {
       const isCompanyClient = document.getElementById('isCompanyClient')?.value;
-      return (isCompanyClient === 'yes') ? 0 : 0.18; // 0% for companies, 18% for private
+      return (isCompanyClient === 'yes') ? 0 : (MathEngine.getVatRate() / 100); // 0% for companies, admin rate for private
     }
 
     // Toggle differentials display
@@ -11709,7 +11710,18 @@
     };
 
     window.saveData = function() {
-      saveEstimate();
+      saveFinalReport();
+    };
+
+    // Functions for renamed buttons (former estimate functions)
+    window.fetchFinalReportPDF = function() {
+      // Redirect to preview final report functionality
+      previewFinalReport();
+    };
+
+    window.requestFinalReport = function() {
+      // Redirect to generate final report functionality  
+      generateFinalReport();
     };
 
     window.exitSystem = function() {
