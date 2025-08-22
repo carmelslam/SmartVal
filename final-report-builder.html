@@ -6336,7 +6336,15 @@
           // Update claims data for backward compatibility
           helper.claims_data = helper.claims_data || {};
           helper.claims_data.gross_percent = formattedPercentage;
-          helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
+          
+          // ✅ FIX: Only update total_claim if no manual value exists (preserve user input)
+          if (!helper.manual_gross_result?.authorizedClaim && !helper.claims_data.total_claim) {
+            helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
+            console.log(`🔄 Gross calc: Set total_claim to calculated value: ${helper.claims_data.total_claim}`);
+          } else {
+            console.log(`🔄 Gross calc: Preserving existing total_claim: ${helper.claims_data.total_claim} (manual: ${helper.manual_gross_result?.authorizedClaim})`);
+          }
+          
           helper.claims_data.gross_value = `₪${grossPrice.toLocaleString()}`;
           
           sessionStorage.setItem('helper', JSON.stringify(helper));
