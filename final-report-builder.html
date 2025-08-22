@@ -7164,6 +7164,78 @@
       }
     }
 
+    // 🏛️ ADMIN HUB COMMUNICATION SETUP
+    function initAdminHubCommunication() {
+      console.log('🔌 Initializing admin hub communication...');
+      
+      // Listen for messages from admin hub (parent frame)
+      window.addEventListener('message', function(event) {
+        // Security: Check origin if needed
+        // if (event.origin !== 'https://yaron-cayouf-portal.netlify.app') return;
+        
+        if (event.data && event.data.type) {
+          switch (event.data.type) {
+            case 'VAT_RATE_UPDATED':
+              // Admin hub notifies us of VAT rate change
+              const newVatRate = event.data.vatRate;
+              console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
+              
+              if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+                MathEngine.setVatRate(newVatRate);
+              }
+              
+              // Update helper and refresh display
+              if (window.setHelperVatRate) {
+                window.setHelperVatRate(newVatRate, 'admin_hub');
+              }
+              
+              // Refresh VAT display
+              if (window.initVatDisplay) {
+                window.initVatDisplay();
+              }
+              
+              // Refresh all calculations
+              if (typeof refreshAllCalculations === 'function') {
+                refreshAllCalculations();
+              }
+              
+              break;
+              
+            case 'GET_VAT_RATE':
+              // Admin hub requests current VAT rate
+              const currentVat = window.getHelperVatRate ? window.getHelperVatRate() : 18;
+              event.source.postMessage({
+                type: 'VAT_RATE_RESPONSE',
+                vatRate: currentVat
+              }, event.origin);
+              break;
+              
+            default:
+              console.log('📨 Unknown message from admin hub:', event.data);
+          }
+        }
+      });
+      
+      // Try to establish connection with admin hub
+      if (window.parent && window.parent !== window) {
+        console.log('🔗 Attempting to connect to admin hub...');
+        
+        // Request current VAT rate from admin hub
+        setTimeout(() => {
+          window.parent.postMessage({ type: 'GET_VAT_RATE' }, '*');
+        }, 500);
+        
+        // Notify admin hub that we're ready
+        window.parent.postMessage({ 
+          type: 'MODULE_READY', 
+          module: 'final-report-builder',
+          timestamp: Date.now()
+        }, '*');
+      } else {
+        console.log('ℹ️ No parent frame detected (not in admin hub iframe)');
+      }
+    }
+
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
       // First initialize the FinalReportCalculations object
@@ -7175,6 +7247,12 @@
         loadAttachmentsData();
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
+        
+        // Initialize admin hub communication and VAT display
+        initAdminHubCommunication();
+        if (typeof window.initVatDisplay === 'function') {
+          window.initVatDisplay();
+        }
       }, 100);
       
       // Initialize adjustment system with event listeners
@@ -11763,18 +11841,57 @@
     // 🏛️ VAT RATE MANAGEMENT FUNCTIONS
     
     // Initialize VAT rate display
-    window.initVatDisplay = function() {
+    window.initVatDisplay = async function() {
       try {
-        const vatInfo = window.getVatRateInfo ? window.getVatRateInfo() : 
-          { rate: 18, source: 'admin_hub', updated: null };
+        // Try to get actual VAT rate from admin hub via MathEngine
+        let adminVatRate = null;
+        let vatSource = 'default';
         
-        document.getElementById('vat-rate-input').value = vatInfo.rate;
-        document.getElementById('vat-source-display').textContent = 
-          vatInfo.source === 'manual' ? 'עריכה ידנית' : 'מנהל מערכת';
-        document.getElementById('vat-updated-display').textContent = 
-          vatInfo.updated ? new Date(vatInfo.updated).toLocaleString('he-IL') : 'לא עודכן';
+        if (typeof MathEngine !== 'undefined' && MathEngine.loadAdminHubVatRate) {
+          try {
+            adminVatRate = await MathEngine.loadAdminHubVatRate();
+            if (adminVatRate !== null) {
+              vatSource = 'admin_hub';
+              console.log('✅ Loaded VAT rate from admin hub:', adminVatRate + '%');
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not load VAT rate from admin hub:', e);
+          }
+        }
+        
+        // Fallback to helper or default
+        if (adminVatRate === null) {
+          adminVatRate = window.getHelperVatRate ? window.getHelperVatRate() : 18;
+          vatSource = window.helper?.calculations?.vat_rate ? 'helper' : 'default';
+        }
+        
+        // Update MathEngine with admin rate
+        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate && vatSource === 'admin_hub') {
+          MathEngine.setVatRate(adminVatRate);
+        }
+        
+        // Update display
+        const vatInput = document.getElementById('vat-rate-input');
+        const sourceDisplay = document.getElementById('vat-source-display');
+        const updatedDisplay = document.getElementById('vat-updated-display');
+        
+        if (vatInput) vatInput.value = adminVatRate;
+        if (sourceDisplay) {
+          sourceDisplay.textContent = vatSource === 'admin_hub' ? 'מנהל מערכת' : 
+                                      vatSource === 'helper' ? 'נתוני מערכת' : 'ברירת מחדל';
+        }
+        if (updatedDisplay) {
+          updatedDisplay.textContent = vatSource === 'admin_hub' ? 
+            new Date().toLocaleString('he-IL') : 'לא עודכן מאדמין';
+        }
+        
+        console.log(`📊 VAT display initialized: ${adminVatRate}% (${vatSource})`);
+        
       } catch (e) {
         console.warn('⚠️ Could not initialize VAT display:', e);
+        // Fallback initialization
+        const vatInput = document.getElementById('vat-rate-input');
+        if (vatInput) vatInput.value = 18;
       }
     };
     
@@ -11815,6 +11932,37 @@
             refreshAllCalculations();
           }
         }
+      }
+    };
+    
+    // 🔧 DEBUG: Test admin hub connection
+    window.testAdminHubConnection = function() {
+      console.log('🔍 Testing admin hub connection...');
+      
+      if (window.parent && window.parent !== window) {
+        console.log('✅ Parent frame detected - we are in an iframe');
+        
+        // Test VAT rate request
+        const timeout = setTimeout(() => {
+          console.log('❌ Timeout: Admin hub did not respond');
+          alert('❌ לא התקבלה תשובה מאדמין בזמן - ייתכן שהחיבור לא פעיל');
+        }, 3000);
+        
+        const messageHandler = (event) => {
+          if (event.data && event.data.type === 'VAT_RATE_RESPONSE') {
+            clearTimeout(timeout);
+            window.removeEventListener('message', messageHandler);
+            console.log('✅ Admin hub responded with VAT rate:', event.data.vatRate + '%');
+            alert(`✅ חיבור לאדמין פעיל! שיעור מע"מ נוכחי: ${event.data.vatRate}%`);
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        window.parent.postMessage({ type: 'GET_VAT_RATE' }, '*');
+        
+      } else {
+        console.log('❌ No parent frame - not running in admin hub');
+        alert('❌ לא רץ בתוך מנהל המערכת - פתח דרך הפורטל');
       }
     };
     

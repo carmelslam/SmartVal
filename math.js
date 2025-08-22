@@ -1,6 +1,7 @@
 // math.js — Core Calculation Engine for Report Values
 
 let _vatRate = 18; // default system VAT rate
+let _adminHubVatRate = null; // VAT rate from admin hub
 
 export const MathEngine = {
   // Core Math Functions
@@ -133,16 +134,134 @@ export const MathEngine = {
 
   // VAT Management
   getVatRate() {
-    return _vatRate;
+    // Check if admin hub VAT rate is available
+    if (_adminHubVatRate !== null && _adminHubVatRate !== undefined) {
+      return _adminHubVatRate;
+    }
+    
+    // Try to load from admin hub
+    try {
+      const adminVat = MathEngine.loadAdminHubVatRate();
+      if (adminVat !== null) {
+        _adminHubVatRate = adminVat;
+        return _adminHubVatRate;
+      }
+    } catch (e) {
+      console.warn('Could not load VAT rate from admin hub:', e);
+    }
+    
+    // Fallback to stored or default rate
+    const storedVat = sessionStorage.getItem('globalVAT');
+    return storedVat ? parseFloat(storedVat) : _vatRate;
   },
 
   setVatRate(rate) {
     if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
       _vatRate = rate;
+      _adminHubVatRate = rate; // Update admin hub cache
       sessionStorage.setItem('globalVAT', rate);
+      console.log(`🔄 VAT rate updated to ${rate}% in MathEngine`);
+      
+      // Notify admin hub if available
+      try {
+        MathEngine.updateAdminHubVatRate(rate);
+      } catch (e) {
+        console.warn('Could not update admin hub VAT rate:', e);
+      }
+      
       if (window.Helper?.updateMeta) {
         Helper.updateMeta({ global_vat: rate });
       }
+      
+      // Broadcast change to all modules
+      if (typeof window.refreshHelperVatRate === 'function') {
+        window.refreshHelperVatRate();
+      }
+    }
+  },
+
+  // Load VAT rate from admin hub
+  loadAdminHubVatRate() {
+    // Check for admin hub communication methods
+    if (window.parent && window.parent !== window) {
+      // We're in an iframe, try to communicate with parent (admin hub)
+      try {
+        return MathEngine.getVatRateFromParent();
+      } catch (e) {
+        console.warn('Could not get VAT rate from parent frame:', e);
+      }
+    }
+    
+    // Check for admin hub API
+    if (typeof window.AdminHubAPI !== 'undefined') {
+      try {
+        return window.AdminHubAPI.getVatRate();
+      } catch (e) {
+        console.warn('Could not get VAT rate from AdminHubAPI:', e);
+      }
+    }
+    
+    // Check sessionStorage for admin hub data
+    try {
+      const adminData = sessionStorage.getItem('adminHubConfig');
+      if (adminData) {
+        const config = JSON.parse(adminData);
+        if (config.vat_rate !== undefined) {
+          return config.vat_rate;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not parse admin hub config from sessionStorage:', e);
+    }
+    
+    return null;
+  },
+
+  // Get VAT rate from parent frame (admin hub)
+  getVatRateFromParent() {
+    return new Promise((resolve, reject) => {
+      const messageHandler = (event) => {
+        if (event.data && event.data.type === 'VAT_RATE_RESPONSE') {
+          window.removeEventListener('message', messageHandler);
+          resolve(event.data.vatRate);
+        }
+      };
+      
+      window.addEventListener('message', messageHandler);
+      
+      // Request VAT rate from parent
+      window.parent.postMessage({ type: 'GET_VAT_RATE' }, '*');
+      
+      // Timeout after 2 seconds
+      setTimeout(() => {
+        window.removeEventListener('message', messageHandler);
+        reject(new Error('Timeout waiting for VAT rate from admin hub'));
+      }, 2000);
+    });
+  },
+
+  // Update VAT rate in admin hub
+  updateAdminHubVatRate(rate) {
+    if (window.parent && window.parent !== window) {
+      // Notify parent frame (admin hub) of VAT rate change
+      window.parent.postMessage({ 
+        type: 'UPDATE_VAT_RATE', 
+        vatRate: rate 
+      }, '*');
+    }
+    
+    // Update admin hub API if available
+    if (typeof window.AdminHubAPI !== 'undefined' && window.AdminHubAPI.setVatRate) {
+      window.AdminHubAPI.setVatRate(rate);
+    }
+    
+    // Store in sessionStorage for persistence
+    try {
+      const adminData = JSON.parse(sessionStorage.getItem('adminHubConfig') || '{}');
+      adminData.vat_rate = rate;
+      sessionStorage.setItem('adminHubConfig', JSON.stringify(adminData));
+    } catch (e) {
+      console.warn('Could not update admin hub config in sessionStorage:', e);
     }
   },
 
