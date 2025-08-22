@@ -5178,7 +5178,13 @@ window.getHelperVatRate = function(forceRefresh = false) {
   // Ensure helper and calculations exist
   if (!window.helper) {
     console.warn('⚠️ Helper not initialized, cannot get VAT rate');
-    return MathEngine?.getVatRate?.() || 18;
+    // Safe fallback chain
+    try {
+      return (typeof MathEngine !== 'undefined' && MathEngine?.getVatRate) ? MathEngine.getVatRate() : 18;
+    } catch (e) {
+      console.warn('⚠️ MathEngine not available, using default VAT rate 18%');
+      return 18;
+    }
   }
   
   if (!window.helper.calculations) {
@@ -5186,9 +5192,15 @@ window.getHelperVatRate = function(forceRefresh = false) {
   }
   
   // ALWAYS get current VAT rate from admin hub to ensure it's up to date
+  let currentAdminVatRate = 18; // Default fallback
+  
   try {
-    const currentAdminVatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-      MathEngine.getVatRate() : 18;
+    if (typeof MathEngine !== 'undefined' && MathEngine?.getVatRate) {
+      currentAdminVatRate = MathEngine.getVatRate();
+    } else {
+      console.warn('⚠️ MathEngine not available, using stored VAT rate or default');
+      return window.helper.calculations.vat_rate || 18;
+    }
     
     // Update helper if admin rate changed or if forced refresh
     if (forceRefresh || !window.helper.calculations.vat_rate || window.helper.calculations.vat_rate !== currentAdminVatRate) {
@@ -5212,7 +5224,7 @@ window.getHelperVatRate = function(forceRefresh = false) {
     return window.helper.calculations.vat_rate;
     
   } catch (e) {
-    console.warn('⚠️ Could not load VAT rate from admin hub, using stored value or default');
+    console.warn('⚠️ Error accessing VAT rate from admin hub:', e.message);
     return window.helper.calculations.vat_rate || 18;
   }
 };

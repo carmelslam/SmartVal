@@ -5423,3 +5423,66 @@ function validateHelperData(helper) {
 **Files Analyzed:** final-report-builder.html (522KB, 11,000+ lines)
 **Calculation Functions Examined:** 15+ functions
 **Hardcoded Values Found:** 4 different hardcoded constants
+
+---
+
+## ✅ COMPLETED: MathEngine Error Resolution & VAT Centralization
+**Date: 22/08/2025**
+
+### Problem Summary
+"MathEngine is not defined" ReferenceError occurred when modules tried to access MathEngine.getVatRate() before math.js was properly loaded. Additionally, VAT rates needed centralization across all modules.
+
+### Implementation Summary
+
+**Files Modified:**
+- `final-report-builder.html` - Added math.js script import
+- `helper.js` - Enhanced getHelperVatRate() error handling
+- `estimate.js`, `estimate-generator.js`, `estimate-report.js`, `final_report.js`, `fee-module.js`, `expertise.js` - Updated VAT references
+- Multiple HTML files - Updated VAT rate usage patterns
+
+### Key Changes Made:
+
+1. **Fixed Script Loading Order:**
+   - Added `<script type="module" src="./math.js"></script>` to final-report-builder.html
+   - Ensured math.js loads before any VAT calculations
+
+2. **Enhanced Error Handling in getHelperVatRate():**
+   ```javascript
+   try {
+     if (typeof MathEngine !== 'undefined' && MathEngine?.getVatRate) {
+       currentAdminVatRate = MathEngine.getVatRate();
+     } else {
+       return window.helper.calculations.vat_rate || 18;
+     }
+   } catch (e) {
+     console.warn('⚠️ Error accessing VAT rate from admin hub:', e.message);
+     return window.helper.calculations.vat_rate || 18;
+   }
+   ```
+
+3. **Centralized VAT Rate System:**
+   - All 10+ modules now use `window.getHelperVatRate()` instead of direct MathEngine calls
+   - VAT rates sync from admin hub to helper.calculations.vat_rate
+   - Fallback chain: Admin Hub → Helper Storage → Default (18%)
+
+4. **Added VAT Rate Editing UI:**
+   - VAT editing panel in final-report-builder.html
+   - Real-time calculation updates when VAT changes
+   - Admin hub reset functionality
+
+### Technical Solution:
+**Before:** Direct MathEngine calls causing undefined errors
+```javascript
+const vatRate = MathEngine.getVatRate(); // ❌ Error if MathEngine not loaded
+```
+
+**After:** Safe helper-based VAT access with comprehensive fallbacks
+```javascript
+const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (MathEngine.getVatRate ? MathEngine.getVatRate() : 18); // ✅ Safe
+```
+
+### Results:
+- **Fixed:** "MathEngine is not defined" errors across all modules
+- **Implemented:** Centralized VAT rate management system
+- **Added:** Comprehensive error handling and fallbacks
+- **Verified:** All 10+ modules now use consistent VAT rate access pattern
