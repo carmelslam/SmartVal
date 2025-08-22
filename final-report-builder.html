@@ -2316,10 +2316,11 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // Also update gross section total claim field (input element uses value)
+        // ✅ FIX: Update gross section with correct value from damage_assessment.totals["Total with VAT"]
         const totalClaimGrossInput = document.getElementById('totalClaimGross');
         if (totalClaimGrossInput) {
-          totalClaimGrossInput.value = formattedClaim;
+          const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
         
         // 2. חישוב הערך לנזק גולמי - Gross damage value (from Levi adjustments)
@@ -6213,9 +6214,17 @@
           const totalClaimField = document.getElementById('totalClaim');
           const leviPriceListField = document.getElementById('leviPriceList');
           const grossPercentField = document.getElementById('grossPercent');
+          const totalClaimGrossField = document.getElementById('totalClaimGross');
           
           if (totalClaimField && helper.claims_data.total_claim) {
             totalClaimField.value = helper.claims_data.total_claim;
+          }
+          
+          // ✅ FIX: Load totalClaimGross from damage_assessment.totals["Total with VAT"]
+          if (totalClaimGrossField) {
+            const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+            totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+            console.log(`💰 Loaded totalClaimGross from helper.damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
           }
           
           if (leviPriceListField && helper.claims_data.gross_value) {
@@ -8206,10 +8215,11 @@
         } else if (totalClaimField) {
           totalClaimField.value = formattedAmount;
         }
-        // Also update gross section total claim field
+        // ✅ FIX: Update gross section with correct value from damage_assessment.totals["Total with VAT"]
         const totalClaimGrossField = document.getElementById('totalClaimGross');
         if (totalClaimGrossField) {
-          totalClaimGrossField.value = formattedAmount;
+          const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
         
         console.log(`💰 Updated total claim with VAT: ${totalClaimBeforeVAT.toLocaleString()} → ${totalClaimWithVAT.toLocaleString()}`);
@@ -11483,10 +11493,12 @@
       if (totalClaimDiv) {
         totalClaimDiv.innerText = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
       }
-      // Update gross section totalClaim field with formatting
+      // ✅ FIX: Update gross section with correct value from damage_assessment.totals["Total with VAT"]
       const totalClaimGrossInput = document.getElementById('totalClaimGross');
       if (totalClaimGrossInput) {
-        totalClaimGrossInput.value = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
+        const helper = window.helper || {};
+        const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+        totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
       }
       
       const depFields = [
