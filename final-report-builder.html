@@ -2406,9 +2406,19 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // ✅ FIX: Load from damage_assessment.summary.total_with_vat instead of formattedClaim
+          // ✅ FIX: Prioritize saved value, fallback to damage assessment
+          const savedValue = helper.claims_data?.total_claim;
           const totalWithVAT = helper.damage_assessment?.summary?.total_with_vat || 0;
-          authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          
+          if (savedValue) {
+            // Use saved value if it exists
+            authorizedClaimField.value = savedValue;
+            console.log(`💰 Loaded authorizedClaim from saved claims_data.total_claim: ${savedValue}`);
+          } else {
+            // Fallback to damage assessment value
+            authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+            console.log(`💰 Loaded authorizedClaim from damage_assessment.summary.total_with_vat: ${totalWithVAT}`);
+          }
         }
           
         console.log('💰 נתוני תביעה mapped successfully:', { 
@@ -4121,6 +4131,7 @@
             'authorizedClaim': 'total_claim'  // ✅ FIX: authorizedClaim also writes to total_claim
           };
           helper.claims_data[mapping[fieldId]] = value;
+          console.log(`💰 Updated claims_data.${mapping[fieldId]} from ${fieldId}: ${value}`);
           
           // Also update expertise.calculations for compatibility
           helper.expertise = helper.expertise || {};
