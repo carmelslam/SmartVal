@@ -11650,8 +11650,28 @@
     function triggerMathCalculation() {
       if (typeof MathEngine !== 'undefined' && MathEngine.calculateAll) {
         try {
-          MathEngine.calculateAll();
-          console.log('✅ MathEngine calculation triggered');
+          // Gather required data for calculation
+          const helper = window.helper || {};
+          const baseDamage = helper.damage_assessment?.totals?.base_damage || 0;
+          const depreciation = helper.depreciation?.total_value || 0;
+          const fees = helper.fees?.total || 0;
+          const marketValue = helper.vehicle?.market_value || 0;
+          const vehicleValueGross = helper.vehicle?.gross_value || marketValue;
+          const shavehPercent = helper.calculations?.shaveh_percent || 0;
+          const vatRate = helper.calculations?.vat_rate || 18;
+          
+          const calculationData = {
+            baseDamage,
+            depreciation,
+            fees,
+            marketValue,
+            vehicleValueGross,
+            shavehPercent,
+            vatRate
+          };
+          
+          MathEngine.calculateAll(calculationData);
+          console.log('✅ MathEngine calculation triggered with data:', calculationData);
         } catch (error) {
           console.error('❌ Error triggering MathEngine calculation:', error);
         }
