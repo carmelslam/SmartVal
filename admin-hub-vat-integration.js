@@ -24,6 +24,7 @@ window.setAdminVatRate = function(newVatRate) {
   adminHubVatRate = newVatRate;
   
   console.log(`🔄 Admin VAT rate changed from ${oldRate}% to ${newVatRate}%`);
+  console.log('🎯 This should update helper.calculations.vat_rate in all modules');
   
   // Broadcast to all connected modules
   broadcastVatRateChange(newVatRate);

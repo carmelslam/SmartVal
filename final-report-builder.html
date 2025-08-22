@@ -7180,13 +7180,12 @@
               const newVatRate = event.data.vatRate;
               console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
               
-              if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
-                MathEngine.setVatRate(newVatRate);
-              }
-              
-              // Update helper and refresh display
-              if (window.setHelperVatRate) {
-                window.setHelperVatRate(newVatRate, 'admin_hub');
+              // CRITICAL: Update helper.calculations.vat_rate directly (source of truth)
+              if (typeof window.setHelperVatRateFromAdmin === 'function') {
+                const success = window.setHelperVatRateFromAdmin(newVatRate, 'admin_hub');
+                console.log(success ? '✅ Helper VAT rate updated successfully' : '❌ Failed to update helper VAT rate');
+              } else {
+                console.warn('⚠️ setHelperVatRateFromAdmin function not available');
               }
               
               // Refresh VAT display
@@ -12131,7 +12130,21 @@
     
   </script>
   
-  <script type="module" src="./math.js"></script>
+  <script type="module">
+    // Import and make MathEngine globally available
+    import { MathEngine } from './math.js';
+    
+    // Make MathEngine available globally for other scripts
+    window.MathEngine = MathEngine;
+    
+    // Log that MathEngine is now available
+    console.log('✅ MathEngine loaded and available globally');
+    
+    // Dispatch event to notify other scripts MathEngine is ready
+    window.dispatchEvent(new CustomEvent('mathEngineReady', { 
+      detail: { MathEngine: MathEngine } 
+    }));
+  </script>
   
   <script>
     // 🔧 IMMEDIATE FUNCTIONS - Available right away for testing

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAT Communication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { border-left: 4px solid #28a745; }
+        .warning { border-left: 4px solid #ffc107; }
+        .error { border-left: 4px solid #dc3545; }
+        .info { border-left: 4px solid #007bff; }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .vat-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .log-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 VAT Communication Test Page</h1>
+    
+    <div class="status-card info">
+        <h3>📊 Current VAT Rate</h3>
+        <div class="vat-display" id="currentVatDisplay">Loading...</div>
+        <p>Source: <span id="vatSource">Unknown</span></p>
+        <p>Last Updated: <span id="lastUpdated">Never</span></p>
+    </div>
+    
+    <div class="status-card">
+        <h3>🔧 Test Functions</h3>
+        <button onclick="testAdminConnection()">Test Admin Connection</button>
+        <button onclick="testVatRetrieval()">Test VAT Retrieval</button>
+        <button onclick="simulateVatChange()">Simulate VAT Change</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="status-card">
+        <h3>📋 Communication Log</h3>
+        <div class="log-area" id="logArea"></div>
+    </div>
+    
+    <script>
+        let currentVat = 18;
+        let vatSource = 'default';
+        
+        // Logging function
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('logArea');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logArea.textContent += logEntry;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(message);
+        }
+        
+        // Update VAT display
+        function updateVatDisplay(rate, source = 'unknown') {
+            currentVat = rate;
+            vatSource = source;
+            
+            document.getElementById('currentVatDisplay').textContent = rate + '%';
+            document.getElementById('vatSource').textContent = source;
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString('he-IL');
+            
+            log(`✅ VAT display updated: ${rate}% (source: ${source})`, 'success');
+        }
+        
+        // Test admin hub connection
+        function testAdminConnection() {
+            log('🔍 Testing admin hub connection...', 'info');
+            
+            if (window.parent && window.parent !== window) {
+                log('✅ Parent frame detected - we are in an iframe', 'success');
+                
+                // Request VAT rate from admin hub
+                const timeout = setTimeout(() => {
+                    log('❌ Timeout: No response from admin hub', 'error');
+                }, 3000);
+                
+                const responseHandler = (event) => {
+                    if (event.data && event.data.type === 'VAT_RATE_RESPONSE') {
+                        clearTimeout(timeout);
+                        window.removeEventListener('message', responseHandler);
+                        log(`✅ Admin hub responded with VAT rate: ${event.data.vatRate}%`, 'success');
+                        updateVatDisplay(event.data.vatRate, 'admin_hub');
+                    }
+                };
+                
+                window.addEventListener('message', responseHandler);
+                window.parent.postMessage({ type: 'GET_VAT_RATE' }, '*');
+                log('📡 Sent GET_VAT_RATE request to admin hub', 'info');
+                
+            } else {
+                log('❌ No parent frame detected - not running in iframe', 'error');
+            }
+        }
+        
+        // Test VAT retrieval from helper system
+        function testVatRetrieval() {
+            log('🔍 Testing VAT retrieval from helper system...', 'info');
+            
+            // Test helper VAT function
+            if (typeof window.getHelperVatRate === 'function') {
+                const helperVat = window.getHelperVatRate();
+                log(`✅ Helper VAT function available: ${helperVat}%`, 'success');
+                updateVatDisplay(helperVat, 'helper');
+            } else {
+                log('⚠️ Helper VAT function not available', 'warning');
+            }
+            
+            // Test MathEngine
+            if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+                const mathEngineVat = MathEngine.getVatRate();
+                log(`✅ MathEngine VAT available: ${mathEngineVat}%`, 'success');
+                if (!window.getHelperVatRate) {
+                    updateVatDisplay(mathEngineVat, 'mathengine');
+                }
+            } else {
+                log('⚠️ MathEngine not available', 'warning');
+            }
+            
+            // Test sessionStorage
+            const storedVat = sessionStorage.getItem('globalVAT');
+            if (storedVat) {
+                log(`ℹ️ Stored VAT in sessionStorage: ${storedVat}%`, 'info');
+            } else {
+                log('ℹ️ No VAT stored in sessionStorage', 'info');
+            }
+        }
+        
+        // Simulate VAT change
+        function simulateVatChange() {
+            const newRate = currentVat === 18 ? 17 : 18;
+            log(`🔄 Simulating VAT change to ${newRate}%...`, 'info');
+            
+            // Update local display
+            updateVatDisplay(newRate, 'manual');
+            
+            // Try to update MathEngine if available
+            if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+                MathEngine.setVatRate(newRate);
+                log(`✅ Updated MathEngine VAT to ${newRate}%`, 'success');
+            }
+            
+            // Try to update helper if available
+            if (typeof window.setHelperVatRate === 'function') {
+                window.setHelperVatRate(newRate, 'manual');
+                log(`✅ Updated helper VAT to ${newRate}%`, 'success');
+            }
+            
+            // Notify admin hub if we're in iframe
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'UPDATE_VAT_RATE',
+                    vatRate: newRate
+                }, '*');
+                log(`📡 Notified admin hub of VAT change to ${newRate}%`, 'info');
+            }
+        }
+        
+        // Clear log
+        function clearLog() {
+            document.getElementById('logArea').textContent = '';
+            log('📋 Log cleared', 'info');
+        }
+        
+        // Message listener for admin hub communication
+        window.addEventListener('message', function(event) {
+            if (!event.data || !event.data.type) return;
+            
+            switch (event.data.type) {
+                case 'VAT_RATE_UPDATED':
+                    log(`📢 Received VAT update from admin hub: ${event.data.vatRate}%`, 'success');
+                    updateVatDisplay(event.data.vatRate, 'admin_hub');
+                    break;
+                    
+                case 'GET_VAT_RATE':
+                    log('📡 Admin hub requested current VAT rate', 'info');
+                    if (event.source) {
+                        event.source.postMessage({
+                            type: 'VAT_RATE_RESPONSE',
+                            vatRate: currentVat
+                        }, event.origin);
+                        log(`📤 Sent VAT rate response: ${currentVat}%`, 'info');
+                    }
+                    break;
+                    
+                default:
+                    log(`📨 Unknown message: ${event.data.type}`, 'info');
+            }
+        });
+        
+        // Initialize on load
+        window.addEventListener('load', function() {
+            log('🚀 VAT Communication Test Page loaded', 'info');
+            
+            // Auto-test connection
+            setTimeout(() => {
+                testAdminConnection();
+                testVatRetrieval();
+            }, 500);
+            
+            // Notify admin hub we're ready
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'MODULE_READY',
+                    module: 'vat-test-page'
+                }, '*');
+                log('📋 Notified admin hub that test page is ready', 'info');
+            }
+        });
+        
+        // Make functions globally available for console testing
+        window.testVatCommunication = {
+            testAdmin: testAdminConnection,
+            testRetrieval: testVatRetrieval,
+            simulate: simulateVatChange,
+            clearLog: clearLog,
+            currentVat: () => currentVat,
+            log: log
+        };
+        
+        log('🔧 Test functions available in window.testVatCommunication', 'info');
+    </script>
+</body>
+</html>
