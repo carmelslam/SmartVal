@@ -2406,9 +2406,17 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // Simple: Always load from damage_assessment.summary.total_with_vat
-          const totalWithVAT = helper.damage_assessment?.summary?.total_with_vat || 0;
-          authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          // ✅ FIX: Priority loading - saved value first, then auto-populate
+          const savedValue = helper.claims_data?.total_claim;
+          const autoValue = helper.damage_assessment?.summary?.total_with_vat || 0;
+
+          if (savedValue) {
+            // Use saved value (user has manually set this)
+            authorizedClaimField.value = savedValue;
+          } else {
+            // Auto-populate from calculation (no saved value yet)  
+            authorizedClaimField.value = autoValue ? `₪${autoValue.toLocaleString()}` : '';
+          }
         }
           
         console.log('💰 נתוני תביעה mapped successfully:', { 
