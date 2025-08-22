@@ -7261,8 +7261,8 @@
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
         
-        // Initialize admin hub communication
-        initAdminHubCommunication();
+        // DO NOT initialize admin hub communication here - wait for helper.js to load first
+        console.log('ℹ️ Waiting for helper.js to load before initializing admin hub communication...');
         
         // Wait for MathEngine to be ready before initializing VAT display
         if (typeof window.MathEngine !== 'undefined') {
@@ -12226,6 +12226,32 @@
         console.log('✅ Helper VAT rate:', window.getHelperVatRate() + '%');
       }
     };
+    
+    // Test admin VAT change simulation
+    window.simulateAdminVatChange = function(newVatRate = 19) {
+      console.log(`🧪 Simulating admin VAT change to ${newVatRate}%...`);
+      console.log('📊 BEFORE - helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+      
+      // Simulate the message that admin hub would send
+      const simulatedMessage = {
+        data: {
+          type: 'VAT_RATE_UPDATED',
+          vatRate: newVatRate,
+          timestamp: Date.now()
+        },
+        origin: '*',
+        source: window
+      };
+      
+      // Trigger the message handler manually
+      window.dispatchEvent(new MessageEvent('message', simulatedMessage));
+      
+      // Check result after a short delay
+      setTimeout(() => {
+        console.log('📊 AFTER - helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+        console.log('📊 AFTER - getHelperVatRate():', window.getHelperVatRate ? window.getHelperVatRate() : 'function not available');
+      }, 200);
+    };
   </script>
   <script type="module" src="./helper-events.js"></script>
   <!-- TEMPORARILY DISABLED - conflicts with differential structure -->
@@ -12249,6 +12275,88 @@
   
   <script type="module" src="auth.js"></script>
   <script src="helper.js" type="module"></script>
+  
+  <script>
+    // 🏛️ INITIALIZE ADMIN HUB COMMUNICATION AFTER ALL MODULES LOADED
+    window.addEventListener('load', function() {
+      // Wait a bit more for modules to finish loading
+      setTimeout(() => {
+        console.log('🔌 Now initializing admin hub communication after all modules loaded...');
+        
+        // Check if helper VAT function is available
+        if (typeof window.setHelperVatRateFromAdmin === 'function') {
+          console.log('✅ setHelperVatRateFromAdmin function is available');
+        } else {
+          console.log('❌ setHelperVatRateFromAdmin function NOT available');
+        }
+        
+        // Initialize admin hub communication
+        if (typeof initAdminHubCommunication === 'function') {
+          initAdminHubCommunication();
+        }
+        
+        // Initialize VAT display
+        if (typeof window.initVatDisplay === 'function') {
+          window.initVatDisplay();
+        }
+        
+        console.log('🎯 Admin hub communication initialized. Testing functions available:');
+        console.log('- simulateAdminVatChange(19) - Test admin VAT change');
+        console.log('- testMathEngineLoading() - Test MathEngine status');
+        console.log('- testCompleteVatFlow() - Test entire VAT flow');
+        
+        // Create comprehensive VAT flow test
+        window.testCompleteVatFlow = function() {
+          console.log('🧪 Testing complete VAT flow: Admin → Helper → All UI');
+          console.log('═══════════════════════════════════════════════');
+          
+          // Step 1: Check current state
+          console.log('📊 STEP 1: Current VAT State');
+          console.log('helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+          console.log('getHelperVatRate():', window.getHelperVatRate ? window.getHelperVatRate() : 'N/A');
+          console.log('MathEngine.getVatRate():', typeof MathEngine !== 'undefined' ? MathEngine.getVatRate() : 'N/A');
+          
+          // Step 2: Test helper function availability
+          console.log('📊 STEP 2: Function Availability');
+          console.log('setHelperVatRateFromAdmin:', typeof window.setHelperVatRateFromAdmin === 'function');
+          console.log('getHelperVatRate:', typeof window.getHelperVatRate === 'function');
+          console.log('initVatDisplay:', typeof window.initVatDisplay === 'function');
+          
+          // Step 3: Test admin → helper flow
+          console.log('📊 STEP 3: Testing Admin → Helper Flow');
+          if (typeof window.setHelperVatRateFromAdmin === 'function') {
+            const testRate = 19;
+            console.log(`Setting helper VAT to ${testRate}% directly...`);
+            const success = window.setHelperVatRateFromAdmin(testRate, 'test_admin');
+            console.log('Helper update success:', success);
+            
+            setTimeout(() => {
+              console.log('📊 STEP 4: Verification');
+              console.log('helper.calculations.vat_rate after update:', window.helper?.calculations?.vat_rate);
+              console.log('getHelperVatRate() after update:', window.getHelperVatRate());
+              
+              // Step 5: Test if UI updates
+              console.log('📊 STEP 5: UI Update Test');
+              const vatInput = document.getElementById('vat-rate-input');
+              if (vatInput) {
+                console.log('VAT input field value:', vatInput.value);
+                console.log('Expected:', testRate, 'Actual:', parseFloat(vatInput.value));
+                console.log('UI updated correctly:', parseFloat(vatInput.value) === testRate);
+              } else {
+                console.log('VAT input field not found');
+              }
+              
+              console.log('═══════════════════════════════════════════════');
+              console.log('✅ VAT flow test completed');
+            }, 200);
+          } else {
+            console.log('❌ Cannot test - setHelperVatRateFromAdmin not available');
+          }
+        };
+        
+      }, 500);
+    });
+  </script>
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
