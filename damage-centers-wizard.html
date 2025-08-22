@@ -1601,7 +1601,8 @@
         const repairsTotal = center.Repairs?.repairs_meta?.total_cost || 0;
         
         const centerSubtotal = worksTotal + partsTotal + repairsTotal;
-        const centerVAT = centerSubtotal * 0.18; // 18% VAT
+        const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+        const centerVAT = centerSubtotal * (vatRate / 100);
         const centerTotal = centerSubtotal + centerVAT;
         
         // Add to damage_centers_summary
@@ -1710,9 +1711,9 @@
       
       // Initialize helper system
       if (typeof window.helper !== 'undefined') {
-        // Load VAT percentage from system settings
-        if (window.helper.system && window.helper.system.vat_percentage) {
-          vatPercentage = window.helper.system.vat_percentage;
+        // Load VAT percentage from helper calculations (centralized source)
+        if (window.helper.calculations && window.helper.calculations.vat_rate) {
+          vatPercentage = window.helper.calculations.vat_rate;
         }
       }
       
@@ -2001,7 +2002,7 @@
             const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
             const repairsTotal = helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0;
             const subtotal = worksTotal + partsTotal + repairsTotal;
-            const vatPercentage = 17; // VAT percentage
+            const vatPercentage = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
             const vatAmount = subtotal * (vatPercentage / 100);
             const totalWithVat = subtotal + vatAmount;
             
@@ -3880,7 +3881,8 @@
         }
         
         const subtotal = worksTotal + partsTotal + repairsTotal;
-        const vatAmount = subtotal * 0.18;
+        const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+        const vatAmount = subtotal * (vatRate / 100);
         
         const totalWithVat = center.Summary?.["Total with VAT"] || (subtotal + vatAmount);
         
@@ -3966,7 +3968,8 @@
         }
         
         const subtotal = worksTotal + partsTotal + repairsTotal;
-        const totalWithVat = center.Summary?.["Total with VAT"] || (subtotal * 1.18);
+        const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+        const totalWithVat = center.Summary?.["Total with VAT"] || (subtotal * (1 + vatRate / 100));
         
         centersTotalsHtml += `
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px;">
@@ -5523,7 +5526,8 @@
           const partsAmount = document.getElementById('partsAmount');
           const partsAmountWithVat = document.getElementById('partsAmountWithVat');
           if (partsAmount) partsAmount.textContent = `₪${data.total.toLocaleString()}`;
-          if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+          if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
           
           // Update parts display visibility
           const partsSubtotal = document.getElementById('partsSubtotal');
@@ -5536,7 +5540,8 @@
           const repairsAmount = document.getElementById('repairsAmount');
           const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
           if (repairsAmount) repairsAmount.textContent = `₪${data.total.toLocaleString()}`;
-          if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+          if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
           
           // Update repairs display visibility
           const repairsSubtotal = document.getElementById('repairsSubtotal');
@@ -5549,7 +5554,8 @@
           const worksAmount = document.getElementById('worksAmount');
           const worksAmountWithVat = document.getElementById('worksAmountWithVat');
           if (worksAmount) worksAmount.textContent = `₪${data.total.toLocaleString()}`;
-          if (worksAmountWithVat) worksAmountWithVat.textContent = `₪${(data.total * 1.18).toLocaleString()}`;
+          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+          if (worksAmountWithVat) worksAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
           
           // Update works display visibility
           const worksSubtotal = document.getElementById('worksSubtotal');
@@ -6032,7 +6038,8 @@
           const partsTotal = center.Parts?.parts_meta?.total_cost || center.Summary?.["Total parts"] || 0;
           const repairsTotal = center.Repairs?.repairs_meta?.total_cost || center.Summary?.["Total repairs"] || 0;
           const subtotal = worksTotal + partsTotal + repairsTotal;
-          totalCost = subtotal > 0 ? subtotal * 1.18 : 0; // Add 18% VAT if we have costs
+          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+          totalCost = subtotal > 0 ? subtotal * (1 + vatRate / 100) : 0; // Add VAT if we have costs
         }
         
         return `
