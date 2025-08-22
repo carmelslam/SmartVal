@@ -99,7 +99,7 @@ function getEstimateTitle() {
 // Calculate Summary Total (no fees/depreciation)
 function calculateEstimateSummary() {
   const baseDamage = helper.expertise?.calculations?.base_damage || damageData.summary?.total_damage_amount || 0;
-  const vatRate = MathEngine.getVatRate(); // Use VAT from math.js (controlled by admin hub)
+  const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate(); // Use VAT from helper (synced with admin hub)
   const vat = MathEngine.round(baseDamage * vatRate / 100);
   const total = MathEngine.round(baseDamage + vat);
   

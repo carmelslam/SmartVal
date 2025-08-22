@@ -5174,7 +5174,7 @@ if (!window.helper) {
 }
 
 // 🏛️ VAT RATE UTILITY FUNCTION - Centralized VAT access for all modules
-window.getHelperVatRate = function() {
+window.getHelperVatRate = function(forceRefresh = false) {
   // Ensure helper and calculations exist
   if (!window.helper) {
     console.warn('⚠️ Helper not initialized, cannot get VAT rate');
@@ -5185,23 +5185,133 @@ window.getHelperVatRate = function() {
     window.helper.calculations = {};
   }
   
-  // If VAT rate is not set in helper, populate it from admin hub
-  if (!window.helper.calculations.vat_rate) {
-    try {
-      window.helper.calculations.vat_rate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-        MathEngine.getVatRate() : 18;
-      console.log('✅ VAT rate populated on demand from admin hub:', window.helper.calculations.vat_rate + '%');
-    } catch (e) {
-      console.warn('⚠️ Could not load VAT rate from admin hub on demand, using default 18%');
-      window.helper.calculations.vat_rate = 18;
+  // ALWAYS get current VAT rate from admin hub to ensure it's up to date
+  try {
+    const currentAdminVatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+      MathEngine.getVatRate() : 18;
+    
+    // Update helper if admin rate changed or if forced refresh
+    if (forceRefresh || !window.helper.calculations.vat_rate || window.helper.calculations.vat_rate !== currentAdminVatRate) {
+      const oldRate = window.helper.calculations.vat_rate;
+      window.helper.calculations.vat_rate = currentAdminVatRate;
+      
+      if (oldRate && oldRate !== currentAdminVatRate) {
+        console.log(`🔄 VAT rate updated from ${oldRate}% to ${currentAdminVatRate}% (admin changed)`);
+      } else {
+        console.log('✅ VAT rate synchronized with admin hub:', currentAdminVatRate + '%');
+      }
+      
+      // Save updated helper to session storage
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      } catch (e) {
+        console.warn('⚠️ Could not save updated VAT rate to session storage');
+      }
     }
+    
+    return window.helper.calculations.vat_rate;
+    
+  } catch (e) {
+    console.warn('⚠️ Could not load VAT rate from admin hub, using stored value or default');
+    return window.helper.calculations.vat_rate || 18;
+  }
+};
+
+// 🔄 VAT RATE REFRESH FUNCTION - Call this when admin VAT rate changes
+window.refreshHelperVatRate = function() {
+  console.log('🔄 Refreshing helper VAT rate from admin hub...');
+  const newRate = window.getHelperVatRate(true); // Force refresh
+  
+  // Broadcast VAT rate change event for other modules to listen
+  try {
+    const event = new CustomEvent('vatRateChanged', {
+      detail: { 
+        newVatRate: newRate,
+        timestamp: new Date().toISOString()
+      }
+    });
+    window.dispatchEvent(event);
+    console.log('📢 VAT rate change broadcasted to all modules:', newRate + '%');
+  } catch (e) {
+    console.warn('⚠️ Could not broadcast VAT rate change event');
   }
   
-  return window.helper.calculations.vat_rate;
+  return newRate;
 };
 
 // 💡 RECOMMENDED USAGE PATTERN FOR ALL MODULES:
 // const vatRate = window.getHelperVatRate(); // Gets from helper.calculations.vat_rate (populated from admin)
 // Alternative: const vatRate = MathEngine.getVatRate(); // Gets directly from admin (bypass helper)
+// For admin changes: window.refreshHelperVatRate(); // Updates helper and broadcasts to modules
+
+// ✏️ VAT RATE EDITING FUNCTION - Allow manual VAT rate override
+window.setHelperVatRate = function(newVatRate, source = 'manual') {
+  if (!window.helper) {
+    console.warn('⚠️ Helper not initialized, cannot set VAT rate');
+    return false;
+  }
+  
+  if (!window.helper.calculations) {
+    window.helper.calculations = {};
+  }
+  
+  // Validate VAT rate
+  const vatRate = parseFloat(newVatRate);
+  if (isNaN(vatRate) || vatRate < 0 || vatRate > 100) {
+    console.error('❌ Invalid VAT rate:', newVatRate);
+    return false;
+  }
+  
+  const oldRate = window.helper.calculations.vat_rate;
+  window.helper.calculations.vat_rate = vatRate;
+  window.helper.calculations.vat_rate_source = source; // Track source of change
+  window.helper.calculations.vat_rate_updated = new Date().toISOString();
+  
+  console.log(`💡 VAT rate manually set to ${vatRate}% (was ${oldRate}%) by ${source}`);
+  
+  // Save updated helper to session storage
+  try {
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+  } catch (e) {
+    console.warn('⚠️ Could not save updated VAT rate to session storage');
+  }
+  
+  // Broadcast VAT rate change event
+  try {
+    const event = new CustomEvent('vatRateChanged', {
+      detail: { 
+        newVatRate: vatRate,
+        oldVatRate: oldRate,
+        source: source,
+        timestamp: new Date().toISOString()
+      }
+    });
+    window.dispatchEvent(event);
+    console.log('📢 VAT rate change broadcasted to all modules:', vatRate + '%');
+  } catch (e) {
+    console.warn('⚠️ Could not broadcast VAT rate change event');
+  }
+  
+  return true;
+};
+
+// 🔍 VAT RATE INFO FUNCTION - Get current VAT rate info
+window.getVatRateInfo = function() {
+  if (!window.helper?.calculations) {
+    return {
+      rate: window.getHelperVatRate(),
+      source: 'admin_hub',
+      updated: null
+    };
+  }
+  
+  return {
+    rate: window.helper.calculations.vat_rate || window.getHelperVatRate(),
+    source: window.helper.calculations.vat_rate_source || 'admin_hub',
+    updated: window.helper.calculations.vat_rate_updated || null
+  };
+};
 
 console.log('🏛️ Helper VAT integration complete - all modules can now use getHelperVatRate()');
+console.log('🔄 Admin can call refreshHelperVatRate() to update all modules when VAT changes');
+console.log('✏️ Manual override: setHelperVatRate(rate) - allows manual VAT rate changes');

@@ -110,7 +110,7 @@ class EstimateReportCoordinator {
       }
       
       // Get VAT rate from math engine
-      const vatRate = MathEngine.getVatRate();
+      const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate();
       const vatAmount = Math.round(baseDamage * vatRate / 100);
       const totalEstimate = baseDamage + vatAmount;
       

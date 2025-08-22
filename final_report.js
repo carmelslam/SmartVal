@@ -18,7 +18,7 @@ const financialData = getFinancialData();
 
 function buildFeeSummary() {
   const fees = financialData.fees || {};
-  const vatRate = parseFloat(fees.vat_rate) || MathEngine.getVatRate();
+  const vatRate = parseFloat(fees.vat_rate) || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
   
   // Use MathEngine for consistent calculations
   const subtotal = MathEngine.calculateFeesSubtotal(fees);

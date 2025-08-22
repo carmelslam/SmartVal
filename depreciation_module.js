@@ -374,7 +374,7 @@ function createDiffRow(data = {}) {
   
   // Get VAT rate from system configuration (default 18%)
   const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-                  MathEngine.getVatRate() / 100 : 0.18;
+                  (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100 : 0.18;
   const vat = data.vat || Math.round((data.amount || 0) * vatRate);
   const totalWithVat = data.total_with_vat || Math.round((data.amount || 0) * (1 + vatRate));
   
@@ -536,7 +536,7 @@ function setupDifferentialRowEvents(div) {
         // Auto-populate amount, VAT, and total
         const amount = selectedItem.amount;
         const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-                        MathEngine.getVatRate() / 100 : 0.18;
+                        (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100 : 0.18;
         const vat = Math.round(amount * vatRate);
         const total = Math.round(amount + vat);
         
@@ -557,7 +557,7 @@ function setupDifferentialRowEvents(div) {
     if (selectElement.value === 'custom') {
       const amount = parseFloat(this.value) || 0;
       const vatRate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
-                      MathEngine.getVatRate() / 100 : 0.18;
+                      (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100 : 0.18;
       const vat = Math.round(amount * vatRate);
       const total = Math.round(amount + vat);
       vatInput.value = vat;

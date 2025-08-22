@@ -281,7 +281,7 @@ const EstimateEngine = {
           </div>
           <div class="field">
             <label>מע"מ (%):</label>
-            <input type="number" id="vat-percent" value="${fees.vat_percent || MathEngine.getVatRate()}" class="estimate-field">
+            <input type="number" id="vat-percent" value="${fees.vat_percent || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate())}" class="estimate-field">
           </div>
         </div>
       </div>
@@ -398,7 +398,7 @@ const EstimateEngine = {
       photo_fee: parseFloat(document.getElementById('photo-fee')?.value || 0),
       office_fee: parseFloat(document.getElementById('office-fee')?.value || 0),
       transport_fee: parseFloat(document.getElementById('transport-fee')?.value || 0),
-      vat_percent: parseFloat(document.getElementById('vat-percent')?.value || MathEngine.getVatRate())
+      vat_percent: parseFloat(document.getElementById('vat-percent')?.value || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()))
     };
 
     // Update depreciation

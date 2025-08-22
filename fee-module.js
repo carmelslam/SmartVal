@@ -13,7 +13,7 @@ function init() {
   const meta = helper.meta || {};
   const vehicle = helper.vehicle || {};
   const stakeholders = helper.stakeholders || {};
-  const vatRate = MathEngine.getVatRate ? MathEngine.getVatRate() : (helper.vat || 18);
+  const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (MathEngine.getVatRate ? MathEngine.getVatRate() : (helper.vat || 18));
 
   // ENHANCED: Use proper helper paths for vehicle and stakeholder data
   const plateValue = vehicle.plate || meta.plate || '...';
@@ -68,7 +68,7 @@ function calculateFees() {
     media_fee: parseFloat($('media_fee').value) || 0,
     office_fee: parseFloat($('office_fee').value) || 0
   };
-  const vatRate = parseFloat($('vat_rate').value) || MathEngine.getVatRate();
+  const vatRate = parseFloat($('vat_rate').value) || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
 
   // Use MathEngine for consistent calculations
   const subtotal = MathEngine.calculateFeesSubtotal(fees);

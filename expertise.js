@@ -29,7 +29,7 @@ function updateExpertiseCalculations() {
   const fees = helper.fees || financialData.fees || {};
   const marketValue = helper.car_details?.market_value || vehicleData.market_value || 0;
   const shavehPercent = helper.car_details?.shaveh_percent || 0;
-  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || MathEngine.getVatRate();
+  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
 
   helper.calculations = MathEngine.calculateAll({
     baseDamage,
@@ -53,7 +53,7 @@ function updateInvoiceCalculations() {
   const fees = helper.invoice_fees || financialData.fees || {};
   const marketValue = helper.car_details?.market_value || vehicleData.market_value || 0;
   const shavehPercent = helper.car_details?.shaveh_percent || 0;
-  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || MathEngine.getVatRate();
+  const vatRate = helper.meta?.vat_rate || financialData.taxes?.vat_percentage || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
 
   helper.invoice_calculations = MathEngine.calculateAll({
     baseDamage,

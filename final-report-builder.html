@@ -1540,6 +1540,34 @@
       </div>
     </div>
 
+    <!-- VAT RATE SETTINGS -->
+    <div class="form-section" id="vat-settings" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+      <h3 style="color: #856404;">🏛️ הגדרות מע"מ</h3>
+      <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+        <div style="font-size: 14px; color: #495057; margin-bottom: 10px;">
+          <strong>מקור שיעור מע"מ נוכחי:</strong> <span id="vat-source-display">טוען...</span><br>
+          <strong>עדכון אחרון:</strong> <span id="vat-updated-display">טוען...</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <label style="font-weight: bold; color: #495057;">שיעור מע"מ (%):</label>
+          <input type="number" id="vat-rate-input" min="0" max="100" step="0.1" 
+                 style="width: 80px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" 
+                 value="" placeholder="18">
+          <button type="button" onclick="updateVatRate()" 
+                  style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+            עדכן מע"מ
+          </button>
+          <button type="button" onclick="resetVatRateFromAdmin()" 
+                  style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+            אפס לערך מנהל
+          </button>
+        </div>
+        <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
+          💡 שינוי שיעור המע"מ ישפיע על כל החישובים בדו"ח זה. השינוי לא ישפיע על המקרים האחרים.
+        </div>
+      </div>
+    </div>
+
     <!-- ATTACHMENTS SECTION - EDITABLE -->
     <div class="form-section" id="attachments-section">
       <h3>רשימת נספחים</h3>
@@ -2582,7 +2610,7 @@
           const subtotal = claimValue + depValue - salvageValue;
           
           // Automatic calculation with math.js - Calculate VAT (admin rate on subtotal)
-          const vatRate = MathEngine.getVatRate() / 100;
+          const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100;
           const vat = Math.round(subtotal * vatRate);
           
           // Calculate final total (subtotal + VAT) - automatic calculation with math.js
@@ -2887,7 +2915,7 @@
       const workCosts = block.work_cost || 0;
       const partsCosts = block.parts_cost || 0;
       const repairsCosts = workCosts + partsCosts;
-      const totalWithVAT = repairsCosts * (1 + MathEngine.getVatRate() / 100);
+      const totalWithVAT = repairsCosts * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
       
       // Get existing parts, works, repairs from block
       const parts = block.parts || [];
@@ -3731,7 +3759,7 @@
           levi_total: leviTotal,
           damage_total: damageTotal,
           total_before_vat: leviTotal + damageTotal,
-          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + MathEngine.getVatRate() / 100)),
+          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)),
           calculated_at: new Date().toISOString()
         };
         
@@ -7627,7 +7655,7 @@
               }
             },
             Summary: {
-              "Total with VAT": totalCost * (1 + MathEngine.getVatRate() / 100)
+              "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)
             }
           };
           
@@ -7869,7 +7897,7 @@
 
     function updateCostDisplay(card, partsCost, workCost, repairsCost) {
       const totalCost = partsCost + workCost + repairsCost;
-      const totalWithVAT = totalCost * (1 + MathEngine.getVatRate() / 100);
+      const totalWithVAT = totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
       
       // Update display elements
       const workDisplay = card.querySelector('.work-costs-display');
@@ -7953,7 +7981,7 @@
       });
       
       // Calculate total claim with VAT (admin configured rate)
-      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * (1 + MathEngine.getVatRate() / 100));
+      const totalClaimWithVAT = Math.round(totalClaimBeforeVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100));
       
       // Update summary fields
       const sumClaimField = document.getElementById('sumClaim');
@@ -8277,7 +8305,7 @@
           works: totalWorks,
           repairs: totalRepairs,
           total: totalParts + totalWorks + totalRepairs,
-          totalWithVAT: (totalParts + totalWorks + totalRepairs) * (1 + MathEngine.getVatRate() / 100)
+          totalWithVAT: (totalParts + totalWorks + totalRepairs) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100)
         };
       },
       
@@ -8574,7 +8602,7 @@
         }
         
         const totalWithoutVAT = totalWorks + totalParts + totalRepairs;
-        const totalWithVAT = totalWithoutVAT * (1 + MathEngine.getVatRate() / 100);
+        const totalWithVAT = totalWithoutVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
         
         // Update or create damage_assessment section
         if (!helper.damage_assessment) helper.damage_assessment = {};
@@ -8627,7 +8655,7 @@
       });
       
       const totalWithoutVat = totalWorks + totalParts + totalRepairs;
-      const totalWithVat = totalWithoutVat * (1 + MathEngine.getVatRate() / 100);
+      const totalWithVat = totalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100);
       
       // Update subtotal display elements
       const totalWorksElement = document.getElementById('totalWorksSubtotal');
@@ -11117,7 +11145,7 @@
     // Get VAT rate based on company selection
     function getVatRate() {
       const isCompanyClient = document.getElementById('isCompanyClient')?.value;
-      return (isCompanyClient === 'yes') ? 0 : (MathEngine.getVatRate() / 100); // 0% for companies, admin rate for private
+      return (isCompanyClient === 'yes') ? 0 : ((window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate()) / 100); // 0% for companies, admin rate for private
     }
 
     // Toggle differentials display
@@ -11731,6 +11759,64 @@
         window.location.href = 'index.html';
       }
     };
+
+    // 🏛️ VAT RATE MANAGEMENT FUNCTIONS
+    
+    // Initialize VAT rate display
+    window.initVatDisplay = function() {
+      try {
+        const vatInfo = window.getVatRateInfo ? window.getVatRateInfo() : 
+          { rate: 18, source: 'admin_hub', updated: null };
+        
+        document.getElementById('vat-rate-input').value = vatInfo.rate;
+        document.getElementById('vat-source-display').textContent = 
+          vatInfo.source === 'manual' ? 'עריכה ידנית' : 'מנהל מערכת';
+        document.getElementById('vat-updated-display').textContent = 
+          vatInfo.updated ? new Date(vatInfo.updated).toLocaleString('he-IL') : 'לא עודכן';
+      } catch (e) {
+        console.warn('⚠️ Could not initialize VAT display:', e);
+      }
+    };
+    
+    // Update VAT rate manually
+    window.updateVatRate = function() {
+      const input = document.getElementById('vat-rate-input');
+      const newRate = parseFloat(input.value);
+      
+      if (isNaN(newRate) || newRate < 0 || newRate > 100) {
+        alert('אנא הזן שיעור מע"מ חוקי (0-100)');
+        return;
+      }
+      
+      if (window.setHelperVatRate && window.setHelperVatRate(newRate, 'manual')) {
+        alert(`שיעור המע"מ עודכן ל-${newRate}%`);
+        window.initVatDisplay(); // Refresh display
+        
+        // Trigger calculations refresh
+        if (typeof refreshAllCalculations === 'function') {
+          refreshAllCalculations();
+        }
+      } else {
+        alert('שגיאה בעדכון שיעור המע"מ');
+      }
+    };
+    
+    // Reset VAT rate to admin hub value
+    window.resetVatRateFromAdmin = function() {
+      if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
+        if (window.refreshHelperVatRate) {
+          const adminRate = window.refreshHelperVatRate();
+          document.getElementById('vat-rate-input').value = adminRate;
+          window.initVatDisplay();
+          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+          
+          // Trigger calculations refresh
+          if (typeof refreshAllCalculations === 'function') {
+            refreshAllCalculations();
+          }
+        }
+      }
+    };
     
     // ENSURE DATA FLOW: Update dependent fields when source data changes
     function refreshAllCalculations() {
@@ -11841,6 +11927,14 @@
         });
         console.log('💵 BasicPrice observer set up');
       }
+      
+      // Initialize VAT display on page load
+      setTimeout(function() {
+        if (typeof window.initVatDisplay === 'function') {
+          window.initVatDisplay();
+          console.log('🏛️ VAT display initialized');
+        }
+      }, 1000);
       
       // Initial calculation refresh on page load (delayed to allow helper data to load first)
       // TEMPORARILY DISABLED to check if this is causing configuration issues
