@@ -2406,14 +2406,22 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // ✅ FIX: Proper architecture - load from centralized claims_data.total_claim
-          const savedValue = helper.claims_data?.total_claim;
+          // ✅ FIX: Check both save locations - section save and individual field save
+          const sectionSavedValue = helper.manual_gross_result?.authorizedClaim;
+          const claimsSavedValue = helper.claims_data?.total_claim;
           const autoValue = helper.damage_assessment?.summary?.total_with_vat || 0;
 
-          if (savedValue && savedValue !== '') {
-            // Use saved value from centralized claims_data section
-            console.log(`🔄 Loading authorizedClaim from helper.claims_data.total_claim: ${savedValue}`);
-            authorizedClaimField.value = savedValue;
+          if (sectionSavedValue && sectionSavedValue !== '') {
+            // Use section saved value (current save system)
+            console.log(`🔄 Loading authorizedClaim from section save: ${sectionSavedValue}`);
+            authorizedClaimField.value = sectionSavedValue;
+            // Sync to claims_data for consistency
+            if (!helper.claims_data) helper.claims_data = {};
+            helper.claims_data.total_claim = sectionSavedValue;
+          } else if (claimsSavedValue && claimsSavedValue !== '') {
+            // Use individual field saved value
+            console.log(`🔄 Loading authorizedClaim from claims_data: ${claimsSavedValue}`);
+            authorizedClaimField.value = claimsSavedValue;
           } else {
             // Auto-populate from damage assessment calculation
             console.log(`🔄 Auto-populating authorizedClaim from damage_assessment: ${autoValue}`);
