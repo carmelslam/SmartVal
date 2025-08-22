@@ -2704,6 +2704,7 @@ window.helper = existingHelper || {
     depreciation: {},
     adjustments: {},
     final_values: {},
+    vat_rate: null, // Will be populated from admin hub on case initialization
     calculation_log: []
   },
   raw_webhook_data: {},
@@ -2736,6 +2737,18 @@ window.helper = existingHelper || {
   damage_centers: []
 };
 
+// 🔧 Ensure VAT rate is always populated from admin hub on helper initialization
+if (!window.helper.calculations.vat_rate) {
+  try {
+    window.helper.calculations.vat_rate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+      MathEngine.getVatRate() : 18;
+    console.log('✅ VAT rate initialized from admin hub:', window.helper.calculations.vat_rate + '%');
+  } catch (e) {
+    console.warn('⚠️ Could not load VAT rate from admin hub during initialization, using default 18%');
+    window.helper.calculations.vat_rate = 18;
+  }
+}
+
 // 🔧 CRITICAL FIX: If we have existing data, merge it with the default structure
 if (existingHelper && typeof existingHelper === 'object') {
   console.log('🔄 Merging existing helper data with default structure...');
@@ -2756,6 +2769,18 @@ if (existingHelper && typeof existingHelper === 'object') {
   deepMerge(window.helper, existingHelper);
   console.log('✅ Helper data merged successfully:', window.helper);
   
+  // Ensure VAT rate is populated from admin hub
+  if (!window.helper.calculations.vat_rate) {
+    try {
+      window.helper.calculations.vat_rate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+        MathEngine.getVatRate() : 18;
+      console.log('✅ VAT rate populated from admin hub:', window.helper.calculations.vat_rate + '%');
+    } catch (e) {
+      console.warn('⚠️ Could not load VAT rate from admin hub, using default 18%');
+      window.helper.calculations.vat_rate = 18;
+    }
+  }
+
   // Immediately trigger form population with restored data
   setTimeout(() => {
     console.log('🔄 Auto-populating forms with restored helper data...');
@@ -5147,3 +5172,36 @@ if (!window.helper) {
   window.helper = existingHelper || getDefaultHelper();
   console.log('✅ Safety check: window.helper initialized');
 }
+
+// 🏛️ VAT RATE UTILITY FUNCTION - Centralized VAT access for all modules
+window.getHelperVatRate = function() {
+  // Ensure helper and calculations exist
+  if (!window.helper) {
+    console.warn('⚠️ Helper not initialized, cannot get VAT rate');
+    return MathEngine?.getVatRate?.() || 18;
+  }
+  
+  if (!window.helper.calculations) {
+    window.helper.calculations = {};
+  }
+  
+  // If VAT rate is not set in helper, populate it from admin hub
+  if (!window.helper.calculations.vat_rate) {
+    try {
+      window.helper.calculations.vat_rate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
+        MathEngine.getVatRate() : 18;
+      console.log('✅ VAT rate populated on demand from admin hub:', window.helper.calculations.vat_rate + '%');
+    } catch (e) {
+      console.warn('⚠️ Could not load VAT rate from admin hub on demand, using default 18%');
+      window.helper.calculations.vat_rate = 18;
+    }
+  }
+  
+  return window.helper.calculations.vat_rate;
+};
+
+// 💡 RECOMMENDED USAGE PATTERN FOR ALL MODULES:
+// const vatRate = window.getHelperVatRate(); // Gets from helper.calculations.vat_rate (populated from admin)
+// Alternative: const vatRate = MathEngine.getVatRate(); // Gets directly from admin (bypass helper)
+
+console.log('🏛️ Helper VAT integration complete - all modules can now use getHelperVatRate()');
