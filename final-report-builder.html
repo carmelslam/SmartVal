@@ -4142,8 +4142,16 @@
             'totalClaim': 'total_claim',
             'authorizedClaim': 'total_claim'  // ✅ FIX: authorizedClaim also writes to total_claim
           };
-          helper.claims_data[mapping[fieldId]] = value;
-          console.log(`💰 Updated claims_data.${mapping[fieldId]} from ${fieldId}: ${value}`);
+          
+          // ✅ FORMAT: Add currency formatting for authorizedClaim
+          let formattedValue = value;
+          if (fieldId === 'authorizedClaim' && value && !value.includes('₪')) {
+            const numericValue = parseFloat(value.replace(/[₪,]/g, '')) || 0;
+            formattedValue = `₪${numericValue.toLocaleString()}`;
+          }
+          
+          helper.claims_data[mapping[fieldId]] = formattedValue;
+          console.log(`💰 Updated claims_data.${mapping[fieldId]} from ${fieldId}: ${formattedValue}`);
           
           // ✅ ENSURE: Update window.helper immediately
           window.helper = helper;
@@ -9538,7 +9546,15 @@
               helper.claims_data = {};
               console.log(`🔍 DEBUG: Created new claims_data section`);
             }
-            helper.claims_data.total_claim = helper.manual_gross_result.authorizedClaim;
+            
+            // ✅ FORMAT: Add currency formatting for section save sync
+            let formattedValue = helper.manual_gross_result.authorizedClaim;
+            if (formattedValue && !formattedValue.includes('₪')) {
+              const numericValue = parseFloat(formattedValue.replace(/[₪,]/g, '')) || 0;
+              formattedValue = `₪${numericValue.toLocaleString()}`;
+            }
+            
+            helper.claims_data.total_claim = formattedValue;
             helper.claims_data.last_updated = new Date().toISOString();
             helper.claims_data.source = 'final_report';
             sessionStorage.setItem('helper', JSON.stringify(helper));
