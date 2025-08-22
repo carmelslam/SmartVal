@@ -268,15 +268,61 @@ function initializeAdminHubVat() {
  */
 function setupVatButtonHandlers() {
   const vatButtons = document.querySelectorAll('[data-vat-rate]');
+  if (vatButtons.length === 0) {
+    console.log('⚠️ No VAT buttons found with [data-vat-rate] attribute');
+    console.log('🔍 Looking for any button that might be VAT-related...');
+    
+    // Try to find buttons by text content or other attributes
+    const allButtons = document.querySelectorAll('button');
+    allButtons.forEach(btn => {
+      const text = btn.textContent.trim();
+      if (text.includes('%') || text.includes('מע') || text.includes('VAT')) {
+        console.log('📍 Found potential VAT button:', text, btn);
+      }
+    });
+    
+    // Also check for clickable elements that might control VAT
+    const clickableElements = document.querySelectorAll('[onclick], .clickable, .btn');
+    clickableElements.forEach(el => {
+      const text = el.textContent.trim();
+      if (text.includes('%') || text.includes('מע') || text.includes('VAT')) {
+        console.log('📍 Found potential VAT element:', text, el);
+      }
+    });
+  }
+  
   vatButtons.forEach(button => {
     button.addEventListener('click', function() {
       const newVatRate = parseFloat(this.dataset.vatRate);
       console.log('🖱️ VAT button clicked:', newVatRate + '%');
+      console.log('📡 About to broadcast VAT change to all modules...');
       setAdminVatRate(newVatRate);
     });
   });
   
   console.log(`🎛️ Set up ${vatButtons.length} VAT button handlers`);
+  
+  // Also try to detect any VAT-related clicks on the page
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    const text = target.textContent.trim();
+    
+    // Check if this might be a VAT-related click
+    if (text.includes('%') && (text.includes('18') || text.includes('17') || text.includes('0'))) {
+      console.log('🔍 Potential VAT-related click detected:', text, target);
+      
+      // Try to extract VAT rate from text
+      const vatMatch = text.match(/(\d+)%/);
+      if (vatMatch) {
+        const potentialVatRate = parseFloat(vatMatch[1]);
+        if ([0, 17, 18, 19, 20].includes(potentialVatRate)) {
+          console.log('🎯 Detected VAT rate click:', potentialVatRate + '%');
+          console.log('📡 Broadcasting detected VAT change...');
+          setAdminVatRate(potentialVatRate);
+        }
+      }
+    }
+  });
 }
 
 // Initialize when DOM is ready
@@ -314,3 +360,45 @@ console.log('🎯 Admin Hub VAT functions available:');
 console.log('- setAdminVatRate(18) - Set VAT rate to 18%');
 console.log('- testModuleConnections() - Test iframe communication');
 console.log('- debugAdminVat() - Show debug info');
+console.log('- forceVatBroadcast(19) - Force broadcast VAT change to test communication');
+
+// Add a force broadcast function for testing
+window.forceVatBroadcast = function(vatRate = 19) {
+  console.log(`🧪 Force broadcasting VAT rate ${vatRate}% to all modules...`);
+  
+  const message = {
+    type: 'VAT_RATE_UPDATED',
+    vatRate: vatRate,
+    timestamp: Date.now(),
+    forced: true
+  };
+  
+  // Send to all iframe modules
+  activeModules.forEach((moduleInfo, iframe) => {
+    try {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage(message, '*');
+        console.log(`📡 Force sent VAT ${vatRate}% to ${moduleInfo.name}`);
+      }
+    } catch (e) {
+      console.warn(`❌ Failed to send to ${moduleInfo.name}:`, e);
+    }
+  });
+  
+  // Also broadcast to direct child frames
+  const iframes = document.querySelectorAll('iframe');
+  console.log(`📡 Broadcasting to ${iframes.length} iframes...`);
+  
+  iframes.forEach((iframe, index) => {
+    try {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage(message, '*');
+        console.log(`📡 Force sent VAT ${vatRate}% to iframe ${index}`);
+      }
+    } catch (e) {
+      console.warn(`❌ Failed to send to iframe ${index}:`, e);
+    }
+  });
+  
+  console.log(`✅ Force broadcast completed for VAT rate: ${vatRate}%`);
+};
