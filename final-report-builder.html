@@ -9523,13 +9523,25 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
         // ✅ SYNC: If gross-result section was saved, sync authorizedClaim to claims_data.total_claim
-        if (sectionId === 'gross-result' && helper.manual_gross_result?.authorizedClaim) {
-          if (!helper.claims_data) helper.claims_data = {};
-          helper.claims_data.total_claim = helper.manual_gross_result.authorizedClaim;
-          helper.claims_data.last_updated = new Date().toISOString();
-          helper.claims_data.source = 'final_report';
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          console.log(`🔄 Synced authorizedClaim to claims_data.total_claim: ${helper.claims_data.total_claim}`);
+        console.log(`🔍 DEBUG: Section saved: ${sectionId}`);
+        console.log(`🔍 DEBUG: helper.manual_gross_result:`, helper.manual_gross_result);
+        
+        if (sectionId === 'gross-result') {
+          console.log(`🔍 DEBUG: gross-result section detected`);
+          if (helper.manual_gross_result?.authorizedClaim) {
+            console.log(`🔍 DEBUG: authorizedClaim found: ${helper.manual_gross_result.authorizedClaim}`);
+            if (!helper.claims_data) {
+              helper.claims_data = {};
+              console.log(`🔍 DEBUG: Created new claims_data section`);
+            }
+            helper.claims_data.total_claim = helper.manual_gross_result.authorizedClaim;
+            helper.claims_data.last_updated = new Date().toISOString();
+            helper.claims_data.source = 'final_report';
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            console.log(`🔄 Synced authorizedClaim to claims_data.total_claim: ${helper.claims_data.total_claim}`);
+          } else {
+            console.log(`🔍 DEBUG: No authorizedClaim found in manual_gross_result`);
+          }
         }
         
         // Show success message
