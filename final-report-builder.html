@@ -7173,6 +7173,8 @@
         // Security: Check origin if needed
         // if (event.origin !== 'https://yaron-cayouf-portal.netlify.app') return;
         
+        console.log('📨 Received message from admin hub:', event.data);
+        
         if (event.data && event.data.type) {
           switch (event.data.type) {
             case 'VAT_RATE_UPDATED':
@@ -7181,11 +7183,23 @@
               console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
               
               // CRITICAL: Update helper.calculations.vat_rate directly (source of truth)
+              console.log('🔍 Checking setHelperVatRateFromAdmin availability:', typeof window.setHelperVatRateFromAdmin);
+              
               if (typeof window.setHelperVatRateFromAdmin === 'function') {
+                console.log('🎯 Calling setHelperVatRateFromAdmin with rate:', newVatRate);
                 const success = window.setHelperVatRateFromAdmin(newVatRate, 'admin_hub');
                 console.log(success ? '✅ Helper VAT rate updated successfully' : '❌ Failed to update helper VAT rate');
+                
+                // Verify the change
+                setTimeout(() => {
+                  const currentHelperVat = window.helper?.calculations?.vat_rate;
+                  console.log('🔍 Verified helper.calculations.vat_rate:', currentHelperVat);
+                  console.log('🔍 getHelperVatRate() returns:', window.getHelperVatRate ? window.getHelperVatRate() : 'function not available');
+                }, 100);
+                
               } else {
                 console.warn('⚠️ setHelperVatRateFromAdmin function not available');
+                console.log('🔍 Available window functions:', Object.keys(window).filter(k => k.includes('Helper') || k.includes('Vat')));
               }
               
               // Refresh VAT display
