@@ -2406,18 +2406,19 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // ✅ FIX: Prioritize saved value, fallback to damage assessment
+          // ✅ FIX: Don't overwrite if user has already set a custom value
           const savedValue = helper.claims_data?.total_claim;
           const totalWithVAT = helper.damage_assessment?.summary?.total_with_vat || 0;
+          const damageAssessmentFormatted = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
           
-          if (savedValue) {
-            // Use saved value if it exists
-            authorizedClaimField.value = savedValue;
-            console.log(`💰 Loaded authorizedClaim from saved claims_data.total_claim: ${savedValue}`);
-          } else {
-            // Fallback to damage assessment value
-            authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          // Only load from damage assessment if no custom value exists OR if they match (meaning no user override)
+          if (!savedValue || savedValue === damageAssessmentFormatted) {
+            authorizedClaimField.value = damageAssessmentFormatted;
             console.log(`💰 Loaded authorizedClaim from damage_assessment.summary.total_with_vat: ${totalWithVAT}`);
+          } else {
+            // User has set a custom value, keep it
+            authorizedClaimField.value = savedValue;
+            console.log(`💰 Kept user's custom authorizedClaim value: ${savedValue}`);
           }
         }
           
