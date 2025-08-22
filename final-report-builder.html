@@ -7253,6 +7253,14 @@
         if (typeof window.initVatDisplay === 'function') {
           window.initVatDisplay();
         }
+        
+        // Log that admin hub functions are now available
+        console.log('🔧 Admin hub functions loaded. Try: verifyAdminHubFunctions() or testAdminHubConnection()');
+        
+        // Automatically verify functions are loaded
+        if (typeof window.verifyAdminHubFunctions === 'function') {
+          window.verifyAdminHubFunctions();
+        }
       }, 100);
       
       // Initialize adjustment system with event listeners
@@ -11966,6 +11974,38 @@
       }
     };
     
+    // 🔍 VERIFY: Check if admin hub functions are loaded
+    window.verifyAdminHubFunctions = function() {
+      const functions = [
+        'initVatDisplay',
+        'updateVatRate', 
+        'resetVatRateFromAdmin',
+        'testAdminHubConnection',
+        'getHelperVatRate',
+        'refreshHelperVatRate'
+      ];
+      
+      console.log('🔍 Checking admin hub function availability:');
+      functions.forEach(funcName => {
+        const available = typeof window[funcName] === 'function';
+        console.log(`${available ? '✅' : '❌'} ${funcName}: ${available ? 'Available' : 'Not found'}`);
+      });
+      
+      // Check MathEngine availability
+      const mathEngineAvailable = typeof MathEngine !== 'undefined';
+      console.log(`${mathEngineAvailable ? '✅' : '❌'} MathEngine: ${mathEngineAvailable ? 'Available' : 'Not found'}`);
+      
+      if (mathEngineAvailable) {
+        console.log(`📊 Current VAT rate from MathEngine: ${MathEngine.getVatRate()}%`);
+      }
+      
+      return {
+        functions: functions.reduce((acc, func) => ({ ...acc, [func]: typeof window[func] === 'function' }), {}),
+        mathEngine: mathEngineAvailable,
+        currentVat: mathEngineAvailable ? MathEngine.getVatRate() : null
+      };
+    };
+    
     // ENSURE DATA FLOW: Update dependent fields when source data changes
     function refreshAllCalculations() {
       try {
@@ -12092,6 +12132,41 @@
   </script>
   
   <script type="module" src="./math.js"></script>
+  
+  <script>
+    // 🔧 IMMEDIATE FUNCTIONS - Available right away for testing
+    window.quickVatTest = function() {
+      console.log('🔍 Quick VAT Test:');
+      console.log('MathEngine available:', typeof MathEngine !== 'undefined');
+      console.log('Helper VAT function:', typeof window.getHelperVatRate === 'function');
+      console.log('Current VAT:', window.getHelperVatRate ? window.getHelperVatRate() : 'Not available');
+      console.log('Parent frame detected:', window.parent !== window);
+      
+      // Test admin hub connection immediately
+      if (window.parent && window.parent !== window) {
+        console.log('📡 Sending test message to admin hub...');
+        window.parent.postMessage({ type: 'GET_VAT_RATE' }, '*');
+        
+        // Listen for response
+        const responseListener = (event) => {
+          if (event.data && event.data.type === 'VAT_RATE_RESPONSE') {
+            window.removeEventListener('message', responseListener);
+            console.log('✅ Admin hub responded with VAT:', event.data.vatRate + '%');
+          }
+        };
+        window.addEventListener('message', responseListener);
+        
+        // Timeout if no response
+        setTimeout(() => {
+          window.removeEventListener('message', responseListener);
+          console.log('⏰ No response from admin hub after 2 seconds');
+        }, 2000);
+      }
+    };
+    
+    // Make it available immediately
+    console.log('🚀 Quick test available: quickVatTest()');
+  </script>
   <script type="module" src="./helper-events.js"></script>
   <!-- TEMPORARILY DISABLED - conflicts with differential structure -->
   <!-- <script type="module" src="./depreciation_module.js"></script> -->
