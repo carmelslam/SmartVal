@@ -1377,6 +1377,10 @@
             <label>ערך השוק של הרכב (לפי דו״ח לוי יצחק): </label>
             <div class="readonly-box" id="finalMarketValue">יחושב מהתאמות לוי</div>
           </div>
+          <div>
+            <label>אישור חברת ביטוח (אופציונלי):</label>
+            <input type="text" id="insuranceAuthorization" placeholder="₪" onchange="updateClaimsDataFromField(this, 'authorized_claim');" style="direction: ltr; text-align: right;" />
+          </div>
         </div>
       </div>
     </div>
@@ -3851,7 +3855,6 @@
         
         // Update claims_data for UI consistency
         helper.claims_data = helper.claims_data || {};
-        helper.claims_data.levi_price_list = `₪${grossMarketValue.toLocaleString()}`;
         helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
         helper.claims_data.gross_percent = `${grossPercentage.toFixed(2)}%`;
         
@@ -4177,6 +4180,65 @@
         
       } catch (error) {
         console.error('Error updating helper from field:', error);
+      }
+    }
+
+    // ✅ STANDARDIZED CLAIMS DATA MAPPING FUNCTION
+    function updateClaimsDataFromField(element, claimsKey) {
+      try {
+        const helper = window.helper || {};
+        if (!helper.claims_data) helper.claims_data = {};
+        
+        let value = element.value;
+        const fieldId = element.id;
+        
+        console.log(`💰 Claims data field change: ${fieldId} -> claims_data.${claimsKey} = "${value}"`);
+        
+        // Format currency fields
+        if (claimsKey === 'authorized_claim' && value) {
+          // Remove existing currency symbols and format properly
+          value = value.replace(/[₪,]/g, '').trim();
+          if (value && !isNaN(value)) {
+            const numericValue = parseInt(value);
+            value = `₪${numericValue.toLocaleString()}`;
+          }
+        }
+        
+        // Update claims_data
+        helper.claims_data[claimsKey] = value;
+        
+        // Save to helper
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ Updated claims_data.${claimsKey} = "${value}"`);
+        
+        // Trigger floating screen refresh
+        if (typeof triggerFloatingScreenRefresh === 'function') {
+          triggerFloatingScreenRefresh();
+        }
+        
+      } catch (error) {
+        console.error('Error updating claims data:', error);
+      }
+    }
+
+    // ✅ STANDARDIZED CLAIMS DATA MAPPING - Load from helper to UI
+    function loadClaimsDataToUI() {
+      try {
+        const helper = window.helper || {};
+        const claimsData = helper.claims_data || {};
+        
+        // Insurance authorization field
+        const insuranceField = document.getElementById('insuranceAuthorization');
+        if (insuranceField && claimsData.authorized_claim) {
+          insuranceField.value = claimsData.authorized_claim;
+        }
+        
+        console.log('✅ Claims data loaded to UI fields');
+        
+      } catch (error) {
+        console.error('Error loading claims data to UI:', error);
       }
     }
 
@@ -4584,7 +4646,7 @@
             
             // Update helper claims data to maintain consistency
             helper.claims_data = helper.claims_data || {};
-            helper.claims_data.levi_price_list = `₪${vehicleValueGross.toLocaleString()}`;
+            helper.claims_data.gross_value = `₪${vehicleValueGross.toLocaleString()}`;
             sessionStorage.setItem('helper', JSON.stringify(helper));
             
             console.log(`💰 Updated gross market value field: ₪${vehicleValueGross.toLocaleString()}`);
@@ -6156,8 +6218,8 @@
             totalClaimField.value = helper.claims_data.total_claim;
           }
           
-          if (leviPriceListField && helper.claims_data.levi_price_list) {
-            leviPriceListField.value = helper.claims_data.levi_price_list;
+          if (leviPriceListField && helper.claims_data.gross_value) {
+            leviPriceListField.value = helper.claims_data.gross_value;
           }
           
           if (grossPercentField && helper.claims_data.gross_percent) {
@@ -7082,12 +7144,12 @@
           }
         }
         
-        // If still no value, try to get from levi_price_list field
+        // If still no value, try to get from gross value field  
         if (!vehicleValueGross) {
           const leviPriceListField = document.getElementById('leviPriceList');
           if (leviPriceListField && leviPriceListField.value) {
             vehicleValueGross = parseFloat(leviPriceListField.value.replace(/[₪,]/g, '')) || 0;
-            console.log(`🔧 Got vehicle_value_gross from leviPriceList field: ${vehicleValueGross}`);
+            console.log(`🔧 Got vehicle_value_gross from gross value field: ${vehicleValueGross}`);
           }
         }
         
@@ -7287,6 +7349,7 @@
       setTimeout(() => {
         loadDataFromHelper();
         loadAttachmentsData();
+        loadClaimsDataToUI(); // Load claims data to UI fields
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
         
