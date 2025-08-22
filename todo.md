@@ -5554,3 +5554,44 @@ The admin panel VAT rate changes (18%, 17%, 0%) were not connecting to the syste
 - Run `testAdminHubConnection()` in console to verify admin hub communication
 - VAT changes in admin panel should now update all calculations immediately
 - VAT editing panel shows actual source (admin/helper/default)
+
+---
+
+## ✅ COMPLETED: MathEngine Loading Order Fix
+**Date: 22/08/2025**
+
+### Problem Summary
+Warning: "⚠️ MathEngine not available, using stored VAT rate or default" occurred because MathEngine module wasn't fully loaded when other scripts tried to access it, causing fallback to helper.calculations.vat_rate.
+
+### Implementation Summary
+
+**Root Cause:** Module loading timing - `math.js` was imported as ES6 module but wasn't available globally when needed.
+
+**Solution Applied:**
+1. **Made MathEngine Globally Available:**
+   ```javascript
+   // Import and expose MathEngine globally
+   import { MathEngine } from './math.js';
+   window.MathEngine = MathEngine;
+   window.dispatchEvent(new CustomEvent('mathEngineReady'));
+   ```
+
+2. **Added Loading Order Management:**
+   - VAT display initialization waits for 'mathEngineReady' event
+   - Graceful fallback to helper.calculations.vat_rate when MathEngine not ready
+   - Less noisy console messages (info instead of warnings)
+
+3. **Enhanced Error Messages:**
+   ```javascript
+   // Before: ⚠️ MathEngine not available, using stored VAT rate or default
+   // After: ℹ️ Using stored VAT rate from helper: 17% (MathEngine not loaded yet)
+   ```
+
+### Results:
+- **Fixed:** MathEngine loading order issues
+- **Maintained:** Robust fallback system to helper.calculations.vat_rate
+- **Improved:** User-friendly console messages
+- **Added:** `testMathEngineLoading()` debug function
+
+### Key Point:
+The "MathEngine not available" warning was actually showing the system working correctly - it was falling back to `helper.calculations.vat_rate` as intended. Now MathEngine loads properly AND the fallback system still works as backup.

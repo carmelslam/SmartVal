@@ -5198,8 +5198,15 @@ window.getHelperVatRate = function(forceRefresh = false) {
     if (typeof MathEngine !== 'undefined' && MathEngine?.getVatRate) {
       currentAdminVatRate = MathEngine.getVatRate();
     } else {
-      console.warn('⚠️ MathEngine not available, using stored VAT rate or default');
-      return window.helper.calculations.vat_rate || 18;
+      // MathEngine not available, use helper as source of truth (this is normal)
+      const storedVat = window.helper.calculations.vat_rate;
+      if (storedVat) {
+        console.log(`ℹ️ Using stored VAT rate from helper: ${storedVat}% (MathEngine not loaded yet)`);
+        return storedVat;
+      } else {
+        console.log('ℹ️ Using default VAT rate: 18% (no stored rate, MathEngine not loaded)');
+        return 18;
+      }
     }
     
     // Update helper if admin rate changed or if forced refresh

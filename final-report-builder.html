@@ -7247,19 +7247,34 @@
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
         
-        // Initialize admin hub communication and VAT display
+        // Initialize admin hub communication
         initAdminHubCommunication();
-        if (typeof window.initVatDisplay === 'function') {
-          window.initVatDisplay();
+        
+        // Wait for MathEngine to be ready before initializing VAT display
+        if (typeof window.MathEngine !== 'undefined') {
+          // MathEngine already loaded
+          if (typeof window.initVatDisplay === 'function') {
+            window.initVatDisplay();
+          }
+        } else {
+          // Wait for MathEngine ready event
+          window.addEventListener('mathEngineReady', function() {
+            console.log('🎯 MathEngine ready, initializing VAT display...');
+            if (typeof window.initVatDisplay === 'function') {
+              window.initVatDisplay();
+            }
+          });
         }
         
         // Log that admin hub functions are now available
         console.log('🔧 Admin hub functions loaded. Try: verifyAdminHubFunctions() or testAdminHubConnection()');
         
-        // Automatically verify functions are loaded
-        if (typeof window.verifyAdminHubFunctions === 'function') {
-          window.verifyAdminHubFunctions();
-        }
+        // Automatically verify functions are loaded (after MathEngine loads)
+        setTimeout(() => {
+          if (typeof window.verifyAdminHubFunctions === 'function') {
+            window.verifyAdminHubFunctions();
+          }
+        }, 200);
       }, 100);
       
       // Initialize adjustment system with event listeners
@@ -12179,6 +12194,24 @@
     
     // Make it available immediately
     console.log('🚀 Quick test available: quickVatTest()');
+    
+    // Test MathEngine loading
+    window.testMathEngineLoading = function() {
+      console.log('🧪 Testing MathEngine loading status...');
+      console.log('MathEngine available:', typeof MathEngine !== 'undefined');
+      console.log('MathEngine.getVatRate available:', typeof MathEngine?.getVatRate === 'function');
+      
+      if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+        console.log('✅ MathEngine VAT rate:', MathEngine.getVatRate() + '%');
+      } else {
+        console.log('⚠️ MathEngine not fully loaded yet');
+      }
+      
+      // Test helper fallback
+      if (typeof window.getHelperVatRate === 'function') {
+        console.log('✅ Helper VAT rate:', window.getHelperVatRate() + '%');
+      }
+    };
   </script>
   <script type="module" src="./helper-events.js"></script>
   <!-- TEMPORARILY DISABLED - conflicts with differential structure -->
