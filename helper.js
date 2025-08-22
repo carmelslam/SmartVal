@@ -2280,6 +2280,21 @@ window.helper = existingHelper || {
     // Audit trail
     audit_trail: []
   },
+  
+  // Claims data (shared between estimate and final report)
+  claims_data: {
+    total_claim: '',          // Total claim amount (used by both estimate and final report)
+    authorized_claim: '',     // Authorized claim amount
+    gross_value: '',          // Gross vehicle value  
+    gross_percent: '',        // Gross damage percentage
+    levi_price_list: '',      // Levi price list value (legacy - should be same as gross_value)
+    net_claim: '',           // Net claim after deductions
+    salvage_value: '',       // Salvage value
+    last_updated: '',        // Last modification timestamp
+    source: '',              // 'estimate' or 'final_report' - which module last updated
+    calculation_method: ''   // How the values were calculated
+  },
+  
   parts_search: {
     current_search: '',
     search_results: [],

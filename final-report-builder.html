@@ -2406,22 +2406,17 @@
         
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // ✅ FIX: Priority loading - section save first, then claims_data, then auto-populate
-          const sectionSavedValue = helper.manual_gross_result?.authorizedClaim;
-          const claimsSavedValue = helper.claims_data?.total_claim;
+          // ✅ FIX: Proper architecture - load from centralized claims_data.total_claim
+          const savedValue = helper.claims_data?.total_claim;
           const autoValue = helper.damage_assessment?.summary?.total_with_vat || 0;
 
-          if (sectionSavedValue && sectionSavedValue !== '') {
-            // Use section saved value (highest priority)
-            console.log(`🔄 Loading section saved authorizedClaim: ${sectionSavedValue}`);
-            authorizedClaimField.value = sectionSavedValue;
-          } else if (claimsSavedValue && claimsSavedValue !== '') {
-            // Use claims_data saved value (medium priority)
-            console.log(`🔄 Loading claims_data saved authorizedClaim: ${claimsSavedValue}`);
-            authorizedClaimField.value = claimsSavedValue;
+          if (savedValue && savedValue !== '') {
+            // Use saved value from centralized claims_data section
+            console.log(`🔄 Loading authorizedClaim from helper.claims_data.total_claim: ${savedValue}`);
+            authorizedClaimField.value = savedValue;
           } else {
-            // Auto-populate from calculation (lowest priority)  
-            console.log(`🔄 Auto-populating authorizedClaim from calculation: ${autoValue}`);
+            // Auto-populate from damage assessment calculation
+            console.log(`🔄 Auto-populating authorizedClaim from damage_assessment: ${autoValue}`);
             authorizedClaimField.value = autoValue ? `₪${autoValue.toLocaleString()}` : '';
           }
         }
