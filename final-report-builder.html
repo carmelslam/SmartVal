@@ -3952,12 +3952,21 @@
           }
         }));
         
-        // ✅ 3-BULK: Update authorizedClaim field with proper formatting
+        // ✅ 3-BULK: Update authorizedClaim field with proper formatting (only if not manually set)
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          const formattedClaim = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
-          authorizedClaimField.value = formattedClaim;
-          console.log(`🔄 3-bulk: Updated authorizedClaim field: ${formattedClaim}`);
+          // Check if user has manually entered a value
+          const currentValue = authorizedClaimField.value;
+          const hasManualValue = helper.claims_data?.total_claim && helper.claims_data.total_claim !== `₪${totalClaim.toLocaleString()}`;
+          
+          if (!hasManualValue || !currentValue) {
+            // Auto-populate with calculation
+            const formattedClaim = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
+            authorizedClaimField.value = formattedClaim;
+            console.log(`🔄 3-bulk: Updated authorizedClaim field: ${formattedClaim}`);
+          } else {
+            console.log(`🔄 3-bulk: Preserving manual authorizedClaim value: ${currentValue}`);
+          }
         }
         
         console.log('✅ Helper updated with 3-bulk calculations:', {
