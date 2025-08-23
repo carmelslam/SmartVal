@@ -2812,33 +2812,27 @@
           // Extract damage center names from helper data - prioritize centers helper
           if (helper.centers && helper.centers.length > 0) {
             helper.centers.forEach((center, index) => {
-              // Clean center name to avoid duplication
-              let centerName = center.Location || center.damage_center_name || `מוקד נזק מס' ${index + 1}`;
-              // If centerName already contains "מוקד נזק מס'", use it as is, otherwise add the prefix
-              if (!centerName.includes('מוקד נזק מס\'')) {
-                centerName = `מוקד נזק מס' ${index + 1}`;
-              }
-              const centerNumber = center["Damage center Number"] || (index + 1);
+              // Get the actual location and center number properly
+              const location = center.Location || center.damage_center_name || '';
+              const centerNum = center["Damage center Number"] || (index + 1);
               const centerDescription = center.Description || '';
               
               // Check if this center already exists (avoid duplicates)
               const existingCenter = damageCenterNames.find(item => 
-                (typeof item === 'object' ? item.name : item) === centerName
+                (typeof item === 'object' ? item.number : item) === centerNum
               );
               
               if (!existingCenter) {
                 damageCenterNames.push({
-                  name: centerName,
-                  number: centerNumber,
+                  name: location,  // The actual location/part name
+                  number: centerNum,  // Just the number (1, 2, 3, etc.)
                   description: centerDescription
                 });
               }
             });
           } else if (helper.expertise?.damage_blocks) {
             helper.expertise.damage_blocks.forEach(block => {
-              console.log('🔍 Processing damage block:', block);
               const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
-              console.log('🔍 Center name:', centerName);
               if (centerName && !damageCenterNames.includes(centerName)) {
                 damageCenterNames.push(centerName);
               }
@@ -7988,7 +7982,6 @@
     // UPDATE DEPRECIATION SECTION FROM DAMAGE CENTERS
     function updateDepreciationFromDamageCenters(damageCenterNames) {
       try {
-        console.log('🔄 updateDepreciationFromDamageCenters called with:', damageCenterNames);
         
         // If no data provided, get current data from helper.centers
         if (!damageCenterNames || damageCenterNames.length === 0) {
@@ -7996,35 +7989,28 @@
           damageCenterNames = [];
           
           if (helper.centers && helper.centers.length > 0) {
-            console.log('🔄 Getting fresh data from helper.centers');
             helper.centers.forEach((center, index) => {
-              // Clean center name to avoid duplication
-              let centerName = center.Location || center.damage_center_name || `מוקד נזק מס' ${index + 1}`;
-              // If centerName already contains "מוקד נזק מס'", use it as is, otherwise add the prefix
-              if (!centerName.includes('מוקד נזק מס\'')) {
-                centerName = `מוקד נזק מס' ${index + 1}`;
-              }
+              // Get the actual location and center number properly
+              const location = center.Location || center.damage_center_name || '';
+              const centerNum = center["Damage center Number"] || (index + 1);
               
               damageCenterNames.push({
-                name: centerName,
-                number: center["Damage center Number"] || (index + 1),
+                name: location,  // The actual location/part name
+                number: centerNum,  // Just the number (1, 2, 3, etc.)
                 description: center.Description || ''
               });
             });
           }
         }
         
-        console.log('🔄 Final damageCenterNames for depreciation:', damageCenterNames);
         
         const depreciationTable = document.getElementById('depreciationBulkTable');
         if (!depreciationTable) {
-          console.log('❌ depreciationBulkTable not found');
           return;
         }
         
         // Clear existing depreciation rows
         depreciationTable.innerHTML = '';
-        console.log('🧹 Cleared depreciation table');
         
         // Add a row for each damage center
         damageCenterNames.forEach(centerData => {
@@ -8039,7 +8025,6 @@
           const damageLocation = centerName || ''; // This is the location/part that was damaged
           const workEssence = centerDescription || ''; // This is the essence of work to be done
           
-          console.log('🔄 Adding depreciation row for center:', centerNumber, 'Location:', damageLocation, 'Work:', workEssence);
           const row = document.createElement('div');
           row.className = 'dep-row';
           row.style.cssText = 'display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;';
