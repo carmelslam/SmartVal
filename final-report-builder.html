@@ -2787,20 +2787,37 @@
           
           // Load bulk depreciation table
           if (depreciationData.bulk_items && Array.isArray(depreciationData.bulk_items)) {
-            // Clear existing rows to prevent duplication
-            const depreciationContainer = document.getElementById('depreciationBulkTable');
-            if (depreciationContainer) {
-              depreciationContainer.innerHTML = '';
+            // Check if we need to update the mapping
+            let needsUpdate = false;
+            
+            // If we have damage centers, check if the saved data needs updating
+            if (helper.centers && helper.centers.length > 0) {
+              // Check if any saved item has old format (center_number contains full text)
+              needsUpdate = depreciationData.bulk_items.some(item => 
+                item.center_number && item.center_number.includes('מוקד נזק מס')
+              );
             }
             
-            depreciationData.bulk_items.forEach(item => {
-              addDepField(item);
-            });
-            
-            // Add auto-calculation to all existing rows after loading
-            setTimeout(() => {
-              addAutoCalculationToExistingRows();
-            }, 100);
+            if (needsUpdate) {
+              // Regenerate from damage centers with correct mapping
+              console.log('Updating depreciation mapping from damage centers');
+              updateDepreciationFromDamageCenters([]);
+            } else {
+              // Load existing data
+              const depreciationContainer = document.getElementById('depreciationBulkTable');
+              if (depreciationContainer) {
+                depreciationContainer.innerHTML = '';
+              }
+              
+              depreciationData.bulk_items.forEach(item => {
+                addDepField(item);
+              });
+              
+              // Add auto-calculation to all existing rows after loading
+              setTimeout(() => {
+                addAutoCalculationToExistingRows();
+              }, 100);
+            }
           }
           
         } else {
@@ -2817,11 +2834,11 @@
               const centerDescription = center.Description || '';
               
               // Extract just the number from "Damage center Number" field
-              // e.g., "1 'מוקד נזק מס" -> "1"
+              // e.g., "מוקד נזק מס' מוקד נזק מס' 1" -> "1"
               let centerNum = center["Damage center Number"] || String(index + 1);
-              // Extract the first number found in the string
-              const numberMatch = String(centerNum).match(/^\d+/);
-              centerNum = numberMatch ? numberMatch[0] : String(index + 1);
+              // Extract all numbers and take the last one
+              const numberMatch = String(centerNum).match(/\d+/g);
+              centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
               
               // Check if this center already exists (avoid duplicates)
               const existingCenter = damageCenterNames.find(item => 
@@ -8000,11 +8017,11 @@
               const location = center.Location || center.damage_center_name || '';
               
               // Extract just the number from "Damage center Number" field
-              // e.g., "1 'מוקד נזק מס" -> "1"
+              // e.g., "מוקד נזק מס' מוקד נזק מס' 1" -> "1"
               let centerNum = center["Damage center Number"] || String(index + 1);
-              // Extract the first number found in the string
-              const numberMatch = String(centerNum).match(/^\d+/);
-              centerNum = numberMatch ? numberMatch[0] : String(index + 1);
+              // Extract all numbers and take the last one
+              const numberMatch = String(centerNum).match(/\d+/g);
+              centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
               
               damageCenterNames.push({
                 name: location,  // The actual location/part name
