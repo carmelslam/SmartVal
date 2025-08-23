@@ -3799,6 +3799,12 @@ window.populateAllForms = function() {
 
   // 🔧 PHASE 3 FIX: Enhanced form population with better field detection
   Object.entries(dataMapping).forEach(([fieldId, value]) => {
+    // ✅ FIX: Exclude depreciation fields from auto-population to prevent conflicts
+    const depreciationFields = ['globalDep1', 'globalDepValue', 'garageDays'];
+    if (depreciationFields.includes(fieldId)) {
+      return; // Skip depreciation fields - they have their own save/load system
+    }
+    
     if (value !== undefined && value !== null && value !== '') {
       // Multiple field detection strategies
       const element = document.getElementById(fieldId) || 
@@ -3814,6 +3820,12 @@ window.populateAllForms = function() {
                      (fieldId === 'plate' ? document.querySelector('[id*="רכב"], [name*="plate"]') : null);
                      
       if (element) {
+        // ✅ FIX: Skip elements that are in depreciation table to avoid conflicts
+        const depreciationTable = document.getElementById('depreciationBulkTable');
+        if (depreciationTable && depreciationTable.contains(element)) {
+          return; // Skip depreciation table inputs - they have their own save/load system
+        }
+        
         const currentValue = element.value?.trim() || '';
         const newValue = String(value).trim();
         

@@ -1885,35 +1885,37 @@
         // ✅ CORRECT 2-WAY DATA FLOW: Save to main helper.depreciation structure
         if (!helper.depreciation) helper.depreciation = {};
         
-        // Save to main depreciation section (single source of truth)
+        // Save to main depreciation section (single source of truth) with COMPLETE structure
         helper.depreciation = {
-          global_percentage: parseFloat(globalPercent) || 0,
+          // Form field names (for direct loading)
+          globalDep1: globalPercent,
+          globalDepValue: globalValue,
+          garageDays: document.getElementById('garageDays')?.value || '',
+          
+          // Processed values (for calculations)
+          global_percentage: parseFloat(globalPercent.replace('%', '')) || 0,
           global_amount: parseFloat(globalValue.replace(/[₪,]/g, '')) || 0,
-          bulk_items: depreciationData.bulk_items,
           work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
+          
+          // Array data (both names for compatibility)
+          bulk_items: depreciationData.bulk_items,
+          depreciationRows: depreciationData.bulk_items,
+          
+          // Calculations and metadata
           total_depreciation: (parseFloat(globalValue.replace(/[₪,]/g, '')) || 0) + 
                              depreciationData.bulk_items.reduce((sum, item) => 
                                sum + (parseFloat(item.value.replace(/[₪,]/g, '')) || 0), 0),
           last_updated: new Date().toISOString(),
-          source: 'final_report_builder'
+          lastSaved: new Date().toISOString(),
+          source: 'final_report_builder',
+          isManualSave: true
         };
         
         // Also maintain final_report reference for compatibility
         if (!helper.final_report) helper.final_report = {};
         helper.final_report.depreciation = helper.depreciation;
         
-        // Also save to manual depreciation section for form loader compatibility
-        helper.manual_depreciation = {
-          globalDep1: globalPercent,  // Use exact field name for form loader
-          globalDepValue: globalValue,  // Use exact field name for form loader  
-          garageDays: document.getElementById('garageDays')?.value || '',  // Use exact field name for form loader
-          global_percentage: globalPercent,
-          global_value: globalValue,
-          work_days_impact: document.getElementById('garageDays')?.value || '',
-          depreciationRows: depreciationData.bulk_items,
-          lastSaved: new Date().toISOString(),
-          isManualSave: true
-        };
+        // ✅ REMOVED: No longer saving to manual_depreciation - everything is in helper.depreciation
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('✅ Depreciation data saved successfully:', depreciationData.bulk_items.length, 'items');
@@ -2755,13 +2757,13 @@
         if (depreciationData) {
           console.log('✅ Loading depreciation data:', depreciationData.bulk_items?.length || 0, 'items');
           
-          // Load global depreciation fields with backward compatibility
-          document.getElementById('globalDep1').value = depreciationData.global_percentage?.toString() || 
+          // Load global depreciation fields from helper.depreciation (single source)
+          document.getElementById('globalDep1').value = depreciationData.globalDep1 || 
                                                         depreciationData.global_percent || '';
-          document.getElementById('globalDepValue').value = depreciationData.global_amount ? 
-                                                           `₪${depreciationData.global_amount.toLocaleString()}` :
+          document.getElementById('globalDepValue').value = depreciationData.globalDepValue || 
                                                            depreciationData.global_value || '';
-          document.getElementById('garageDays').value = depreciationData.work_days_impact || '';
+          document.getElementById('garageDays').value = depreciationData.garageDays || 
+                                                       depreciationData.work_days_impact || '';
           
           // Load bulk depreciation table
           if (depreciationData.bulk_items && Array.isArray(depreciationData.bulk_items)) {
@@ -9473,7 +9475,7 @@
         dynamicContent: true
       },
       'depreciation': {
-        helperKey: 'manual_depreciation',
+        helperKey: 'depreciation',
         fields: ['globalDep1', 'globalDepValue', 'garageDays'],
         loadFunction: 'loadDepreciationData',
         name: 'חישוב ירידת ערך',
