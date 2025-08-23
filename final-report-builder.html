@@ -7437,8 +7437,46 @@
       }
     }
 
+    // Cleanup function to fix duplicated damage center numbers
+    function cleanupDamageCenterNumbers() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (helper.centers && Array.isArray(helper.centers)) {
+          let updated = false;
+          
+          helper.centers.forEach((center, index) => {
+            if (center["Damage center Number"] && typeof center["Damage center Number"] === 'string') {
+              // Check if it contains duplicated text
+              if (center["Damage center Number"].includes('מוקד')) {
+                // Extract just the number
+                const match = center["Damage center Number"].match(/\d+$/);
+                const cleanNumber = match ? match[0] : String(index + 1);
+                center["Damage center Number"] = cleanNumber;
+                updated = true;
+              }
+            }
+          });
+          
+          if (updated) {
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            // Also update window.helper if it exists
+            if (window.helper && window.helper.centers) {
+              window.helper.centers = helper.centers;
+            }
+            console.log('Cleaned up damage center numbers');
+          }
+        }
+      } catch (error) {
+        console.error('Error cleaning damage center numbers:', error);
+      }
+    }
+
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
+      // First clean up any duplicated damage center numbers in helper
+      // cleanupDamageCenterNumbers(); // Commented out - leave existing data as is
+      
       // First initialize the FinalReportCalculations object
       console.log('🚀 Initializing FinalReportCalculations object first');
       
