@@ -213,6 +213,17 @@
       font-weight: 600;
       line-height: 1.1;
     }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .section-header h3 {
+      margin: 0;
+    }
     @media (max-width: 768px) {
       .floating-toggles-top {
         top: 5px;
@@ -962,8 +973,11 @@
 
     <!-- VEHICLE DATA - EDITABLE FROM HELPER -->
     <div class="form-section">
-      <h3>נתוני רכב</h3>
-      <div class="form-grid" id="vehicleData">
+      <div class="section-header">
+        <h3>נתוני רכב</h3>
+        <button class="toggle-btn" type="button" id="vehicleDataToggleBtn" onclick="toggleVehicleDataSection()" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🔼 פתח</button>
+      </div>
+      <div class="form-grid" id="vehicleData" style="display: none;">
         <div>
           <label>מספר רכב:</label>
           <input type="text" id="carPlate" onchange="updateHelperFromField(event);" />
@@ -1023,7 +1037,7 @@
     <!-- DAMAGE CENTERS SUMMARY SECTION - EDITABLE -->
     <div class="form-section">
       <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
-      <div id="damageCentersSummary" style="display:block;">
+      <div id="damageCentersSummary" style="display:none;">
         <h3>סיכום מוקדי נזק (ניתן לעריכה) </h3>
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
@@ -1283,8 +1297,12 @@
 
     <!-- DEPRECIATION CALCULATION SECTION -->
     <div class="form-section" id="depreciationSection">
-      <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
-      <div style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;">
+      <div class="section-header">
+        <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
+        <button class="toggle-btn" type="button" id="depreciationToggleBtn" onclick="toggleDepreciationSection()" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🔼 פתח</button>
+      </div>
+      <div id="depreciationContent" style="display: none;">
+        <div style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;">
         <div><label>מס' מוקד:</label></div>
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
@@ -1349,6 +1367,7 @@
       <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
         <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer; position: relative; z-index: 10;">שמור הפרשים</button>
       </div>
+      </div> <!-- Close depreciationContent -->
     </div>
     <br><br>
 
@@ -1753,6 +1772,52 @@
         // Save state to sessionStorage
         sessionStorage.setItem('damageCentersSection', isVisible ? 'collapsed' : 'expanded');
         console.log(`🔄 Damage centers section ${isVisible ? 'collapsed' : 'expanded'}`);
+      }
+    }
+
+    // VEHICLE DATA SECTION TOGGLE
+    function toggleVehicleDataSection() {
+      const section = document.getElementById('vehicleData');
+      const toggleBtn = document.getElementById('vehicleDataToggleBtn');
+      
+      if (section && toggleBtn) {
+        const isVisible = section.style.display !== 'none';
+        
+        if (isVisible) {
+          section.style.display = 'none';
+          toggleBtn.innerHTML = '🔼 פתח';
+          toggleBtn.style.background = '#28a745';
+        } else {
+          section.style.display = 'block';
+          toggleBtn.innerHTML = '🔽 סגור';
+          toggleBtn.style.background = '#6c757d';
+        }
+        
+        sessionStorage.setItem('vehicleDataSection', isVisible ? 'collapsed' : 'expanded');
+        console.log(`🔄 Vehicle data section ${isVisible ? 'collapsed' : 'expanded'}`);
+      }
+    }
+
+    // DEPRECIATION SECTION TOGGLE  
+    function toggleDepreciationSection() {
+      const section = document.getElementById('depreciationContent');
+      const toggleBtn = document.getElementById('depreciationToggleBtn');
+      
+      if (section && toggleBtn) {
+        const isVisible = section.style.display !== 'none';
+        
+        if (isVisible) {
+          section.style.display = 'none';
+          toggleBtn.innerHTML = '🔼 פתח';
+          toggleBtn.style.background = '#28a745';
+        } else {
+          section.style.display = 'block';
+          toggleBtn.innerHTML = '🔽 סגור';
+          toggleBtn.style.background = '#6c757d';
+        }
+        
+        sessionStorage.setItem('depreciationSection', isVisible ? 'collapsed' : 'expanded');
+        console.log(`🔄 Depreciation section ${isVisible ? 'collapsed' : 'expanded'}`);
       }
     }
     
@@ -9988,17 +10053,55 @@
       setTimeout(() => {
         addSectionButtons();
         
-        // Restore damage centers section state
-        const damageCentersState = sessionStorage.getItem('damageCentersSection');
-        if (damageCentersState === 'collapsed') {
-          const section = document.getElementById('damageCentersSummary');
-          const toggleBtn = document.getElementById('damageCentersToggleBtn');
-          if (section && toggleBtn) {
-            section.style.display = 'none';
-            toggleBtn.innerHTML = '🔼 פתח';
-            toggleBtn.style.background = '#28a745';
-            console.log('🔄 Restored damage centers section as collapsed');
+        // Restore damage centers section state (default collapsed)
+        const damageCentersState = sessionStorage.getItem('damageCentersSection') || 'collapsed';
+        const damageCentersSection = document.getElementById('damageCentersSummary');
+        const damageCentersToggleBtn = document.getElementById('damageCentersToggleBtn');
+        if (damageCentersSection && damageCentersToggleBtn) {
+          if (damageCentersState === 'collapsed') {
+            damageCentersSection.style.display = 'none';
+            damageCentersToggleBtn.innerHTML = '🔼 פתח';
+            damageCentersToggleBtn.style.background = '#28a745';
+          } else {
+            damageCentersSection.style.display = 'block';
+            damageCentersToggleBtn.innerHTML = '🔽 סגור';
+            damageCentersToggleBtn.style.background = '#6c757d';
           }
+          console.log(`🔄 Restored damage centers section as ${damageCentersState}`);
+        }
+        
+        // Restore vehicle data section state (default collapsed)
+        const vehicleDataState = sessionStorage.getItem('vehicleDataSection') || 'collapsed';
+        const vehicleDataSection = document.getElementById('vehicleData');
+        const vehicleDataToggleBtn = document.getElementById('vehicleDataToggleBtn');
+        if (vehicleDataSection && vehicleDataToggleBtn) {
+          if (vehicleDataState === 'collapsed') {
+            vehicleDataSection.style.display = 'none';
+            vehicleDataToggleBtn.innerHTML = '🔼 פתח';
+            vehicleDataToggleBtn.style.background = '#28a745';
+          } else {
+            vehicleDataSection.style.display = 'block';
+            vehicleDataToggleBtn.innerHTML = '🔽 סגור';
+            vehicleDataToggleBtn.style.background = '#6c757d';
+          }
+          console.log(`🔄 Restored vehicle data section as ${vehicleDataState}`);
+        }
+        
+        // Restore depreciation section state (default collapsed)
+        const depreciationState = sessionStorage.getItem('depreciationSection') || 'collapsed';
+        const depreciationSection = document.getElementById('depreciationContent');
+        const depreciationToggleBtn = document.getElementById('depreciationToggleBtn');
+        if (depreciationSection && depreciationToggleBtn) {
+          if (depreciationState === 'collapsed') {
+            depreciationSection.style.display = 'none';
+            depreciationToggleBtn.innerHTML = '🔼 פתח';
+            depreciationToggleBtn.style.background = '#28a745';
+          } else {
+            depreciationSection.style.display = 'block';
+            depreciationToggleBtn.innerHTML = '🔽 סגור';
+            depreciationToggleBtn.style.background = '#6c757d';
+          }
+          console.log(`🔄 Restored depreciation section as ${depreciationState}`);
         }
       }, 1000);
     });
