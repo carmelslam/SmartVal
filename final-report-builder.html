@@ -1763,7 +1763,7 @@
           <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || ''}" /></div>
           <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
           <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" /></div>
-          <div><input type="text" placeholder="% ירידת ערך" value="${data.percent ? data.percent + '%' : ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent ? data.percent + '%' : ''}" style="direction: ltr; text-align: right;" /></div>
+          <div><input type="text" placeholder="% ירידת ערך" value="${data.percent ? (String(data.percent).includes('%') ? data.percent : data.percent + '%') : ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent ? (String(data.percent).includes('%') ? data.percent : data.percent + '%') : ''}" style="direction: ltr; text-align: right;" /></div>
           <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="₪${data.value || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
@@ -9041,11 +9041,10 @@
           addDamageCenterEventListeners();
           updateAllCostDisplays();
           
-          // Also update depreciation table when damage centers are loaded/refreshed
-          updateDepreciationFromDamageCenters([]);
+          // DO NOT update depreciation table here - it clears manual rows
+          // updateDepreciationFromDamageCenters([]);
         }, 100);
         
-        console.log('✅ Damage centers loaded from helper:', damageBlocks.length);
         
       } catch (error) {
         console.error('Error loading damage centers from helper:', error);
@@ -9795,10 +9794,10 @@
         setTimeout(() => {
           addDamageCenterEventListeners();
           updateAllCostDisplays();
-          updateDepreciationFromDamageCenters([]);
+          // DO NOT update depreciation table here - it clears manual rows
+          // updateDepreciationFromDamageCenters([]);
         }, 100);
         
-        console.log('✅ Damage centers data restored successfully');
         
       } catch (error) {
         console.error('❌ Error restoring damage centers data:', error);
