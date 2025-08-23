@@ -2777,7 +2777,9 @@
           // Load global depreciation fields from helper.depreciation (single source)
           // Format global depreciation with % symbol if numeric
           const globalPercent = depreciationData.globalDep1 || depreciationData.global_percent || '';
-          document.getElementById('globalDep1').value = globalPercent && !globalPercent.includes('%') ? globalPercent + '%' : globalPercent;
+          // Clean any existing % and reformat
+          const cleanPercent = String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '');
+          document.getElementById('globalDep1').value = cleanPercent ? cleanPercent + '%' : '';
           document.getElementById('globalDepValue').value = depreciationData.globalDepValue || 
                                                            depreciationData.global_value || '';
           document.getElementById('garageDays').value = depreciationData.garageDays || 
@@ -2802,17 +2804,13 @@
           }
           
         } else {
-          console.log('ℹ️ No saved depreciation data, will populate from damage centers');
           // If no saved depreciation data, populate from damage centers
           const damageCenterNames = [];
           
           // Primary source: helper.centers (from damage center wizard)
-          console.log('🔍 Checking helper.centers:', helper.centers);
-          console.log('🔍 Fallback - helper.expertise?.damage_blocks:', helper.expertise?.damage_blocks);
           
           // Extract damage center names from helper data - prioritize centers helper
           if (helper.centers && helper.centers.length > 0) {
-            console.log('🔍 Found centers in helper.centers');
             helper.centers.forEach((center, index) => {
               // Clean center name to avoid duplication
               let centerName = center.Location || center.damage_center_name || `מוקד נזק מס' ${index + 1}`;
@@ -2822,7 +2820,6 @@
               }
               const centerNumber = center["Damage center Number"] || (index + 1);
               const centerDescription = center.Description || '';
-              console.log(`🔍 Center ${centerNumber}: ${centerName} - Description: ${centerDescription}`);
               
               // Check if this center already exists (avoid duplicates)
               const existingCenter = damageCenterNames.find(item => 
@@ -2838,7 +2835,6 @@
               }
             });
           } else if (helper.expertise?.damage_blocks) {
-            console.log('🔍 Found damage_blocks in expertise');
             helper.expertise.damage_blocks.forEach(block => {
               console.log('🔍 Processing damage block:', block);
               const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
@@ -2879,14 +2875,14 @@
             });
           }
           
-          console.log('🔍 Extracted damage center names:', damageCenterNames);
           
-          // If we have damage center names, populate depreciation section
+          // Only populate from damage centers if we have NO existing depreciation rows
+          // This prevents clearing manually added rows when refreshing
+          const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
           if (damageCenterNames.length > 0) {
-            console.log('🔄 Populating depreciation from damage centers:', damageCenterNames);
-            updateDepreciationFromDamageCenters(damageCenterNames);
+            // Don't call updateDepreciationFromDamageCenters here as it clears the table
+            // Manual rows are already loaded from helper.depreciation.bulk_items above
           } else {
-            console.log('❌ No damage center names found to populate depreciation');
           }
         }
       } catch (error) {
@@ -4571,8 +4567,9 @@
           const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
           let percent = parseFloat(cleanValue) || 0;
           
-          // Auto-add % symbol if not present and user enters a number
-          if (this.value && !this.value.includes('%') && !isNaN(percent)) {
+          // Format the display value properly
+          if (!isNaN(percent) && percent > 0) {
+            // Always reformat to ensure clean display
             this.value = percent + '%';
           }
           
@@ -11863,8 +11860,23 @@
       if (!globalDep1) return;
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const levi = helper.expertise?.levi_report || {};
-      const marketValue = parseFloat(levi.final_price) || 0;
+      
+      // Try multiple sources for market value
+      let marketValue = 0;
+      
+      // First try the summary market value field (most reliable)
+      const sumMarketValueField = document.getElementById('sumMarketValue');
+      if (sumMarketValueField && sumMarketValueField.value) {
+        const sumMarketStr = sumMarketValueField.value.replace(/[₪,]/g, '') || '0';
+        marketValue = parseFloat(sumMarketStr) || 0;
+      }
+      
+      // Fallback to helper data
+      if (!marketValue) {
+        marketValue = helper.calculations?.market_value || 
+                     helper.expertise?.levi_report?.final_price || 
+                     helper.calculations?.vehicle_value_gross || 0;
+      }
       // Clean the percentage value properly to handle decimals like 2.5%
       const cleanedValue = globalDep1.value.replace('%', '').replace(/[^0-9.-]/g, '');
       const depPercent = parseFloat(cleanedValue) || 0;
