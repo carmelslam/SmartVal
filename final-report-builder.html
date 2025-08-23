@@ -1852,14 +1852,12 @@
     // SAVE DEPRECIATION DATA TO HELPER
     function saveDepreciationData() {
       try {
-        console.log('🔧 DEBUG: saveDepreciationData called');
-        // 🔧 FIX: Get helper data from sessionStorage (single source of truth) to ensure consistency
+        // Get helper data from sessionStorage (single source of truth) to ensure consistency
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Get global depreciation values
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
-        console.log('🔧 DEBUG: Global values - percent:', globalPercent, 'value:', globalValue);
         
         // Collect depreciation data
         const depreciationData = {
@@ -1870,10 +1868,8 @@
         
         // Collect data from all depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-        console.log('🔧 DEBUG: Found', depRows.length, 'depreciation rows');
         depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
-          console.log('🔧 DEBUG: Row', index, 'has', inputs.length, 'inputs');
           if (inputs.length >= 5) {
             const item = {
               center_number: inputs[0].value,
@@ -1882,7 +1878,6 @@
               percent: inputs[3].value,
               value: inputs[4].value
             };
-            console.log('💾 DEBUG: Saving depreciation item:', item);
             depreciationData.bulk_items.push(item);
           }
         });
@@ -1907,7 +1902,7 @@
         if (!helper.final_report) helper.final_report = {};
         helper.final_report.depreciation = helper.depreciation;
         
-        // Also save to manual depreciation section for refresh functionality
+        // Also save to manual depreciation section for form loader compatibility
         helper.manual_depreciation = {
           globalDep1: globalPercent,  // Use exact field name for form loader
           globalDepValue: globalValue,  // Use exact field name for form loader  
@@ -1921,10 +1916,7 @@
         };
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Depreciation data saved to helper.depreciation:', helper.depreciation);
-        console.log('✅ Depreciation data saved to manual_depreciation for refresh:', helper.manual_depreciation);
-        
-        console.log('💾 Depreciation data saved to helper:', depreciationData);
+        console.log('✅ Depreciation data saved successfully:', depreciationData.bulk_items.length, 'items');
         
         // Trigger helper update broadcast for real-time sync
         if (typeof broadcastHelperUpdate === 'function') {
@@ -2756,15 +2748,12 @@
     // LOAD DEPRECIATION DATA
     function loadDepreciationData(helper) {
       try {
-        console.log('🔄 loadDepreciationData called with helper:', helper);
-        console.log('🔄 helper.final_report.depreciation:', helper.final_report?.depreciation);
-        
         // ✅ 2-WAY DATA FLOW: Load depreciation data from helper.depreciation (single source of truth)
         // Depreciation is ONLY for final report and estimate workflows, NOT expertise
         const depreciationData = helper.depreciation || helper.final_report?.depreciation || null;
         
         if (depreciationData) {
-          console.log('✅ Found depreciation data, loading from helper.depreciation:', depreciationData);
+          console.log('✅ Loading depreciation data:', depreciationData.bulk_items?.length || 0, 'items');
           
           // Load global depreciation fields with backward compatibility
           document.getElementById('globalDep1').value = depreciationData.global_percentage?.toString() || 
@@ -2783,10 +2772,8 @@
             }
             
             depreciationData.bulk_items.forEach(item => {
-              console.log('🔄 DEBUG: Loading depreciation item:', item);
               addDepField(item);
             });
-            console.log('🔄 DEBUG: Loaded', depreciationData.bulk_items.length, 'depreciation items from helper');
             
             // Add auto-calculation to all existing rows after loading
             setTimeout(() => {
@@ -2794,9 +2781,9 @@
             }, 100);
           }
           
-          console.log('✅ Depreciation data loaded successfully from helper.depreciation');
+          console.log('✅ Depreciation data loaded successfully');
         } else {
-          console.log('❌ No saved depreciation data, trying to populate from damage centers');
+          console.log('ℹ️ No saved depreciation data, will populate from damage centers');
           // If no saved depreciation data, populate from damage centers
           const damageCenterNames = [];
           
@@ -8027,15 +8014,22 @@
           const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
           const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
           const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
-          console.log('🔄 Adding depreciation row for:', centerName, 'Number:', centerNumber);
+          
+          // ✅ FIX: Correct field mapping for depreciation
+          // "החלק הניזוק" should show LOCATION/PART (use centerName which contains the damage location)
+          // "מהות התיקון" should show WORK ESSENCE/TYPE (use centerDescription which contains work details)
+          const damageLocation = centerName || ''; // This is the location/part that was damaged
+          const workEssence = centerDescription || ''; // This is the essence of work to be done
+          
+          console.log('🔄 Adding depreciation row for center:', centerNumber, 'Location:', damageLocation, 'Work:', workEssence);
           const row = document.createElement('div');
           row.className = 'dep-row';
           row.style.cssText = 'display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;';
           
           row.innerHTML = `
             <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" title="${centerNumber || ''}" /></div>
-            <div><input type="text" placeholder="החלק הניזוק" value="${centerName}" onchange="saveDepreciationData()" title="${centerName}" /></div>
-            <div><input type="text" placeholder="מהות התיקון" value="${centerDescription}" onchange="saveDepreciationData()" title="${centerDescription}" /></div>
+            <div><input type="text" placeholder="החלק הניזוק" value="${damageLocation}" onchange="saveDepreciationData()" title="${damageLocation}" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="${workEssence}" onchange="saveDepreciationData()" title="${workEssence}" /></div>
             <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" title="" /></div>
             <div><input type="text" placeholder="ערך ב-₪" onchange="saveDepreciationData()" title="" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
@@ -9543,7 +9537,9 @@
         } else if (sectionId === 'full-market-value') {
           sectionData.allAdjustments = collectAdjustmentData('#allAdjustmentsList');
         } else if (sectionId === 'depreciation') {
-          sectionData.depreciationRows = collectDepreciationData('#depreciationBulkTable');
+          // ✅ FIX: Use saveDepreciationData() instead of collectDepreciationData() to avoid conflicts
+          saveDepreciationData();
+          return; // Exit early, saveDepreciationData handles everything
         }
         
         // Save to helper with timestamp

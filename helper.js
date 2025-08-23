@@ -2450,7 +2450,10 @@ window.helper = existingHelper || {
       global_percentage: 0,
       global_amount: 0,
       work_days_impact: 0,
-      total_depreciation: 0
+      total_depreciation: 0,
+      bulk_items: [], // Array for center-by-center depreciation data
+      last_updated: null,
+      source: null
     },
     calculations: {
       gross_price: {
