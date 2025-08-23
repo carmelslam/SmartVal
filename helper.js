@@ -3802,6 +3802,7 @@ window.populateAllForms = function() {
     // ✅ FIX: Exclude depreciation fields from auto-population to prevent conflicts
     const depreciationFields = ['globalDep1', 'globalDepValue', 'garageDays'];
     if (depreciationFields.includes(fieldId)) {
+      console.log('🔧 DEBUG: Skipping depreciation field:', fieldId);
       return; // Skip depreciation fields - they have their own save/load system
     }
     
@@ -3823,6 +3824,7 @@ window.populateAllForms = function() {
         // ✅ FIX: Skip elements that are in depreciation table to avoid conflicts
         const depreciationTable = document.getElementById('depreciationBulkTable');
         if (depreciationTable && depreciationTable.contains(element)) {
+          console.log('🔧 DEBUG: Skipping depreciation table element:', fieldId, element.id || element.placeholder);
           return; // Skip depreciation table inputs - they have their own save/load system
         }
         
