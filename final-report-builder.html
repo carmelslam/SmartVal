@@ -2943,12 +2943,20 @@
 
     // Adapt centers data structure to damage block structure for compatibility
     function adaptCenterToBlock(center, index) {
-      console.log(`🔍 Adapting center ${index}:`, center);
       
       // Centers structure (from wizard) vs damage_blocks structure (from expertise)
       const adaptedBlock = {
         damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
-        damage_center_number: center["Damage center Number"] || center.damage_center_number || (index + 1),
+        // Extract just the number if it contains the full text
+        damage_center_number: (() => {
+          const num = center["Damage center Number"] || center.damage_center_number || (index + 1);
+          // If it's a string that contains "מוקד נזק מס'", extract just the number
+          if (typeof num === 'string' && num.includes('מוקד')) {
+            const match = num.match(/\d+$/);
+            return match ? match[0] : String(index + 1);
+          }
+          return num;
+        })(),
         description: center.Description || center.description || '',
         // CORRECT MAPPING: Works data structure from helper.centers
         works: center.Works?.works || center.works || [],
@@ -2981,7 +2989,6 @@
 
     // CREATE EDITABLE DAMAGE CENTER CARD
     function createEditableDamageCenterCard(block, index) {
-      console.log(`🏗️ Creating damage center card ${index} with block:`, block);
       
       const centerNum = block.damage_center_number || (index + 1);
       const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
@@ -3003,7 +3010,10 @@
         <div class="editable-damage-card" data-center-index="${index}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Card Header -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <input type="text" value="מוקד נזק מס' ${centerNum}" class="damage-center-number" style="font-weight: bold; color: #1e3a8a; font-size: 16px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; width: 70%;" />
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: bold; color: #1e3a8a; font-size: 16px;">מוקד נזק מס'</span>
+              <input type="text" value="${centerNum}" class="damage-center-number" style="font-weight: bold; color: #1e3a8a; font-size: 16px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; width: 50px; text-align: center;" />
+            </div>
             <button onclick="removeDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
           </div>
           
@@ -7866,7 +7876,11 @@
         
         // Collect data from all damage center cards
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
-          const centerNumber = card.querySelector('.damage-center-number').value;
+          // Extract just the number from the damage center number field
+          const centerNumberField = card.querySelector('.damage-center-number').value;
+          // Extract the number (e.g., "מוקד נזק מס' 1" -> "1")
+          const numberMatch = centerNumberField.match(/\d+$/);
+          const centerNumber = numberMatch ? numberMatch[0] : String(index + 1);
           const centerLocation = card.querySelector('.damage-center-location').value;
           const centerDescription = card.querySelector('.damage-center-description').value;
           
