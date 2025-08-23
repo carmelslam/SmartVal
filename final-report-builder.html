@@ -1894,30 +1894,35 @@
         console.log('🔧 DEBUG: About to save - depreciationData.bulk_items:', depreciationData.bulk_items);
         
         // Save to main depreciation section (single source of truth) with COMPLETE structure
-        helper.depreciation = {
-          // Form field names (for direct loading)
-          globalDep1: globalPercent,
-          globalDepValue: globalValue,
-          garageDays: document.getElementById('garageDays')?.value || '',
+        try {
+          console.log('🔧 DEBUG: Starting helper.depreciation assignment...');
           
-          // Processed values (for calculations)
-          global_percentage: parseFloat(String(globalPercent).replace('%', '')) || 0,
-          global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
-          work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
+          helper.depreciation = {
+            // Form field names (for direct loading)
+            globalDep1: globalPercent,
+            globalDepValue: globalValue,
+            garageDays: document.getElementById('garageDays')?.value || '',
+            
+            // Processed values (for calculations)  
+            global_percentage: parseFloat(String(globalPercent).replace('%', '')) || 0,
+            global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
+            work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
+            
+            // Array data (both names for compatibility)
+            bulk_items: depreciationData.bulk_items,
+            depreciationRows: depreciationData.bulk_items,
+            
+            // Metadata
+            last_updated: new Date().toISOString(),
+            lastSaved: new Date().toISOString(),
+            source: 'final_report_builder',
+            isManualSave: true
+          };
           
-          // Array data (both names for compatibility)
-          bulk_items: depreciationData.bulk_items,
-          depreciationRows: depreciationData.bulk_items,
-          
-          // Calculations and metadata
-          total_depreciation: (parseFloat(globalValue.replace(/[₪,]/g, '')) || 0) + 
-                             depreciationData.bulk_items.reduce((sum, item) => 
-                               sum + (parseFloat(item.value.replace(/[₪,]/g, '')) || 0), 0),
-          last_updated: new Date().toISOString(),
-          lastSaved: new Date().toISOString(),
-          source: 'final_report_builder',
-          isManualSave: true
-        };
+          console.log('🔧 DEBUG: helper.depreciation assignment completed successfully');
+        } catch (error) {
+          console.error('❌ ERROR in helper.depreciation assignment:', error);
+        }
         
         // Also maintain final_report reference for compatibility
         if (!helper.final_report) helper.final_report = {};
