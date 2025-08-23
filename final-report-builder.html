@@ -1852,12 +1852,14 @@
     // SAVE DEPRECIATION DATA TO HELPER
     function saveDepreciationData() {
       try {
+        console.log('🔧 DEBUG: saveDepreciationData called');
         // 🔧 FIX: Get helper data from sessionStorage (single source of truth) to ensure consistency
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Get global depreciation values
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
+        console.log('🔧 DEBUG: Global values - percent:', globalPercent, 'value:', globalValue);
         
         // Collect depreciation data
         const depreciationData = {
@@ -1868,8 +1870,10 @@
         
         // Collect data from all depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-        depRows.forEach(row => {
+        console.log('🔧 DEBUG: Found', depRows.length, 'depreciation rows');
+        depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
+          console.log('🔧 DEBUG: Row', index, 'has', inputs.length, 'inputs');
           if (inputs.length >= 5) {
             const item = {
               center_number: inputs[0].value,
@@ -1878,7 +1882,7 @@
               percent: inputs[3].value,
               value: inputs[4].value
             };
-            console.log('💾 Saving depreciation item:', item);
+            console.log('💾 DEBUG: Saving depreciation item:', item);
             depreciationData.bulk_items.push(item);
           }
         });
@@ -2776,9 +2780,10 @@
             }
             
             depreciationData.bulk_items.forEach(item => {
-              console.log('🔄 Loading depreciation item:', item);
+              console.log('🔄 DEBUG: Loading depreciation item:', item);
               addDepField(item);
             });
+            console.log('🔄 DEBUG: Loaded', depreciationData.bulk_items.length, 'depreciation items from helper');
             
             // Add auto-calculation to all existing rows after loading
             setTimeout(() => {
