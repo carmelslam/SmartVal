@@ -1816,7 +1816,11 @@
         // Handle different field types
         switch(fieldName) {
           case 'global_percentage':
-            helper.depreciation.global_percentage = parseFloat(value) || 0;
+            // Clean the value: remove % sign and handle decimal values correctly
+            const cleanValue = value.replace('%', '').replace(/[^0-9.-]/g, '');
+            helper.depreciation.global_percentage = parseFloat(cleanValue) || 0;
+            // Also trigger the calculation
+            calculateGlobalDepreciationValue();
             break;
           case 'work_days_impact':
             helper.depreciation.work_days_impact = parseInt(value) || 0;
@@ -1859,7 +1863,6 @@
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
         
-        console.log('🔧 DEBUG saveDepreciationData - globalPercent:', globalPercent, 'globalValue:', globalValue);
         
         // Collect depreciation data
         const depreciationData = {
@@ -1870,11 +1873,9 @@
         
         // Collect data from all depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-        console.log('🔧 DEBUG: Found', depRows.length, 'depreciation rows');
         
         depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
-          console.log('🔧 DEBUG: Row', index, 'has', inputs.length, 'inputs');
           if (inputs.length >= 5) {
             const item = {
               center_number: inputs[0].value,
@@ -1883,7 +1884,6 @@
               percent: inputs[3].value,
               value: inputs[4].value
             };
-            console.log('🔧 DEBUG: Collected item:', item);
             depreciationData.bulk_items.push(item);
           }
         });
@@ -1891,11 +1891,9 @@
         // ✅ CORRECT 2-WAY DATA FLOW: Save to main helper.depreciation structure
         if (!helper.depreciation) helper.depreciation = {};
         
-        console.log('🔧 DEBUG: About to save - depreciationData.bulk_items:', depreciationData.bulk_items);
         
         // Save to main depreciation section (single source of truth) with COMPLETE structure
         try {
-          console.log('🔧 DEBUG: Starting helper.depreciation assignment...');
           
           helper.depreciation = {
             // Form field names (for direct loading)
@@ -1904,7 +1902,7 @@
             garageDays: document.getElementById('garageDays')?.value || '',
             
             // Processed values (for calculations)  
-            global_percentage: parseFloat(String(globalPercent).replace('%', '')) || 0,
+            global_percentage: parseFloat(String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '')) || 0,
             global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
             work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
             
@@ -1918,7 +1916,6 @@
             isManualSave: true
           };
           
-          console.log('🔧 DEBUG: helper.depreciation assignment completed successfully');
         } catch (error) {
           console.error('❌ ERROR in helper.depreciation assignment:', error);
         }
@@ -1933,10 +1930,7 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         if (window.helper) {
           window.helper.depreciation = helper.depreciation;
-          console.log('🔧 DEBUG: Updated window.helper.depreciation to prevent overwrite');
         }
-        console.log('✅ Depreciation data saved successfully:', depreciationData.bulk_items.length, 'items');
-        console.log('🔧 DEBUG: Final helper.depreciation.bulk_items:', helper.depreciation.bulk_items);
         
         // Trigger helper update broadcast for real-time sync
         if (typeof broadcastHelperUpdate === 'function') {
@@ -2768,15 +2762,12 @@
     // LOAD DEPRECIATION DATA
     function loadDepreciationData(helper) {
       try {
-        console.log('🔧 DEBUG: loadDepreciationData called with helper:', !!helper);
         // ✅ 2-WAY DATA FLOW: Load depreciation data from helper.depreciation (single source of truth)
         // Depreciation is ONLY for final report and estimate workflows, NOT expertise
         const depreciationData = helper.depreciation || helper.final_report?.depreciation || null;
-        console.log('🔧 DEBUG: depreciationData found:', !!depreciationData);
         
         if (depreciationData) {
           console.log('✅ Loading depreciation data:', depreciationData.bulk_items?.length || 0, 'items');
-          console.log('🔧 DEBUG: Loading fields - globalDep1:', depreciationData.globalDep1, 'globalDepValue:', depreciationData.globalDepValue);
           
           // Load global depreciation fields from helper.depreciation (single source)
           document.getElementById('globalDep1').value = depreciationData.globalDep1 || 
@@ -2804,7 +2795,6 @@
             }, 100);
           }
           
-          console.log('✅ Depreciation data loaded successfully');
         } else {
           console.log('ℹ️ No saved depreciation data, will populate from damage centers');
           // If no saved depreciation data, populate from damage centers
@@ -8093,7 +8083,6 @@
           });
         });
         
-        console.log('✅ Depreciation section updated with damage centers:', damageCenterNames);
         
       } catch (error) {
         console.error('Error updating depreciation from damage centers:', error);
@@ -9864,7 +9853,6 @@
           });
         }
         
-        console.log('✅ Depreciation data restored successfully');
         
       } catch (error) {
         console.error('❌ Error restoring depreciation data:', error);
@@ -11867,7 +11855,9 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const levi = helper.expertise?.levi_report || {};
       const marketValue = parseFloat(levi.final_price) || 0;
-      const depPercent = parseFloat(globalDep1.value) || 0;
+      // Clean the percentage value properly to handle decimals like 2.5%
+      const cleanedValue = globalDep1.value.replace('%', '').replace(/[^0-9.-]/g, '');
+      const depPercent = parseFloat(cleanedValue) || 0;
       
       const globalAmount = Math.round(marketValue * (depPercent / 100));
       
@@ -11879,13 +11869,12 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      // Update display
-      const globalAmountField = document.getElementById('globalAmount');
-      if (globalAmountField) {
-        globalAmountField.value = `₪${globalAmount.toLocaleString()}`;
+      // Update display - target the correct field: globalDepValue
+      const globalDepValueField = document.getElementById('globalDepValue');
+      if (globalDepValueField) {
+        globalDepValueField.value = `₪${globalAmount.toLocaleString()}`;
       }
       
-      console.log(`Global depreciation calculated: ${depPercent}% of ₪${marketValue.toLocaleString()} = ₪${globalAmount.toLocaleString()}`);
     }
 
     // Trigger MathEngine calculation
