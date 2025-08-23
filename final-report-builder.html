@@ -2792,15 +2792,14 @@
             
             // If we have damage centers, check if the saved data needs updating
             if (helper.centers && helper.centers.length > 0) {
-              // Check if any saved item has old format (center_number contains full text)
+              // Check if any saved item has old format (center_number is not just a number)
               needsUpdate = depreciationData.bulk_items.some(item => 
-                item.center_number && item.center_number.includes('מוקד נזק מס')
+                item.center_number && (item.center_number.includes('מוקד') || isNaN(item.center_number))
               );
             }
             
             if (needsUpdate) {
               // Regenerate from damage centers with correct mapping
-              console.log('Updating depreciation mapping from damage centers');
               updateDepreciationFromDamageCenters([]);
             } else {
               // Load existing data
