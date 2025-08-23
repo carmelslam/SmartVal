@@ -1859,6 +1859,8 @@
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
         
+        console.log('🔧 DEBUG saveDepreciationData - globalPercent:', globalPercent, 'globalValue:', globalValue);
+        
         // Collect depreciation data
         const depreciationData = {
           global_percent: globalPercent,
@@ -1868,8 +1870,11 @@
         
         // Collect data from all depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+        console.log('🔧 DEBUG: Found', depRows.length, 'depreciation rows');
+        
         depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
+          console.log('🔧 DEBUG: Row', index, 'has', inputs.length, 'inputs');
           if (inputs.length >= 5) {
             const item = {
               center_number: inputs[0].value,
@@ -1878,6 +1883,7 @@
               percent: inputs[3].value,
               value: inputs[4].value
             };
+            console.log('🔧 DEBUG: Collected item:', item);
             depreciationData.bulk_items.push(item);
           }
         });
@@ -1893,8 +1899,8 @@
           garageDays: document.getElementById('garageDays')?.value || '',
           
           // Processed values (for calculations)
-          global_percentage: parseFloat(globalPercent.replace('%', '')) || 0,
-          global_amount: parseFloat(globalValue.replace(/[₪,]/g, '')) || 0,
+          global_percentage: parseFloat(String(globalPercent).replace('%', '')) || 0,
+          global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
           work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
           
           // Array data (both names for compatibility)
@@ -1919,6 +1925,7 @@
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('✅ Depreciation data saved successfully:', depreciationData.bulk_items.length, 'items');
+        console.log('🔧 DEBUG: Final helper.depreciation:', helper.depreciation);
         
         // Trigger helper update broadcast for real-time sync
         if (typeof broadcastHelperUpdate === 'function') {
