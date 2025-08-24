@@ -11429,21 +11429,57 @@
     function calculateGlobalReport(helper, marketValue) {
       console.log('📊 Calculating Global Report');
       
-      // Get values using the exact mapping from user screenshots
-      const totalClaim = helper.claims_data?.total_claim || 0;
-      const depCompensation = 1972; // From user screenshot: shows 1,972₪
-      
-      // Calculation: Total Claim + Depreciation Compensation  
-      const calculatedTotal = (parseFloat(totalClaim) || 0) + depCompensation;
-      
-      // Update UI fields - try both static and dynamic elements
-      const totalField = document.getElementById('sumTotalGlobal') || document.getElementById('sumTotalGlobalDynamic');
-      if (totalField) {
-        totalField.value = `₪${calculatedTotal.toLocaleString()}`;
-        helper.final_report.summary.global_total = totalField.value;
+      // Get values using proper parsing like Private report
+      let totalClaim = 0;
+      if (helper.claims_data?.total_claim) {
+        totalClaim = parseFloat(String(helper.claims_data.total_claim).replace(/[₪,]/g, '')) || 0;
       }
       
-      console.log(`Global calculation: ${totalClaim} + ${depCompensation} = ${calculatedTotal}`);
+      let depCompensation = 0;
+      if (helper.depreciation?.globalDepValue) {
+        depCompensation = parseFloat(String(helper.depreciation.globalDepValue).replace(/[₪,]/g, '')) || 0;
+      } else if (helper.depreciation?.globalDep1) {
+        depCompensation = parseFloat(String(helper.depreciation.globalDep1).replace(/[₪,%]/g, '')) || 0;
+      }
+      
+      // 1. BEFORE DIFFERENTIALS: Total Claim + Depreciation Compensation (like Private)
+      const beforeDifferentials = totalClaim + depCompensation;
+      
+      // 2. Get total differentials value
+      let totalDifferentials = 0;
+      if (helper.adjustments?.total_adjustments) {
+        totalDifferentials = parseFloat(String(helper.adjustments.total_adjustments).replace(/[₪,]/g, '')) || 0;
+      }
+      
+      // 3. AFTER DIFFERENTIALS: Before Differentials - Total Differentials  
+      const afterDifferentials = beforeDifferentials - totalDifferentials;
+      
+      // Update "Before Differentials" field (לפני הפרשים)
+      const beforeField = document.getElementById('sumTotalGlobal');
+      if (beforeField) {
+        beforeField.value = `₪${beforeDifferentials.toLocaleString()}`;
+        beforeField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
+      }
+      
+      // Update "After Differentials" field (לאחר הפרשים)
+      const afterField = document.getElementById('sumTotalAfterDifferentials-global');
+      if (afterField) {
+        afterField.style.display = 'block'; // Make visible
+        const afterInput = afterField.querySelector('input');
+        if (afterInput) {
+          afterInput.value = `₪${afterDifferentials.toLocaleString()}`;
+          afterInput.style.backgroundColor = '#e8f5e8'; // Show it's calculated
+        }
+      }
+      
+      // Update helper structure
+      if (!helper.final_report) helper.final_report = {};
+      if (!helper.final_report.summary) helper.final_report.summary = {};
+      helper.final_report.summary.global_before_differentials = `₪${beforeDifferentials.toLocaleString()}`;
+      helper.final_report.summary.global_after_differentials = `₪${afterDifferentials.toLocaleString()}`;
+      
+      console.log(`Global calculation: Before=${totalClaim} + ${depCompensation} = ${beforeDifferentials}, After=${beforeDifferentials} - ${totalDifferentials} = ${afterDifferentials}`);
+      return { beforeDifferentials, afterDifferentials };
     }
     
     // DAMAGED SALE REPORT CALCULATION (Based on User Mapping)
@@ -11811,7 +11847,7 @@
           }
           
           // Calculate other report variants totals
-          const sumTotalGlobalField = document.getElementById('sumTotalGlobalDynamic');
+          const sumTotalGlobalField = document.getElementById('sumTotalGlobal') || document.getElementById('sumTotalGlobalDynamic');
           if (sumTotalGlobalField) {
             const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
             calculateGlobalReport(helper, marketValue);
