@@ -1585,8 +1585,12 @@
 
     <!-- Navigation Buttons -->
     <div class="form-section">
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
         <button type="button" class="nav-btn save-btn" onclick="saveDepreciationData()">שמור נתונים</button>
+        <button type="button" class="nav-btn" style="background: #1e40af;" onclick="previewFinalReport()">
+          <span style="margin-left: 5px;">👁️</span>
+          תצוגה מקדימה לחוו״ד
+        </button>
         <button type="button" class="nav-btn" style="background: #059669;" onclick="continueToValidation()">
           <span style="margin-left: 5px;">✅</span>
           המשך לשכר טרחה
@@ -12302,6 +12306,371 @@
     window.saveData = function() {
       saveFinalReport();
     };
+
+    // Preview final report with all filled data
+    window.previewFinalReport = function() {
+      try {
+        console.log('🔍 Generating final report preview...');
+        
+        // Save current data first
+        saveDepreciationData();
+        
+        // Get all the data from helper
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get report type
+        const reportType = document.querySelector('input[name="final-report-type"]:checked')?.value || 
+                         document.getElementById('reportType')?.value || 
+                         'חוות דעת פרטית';
+        
+        // Collect all the data for the report
+        const reportData = {
+          // Vehicle data
+          plate: helper.vehicle?.plate || helper.meta?.plate || '',
+          manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
+          model: helper.vehicle?.model || helper.car_details?.model || '',
+          year: helper.vehicle?.year || helper.car_details?.year || '',
+          
+          // Owner data
+          ownerName: helper.stakeholders?.owner?.name || helper.client?.name || '',
+          ownerAddress: helper.stakeholders?.owner?.address || helper.client?.address || '',
+          ownerPhone: helper.stakeholders?.owner?.phone || helper.client?.phone || '',
+          
+          // Insurance data
+          insuranceCompany: helper.stakeholders?.insurance?.company || helper.client?.insurance_company || '',
+          insuranceAgent: helper.stakeholders?.insurance?.agent?.name || helper.client?.insurance_agent || '',
+          
+          // Claims data
+          totalClaim: helper.damage_centers_summary?.total_cost || helper.expertise?.calculations?.total_damage || 0,
+          grossPercent: helper.calculations?.damage_percent || helper.expertise?.calculations?.damage_percent || '',
+          
+          // Market values
+          grossMarketValue: helper.valuation?.calculations?.gross_price?.total || 0,
+          fullMarketValue: helper.valuation?.calculations?.full_price?.total || 0,
+          
+          // Depreciation
+          depreciation: helper.depreciation?.total_compensation || 0,
+          depreciationDetails: helper.depreciation?.damage_centers || [],
+          
+          // Summary data
+          sumMarketValue: document.getElementById('sumMarketValue')?.value || '',
+          sumClaim: document.getElementById('sumClaim')?.value || '',
+          depCompensation: document.getElementById('depCompensation')?.value || '',
+          sumVAT: document.getElementById('sumVAT')?.value || '',
+          sumTotalClaim: document.getElementById('sumTotalClaim')?.value || '',
+          
+          // Additional fields
+          additionalNotes: helper.final_report?.notes || helper.final_report?.comments || '',
+          legalText: document.getElementById('legalTextArea')?.value || '',
+          attachmentsList: document.getElementById('attachmentsList')?.value || '',
+          garageDays: document.getElementById('garageDays')?.value || '',
+          
+          // Report metadata
+          reportType: reportType,
+          reportDate: new Date().toLocaleDateString('he-IL'),
+          caseNumber: helper.meta?.case_number || '',
+          
+          // Assessor data
+          assessorName: helper.assessor?.name || 'שם השמאי',
+          assessorLicense: helper.assessor?.license || 'מספר רישיון'
+        };
+        
+        // Store the preview data
+        sessionStorage.setItem('finalReportPreview', JSON.stringify(reportData));
+        
+        // Open preview in new window
+        const previewWindow = window.open('', 'reportPreview', 'width=900,height=1000,scrollbars=yes,resizable=yes');
+        
+        // Generate the preview HTML
+        const previewHTML = generateReportPreviewHTML(reportData);
+        
+        // Write the preview to the new window
+        previewWindow.document.write(previewHTML);
+        previewWindow.document.close();
+        
+        console.log('✅ Preview generated successfully');
+        
+      } catch (error) {
+        console.error('❌ Error generating preview:', error);
+        alert('שגיאה ביצירת תצוגה מקדימה');
+      }
+    };
+
+    // Generate HTML for report preview
+    function generateReportPreviewHTML(data) {
+      const html = `
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תצוגה מקדימה - ${data.reportType}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            direction: rtl;
+        }
+        .report-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 5px;
+        }
+        .field {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .field-label {
+            font-weight: bold;
+            margin-left: 10px;
+            min-width: 150px;
+            color: #6b7280;
+        }
+        .field-value {
+            flex: 1;
+            color: #111827;
+        }
+        .damage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .damage-table th, .damage-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: right;
+        }
+        .damage-table th {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+        .summary-box {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .legal-text {
+            background: #fefce8;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #fde047;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .report-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <h1>${data.reportType}</h1>
+            <div>תאריך: ${data.reportDate}</div>
+            ${data.caseNumber ? `<div>מספר תיק: ${data.caseNumber}</div>` : ''}
+        </div>
+
+        <div class="section">
+            <div class="section-title">פרטי הרכב</div>
+            <div class="field">
+                <span class="field-label">מספר רישוי:</span>
+                <span class="field-value">${data.plate}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">תוצרת:</span>
+                <span class="field-value">${data.manufacturer}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">דגם:</span>
+                <span class="field-value">${data.model}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">שנת ייצור:</span>
+                <span class="field-value">${data.year}</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">פרטי בעל הרכב</div>
+            <div class="field">
+                <span class="field-label">שם:</span>
+                <span class="field-value">${data.ownerName}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">כתובת:</span>
+                <span class="field-value">${data.ownerAddress}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">טלפון:</span>
+                <span class="field-value">${data.ownerPhone}</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">פרטי ביטוח</div>
+            <div class="field">
+                <span class="field-label">חברת ביטוח:</span>
+                <span class="field-value">${data.insuranceCompany}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">סוכן ביטוח:</span>
+                <span class="field-value">${data.insuranceAgent}</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">נתוני נזק וחישובים</div>
+            <div class="field">
+                <span class="field-label">סה״כ עלות נזקים:</span>
+                <span class="field-value">₪${data.totalClaim.toLocaleString()}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">אחוז נזק גולמי:</span>
+                <span class="field-value">${data.grossPercent}%</span>
+            </div>
+            <div class="field">
+                <span class="field-label">ערך שוק ברוטו:</span>
+                <span class="field-value">₪${data.grossMarketValue.toLocaleString()}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">ערך שוק מלא:</span>
+                <span class="field-value">₪${data.fullMarketValue.toLocaleString()}</span>
+            </div>
+        </div>
+
+        ${data.depreciationDetails && data.depreciationDetails.length > 0 ? `
+        <div class="section">
+            <div class="section-title">פירוט ירידת ערך</div>
+            <table class="damage-table">
+                <thead>
+                    <tr>
+                        <th>מוקד נזק</th>
+                        <th>חלק</th>
+                        <th>עלות</th>
+                        <th>אחוז פיצוי</th>
+                        <th>סכום פיצוי</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.depreciationDetails.map(center => `
+                        <tr>
+                            <td>${center.damagePoint || ''}</td>
+                            <td>${center.part || ''}</td>
+                            <td>₪${(center.cost || 0).toLocaleString()}</td>
+                            <td>${center.compensationPercent || 0}%</td>
+                            <td>₪${(center.compensationAmount || 0).toLocaleString()}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        ` : ''}
+
+        <div class="summary-box">
+            <div class="section-title">סיכום חוות הדעת</div>
+            <div class="field">
+                <span class="field-label">ערך שוק הרכב:</span>
+                <span class="field-value">${data.sumMarketValue}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">סה״כ תביעה:</span>
+                <span class="field-value">${data.sumClaim}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">פיצוי ירידת ערך:</span>
+                <span class="field-value">${data.depCompensation}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">מע״מ:</span>
+                <span class="field-value">${data.sumVAT}</span>
+            </div>
+            <div class="field">
+                <span class="field-label">סה״כ כולל מע״מ:</span>
+                <span class="field-value" style="font-weight: bold; font-size: 18px;">${data.sumTotalClaim}</span>
+            </div>
+            ${data.garageDays ? `
+            <div class="field">
+                <span class="field-label">ימי מוסך:</span>
+                <span class="field-value">${data.garageDays}</span>
+            </div>
+            ` : ''}
+        </div>
+
+        ${data.additionalNotes ? `
+        <div class="section">
+            <div class="section-title">הערות נוספות</div>
+            <div style="white-space: pre-wrap;">${data.additionalNotes}</div>
+        </div>
+        ` : ''}
+
+        ${data.legalText ? `
+        <div class="legal-text">
+            <div class="section-title">טקסט משפטי</div>
+            ${data.legalText}
+        </div>
+        ` : ''}
+
+        ${data.attachmentsList ? `
+        <div class="section">
+            <div class="section-title">רשימת נספחים</div>
+            <div style="white-space: pre-wrap;">${data.attachmentsList}</div>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+            <div>${data.assessorName} - ${data.assessorLicense}</div>
+            <div>דוח זה הופק באמצעות מערכת הערכת נזקי רכב</div>
+        </div>
+    </div>
+</body>
+</html>
+      `;
+      return html;
+    }
 
     // Functions for renamed buttons (former final report functions)
     window.fetchFinalReportPDF = function() {
