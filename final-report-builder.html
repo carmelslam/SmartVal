@@ -2645,41 +2645,56 @@
       }
     }
     
-    // Helper function to get mapping key for field ID
+    // CONSOLIDATED FIELD MAPPING - ELIMINATES DUPLICATES
     function getHelperMappingKey(fieldId) {
-      const comprehensiveMapping = {
-        // Original fields
+      const consolidatedMapping = {
+        // UNIVERSAL FIELDS - ALL VARIANTS USE SAME KEY
+        // Market Value - all variants write to same key
         'sumMarketValue': 'market_value',
-        'sumMarketValueGlobal': 'market_value_global',
-        'sumMarketValueDamage': 'market_value_damage',
-        'sumMarketValueTotal': 'market_value_total',
-        'sumMarketValueLegal': 'market_value_legal',
+        'sumMarketValueGlobal': 'market_value',
+        'sumMarketValueDamage': 'market_value', 
+        'sumMarketValueTotal': 'market_value',
+        'sumMarketValueLegal': 'market_value',
+        'sumMarketValuePrivate': 'market_value',
+        
+        // Total Claim - all variants write to same key
         'sumClaim': 'total_claim',
-        'depCompensation': 'dep_compensation',
+        'sumClaimPrivate': 'total_claim',
+        'sumClaimGlobal': 'total_claim',
         
-        // Dynamic variant-specific fields (unique IDs)
-        'sumMarketValuePrivate': 'market_value_private',
-        'sumClaimPrivate': 'total_claim_private',
-        'depCompensationPrivate': 'dep_compensation_private',
-        'sumTotalPrivate': 'total_private',
-        'sumClaimGlobal': 'total_claim_global',
-        'sumDepreciation': 'depreciation_global',
-        'sumAdjustments': 'adjustments_global',
-        'sumTotalGlobalDynamic': 'total_global_dynamic',
-        'sumMarketValueDefault': 'market_value_default',
-        'sumClaimDefault': 'total_claim_default',
-        'sumDepreciationDefault': 'depreciation_default',
-        'sumAdjustmentsDefault': 'adjustments_default',
-        'sumTotalDefault': 'total_default',
+        // Depreciation Compensation - all variants write to same key
+        'depCompensation': 'depreciation_compensation',
+        'depCompensationPrivate': 'depreciation_compensation',
+        'depCompensationGlobal': 'depreciation_compensation',
+        'sumDepreciation': 'depreciation_compensation',
         
-        // Manual input fields
+        // VARIANT-SPECIFIC FIELDS - UNIQUE VALUES
+        // Private Report
+        'sumTotalBeforeDifferentials': 'private_before_differentials',
+        'sumTotalFinal': 'private_after_differentials',
+        
+        // Global Report  
+        'sumTotalGlobal': 'global_before_differentials',
+        'sumTotalFinalGlobal': 'global_after_differentials',
+        
+        // Damaged Sale Report
         'saleValueDamage': 'sale_value_damaged',
-        'salvageValueTotal': 'salvage_value_total',
-        'storageValueTotal': 'storage_towing_value_total',
-        'salvageValueLegal': 'salvage_value_legal',
-        'salvageValue': 'salvage_value'
+        'afterSaleDamage': 'damage_total_before_differentials',
+        'afterSaleDamageFinal': 'damage_total_after_differentials',
+        
+        // Total Loss Report
+        'salvageValueTotal': 'salvage_value_total_loss',
+        'storageValueTotal': 'storage_towing_costs',
+        'afterSaleTotal': 'total_loss_before_differentials',
+        
+        // Legal Loss Report
+        'salvageValueLegal': 'salvage_value_legal_loss',
+        'afterSaleLegal': 'legal_loss_before_differentials',
+        
+        // General fields
+        'finalReportDateSummary': 'report_date'
       };
-      return comprehensiveMapping[fieldId] || null;
+      return consolidatedMapping[fieldId] || null;
     }
 
     // LOAD ADDITIONAL NOTES FIELD
@@ -11702,7 +11717,7 @@
             }
           });
           
-          // Update helper structure
+          // Update helper structure using consolidated key
           if (!helper.final_report) helper.final_report = {};
           if (!helper.final_report.summary) helper.final_report.summary = {};
           helper.final_report.summary.market_value = `₪${marketValue.toLocaleString()}`;
@@ -11744,12 +11759,10 @@
             }
           });
           
-          // Update helper structure  
+          // Update helper structure using consolidated key
           if (!helper.final_report) helper.final_report = {};
           if (!helper.final_report.summary) helper.final_report.summary = {};
           helper.final_report.summary.total_claim = `₪${totalClaim.toLocaleString()}`;
-          helper.final_report.summary.total_claim_private = `₪${totalClaim.toLocaleString()}`;
-          helper.final_report.summary.total_claim_global = `₪${totalClaim.toLocaleString()}`;
           
         } else {
           console.warn('⚠️ No total claim found in helper');
@@ -11789,12 +11802,10 @@
             }
           });
           
-          // Update helper structure  
+          // Update helper structure using consolidated key
           if (!helper.final_report) helper.final_report = {};
           if (!helper.final_report.summary) helper.final_report.summary = {};
-          helper.final_report.summary.dep_compensation = `₪${depCompensation.toLocaleString()}`;
-          helper.final_report.summary.dep_compensation_private = `₪${depCompensation.toLocaleString()}`;
-          helper.final_report.summary.depreciation_global = `₪${depCompensation.toLocaleString()}`;
+          helper.final_report.summary.depreciation_compensation = `₪${depCompensation.toLocaleString()}`;
           
         } else {
           console.warn('⚠️ No depreciation compensation found in helper');
