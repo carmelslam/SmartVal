@@ -12310,7 +12310,7 @@
     // Preview final report with all filled data
     window.previewFinalReport = function() {
       try {
-        console.log('🔍 Opening final report template preview...');
+        console.log('🔍 Opening final report template preview in PiP...');
         
         // Save current data first
         saveDepreciationData();
@@ -12330,8 +12330,19 @@
         // Save the helper with preview flag
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Open the actual final report template in a new window
-        const previewWindow = window.open('final-report-template-builder.html', 'reportPreview', 'width=1200,height=900,scrollbars=yes,resizable=yes');
+        // Create preview modal if it doesn't exist
+        let previewModal = document.getElementById('reportPreviewModal');
+        if (!previewModal) {
+          previewModal = createPreviewModal();
+          document.body.appendChild(previewModal);
+        }
+        
+        // Show the modal
+        previewModal.style.display = 'block';
+        
+        // Load the report template in the iframe
+        const iframe = document.getElementById('reportPreviewFrame');
+        iframe.src = 'final-report-template-builder.html';
         
         // Remove preview flag after a short delay
         setTimeout(() => {
@@ -12344,11 +12355,143 @@
           sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
         }, 2000);
         
-        console.log('✅ Final report preview opened');
+        console.log('✅ Final report preview opened in PiP');
         
       } catch (error) {
         console.error('❌ Error opening preview:', error);
         alert('שגיאה בפתיחת תצוגה מקדימה');
+      }
+    };
+    
+    // Create the preview modal structure
+    function createPreviewModal() {
+      const modal = document.createElement('div');
+      modal.id = 'reportPreviewModal';
+      modal.style.cssText = `
+        display: none;
+        position: fixed;
+        top: 50px;
+        right: 50px;
+        width: 800px;
+        height: 80vh;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 10000;
+        resize: both;
+        overflow: auto;
+        min-width: 400px;
+        min-height: 300px;
+      `;
+      
+      // Create header
+      const header = document.createElement('div');
+      header.style.cssText = `
+        background: #1e40af;
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move;
+        user-select: none;
+        border-radius: 10px 10px 0 0;
+      `;
+      header.innerHTML = `
+        <h3 style="margin: 0; font-size: 18px;">תצוגה מקדימה - חוות דעת</h3>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="minimizePreview()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" title="מזער">_</button>
+          <button onclick="maximizePreview()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" title="הגדל">□</button>
+          <button onclick="closePreview()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;" title="סגור">×</button>
+        </div>
+      `;
+      
+      // Create iframe container
+      const iframeContainer = document.createElement('div');
+      iframeContainer.style.cssText = `
+        width: 100%;
+        height: calc(100% - 50px);
+        overflow: hidden;
+      `;
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.id = 'reportPreviewFrame';
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+      `;
+      
+      iframeContainer.appendChild(iframe);
+      modal.appendChild(header);
+      modal.appendChild(iframeContainer);
+      
+      // Make the modal draggable
+      makeDraggable(modal, header);
+      
+      return modal;
+    }
+    
+    // Make element draggable
+    function makeDraggable(element, handle) {
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+      handle.onmousedown = dragMouseDown;
+      
+      function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+      }
+      
+      function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+        element.style.right = "auto";
+      }
+      
+      function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
+    }
+    
+    // Preview control functions
+    window.closePreview = function() {
+      const modal = document.getElementById('reportPreviewModal');
+      if (modal) {
+        modal.style.display = 'none';
+        const iframe = document.getElementById('reportPreviewFrame');
+        if (iframe) iframe.src = '';
+      }
+    };
+    
+    window.minimizePreview = function() {
+      const modal = document.getElementById('reportPreviewModal');
+      if (modal) {
+        modal.style.width = '400px';
+        modal.style.height = '300px';
+      }
+    };
+    
+    window.maximizePreview = function() {
+      const modal = document.getElementById('reportPreviewModal');
+      if (modal) {
+        modal.style.width = '90vw';
+        modal.style.height = '90vh';
+        modal.style.top = '5vh';
+        modal.style.left = '5vw';
+        modal.style.right = 'auto';
       }
     };
 
