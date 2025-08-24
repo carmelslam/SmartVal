@@ -11394,22 +11394,36 @@
     function calculatePrivateReport(helper, marketValue) {
       console.log('📊 Calculating Private Report');
       
-      // Get values using the exact mapping from user screenshots
-      const totalClaim = helper.claims_data?.total_claim || 0;
-      const depCompensation = helper.depreciation?.globalDepValue || 0; 
-      const adjustments = helper.valuation?.adjustments_value || 0;
+      // Get values using the exact mapping from user screenshots - with proper parsing
+      let totalClaim = 0;
+      if (helper.claims_data?.total_claim) {
+        totalClaim = parseFloat(String(helper.claims_data.total_claim).replace(/[₪,]/g, '')) || 0;
+      }
+      
+      let depCompensation = 0;
+      if (helper.depreciation?.globalDepValue) {
+        depCompensation = parseFloat(String(helper.depreciation.globalDepValue).replace(/[₪,]/g, '')) || 0;
+      } else if (helper.depreciation?.globalDep1) {
+        depCompensation = parseFloat(String(helper.depreciation.globalDep1).replace(/[₪,%]/g, '')) || 0;
+      }
+      
+      const adjustments = parseFloat(String(helper.valuation?.adjustments_value || 0).replace(/[₪,]/g, '')) || 0;
       
       // Calculation: Total Claim + Depreciation Compensation + Adjustments
-      const calculatedTotal = (parseFloat(totalClaim) || 0) + (parseFloat(depCompensation) || 0) + (parseFloat(adjustments) || 0);
+      const calculatedTotal = totalClaim + depCompensation + adjustments;
       
       // Update UI fields
       const totalField = document.getElementById('sumTotalPrivate');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
+        totalField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.summary) helper.final_report.summary = {};
         helper.final_report.summary.private_total = totalField.value;
       }
       
       console.log(`Private calculation: ${totalClaim} + ${depCompensation} + ${adjustments} = ${calculatedTotal}`);
+      return calculatedTotal;
     }
     
     // GLOBAL REPORT CALCULATION (Based on User Mapping)  
@@ -11786,9 +11800,23 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         window.helper = helper;
         
-        // Trigger calculations
+        // Trigger calculations and private report total calculation
         setTimeout(() => {
           calculateSummaryTotals();
+          
+          // Calculate Private Report total if it exists
+          const sumTotalPrivateField = document.getElementById('sumTotalPrivate');
+          if (sumTotalPrivateField) {
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculatePrivateReport(helper, marketValue);
+          }
+          
+          // Calculate other report variants totals
+          const sumTotalGlobalField = document.getElementById('sumTotalGlobalDynamic');
+          if (sumTotalGlobalField) {
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateGlobalReport(helper, marketValue);
+          }
         }, 500);
         
         console.log('✅ CRITICAL FIX: Summary fields initialization completed');
