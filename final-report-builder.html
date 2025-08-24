@@ -7741,6 +7741,12 @@
           // Also reload summary fields to ensure they're populated
           const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
           loadSummaryFieldsFromHelper(helper);
+          
+          // 🚨 CRITICAL FIX: Initialize summary fields and manual inputs
+          setTimeout(() => {
+            initializeSummaryFieldsFix();
+            initializeHelperDataSafeguards();
+          }, 200);
         }, 500);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first
@@ -11583,6 +11589,220 @@
             field.value = `₪${marketValue.toLocaleString()}`;
           }
         });
+      }
+    }
+    
+    // CRITICAL FIX: Initialize Summary Fields and Manual Inputs
+    function initializeSummaryFieldsFix() {
+      console.log('🚨 CRITICAL FIX: Initializing summary fields and manual inputs');
+      
+      try {
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // TASK 1: Fix market value auto-population
+        const marketValue = helper.calculations?.full_market_value || 
+                           helper.valuation?.calculations?.full_price?.total ||
+                           helper.levi_report?.final_price || 
+                           0;
+        
+        if (marketValue > 0) {
+          console.log(`💰 Found market value: ₪${marketValue.toLocaleString()}`);
+          
+          // Populate ALL market value fields across variants
+          const allMarketFields = [
+            'sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 
+            'sumMarketValueTotal', 'sumMarketValueLegal', 'sumMarketValuePrivate',
+            'sumMarketValueDefault'
+          ];
+          
+          allMarketFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+              field.value = `₪${marketValue.toLocaleString()}`;
+              field.style.backgroundColor = '#e8f5e8'; // Show it's auto-populated
+              console.log(`✅ Populated ${fieldId} with ₪${marketValue.toLocaleString()}`);
+            }
+          });
+          
+          // Update helper structure
+          if (!helper.final_report) helper.final_report = {};
+          if (!helper.final_report.summary) helper.final_report.summary = {};
+          helper.final_report.summary.market_value = `₪${marketValue.toLocaleString()}`;
+          
+        } else {
+          console.warn('⚠️ No market value found in helper');
+        }
+        
+        // TASK 2: Ensure manual input fields are enabled and working
+        const manualInputFields = [
+          'saleValueDamage',    // ערך המכירה במצבו הניזוק
+          'salvageValueTotal',  // ערך שרידי הרכב (Total Loss)
+          'salvageValueLegal',  // ערך שרידי הרכב (Legal Loss)
+          'storageValueTotal',  // תוספת גרירה ואחסנה
+          'salvageValue'        // General salvage value
+        ];
+        
+        manualInputFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            // Remove any readonly attributes
+            field.removeAttribute('readonly');
+            field.removeAttribute('disabled');
+            
+            // Ensure the field is editable
+            field.style.backgroundColor = 'white';
+            field.style.color = '#333';
+            field.style.cursor = 'text';
+            field.contentEditable = true;
+            
+            // Add placeholder if empty
+            if (!field.placeholder) {
+              field.placeholder = 'הזן ערך...';
+            }
+            
+            // Test typing capability
+            if (!field.hasAttribute('data-typing-enabled')) {
+              field.setAttribute('data-typing-enabled', 'true');
+              
+              // Add enhanced event listeners
+              field.addEventListener('input', function(e) {
+                console.log(`📝 ${fieldId} input: ${e.target.value}`);
+                updateHelperFromManualField(fieldId, e.target.value);
+                calculateSummaryTotals();
+              });
+              
+              field.addEventListener('focus', function(e) {
+                console.log(`🎯 ${fieldId} focused`);
+                e.target.style.borderColor = '#007bff';
+                e.target.style.boxShadow = '0 0 0 0.2rem rgba(0, 123, 255, 0.25)';
+              });
+              
+              field.addEventListener('blur', function(e) {
+                e.target.style.borderColor = '';
+                e.target.style.boxShadow = '';
+                console.log(`💾 ${fieldId} saved: ${e.target.value}`);
+              });
+              
+              console.log(`✅ Manual input field enabled: ${fieldId}`);
+            }
+          } else {
+            console.warn(`⚠️ Manual field not found: ${fieldId}`);
+          }
+        });
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        // Trigger calculations
+        setTimeout(() => {
+          calculateSummaryTotals();
+        }, 500);
+        
+        console.log('✅ CRITICAL FIX: Summary fields initialization completed');
+        
+      } catch (error) {
+        console.error('❌ CRITICAL FIX ERROR:', error);
+      }
+    }
+    
+    // HELPER DATA PERSISTENCE SAFEGUARDS
+    function initializeHelperDataSafeguards() {
+      console.log('🛡️ Initializing helper data persistence safeguards');
+      
+      try {
+        // Create backup of helper data every time it changes
+        const originalSetItem = sessionStorage.setItem;
+        sessionStorage.setItem = function(key, value) {
+          if (key === 'helper') {
+            try {
+              const helperData = JSON.parse(value);
+              if (helperData && Object.keys(helperData).length > 0) {
+                // Create backup with timestamp
+                const backupKey = `helper_backup_${Date.now()}`;
+                sessionStorage.setItem(backupKey, value);
+                
+                // Keep only last 3 backups
+                const backupKeys = [];
+                for (let i = 0; i < sessionStorage.length; i++) {
+                  const storageKey = sessionStorage.key(i);
+                  if (storageKey && storageKey.startsWith('helper_backup_')) {
+                    backupKeys.push(storageKey);
+                  }
+                }
+                
+                // Sort by timestamp and remove old backups
+                backupKeys.sort().slice(0, -3).forEach(oldBackup => {
+                  sessionStorage.removeItem(oldBackup);
+                });
+                
+                console.log('💾 Helper backup created:', backupKey);
+              }
+            } catch (e) {
+              console.warn('⚠️ Could not backup helper data:', e);
+            }
+          }
+          
+          // Call original setItem
+          return originalSetItem.call(this, key, value);
+        };
+        
+        // Recovery function
+        window.recoverHelperData = function() {
+          const backupKeys = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && key.startsWith('helper_backup_')) {
+              backupKeys.push(key);
+            }
+          }
+          
+          if (backupKeys.length > 0) {
+            // Get the most recent backup
+            const latestBackup = backupKeys.sort().pop();
+            const backupData = sessionStorage.getItem(latestBackup);
+            
+            if (backupData) {
+              sessionStorage.setItem('helper', backupData);
+              window.helper = JSON.parse(backupData);
+              console.log('🔄 Helper data recovered from backup:', latestBackup);
+              
+              // Refresh the page to reload the data
+              if (confirm('Helper data recovered! Refresh page to see changes?')) {
+                location.reload();
+              }
+              return true;
+            }
+          }
+          
+          console.warn('⚠️ No helper backup found');
+          return false;
+        };
+        
+        // Add recovery button to console
+        console.log('🆘 To recover helper data, run: window.recoverHelperData()');
+        
+        // Check if helper data is empty and offer recovery
+        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const helperKeys = Object.keys(currentHelper);
+        
+        if (helperKeys.length < 3) { // Helper seems empty or minimal
+          console.warn('⚠️ Helper data appears to be cleared or minimal');
+          console.log('🔍 Current helper keys:', helperKeys);
+          
+          // Try to recover automatically
+          setTimeout(() => {
+            if (window.recoverHelperData) {
+              console.log('🚨 Attempting automatic helper data recovery...');
+              window.recoverHelperData();
+            }
+          }, 1000);
+        }
+        
+        console.log('✅ Helper data safeguards initialized');
+        
+      } catch (error) {
+        console.error('❌ Error initializing helper safeguards:', error);
       }
     }
     
