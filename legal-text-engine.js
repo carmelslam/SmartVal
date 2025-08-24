@@ -8,7 +8,7 @@
 
 class LegalTextEngine {
   constructor() {
-    this.vaultPath = 'legal texts logic .md';
+    this.vaultPath = 'final report legal texts vault.md';
     this.cachedTexts = null;
     this.lastModified = null;
     this.placeholderPattern = /%[^%]+%/g;
@@ -47,7 +47,7 @@ class LegalTextEngine {
         'global': vaultData.global?.text || '',
         'total_loss': vaultData.total_loss?.text || '',
         'damaged_sale': vaultData.damaged_sale?.text || '',
-        'legal_loss': vaultData['final report_אובדן_להלכה']?.text || '',
+        'legal_loss': vaultData['estimate_אובדן_להלכה']?.text || '',  // Use estimate version for now
         
         // Estimate Types
         'estimate_legal_loss': vaultData['estimate_אובדן_להלכה']?.text || '',
@@ -217,7 +217,7 @@ class LegalTextEngine {
       'חוות דעת גלובלית': 'global', 
       'חוות דעת טוטלוסט': 'total_loss',
       'חוות דעת מכירה מצבו הניזוק': 'damaged_sale',
-      'חוות דעת אובדן להלכה': 'final report_אובדן_להלכה'
+      'חוות דעת אובדן להלכה': 'estimate_אובדן_להלכה'  // Use estimate version for now
     };
     
     return mapping[reportType] || 'private';
@@ -237,11 +237,37 @@ class LegalTextEngine {
       
       let attachments = '';
       
+      // Check if vault entry has separate attachments field
       if (vaultData[vaultKey]?.attachments) {
         attachments = vaultData[vaultKey].attachments;
-      } else if (vaultData.private?.attachments) {
-        // Fallback to private attachments
-        attachments = vaultData.private.attachments;
+      } else if (vaultData[vaultKey]?.text) {
+        // Extract attachments from the text field (they're embedded in the text)
+        const textContent = vaultData[vaultKey].text;
+        const attachmentMatch = textContent.match(/לוטה:?([\s\S]*?)(?:בכבוד רב|$)/);
+        if (attachmentMatch) {
+          attachments = '**לוטה**' + attachmentMatch[1].trim();
+        }
+      }
+      
+      // Special handling for specific report types with custom attachments
+      if (reportType === 'חוות דעת אובדן להלכה') {
+        // For אובדן להלכה, use specific attachments for this report type
+        attachments = '**לוטה**\nחוות דעת שמאי\nתצלומי הרכב הניזוק\nהצעת תיקון/חשבונית\nצילום רישיון הרכב\nערך רכב ממוחשב';
+      } else if (reportType === 'חוות דעת טוטלוסט') {
+        // For טוטלוסט, use specific attachments
+        attachments = '**לוטה**\nתצלומי הרכב הניזוק\nהערכת נזקים\nערך רכב ממוחשב\nצילום רישיון הרכב\nטופס ביטול רישיון';
+      } else if (!attachments && vaultData.private?.text) {
+        // Fallback to private attachments from text
+        const privateText = vaultData.private.text;
+        const privateMatch = privateText.match(/לוטה:?([\s\S]*?)(?:בכבוד רב|$)/);
+        if (privateMatch) {
+          attachments = '**לוטה**' + privateMatch[1].trim();
+        }
+      }
+      
+      // Final fallback
+      if (!attachments) {
+        attachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
       }
       
       // Decode escaped characters from JSON
