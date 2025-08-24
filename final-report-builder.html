@@ -2536,6 +2536,70 @@
       }
     }
 
+    // LOAD SUMMARY FIELDS FROM HELPER
+    function loadSummaryFieldsFromHelper(helper) {
+      try {
+        console.log('📊 Loading summary fields from helper');
+        
+        // COMMON FIELDS ACROSS ALL VARIANTS
+        
+        // 1. Market Value - from valuation.calculations.full_price.total
+        const marketValue = helper.valuation?.calculations?.full_price?.total || 0;
+        const marketValueFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
+        marketValueFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.value = marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '';
+          }
+        });
+        
+        // 2. Total Claim - from damage_centers_summary.total_cost  
+        const totalClaim = helper.damage_centers_summary?.total_cost || 0;
+        const sumClaimField = document.getElementById('sumClaim');
+        if (sumClaimField) {
+          sumClaimField.value = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
+        }
+        
+        // 3. Depreciation Compensation - from depreciation.total_compensation
+        const depCompensation = helper.depreciation?.total_compensation || 0;
+        const depCompensationField = document.getElementById('depCompensation');
+        if (depCompensationField) {
+          depCompensationField.value = depCompensation > 0 ? `₪${depCompensation.toLocaleString()}` : '';
+        }
+        
+        // VARIANT-SPECIFIC FIELDS
+        
+        // Salvage Value - for total loss and legal loss variants
+        const salvageValue = helper.final_report?.summary?.salvage_value || 0;
+        ['salvageValueTotal', 'salvageValueLegal'].forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.value = salvageValue > 0 ? `₪${salvageValue.toLocaleString()}` : '';
+          }
+        });
+        
+        // Damaged Sale Value - for damaged sale variant
+        const saleValue = helper.final_report?.summary?.damaged_sale_value || 0;
+        const saleValueField = document.getElementById('saleValueDamage');
+        if (saleValueField) {
+          saleValueField.value = saleValue > 0 ? `₪${saleValue.toLocaleString()}` : '';
+        }
+        
+        // Storage/Towing Value - for total loss variant
+        const storageValue = helper.final_report?.summary?.storage_value || 0;
+        const storageValueField = document.getElementById('storageValueTotal');
+        if (storageValueField) {
+          storageValueField.value = storageValue > 0 ? `₪${storageValue.toLocaleString()}` : '';
+        }
+        
+        // Calculate totals based on visible fields
+        calculateSummaryTotals();
+        
+      } catch (error) {
+        console.error('❌ Error loading summary fields:', error);
+      }
+    }
+
     // LOAD ADDITIONAL NOTES FIELD
     function loadAdditionalNotesField() {
       try {
@@ -2588,23 +2652,7 @@
         });
         
         // Load all summary fields from helper data with proper mapping
-        
-        // Claims data - from damage centers or manual input
-        const totalClaim = helper.damage_centers_summary?.total_cost || 
-                          helper.expertise?.calculations?.total_damage || 
-                          helper.final_report?.summary?.total_claim || 0;
-        const claimField = document.getElementById('sumClaim');
-        if (claimField && totalClaim > 0) {
-          claimField.value = `₪${totalClaim.toLocaleString()}`;
-        }
-        
-        // Compensation data from helper calculations or UI capture
-        const compensation = helper.expertise?.calculations?.depreciation_compensation ||
-                               helper.final_report?.summary?.dep_compensation || 0;
-        const depCompensationField = document.getElementById('depCompensation');
-        if (depCompensationField && compensation > 0) {
-          depCompensationField.value = `₪${compensation.toLocaleString()}`;
-        }
+        loadSummaryFieldsFromHelper(helper);
         
         // Salvage values for different summary types
         const salvageValue = helper.final_report?.summary?.salvage_value || 
@@ -7553,6 +7601,9 @@
         // Load additional notes field separately with extra delay
         setTimeout(() => {
           loadAdditionalNotesField();
+          // Also reload summary fields to ensure they're populated
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          loadSummaryFieldsFromHelper(helper);
         }, 500);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first
@@ -11071,11 +11122,10 @@
       switch(reportType) {
         case 'חוות דעת פרטית':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalPrivate" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="depCompensation" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת (לפני הפרשים):</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -11126,6 +11176,10 @@
       
       // Recalculate totals after content change
       setTimeout(calculateSummaryTotals, 100);
+      
+      // Load data from helper for the new summary structure
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      loadSummaryFieldsFromHelper(helper);
     }
     
     // Calculate summary totals based on current report type
