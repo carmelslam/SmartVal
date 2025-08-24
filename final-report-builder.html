@@ -11812,6 +11812,8 @@
         manualInputFields.forEach(fieldId => {
           const field = document.getElementById(fieldId);
           if (field) {
+            console.log(`🔧 Processing manual field: ${fieldId}`, field);
+            
             // Remove any readonly attributes
             field.removeAttribute('readonly');
             field.removeAttribute('disabled');
@@ -11820,7 +11822,12 @@
             field.style.backgroundColor = 'white';
             field.style.color = '#333';
             field.style.cursor = 'text';
-            field.contentEditable = true;
+            field.contentEditable = false; // Fix: contentEditable should be false for input elements
+            
+            // Ensure proper input attributes
+            field.type = 'text';
+            field.style.pointerEvents = 'auto';
+            field.readOnly = false;
             
             // Add placeholder if empty
             if (!field.placeholder) {
@@ -11830,6 +11837,26 @@
             // Test typing capability
             if (!field.hasAttribute('data-typing-enabled')) {
               field.setAttribute('data-typing-enabled', 'true');
+              
+              // Test if field accepts input
+              setTimeout(() => {
+                field.focus();
+                field.value = 'test';
+                if (field.value === 'test') {
+                  field.value = ''; // Clear test
+                  console.log(`✅ ${fieldId} accepts input successfully`);
+                } else {
+                  console.error(`❌ ${fieldId} CANNOT accept input - investigating...`);
+                  // Force clear all potential blockers
+                  field.removeAttribute('readonly');
+                  field.removeAttribute('disabled'); 
+                  field.readOnly = false;
+                  field.disabled = false;
+                  field.style.pointerEvents = 'auto';
+                  field.style.userSelect = 'text';
+                  field.contentEditable = false;
+                }
+              }, 100);
               
               // Add enhanced event listeners
               field.addEventListener('input', function(e) {
