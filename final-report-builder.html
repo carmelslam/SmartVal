@@ -11500,21 +11500,33 @@
     function calculateDamagedSaleReport(helper, marketValue) {
       console.log('📊 Calculating Damaged Sale Report');
       
-      // Get sale value from manual input (user specified as manual)
+      // 1. Auto-populate market value for Damaged Sale variant
+      const marketValueField = document.getElementById('sumMarketValueDamage');
+      if (marketValueField) {
+        marketValueField.value = `₪${marketValue.toLocaleString()}`;
+        marketValueField.style.backgroundColor = '#e8f5e8'; // Show it's auto-populated
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.summary) helper.final_report.summary = {};
+        helper.final_report.summary.market_value_damage = marketValueField.value;
+      }
+      
+      // 2. Get sale value from manual input (user specified as manual)
       const saleValueField = document.getElementById('saleValueDamage');
       const saleValue = saleValueField ? parseFloat(saleValueField.value.replace(/[₪,]/g, '') || '0') : 0;
       
-      // Calculation: Market Value - Sale Value (from user mapping)
+      // 3. Calculation: Market Value - Sale Value (from user mapping)
       const calculatedTotal = marketValue - saleValue;
       
-      // Update UI fields  
+      // 4. Update total field
       const totalField = document.getElementById('afterSaleDamage');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
+        totalField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
         helper.final_report.summary.total_after_sale_damage = totalField.value;
       }
       
-      console.log(`Damage sale calculation: ${marketValue} - ${saleValue} = ${calculatedTotal}`);
+      console.log(`Damage sale calculation: Market Value=${marketValue}, Sale Value=${saleValue}, Total=${calculatedTotal}`);
+      return calculatedTotal;
     }
     
     // TOTAL LOSS REPORT CALCULATION (Based on User Mapping)
@@ -11824,6 +11836,12 @@
                 console.log(`📝 ${fieldId} input: ${e.target.value}`);
                 updateHelperFromManualField(fieldId, e.target.value);
                 calculateSummaryTotals();
+                
+                // Trigger Damaged Sale calculation if this is the sale value field
+                if (fieldId === 'saleValueDamage') {
+                  const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+                  calculateDamagedSaleReport(helper, marketValue);
+                }
               });
               
               field.addEventListener('focus', function(e) {
@@ -11865,6 +11883,13 @@
           if (sumTotalGlobalField) {
             const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
             calculateGlobalReport(helper, marketValue);
+          }
+          
+          // Calculate Damaged Sale Report if it exists
+          const afterSaleDamageField = document.getElementById('afterSaleDamage');
+          if (afterSaleDamageField) {
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateDamagedSaleReport(helper, marketValue);
           }
         }, 500);
         
