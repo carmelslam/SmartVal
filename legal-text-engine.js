@@ -230,20 +230,27 @@ class LegalTextEngine {
    */
   async getAttachments(reportType) {
     try {
+      console.log(`📎 getAttachments called with reportType: "${reportType}"`);
+      
       await this.loadFromVault();
       
       const vaultKey = this.getVaultKey(reportType);
+      console.log(`📎 Vault key for "${reportType}" is: "${vaultKey}"`);
+      
       const vaultData = this.cachedTexts?.vaultData || {};
+      console.log('📎 Available attachment keys:', vaultData.attachments ? Object.keys(vaultData.attachments) : 'No attachments section');
       
       let attachments = '';
       
       // Check if we have the new attachments section
       if (vaultData.attachments) {
         attachments = vaultData.attachments[vaultKey] || '';
+        console.log(`📎 Found attachments for ${vaultKey}:`, attachments ? 'Yes' : 'No');
       }
       
       // Final fallback to default attachments
       if (!attachments) {
+        console.log('📎 Using fallback attachments');
         attachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
       }
       
@@ -254,7 +261,7 @@ class LegalTextEngine {
         .replace(/\\"/g, '"')      // Convert \" to actual quotes
         .replace(/\\\\/g, '\\');   // Convert \\ to actual backslash
       
-      console.log(`📎 Loaded attachments for ${reportType} (${vaultKey}):`, attachments.substring(0, 50) + '...');
+      console.log(`📎 Returning attachments for ${reportType} (${vaultKey}):`, attachments.substring(0, 50) + '...');
       return attachments;
     } catch (error) {
       console.error('❌ Error loading attachments:', error);

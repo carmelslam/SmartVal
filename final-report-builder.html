@@ -4514,18 +4514,30 @@
 
     // LOAD ATTACHMENTS FROM VAULT
     async function loadAttachmentsFromVault() {
+      console.log('🔵 loadAttachmentsFromVault function called');
+      
       try {
         // Get selected type from dropdown
         const reportTypeSelect = document.getElementById('reportType');
-        const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
+        console.log('🔵 reportTypeSelect element:', reportTypeSelect);
         
+        const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
         console.log('📎 Loading attachments from vault for type:', reportType);
         
         // Use the legal text engine to get attachments from the actual vault
         if (window.LegalTextEngine) {
+          console.log('🔵 LegalTextEngine is available');
           const attachmentsText = await window.LegalTextEngine.getAttachments(reportType);
           
-          document.getElementById('attachments-content').value = attachmentsText;
+          const attachmentsElement = document.getElementById('attachments-content');
+          console.log('🔵 attachments-content element:', attachmentsElement);
+          
+          if (attachmentsElement) {
+            attachmentsElement.value = attachmentsText;
+            console.log('🔵 Attachments text set to textarea');
+          } else {
+            console.error('❌ attachments-content element not found');
+          }
           
           // Save to helper and LOCK the selection
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
