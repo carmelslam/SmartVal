@@ -237,35 +237,12 @@ class LegalTextEngine {
       
       let attachments = '';
       
-      // Check if vault entry has separate attachments field
-      if (vaultData[vaultKey]?.attachments) {
-        attachments = vaultData[vaultKey].attachments;
-      } else if (vaultData[vaultKey]?.text) {
-        // Extract attachments from the text field (they're embedded in the text)
-        const textContent = vaultData[vaultKey].text;
-        const attachmentMatch = textContent.match(/לוטה:?([\s\S]*?)(?:בכבוד רב|$)/);
-        if (attachmentMatch) {
-          attachments = '**לוטה**' + attachmentMatch[1].trim();
-        }
+      // Check if we have the new attachments section
+      if (vaultData.attachments) {
+        attachments = vaultData.attachments[vaultKey] || '';
       }
       
-      // Special handling for specific report types with custom attachments
-      if (reportType === 'חוות דעת אובדן להלכה') {
-        // For אובדן להלכה, use specific attachments for this report type
-        attachments = '**לוטה**\nחוות דעת שמאי\nתצלומי הרכב הניזוק\nהצעת תיקון/חשבונית\nצילום רישיון הרכב\nערך רכב ממוחשב';
-      } else if (reportType === 'חוות דעת טוטלוסט') {
-        // For טוטלוסט, use specific attachments
-        attachments = '**לוטה**\nתצלומי הרכב הניזוק\nהערכת נזקים\nערך רכב ממוחשב\nצילום רישיון הרכב\nטופס ביטול רישיון';
-      } else if (!attachments && vaultData.private?.text) {
-        // Fallback to private attachments from text
-        const privateText = vaultData.private.text;
-        const privateMatch = privateText.match(/לוטה:?([\s\S]*?)(?:בכבוד רב|$)/);
-        if (privateMatch) {
-          attachments = '**לוטה**' + privateMatch[1].trim();
-        }
-      }
-      
-      // Final fallback
+      // Final fallback to default attachments
       if (!attachments) {
         attachments = '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
       }
@@ -277,7 +254,7 @@ class LegalTextEngine {
         .replace(/\\"/g, '"')      // Convert \" to actual quotes
         .replace(/\\\\/g, '\\');   // Convert \\ to actual backslash
       
-      console.log(`📎 Loaded attachments for ${reportType}:`, attachments.substring(0, 50) + '...');
+      console.log(`📎 Loaded attachments for ${reportType} (${vaultKey}):`, attachments.substring(0, 50) + '...');
       return attachments;
     } catch (error) {
       console.error('❌ Error loading attachments:', error);
