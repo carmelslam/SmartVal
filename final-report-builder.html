@@ -1102,7 +1102,7 @@
             <div></div>
           </div>
           <div style="margin-top: 10px; font-size: 14px; color: #666;">
-            <strong>חישוב:</strong> סה״כ עלות נזקים ÷ ערך הרכב לנזק גולמי × 100
+            <strong>חישוב:</strong> סה״כ תביעה (מאושר) ÷ ערך הרכב לנזק גולמי × 100
           </div>
         </div>
         
@@ -1110,7 +1110,7 @@
         <div style="margin-top: 20px;">
           <h4 style="color: #1e3a8a; margin-bottom: 10px;">נתונים נוספים:</h4>
           <div class="form-grid">
-            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateHelperFromField(event);" style="direction: ltr; text-align: right;" /></div>
+            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateHelperFromField(event); updateGrossPercentageField();" style="direction: ltr; text-align: right;" /></div>
             <div></div>
           </div>
         </div>
@@ -6360,9 +6360,14 @@
         leviPriceListField.value = `₪${grossPrice.toLocaleString()}`;
       }
       
-      // Calculate and update GROSS DAMAGE PERCENTAGE (damage ÷ gross price)
-      if (grossPrice > 0 && totalClaim > 0) {
-        const grossDamagePercentage = (totalClaim / grossPrice) * 100;
+      // Get authorized claim instead of total claim
+      const authorizedClaimField = document.getElementById('authorizedClaim');
+      const authorizedClaimValue = authorizedClaimField?.value || '';
+      const authorizedClaim = parseFloat(authorizedClaimValue.replace(/[₪,]/g, '')) || totalClaim; // fallback to totalClaim if no authorized claim
+      
+      // Calculate and update GROSS DAMAGE PERCENTAGE (authorized claim ÷ gross price)
+      if (grossPrice > 0 && authorizedClaim > 0) {
+        const grossDamagePercentage = (authorizedClaim / grossPrice) * 100;
         const grossPercentField = document.getElementById('grossPercent');
         if (grossPercentField) {
           const formattedPercentage = `${Math.round(grossDamagePercentage * 100) / 100}%`;
@@ -6374,6 +6379,7 @@
           helper.calculations = helper.calculations || {};
           helper.calculations.damage_percent_gross = grossDamagePercentage;
           helper.calculations.total_damage = totalClaim;
+          helper.calculations.authorized_claim = authorizedClaim;
           
           // Update claims data for backward compatibility
           helper.claims_data = helper.claims_data || {};
@@ -6391,7 +6397,7 @@
           
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
-          console.log(`📊 GROSS DAMAGE %: ${totalClaim.toLocaleString()} ÷ ${grossPrice.toLocaleString()} = ${formattedPercentage}`);
+          console.log(`📊 GROSS DAMAGE %: ${authorizedClaim.toLocaleString()} ÷ ${grossPrice.toLocaleString()} = ${formattedPercentage}`);
           console.log(`🏠 This uses GROSS PRICE (car properties only), not market price`);
         }
       }
@@ -7157,10 +7163,10 @@
         const helper = window.helper || {};
         let vehicleValueGross = helper.calculations?.vehicle_value_gross;
         
-        // Get total claim from the field or helper
-        const totalClaimField = document.getElementById('totalClaim');
-        const totalClaimValue = totalClaimField?.value || '';
-        const totalClaim = parseFloat(totalClaimValue.replace(/[₪,]/g, '')) || 0;
+        // Get AUTHORIZED claim from the field (סה"כ תביעה מאושר) instead of total claim
+        const authorizedClaimField = document.getElementById('authorizedClaim');
+        const authorizedClaimValue = authorizedClaimField?.value || '';
+        const authorizedClaim = parseFloat(authorizedClaimValue.replace(/[₪,]/g, '')) || 0;
         
         // If vehicle_value_gross is missing, try to get it from the leviPriceList field
         if (!vehicleValueGross) {
@@ -7173,14 +7179,14 @@
         
         console.log('🔍 Gross percentage calculation:', {
           vehicleValueGross: vehicleValueGross,
-          totalClaim: totalClaim,
-          totalClaimRaw: totalClaimValue,
+          authorizedClaim: authorizedClaim,
+          authorizedClaimRaw: authorizedClaimValue,
           helperCalculations: helper.calculations
         });
         
-        if (vehicleValueGross && vehicleValueGross > 0 && totalClaim > 0) {
-          // Calculate gross percentage: (Total Claim ÷ Gross Market Value) × 100
-          const grossPercentage = (totalClaim / vehicleValueGross) * 100;
+        if (vehicleValueGross && vehicleValueGross > 0 && authorizedClaim > 0) {
+          // Calculate gross percentage: (Authorized Claim ÷ Gross Market Value) × 100
+          const grossPercentage = (authorizedClaim / vehicleValueGross) * 100;
           const formattedPercentage = `${Math.round(grossPercentage * 100) / 100}%`;
           
           const grossPercentField = document.getElementById('grossPercent');
@@ -7198,12 +7204,12 @@
             
             sessionStorage.setItem('helper', JSON.stringify(helper));
             
-            console.log(`📊 Updated gross percentage: ${totalClaim.toLocaleString()} ÷ ${vehicleValueGross.toLocaleString()} = ${formattedPercentage}`);
+            console.log(`📊 Updated gross percentage: ${authorizedClaim.toLocaleString()} ÷ ${vehicleValueGross.toLocaleString()} = ${formattedPercentage}`);
           }
         } else {
           console.log('ℹ️ Gross percentage calculation skipped - values not ready:', {
             vehicleValueGross: vehicleValueGross,
-            totalClaim: totalClaim
+            authorizedClaim: authorizedClaim
           });
           
           // Do NOT call updateGrossMarketValueField here to avoid infinite loop
