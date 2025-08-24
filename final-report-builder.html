@@ -12526,10 +12526,16 @@
     function loadDifferentialData() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔍 Checking for differential data in helper.final_report:', helper.final_report);
         const differentialData = helper.final_report?.differential;
         
-        if (!differentialData || !differentialData.has_differentials) {
-          console.log('📝 No differential data found in helper');
+        if (!differentialData) {
+          console.log('📝 No differential data found in helper.final_report.differential');
+          return;
+        }
+        
+        if (!differentialData.has_differentials) {
+          console.log('📝 Differential data exists but has_differentials is false:', differentialData);
           return;
         }
         
@@ -12540,7 +12546,7 @@
         if (hasDiffCheckbox) {
           hasDiffCheckbox.checked = differentialData.has_differentials;
           // Trigger the toggle to show the table
-          toggleDifferentials();
+          toggleDifferentialsTable();
         }
         
         // Load each differential item
@@ -13667,7 +13673,13 @@
     // Load differential data on page load
     document.addEventListener('DOMContentLoaded', function() {
       console.log('📖 Loading saved differential data...');
-      setTimeout(loadDifferentialData, 500); // Delay to ensure DOM is ready
+      setTimeout(loadDifferentialData, 1000); // Increased delay to ensure all other loading is complete
+    });
+    
+    // Also try loading after the main data loading is complete
+    window.addEventListener('load', function() {
+      console.log('📖 Loading differential data after full page load...');
+      setTimeout(loadDifferentialData, 500);
     });
     
     // Auto-trigger calculation refresh when key data changes
