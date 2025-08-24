@@ -2662,6 +2662,9 @@
         'sumClaimPrivate': 'total_claim_private',
         'depCompensationPrivate': 'dep_compensation_private',
         'sumTotalPrivate': 'total_private',
+        'sumClaimGlobal': 'total_claim_global',
+        'sumDepreciation': 'depreciation_global',
+        'sumAdjustments': 'adjustments_global',
         'sumTotalGlobalDynamic': 'total_global_dynamic',
         'sumMarketValueDefault': 'market_value_default',
         'sumClaimDefault': 'total_claim_default',
@@ -11275,7 +11278,7 @@
         case 'חוות דעת גלובלית':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueGlobal" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaimGlobal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobalDynamic" style="background: white; color: #333;" /></div>
@@ -11633,7 +11636,45 @@
           console.warn('⚠️ No market value found in helper');
         }
         
-        // TASK 2: Ensure manual input fields are enabled and working
+        // TASK 2: Fix Total Claim field population for ALL variants
+        const totalClaim = helper.claims_data?.total_claim || 
+                          helper.damage_centers_summary?.total_cost ||
+                          helper.calculations?.total_damage || 0;
+        
+        if (totalClaim > 0) {
+          console.log(`💰 Found total claim: ₪${totalClaim.toLocaleString()}`);
+          
+          // Populate ALL total claim fields across variants  
+          const allClaimFields = [
+            'sumClaim',          // Static Private report
+            'sumClaimPrivate',   // Dynamic Private report  
+            'sumClaimGlobal',    // Dynamic Global report (FIXED)
+            'sumClaimDefault'    // Dynamic Default report
+          ];
+          
+          allClaimFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+              field.value = `₪${totalClaim.toLocaleString()}`;
+              field.style.backgroundColor = '#e8f5e8'; // Show it's auto-populated
+              console.log(`✅ Populated ${fieldId} with ₪${totalClaim.toLocaleString()}`);
+            } else {
+              console.warn(`⚠️ Claim field not found: ${fieldId}`);
+            }
+          });
+          
+          // Update helper structure  
+          if (!helper.final_report) helper.final_report = {};
+          if (!helper.final_report.summary) helper.final_report.summary = {};
+          helper.final_report.summary.total_claim = `₪${totalClaim.toLocaleString()}`;
+          helper.final_report.summary.total_claim_private = `₪${totalClaim.toLocaleString()}`;
+          helper.final_report.summary.total_claim_global = `₪${totalClaim.toLocaleString()}`;
+          
+        } else {
+          console.warn('⚠️ No total claim found in helper');
+        }
+        
+        // TASK 3: Ensure manual input fields are enabled and working
         const manualInputFields = [
           'saleValueDamage',    // ערך המכירה במצבו הניזוק
           'salvageValueTotal',  // ערך שרידי הרכב (Total Loss)
