@@ -915,21 +915,16 @@
       <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
         פעולות מסמכים
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
-          הצג אקספירטיזה PDF
-        </button>
-        <button class="nav-btn" id="fetchFinalReportBtn" onclick="fetchFinalReportPDF()" style="background: #06b6d4; color: white;">
-          הצג חוות דעת PDF
-        </button>
-      </div>
       <!-- FETCH BUTTONS - View existing documents (require plate input) -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
         <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #dc2626; color: white;">
           הצג אומדן ראשוני PDF
         </button>
         <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
           הצג אקספירטיזה PDF
+        </button>
+        <button class="nav-btn" id="fetchFinalReportBtn" onclick="fetchFinalReportPDF()" style="background: #06b6d4; color: white;">
+          הצג חוות דעת PDF
         </button>
       </div>
       <div style="margin-top: 10px; padding: 10px; background: #e0f2fe; border-radius: 6px; font-size: 14px; text-align: center; color: #0277bd;">
@@ -13597,93 +13592,7 @@
       }
     };
 
-    // EXPERTISE CALL FUNCTION - Uses session data for current case
-    console.log('🔧 Defining reloadExpertiseReport function...');
-    window.reloadExpertiseReport = async function() {
-      // CALL functions use current session data (working on existing case)
-      const helper = sessionStorage.getItem('helper');
-      const helperData = helper ? JSON.parse(helper) : {};
-      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
-      
-      if (!plateNumber) {
-        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
-        return;
-      }
-      
-      const requestBtn = document.getElementById('requestExpertiseBtn');
-      const originalText = requestBtn.textContent;
-      
-      try {
-        requestBtn.disabled = true;
-        requestBtn.textContent = 'שולח בקשה...';
-        
-        const payload = {
-          plate: plateNumber,
-          case_id: helperData?.meta?.case_id,
-          report_type: 'expertise',
-          helper_data: helperData
-        };
-        
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('CALL_EXPERTISE', payload);
-        
-        if (response?.success) {
-          alert(response.message || 'בקשה לאקספירטיזה נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
-        } else {
-          alert('שגיאה בשליחת בקשה לאקספירטיזה');
-        }
-        
-      } catch (error) {
-        console.error('Error requesting expertise:', error);
-        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-      } finally {
-        requestBtn.disabled = false;
-        requestBtn.textContent = originalText;
-      }
-    };
 
-    window.requestEstimateReport = async function() {
-      // CALL functions use current session data (working on existing case)
-      const helper = sessionStorage.getItem('helper');
-      const helperData = helper ? JSON.parse(helper) : {};
-      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
-      
-      if (!plateNumber) {
-        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
-        return;
-      }
-      
-      const requestBtn = document.getElementById('requestEstimateBtn');
-      const originalText = requestBtn.textContent;
-      
-      try {
-        requestBtn.disabled = true;
-        requestBtn.textContent = 'שולח בקשה...';
-        
-        const payload = {
-          plate: plateNumber,
-          case_id: helperData?.meta?.case_id,
-          report_type: 'estimate',
-          helper_data: helperData
-        };
-        
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('CALL_ESTIMATE', payload);
-        
-        if (response?.success) {
-          alert(response.message || 'בקשה לאומדן ראשוני נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
-        } else {
-          alert('שגיאה בשליחת בקשה לאומדן ראשוני');
-        }
-        
-      } catch (error) {
-        console.error('Error requesting estimate:', error);
-        alert('שגיאה בשליחת בקשה לאומדן ראשוני. אנא נסה שוב.');
-      } finally {
-        requestBtn.disabled = false;
-        requestBtn.textContent = originalText;
-      }
-    };
 
     window.exitSystem = function() {
       if (confirm('האם אתה בטוח שברצונך לצאת מהמערכת? השינויים שלא נשמרו יאבדו.')) {
@@ -14133,56 +14042,6 @@
     // Make it available immediately
     console.log('🚀 Quick test available: quickVatTest()');
     
-    // GLOBAL EXPERTISE AND ESTIMATE FUNCTIONS - Available immediately
-    window.reloadExpertiseReport = async function() {
-      console.log('🔧 reloadExpertiseReport called from global scope');
-      // CALL functions use current session data (working on existing case)
-      const helper = sessionStorage.getItem('helper');
-      const helperData = helper ? JSON.parse(helper) : {};
-      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
-      
-      if (!plateNumber) {
-        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
-        return;
-      }
-      
-      const requestBtn = document.getElementById('requestExpertiseBtn');
-      const originalText = requestBtn ? requestBtn.textContent : 'בקש אקספירטיזה';
-      
-      try {
-        if (requestBtn) {
-          requestBtn.disabled = true;
-          requestBtn.textContent = 'שולח בקשה...';
-        }
-        
-        const payload = {
-          plate: plateNumber,
-          case_id: helperData?.meta?.case_id,
-          report_type: 'expertise',
-          helper_data: helperData
-        };
-        
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('CALL_EXPERTISE', payload);
-        
-        if (response?.success) {
-          alert(response.message || 'בקשה לאקספירטיזה נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
-        } else {
-          alert('שגיאה בשליחת בקשה לאקספירטיזה');
-        }
-        
-      } catch (error) {
-        console.error('Error requesting expertise:', error);
-        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-      } finally {
-        if (requestBtn) {
-          requestBtn.disabled = false;
-          requestBtn.textContent = originalText;
-        }
-      }
-    };
-    
-    console.log('✅ Global reloadExpertiseReport function defined:', typeof window.reloadExpertiseReport);
     
     // LOCAL GENERATION FUNCTIONS - No webhooks needed
     window.generateEstimateReport = function() {
