@@ -923,26 +923,18 @@
           הצג חוות דעת PDF
         </button>
       </div>
-      <!-- ESTIMATE BUTTONS - NEW ADDITION -->
+      <!-- FETCH BUTTONS - View existing documents (require plate input) -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
         <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #dc2626; color: white;">
           הצג אומדן ראשוני PDF
         </button>
-        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #ea580c; color: white;">
-          בקש אומדן ראשוני
+        <button class="nav-btn" id="fetchExpertiseBtn" onclick="fetchExpertisePDF()" style="background: #8b5cf6; color: white;">
+          הצג אקספירטיזה PDF
         </button>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white;">
-          בקש אקספירטיזה
-        </button>
-        <button class="nav-btn" id="requestFinalReportBtn" onclick="requestFinalReport()" style="background: #f59e0b; color: white;">
-          בקש חוות דעת
-        </button>
-      </div>
-      <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 14px; text-align: center; color: #92400e;">
-        💡 הכנס מספר רכב וטען תיק כדי לראות את כל הפעולות הזמינות<br>
-        הכפתור מזהה אוטומטית אם המשתמש ממשיך עבודה או מתחיל מחדש
+      <div style="margin-top: 10px; padding: 10px; background: #e0f2fe; border-radius: 6px; font-size: 14px; text-align: center; color: #0277bd;">
+        📁 הכנס מספר רכב וטען תיק כדי לצפות במסמכים קיימים<br>
+        כפתורי הפקה של מסמכים חדשים נמצאים בפינה הימנית התחתונה 🚀
       </div>
     </div>
     
@@ -13606,6 +13598,7 @@
     };
 
     // EXPERTISE CALL FUNCTION - Uses session data for current case
+    console.log('🔧 Defining reloadExpertiseReport function...');
     window.reloadExpertiseReport = async function() {
       // CALL functions use current session data (working on existing case)
       const helper = sessionStorage.getItem('helper');
@@ -14140,6 +14133,87 @@
     // Make it available immediately
     console.log('🚀 Quick test available: quickVatTest()');
     
+    // GLOBAL EXPERTISE AND ESTIMATE FUNCTIONS - Available immediately
+    window.reloadExpertiseReport = async function() {
+      console.log('🔧 reloadExpertiseReport called from global scope');
+      // CALL functions use current session data (working on existing case)
+      const helper = sessionStorage.getItem('helper');
+      const helperData = helper ? JSON.parse(helper) : {};
+      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
+      
+      if (!plateNumber) {
+        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('requestExpertiseBtn');
+      const originalText = requestBtn ? requestBtn.textContent : 'בקש אקספירטיזה';
+      
+      try {
+        if (requestBtn) {
+          requestBtn.disabled = true;
+          requestBtn.textContent = 'שולח בקשה...';
+        }
+        
+        const payload = {
+          plate: plateNumber,
+          case_id: helperData?.meta?.case_id,
+          report_type: 'expertise',
+          helper_data: helperData
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_EXPERTISE', payload);
+        
+        if (response?.success) {
+          alert(response.message || 'בקשה לאקספירטיזה נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
+        } else {
+          alert('שגיאה בשליחת בקשה לאקספירטיזה');
+        }
+        
+      } catch (error) {
+        console.error('Error requesting expertise:', error);
+        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
+      } finally {
+        if (requestBtn) {
+          requestBtn.disabled = false;
+          requestBtn.textContent = originalText;
+        }
+      }
+    };
+    
+    console.log('✅ Global reloadExpertiseReport function defined:', typeof window.reloadExpertiseReport);
+    
+    // LOCAL GENERATION FUNCTIONS - No webhooks needed
+    window.generateEstimateReport = function() {
+      console.log('🔧 Generating estimate report locally...');
+      // First save all data
+      if (typeof window.saveFinalReport === 'function') {
+        window.saveFinalReport();
+      }
+      
+      // Set report type and navigate to fee module
+      sessionStorage.setItem('selectedReportType', 'estimate');
+      window.location.href = 'fee-module.html';
+    };
+    
+    window.generateExpertiseReport = function() {
+      console.log('🔧 Generating expertise report locally...');
+      // First save all data
+      if (typeof window.saveFinalReport === 'function') {
+        window.saveFinalReport();
+      }
+      
+      // Set report type and navigate to fee module
+      sessionStorage.setItem('selectedReportType', 'expertise');
+      window.location.href = 'fee-module.html';
+    };
+    
+    console.log('✅ Local generation functions defined:', {
+      generateEstimateReport: typeof window.generateEstimateReport,
+      generateExpertiseReport: typeof window.generateExpertiseReport
+    });
+    
     // Test MathEngine loading
     window.testMathEngineLoading = function() {
       console.log('🧪 Testing MathEngine loading status...');
@@ -14288,6 +14362,30 @@
       }, 500);
     });
   </script>
+
+  <!-- CALL BUTTONS SECTION - Generate new documents (uses current session data) -->
+  <div style="position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid #1e3a8a; z-index: 1000; min-width: 300px;">
+    <div style="text-align: center; font-weight: bold; color: #1e3a8a; margin-bottom: 10px; font-size: 14px;">
+      🚀 פעולות על התיק הנוכחי
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+      <button class="nav-btn" id="generateEstimateBtn" onclick="generateEstimateReport()" style="background: #ea580c; color: white; font-size: 12px; padding: 8px;">
+        צור אומדן ראשוני
+      </button>
+      <button class="nav-btn" id="generateExpertiseBtn" onclick="generateExpertiseReport()" style="background: #059669; color: white; font-size: 12px; padding: 8px;">
+        צור אקספירטיזה
+      </button>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+      <button class="nav-btn" id="generateFinalReportBtn" onclick="generateFinalReport()" style="background: #f59e0b; color: white; font-size: 12px; padding: 8px;">
+        צור חוות דעת
+      </button>
+    </div>
+    <div style="font-size: 11px; color: #6b7280; text-align: center; margin-top: 8px;">
+      לא נדרש הכנסת מספר רכב - עובד על התיק הפתוח
+    </div>
+  </div>
+
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>

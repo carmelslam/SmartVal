@@ -55,7 +55,7 @@ FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp'
   
   // Fetch PDF webhooks - using dedicated endpoints
   FETCH_EXPERTISE_PDF: 'https://hook.eu2.make.com/lvlni0nc6dmas8mjdvd39jcbx4rlsxon', // Use LAUNCH_EXPERTISE for PDF fetching
-  FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/thf4d1awjgx0eqt0clmr2vkj9gmxfl6p'
+  FETCH_ESTIMATE_PDF: 'https://hook.eu2.make.com/p1emfh80u503ourf49r2s9kxklhkz58d'
 
 
 };
