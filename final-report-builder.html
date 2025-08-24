@@ -11637,9 +11637,15 @@
         }
         
         // TASK 2: Fix Total Claim field population for ALL variants
-        const totalClaim = helper.claims_data?.total_claim || 
-                          helper.damage_centers_summary?.total_cost ||
-                          helper.calculations?.total_damage || 0;
+        // Extract numeric value from total_claim which may be formatted
+        let totalClaim = 0;
+        if (helper.claims_data?.total_claim) {
+          totalClaim = parseFloat(String(helper.claims_data.total_claim).replace(/[₪,]/g, '')) || 0;
+        } else if (helper.damage_centers_summary?.total_cost) {
+          totalClaim = parseFloat(String(helper.damage_centers_summary.total_cost).replace(/[₪,]/g, '')) || 0;
+        } else if (helper.calculations?.total_damage) {
+          totalClaim = parseFloat(String(helper.calculations.total_damage).replace(/[₪,]/g, '')) || 0;
+        }
         
         if (totalClaim > 0) {
           console.log(`💰 Found total claim: ₪${totalClaim.toLocaleString()}`);
@@ -11675,9 +11681,15 @@
         }
         
         // TASK 3: Fix Depreciation Compensation field population for ALL variants
-        const depCompensation = helper.depreciation?.globalDepValue || 
-                               helper.depreciation?.total_compensation ||
-                               helper.calculations?.depreciation_value || 0;
+        // Extract numeric value from globalDep1 which contains formatted value like "1,972₪"
+        let depCompensation = 0;
+        if (helper.depreciation?.globalDepValue) {
+          depCompensation = parseFloat(String(helper.depreciation.globalDepValue).replace(/[₪,]/g, '')) || 0;
+        } else if (helper.depreciation?.globalDep1) {
+          depCompensation = parseFloat(String(helper.depreciation.globalDep1).replace(/[₪,%]/g, '')) || 0;
+        } else if (helper.depreciation?.total_compensation) {
+          depCompensation = parseFloat(String(helper.depreciation.total_compensation).replace(/[₪,]/g, '')) || 0;
+        }
         
         if (depCompensation > 0) {
           console.log(`💰 Found depreciation compensation: ₪${depCompensation.toLocaleString()}`);
