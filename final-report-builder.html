@@ -923,6 +923,15 @@
           הצג חוות דעת PDF
         </button>
       </div>
+      <!-- ESTIMATE BUTTONS - NEW ADDITION -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <button class="nav-btn" id="fetchEstimateBtn" onclick="fetchEstimatePDF()" style="background: #dc2626; color: white;">
+          הצג אומדן ראשוני PDF
+        </button>
+        <button class="nav-btn" id="requestEstimateBtn" onclick="requestEstimateReport()" style="background: #ea580c; color: white;">
+          בקש אומדן ראשוני
+        </button>
+      </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <button class="nav-btn" id="requestExpertiseBtn" onclick="reloadExpertiseReport()" style="background: #059669; color: white;">
           בקש אקספירטיזה
@@ -13508,6 +13517,90 @@
     window.requestFinalReport = function() {
       // Redirect to generate final report functionality  
       generateFinalReport();
+    };
+
+    // ESTIMATE FUNCTIONS - NEW ADDITION
+    window.fetchEstimatePDF = async function() {
+      const helper = sessionStorage.getItem('helper');
+      const helperData = helper ? JSON.parse(helper) : {};
+      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
+      
+      if (!plateNumber) {
+        alert('מספר רכב לא נמצא בנתוני המערכת');
+        return;
+      }
+      
+      const fetchBtn = document.getElementById('fetchEstimateBtn');
+      const originalText = fetchBtn.textContent;
+      
+      try {
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = 'טוען PDF...';
+        
+        const payload = {
+          plate: plateNumber,
+          case_id: helperData?.meta?.case_id,
+          document_type: 'estimate'
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('FETCH_ESTIMATE_PDF', payload);
+        
+        if (response?.success && response?.pdf_url) {
+          showFloatingPDF(response.pdf_url, 'אומדן ראשוני PDF');
+        } else {
+          alert('אומדן ראשוני לא נמצא במערכת או לא הופק עדיין');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching estimate PDF:', error);
+        alert('שגיאה בטעינת אומדן ראשוני PDF');
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = originalText;
+      }
+    };
+
+    window.requestEstimateReport = async function() {
+      const helper = sessionStorage.getItem('helper');
+      const helperData = helper ? JSON.parse(helper) : {};
+      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
+      
+      if (!plateNumber) {
+        alert('מספר רכב לא נמצא בנתוני המערכת');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('requestEstimateBtn');
+      const originalText = requestBtn.textContent;
+      
+      try {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'שולח בקשה...';
+        
+        const payload = {
+          plate: plateNumber,
+          case_id: helperData?.meta?.case_id,
+          report_type: 'estimate',
+          helper_data: helperData
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_ESTIMATE', payload);
+        
+        if (response?.success) {
+          alert(response.message || 'בקשה לאומדן ראשוני נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
+        } else {
+          alert('שגיאה בשליחת בקשה לאומדן ראשוני');
+        }
+        
+      } catch (error) {
+        console.error('Error requesting estimate:', error);
+        alert('שגיאה בשליחת בקשה לאומדן ראשוני. אנא נסה שוב.');
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
+      }
     };
 
     window.exitSystem = function() {
