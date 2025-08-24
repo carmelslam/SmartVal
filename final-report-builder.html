@@ -2135,7 +2135,7 @@
       updateBuilderCurrentState('final_report.work_days', garageDays);
       updateBuilderCurrentState('final_report.summary', summaryData);
       updateBuilderCurrentState('final_report.depreciation', depreciationData);
-      updateBuilderCurrentState('final_report.adjustments', adjustmentsData);
+      // Removed: updateBuilderCurrentState('final_report.adjustments', adjustmentsData); - using valuation.adjustments instead
       updateBuilderCurrentState('final_report.legal_text', legalText);
       
       alert('חוות דעת סופית נשמרה בהצלחה');
@@ -3330,8 +3330,9 @@
         // Note: allAdjustmentsRows-final-report container was removed
       }
       
-      // Load saved adjustments data (תוספות והורדות) from Helper
-      if (helper.final_report?.adjustments) {
+      // Removed: Loading adjustments from helper.final_report.adjustments
+      // Now using valuation.adjustments for all adjustment data flow
+      if (false) { // Disabled - keeping code for reference
         console.log('📋 Loading saved adjustments from Helper:', helper.final_report.adjustments);
         
         // Clear existing rows to prevent duplication
@@ -5248,21 +5249,8 @@
           timestamp: new Date().toISOString()
         };
         
-        // Initialize helper structure
-        if (!helper.final_report.adjustments) helper.final_report.adjustments = {};
-        if (!helper.final_report.adjustments[category]) helper.final_report.adjustments[category] = [];
-        
-        // Find existing adjustment by row ID or add new one
-        const rowId = row.id;
-        const existingIndex = helper.final_report.adjustments[category].findIndex(adj => adj.rowId === rowId);
-        
-        adjustmentData.rowId = rowId;
-        
-        if (existingIndex >= 0) {
-          helper.final_report.adjustments[category][existingIndex] = adjustmentData;
-        } else {
-          helper.final_report.adjustments[category].push(adjustmentData);
-        }
+        // Removed: No longer saving to helper.final_report.adjustments
+        // Using valuation.adjustments for all adjustment data
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -5386,10 +5374,8 @@
         
         if (existingIndex >= 0) {
           helper.final_report.adjustments[category][existingIndex] = adjustmentData;
-          console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
-        } else {
+          } else {
           helper.final_report.adjustments[category].push(adjustmentData);
-          console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
         }
         
         // Save to storage
@@ -7445,6 +7431,30 @@
       }
     }
 
+    // Cleanup function to remove deprecated data structures
+    function cleanupDeprecatedData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let updated = false;
+        
+        // Remove deprecated final_report.adjustments
+        if (helper.final_report && helper.final_report.adjustments) {
+          delete helper.final_report.adjustments;
+          updated = true;
+          console.log('Removed deprecated helper.final_report.adjustments');
+        }
+        
+        if (updated) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          if (window.helper && window.helper.final_report) {
+            delete window.helper.final_report.adjustments;
+          }
+        }
+      } catch (error) {
+        console.error('Error cleaning deprecated data:', error);
+      }
+    }
+
     // Cleanup function to fix duplicated damage center numbers
     function cleanupDamageCenterNumbers() {
       try {
@@ -7482,6 +7492,9 @@
 
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
+      // Clean up deprecated data structures
+      cleanupDeprecatedData();
+      
       // First clean up any duplicated damage center numbers in helper
       // cleanupDamageCenterNumbers(); // Commented out - leave existing data as is
       
