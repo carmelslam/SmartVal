@@ -11917,6 +11917,34 @@
           if (afterSaleDamageField) {
             const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
             calculateDamagedSaleReport(helper, marketValue);
+            
+            // CRITICAL FIX: Force enable saleValueDamage field for typing
+            setTimeout(() => {
+              const saleField = document.getElementById('saleValueDamage');
+              if (saleField) {
+                console.log('🔧 FORCE FIXING saleValueDamage field for typing...');
+                
+                // Remove ALL possible blockers
+                saleField.removeAttribute('readonly');
+                saleField.removeAttribute('disabled');
+                saleField.removeAttribute('contenteditable');
+                saleField.readOnly = false;
+                saleField.disabled = false;
+                
+                // Clear any conflicting styles
+                saleField.style.pointerEvents = 'auto';
+                saleField.style.userSelect = 'text';
+                saleField.style.backgroundColor = 'white';
+                saleField.style.color = '#333';
+                saleField.style.cursor = 'text';
+                
+                // Test typing
+                saleField.focus();
+                saleField.select();
+                
+                console.log('✅ saleValueDamage field forcefully enabled');
+              }
+            }, 200);
           }
         }, 500);
         
@@ -13746,10 +13774,44 @@
     // Expose refresh function globally
     window.refreshAllCalculations = refreshAllCalculations;
     
+    // SPECIFIC FIX FOR saleValueDamage FIELD
+    function forceSaleValueDamageEditable() {
+      const saleField = document.getElementById('saleValueDamage');
+      if (saleField) {
+        console.log('🚨 FORCING saleValueDamage to be editable...');
+        
+        // Nuclear option - completely reset the field
+        const parent = saleField.parentNode;
+        const newField = document.createElement('input');
+        newField.type = 'text';
+        newField.id = 'saleValueDamage';
+        newField.placeholder = 'הזן ערך המכירה...';
+        newField.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white; color: #333;';
+        
+        // Add event listener
+        newField.addEventListener('input', function(e) {
+          console.log('💰 Sale value changed:', e.target.value);
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+          calculateDamagedSaleReport(helper, marketValue);
+        });
+        
+        // Replace the problematic field
+        parent.replaceChild(newField, saleField);
+        console.log('✅ saleValueDamage field replaced with editable version');
+        
+        return newField;
+      }
+      return null;
+    }
+
     // Load differential data on page load
     document.addEventListener('DOMContentLoaded', function() {
       console.log('📖 Loading saved differential data...');
       setTimeout(loadDifferentialData, 1000); // Increased delay to ensure all other loading is complete
+      
+      // Also fix the sale value field
+      setTimeout(forceSaleValueDamageEditable, 1500);
     });
     
     // Also try loading after the main data loading is complete
