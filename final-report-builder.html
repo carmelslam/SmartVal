@@ -2613,8 +2613,14 @@
         }
         
         // Load saved final report notes if available
-        if (helper.final_report?.notes) {
-          document.getElementById('additional-notes').value = helper.final_report.notes;
+        // Check both 'notes' (from save) and 'comments' (from real-time save)
+        const additionalNotesField = document.getElementById('additional-notes');
+        if (additionalNotesField) {
+          const savedNotes = helper.final_report?.notes || helper.final_report?.comments || '';
+          if (savedNotes) {
+            additionalNotesField.value = savedNotes;
+            console.log('✅ Loaded additional notes from helper:', savedNotes.substring(0, 50) + '...');
+          }
         }
         
         // Add event listeners for real-time calculations
@@ -7622,12 +7628,15 @@
           if (!helper.final_report) {
             helper.final_report = {};
           }
+          // Save to both 'comments' and 'notes' for consistency
           helper.final_report.comments = additionalNotesArea.value;
+          helper.final_report.notes = additionalNotesArea.value;
           
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // ✅ BIDIRECTIONAL INTEGRATION: Update builder state in real-time
           updateBuilderCurrentState('final_report.comments', additionalNotesArea.value);
+          updateBuilderCurrentState('final_report.notes', additionalNotesArea.value);
         }
         
         // Save on input
