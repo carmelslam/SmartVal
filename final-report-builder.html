@@ -2532,6 +2532,38 @@
       }
     }
 
+    // LOAD ADDITIONAL NOTES FIELD
+    function loadAdditionalNotesField() {
+      try {
+        const helper = window.helper || {};
+        const additionalNotesField = document.getElementById('additional-notes');
+        
+        if (additionalNotesField) {
+          // Check both 'notes' (from save) and 'comments' (from real-time save)
+          const savedNotes = helper.final_report?.notes || helper.final_report?.comments || '';
+          
+          console.log('🔍 Loading additional notes field:', {
+            fieldExists: true,
+            notes: helper.final_report?.notes,
+            comments: helper.final_report?.comments,
+            savedNotes: savedNotes,
+            currentValue: additionalNotesField.value
+          });
+          
+          if (savedNotes) {
+            additionalNotesField.value = savedNotes;
+            console.log('✅ Additional notes loaded successfully:', savedNotes.substring(0, 50) + '...');
+          } else {
+            console.log('⚠️ No saved notes found in helper');
+          }
+        } else {
+          console.log('❌ Additional notes field not found in DOM');
+        }
+      } catch (error) {
+        console.error('❌ Error loading additional notes:', error);
+      }
+    }
+
     // LOAD SUMMARY DATA AND CALCULATIONS
     function loadSummaryData(helper) {
       try {
@@ -2617,10 +2649,20 @@
         const additionalNotesField = document.getElementById('additional-notes');
         if (additionalNotesField) {
           const savedNotes = helper.final_report?.notes || helper.final_report?.comments || '';
+          console.log('🔍 Checking for additional notes:', {
+            notes: helper.final_report?.notes,
+            comments: helper.final_report?.comments,
+            savedNotes: savedNotes
+          });
+          
           if (savedNotes) {
             additionalNotesField.value = savedNotes;
             console.log('✅ Loaded additional notes from helper:', savedNotes.substring(0, 50) + '...');
+          } else {
+            console.log('⚠️ No saved notes found in helper');
           }
+        } else {
+          console.log('❌ Additional notes field not found in DOM');
         }
         
         // Add event listeners for real-time calculations
@@ -5340,21 +5382,6 @@
       }
     }
     
-    // LOAD SUMMARY DATA AND CALCULATIONS
-    function loadSummaryData(helper) {
-      try {
-        // Set report type based on final report type selection
-        const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
-        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
-        document.getElementById('reportType').value = reportTypeText;
-        
-        // Implementation continues...
-        
-      } catch (error) {
-        console.error('Error loading summary data:', error);
-      }
-    }
-    
     /**
      * Enhanced two-way data binding: sync individual adjustment changes to helper
      */
@@ -7518,6 +7545,11 @@
         loadClaimsDataToUI(); // Load claims data to UI fields
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
+        
+        // Load additional notes field separately with extra delay
+        setTimeout(() => {
+          loadAdditionalNotesField();
+        }, 500);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first
         console.log('ℹ️ Waiting for helper.js to load before initializing admin hub communication...');
