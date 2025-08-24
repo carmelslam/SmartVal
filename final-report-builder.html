@@ -11674,7 +11674,46 @@
           console.warn('⚠️ No total claim found in helper');
         }
         
-        // TASK 3: Ensure manual input fields are enabled and working
+        // TASK 3: Fix Depreciation Compensation field population for ALL variants
+        const depCompensation = helper.depreciation?.globalDepValue || 
+                               helper.depreciation?.total_compensation ||
+                               helper.calculations?.depreciation_value || 0;
+        
+        if (depCompensation > 0) {
+          console.log(`💰 Found depreciation compensation: ₪${depCompensation.toLocaleString()}`);
+          
+          // Populate ALL depreciation compensation fields across variants  
+          const allDepFields = [
+            'depCompensation',        // Static Private report
+            'depCompensationPrivate', // Dynamic Private report  
+            'depCompensationGlobal',  // Global report
+            'sumDepreciation',        // Global dynamic report
+            'sumDepreciationDefault'  // Default report
+          ];
+          
+          allDepFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+              field.value = `₪${depCompensation.toLocaleString()}`;
+              field.style.backgroundColor = '#e8f5e8'; // Show it's auto-populated
+              console.log(`✅ Populated ${fieldId} with ₪${depCompensation.toLocaleString()}`);
+            } else {
+              console.warn(`⚠️ Depreciation field not found: ${fieldId}`);
+            }
+          });
+          
+          // Update helper structure  
+          if (!helper.final_report) helper.final_report = {};
+          if (!helper.final_report.summary) helper.final_report.summary = {};
+          helper.final_report.summary.dep_compensation = `₪${depCompensation.toLocaleString()}`;
+          helper.final_report.summary.dep_compensation_private = `₪${depCompensation.toLocaleString()}`;
+          helper.final_report.summary.depreciation_global = `₪${depCompensation.toLocaleString()}`;
+          
+        } else {
+          console.warn('⚠️ No depreciation compensation found in helper');
+        }
+        
+        // TASK 4: Ensure manual input fields are enabled and working
         const manualInputFields = [
           'saleValueDamage',    // ערך המכירה במצבו הניזוק
           'salvageValueTotal',  // ערך שרידי הרכב (Total Loss)
