@@ -1412,7 +1412,7 @@
         <div class="form-grid">
           <div>
             <label style="color: #333;">סה״כ נכלל בחוות הדעת (לפני הפרשים):</label>
-            <input type="text" id="sumTotal1" style="background: white; color: #333;" />
+            <input type="text" id="sumTotalBeforeDifferentials" style="background: white; color: #333;" />
           </div>
           <div id="sumTotalAfterDifferentials-private" style="display:none;">
             <label style="color: #333;">סה״כ סופי (לאחר הפרשים):</label>
@@ -2648,6 +2648,7 @@
     // Helper function to get mapping key for field ID
     function getHelperMappingKey(fieldId) {
       const comprehensiveMapping = {
+        // Original fields
         'sumMarketValue': 'market_value',
         'sumMarketValueGlobal': 'market_value_global',
         'sumMarketValueDamage': 'market_value_damage',
@@ -2655,6 +2656,20 @@
         'sumMarketValueLegal': 'market_value_legal',
         'sumClaim': 'total_claim',
         'depCompensation': 'dep_compensation',
+        
+        // Dynamic variant-specific fields (unique IDs)
+        'sumMarketValuePrivate': 'market_value_private',
+        'sumClaimPrivate': 'total_claim_private',
+        'depCompensationPrivate': 'dep_compensation_private',
+        'sumTotalPrivate': 'total_private',
+        'sumTotalGlobalDynamic': 'total_global_dynamic',
+        'sumMarketValueDefault': 'market_value_default',
+        'sumClaimDefault': 'total_claim_default',
+        'sumDepreciationDefault': 'depreciation_default',
+        'sumAdjustmentsDefault': 'adjustments_default',
+        'sumTotalDefault': 'total_default',
+        
+        // Manual input fields
         'saleValueDamage': 'sale_value_damaged',
         'salvageValueTotal': 'salvage_value_total',
         'storageValueTotal': 'storage_towing_value_total',
@@ -11244,10 +11259,10 @@
       switch(reportType) {
         case 'חוות דעת פרטית':
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" readonly /></div>
-            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" readonly /></div>
-            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="depCompensation" style="background: white; color: #333;" readonly /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת (לפני הפרשים):</label><input type="text" id="sumTotal1" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValuePrivate" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaimPrivate" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="depCompensationPrivate" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת (לפני הפרשים):</label><input type="text" id="sumTotalPrivate" style="background: white; color: #333;" readonly /></div>
           `;
           break;
           
@@ -11257,7 +11272,7 @@
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumIncluded" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobal" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobalDynamic" style="background: white; color: #333;" /></div>
           `;
           break;
           
@@ -11288,10 +11303,10 @@
         default:
           // Default to private report structure
           summaryContent.innerHTML = `
-            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValue" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaim" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciation" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueDefault" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaimDefault" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="sumDepreciationDefault" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustmentsDefault" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalDefault" style="background: white; color: #333;" /></div>
           `;
       }
@@ -11379,7 +11394,7 @@
       const calculatedTotal = (parseFloat(totalClaim) || 0) + (parseFloat(depCompensation) || 0) + (parseFloat(adjustments) || 0);
       
       // Update UI fields
-      const totalField = document.getElementById('sumTotal1');
+      const totalField = document.getElementById('sumTotalPrivate');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
         helper.final_report.summary.private_total = totalField.value;
@@ -11399,8 +11414,8 @@
       // Calculation: Total Claim + Depreciation Compensation  
       const calculatedTotal = (parseFloat(totalClaim) || 0) + depCompensation;
       
-      // Update UI fields
-      const totalField = document.getElementById('sumTotalGlobal');
+      // Update UI fields - try both static and dynamic elements
+      const totalField = document.getElementById('sumTotalGlobal') || document.getElementById('sumTotalGlobalDynamic');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
         helper.final_report.summary.global_total = totalField.value;
@@ -12010,10 +12025,10 @@
       // Get the "before differentials" values and calculate "after differentials"
       
       // Private summary
-      const sumTotal1 = parseFloat(document.getElementById('sumTotal1')?.value?.replace(/[₪,]/g, '') || '0') || 0;
+      const sumTotalBeforeDiff = parseFloat(document.getElementById('sumTotalBeforeDifferentials')?.value?.replace(/[₪,]/g, '') || '0') || 0;
       const sumTotalFinalField = document.getElementById('sumTotalFinal');
       if (sumTotalFinalField) {
-        const finalValue = sumTotal1 - differentialsTotal;
+        const finalValue = sumTotalBeforeDiff - differentialsTotal;
         sumTotalFinalField.value = `₪${finalValue.toLocaleString()}`;
       }
       
