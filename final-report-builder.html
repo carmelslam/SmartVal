@@ -13832,9 +13832,32 @@
           newField.placeholder = fieldConfig.placeholder;
           newField.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white; color: #333;';
           
-          // Add event listener with specific callback
+          // LOAD SAVED VALUE FROM HELPER
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const helperKey = getHelperMappingKey(fieldConfig.id);
+          if (helperKey && helper.final_report?.summary?.[helperKey]) {
+            newField.value = helper.final_report.summary[helperKey];
+            console.log(`📖 Restored ${fieldConfig.id} value: ${newField.value}`);
+          }
+          
+          // Add event listener with specific callback AND persistence
           newField.addEventListener('input', function(e) {
             console.log(`💰 ${fieldConfig.label} changed:`, e.target.value);
+            
+            // Save to helper immediately
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (!helper.final_report) helper.final_report = {};
+            if (!helper.final_report.summary) helper.final_report.summary = {};
+            
+            const helperKey = getHelperMappingKey(fieldConfig.id);
+            if (helperKey) {
+              helper.final_report.summary[helperKey] = e.target.value;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              window.helper = helper;
+              console.log(`💾 Saved ${fieldConfig.id} to helper.final_report.summary.${helperKey}`);
+            }
+            
+            // Trigger calculation
             if (fieldConfig.callback) {
               fieldConfig.callback();
             }
