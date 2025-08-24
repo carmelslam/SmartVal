@@ -11445,10 +11445,23 @@
       // 1. BEFORE DIFFERENTIALS: Total Claim + Depreciation Compensation (like Private)
       const beforeDifferentials = totalClaim + depCompensation;
       
-      // 2. Get total differentials value
+      // 2. Get total differentials value from the correct source
       let totalDifferentials = 0;
-      if (helper.adjustments?.total_adjustments) {
-        totalDifferentials = parseFloat(String(helper.adjustments.total_adjustments).replace(/[₪,]/g, '')) || 0;
+      
+      // Check helper.final_report.differential (where differentials are actually saved)
+      if (helper.final_report?.differential?.summary?.total_amount_with_vat) {
+        totalDifferentials = parseFloat(String(helper.final_report.differential.summary.total_amount_with_vat).replace(/[₪,]/g, '')) || 0;
+      }
+      // Also check the alternative field name
+      else if (helper.final_report?.differential?.summary?.total_with_vat) {
+        totalDifferentials = parseFloat(String(helper.final_report.differential.summary.total_with_vat).replace(/[₪,]/g, '')) || 0;
+      }
+      // Fallback to DOM elements if helper data not available
+      else {
+        const totalDiffField = document.getElementById('totalDifferentialsWithVAT');
+        if (totalDiffField && totalDiffField.textContent) {
+          totalDifferentials = parseFloat(String(totalDiffField.textContent).replace(/[₪,]/g, '')) || 0;
+        }
       }
       
       // 3. AFTER DIFFERENTIALS: Before Differentials - Total Differentials  
@@ -11479,6 +11492,7 @@
       helper.final_report.summary.global_after_differentials = `₪${afterDifferentials.toLocaleString()}`;
       
       console.log(`Global calculation: Before=${totalClaim} + ${depCompensation} = ${beforeDifferentials}, After=${beforeDifferentials} - ${totalDifferentials} = ${afterDifferentials}`);
+      console.log(`Total differentials source: helper.final_report.differential.summary.total_with_vat = ${totalDifferentials}`);
       return { beforeDifferentials, afterDifferentials };
     }
     
@@ -12322,6 +12336,16 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('💾 Auto-saved differentials to helper:', helper.final_report.differential);
+      
+      // Trigger Global report recalculation if Global report is active
+      setTimeout(() => {
+        const sumTotalGlobalField = document.getElementById('sumTotalGlobal');
+        if (sumTotalGlobalField && sumTotalGlobalField.offsetParent !== null) { // Check if visible
+          const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+          calculateGlobalReport(helper, marketValue);
+          console.log('🔄 Triggered Global report recalculation due to differentials change');
+        }
+      }, 100);
     }
     
     function updateDifferentialsSummary() {
