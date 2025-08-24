@@ -13519,14 +13519,58 @@
       generateFinalReport();
     };
 
-    // ESTIMATE FUNCTIONS - NEW ADDITION
-    window.fetchEstimatePDF = async function() {
-      const helper = sessionStorage.getItem('helper');
-      const helperData = helper ? JSON.parse(helper) : {};
-      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
+    // EXPERTISE FETCH FUNCTION - Uses input field for flexibility
+    window.fetchExpertisePDF = async function() {
+      // FETCH functions use input field for flexibility (can load any case)
+      const plateInput = document.getElementById('builderPlateInput');
+      const plateNumber = plateInput ? plateInput.value.trim() : '';
       
       if (!plateNumber) {
-        alert('מספר רכב לא נמצא בנתוני המערכת');
+        alert('אנא הכנס מספר רכב בשדה "טען תיק קיים"');
+        return;
+      }
+      
+      const fetchBtn = document.getElementById('fetchExpertiseBtn');
+      const originalText = fetchBtn.textContent;
+      
+      try {
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = 'טוען PDF...';
+        
+        const helper = sessionStorage.getItem('helper');
+        const caseData = helper ? JSON.parse(helper) : null;
+        const payload = {
+          plate: plateNumber,
+          case_id: caseData?.meta?.case_id,
+          document_type: 'expertise'
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('FETCH_EXPERTISE_PDF', payload);
+        
+        if (response?.success && response?.pdf_url) {
+          showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+        } else {
+          alert('אקספירטיזה לא נמצאה במערכת או לא הופקה עדיין');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching expertise PDF:', error);
+        alert('שגיאה בטעינת אקספירטיזה PDF');
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = originalText;
+      }
+    };
+
+    // ESTIMATE FUNCTIONS - NEW ADDITION
+    window.fetchEstimatePDF = async function() {
+      // FETCH functions use input field for flexibility (can load any case)
+      const plateInput = document.getElementById('builderPlateInput');
+      const plateNumber = plateInput ? plateInput.value.trim() : '';
+      
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב בשדה "טען תיק קיים"');
         return;
       }
       
@@ -13561,13 +13605,58 @@
       }
     };
 
-    window.requestEstimateReport = async function() {
+    // EXPERTISE CALL FUNCTION - Uses session data for current case
+    window.reloadExpertiseReport = async function() {
+      // CALL functions use current session data (working on existing case)
       const helper = sessionStorage.getItem('helper');
       const helperData = helper ? JSON.parse(helper) : {};
       const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
       
       if (!plateNumber) {
-        alert('מספר רכב לא נמצא בנתוני המערכת');
+        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
+        return;
+      }
+      
+      const requestBtn = document.getElementById('requestExpertiseBtn');
+      const originalText = requestBtn.textContent;
+      
+      try {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'שולח בקשה...';
+        
+        const payload = {
+          plate: plateNumber,
+          case_id: helperData?.meta?.case_id,
+          report_type: 'expertise',
+          helper_data: helperData
+        };
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_EXPERTISE', payload);
+        
+        if (response?.success) {
+          alert(response.message || 'בקשה לאקספירטיזה נשלחה בהצלחה! תקבל התראה כשהקובץ יהיה מוכן.');
+        } else {
+          alert('שגיאה בשליחת בקשה לאקספירטיזה');
+        }
+        
+      } catch (error) {
+        console.error('Error requesting expertise:', error);
+        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
+      }
+    };
+
+    window.requestEstimateReport = async function() {
+      // CALL functions use current session data (working on existing case)
+      const helper = sessionStorage.getItem('helper');
+      const helperData = helper ? JSON.parse(helper) : {};
+      const plateNumber = helperData.plate || helperData.מספר_רכב || helperData['מס רכב'];
+      
+      if (!plateNumber) {
+        alert('מספר רכב לא נמצא בנתוני המערכת הנוכחית');
         return;
       }
       
