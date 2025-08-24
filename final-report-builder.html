@@ -13774,35 +13774,77 @@
     // Expose refresh function globally
     window.refreshAllCalculations = refreshAllCalculations;
     
-    // SPECIFIC FIX FOR saleValueDamage FIELD
-    function forceSaleValueDamageEditable() {
-      const saleField = document.getElementById('saleValueDamage');
-      if (saleField) {
-        console.log('🚨 FORCING saleValueDamage to be editable...');
-        
-        // Nuclear option - completely reset the field
-        const parent = saleField.parentNode;
-        const newField = document.createElement('input');
-        newField.type = 'text';
-        newField.id = 'saleValueDamage';
-        newField.placeholder = 'הזן ערך המכירה...';
-        newField.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white; color: #333;';
-        
-        // Add event listener
-        newField.addEventListener('input', function(e) {
-          console.log('💰 Sale value changed:', e.target.value);
-          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-          calculateDamagedSaleReport(helper, marketValue);
-        });
-        
-        // Replace the problematic field
-        parent.replaceChild(newField, saleField);
-        console.log('✅ saleValueDamage field replaced with editable version');
-        
-        return newField;
-      }
-      return null;
+    // NUCLEAR FIX FOR ALL MANUAL INPUT FIELDS
+    function forceManualFieldsEditable() {
+      const fieldsToFix = [
+        {
+          id: 'saleValueDamage',
+          placeholder: 'הזן ערך המכירה...',
+          label: 'Sale Value Damage',
+          callback: function() {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateDamagedSaleReport(helper, marketValue);
+          }
+        },
+        {
+          id: 'salvageValueTotal',
+          placeholder: 'הזן ערך שרידים...',
+          label: 'Salvage Value Total',
+          callback: function() {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateTotalLossReport(helper, marketValue);
+          }
+        },
+        {
+          id: 'storageValueTotal',
+          placeholder: 'הזן עלות גרירה ואחסנה...',
+          label: 'Storage Value Total',
+          callback: function() {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateTotalLossReport(helper, marketValue);
+          }
+        },
+        {
+          id: 'salvageValueLegal',
+          placeholder: 'הזן ערך שרידים...',
+          label: 'Salvage Value Legal',
+          callback: function() {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
+            calculateLegalLossReport(helper, marketValue);
+          }
+        }
+      ];
+
+      fieldsToFix.forEach(fieldConfig => {
+        const field = document.getElementById(fieldConfig.id);
+        if (field) {
+          console.log(`🚨 FORCING ${fieldConfig.id} to be editable...`);
+          
+          // Nuclear option - completely reset the field
+          const parent = field.parentNode;
+          const newField = document.createElement('input');
+          newField.type = 'text';
+          newField.id = fieldConfig.id;
+          newField.placeholder = fieldConfig.placeholder;
+          newField.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white; color: #333;';
+          
+          // Add event listener with specific callback
+          newField.addEventListener('input', function(e) {
+            console.log(`💰 ${fieldConfig.label} changed:`, e.target.value);
+            if (fieldConfig.callback) {
+              fieldConfig.callback();
+            }
+          });
+          
+          // Replace the problematic field
+          parent.replaceChild(newField, field);
+          console.log(`✅ ${fieldConfig.id} field replaced with editable version`);
+        }
+      });
     }
 
     // Load differential data on page load
@@ -13810,8 +13852,8 @@
       console.log('📖 Loading saved differential data...');
       setTimeout(loadDifferentialData, 1000); // Increased delay to ensure all other loading is complete
       
-      // Also fix the sale value field
-      setTimeout(forceSaleValueDamageEditable, 1500);
+      // Fix all manual input fields
+      setTimeout(forceManualFieldsEditable, 1500);
     });
     
     // Also try loading after the main data loading is complete
