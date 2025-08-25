@@ -1313,15 +1313,7 @@
       </label>
       
       <div id="differentialsTable" style="display:none; margin-top:15px;">
-        <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr 120px 120px 120px 80px; gap:10px; font-weight:600; margin-bottom:10px; background:#f8f9fa; padding:10px; border-radius:6px;">
-          <div><label>חלק:</label></div>
-          <div><label>מהות ההפרש:</label></div>
-          <div><label>סיבת ההפרש:</label></div>
-          <div><label>מחיר ללא מע"מ:</label></div>
-          <div><label>ערך מע"מ:</label></div>
-          <div><label>מחיר עם מע"מ:</label></div>
-          <div><label>פעולות:</label></div>
-        </div>
+        <!-- Mobile-optimized header - No static header needed for 2-row layout -->
         <div id="differentialsRows"></div>
         <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
       </div>
@@ -12206,13 +12198,11 @@
     function createDifferentialRow(data = {}) {
       const div = document.createElement('div');
       div.className = 'differential-row';
-      div.style.display = 'grid';
-      div.style.gridTemplateColumns = '1fr 1fr 1fr 120px 120px 120px 80px';
-      div.style.gap = '14px';
-      div.style.marginBottom = '10px';
-      div.style.padding = '10px';
+      div.style.marginBottom = '20px';
+      div.style.padding = '15px';
       div.style.background = '#f8fafc';
-      div.style.borderRadius = '6px';
+      div.style.borderRadius = '8px';
+      div.style.border = '1px solid #e2e8f0';
       
       // Get VAT rate based on company selection
       const vatRate = getVatRate();
@@ -12220,31 +12210,72 @@
       const vat = Math.round(amount * vatRate);
       const totalWithVat = amount + vat;
       
-      // CORRECTED: Ensure we use the correct data structure - clear any wrong legacy data
       console.log('🔍 Creating differential row with data:', data);
       
       div.innerHTML = `
-        <div>
-          <input type="text" class="diff-part" placeholder="חלק" value="${data.part || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        <!-- Row 1: Details (3 fields) - Responsive -->
+        <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">חלק</label>
+            <input type="text" class="diff-part" placeholder="הזן חלק" value="${data.part || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מהות ההפרש</label>
+            <input type="text" class="diff-nature" placeholder="הזן מהות" value="${data.nature || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">סיבת ההפרש</label>
+            <input type="text" class="diff-reason" placeholder="הזן סיבה" value="${data.reason || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
         </div>
-        <div>
-          <input type="text" class="diff-nature" placeholder="מהות ההפרש" value="${data.nature || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        
+        <!-- Row 2: Costs (3 fields) - Responsive -->
+        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר ללא מע״מ</label>
+            <input type="number" class="diff-amount" placeholder="0" value="${amount}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">ערך מע״מ</label>
+            <input type="number" class="diff-vat" placeholder="0" value="${vat}" readonly style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f1f5f9; font-size:14px; color:#64748b;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר עם מע״מ</label>
+            <input type="number" class="diff-total" placeholder="0" value="${totalWithVat}" readonly style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f1f5f9; font-size:14px; color:#64748b;">
+          </div>
         </div>
-        <div>
-          <input type="text" class="diff-reason" placeholder="סיבת ההפרש" value="${data.reason || ''}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
+        
+        <!-- Remove button -->
+        <div style="text-align: center; margin-top: 15px;">
+          <button type="button" class="btn-remove" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:14px; transition: all 0.2s;">🗑️ הסר הפרש</button>
         </div>
-        <div>
-          <input type="number" class="diff-amount" placeholder="מחיר ללא מע״מ" value="${amount}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;">
-        </div>
-        <div>
-          <input type="number" class="diff-vat" placeholder="ערך מע״מ" value="${vat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
-        </div>
-        <div>
-          <input type="number" class="diff-total" placeholder="מחיר עם מע״מ" value="${totalWithVat}" readonly style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; background:#f4f6fa;">
-        </div>
-        <div>
-          <button type="button" class="btn-remove" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">✕</button>
-        </div>
+        
+        <!-- Mobile-specific CSS -->
+        <style>
+          @media (max-width: 768px) {
+            .diff-details-row, .diff-costs-row {
+              grid-template-columns: 1fr !important;
+              gap: 15px !important;
+            }
+            .differential-row {
+              padding: 12px !important;
+              margin-bottom: 15px !important;
+            }
+            .diff-details-row input, .diff-costs-row input {
+              padding: 12px !important;
+              font-size: 16px !important; /* Prevents zoom on iOS */
+            }
+          }
+          
+          @media (max-width: 480px) {
+            .diff-details-row, .diff-costs-row {
+              gap: 10px !important;
+            }
+            .differential-row {
+              padding: 10px !important;
+            }
+          }
+        </style>
       `;
       
       // Add event listeners
