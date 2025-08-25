@@ -2312,13 +2312,15 @@
       const urlParams = new URLSearchParams(window.location.search);
       const fromExpertise = urlParams.get('from') === 'expertise';
       const skipValidation = urlParams.get('skipValidation') === 'true';
+      const fromFinalReportBuilder = referrer.includes('final-report-builder') || sessionStorage.getItem('fromFinalReportBuilder') === 'true';
       
       // Check if report is finalized
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const isFinalized = helper.meta?.finalized === true || helper.meta?.estimate_finalized === true;
       
-      // If accessed from expertise or not finalized, show draft with watermark
-      if (fromExpertise || skipValidation || referrer.includes('expertise') || workflowMode === 'draft_view' || !isFinalized) {
+      // If accessed from final-report-builder, expertise, or skip validation flags, show draft with watermark
+      if (fromFinalReportBuilder || fromExpertise || skipValidation || referrer.includes('expertise') || workflowMode === 'draft_view' || !isFinalized) {
+        console.log('✅ Skipping validation - accessed from final report builder or other bypass mode');
         return 'draft'; // No validation required, read-only with watermark
       }
       
