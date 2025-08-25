@@ -1727,29 +1727,6 @@
   <script src="legal-text-engine.js"></script>
   
   <script>
-    // Manual function to force populate fields from damage assessment totals
-    window.forcePopulateFields = function() {
-      const helper = window.helper || {};
-      const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-      
-      // Force populate totalClaimGross
-      const totalClaimGrossInput = document.getElementById('totalClaimGross');
-      if (totalClaimGrossInput) {
-        totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-        console.log('✅ Force populated totalClaimGross:', totalClaimGrossInput.value);
-      }
-      
-      // Force populate authorizedClaim  
-      const authorizedClaimInput = document.getElementById('authorizedClaim');
-      if (authorizedClaimInput) {
-        authorizedClaimInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-        console.log('✅ Force populated authorizedClaim:', authorizedClaimInput.value);
-        // Trigger change event to update helper
-        authorizedClaimInput.dispatchEvent(new Event('change'));
-      }
-      
-      return totalWithVAT;
-    };
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
     window.toggleFloatingScreen = function(screenType) {
@@ -2572,7 +2549,7 @@
         if (authorizedClaimField) {
           // ✅ FIX: Check both save locations - section save and individual field save
           const sectionSavedValue = helper.manual_gross_result?.authorizedClaim;
-          const claimsSavedValue = helper.claims_data?.total_claim;
+          const claimsSavedValue = helper.claims_data?.total_claim || helper.claims_data?.authorized_claim;
           const autoValue = helper.damage_assessment?.totals?.Total_with_VAT || 0;
 
           if (sectionSavedValue && sectionSavedValue !== '' && sectionSavedValue !== '00' && sectionSavedValue !== '0') {
