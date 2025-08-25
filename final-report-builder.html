@@ -887,15 +887,22 @@
     
     <!-- Plate Input and Document Actions Section -->
     <div class="plate-actions-section">
-      <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); loadExistingCaseForBuilder();" autocomplete="off">
+      <!-- Separate the plate input from password to prevent browser interference -->
+      <div style="margin-bottom: 15px;">
+        <div style="display: inline-block; margin-left: 15px;">
+          <label for="builderPlateInput" style="display: block; margin-bottom: 5px;">מספר רכב:</label>
+          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="off" autocapitalize="none" spellcheck="false" style="-webkit-text-security: none !important; text-security: none !important; font-family: inherit !important;" inputmode="numeric" data-no-password="true">
+        </div>
+      </div>
+      
+      <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); const plateInput = document.getElementById('builderPlateInput'); if (plateInput && typeof loadExistingCaseForBuilder === 'function') { loadExistingCaseForBuilder(); }" autocomplete="off">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
-          <div>
-            <label>מספר רכב:</label>
-            <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="new-password" autocapitalize="none" spellcheck="false" style="-webkit-text-security: none; text-security: none;">
-          </div>
           <div>
             <label>סיסמה (אופציונלי):</label>
             <input type="password" id="builderPasswordInput" placeholder="סיסמה לאימות נתונים" autocomplete="current-password">
+          </div>
+          <div style="display: flex; align-items: end;">
+            <!-- Spacer div -->
           </div>
         </div>
         
@@ -14071,6 +14078,38 @@
     console.log('✅ Local generation functions defined:', {
       generateEstimateReport: typeof window.generateEstimateReport,
       generateExpertiseReport: typeof window.generateExpertiseReport
+    });
+    
+    // FORCE PLATE INPUT TO BE PLAIN TEXT - No password behavior
+    window.forcePlateInputAsText = function() {
+      const plateInput = document.getElementById('builderPlateInput');
+      if (plateInput) {
+        // Force type to text and remove any password-like styling
+        plateInput.type = 'text';
+        plateInput.style.webkitTextSecurity = 'none';
+        plateInput.style.textSecurity = 'none';
+        plateInput.style.fontFamily = 'inherit';
+        
+        // Force redraw by changing a property
+        const currentValue = plateInput.value;
+        plateInput.value = '';
+        plateInput.value = currentValue;
+        
+        console.log('🔢 Forced plate input to display as plain text');
+      }
+    };
+    
+    // Apply the fix immediately and on DOM ready
+    setTimeout(window.forcePlateInputAsText, 100);
+    document.addEventListener('DOMContentLoaded', window.forcePlateInputAsText);
+    
+    // Also apply on any interaction with the field
+    document.addEventListener('DOMContentLoaded', function() {
+      const plateInput = document.getElementById('builderPlateInput');
+      if (plateInput) {
+        plateInput.addEventListener('focus', window.forcePlateInputAsText);
+        plateInput.addEventListener('input', window.forcePlateInputAsText);
+      }
     });
     
     // Test MathEngine loading
