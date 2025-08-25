@@ -14124,14 +14124,42 @@
         window.saveFinalReport();
       }
       
-      // Set report type and navigate to fee module (skip validation as requested)
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      sessionStorage.setItem('skipValidation', 'true');
-      sessionStorage.setItem('autoSelectReportType', 'estimate'); 
-      sessionStorage.setItem('skipReportTypeDialog', 'true');
-      console.log('🚀 Navigating to fee module for estimate generation...');
-      console.log('📋 Report type set to: estimate');
-      window.location.href = 'fee-module.html';
+      // Set multiple flags to ensure fee module gets the message
+      const reportConfig = {
+        selectedReportType: 'estimate',
+        skipValidation: true,
+        autoSelectReportType: 'estimate',
+        skipReportTypeDialog: true,
+        directGeneration: true,
+        fromFinalReportBuilder: true,
+        reportTypeSelected: true,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Set individual items
+      Object.keys(reportConfig).forEach(key => {
+        sessionStorage.setItem(key, String(reportConfig[key]));
+      });
+      
+      // Also set as complete config object
+      sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
+      
+      console.log('🚀 Navigating directly to estimate builder...');
+      console.log('📋 Report configuration set:', reportConfig);
+      
+      // Navigate directly to estimate builder, bypassing fee-module and report selection
+      setTimeout(() => {
+        const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+        const urlWithParams = `estimate-builder.html?plate=${encodeURIComponent(finalPlate)}`;
+        console.log('🎯 Direct navigation to estimate builder:', urlWithParams);
+        
+        try {
+          window.location.href = urlWithParams;
+        } catch (error) {
+          console.warn('⚠️ Direct navigation failed, trying fallback:', error);
+          window.location.href = 'estimate-builder.html';
+        }
+      }, 100);
     };
     
     window.generateExpertiseReport = function() {
@@ -14172,14 +14200,42 @@
         window.saveFinalReport();
       }
       
-      // Set report type and navigate to fee module (skip validation as requested)
-      sessionStorage.setItem('selectedReportType', 'expertise');  
-      sessionStorage.setItem('skipValidation', 'true');
-      sessionStorage.setItem('autoSelectReportType', 'expertise'); 
-      sessionStorage.setItem('skipReportTypeDialog', 'true');
-      console.log('🚀 Navigating to fee module for expertise generation...');
-      console.log('📋 Report type set to: expertise');
-      window.location.href = 'fee-module.html';
+      // Set multiple flags to ensure fee module gets the message
+      const reportConfig = {
+        selectedReportType: 'expertise',
+        skipValidation: true,
+        autoSelectReportType: 'expertise',
+        skipReportTypeDialog: true,
+        directGeneration: true,
+        fromFinalReportBuilder: true,
+        reportTypeSelected: true,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Set individual items
+      Object.keys(reportConfig).forEach(key => {
+        sessionStorage.setItem(key, String(reportConfig[key]));
+      });
+      
+      // Also set as complete config object
+      sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
+      
+      console.log('🚀 Navigating directly to expertise builder...');
+      console.log('📋 Report configuration set:', reportConfig);
+      
+      // Navigate directly to expertise builder, bypassing fee-module and report selection
+      setTimeout(() => {
+        const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+        const urlWithParams = `expertise-builder.html?plate=${encodeURIComponent(finalPlate)}`;
+        console.log('🎯 Direct navigation to expertise builder:', urlWithParams);
+        
+        try {
+          window.location.href = urlWithParams;
+        } catch (error) {
+          console.warn('⚠️ Direct navigation failed, trying fallback:', error);
+          window.location.href = 'expertise-builder.html';
+        }
+      }, 100);
     };
     
     console.log('✅ Local generation functions defined:', {
