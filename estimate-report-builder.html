@@ -831,28 +831,29 @@
       const selectedReportType = sessionStorage.getItem('selectedReportType');
       const validationCompleted = sessionStorage.getItem('estimateValidationCompleted');
       
-      // Check if we should skip validation (coming from expertise) FIRST
+      // Check if we should skip validation (coming from expertise or final-report-builder) FIRST
       const urlParams = new URLSearchParams(window.location.search);
       const skipValidation = urlParams.get('skipValidation') === 'true';
       const fromExpertise = urlParams.get('from') === 'expertise';
+      const fromFinalReportBuilder = urlParams.get('fromFinalReportBuilder') === 'true' || sessionStorage.getItem('fromFinalReportBuilder') === 'true';
       
-      // Allow access if coming from expertise or skipping validation, even without selectedReportType
-      if (!helperData || (!skipValidation && !fromExpertise && selectedReportType !== 'estimate')) {
+      // Allow access if coming from final-report-builder, expertise or skipping validation, even without selectedReportType
+      if (!helperData || (!skipValidation && !fromExpertise && !fromFinalReportBuilder && selectedReportType !== 'estimate')) {
         console.error('❌ Missing required data for estimate report builder');
         alert('שגיאה: נתונים חסרים לבניית אומדן. חוזר לדף הבחירה...');
         window.location.href = 'selection.html';
         return;
       }
       
-      if (!validationCompleted && !skipValidation && !fromExpertise) {
+      if (!validationCompleted && !skipValidation && !fromExpertise && !fromFinalReportBuilder) {
         console.warn('⚠️ Validation not completed, redirecting to validation');
         alert('יש להשלים תחילה את תהליך האימות');
         window.location.href = 'estimate-validation.html';
         return;
       }
       
-      if (skipValidation || fromExpertise) {
-        console.log('✅ Validation skipped - accessed from expertise report');
+      if (skipValidation || fromExpertise || fromFinalReportBuilder) {
+        console.log('✅ Validation skipped - accessed from expertise report or final report builder');
       }
 
       console.log('✅ Estimate Report Builder: All validations passed');
