@@ -7852,6 +7852,18 @@
 
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
+      // Ensure floating PDF overlay is hidden on page load and setup controls
+      const overlay = document.getElementById('floatingPdfOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+        console.log('🔧 Ensured PiP overlay is hidden on page load');
+        
+        // Setup controls even if overlay is hidden, so they work when needed
+        setTimeout(() => {
+          setupFloatingPDFControlsOnLoad();
+        }, 500);
+      }
+      
       // Clean up deprecated data structures
       cleanupDeprecatedData();
       
@@ -10875,6 +10887,48 @@
       
       // Setup event listeners for controls
       setupFloatingPDFControls();
+    }
+    
+    // Global function to force close PiP overlay (for debugging)
+    window.forceClosePiP = function() {
+      const overlay = document.getElementById('floatingPdfOverlay');
+      const iframe = document.getElementById('pdfViewer');
+      if (overlay) {
+        overlay.style.display = 'none';
+        if (iframe) iframe.src = '';
+        console.log('🔧 Force closed PiP overlay');
+      }
+    };
+    
+    // Setup floating PDF controls on page load (separate from showFloatingPDF)
+    function setupFloatingPDFControlsOnLoad() {
+      const toggleBtn = document.getElementById('togglePdfBtn');
+      const closeBtn = document.getElementById('closePdfBtn');
+      const overlay = document.getElementById('floatingPdfOverlay');
+      
+      console.log('🔧 Setting up PiP controls on page load...', {
+        toggleBtn: !!toggleBtn,
+        closeBtn: !!closeBtn,
+        overlay: !!overlay
+      });
+      
+      // Remove any existing event listeners to avoid duplicates
+      if (closeBtn) {
+        closeBtn.onclick = null;
+        closeBtn.addEventListener('click', function() {
+          console.log('🔧 Close button clicked');
+          window.forceClosePiP();
+        });
+      }
+      
+      if (overlay) {
+        overlay.onclick = function(e) {
+          if (e.target === overlay) {
+            console.log('🔧 Overlay clicked, closing PiP');
+            window.forceClosePiP();
+          }
+        };
+      }
     }
     
     // Setup floating PDF controls with mobile optimization
