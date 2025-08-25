@@ -1727,24 +1727,6 @@
   <script src="legal-text-engine.js"></script>
   
   <script>
-    // Manual function to populate totalClaimGross and authorizedClaim fields
-    window.populateGrossFields = function() {
-      const helper = window.helper || {};
-      const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-      console.log('🔍 Manual populate - Total_with_VAT value:', totalWithVAT);
-      
-      const totalClaimGrossInput = document.getElementById('totalClaimGross');
-      if (totalClaimGrossInput && totalWithVAT > 0) {
-        totalClaimGrossInput.value = `₪${totalWithVAT.toLocaleString()}`;
-        console.log('✅ Populated totalClaimGross:', totalClaimGrossInput.value);
-      }
-      
-      const authorizedClaimInput = document.getElementById('authorizedClaim');
-      if (authorizedClaimInput && totalWithVAT > 0) {
-        authorizedClaimInput.value = `₪${totalWithVAT.toLocaleString()}`;
-        console.log('✅ Populated authorizedClaim:', authorizedClaimInput.value);
-      }
-    };
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
     window.toggleFloatingScreen = function(screenType) {
@@ -2479,7 +2461,6 @@
         const totalClaimGrossInput = document.getElementById('totalClaimGross');
         if (totalClaimGrossInput) {
           const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-          console.log('🔍 totalClaimGross - Reading Total_with_VAT:', totalWithVAT);
           totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
         
@@ -2570,7 +2551,6 @@
           const sectionSavedValue = helper.manual_gross_result?.authorizedClaim;
           const claimsSavedValue = helper.claims_data?.total_claim;
           const autoValue = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-          console.log('🔍 authorizedClaim - Reading Total_with_VAT:', autoValue);
 
           if (sectionSavedValue && sectionSavedValue !== '') {
             // Use section saved value (current save system)
@@ -11900,6 +11880,8 @@
           totalClaim = parseFloat(String(helper.damage_centers_summary.total_cost).replace(/[₪,]/g, '')) || 0;
         } else if (helper.calculations?.total_damage) {
           totalClaim = parseFloat(String(helper.calculations.total_damage).replace(/[₪,]/g, '')) || 0;
+        } else if (helper.damage_assessment?.totals?.Total_with_VAT) {
+          totalClaim = parseFloat(String(helper.damage_assessment.totals.Total_with_VAT).replace(/[₪,]/g, '')) || 0;
         }
         
         if (totalClaim > 0) {
