@@ -1011,7 +1011,7 @@
       <div style="margin-bottom: 15px;">
         <div style="display: inline-block; margin-left: 15px;">
           <label for="builderPlateInput" style="display: block; margin-bottom: 5px;">מספר רכב:</label>
-          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="off" autocapitalize="none" spellcheck="false" style="-webkit-text-security: none !important; text-security: none !important; font-family: inherit !important;" inputmode="numeric" data-no-password="true">
+          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="numeric" data-plate-field="true">
         </div>
       </div>
       
@@ -14378,22 +14378,22 @@
       generateExpertiseReport: typeof window.generateExpertiseReport
     });
     
-    // FORCE PLATE INPUT TO BE PLAIN TEXT - No password behavior
+    // FORCE PLATE INPUT TO BE PLAIN TEXT - Keep password type for autofill but prevent dots
     window.forcePlateInputAsText = function() {
       const plateInput = document.getElementById('builderPlateInput');
       if (plateInput) {
-        // Force type to text and remove any password-like styling
-        plateInput.type = 'text';
+        // Keep type as password for autofill, but override the visual display
         plateInput.style.webkitTextSecurity = 'none';
         plateInput.style.textSecurity = 'none';
         plateInput.style.fontFamily = 'inherit';
+        plateInput.style.letterSpacing = 'normal';
+        plateInput.style.fontSize = '16px';
         
-        // Force redraw by changing a property
-        const currentValue = plateInput.value;
-        plateInput.value = '';
-        plateInput.value = currentValue;
+        // Additional CSS to prevent password styling
+        plateInput.style.setProperty('-webkit-text-security', 'none', 'important');
+        plateInput.style.setProperty('text-security', 'none', 'important');
         
-        console.log('🔢 Forced plate input to display as plain text');
+        console.log('🔢 Plate input configured for autofill with plain text display');
       }
     };
     
@@ -14401,12 +14401,25 @@
     setTimeout(window.forcePlateInputAsText, 100);
     document.addEventListener('DOMContentLoaded', window.forcePlateInputAsText);
     
-    // Also apply on any interaction with the field
+    // Enhanced event listeners to maintain plain text display
     document.addEventListener('DOMContentLoaded', function() {
       const plateInput = document.getElementById('builderPlateInput');
       if (plateInput) {
+        // Apply fixes on various events
         plateInput.addEventListener('focus', window.forcePlateInputAsText);
         plateInput.addEventListener('input', window.forcePlateInputAsText);
+        plateInput.addEventListener('change', window.forcePlateInputAsText);
+        plateInput.addEventListener('keyup', window.forcePlateInputAsText);
+        plateInput.addEventListener('blur', window.forcePlateInputAsText);
+        
+        // Monitor for autofill
+        setInterval(function() {
+          if (plateInput.value && plateInput.style.webkitTextSecurity !== 'none') {
+            window.forcePlateInputAsText();
+          }
+        }, 500);
+        
+        console.log('✅ Enhanced plate input event listeners configured');
       }
     });
     
@@ -14581,5 +14594,6 @@
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
   <script src="invoice-details-floating.js"></script>
+  <script src="password-prefill.js"></script>
 </body>
 </html>
