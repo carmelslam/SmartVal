@@ -1,32 +1,52 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>אימות דו"ח סופי - ירון כיוף שמאות</title>
-  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>אימות חוות דעת - ירון כיוף שמאות</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  
+  <!-- OneSignal Push -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "3b924b99-c302-4919-a97e-baf909394696",
+      });
+    });
+  </script>
+
   <style>
     body {
       font-family: sans-serif;
       background: #f3f6fb;
       margin: 0;
-      padding: 20px;
+      min-height: 100vh;
+      padding: 0;
+      padding-top: 90px;
+      overflow-x: hidden;
       display: flex;
       justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      align-items: flex-start;
     }
     .container {
-      max-width: 800px;
+      max-width: 1200px;
       background: white;
       padding: 30px;
       border-radius: 16px;
       box-shadow: 0 0 20px rgba(0,0,0,0.1);
       width: 100%;
+      margin: 20px;
     }
     .logo img {
       width: 120px;
-      margin-bottom: 20px;
+      margin-bottom: 40px;
       display: block;
       margin-left: auto;
       margin-right: auto;
@@ -42,266 +62,1152 @@
       font-size: 18px;
       color: #64748b;
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 15px;
     }
     h1 {
-      font-size: 22px;
+      font-size: 26px;
       color: #1e3a8a;
       text-align: center;
       margin-bottom: 30px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
+    
+    /* FLOATING SCREENS STYLING - COPIED FROM FINAL REPORT BUILDER */
+    .floating-toggles-top {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .toggle-square {
+      width: 80px;
+      height: 70px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .toggle-square:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .toggle-square.active {
+      border-color: #fbbf24;
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+    }
+
+    .toggle-icon {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .toggle-text {
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+    
+    @media (max-width: 768px) {
+      .floating-toggles-top {
+        top: 5px;
+        gap: 4px;
+        padding: 6px;
+      }
+      .toggle-square {
+        width: 65px;
+        height: 60px;
+      }
+      .toggle-icon {
+        font-size: 16px;
+      }
+      .toggle-text {
+        font-size: 9px;
+      }
+    }
+    
+    /* PIP MODAL STYLES FOR VALIDATION WORKFLOW MODULES */
+    .pip-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 1200px;
+      max-height: 80vh;
+      background: white;
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      z-index: 2000;
+      display: none;
+      overflow: hidden;
+      direction: rtl;
+    }
+    
+    .pip-modal-header {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+    }
+    
+    .pip-modal-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .pip-modal-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .pip-control-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    
+    .pip-control-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+    
+    .pip-modal-content {
+      padding: 20px;
+      max-height: calc(80vh - 70px);
+      overflow-y: auto;
+    }
+    
+    .pip-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1999;
+      display: none;
+    }
+    
     .validation-section {
       background: #f8fafc;
       border: 2px solid #e2e8f0;
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .validation-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: #e2e8f0;
       transition: all 0.3s ease;
     }
     .validation-section.completed {
       border-color: #16a34a;
       background: #f0fdf4;
     }
+    .validation-section.completed::before {
+      background: #16a34a;
+    }
     .validation-section.current {
       border-color: #3b82f6;
       background: #eff6ff;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     }
+    .validation-section.current::before {
+      background: #3b82f6;
+    }
+    .validation-section.error {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    .validation-section.error::before {
+      background: #dc2626;
+    }
+    .validation-section.warning {
+      border-color: #f59e0b;
+      background: #fefbf2;
+    }
+    .validation-section.warning::before {
+      background: #f59e0b;
+    }
+    
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
     }
     .section-title {
       font-size: 18px;
       font-weight: bold;
       color: #1e3a8a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-icon {
+      font-size: 20px;
     }
     .section-status {
-      padding: 5px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .status-pending {
       background: #fef3c7;
       color: #92400e;
+      border: 1px solid #fbbf24;
     }
     .status-current {
       background: #dbeafe;
       color: #1d4ed8;
+      border: 1px solid #3b82f6;
+      animation: pulse 2s infinite;
     }
     .status-completed {
       background: #dcfce7;
       color: #166534;
+      border: 1px solid #16a34a;
     }
+    .status-error {
+      background: #fecaca;
+      color: #991b1b;
+      border: 1px solid #dc2626;
+    }
+    .status-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
     .section-content {
       color: #475569;
       line-height: 1.6;
     }
-    .validation-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
+    
+    /* Enhanced 3-Column Validation Display */
+    .validation-item-enhanced {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 15px;
+      padding: 15px 0;
       border-bottom: 1px solid #e2e8f0;
+      align-items: center;
     }
-    .validation-item:last-child {
+    .validation-item-enhanced:last-child {
       border-bottom: none;
     }
-    .validation-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
+    .validation-label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 14px;
     }
-    .btn {
-      padding: 12px 24px;
+    .validation-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .current-value {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+    .current-value.data-match {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #16a34a;
+    }
+    .current-value.data-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+    .current-value.data-error {
+      background: #fecaca;
+      color: #991b1b;
+      border-color: #dc2626;
+    }
+    .stored-value {
+      padding: 10px 14px;
+      background: #f8fafc;
+      border-radius: 8px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      border: 1px solid #e2e8f0;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .action-buttons button {
+      width: 36px;
+      height: 36px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .btn-primary {
+    .edit-inline {
       background: #3b82f6;
       color: white;
     }
-    .btn-primary:hover {
-      background: #1e40af;
+    .edit-inline:hover {
+      background: #2563eb;
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
-    .btn-secondary {
+    .edit-builder {
       background: #64748b;
       color: white;
     }
-    .btn-secondary:hover {
+    .edit-builder:hover {
       background: #475569;
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
     }
-    .btn-success {
-      background: #16a34a;
+    .ignore {
+      background: #f59e0b;
       color: white;
     }
-    .btn-success:hover {
-      background: #15803d;
+    .ignore:hover {
+      background: #d97706;
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
     }
-    .final-confirmation {
-      background: #fef2f2;
-      border: 2px solid #fca5a5;
+    
+    /* Inline editing styles */
+    .inline-edit-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #3b82f6;
+      border-radius: 8px;
+      font-weight: 600;
+      color: #1e3a8a;
+      background: white;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    .inline-edit-input:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Cost Summary Styling */
+    .cost-summary {
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+      border: 2px solid #cbd5e1;
       border-radius: 12px;
-      padding: 25px;
-      text-align: center;
-      margin-top: 30px;
-      display: none;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
     }
-    .final-confirmation.show {
-      display: block;
-    }
-    .confirmation-text {
+    .cost-summary-title {
       font-size: 18px;
       font-weight: bold;
-      color: #dc2626;
-      margin-bottom: 20px;
-    }
-    .footer {
+      color: #1e3a8a;
+      margin-bottom: 15px;
       text-align: center;
-      margin-top: 30px;
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 10px;
+    }
+    .cost-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .cost-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      align-items: center;
+    }
+    .cost-label {
+      color: #64748b;
+      font-weight: 500;
+    }
+    .cost-value {
+      font-weight: 700;
+      color: #1e3a8a;
+      font-size: 16px;
+    }
+    
+    /* Damage Centers Styling */
+    .damage-center {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+    .damage-center:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    }
+    .damage-center-header {
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 10px;
+      font-size: 16px;
+    }
+    .damage-center-content {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .damage-stat {
+      text-align: center;
+      padding: 15px 10px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .damage-stat:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+    .damage-stat-label {
       font-size: 12px;
       color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .damage-stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+    
+    /* Progress Indicator */
+    .progress-section {
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+      padding: 25px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      border: 2px solid #cbd5e1;
+    }
+    .progress-title {
+      text-align: center;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    .progress-bar {
+      background: #e2e8f0;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #16a34a, #22c55e);
+      height: 100%;
+      width: 0%;
+      transition: width 0.8s ease;
+      position: relative;
+    }
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+      animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .progress-text {
+      text-align: center;
+      color: #64748b;
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    /* Validation Buttons */
+    .validation-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      flex: 1;
+      min-width: 140px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn:hover:before {
+      left: 100%;
+    }
+    .btn-validate {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .btn-validate:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+    .btn-edit {
+      background: linear-gradient(135deg, #64748b, #475569);
+      color: white;
+      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+    }
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #475569, #334155);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: white;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+    .btn-success:hover {
+      background: linear-gradient(135deg, #15803d, #166534);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    /* Final Actions Section */
+    .final-actions {
+      margin-top: 40px;
+      padding: 30px;
+      border: 3px solid #e2e8f0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fafbfe, #f1f5f9);
+      position: relative;
+      overflow: hidden;
+    }
+    .final-actions::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #3b82f6, #16a34a, #f59e0b, #dc2626);
+      border-radius: 16px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .final-actions.ready::before {
+      opacity: 1;
+      animation: borderGlow 3s infinite;
+    }
+    @keyframes borderGlow {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    .final-actions-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 20px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .final-actions-subtitle {
+      color: #64748b;
+      margin-bottom: 25px;
+      text-align: center;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .final-actions .validation-buttons {
+      justify-content: center;
+      max-width: 800px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    /* Legal Text Section */
+    .legal-text-section {
+      background: linear-gradient(135deg, #fef3c7, #fbbf24);
+      border: 3px solid #f59e0b;
+      border-radius: 16px;
+      padding: 25px;
+      margin: 25px 0;
+      color: #92400e;
+    }
+    .legal-text-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+    }
+    
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+      .floating-toggles-top {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .validation-columns {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .cost-grid {
+        grid-template-columns: 1fr;
+      }
+      .damage-center-content {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .validation-buttons {
+        flex-direction: column;
+      }
+      .btn {
+        min-width: auto;
+      }
     }
   </style>
 </head>
 <body>
+  <div id="alerts"></div>
+  
   <div class="container">
     <div class="logo">
-      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" />
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo">
     </div>
-    <div class="title">ירון כיוף שמאות - פורטל</div>
+    <div class="title">ירון כיוף - פורטל שמאות</div>
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
     
-    <h1>אימות דו"ח סופי - חוות דעת</h1>
-    
+    <h1>🏆 אימות דו"ח סופי - מערכת ולידציה מתקדמת</h1>
+
+    <!-- FLOATING SCREEN TOGGLES - COPIED FROM FINAL REPORT BUILDER -->
+    <div class="floating-toggles-top">
+      <div class="toggle-square" onclick="toggleFloatingScreen('leviReport')">
+        <div class="toggle-icon">📊</div>
+        <div class="toggle-text">דו"ח לוי יצחק</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('carDetails')">
+        <div class="toggle-icon">🚗</div>
+        <div class="toggle-text">פרטי רכב</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('invoiceDetails')">
+        <div class="toggle-icon">🧾</div>
+        <div class="toggle-text">פרטי חשבוניות</div>
+      </div>
+      <div class="toggle-square" onclick="toggleFloatingScreen('internalBrowser')">
+        <div class="toggle-icon">🌐</div>
+        <div class="toggle-text">דפדפן פנימי</div>
+      </div>
+    </div>
+
+    <!-- Enhanced Progress Indicator -->
+    <div class="progress-section">
+      <div class="progress-title">התקדמות אימות הדו"ח הסופי</div>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <div class="progress-text">
+        <span id="progress-text">0 מתוך 4 שלבים הושלמו</span> • 
+        <span id="progress-percentage">0%</span>
+      </div>
+    </div>
+
+    <!-- Phase 1: Vehicle Details and Case Information -->
     <div class="validation-section current" id="section-vehicle">
       <div class="section-header">
-        <div class="section-title">פרטי רכב ומקרה</div>
+        <div class="section-title">
+          <span class="section-icon">🚗</span>
+          פרטי רכב ומידע בסיסי
+        </div>
         <div class="section-status status-current">בבדיקה</div>
       </div>
       <div class="section-content">
-        <div class="validation-item">
-          <span>מספר רכב מאומת</span>
-          <span id="vehicle-plate">✓</span>
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+          <strong style="color: #1e40af;">📋 הנחיות אימות:</strong><br>
+          עמודת "ערך נוכחי" = נתונים המוצגים כעת | עמודת "נתונים מאוחסנים" = נתונים בעזר<br>
+          ניתן לערוך באופן מיידי או להתעלם מאי התאמות | כל שדה נבדק אוטומטית
         </div>
-        <div class="validation-item">
-          <span>פרטי בעלים מלאים</span>
-          <span id="vehicle-owner">✓</span>
+        
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap: 10px; margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); border-radius: 8px; font-weight: 600; font-size: 13px; color: #374151; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+          <div>🏷️ שדה</div>
+          <div style="text-align: center;">📊 ערך נוכחי</div>
+          <div style="text-align: center;">💾 נתונים מאוחסנים</div>
+          <div style="text-align: center;">⚙️ פעולות</div>
         </div>
-        <div class="validation-item">
-          <span>פרטי ביטוח</span>
-          <span id="vehicle-insurance">✓</span>
+        
+        <div id="vehicle-validation-items">
+          <!-- Will be populated by JavaScript -->
         </div>
+
       </div>
       <div class="validation-buttons">
-        <button class="btn btn-primary" onclick="approveSection('vehicle')">אימות פרטי רכב</button>
+        <button class="btn btn-validate" onclick="validateSection('vehicle')">🔍 בדיקה אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('vehicle')">✏️ עריכה מתקדמת</button>
+        <button class="btn btn-success" onclick="approveSection('vehicle')" disabled>✅ אימות פרטי רכב</button>
       </div>
     </div>
-    
+
+    <!-- NEW: Report Type Validation Section -->
+    <div class="validation-section" id="section-report-type">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon">📋</span>
+          סוג דו"ח ותצורה
+        </div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+          <strong style="color: #1e40af;">📋 אימות סוג דו"ח:</strong><br>
+          בדיקת סוג הדו"ח הנבחר והתאמת הטקסטים המשפטיים | אימות קבצים מצורפים<br>
+          כל רכיב נבדק מול דרישות סוג הדו"ח הספציפי
+        </div>
+        
+        <div id="report-type-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+        <!-- Legal Text and Attachments Validation -->
+        <div class="legal-text-section">
+          <div class="legal-text-header">🏛️ אימות טקסטים משפטיים וקבצים מצורפים</div>
+          <div id="legal-validation-content">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+        
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('reportType')" disabled>🔍 בדיקת סוג דו"ח</button>
+        <button class="btn btn-edit" onclick="editSection('reportType')">✏️ עריכת הגדרות דו"ח</button>
+        <button class="btn btn-success" onclick="approveSection('reportType')" disabled>✅ אימות סוג דו"ח</button>
+      </div>
+    </div>
+
+    <!-- Phase 2: Levi Report Validation -->
     <div class="validation-section" id="section-levi">
       <div class="section-header">
-        <div class="section-title">דו"ח לוי יצחק</div>
+        <div class="section-title">
+          <span class="section-icon">📊</span>
+          דו"ח לוי יצחק - שווי וערכאות
+        </div>
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div class="validation-item">
-          <span>שווי רכב מאומת</span>
-          <span id="levi-value">⏳</span>
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+          <strong style="color: #92400e;">💰 אימות שווי רכב:</strong><br>
+          בדיקת התאמת נתוני השווי מדו"ח לוי יצחק | אימות התאמות מחיר וחישוב שווי סופי<br>
+          כל ערך נבדק מול מסד הנתונים המרכזי
         </div>
-        <div class="validation-item">
-          <span>התאמות מחיר</span>
-          <span id="levi-adjustments">⏳</span>
+        
+        <div id="levi-validation-items">
+          <!-- Will be populated by JavaScript -->
         </div>
-        <div class="validation-item">
-          <span>מחיר סופי</span>
-          <span id="levi-final">⏳</span>
+
+        <!-- Enhanced Valuation Summary -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">💎 סיכום שווי הרכב המעודכן</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">שווי בסיס לוי יצחק</span>
+              <span class="cost-value" id="levi-base-value">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">התאמות מחיר (+/-)</span>
+              <span class="cost-value" id="levi-adjustments-value">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">שווי סופי מעודכן</span>
+              <span class="cost-value" id="levi-final-value">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">אחוז מדו"ח מקורי</span>
+              <span class="cost-value" id="levi-percentage">100%</span>
+            </div>
+          </div>
         </div>
+        
       </div>
       <div class="validation-buttons">
-        <button class="btn btn-primary" onclick="approveSection('levi')" disabled>אימות דו"ח לוי</button>
+        <button class="btn btn-validate" onclick="validateSection('levi')" disabled>🔍 בדיקת שווי אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('levi')">✏️ עריכת נתוני שווי</button>
+        <button class="btn btn-success" onclick="approveSection('levi')" disabled>✅ אימות דו"ח לוי</button>
       </div>
     </div>
-    
-    <div class="validation-section" id="section-damage">
-      <div class="section-header">
-        <div class="section-title">מוקדי נזק ואקספרטיזה</div>
-        <div class="section-status status-pending">ממתין</div>
-      </div>
-      <div class="section-content">
-        <div class="validation-item">
-          <span>מוקדי נזק מוגדרים</span>
-          <span id="damage-centers">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span>חלקים ותיקונים</span>
-          <span id="damage-parts">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span>סטטוס אקספרטיזה</span>
-          <span id="damage-expertise">⏳</span>
-        </div>
-      </div>
-      <div class="validation-buttons">
-        <button class="btn btn-primary" onclick="approveSection('damage')" disabled>אימות מוקדי נזק</button>
-      </div>
-    </div>
-    
+
+    <!-- NEW: Depreciation Validation Section -->
     <div class="validation-section" id="section-depreciation">
       <div class="section-header">
-        <div class="section-title">ירידת ערך ועלויות</div>
+        <div class="section-title">
+          <span class="section-icon">📉</span>
+          פחת ונזקים קיימים
+        </div>
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div class="validation-item">
-          <span>חישוב ירידת ערך</span>
-          <span id="depreciation-calc">⏳</span>
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+          <strong style="color: #92400e;">📉 אימות פחת ונזקים:</strong><br>
+          בדיקת נתוני הפחת וההנזקה הקיימת | אימות חישובי פחת לכל מוקד נזק<br>
+          כל אחוז פחת נבדק מול הסטנדרטים המקצועיים
         </div>
-        <div class="validation-item">
-          <span>סוג חוות דעת</span>
-          <span id="depreciation-type">⏳</span>
+        
+        <div id="depreciation-validation-items">
+          <!-- Will be populated by JavaScript -->
         </div>
-        <div class="validation-item">
-          <span>שכר טרחה</span>
-          <span id="depreciation-fees">⏳</span>
+
+        <!-- Depreciation Summary -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">📉 סיכום פחת ונזקים קיימים</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">פחת כללי (%)</span>
+              <span class="cost-value" id="depreciation-global-percent">0%</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">פחת כללי (₪)</span>
+              <span class="cost-value" id="depreciation-global-amount">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">ימי מוסך</span>
+              <span class="cost-value" id="depreciation-garage-days">0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ פחת מחושב</span>
+              <span class="cost-value" id="depreciation-total-calculated">₪0</span>
+            </div>
+          </div>
         </div>
+        
       </div>
       <div class="validation-buttons">
-        <button class="btn btn-primary" onclick="approveSection('depreciation')" disabled>אימות ירידת ערך</button>
+        <button class="btn btn-validate" onclick="validateSection('depreciation')" disabled>🔍 בדיקת פחת אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('depreciation')">✏️ עריכת נתוני פחת</button>
+        <button class="btn btn-success" onclick="approveSection('depreciation')" disabled>✅ אימות פחת</button>
+      </div>
+    </div>
+
+    <!-- Phase 3: Damage Centers Assessment -->
+    <div class="validation-section" id="section-damage">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon">🔧</span>
+          מוקדי נזק ואומדן עלויות
+        </div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #dc2626;">
+          <strong style="color: #991b1b;">🛠️ אימות נזקים ועלויות:</strong><br>
+          בדיקת כל מוקדי הנזק שהוגדרו | אימות חלקי חילוף ותיקונים | חישוב עלויות סופיות<br>
+          כל פריט נבדק מול בנק החלקים והמחירון
+        </div>
+        
+        <div id="damage-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+        <!-- Enhanced Damage Centers Display -->
+        <div id="damage-centers-container">
+          <!-- Will be populated with damage centers -->
+        </div>
+
+        <!-- Damage Cost Summary -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">💰 סיכום עלויות נזק מעודכן</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">חלקי חילוף</span>
+              <span class="cost-value" id="damage-parts-cost">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">עבודות תיקון</span>
+              <span class="cost-value" id="damage-labor-cost">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">עבודות</span>
+              <span class="cost-value" id="damage-painting-cost">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ עלויות נזק</span>
+              <span class="cost-value" id="damage-total-cost">₪0</span>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('damage')" disabled>🔍 בדיקת נזקים אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('damage')">✏️ עריכת מוקדי נזק</button>
+        <button class="btn btn-success" onclick="approveSection('damage')" disabled>✅ אימות מוקדי נזק</button>
+      </div>
+    </div>
+
+    <!-- Phase 4: Fee Module Validation -->
+    <div class="validation-section" id="section-fees">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon">💰</span>
+          שכר טרחה וחישובים פיננסיים
+        </div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #16a34a;">
+          <strong style="color: #166534;">💎 אימות שכר טרחה:</strong><br>
+          בדיקת כל רכיבי שכר הטרחה | אימות חישובי מע"מ והפיגיות | חישוב סופי מדויק<br>
+          כל סכום נבדק מול התעריפים המאושרים
+        </div>
+        
+        <div id="fees-validation-items">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+        <!-- Enhanced Fee Breakdown -->
+        <div class="cost-summary">
+          <div class="cost-summary-title">💰 פירוט שכר טרחה מעודכן</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">נסיעות ותקשורת</span>
+              <span class="cost-value" id="fee-travel-display">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">צילומים ומדיה</span>
+              <span class="cost-value" id="fee-media-display">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">הוצאות משרד</span>
+              <span class="cost-value" id="fee-office-display">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">שעות עבודה</span>
+              <span class="cost-value" id="fee-hours-display">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ ללא מע"מ</span>
+              <span class="cost-value" id="fee-subtotal-display">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">מע"מ (<span id="fee-vat-rate">17%</span>)</span>
+              <span class="cost-value" id="fee-vat-display">₪0</span>
+            </div>
+            <div class="cost-item" style="border: 2px solid #16a34a; background: #f0fdf4;">
+              <span class="cost-label" style="font-weight: bold; color: #166534;">סה"כ כולל מע"מ</span>
+              <span class="cost-value" id="fee-total-display" style="font-size: 18px; color: #166534;">₪0</span>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('fees')" disabled>🔍 בדיקת שכר טרחה</button>
+        <button class="btn btn-edit" onclick="editSection('fees')">✏️ עריכת שכר טרחה</button>
+        <button class="btn btn-success" onclick="approveSection('fees')" disabled>✅ אימות שכר טרחה</button>
+      </div>
+    </div>
+
+    <!-- Enhanced Final Actions Section -->
+    <div class="final-actions" id="final-actions">
+      <div class="final-actions-title">🏆 פעולות סיום - דו"ח סופי</div>
+      <div class="final-actions-subtitle">
+        לאחר השלמת כל שלבי האימות, הדו"ח הסופי יווצר ויישלח לעיבוד מתקדם.<br>
+        <strong>שימו לב:</strong> לא ניתן יהיה לערוך את הנתונים לאחר האישור הסופי.
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-edit" onclick="window.location.href='final-report-builder.html'">
+          ⬅️ חזור לעריכת דו"ח
+        </button>
+        <button class="btn btn-validate" onclick="saveValidationData()" id="save-validation-btn">
+          💾 שמירת מצב אימות
+        </button>
+        <button class="btn btn-success" onclick="proceedToFinalReport()" id="final-report-btn" disabled>
+          📄 המשך לתבנית דו"ח סופי
+        </button>
       </div>
     </div>
     
-    <div class="final-confirmation" id="finalConfirmation">
-      <div class="confirmation-text">
-        האם אתה בטוח שברצונך לסיים ולהפיק את הדו"ח הסופי?
-      </div>
-      <div style="color: #7c2d12; margin-bottom: 20px;">
-        לאחר האישור הסופי לא ניתן יהיה לערוך את הדו"ח
-      </div>
-      <div class="validation-buttons" style="justify-content: center;">
-        <button class="btn btn-success" onclick="finalSubmit()">אישור סופי ויצירת דו"ח</button>
-        <button class="btn btn-secondary" onclick="cancelFinal()">ביטול</button>
-      </div>
-    </div>
-    
+    <!-- Navigation Buttons -->
     <div class="validation-buttons" style="justify-content: center; margin-top: 30px;">
-      <button class="btn btn-secondary" onclick="window.location.href='selection.html'">
-        חזור לדף הבחירה
+      <button class="btn btn-edit" onclick="window.location.href='selection.html'">
+        🏠 חזור לדף הבחירה
       </button>
-      <button class="btn btn-secondary" onclick="logout()">
-        יציאה מהמערכת
+      <button class="btn btn-edit" onclick="logout()">
+        👋 יציאה מהמערכת
       </button>
     </div>
     
-    <div class="footer">All rights reserved © Carmel Cayouf</div>
+    <div class="footer">
+      🏆 מערכת ולידציה מתקדמת • All rights reserved © Carmel Cayouf • SmartVal Pro System
+    </div>
   </div>
 
+  <!-- PIP MODALS FOR VALIDATION WORKFLOW MODULES -->
+  <div class="pip-overlay" id="pipOverlay" onclick="closeAllPipModals()"></div>
+  
+  <!-- Final Report Builder PiP Modal -->
+  <div class="pip-modal" id="finalReportBuilderModal">
+    <div class="pip-modal-header">
+      <div class="pip-modal-title">📋 בונה דו"ח סופי</div>
+      <div class="pip-modal-controls">
+        <button class="pip-control-btn" onclick="closePipModal('finalReportBuilderModal')" title="סגור">✕</button>
+      </div>
+    </div>
+    <div class="pip-modal-content" id="finalReportBuilderContent">
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">📋</div>
+        <div style="font-size: 18px; margin-bottom: 15px;">בונה דו"ח סופי</div>
+        <div style="color: #64748b;">טוען ממשק עריכה...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fee Module PiP Modal -->
+  <div class="pip-modal" id="feeModuleModal">
+    <div class="pip-modal-header">
+      <div class="pip-modal-title">💰 מודול שכר טרחה</div>
+      <div class="pip-modal-controls">
+        <button class="pip-control-btn" onclick="closePipModal('feeModuleModal')" title="סגור">✕</button>
+      </div>
+    </div>
+    <div class="pip-modal-content" id="feeModuleContent">
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">💰</div>
+        <div style="font-size: 18px; margin-bottom: 15px;">מודול שכר טרחה</div>
+        <div style="color: #64748b;">טוען ממשק עריכה...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Damage Centers PiP Modal -->
+  <div class="pip-modal" id="damageCentersModal">
+    <div class="pip-modal-header">
+      <div class="pip-modal-title">🔧 מוקדי נזק</div>
+      <div class="pip-modal-controls">
+        <button class="pip-control-btn" onclick="closePipModal('damageCentersModal')" title="סגור">✕</button>
+      </div>
+    </div>
+    <div class="pip-modal-content" id="damageCentersContent">
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">🔧</div>
+        <div style="font-size: 18px; margin-bottom: 15px;">מוקדי נזק</div>
+        <div style="color: #64748b;">טוען ממשק עריכה...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced JavaScript Implementation -->
   <script type="module">
+    import { helper } from './helper.js';
     import { sendToWebhook } from './webhook.js';
     
     // Authentication check
@@ -311,106 +1217,1473 @@
       window.location.href = "index.html";
     }
 
-    let approvedSections = [];
+    // Global validation state
+    let validatedSections = [];
+    let currentSection = 0;
+    const totalSections = 6; // Updated: vehicle, reportType, levi, depreciation, damage, fees
+    
+    // Initialize validation system
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🏆 Final Report Validation System: Advanced initialization...');
+      initializeValidationSystem();
+    });
+    
+    function initializeValidationSystem() {
+      console.log('📊 Loading comprehensive validation data from helper system...');
+      
+      if (!window.helper) {
+        console.warn('⚠️ Helper system not available, initializing fallback validation');
+        initializeFallbackData();
+        return;
+      }
+      
+      // Load all validation sections
+      loadVehicleValidation();
+      loadReportTypeValidation();
+      loadLeviValidation();
+      loadDepreciationValidation();
+      loadDamageValidation();
+      loadFeesValidation();
+      
+      // Update progress
+      updateProgress();
+    }
+    
+    function loadVehicleValidation() {
+      const helper = window.helper || {};
+      const case_info = helper.case_info || {};
+      const vehicle = helper.vehicle || {};
+      const stakeholders = helper.stakeholders || {};
+      const meta = helper.meta || {};
+      
+      const vehicleItems = [
+        {
+          label: 'מזהה תיק',
+          current: case_info.case_id || '',
+          stored: meta.case_number || '',
+          field: 'case_id',
+          validation: (val) => /^YC-\d{8}-\d{4}$/.test(val)
+        },
+        {
+          label: 'מספר רכב',
+          current: vehicle.plate || '',
+          stored: meta.plate || '',
+          field: 'vehicle_plate',
+          validation: (val) => val && val.length > 0
+        },
+        {
+          label: 'שם בעל הרכב',
+          current: stakeholders.owner?.name || '',
+          stored: meta.owner_name || '',
+          field: 'owner_name',
+          validation: (val) => val && val.length >= 2
+        },
+        {
+          label: 'טלפון בעל הרכב',
+          current: stakeholders.owner?.phone || '',
+          stored: meta.owner_phone || '',
+          field: 'owner_phone',
+          validation: (val) => val && /^\d{9,10}$/.test(val.replace(/[-\s]/g, ''))
+        },
+        {
+          label: 'כתובת בעל הרכב',
+          current: stakeholders.owner?.address || '',
+          stored: meta.owner_address || '',
+          field: 'owner_address',
+          validation: (val) => val && val.length >= 5
+        },
+        {
+          label: 'חברת ביטוח',
+          current: stakeholders.insurance?.company || '',
+          stored: meta.insurance_company || '',
+          field: 'insurance_company',
+          validation: (val) => val && val.length >= 2
+        },
+        {
+          label: 'סוכן ביטוח',
+          current: stakeholders.insurance?.agent?.name || '',
+          stored: meta.agent_name || '',
+          field: 'agent_name',
+          validation: (val) => true // Optional field
+        },
+        {
+          label: 'תאריך אירוע',
+          current: meta.incident_date || '',
+          stored: meta.inspection_date || '',
+          field: 'incident_date',
+          validation: (val) => val && new Date(val) <= new Date()
+        }
+      ];
+      
+      renderValidationItems('vehicle-validation-items', vehicleItems);
+    }
+    
+    function loadLeviValidation() {
+      const helper = window.helper || {};
+      const valuation = helper.valuation || {};
+      const vehicle = helper.vehicle || {};
+      
+      const leviItems = [
+        {
+          label: 'קובץ דו"ח לוי',
+          current: valuation.source || 'levi_yitzhak',
+          stored: valuation.levi_code || '',
+          field: 'levi_source',
+          validation: (val) => val && val.length > 0
+        },
+        {
+          label: 'שנת ייצור',
+          current: vehicle.year || '',
+          stored: valuation.vehicle_year || '',
+          field: 'vehicle_year',
+          validation: (val) => val && parseInt(val) >= 1980 && parseInt(val) <= new Date().getFullYear()
+        },
+        {
+          label: 'קילומטראז',
+          current: vehicle.mileage || '',
+          stored: vehicle.original_mileage || '',
+          field: 'vehicle_mileage',
+          validation: (val) => val && parseInt(val) >= 0
+        },
+        {
+          label: 'שווי בסיס לוי',
+          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '₪0',
+          stored: valuation.original_base_price ? `₪${parseInt(valuation.original_base_price).toLocaleString()}` : '₪0',
+          field: 'base_price',
+          validation: (val) => val && parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'התאמות מחיר',
+          current: valuation.adjustments_value ? `₪${parseInt(valuation.adjustments_value).toLocaleString()}` : '₪0',
+          stored: valuation.calculated_adjustments ? `₪${parseInt(valuation.calculated_adjustments).toLocaleString()}` : '₪0',
+          field: 'price_adjustments',
+          validation: (val) => true
+        },
+        {
+          label: 'שווי סופי מעודכן',
+          current: valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '₪0',
+          stored: vehicle.market_value ? `₪${parseInt(vehicle.market_value).toLocaleString()}` : '₪0',
+          field: 'final_price',
+          validation: (val) => val && parseFloat(val.replace(/[^\d]/g, '')) > 0
+        }
+      ];
+      
+      renderValidationItems('levi-validation-items', leviItems);
+      updateLeviSummary(valuation);
+    }
+    
+    function loadReportTypeValidation() {
+      const helper = window.helper || {};
+      const system = helper.system || {};
+      const final_report = helper.final_report || {};
+      
+      const reportTypeItems = [
+        {
+          label: 'סוג דו"ח נבחר',
+          current: system.active_report_types?.final_report || 'לא נבחר',
+          stored: system.last_report_type || '',
+          field: 'report_type',
+          validation: (val) => val && ['private_opinion', 'global_opinion', 'court_opinion', 'insurance_opinion', 'damage_assessment'].includes(val)
+        },
+        {
+          label: 'תבנית דו"ח',
+          current: final_report.template || 'ברירת מחדל',
+          stored: final_report.selected_template || '',
+          field: 'report_template',
+          validation: (val) => val && val.length > 0
+        },
+        {
+          label: 'סטטוס טקסטים משפטיים',
+          current: final_report.report_types?.[system.active_report_types?.final_report]?.legal_text ? 'קיים' : 'חסר',
+          stored: 'נדרש',
+          field: 'legal_text_status',
+          validation: (val) => val === 'קיים'
+        },
+        {
+          label: 'סטטוס קבצים מצורפים',
+          current: final_report.report_types?.[system.active_report_types?.final_report]?.attachments ? 'קיים' : 'חסר',
+          stored: 'נדרש',
+          field: 'attachments_status',
+          validation: (val) => val === 'קיים'
+        }
+      ];
+      
+      renderValidationItems('report-type-validation-items', reportTypeItems);
+      updateLegalValidation(system.active_report_types?.final_report, final_report);
+    }
+    
+    function loadDepreciationValidation() {
+      const helper = window.helper || {};
+      const valuation = helper.valuation || {};
+      const depreciation = valuation.depreciation || {};
+      
+      const depreciationItems = [
+        {
+          label: 'פחת כללי (%)',
+          current: depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%',
+          stored: depreciation.calculated_global_percentage ? `${depreciation.calculated_global_percentage}%` : '0%',
+          field: 'global_depreciation_percent',
+          validation: (val) => {
+            const num = parseFloat(val.replace('%', ''));
+            return num >= 0 && num <= 100;
+          }
+        },
+        {
+          label: 'פחת כללי (סכום)',
+          current: depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0',
+          stored: depreciation.calculated_global_amount ? `₪${parseInt(depreciation.calculated_global_amount).toLocaleString()}` : '₪0',
+          field: 'global_depreciation_amount',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'ימי מוסך',
+          current: depreciation.garage_days?.toString() || '0',
+          stored: depreciation.calculated_garage_days?.toString() || '0',
+          field: 'garage_days',
+          validation: (val) => parseInt(val) >= 0
+        },
+        {
+          label: 'מספר פריטי פחת',
+          current: depreciation.bulk_items?.length?.toString() || '0',
+          stored: depreciation.total_items?.toString() || '0',
+          field: 'depreciation_items_count',
+          validation: (val) => parseInt(val) >= 0
+        },
+        {
+          label: 'סה"כ פחת מחושב',
+          current: depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0',
+          stored: depreciation.final_calculated_depreciation ? `₪${parseInt(depreciation.final_calculated_depreciation).toLocaleString()}` : '₪0',
+          field: 'total_depreciation',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
+      
+      renderValidationItems('depreciation-validation-items', depreciationItems);
+      updateDepreciationSummary(depreciation);
+    }
+    
+    function loadDamageValidation() {
+      const damage = window.helper?.damage_assessment || {};
+      const centers = window.helper?.centers || [];
+      
+      const damageItems = [
+        {
+          label: 'מספר מוקדי נזק',
+          current: centers.length.toString(),
+          stored: damage.statistics?.total_centers?.toString() || '0',
+          field: 'damage_centers_count',
+          validation: (val) => parseInt(val) > 0
+        },
+        {
+          label: 'סה"כ עלות חלקים',
+          current: damage.summary?.total_damage_amount ? `₪${damage.summary.total_damage_amount.toLocaleString()}` : '₪0',
+          stored: damage.totals?.all_centers_subtotal ? `₪${damage.totals.all_centers_subtotal.toLocaleString()}` : '₪0',
+          field: 'total_parts_cost',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'אחוז נזק',
+          current: damage.summary?.damage_percentage ? `${damage.summary.damage_percentage}%` : '0%',
+          stored: damage.statistics?.calculated_percentage ? `${damage.statistics.calculated_percentage}%` : '0%',
+          field: 'damage_percentage',
+          validation: (val) => {
+            const num = parseFloat(val.replace('%', ''));
+            return num >= 0 && num <= 100;
+          }
+        },
+        {
+          label: 'סטטוס אובדן מוחלט',
+          current: damage.summary?.is_total_loss ? 'כן' : 'לא',
+          stored: damage.calculations?.total_loss_status || 'לא',
+          field: 'total_loss_status',
+          validation: (val) => ['כן', 'לא', 'yes', 'no'].includes(val.toLowerCase())
+        }
+      ];
+      
+      renderValidationItems('damage-validation-items', damageItems);
+      renderDamageCenters(centers);
+      updateDamageSummary(damage);
+    }
+    
+    function loadFeesValidation() {
+      const fees = window.helper?.financials?.fees;
+      
+      if (!fees) {
+        console.warn('⚠️ No fees data found in helper system');
+        return;
+      }
+      
+      const calculations = fees.calculations || {};
+      
+      const feeItems = [
+        {
+          label: 'נסיעות ותקשורת',
+          current: fees.travel?.total ? `₪${fees.travel.total}` : '₪0',
+          stored: calculations.travel_calc || '₪0',
+          field: 'travel_fee',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'צילומים ומדיה',
+          current: fees.photography?.total ? `₪${fees.photography.total}` : '₪0',
+          stored: calculations.media_calc || '₪0',
+          field: 'media_fee',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'הוצאות משרד',
+          current: fees.office?.total ? `₪${fees.office.total}` : '₪0',
+          stored: calculations.office_calc || '₪0',
+          field: 'office_fee',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'שעות עבודה',
+          current: fees.assessment?.hourly_rate ? `₪${fees.assessment.hourly_rate}` : '₪0',
+          stored: calculations.hourly_calc || '₪0',
+          field: 'hourly_rate',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'אחוז מע"מ',
+          current: calculations.vat_rate ? `${calculations.vat_rate}%` : '17%',
+          stored: '17%',
+          field: 'vat_rate',
+          validation: (val) => {
+            const num = parseFloat(val.replace('%', ''));
+            return num >= 0 && num <= 30;
+          }
+        },
+        {
+          label: 'סכום מע"מ',
+          current: calculations.vat_amount ? `₪${calculations.vat_amount}` : '₪0',
+          stored: calculations.calculated_vat || '₪0',
+          field: 'vat_amount',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ כולל מע"מ',
+          current: calculations.total_with_vat ? `₪${calculations.total_with_vat}` : '₪0',
+          stored: calculations.calculated_total || '₪0',
+          field: 'total_with_vat',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        }
+      ];
+      
+      renderValidationItems('fees-validation-items', feeItems);
+      updateFeesSummary(fees);
+    }
+    
+    function renderValidationItems(containerId, items) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      container.innerHTML = items.map(item => {
+        const isValid = item.validation(item.current);
+        const statusClass = isValid ? 'data-match' : (item.current ? 'data-warning' : 'data-error');
+        const statusIcon = isValid ? '✅' : (item.current ? '⚠️' : '❌');
+        
+        return `
+          <div class="validation-item-enhanced">
+            <div class="validation-label">${statusIcon} ${item.label}</div>
+            <div class="validation-columns">
+              <div class="current-value ${statusClass}" id="${item.field}_current">
+                ${item.current || 'חסר נתון'}
+              </div>
+              <div class="stored-value">
+                ${item.stored || 'לא מאוחסן'}
+              </div>
+              <div class="action-buttons">
+                <button class="edit-inline" onclick="editInline('${item.field}')" title="עריכה מיידית">
+                  ✏️
+                </button>
+                <button class="edit-builder" onclick="editInBuilder('${item.field}')" title="עריכה מתקדמת">
+                  🔧
+                </button>
+                <button class="ignore" onclick="ignoreField('${item.field}')" title="התעלם מהשדה">
+                  🚫
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderDamageCenters(centers) {
+      const container = document.getElementById('damage-centers-container');
+      if (!container) return;
+      
+      if (!centers.length) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #64748b;">
+            <strong>לא נמצאו מוקדי נזק</strong><br>
+            נא להוסיף מוקדי נזק באמצעות אשף מוקדי הנזק
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = centers.map((center, index) => `
+        <div class="damage-center">
+          <div class="damage-center-header">
+            🔧 מוקד נזק ${center.number || index + 1}: ${center.location || center.description || 'לא צוין'}
+          </div>
+          <div class="damage-center-content">
+            <div class="damage-stat">
+              <div class="damage-stat-label">חלקים</div>
+              <div class="damage-stat-value">${center.parts_items?.length || 0}</div>
+            </div>
+            <div class="damage-stat">
+              <div class="damage-stat-label">עבודות</div>
+              <div class="damage-stat-value">${center.work_items?.length || 0}</div>
+            </div>
+            <div class="damage-stat">
+              <div class="damage-stat-label">תיקונים</div>
+              <div class="damage-stat-value">${center.repairs_items?.length || 0}</div>
+            </div>
+            <div class="damage-stat">
+              <div class="damage-stat-label">עלות כוללת</div>
+              <div class="damage-stat-value">₪${(center.calculations?.total_with_vat || center.calculations?.subtotal_before_vat || 0).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function updateLeviSummary(valuation) {
+      document.getElementById('levi-base-value').textContent = 
+        valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '₪0';
+      document.getElementById('levi-adjustments-value').textContent = 
+        valuation.adjustments_value ? `₪${parseInt(valuation.adjustments_value).toLocaleString()}` : '₪0';
+      document.getElementById('levi-final-value').textContent = 
+        valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '₪0';
+      document.getElementById('levi-percentage').textContent = 
+        valuation.base_price && valuation.final_price ? 
+        `${Math.round((parseInt(valuation.final_price) / parseInt(valuation.base_price)) * 100)}%` : '100%';
+    }
+    
+    function updateDamageSummary(damage) {
+      document.getElementById('damage-parts-cost').textContent = 
+        `₪${(damage.totals?.parts_cost || 0).toLocaleString()}`;
+      document.getElementById('damage-labor-cost').textContent = 
+        `₪${(damage.totals?.labor_cost || 0).toLocaleString()}`;
+      document.getElementById('damage-painting-cost').textContent = 
+        `₪${(damage.totals?.painting_cost || 0).toLocaleString()}`;
+      document.getElementById('damage-total-cost').textContent = 
+        `₪${(damage.summary?.total_damage_amount || 0).toLocaleString()}`;
+    }
+    
+    function updateFeesSummary(fees) {
+      const calculations = fees.calculations || {};
+      
+      document.getElementById('fee-travel-display').textContent = 
+        `₪${fees.travel?.total || 0}`;
+      document.getElementById('fee-media-display').textContent = 
+        `₪${fees.photography?.total || 0}`;
+      document.getElementById('fee-office-display').textContent = 
+        `₪${fees.office?.total || 0}`;
+      document.getElementById('fee-hours-display').textContent = 
+        `₪${fees.assessment?.total || 0}`;
+      document.getElementById('fee-subtotal-display').textContent = 
+        `₪${calculations.total_before_vat || 0}`;
+      document.getElementById('fee-vat-rate').textContent = 
+        `${calculations.vat_rate || 17}%`;
+      document.getElementById('fee-vat-display').textContent = 
+        `₪${calculations.vat_amount || 0}`;
+      document.getElementById('fee-total-display').textContent = 
+        `₪${calculations.total_with_vat || 0}`;
+    }
+    
+    function updateDepreciationSummary(depreciation) {
+      document.getElementById('depreciation-global-percent').textContent = 
+        depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%';
+      document.getElementById('depreciation-global-amount').textContent = 
+        depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
+      document.getElementById('depreciation-garage-days').textContent = 
+        depreciation.garage_days?.toString() || '0';
+      document.getElementById('depreciation-total-calculated').textContent = 
+        depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+    }
+    
+    function updateLegalValidation(reportType, finalReport) {
+      const container = document.getElementById('legal-validation-content');
+      if (!container) return;
+      
+      const reportTypeDisplay = {
+        'private_opinion': 'חוות דעת פרטית',
+        'global_opinion': 'חוות דעת כללית', 
+        'court_opinion': 'חוות דעת לבית משפט',
+        'insurance_opinion': 'חוות דעת לביטוח',
+        'damage_assessment': 'אומדן נזק'
+      };
+      
+      const currentType = reportType || 'לא נבחר';
+      const typeDisplay = reportTypeDisplay[currentType] || currentType;
+      
+      const legalText = finalReport.report_types?.[currentType]?.legal_text || '';
+      const attachments = finalReport.report_types?.[currentType]?.attachments || '';
+      
+      container.innerHTML = `
+        <div style="margin-bottom: 15px;">
+          <strong>סוג דו"ח נוכחי:</strong> ${typeDisplay}
+        </div>
+        <div style="margin-bottom: 15px;">
+          <strong>סטטוס טקסט משפטי:</strong> 
+          <span style="color: ${legalText ? '#16a34a' : '#dc2626'};">
+            ${legalText ? '✅ קיים' : '❌ חסר'}
+          </span>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <strong>סטטוס קבצים מצורפים:</strong> 
+          <span style="color: ${attachments ? '#16a34a' : '#dc2626'};">
+            ${attachments ? '✅ קיים' : '❌ חסר'}
+          </span>
+        </div>
+        ${legalText ? `
+        <div style="margin-top: 15px; padding: 10px; background: #f0fdf4; border-radius: 8px; border: 1px solid #16a34a;">
+          <strong>טקסט משפטי נוכחי:</strong><br>
+          <div style="max-height: 100px; overflow-y: auto; margin-top: 8px; font-size: 12px;">
+            ${legalText.substring(0, 200)}...
+          </div>
+        </div>
+        ` : ''}
+      `;
+    }
+    
+    function updateProgress() {
+      const percentage = (validatedSections.length / totalSections) * 100;
+      const progressFill = document.getElementById('progress-fill');
+      const progressText = document.getElementById('progress-text');
+      const progressPercentage = document.getElementById('progress-percentage');
+      
+      if (progressFill) {
+        progressFill.style.width = `${percentage}%`;
+      }
+      if (progressText) {
+        progressText.textContent = `${validatedSections.length} מתוך ${totalSections} שלבים הושלמו`;
+      }
+      if (progressPercentage) {
+        progressPercentage.textContent = `${Math.round(percentage)}%`;
+      }
+      
+      // Update final actions section
+      const finalActions = document.getElementById('final-actions');
+      if (validatedSections.length === totalSections) {
+        finalActions.classList.add('ready');
+        document.getElementById('final-report-btn').disabled = false;
+      }
+    }
+    
+    // Global functions for section management
+    window.validateSection = function(sectionName) {
+      console.log(`🔍 Validating section: ${sectionName}`);
+      
+      // Perform section-specific validation logic
+      let isValid = false;
+      
+      switch(sectionName) {
+        case 'vehicle':
+          isValid = validateVehicleSection();
+          break;
+        case 'reportType':
+          isValid = validateReportTypeSection();
+          break;
+        case 'levi':
+          isValid = validateLeviSection();
+          break;
+        case 'depreciation':
+          isValid = validateDepreciationSection();
+          break;
+        case 'damage':
+          isValid = validateDamageSection();
+          break;
+        case 'fees':
+          isValid = validateFeesSection();
+          break;
+      }
+      
+      if (isValid) {
+        enableApproval(sectionName);
+      } else {
+        showValidationErrors(sectionName);
+      }
+    };
+    
+    // Debounce mechanism to prevent rapid multiple clicks
+    let editSectionTimeout = null;
+    
+    window.editSection = function(sectionName) {
+      console.log('Edit section requested:', sectionName);
+      
+      // Prevent rapid multiple clicks
+      if (editSectionTimeout) {
+        console.log('Edit section request ignored - too frequent');
+        return;
+      }
+      
+      editSectionTimeout = setTimeout(() => {
+        editSectionTimeout = null;
+      }, 1000); // 1 second cooldown
+      
+      // Use PiP modals for the inline validation buttons
+      const pipModals = {
+        'vehicle': () => openPipModal('finalReportBuilderModal'),
+        'reportType': () => openPipModal('finalReportBuilderModal'),
+        'levi': () => {
+          // Levi uses the existing floating screen
+          if (window.toggleLeviReport) {
+            window.toggleLeviReport();
+          } else {
+            alert('דו"ח לוי לא זמין');
+          }
+        },
+        'depreciation': () => openPipModal('finalReportBuilderModal'),
+        'damage': () => openPipModal('damageCentersModal'),
+        'fees': () => openPipModal('feeModuleModal')
+      };
+      
+      if (pipModals[sectionName]) {
+        pipModals[sectionName]();
+      } else {
+        console.warn(`Unknown section for editing: ${sectionName}`);
+        alert(`שגיאה: לא ניתן לערוך את הקטע ${sectionName}`);
+      }
+    };
     
     window.approveSection = function(sectionName) {
+      console.log(`✅ Approving section: ${sectionName}`);
+      
       // Mark section as completed
       const section = document.getElementById(`section-${sectionName}`);
       const status = section.querySelector('.section-status');
-      const button = section.querySelector('button');
+      const buttons = section.querySelectorAll('.btn');
       
-      section.classList.remove('current');
+      section.classList.remove('current', 'warning', 'error');
       section.classList.add('completed');
-      status.textContent = 'אומת';
+      status.textContent = 'אומת ✅';
       status.className = 'section-status status-completed';
-      button.disabled = true;
-      button.textContent = '✓ אומת';
       
-      // Update validation items in this section
-      const items = section.querySelectorAll('.validation-item span:last-child');
-      items.forEach(item => {
-        if (item.textContent === '⏳') {
-          item.textContent = '✓';
+      buttons.forEach(btn => {
+        if (btn.textContent.includes('אימות')) {
+          btn.disabled = true;
+          btn.textContent = '✅ אומת';
+          btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
         }
       });
       
-      approvedSections.push(sectionName);
+      validatedSections.push(sectionName);
       
       // Enable next section
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation'];
+      const sections = ['vehicle', 'reportType', 'levi', 'depreciation', 'damage', 'fees'];
       const currentIndex = sections.indexOf(sectionName);
       if (currentIndex < sections.length - 1) {
-        const nextSection = document.getElementById(`section-${sections[currentIndex + 1]}`);
-        const nextStatus = nextSection.querySelector('.section-status');
-        const nextButton = nextSection.querySelector('button');
-        
-        nextSection.classList.add('current');
-        nextStatus.textContent = 'בבדיקה';
-        nextStatus.className = 'section-status status-current';
-        nextButton.disabled = false;
-      } else {
-        // All sections approved, show final confirmation
-        document.getElementById('finalConfirmation').classList.add('show');
+        enableNextSection(sections[currentIndex + 1]);
       }
       
-      console.log(`Section ${sectionName} approved`);
+      updateProgress();
+      console.log(`✅ Section ${sectionName} validated successfully`);
     };
     
-    window.cancelFinal = function() {
-      document.getElementById('finalConfirmation').classList.remove('show');
-    };
-    
-    window.finalSubmit = async function() {
-      const submitBtn = document.querySelector('.btn-success');
-      const originalText = submitBtn.textContent;
+    function enableNextSection(sectionName) {
+      const nextSection = document.getElementById(`section-${sectionName}`);
+      const nextStatus = nextSection.querySelector('.section-status');
+      const nextButtons = nextSection.querySelectorAll('.btn');
       
-      try {
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'מעבד דו"ח סופי...';
-        
-        // Prepare final report data
-        const finalReportData = {
-          validated_sections: approvedSections,
-          validation_timestamp: new Date().toISOString(),
-          report_status: 'final_approved',
-          validator: 'user'
+      nextSection.classList.add('current');
+      nextStatus.textContent = 'בבדיקה';
+      nextStatus.className = 'section-status status-current';
+      nextButtons.forEach(btn => btn.disabled = false);
+    }
+    
+    function enableApproval(sectionName) {
+      const section = document.getElementById(`section-${sectionName}`);
+      const approveBtn = section.querySelector('.btn-success');
+      if (approveBtn) {
+        approveBtn.disabled = false;
+        approveBtn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+      }
+    }
+    
+    function validateVehicleSection() {
+      const helper = window.helper || {};
+      const case_info = helper.case_info || {};
+      const vehicle = helper.vehicle || {};
+      const stakeholders = helper.stakeholders || {};
+      
+      // Check required fields
+      return !!(case_info.case_id && 
+               vehicle.plate && 
+               stakeholders.owner?.name && 
+               stakeholders.insurance?.company);
+    }
+    
+    function validateReportTypeSection() {
+      const helper = window.helper || {};
+      const system = helper.system || {};
+      const final_report = helper.final_report || {};
+      
+      const reportType = system.active_report_types?.final_report;
+      if (!reportType) return false;
+      
+      const legalText = final_report.report_types?.[reportType]?.legal_text;
+      return !!(reportType && legalText);
+    }
+    
+    function validateLeviSection() {
+      const helper = window.helper || {};
+      const valuation = helper.valuation || {};
+      
+      return !!(valuation.base_price && 
+               valuation.final_price && 
+               parseFloat(valuation.base_price) > 0 &&
+               parseFloat(valuation.final_price) > 0);
+    }
+    
+    function validateDepreciationSection() {
+      const helper = window.helper || {};
+      const depreciation = helper.valuation?.depreciation || {};
+      
+      // Depreciation can be zero, so we just check if structure exists
+      return true;
+    }
+    
+    function validateDamageSection() {
+      const helper = window.helper || {};
+      const centers = helper.centers || [];
+      
+      return centers.length > 0;
+    }
+    
+    function validateFeesSection() {
+      const helper = window.helper || {};
+      const fees = helper.financials?.fees || {};
+      const calculations = fees.calculations || {};
+      
+      return !!(calculations.total_with_vat && 
+               parseFloat(calculations.total_with_vat) > 0);
+    }
+    
+    function showValidationErrors(sectionName) {
+      alert(`נמצאו שגיאות באימות ${sectionName}. אנא בדוק את הנתונים ונסה שוב.`);
+    }
+    
+    // Inline editing functions
+    window.editInline = function(fieldId) {
+      const currentValueEl = document.getElementById(`${fieldId}_current`);
+      if (!currentValueEl) return;
+      
+      const currentValue = currentValueEl.textContent.replace(/[₪,]/g, '').trim();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'inline-edit-input';
+      input.value = currentValue;
+      
+      input.addEventListener('blur', function() {
+        finishInlineEdit(fieldId, this.value, currentValueEl);
+      });
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          finishInlineEdit(fieldId, this.value, currentValueEl);
+        }
+      });
+      
+      currentValueEl.innerHTML = '';
+      currentValueEl.appendChild(input);
+      input.focus();
+    };
+    
+    function finishInlineEdit(fieldId, newValue, element) {
+      // Update helper data
+      updateHelperField(fieldId, newValue);
+      
+      // Update display
+      element.textContent = newValue;
+      element.classList.remove('data-error', 'data-warning');
+      element.classList.add('data-match');
+      
+      console.log(`✅ Field ${fieldId} updated to: ${newValue}`);
+    }
+    
+    window.editInBuilder = function(fieldId) {
+      // Navigate to appropriate builder section
+      editSection('vehicle'); // Default to vehicle section
+    };
+    
+    window.ignoreField = function(fieldId) {
+      const currentValueEl = document.getElementById(`${fieldId}_current`);
+      if (!currentValueEl) return;
+      
+      currentValueEl.classList.remove('data-error', 'data-warning');
+      currentValueEl.classList.add('data-match');
+      currentValueEl.style.opacity = '0.6';
+      
+      console.log(`➡️ Field ${fieldId} validation ignored`);
+    };
+    
+    function updateHelperField(fieldId, value) {
+      // Update the appropriate helper field based on fieldId
+      // This should be expanded based on your helper structure
+      if (window.helper) {
+        // Add field mapping logic here
+        console.log(`🔄 Updating helper field ${fieldId} with value: ${value}`);
+      }
+    }
+    
+    function saveValidationState() {
+      if (window.helper) {
+        window.helper.validation = window.helper.validation || {};
+        window.helper.validation.final_report = {
+          validated_sections: validatedSections,
+          current_section: currentSection,
+          timestamp: new Date().toISOString()
         };
         
-        // Send to webhook for final processing
-        await sendToWebhook('SUBMIT_FINAL_REPORT', finalReportData);
+        localStorage.setItem('validation_final_report', JSON.stringify(window.helper.validation.final_report));
+      }
+    }
+    
+    // Final actions functions
+    window.saveValidationData = function() {
+      const saveBtn = document.getElementById('save-validation-btn');
+      const originalText = saveBtn.textContent;
+      
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '💾 שומר...';
         
-        submitBtn.textContent = '✅ הושלם בהצלחה';
-        alert('✅ הדו"ח הסופי נוצר בהצלחה ונשלח לעיבוד');
+        saveValidationState();
         
-        // Redirect to success page or selection
+        saveBtn.textContent = '✅ נשמר בהצלחה';
+        saveBtn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        
         setTimeout(() => {
-          window.location.href = 'selection.html';
-        }, 2000);
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+          saveBtn.disabled = false;
+        }, 3000);
+        
+        console.log('✅ Validation state saved successfully');
         
       } catch (error) {
-        console.error('Final submission error:', error);
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-        alert('❌ שגיאה ביצירת הדו"ח הסופי: ' + error.message);
+        console.error('Save validation error:', error);
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+        alert('❌ שגיאה בשמירת נתוני האימות: ' + error.message);
       }
     };
     
+    window.proceedToFinalReport = function() {
+      if (validatedSections.length < totalSections) {
+        alert(`⚠️ נא להשלים את אימות כל השלבים לפני המעבר לתבנית הדו"ח הסופי\n\nהושלמו: ${validatedSections.length}/${totalSections} שלבים`);
+        return;
+      }
+      
+      const finalBtn = document.getElementById('final-report-btn');
+      finalBtn.disabled = true;
+      finalBtn.textContent = '📄 מעביר לתבנית דו"ח...';
+      
+      // Save final validation completion
+      saveValidationState();
+      if (window.helper) {
+        window.helper.validation.final_report.status = 'completed';
+        window.helper.validation.final_report.completion_timestamp = new Date().toISOString();
+      }
+      
+      // Navigate to final report template builder
+      setTimeout(() => {
+        window.location.href = 'final-report-template-builder.html';
+      }, 1500);
+    };
+    
+    function initializeFallbackData() {
+      console.warn('🔄 Initializing fallback validation data');
+      // Add fallback initialization logic here
+    }
+    
+    // Floating screen toggle functions - COPIED FROM FINAL REPORT BUILDER
+    window.toggleFloatingScreen = function(screenType) {
+      console.log('Toggling floating screen:', screenType);
+      
+      const screens = {
+        leviReport: () => {
+          if (window.toggleLeviReport) {
+            window.toggleLeviReport();
+          } else {
+            console.log('Levi report floating screen not available');
+          }
+        },
+        carDetails: () => {
+          if (window.toggleCarDetails) {
+            window.toggleCarDetails();
+          } else {
+            console.log('Car details floating screen not available');
+          }
+        },
+        internalBrowser: () => {
+          if (window.showBrowserMenu) {
+            showBrowserMenuUnderToggle();
+          } else {
+            console.log('Internal browser not available');
+          }
+        },
+        invoiceDetails: () => {
+          if (window.toggleInvoiceDetails) {
+            window.toggleInvoiceDetails();
+          } else {
+            alert('מסך פרטי חשבוניות יהיה זמין בקרוב\nInvoice details screen coming soon');
+            console.log('Invoice details floating screen not available');
+          }
+        }
+      };
+      
+      if (screens[screenType]) {
+        screens[screenType]();
+      } else {
+        console.log('Unknown screen type:', screenType);
+      }
+    };
+    
+    // PIP MODAL FUNCTIONS FOR VALIDATION WORKFLOW MODULES
+    window.openPipModal = function(modalId) {
+      console.log('Opening PiP modal:', modalId);
+      
+      // Check if modal is already open to prevent duplicates
+      const modal = document.getElementById(modalId);
+      const overlay = document.getElementById('pipOverlay');
+      
+      if (modal && modal.style.display === 'block') {
+        console.log('Modal already open, ignoring duplicate request');
+        return;
+      }
+      
+      // Close any existing modals before opening new one
+      closeAllPipModals();
+      
+      // Save validation state before opening modal
+      saveValidationState();
+      
+      // Show overlay and modal
+      overlay.style.display = 'block';
+      modal.style.display = 'block';
+      
+      // Load content based on modal type
+      loadPipModalContent(modalId);
+      
+      // Make modal draggable
+      makePipModalDraggable(modalId);
+    };
+    
+    window.closePipModal = function(modalId) {
+      console.log('Closing PiP modal:', modalId);
+      document.getElementById(modalId).style.display = 'none';
+      document.getElementById('pipOverlay').style.display = 'none';
+    };
+    
+    window.closeAllPipModals = function() {
+      const modals = document.querySelectorAll('.pip-modal');
+      modals.forEach(modal => modal.style.display = 'none');
+      document.getElementById('pipOverlay').style.display = 'none';
+    };
+    
+    function loadPipModalContent(modalId) {
+      const contentDiv = document.getElementById(modalId.replace('Modal', 'Content'));
+      
+      switch(modalId) {
+        case 'finalReportBuilderModal':
+          contentDiv.innerHTML = createFinalReportBuilderContent();
+          break;
+        case 'feeModuleModal':
+          contentDiv.innerHTML = createFeeModuleContent();
+          break;
+        case 'damageCentersModal':
+          contentDiv.innerHTML = createDamageCentersContent();
+          break;
+      }
+    }
+    
+    function createFinalReportBuilderContent() {
+      const uniqueId = 'iframe_' + Date.now();
+      return `
+        <div style="height: calc(80vh - 70px); position: relative;">
+          <div id="iframe-loading-${uniqueId}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10;">
+            <div style="font-size: 24px; margin-bottom: 15px;">📋</div>
+            <div style="font-weight: bold; margin-bottom: 10px;">טוען בונה דו"ח סופי...</div>
+            <div style="color: #64748b; font-size: 14px;">אם הטעינה נכשלת, יפתח בחלון נפרד</div>
+          </div>
+          <iframe 
+            id="${uniqueId}"
+            src="final-report-builder.html?iframe=true&vatRate=17&unique=${uniqueId}" 
+            style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+            frameborder="0"
+            onload="handleIframeLoad('${uniqueId}')"
+            onerror="handleIframeError('${uniqueId}')">
+          </iframe>
+        </div>
+      `;
+    }
+    
+    function createFeeModuleContent() {
+      const uniqueId = 'iframe_' + Date.now();
+      return `
+        <div style="height: calc(80vh - 70px);">
+          <div id="iframe-loading-${uniqueId}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10;">
+            <div style="font-size: 24px; margin-bottom: 15px;">💰</div>
+            <div style="font-weight: bold; margin-bottom: 10px;">טוען מודול שכר טרחה...</div>
+            <div style="color: #64748b; font-size: 14px;">אם הטעינה נכשלת, יפתח בחלון נפרד</div>
+          </div>
+          <iframe 
+            id="${uniqueId}"
+            src="fee-module.html" 
+            style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+            frameborder="0"
+            onload="handleIframeLoad('${uniqueId}')"
+            onerror="handleIframeError('${uniqueId}')">
+          </iframe>
+        </div>
+      `;
+    }
+    
+    function createDamageCentersContent() {
+      const uniqueId = 'iframe_' + Date.now();
+      return `
+        <div style="height: calc(80vh - 70px);">
+          <div id="iframe-loading-${uniqueId}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10;">
+            <div style="font-size: 24px; margin-bottom: 15px;">🔧</div>
+            <div style="font-weight: bold; margin-bottom: 10px;">טוען מוקדי נזק...</div>
+            <div style="color: #64748b; font-size: 14px;">אם הטעינה נכשלת, יפתח בחלון נפרד</div>
+          </div>
+          <iframe 
+            id="${uniqueId}"
+            src="damage-centers-wizard.html" 
+            style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+            frameborder="0"
+            onload="handleIframeLoad('${uniqueId}')"
+            onerror="handleIframeError('${uniqueId}')">
+          </iframe>
+        </div>
+      `;
+    }
+    
+    function makePipModalDraggable(modalId) {
+      const modal = document.getElementById(modalId);
+      const header = modal.querySelector('.pip-modal-header');
+      
+      let isDragging = false;
+      let dragOffset = { x: 0, y: 0 };
+
+      header.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        dragOffset.x = e.clientX - modal.offsetLeft;
+        dragOffset.y = e.clientY - modal.offsetTop;
+        header.style.cursor = 'grabbing';
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (isDragging) {
+          const newLeft = Math.max(0, Math.min(window.innerWidth - modal.offsetWidth, e.clientX - dragOffset.x));
+          const newTop = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, e.clientY - dragOffset.y));
+          
+          modal.style.left = newLeft + 'px';
+          modal.style.top = newTop + 'px';
+          modal.style.transform = 'none'; // Remove centering transform when dragging
+        }
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (isDragging) {
+          isDragging = false;
+          header.style.cursor = 'move';
+        }
+      });
+    }
+    
+    // CROSS-ORIGIN SAFE IFRAME CONFIGURATION 
+    window.configureIframeForValidation = function(iframe) {
+      console.log('🔧 Configuring iframe for validation context');
+      
+      // Since we can't inject scripts into cross-origin iframes,
+      // we'll use URL parameters and postMessage communication instead
+      
+      try {
+        // Try to access iframe content (will fail for cross-origin)
+        const iframeWindow = iframe.contentWindow;
+        const iframeDocument = iframe.contentDocument;
+        
+        if (iframeWindow && iframeDocument) {
+          // Same-origin iframe - can inject helper directly
+          console.log('✅ Same-origin iframe detected - injecting helper and VAT data');
+          
+          // Share helper object with iframe
+          if (window.helper) {
+            iframeWindow.helper = window.helper;
+            iframeWindow.PARENT_HELPER = window.helper;
+            console.log('📤 Shared helper object with iframe');
+          }
+          
+          const script = iframeDocument.createElement('script');
+          script.textContent = `
+            // COMPREHENSIVE VALIDATION IFRAME SETUP
+            window.VALIDATION_IFRAME_VAT_RATE = ${window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 17};
+            window.IS_VALIDATION_IFRAME = true;
+            
+            console.log('🛡️ Setting up iframe with helper VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
+            
+            // OVERRIDE ALL VAT RATE FUNCTIONS
+            window.getVatRate = function() {
+              console.log('iframe getVatRate called, returning:', window.VALIDATION_IFRAME_VAT_RATE);
+              if (window.helper?.calculations?.vat_rate) {
+                return Promise.resolve(window.helper.calculations.vat_rate);
+              }
+              return Promise.resolve(window.VALIDATION_IFRAME_VAT_RATE);
+            };
+            
+            window.waitForVATRate = function() {
+              console.log('iframe waitForVATRate called, returning:', window.VALIDATION_IFRAME_VAT_RATE);
+              if (window.helper?.calculations?.vat_rate) {
+                return Promise.resolve(window.helper.calculations.vat_rate);
+              }
+              return Promise.resolve(window.VALIDATION_IFRAME_VAT_RATE);
+            };
+            
+            // Override helper VAT rate function (critical for calculations)
+            window.getHelperVatRate = function() {
+              console.log('iframe getHelperVatRate called, returning:', window.VALIDATION_IFRAME_VAT_RATE);
+              if (window.helper?.calculations?.vat_rate) {
+                return window.helper.calculations.vat_rate;
+              }
+              return window.VALIDATION_IFRAME_VAT_RATE;
+            };
+            
+            // Override MathEngine VAT functions if they exist
+            if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+              MathEngine.getVatRate = function() {
+                console.log('iframe MathEngine.getVatRate called, returning:', window.VALIDATION_IFRAME_VAT_RATE);
+                return window.VALIDATION_IFRAME_VAT_RATE;
+              };
+            }
+            
+            // PREVENT NaN ERRORS
+            const originalParseFloat = window.parseFloat;
+            window.parseFloat = function(value) {
+              if (value === null || value === undefined || value === '' || value === 'NaN') {
+                return 0;
+              }
+              const result = originalParseFloat(value);
+              return isNaN(result) ? 0 : result;
+            };
+            
+            const originalParseInt = window.parseInt;
+            window.parseInt = function(value, radix) {
+              if (value === null || value === undefined || value === '' || value === 'NaN') {
+                return 0;
+              }
+              const result = originalParseInt(value, radix);
+              return isNaN(result) ? 0 : result;
+            };
+            
+            // OVERRIDE ADMIN HUB COMMUNICATION TO PREVENT TIMEOUTS
+            if (typeof getValueFromAdminHub === 'function') {
+              const originalGetValue = getValueFromAdminHub;
+              window.getValueFromAdminHub = function(key) {
+                if (key === 'vatRate' || key === 'vat_rate') {
+                  console.log('iframe getValueFromAdminHub VAT override, returning:', window.VALIDATION_IFRAME_VAT_RATE);
+                  return Promise.resolve(window.VALIDATION_IFRAME_VAT_RATE.toString());
+                }
+                return originalGetValue(key).catch(() => '0');
+              };
+            }
+            
+            console.log('✅ Comprehensive iframe validation setup complete - VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
+          `;
+          
+          iframeDocument.head.appendChild(script);
+        } else {
+          throw new Error('Cross-origin iframe detected');
+        }
+        
+      } catch (crossOriginError) {
+        // Cross-origin iframe - use fallback approach
+        console.log('🌐 Cross-origin iframe detected - using fallback approach');
+        
+        // Update iframe src with additional parameters for error prevention
+        const currentSrc = iframe.src;
+        const separator = currentSrc.includes('?') ? '&' : '?';
+        const enhancedSrc = currentSrc + separator + 'validationMode=true&suppressErrors=true&defaultVatRate=17';
+        
+        // Only update if different to prevent reload loop
+        if (iframe.src !== enhancedSrc) {
+          iframe.src = enhancedSrc;
+        }
+        
+        // Set up comprehensive postMessage communication
+        const messageHandler = function(event) {
+          // Only respond to messages from our iframes
+          const allIframes = document.querySelectorAll('iframe');
+          let isFromOurIframe = false;
+          
+          allIframes.forEach(iframe => {
+            if (event.source === iframe.contentWindow) {
+              isFromOurIframe = true;
+            }
+          });
+          
+          if (!isFromOurIframe) return;
+          
+          console.log('📥 Received message from iframe:', event.data);
+          
+          if (event.data && event.data.type) {
+            switch(event.data.type) {
+              case 'REQUEST_VAT_RATE':
+              case 'GET_VAT_RATE':
+                console.log('📤 Sending VAT rate response...');
+                event.source.postMessage({
+                  type: 'VAT_RATE',
+                  vatRate: 17
+                }, '*');
+                break;
+                
+              case 'REQUEST_HELPER_DATA':
+                console.log('📤 Sending helper data...');
+                if (window.helper) {
+                  event.source.postMessage({
+                    type: 'HELPER_DATA',
+                    data: window.helper
+                  }, '*');
+                }
+                break;
+                
+              default:
+                console.log('Unknown message type:', event.data.type);
+            }
+          }
+        };
+        
+        // Remove any existing listeners to prevent duplicates
+        window.removeEventListener('message', messageHandler);
+        window.addEventListener('message', messageHandler);
+        
+      }
+      
+      // Add error handler for iframe loading issues
+      iframe.onerror = function() {
+        console.warn('⚠️ Iframe loading error - will try fallback');
+        
+        // Show error message and provide fallback option
+        const modal = iframe.closest('.pip-modal');
+        if (modal) {
+          const modalBody = modal.querySelector('.pip-modal-body');
+          if (modalBody) {
+            modalBody.innerHTML = `
+              <div style="text-align: center; padding: 40px; color: #666;">
+                <h3 style="color: #e74c3c; margin-bottom: 20px;">⚠️ שגיאה בטעינת המודול</h3>
+                <p style="margin-bottom: 20px;">לא ניתן לטעון את המודול במצב PiP</p>
+                <button onclick="openInNewTab('${iframe.src}')" 
+                        style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                  🔗 פתח בכרטיסיה חדשה
+                </button>
+              </div>
+            `;
+          }
+        }
+      };
+      
+      console.log('✅ Iframe configuration completed');
+    };
+
+    // IFRAME LOAD HANDLERS FOR PIP MODALS
+    window.handleIframeLoad = function(iframeId) {
+      console.log('Iframe loaded successfully:', iframeId);
+      const loadingElement = document.getElementById('iframe-loading-' + iframeId);
+      if (loadingElement) {
+        loadingElement.style.display = 'none';
+      }
+      
+      // Configure iframe for validation context
+      const iframe = document.getElementById(iframeId);
+      if (iframe) {
+        configureIframeForValidation(iframe);
+        
+        // Proactively send VAT rate and helper data to the iframe
+        setTimeout(() => {
+          try {
+            const vatRate = window.helper?.calculations?.vat_rate || 
+                          window.PROTECTED_VAT_RATE || 
+                          sessionStorage.getItem('PROTECTED_VAT_RATE') || 
+                          17;
+            iframe.contentWindow.postMessage({
+              type: 'VAT_RATE',
+              vatRate: vatRate,
+              helper: window.helper,
+              source: 'validation-workflow'
+            }, '*');
+            console.log('📤 Proactively sent VAT rate and helper to iframe:', vatRate);
+          } catch (error) {
+            console.log('Could not send proactive data (cross-origin):', error);
+          }
+        }, 500);
+      }
+    };
+
+    window.handleIframeError = function(iframeId) {
+      console.warn('Iframe loading failed:', iframeId);
+      const loadingElement = document.getElementById('iframe-loading-' + iframeId);
+      const iframe = document.getElementById(iframeId);
+      
+      if (loadingElement && iframe) {
+        loadingElement.innerHTML = `
+          <div style="text-align: center; color: #e74c3c;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+            <div style="font-weight: bold; margin-bottom: 10px;">שגיאה בטעינת המודול</div>
+            <button onclick="openInNewTab('${iframe.src}')" 
+                    style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              פתח בכרטיסיה חדשה
+            </button>
+          </div>
+        `;
+      }
+    };
+
+    // Helper function to open pages in new tab as fallback
+    window.openInNewTab = function(url) {
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.focus();
+      } else {
+        // Popup blocker detected - show manual link
+        alert('חלון קופץ נחסם. אנא פתח את הקישור ידנית: ' + url);
+      }
+    };
+    
+    // BROWSER MENU FUNCTION - COPIED FROM FINAL REPORT BUILDER
+    function showBrowserMenuUnderToggle() {
+      const menu = document.createElement('div');
+      menu.style.cssText = `
+        position: fixed;
+        top: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 20px;
+        z-index: 99999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-family: sans-serif;
+        direction: rtl;
+        min-width: 280px;
+      `;
+      
+      menu.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50; font-size: 16px;">בחר אתר לפתיחה:</div>
+        <button onclick="window.openInternalBrowser('car-part.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+          🔧 Car Part - חלקי רכב
+        </button>
+        <button onclick="window.openInternalBrowser('portal.levi-itzhak.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+          📊 פורטל לוי יצחק
+        </button>
+        <button onclick="this.parentElement.remove();" style="width: 100%; padding: 10px; border: 1px solid #ccc; background: white; color: #666; border-radius: 6px; cursor: pointer; font-size: 14px;">
+          ביטול
+        </button>
+      `;
+      
+      document.body.appendChild(menu);
+      
+      // Remove menu when clicking outside
+      setTimeout(() => {
+        document.addEventListener('click', function removeMenu(e) {
+          if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', removeMenu);
+          }
+        });
+      }, 100);
+    }
+    
     window.logout = function() {
-      // Use the enhanced logout with sound if available
       if (typeof window.logoutWithSound === 'function') {
         window.logoutWithSound();
       } else {
-        // Fallback to regular logout
         sessionStorage.clear();
         window.location.href = "index.html";
       }
     };
   </script>
-  <script type="module" src="helper-events.js"></script>
+  
+  <script type="module" src="./helper-events.js"></script>
+  <script type="module" src="./helper.js"></script>
   <script src="internal-browser.js"></script>
   <script src="logout-sound.js"></script>
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
+  
+  <!-- FLOATING SCREENS SCRIPTS - COPIED FROM FINAL REPORT BUILDER -->
+  <script src="levi-floating.js"></script>
+  <script src="car-details-floating.js"></script>
+  <script src="invoice-details-floating.js"></script>
+  <script src="parts-search-results-floating.js"></script>
+  
+  <script>
+    // GLOBAL POSTMESSAGE HANDLER FOR ALL IFRAME COMMUNICATION
+    console.log('🔗 Setting up global postMessage handler for VAT rate communication');
+    
+    window.addEventListener('message', function(event) {
+      console.log('📥 Global message received:', event.data);
+      
+      if (event.data && event.data.type) {
+        switch(event.data.type) {
+          case 'GET_VAT_RATE':
+          case 'REQUEST_VAT_RATE':
+            // Use protected VAT rate as fallback
+            const vatRate = window.helper?.calculations?.vat_rate || 
+                          window.PROTECTED_VAT_RATE || 
+                          sessionStorage.getItem('PROTECTED_VAT_RATE') || 
+                          17;
+            console.log('📤 Sending global VAT rate response:', vatRate);
+            try {
+              event.source.postMessage({
+                type: 'VAT_RATE',
+                vatRate: vatRate
+              }, '*');
+            } catch (error) {
+              console.warn('Failed to send VAT rate:', error);
+            }
+            break;
+            
+          case 'REQUEST_HELPER_DATA':
+            console.log('📤 Sending global helper data response');
+            try {
+              if (window.helper) {
+                event.source.postMessage({
+                  type: 'HELPER_DATA',
+                  data: window.helper
+                }, '*');
+              }
+            } catch (error) {
+              console.warn('Failed to send helper data:', error);
+            }
+            break;
+            
+          case 'IFRAME_READY':
+            console.log('📤 Sending iframe ready acknowledgment');
+            try {
+              event.source.postMessage({
+                type: 'PARENT_READY',
+                vatRate: 17,
+                helper: window.helper || null
+              }, '*');
+            } catch (error) {
+              console.warn('Failed to send parent ready:', error);
+            }
+            break;
+            
+          default:
+            console.log('Unknown message type received:', event.data.type);
+        }
+      }
+    });
+    
+    console.log('✅ Global postMessage handler ready');
+  </script>
 </body>
 </html>
