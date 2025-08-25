@@ -1223,7 +1223,7 @@
         <!-- Additional Claims Data -->
         <div style="margin-top: 20px;">
           <div class="form-grid">
-            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateHelperFromField(event); updateGrossPercentageField();" style="direction: ltr; text-align: right;" /></div>
+            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateGrossPercentageField();" style="direction: ltr; text-align: right;" /></div>
             <div></div>
           </div>
         </div>
@@ -2457,12 +2457,6 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // ✅ FIX: Update gross section with correct value from damage_assessment.totals.Total_with_VAT
-        const totalClaimGrossInput = document.getElementById('totalClaimGross');
-        if (totalClaimGrossInput) {
-          const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-          totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-        }
         
         // 2. חישוב הערך לנזק גולמי - Gross damage value (from Levi adjustments)
         const grossDamageValueDiv = document.getElementById('grossDamageValue');
@@ -2545,27 +2539,6 @@
           grossPercentField.value = grossPercent;
         }
         
-        const authorizedClaimField = document.getElementById('authorizedClaim');
-        if (authorizedClaimField) {
-          // ✅ FIX: Check both save locations - section save and individual field save
-          const sectionSavedValue = helper.manual_gross_result?.authorizedClaim;
-          const claimsSavedValue = helper.claims_data?.total_claim || helper.claims_data?.authorized_claim;
-          const autoValue = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-
-          if (sectionSavedValue && sectionSavedValue !== '' && sectionSavedValue !== '00' && sectionSavedValue !== '0') {
-            // Use section saved value (current save system)
-            authorizedClaimField.value = sectionSavedValue;
-            // Sync to claims_data for consistency
-            if (!helper.claims_data) helper.claims_data = {};
-            helper.claims_data.total_claim = sectionSavedValue;
-          } else if (claimsSavedValue && claimsSavedValue !== '' && claimsSavedValue !== '00' && claimsSavedValue !== '0') {
-            // Use individual field saved value
-            authorizedClaimField.value = claimsSavedValue;
-          } else {
-            // Auto-populate from damage assessment calculation
-            authorizedClaimField.value = autoValue ? `₪${autoValue.toLocaleString()}` : '';
-          }
-        }
           
         console.log('💰 נתוני תביעה mapped successfully:', { 
           totalClaim: formattedClaim,
@@ -4246,13 +4219,6 @@
         // Update claims_data for UI consistency
         helper.claims_data = helper.claims_data || {};
         
-        // ✅ FIX: Only update total_claim if no manual value exists (preserve user input)
-        if (!helper.manual_gross_result?.authorizedClaim && !helper.claims_data.total_claim) {
-          helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
-          console.log(`🔄 3-bulk: Set total_claim to calculated value: ${helper.claims_data.total_claim}`);
-        } else {
-          console.log(`🔄 3-bulk: Preserving existing total_claim: ${helper.claims_data.total_claim} (manual: ${helper.manual_gross_result?.authorizedClaim})`);
-        }
         helper.claims_data.gross_percent = `${grossPercentage.toFixed(2)}%`;
         
         // Save updated helper
@@ -4321,22 +4287,6 @@
           }
         }));
         
-        // ✅ 3-BULK: Update authorizedClaim field with proper formatting (only if not manually set)
-        const authorizedClaimField = document.getElementById('authorizedClaim');
-        if (authorizedClaimField) {
-          // Check if user has manually entered a value
-          const currentValue = authorizedClaimField.value;
-          const hasManualValue = helper.claims_data?.total_claim && helper.claims_data.total_claim !== `₪${totalClaim.toLocaleString()}`;
-          
-          if (!hasManualValue || !currentValue) {
-            // Auto-populate with calculation
-            const formattedClaim = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
-            authorizedClaimField.value = formattedClaim;
-            console.log(`🔄 3-bulk: Updated authorizedClaim field: ${formattedClaim}`);
-          } else {
-            console.log(`🔄 3-bulk: Preserving manual authorizedClaim value: ${currentValue}`);
-          }
-        }
         
         console.log('✅ Helper updated with 3-bulk calculations:', {
           grossMarketValue,
@@ -4524,15 +4474,11 @@
             helper.client.insurance_agent_email = value;
             helper.car_details.insurance_agent_email = value;
           }
-        } else if (['totalClaim', 'authorizedClaim'].includes(fieldId)) {
+        } else if (fieldId === 'totalClaim') {
           // Claims data mapping
           helper.claims_data = helper.claims_data || {};
-          const mapping = {
-            'totalClaim': 'total_claim',
-            'authorizedClaim': 'total_claim'  // ✅ FIX: authorizedClaim also writes to total_claim
-          };
-          helper.claims_data[mapping[fieldId]] = value;
-          console.log(`💰 Updated claims_data.${mapping[fieldId]} from ${fieldId}: ${value}`);
+          helper.claims_data.total_claim = value;
+          console.log(`💰 Updated claims_data.total_claim from ${fieldId}: ${value}`);
           
           // ✅ ENSURE: Update window.helper immediately
           window.helper = helper;
@@ -4540,7 +4486,7 @@
           // Also update expertise.calculations for compatibility
           helper.expertise = helper.expertise || {};
           helper.expertise.calculations = helper.expertise.calculations || {};
-          if (fieldId === 'totalClaim' || fieldId === 'authorizedClaim') {
+          if (fieldId === 'totalClaim') {
             // Remove currency formatting and parse number
             const numericValue = parseFloat(value.replace(/[₪,]/g, '')) || 0;
             helper.expertise.calculations.total_damage = numericValue;
@@ -6647,18 +6593,11 @@
           const totalClaimField = document.getElementById('totalClaim');
           const leviPriceListField = document.getElementById('leviPriceList');
           const grossPercentField = document.getElementById('grossPercent');
-          const totalClaimGrossField = document.getElementById('totalClaimGross');
           
           if (totalClaimField && helper.claims_data.total_claim) {
             totalClaimField.value = helper.claims_data.total_claim;
           }
           
-          // ✅ FIX: Load totalClaimGross from damage_assessment.summary.total_with_vat
-          if (totalClaimGrossField) {
-            const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-            totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-            console.log(`💰 Loaded totalClaimGross from helper.damage_assessment.summary.total_with_vat: ${totalWithVAT}`);
-          }
           
           if (leviPriceListField && helper.claims_data.gross_value) {
             leviPriceListField.value = helper.claims_data.gross_value;
@@ -6739,19 +6678,11 @@
           helper.calculations = helper.calculations || {};
           helper.calculations.damage_percent_gross = grossDamagePercentage;
           helper.calculations.total_damage = totalClaim;
-          helper.calculations.authorized_claim = authorizedClaim;
           
           // Update claims data for backward compatibility
           helper.claims_data = helper.claims_data || {};
           helper.claims_data.gross_percent = formattedPercentage;
           
-          // ✅ FIX: Only update total_claim if no manual value exists (preserve user input)
-          if (!helper.manual_gross_result?.authorizedClaim && !helper.claims_data.total_claim) {
-            helper.claims_data.total_claim = `₪${totalClaim.toLocaleString()}`;
-            console.log(`🔄 Gross calc: Set total_claim to calculated value: ${helper.claims_data.total_claim}`);
-          } else {
-            console.log(`🔄 Gross calc: Preserving existing total_claim: ${helper.claims_data.total_claim} (manual: ${helper.manual_gross_result?.authorizedClaim})`);
-          }
           
           helper.claims_data.gross_value = `₪${grossPrice.toLocaleString()}`;
           
@@ -8754,12 +8685,6 @@
         } else if (totalClaimField) {
           totalClaimField.value = formattedAmount;
         }
-        // ✅ FIX: Update gross section with correct value from damage_assessment.summary.total_with_vat
-        const totalClaimGrossField = document.getElementById('totalClaimGross');
-        if (totalClaimGrossField) {
-          const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-          totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-        }
         
         console.log(`💰 Updated total claim with VAT: ${totalClaimBeforeVAT.toLocaleString()} → ${totalClaimWithVAT.toLocaleString()}`);
         
@@ -9571,7 +9496,7 @@
         });
         
         // Claims data fields
-        const claimsFields = ['totalClaim', 'authorizedClaim'];
+        const claimsFields = ['totalClaim'];
         
         claimsFields.forEach(fieldId => {
           const field = document.getElementById(fieldId);
@@ -10038,31 +9963,6 @@
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // ✅ SYNC: If gross-result section was saved, sync authorizedClaim to claims_data.total_claim
-        console.log(`🔍 DEBUG: Section saved: ${sectionId}`);
-        console.log(`🔍 DEBUG: helper.manual_gross_result:`, helper.manual_gross_result);
-        
-        if (sectionId === 'gross-result') {
-          console.log(`🔍 DEBUG: gross-result section detected`);
-          if (helper.manual_gross_result?.authorizedClaim) {
-            console.log(`🔍 DEBUG: authorizedClaim found: ${helper.manual_gross_result.authorizedClaim}`);
-            if (!helper.claims_data) {
-              helper.claims_data = {};
-              console.log(`🔍 DEBUG: Created new claims_data section`);
-            }
-            helper.claims_data.total_claim = helper.manual_gross_result.authorizedClaim;
-            helper.claims_data.last_updated = new Date().toISOString();
-            helper.claims_data.source = 'final_report';
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            console.log(`🔄 Synced authorizedClaim to claims_data.total_claim: ${helper.claims_data.total_claim}`);
-            console.log(`🔍 VERIFY: helper.claims_data:`, helper.claims_data);
-            
-            // Also update window.helper for immediate access
-            window.helper = helper;
-          } else {
-            console.log(`🔍 DEBUG: No authorizedClaim found in manual_gross_result`);
-          }
-        }
         
         // Show success message
         showSectionMessage(sectionId, `✅ ${config.name} נשמר בהצלחה`, 'success');
@@ -12992,13 +12892,6 @@
       const totalClaimDiv = document.getElementById('totalClaim');
       if (totalClaimDiv) {
         totalClaimDiv.innerText = totalClaim ? `₪${totalClaim.toLocaleString()}` : '';
-      }
-      // ✅ FIX: Update gross section with correct value from damage_assessment.summary.total_with_vat
-      const totalClaimGrossInput = document.getElementById('totalClaimGross');
-      if (totalClaimGrossInput) {
-        const helper = window.helper || {};
-        const totalWithVAT = helper.damage_assessment?.totals?.Total_with_VAT || 0;
-        totalClaimGrossInput.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
       }
       
       const depFields = [
