@@ -15,7 +15,9 @@ window.prefillUserPassword = function() {
     return;
   }
   
-  const prefillPassword = sessionStorage.getItem('prefillPassword');
+  const prefillPassword = sessionStorage.getItem('prefillPassword') || 
+                          sessionStorage.getItem('mainGatePassword') || 
+                          sessionStorage.getItem('originalPassword');
   
   if (prefillPassword) {
     // Find all password inputs in the page (common IDs used across modules)
@@ -26,6 +28,7 @@ window.prefillUserPassword = function() {
       '#platePassword',
       '#casePassword',
       '#accessPassword',
+      '#builderPasswordInput',  // Added for final-report-builder
       'input[type="password"]',
       'input[type="text"][placeholder*="סיסמה"]',
       'input[type="text"][placeholder*="password"]'
@@ -36,27 +39,36 @@ window.prefillUserPassword = function() {
     passwordSelectors.forEach(selector => {
       const input = document.querySelector(selector);
       if (input && !input.value) {
-        // Create masked display but store actual password
-        const maskedPassword = '*'.repeat(prefillPassword.length);
-        input.value = maskedPassword;
+        // Special handling for builderPasswordInput - user expects to see actual password
+        if (input.id === 'builderPasswordInput') {
+          input.value = prefillPassword;
+          console.log(`🔑 Password prefilled (visible) for selector: ${selector}`);
+        } else {
+          // Create masked display but store actual password for other fields
+          const maskedPassword = '*'.repeat(prefillPassword.length);
+          input.value = maskedPassword;
+          
+          // Store the actual password as a data attribute for form submission
+          input.setAttribute('data-actual-password', prefillPassword);
+          console.log(`🔑 Password prefilled (masked) for selector: ${selector}`);
+        }
         
-        // Store the actual password as a data attribute for form submission
-        input.setAttribute('data-actual-password', prefillPassword);
-        
-        // Handle form submission to use actual password
-        const form = input.closest('form');
-        if (form && !form.hasAttribute('data-password-handler-added')) {
-          form.setAttribute('data-password-handler-added', 'true');
-          form.addEventListener('submit', function(e) {
-            // Replace masked password with actual password before submission
-            if (input.value === maskedPassword) {
-              input.value = prefillPassword;
-            }
-          });
+        // Handle form submission to use actual password (only for masked fields)
+        if (input.id !== 'builderPasswordInput') {
+          const form = input.closest('form');
+          if (form && !form.hasAttribute('data-password-handler-added')) {
+            form.setAttribute('data-password-handler-added', 'true');
+            const maskedPassword = '*'.repeat(prefillPassword.length);
+            form.addEventListener('submit', function(e) {
+              // Replace masked password with actual password before submission
+              if (input.value === maskedPassword) {
+                input.value = prefillPassword;
+              }
+            });
+          }
         }
         
         filledCount++;
-        console.log(`🔑 Password prefilled (masked) for selector: ${selector}`);
       }
     });
     
