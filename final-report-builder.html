@@ -901,7 +901,7 @@
         
         <div style="display:grid; grid-template-columns:1fr; gap:15px; margin-bottom:15px; max-width: 300px;">
           <div>
-            <label>סיסמת העמוד (מתמלאת אוטומטית):</label>
+            <label>סיסמת גישה (מתמלאת אוטומטית):</label>
             <input type="password" id="builderPasswordInput" placeholder="סיסמת אימות לעמוד" autocomplete="current-password">
           </div>
         </div>
@@ -14054,28 +14054,94 @@
     console.log('🚀 Quick test available: quickVatTest()');
     
     
-    // LOCAL GENERATION FUNCTIONS - No webhooks needed
+    // LOCAL GENERATION FUNCTIONS - No webhooks needed, skip validation
     window.generateEstimateReport = function() {
       console.log('🔧 Generating estimate report locally...');
-      // First save all data
+      
+      // Get current helper data or plate from input
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const plateInput = document.getElementById('builderPlateInput');
+      const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+      
+      console.log('📋 Current plate for estimate:', currentPlate);
+      console.log('📊 Current helper data:', helper);
+      
+      // If no plate in helper but there's one in input, create minimal helper structure
+      if (!currentPlate && plateInput && plateInput.value.trim()) {
+        const plateValue = plateInput.value.trim();
+        console.log('📝 Creating minimal helper structure with plate:', plateValue);
+        
+        // Create basic helper structure with plate
+        const minimalHelper = {
+          plate: plateValue,
+          מספר_רכב: plateValue,
+          meta: {
+            case_id: `case_${plateValue}_${Date.now()}`,
+            created_at: new Date().toISOString()
+          }
+        };
+        
+        // Merge with existing helper if any
+        const updatedHelper = { ...helper, ...minimalHelper };
+        sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+        window.helper = updatedHelper;
+      }
+      
+      // Save all current data
       if (typeof window.saveFinalReport === 'function') {
+        console.log('💾 Saving final report data...');
         window.saveFinalReport();
       }
       
-      // Set report type and navigate to fee module
+      // Set report type and navigate to fee module (skip validation as requested)
       sessionStorage.setItem('selectedReportType', 'estimate');
+      sessionStorage.setItem('skipValidation', 'true');
+      console.log('🚀 Navigating to fee module for estimate generation...');
       window.location.href = 'fee-module.html';
     };
     
     window.generateExpertiseReport = function() {
       console.log('🔧 Generating expertise report locally...');
-      // First save all data
+      
+      // Get current helper data or plate from input  
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const plateInput = document.getElementById('builderPlateInput');
+      const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+      
+      console.log('📋 Current plate for expertise:', currentPlate);
+      console.log('📊 Current helper data:', helper);
+      
+      // If no plate in helper but there's one in input, create minimal helper structure
+      if (!currentPlate && plateInput && plateInput.value.trim()) {
+        const plateValue = plateInput.value.trim();
+        console.log('📝 Creating minimal helper structure with plate:', plateValue);
+        
+        // Create basic helper structure with plate
+        const minimalHelper = {
+          plate: plateValue,
+          מספר_רכב: plateValue,
+          meta: {
+            case_id: `case_${plateValue}_${Date.now()}`,
+            created_at: new Date().toISOString()
+          }
+        };
+        
+        // Merge with existing helper if any
+        const updatedHelper = { ...helper, ...minimalHelper };
+        sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+        window.helper = updatedHelper;
+      }
+      
+      // Save all current data
       if (typeof window.saveFinalReport === 'function') {
+        console.log('💾 Saving final report data...');
         window.saveFinalReport();
       }
       
-      // Set report type and navigate to fee module
-      sessionStorage.setItem('selectedReportType', 'expertise');
+      // Set report type and navigate to fee module (skip validation as requested)
+      sessionStorage.setItem('selectedReportType', 'expertise');  
+      sessionStorage.setItem('skipValidation', 'true');
+      console.log('🚀 Navigating to fee module for expertise generation...');
       window.location.href = 'fee-module.html';
     };
     
