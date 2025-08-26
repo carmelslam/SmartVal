@@ -2742,13 +2742,24 @@
         // 4. Adjustments Info - informative field only (not for calculations)
         const adjustmentsValue = helper.valuation?.adjustments_value || 0;
         const adjustmentsInfoField = document.getElementById('adjustmentsInfo');
-        console.log(`🔍 DEBUG: Adjustments value: ${adjustmentsValue}, Field exists: ${!!adjustmentsInfoField}`);
+        const adjustmentsInfoPrivateField = document.getElementById('adjustmentsInfoPrivate');
+        console.log(`🔍 DEBUG: Adjustments value: ${adjustmentsValue}, Static field exists: ${!!adjustmentsInfoField}, Private field exists: ${!!adjustmentsInfoPrivateField}`);
+        
+        const formattedAdjValue = adjustmentsValue !== 0 ? `₪${adjustmentsValue.toLocaleString()}` : '₪0';
+        
+        // Populate both static and dynamic private fields
         if (adjustmentsInfoField) {
-          const formattedAdjValue = adjustmentsValue !== 0 ? `₪${adjustmentsValue.toLocaleString()}` : '₪0';
           adjustmentsInfoField.value = formattedAdjValue;
           console.log(`✅ Set adjustmentsInfo field to: ${formattedAdjValue}`);
-        } else {
-          console.log(`❌ adjustmentsInfo field not found!`);
+        }
+        
+        if (adjustmentsInfoPrivateField) {
+          adjustmentsInfoPrivateField.value = formattedAdjValue;
+          console.log(`✅ Set adjustmentsInfoPrivate field to: ${formattedAdjValue}`);
+        }
+        
+        if (!adjustmentsInfoField && !adjustmentsInfoPrivateField) {
+          console.log(`❌ No adjustments info fields found!`);
         }
         helper.final_report.summary.adjustments_value = adjustmentsValue;
         
@@ -11454,6 +11465,7 @@
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValuePrivate" style="background: white; color: #333;" readonly /></div>
             <div><label style="color: #333;">סה״כ תביעה:</label><input type="text" id="sumClaimPrivate" style="background: white; color: #333;" readonly /></div>
             <div><label style="color: #333;">פיצוי בגין ירידת ערך:</label><input type="text" id="depCompensationPrivate" style="background: white; color: #333;" readonly /></div>
+            <div><label style="color: #333;">תוספות והורדות (מידע בלבד):</label><input type="text" id="adjustmentsInfoPrivate" style="background: #f0f0f0; color: #666;" readonly /></div>
           `;
           break;
           
