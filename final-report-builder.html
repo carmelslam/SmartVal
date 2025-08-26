@@ -11320,13 +11320,17 @@
             value = parts[0] + '.' + parts.slice(1).join('');
           }
           
-          // Add % back if it was there or if we have a valid number
-          if (value !== '' && !isNaN(parseFloat(value))) {
-            this.value = value + '%';
-          } else if (value === '') {
-            this.value = '';
+          // Only add % back if user finished typing (not in the middle of decimal entry)
+          if (value !== '') {
+            // Check if this looks like a complete number (not ending with .)
+            if (!value.endsWith('.') && !isNaN(parseFloat(value))) {
+              this.value = value + '%';
+            } else {
+              // User is still typing (e.g., "1." or incomplete decimal)
+              this.value = value;
+            }
           } else {
-            this.value = value;
+            this.value = '';
           }
           
           console.log('Global depreciation changed:', this.value);
@@ -11342,6 +11346,18 @@
           
           if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
+          }
+        });
+        
+        // Add % sign when user finishes editing (on blur)
+        globalDep1.addEventListener('blur', function() {
+          let value = this.value.replace('%', '');
+          if (value !== '' && !isNaN(parseFloat(value))) {
+            this.value = value + '%';
+            // Trigger the calculation when user finishes editing
+            calculateGlobalDepreciationValue();
+            triggerMathCalculation();
+            saveAndRefreshComplete();
           }
         });
       }
