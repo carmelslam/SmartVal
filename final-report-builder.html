@@ -1777,28 +1777,24 @@
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
     window.toggleFloatingScreen = function(screenType) {
-      console.log('Toggling floating screen:', screenType);
       
       const screens = {
         leviReport: () => {
           if (window.toggleLeviReport) {
             window.toggleLeviReport();
           } else {
-            console.log('Levi report floating screen not available');
           }
         },
         carDetails: () => {
           if (window.toggleCarDetails) {
             window.toggleCarDetails();
           } else {
-            console.log('Car details floating screen not available');
           }
         },
         internalBrowser: () => {
           if (window.showBrowserMenu) {
             showBrowserMenuUnderToggle();
           } else {
-            console.log('Internal browser not available');
           }
         },
         invoiceDetails: () => {
@@ -1806,7 +1802,6 @@
             window.toggleInvoiceDetails();
           } else {
             alert('מסך פרטי חשבוניות יהיה זמין בקרוב\nInvoice details screen coming soon');
-            console.log('Invoice details floating screen not available');
           }
         }
       };
@@ -1814,20 +1809,16 @@
       if (screens[screenType]) {
         screens[screenType]();
       } else {
-        console.log('Unknown screen type:', screenType);
       }
     };
     
     window.toggleSection = function(sectionId) {
-      console.log(`🔄 toggleSection called with: ${sectionId}`);
       
       const section = document.getElementById(sectionId);
       if (section) {
         const isVisible = section.style.display !== 'none';
         section.style.display = isVisible ? 'none' : 'block';
-        console.log(`Section ${sectionId} is now ${isVisible ? 'hidden' : 'visible'}`);
       } else {
-        console.error(`Section with id ${sectionId} not found`);
       }
     };
     // Authentication check
@@ -1894,7 +1885,6 @@
         const isVisible = section.style.display !== 'none';
         sessionStorage.setItem(`section-${sectionId}`, isVisible ? 'expanded' : 'collapsed');
       } else {
-        console.error(`Section with ID '${sectionId}' not found.`);
       }
     }
 
@@ -1920,7 +1910,6 @@
         
         // Save state to sessionStorage
         sessionStorage.setItem('damageCentersSection', isVisible ? 'collapsed' : 'expanded');
-        console.log(`🔄 Damage centers section ${isVisible ? 'collapsed' : 'expanded'}`);
       }
     }
 
@@ -1929,7 +1918,6 @@
     function addDepField(data = {}) {
       const container = document.getElementById('depreciationBulkTable');
       if (!container) {
-        console.error('Depreciation bulk table container not found');
         return;
       }
       
@@ -2008,14 +1996,12 @@
         helper.depreciation.last_updated = new Date().toISOString();
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        console.log(`✅ Real-time update: helper.depreciation.${fieldName} = ${value}`);
         
         // Trigger helper update broadcast
         if (typeof broadcastHelperUpdate === 'function') {
           broadcastHelperUpdate(['depreciation'], 'depreciation_field_update');
         }
       } catch (error) {
-        console.error('Error updating depreciation field in helper:', error);
       }
     }
     
@@ -2094,7 +2080,6 @@
           };
           
         } catch (error) {
-          console.error('❌ ERROR in helper.depreciation assignment:', error);
         }
         
         // Also maintain final_report reference for compatibility
@@ -2114,7 +2099,6 @@
           broadcastHelperUpdate(['depreciation'], 'depreciation_update');
         }
       } catch (error) {
-        console.error('Error saving depreciation data:', error);
       }
     }
 
@@ -2371,7 +2355,6 @@
         
         return '';
       } catch (error) {
-        console.warn('Error converting date:', dateString, error);
         return '';
       }
     }
@@ -2384,7 +2367,6 @@
         
         // Clean up redundant duplicate damage_assessment.centers section on page load
         if (helper.damage_assessment?.centers) {
-          console.log('🧹 Removing redundant damage_assessment.centers section');
           delete helper.damage_assessment.centers;
           if (Object.keys(helper.damage_assessment).length === 0) {
             delete helper.damage_assessment;
@@ -2431,13 +2413,10 @@
           
           // DEBUG: Track where 80487 comes from
           if (helper.vehicle?.market_value) {
-            console.log('📍 Market value from helper.vehicle.market_value:', helper.vehicle.market_value);
           }
           if (helper.calculations?.full_market_value) {
-            console.log('📍 Market value from helper.calculations.full_market_value:', helper.calculations.full_market_value);
           }
           if (helper.valuation?.market_value) {
-            console.log('📍 Market value from helper.valuation.market_value:', helper.valuation.market_value);
           }
           
           // Clean any existing currency symbols and parse as number
@@ -2445,9 +2424,7 @@
           
           // Debug market value loading
           if (marketValue && marketValue > 0) {
-            console.log('✅ Market value loaded successfully:', marketValue);
           } else {
-            console.log('⚠️ No market value found in helper data');
           }
           
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
@@ -2472,7 +2449,6 @@
             const fullMarketValueField = document.getElementById('fullMarketValueResult');
             if (fullMarketValueField) {
               fullMarketValueField.value = `₪${savedFullMarketValue.toLocaleString()}`;
-              console.log('💾 Loaded saved full market value from helper:', savedFullMarketValue);
             }
           }
           
@@ -2513,7 +2489,6 @@
           }
           
           totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-          console.log(`💰 Loaded totalClaimGross from damage_assessment.${source}: ${totalWithVAT}`);
         }
         
         // Load authorizedClaim field - check for saved data first, then fallback to damage assessment
@@ -2530,12 +2505,10 @@
             // Use saved claim value
             useValue = savedClaimValue;
             numericValue = parseFloat(savedClaimValue.replace(/[₪,]/g, '')) || 0;
-            console.log(`💰 Loaded authorizedClaim from saved claims_data.total_claim: ${useValue}`);
           } else if (savedCalculationValue && savedCalculationValue > 0) {
             // Use saved calculation value
             numericValue = savedCalculationValue;
             useValue = `₪${numericValue.toLocaleString()}`;
-            console.log(`💰 Loaded authorizedClaim from saved calculations.total_damage: ${numericValue}`);
           } else {
             // Fallback to damage assessment data - check totals first, then damage_centers_summary
             let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
@@ -2549,7 +2522,6 @@
             
             numericValue = totalWithVAT;
             useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-            console.log(`💰 Loaded authorizedClaim from damage_assessment.${source}: ${totalWithVAT}`);
           }
           
           authorizedClaimField.value = useValue;
@@ -2614,12 +2586,6 @@
                             helper.expertise?.levi_report?.final_price || 0;
         
         // DEBUG: Check what's in helper for Levi data
-        console.log('🔍 Levi value debug:', {
-          'helper.levisummary': helper.levisummary,
-          'helper.levisummary?.final_price': helper.levisummary?.final_price,
-          'helper.levi_report?.final_price': helper.levi_report?.final_price,
-          'finalMarketVal': finalMarketVal
-        });
         
         // Handle string values that need parsing
         if (typeof finalMarketVal === 'string') {
@@ -2677,7 +2643,6 @@
         document.getElementById('garagePhone').value = getNestedValue(helper, 'stakeholders.garage.phone') || helper.garage?.phone || '';
         document.getElementById('garageEmail').value = getNestedValue(helper, 'stakeholders.garage.email') || helper.garage?.email || '';
         
-        console.log('✅ All contact fields populated FROM helper structure (including garage data)');
           
         // Sync data to both standardized and legacy structures for compatibility
         helper.car_details = helper.car_details || {};
@@ -2696,7 +2661,7 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         
         // Update page title with plate
-        // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
+        // Standardize plate format
         const rawPlate = helper.meta?.plate || helper.car_details?.plate || '...';
         const standardizedPlate = rawPlate !== '...' ? String(rawPlate).replace(/[-\s]/g, '') : rawPlate;
         document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedPlate}`;
@@ -2731,7 +2696,6 @@
     // LOAD SUMMARY FIELDS FROM HELPER - ENHANCED FOR ALL 5 REPORT VARIANTS
     function loadSummaryFieldsFromHelper(helper) {
       try {
-        console.log('📊 Enhanced loading of summary fields from helper');
         
         // ENSURE HELPER STRUCTURE EXISTS FOR ALL VARIANTS
         helper.final_report = helper.final_report || {};
@@ -2782,23 +2746,19 @@
         const adjustmentsValue = helper.valuation?.adjustments_value || 0;
         const adjustmentsInfoField = document.getElementById('adjustmentsInfo');
         const adjustmentsInfoPrivateField = document.getElementById('adjustmentsInfoPrivate');
-        console.log(`🔍 DEBUG: Adjustments value: ${adjustmentsValue}, Static field exists: ${!!adjustmentsInfoField}, Private field exists: ${!!adjustmentsInfoPrivateField}`);
         
         const formattedAdjValue = adjustmentsValue !== 0 ? `₪${adjustmentsValue.toLocaleString()}` : '₪0';
         
         // Populate both static and dynamic private fields
         if (adjustmentsInfoField) {
           adjustmentsInfoField.value = formattedAdjValue;
-          console.log(`✅ Set adjustmentsInfo field to: ${formattedAdjValue}`);
         }
         
         if (adjustmentsInfoPrivateField) {
           adjustmentsInfoPrivateField.value = formattedAdjValue;
-          console.log(`✅ Set adjustmentsInfoPrivate field to: ${formattedAdjValue}`);
         }
         
         if (!adjustmentsInfoField && !adjustmentsInfoPrivateField) {
-          console.log(`❌ No adjustments info fields found!`);
         }
         helper.final_report.summary.adjustments_value = adjustmentsValue;
         
@@ -2831,13 +2791,11 @@
           if (field) {
             // Load saved value if exists
             field.value = savedValue || '';
-            console.log(`🔄 Loaded manual field ${fieldId}: ${savedValue || 'empty'}`);
           }
           
           // Ensure field exists in helper structure (initialize if missing)
           if (!helper.final_report.summary.hasOwnProperty(helperKey)) {
             helper.final_report.summary[helperKey] = '';
-            console.log(`✨ Initialized missing helper key: ${helperKey}`);
           }
         });
         
@@ -2849,7 +2807,6 @@
           calculateSummaryTotals();
         }, 100);
         
-        console.log('✅ Enhanced summary fields loaded successfully');
         
       } catch (error) {
         console.error('❌ Error loading enhanced summary fields:', error);
@@ -4690,7 +4647,7 @@
         
         // Update page title if plate changed
         if (fieldId === 'carPlate') {
-          // Apply plate standardization (remove dashes for Israeli format XXXXXXXX) 
+          // Standardize plate format
           const standardizedValue = value && value !== '...' ? String(value).replace(/[-\s]/g, '') : (value || '...');
           document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedValue}`;
         }
@@ -10700,7 +10657,7 @@
           }
           
           // Update page title
-          // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
+          // Standardize plate format
           const standardizedPlateNumber = String(plateNumber).replace(/[-\s]/g, '');
           document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedPlateNumber}`;
           
@@ -10740,7 +10697,7 @@
           }
           
           // Update page title
-          // Apply plate standardization (remove dashes for Israeli format XXXXXXXX)
+          // Standardize plate format
           const standardizedPlateNumber = String(plateNumber).replace(/[-\s]/g, '');
           document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedPlateNumber}`;
           
