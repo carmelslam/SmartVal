@@ -1378,24 +1378,33 @@
       const final_report = helper.final_report || {};
       const meta = helper.meta || {};
       
+      // Debug: Log helper structure to understand actual data paths
+      console.log('🔍 Helper structure for report type validation:', {
+        helper_keys: Object.keys(helper),
+        system: system,
+        final_report: final_report,
+        autoSelectReportType: helper.autoSelectReportType,
+        active_report_types: system.active_report_types
+      });
+      
       const reportTypeItems = [
         {
           label: 'סוג דו"ח נבחר',
-          current: system.active_report_types?.final_report || final_report.report_type || 'לא נבחר',
-          stored: system.active_report_types?.final_report || final_report.report_type || 'private_opinion',
+          current: helper.autoSelectReportType || system.active_report_types?.final_report || final_report.report_type || 'לא נבחר',
+          stored: final_report.report_type || system.active_report_types?.final_report || 'private_opinion',
           field: 'report_type',
           validation: (val) => val && val.length > 0
         },
         {
           label: 'דוח עבור חברה',
-          current: helper.system?.report_configuration?.report_for_company !== undefined ? (helper.system.report_configuration.report_for_company ? 'כן' : 'לא') : 'לא נבחר',
+          current: helper.client?.is_company_client !== undefined ? (helper.client.is_company_client ? 'כן' : 'לא') : 'לא נבחר',
           stored: final_report.report_for_company !== undefined ? (final_report.report_for_company ? 'כן' : 'לא') : 'לא',
           field: 'report_for_company',
           validation: (val) => val === 'כן' || val === 'לא'
         },
         {
           label: 'סוג הסכמה',
-          current: helper.system?.report_configuration?.in_agreement !== undefined ? (helper.system.report_configuration.in_agreement ? 'בהסכמה' : 'ללא הסכמה') : 'לא נבחר',
+          current: final_report.in_agreement !== undefined ? (final_report.in_agreement ? 'בהסכמה' : 'ללא הסכמה') : 'לא נבחר',
           stored: final_report.in_agreement !== undefined ? (final_report.in_agreement ? 'בהסכמה' : 'ללא הסכמה') : 'ללא הסכמה',
           field: 'in_agreement',
           validation: (val) => val === 'בהסכמה' || val === 'ללא הסכמה'
@@ -1410,7 +1419,7 @@
       ];
       
       renderValidationItems('report-type-validation-items', reportTypeItems);
-      updateLegalValidation(system.active_report_types?.final_report || final_report.report_type || 'private_opinion', final_report);
+      updateLegalValidation(helper.autoSelectReportType || system.active_report_types?.final_report || final_report.report_type || 'private_opinion', final_report);
     }
     
     function loadDepreciationValidation() {
