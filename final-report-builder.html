@@ -1896,7 +1896,7 @@
           <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || ''}" /></div>
           <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
           <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" /></div>
-          <div><input type="text" placeholder="% ירידת ערך" value="${data.percent ? (String(data.percent).includes('%') ? data.percent : data.percent + '%') : ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent ? (String(data.percent).includes('%') ? data.percent : data.percent + '%') : ''}" style="direction: ltr; text-align: right;" /></div>
+          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}" style="direction: ltr; text-align: right;" /></div>
           <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="₪${data.value || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
@@ -1914,7 +1914,7 @@
           this.title = this.value;
         });
       });
-      const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+      const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
       const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
       
       percentInput.addEventListener('input', function() {
@@ -1922,10 +1922,8 @@
         const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
         let percent = parseFloat(cleanValue) || 0;
         
-        // Auto-add % symbol if not present and user enters a number
-        if (this.value && !this.value.includes('%') && !isNaN(percent)) {
-          this.value = percent + '%';
-        }
+        // Keep value as clean decimal number without % sign
+        this.value = cleanValue;
         
         // Calculate value from market price automatically
         const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
@@ -2081,7 +2079,7 @@
     function addAutoCalculationToExistingRows() {
       const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
       depRows.forEach(row => {
-        const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+        const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
         const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
         
         if (percentInput && valueInput) {
@@ -2094,10 +2092,8 @@
             const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
             let percent = parseFloat(cleanValue) || 0;
             
-            // Auto-add % symbol if not present and user enters a number
-            if (this.value && !this.value.includes('%') && !isNaN(percent)) {
-              this.value = percent + '%';
-            }
+            // Keep value as clean decimal number without % sign
+            this.value = cleanValue;
             
             // Calculate value from market price automatically
             const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
@@ -5029,11 +5025,8 @@
           const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
           let percent = parseFloat(cleanValue) || 0;
           
-          // Format the display value properly
-          if (!isNaN(percent) && percent > 0) {
-            // Always reformat to ensure clean display
-            this.value = percent + '%';
-          }
+          // Keep value as clean decimal number without % sign
+          this.value = cleanValue;
           
           // Calculate value from market price automatically - try multiple sources
           let marketValue = 0;
@@ -8578,7 +8571,7 @@
             <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" title="${centerNumber || ''}" /></div>
             <div><input type="text" placeholder="החלק הניזוק" value="${damageLocation}" onchange="saveDepreciationData()" title="${damageLocation}" /></div>
             <div><input type="text" placeholder="מהות התיקון" value="${workEssence}" onchange="saveDepreciationData()" title="${workEssence}" /></div>
-            <div><input type="text" placeholder="% ירידת ערך" onchange="saveDepreciationData()" title="" style="direction: ltr; text-align: right;" /></div>
+            <div><input type="text" placeholder="ירידת ערך (מספר)" onchange="saveDepreciationData()" title="" style="direction: ltr; text-align: right;" /></div>
             <div><input type="text" placeholder="ערך ב-₪" onchange="saveDepreciationData()" title="" /></div>
             <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
           `;
@@ -8594,7 +8587,7 @@
           });
           
           // Add calculation listener to the percentage field
-          const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+          const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
           const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
           
           percentInput.addEventListener('input', function() {
@@ -8602,10 +8595,8 @@
             const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
             let percent = parseFloat(cleanValue) || 0;
             
-            // Auto-add % symbol if not present and user enters a number
-            if (this.value && !this.value.includes('%') && !isNaN(percent)) {
-              this.value = percent + '%';
-            }
+            // Keep value as clean decimal number without % sign
+            this.value = cleanValue;
             
             // Calculate value from market price automatically
             const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
@@ -10122,7 +10113,7 @@
         // Trigger calculation for all bulk depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
         depRows.forEach(row => {
-          const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+          const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
           if (percentInput && percentInput.value) {
             const event = new Event('input', { bubbles: true });
             percentInput.dispatchEvent(event);
