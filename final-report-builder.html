@@ -1223,7 +1223,7 @@
         <!-- Additional Claims Data -->
         <div style="margin-top: 20px;">
           <div class="form-grid">
-            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateGrossPercentageField();" style="direction: ltr; text-align: right;" /></div>
+            <div><label>סה"כ תביעה (מאושר):</label><input type="text" id="authorizedClaim" onchange="updateAuthorizedClaim(this); updateGrossPercentageField();" style="direction: ltr; text-align: right;" /></div>
             <div></div>
           </div>
         </div>
@@ -2463,6 +2463,21 @@
           const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
           totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
           console.log(`💰 Loaded totalClaimGross from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
+        }
+        
+        // Load authorizedClaim field from damage_assessment.totals["Total with VAT"]
+        const authorizedClaimField = document.getElementById('authorizedClaim');
+        if (authorizedClaimField) {
+          const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          
+          // Also write to claims_data.total_claim and calculations.total_damage on load
+          if (!helper.claims_data) helper.claims_data = {};
+          if (!helper.calculations) helper.calculations = {};
+          helper.claims_data.total_claim = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          helper.calculations.total_damage = totalWithVAT;
+          
+          console.log(`💰 Loaded authorizedClaim from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
         }
         
         
@@ -7455,6 +7470,40 @@
       updateGrossPercentageFromGrossValue();
     }
     
+    // UPDATE AUTHORIZED CLAIM DATA
+    function updateAuthorizedClaim(element) {
+      try {
+        const helper = window.helper || {};
+        let value = element.value;
+        
+        // Parse the numeric value from the input
+        const numericValue = parseFloat(value.replace(/[₪,]/g, '')) || 0;
+        
+        // Format currency display
+        if (numericValue > 0) {
+          value = `₪${numericValue.toLocaleString()}`;
+          element.value = value;
+        }
+        
+        // Initialize helper sections if they don't exist
+        if (!helper.claims_data) helper.claims_data = {};
+        if (!helper.calculations) helper.calculations = {};
+        
+        // Write to both locations
+        helper.claims_data.total_claim = value;
+        helper.calculations.total_damage = numericValue;
+        
+        // Save to session storage and window.helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log(`💰 Updated authorizedClaim: claims_data.total_claim = "${value}", calculations.total_damage = ${numericValue}`);
+        
+      } catch (error) {
+        console.error('Error updating authorized claim:', error);
+      }
+    }
+
     // UPDATE GROSS PERCENTAGE FIELD
     function updateGrossPercentageField() {
       try {
@@ -8742,6 +8791,7 @@
     window.updateAllCostDisplays = updateAllCostDisplays;
     window.updateSummaryTotalsFromDamageCenters = updateSummaryTotalsFromDamageCenters;
     window.updateGrossMarketValueField = updateGrossMarketValueField;
+    window.updateAuthorizedClaim = updateAuthorizedClaim;
     window.updateGrossPercentageField = updateGrossPercentageField;
     window.calculateGrossMarketValue = calculateGrossMarketValue;
     window.calculateGrossPercentage = calculateGrossPercentage;
