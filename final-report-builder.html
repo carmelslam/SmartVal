@@ -11303,27 +11303,46 @@
       // Initialize global depreciation field
       const globalDep1 = document.getElementById('globalDep1');
       if (globalDep1) {
-        // Allow decimal input - remove any input restrictions
-        globalDep1.addEventListener('keypress', function(e) {
-          // Allow all characters for decimal input (numbers, dot, percent, etc.)
-          console.log('Key pressed in globalDep1:', e.key);
-          // Don't prevent any keys - let all through
-        });
-        
         globalDep1.addEventListener('input', function() {
-          // Apply the same percentage formatting as the bulk table cells
-          const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
-          let percent = parseFloat(cleanValue) || 0;
+          // Clean the value to allow decimal numbers
+          let value = this.value;
           
-          // Auto-add % symbol if not present and user enters a number
-          if (this.value && !this.value.includes('%') && !isNaN(percent) && cleanValue !== '') {
-            this.value = percent + '%';
+          // Remove % sign temporarily for processing
+          const hasPercent = value.includes('%');
+          value = value.replace('%', '');
+          
+          // Allow only numbers, decimal point, and minus sign
+          value = value.replace(/[^0-9.-]/g, '');
+          
+          // Ensure only one decimal point
+          const parts = value.split('.');
+          if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+          }
+          
+          // Add % back if it was there or if we have a valid number
+          if (value !== '' && !isNaN(parseFloat(value))) {
+            this.value = value + '%';
+          } else if (value === '') {
+            this.value = '';
+          } else {
+            this.value = value;
           }
           
           console.log('Global depreciation changed:', this.value);
           calculateGlobalDepreciationValue();
           triggerMathCalculation();
           saveAndRefreshComplete();
+        });
+        
+        // Allow decimal input on keypress
+        globalDep1.addEventListener('keypress', function(e) {
+          // Allow: numbers (0-9), decimal point (.), percent (%), minus (-), backspace, delete
+          const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '%', '-', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+          
+          if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+          }
         });
       }
       
