@@ -1138,8 +1138,8 @@
         </div>
         
         <div style="text-align: center; margin-top: 15px;">
-          <button type="button" onclick="saveFinalReportConfiguration()" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            💾 שמור הגדרות דו"ח
+          <button type="button" onclick="saveFinalReportConfiguration()" class="nav-btn" style="background: #28a745; color: white; font-size: 14px;">
+            💾 שמור הגדרות
           </button>
         </div>
       </div>
@@ -12888,12 +12888,10 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         localStorage.setItem('helper', JSON.stringify(helper));
         
-        // Save via helper.js functions if available
-        if (window.updateHelper) {
-          window.updateHelper(helper);
-        }
-        if (window.saveHelperToStorage) {
-          window.saveHelperToStorage();
+        // Update global helper directly to avoid setNestedValue error
+        if (window.helper) {
+          if (!window.helper.final_report) window.helper.final_report = {};
+          window.helper.final_report[fieldName] = value;
         }
         
         console.log(`✅ Final report field updated: ${fieldName} = ${value}`);
@@ -12910,7 +12908,7 @@
         const isCompanyClient = document.getElementById('isCompanyClient')?.value;
         const inAgreement = document.getElementById('inAgreement')?.value;
         
-        // Update helper with current values
+        // Update helper with current values - SIMPLIFIED TO AVOID setNestedValue ERROR
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper.final_report) helper.final_report = {};
         
@@ -12918,27 +12916,24 @@
         if (isCompanyClient !== undefined) helper.final_report.report_for_company = (isCompanyClient === 'yes');
         if (inAgreement !== undefined) helper.final_report.in_agreement = (inAgreement === 'yes');
         
-        // Save to all storage locations
+        // Save to storage locations directly (avoid helper.js updateHelper to prevent error)
         sessionStorage.setItem('helper', JSON.stringify(helper));
         localStorage.setItem('helper', JSON.stringify(helper));
         
-        // Save via helper.js functions if available
-        if (window.updateHelper) {
-          window.updateHelper(helper);
-        }
-        if (window.saveHelperToStorage) {
-          window.saveHelperToStorage();
+        // Update global helper if available (direct assignment, no updateHelper)
+        if (window.helper) {
+          window.helper.final_report = helper.final_report;
         }
         
         // Show success feedback
         const button = document.querySelector('button[onclick="saveFinalReportConfiguration()"]');
         const originalText = button.textContent;
-        button.textContent = '✅ נשמר בהצלחה';
-        button.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        button.textContent = '✅ נשמר';
+        button.style.background = '#28a745';
         
         setTimeout(() => {
           button.textContent = originalText;
-          button.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+          button.style.background = '#28a745';
         }, 2000);
         
         console.log('✅ Final report configuration saved:', {
