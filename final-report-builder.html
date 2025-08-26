@@ -2465,19 +2465,41 @@
           console.log(`💰 Loaded totalClaimGross from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
         }
         
-        // Load authorizedClaim field from damage_assessment.totals["Total with VAT"]
+        // Load authorizedClaim field - check for saved data first, then fallback to damage assessment
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-          authorizedClaimField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          // Check for saved values first
+          const savedClaimValue = helper.claims_data?.total_claim;
+          const savedCalculationValue = helper.calculations?.total_damage;
           
-          // Also write to claims_data.total_claim and calculations.total_damage on load
+          let useValue = '';
+          let numericValue = 0;
+          
+          if (savedClaimValue && savedClaimValue !== '' && savedClaimValue !== '0' && savedClaimValue !== '00') {
+            // Use saved claim value
+            useValue = savedClaimValue;
+            numericValue = parseFloat(savedClaimValue.replace(/[₪,]/g, '')) || 0;
+            console.log(`💰 Loaded authorizedClaim from saved claims_data.total_claim: ${useValue}`);
+          } else if (savedCalculationValue && savedCalculationValue > 0) {
+            // Use saved calculation value
+            numericValue = savedCalculationValue;
+            useValue = `₪${numericValue.toLocaleString()}`;
+            console.log(`💰 Loaded authorizedClaim from saved calculations.total_damage: ${numericValue}`);
+          } else {
+            // Fallback to damage assessment data
+            const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+            numericValue = totalWithVAT;
+            useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+            console.log(`💰 Loaded authorizedClaim from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
+          }
+          
+          authorizedClaimField.value = useValue;
+          
+          // Ensure both storage locations are updated
           if (!helper.claims_data) helper.claims_data = {};
           if (!helper.calculations) helper.calculations = {};
-          helper.claims_data.total_claim = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-          helper.calculations.total_damage = totalWithVAT;
-          
-          console.log(`💰 Loaded authorizedClaim from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
+          helper.claims_data.total_claim = useValue;
+          helper.calculations.total_damage = numericValue;
         }
         
         
