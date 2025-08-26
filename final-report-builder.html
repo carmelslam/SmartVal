@@ -1136,6 +1136,12 @@
             <option value="no">לא בהסדר</option>
           </select>
         </div>
+        
+        <div style="text-align: center; margin-top: 15px;">
+          <button type="button" onclick="saveFinalReportConfiguration()" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            💾 שמור הגדרות דו"ח
+          </button>
+        </div>
       </div>
     </div>
 
@@ -12877,11 +12883,72 @@
         if (!helper.final_report) helper.final_report = {};
         
         helper.final_report[fieldName] = value;
+        
+        // Save to both storage locations
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        localStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Save via helper.js functions if available
+        if (window.updateHelper) {
+          window.updateHelper(helper);
+        }
+        if (window.saveHelperToStorage) {
+          window.saveHelperToStorage();
+        }
         
         console.log(`✅ Final report field updated: ${fieldName} = ${value}`);
       } catch (error) {
         console.error('❌ Error updating final report field:', error);
+      }
+    }
+    
+    // Save final report configuration function
+    function saveFinalReportConfiguration() {
+      try {
+        // Collect current form values
+        const reportType = document.getElementById('reportType')?.value;
+        const isCompanyClient = document.getElementById('isCompanyClient')?.value;
+        const inAgreement = document.getElementById('inAgreement')?.value;
+        
+        // Update helper with current values
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.final_report) helper.final_report = {};
+        
+        if (reportType) helper.final_report.report_type = reportType;
+        if (isCompanyClient !== undefined) helper.final_report.report_for_company = (isCompanyClient === 'yes');
+        if (inAgreement !== undefined) helper.final_report.in_agreement = (inAgreement === 'yes');
+        
+        // Save to all storage locations
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        localStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Save via helper.js functions if available
+        if (window.updateHelper) {
+          window.updateHelper(helper);
+        }
+        if (window.saveHelperToStorage) {
+          window.saveHelperToStorage();
+        }
+        
+        // Show success feedback
+        const button = document.querySelector('button[onclick="saveFinalReportConfiguration()"]');
+        const originalText = button.textContent;
+        button.textContent = '✅ נשמר בהצלחה';
+        button.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        }, 2000);
+        
+        console.log('✅ Final report configuration saved:', {
+          report_type: helper.final_report.report_type,
+          report_for_company: helper.final_report.report_for_company,
+          in_agreement: helper.final_report.in_agreement
+        });
+      } catch (error) {
+        console.error('❌ Error saving final report configuration:', error);
+        alert('שגיאה בשמירת הגדרות הדו"ח');
       }
     }
     
