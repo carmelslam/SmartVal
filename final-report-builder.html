@@ -1412,7 +1412,7 @@
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <input type="text" id="globalDep1" placeholder="% ירידת ערך" style="direction: ltr; text-align: right;" />
+          <input type="text" id="globalDep1" placeholder="ירידת ערך (מספר בלבד)" style="direction: ltr; text-align: right;" />
           <input type="text" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
         </div>
       </div>
@@ -3173,9 +3173,9 @@
           // Load global depreciation fields from helper.depreciation (single source)
           // Format global depreciation with % symbol if numeric
           const globalPercent = depreciationData.globalDep1 || depreciationData.global_percent || '';
-          // Clean any existing % and reformat
+          // Clean any existing % and load as clean decimal number
           const cleanPercent = String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '');
-          document.getElementById('globalDep1').value = cleanPercent ? cleanPercent + '%' : '';
+          document.getElementById('globalDep1').value = cleanPercent || '';
           document.getElementById('globalDepValue').value = depreciationData.globalDepValue || 
                                                            depreciationData.global_value || '';
           document.getElementById('garageDays').value = depreciationData.garageDays || 
@@ -11307,11 +11307,7 @@
           // Clean the value to allow decimal numbers
           let value = this.value;
           
-          // Remove % sign temporarily for processing
-          const hasPercent = value.includes('%');
-          value = value.replace('%', '');
-          
-          // Allow only numbers, decimal point, and minus sign
+          // Allow only numbers, decimal point, and minus sign - no % processing
           value = value.replace(/[^0-9.-]/g, '');
           
           // Ensure only one decimal point
@@ -11320,18 +11316,8 @@
             value = parts[0] + '.' + parts.slice(1).join('');
           }
           
-          // Only add % back if user finished typing (not in the middle of decimal entry)
-          if (value !== '') {
-            // Check if this looks like a complete number (not ending with .)
-            if (!value.endsWith('.') && !isNaN(parseFloat(value))) {
-              this.value = value + '%';
-            } else {
-              // User is still typing (e.g., "1." or incomplete decimal)
-              this.value = value;
-            }
-          } else {
-            this.value = '';
-          }
+          // Set the cleaned value without % sign
+          this.value = value;
           
           console.log('Global depreciation changed:', this.value);
           
@@ -11346,20 +11332,18 @@
         
         // Allow decimal input on keypress
         globalDep1.addEventListener('keypress', function(e) {
-          // Allow: numbers (0-9), decimal point (.), percent (%), minus (-), backspace, delete
-          const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '%', '-', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+          // Allow: numbers (0-9), decimal point (.), minus (-), navigation keys
+          const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
           
           if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
           }
         });
         
-        // Add % sign when user finishes editing (on blur)
+        // Ensure data is saved when user finishes editing (on blur)
         globalDep1.addEventListener('blur', function() {
-          let value = this.value.replace('%', '');
-          if (value !== '' && !isNaN(parseFloat(value))) {
-            this.value = value + '%';
-            
+          // Just ensure data is saved, no % formatting
+          if (this.value !== '') {
             // Call the functions that were in the inline handlers
             saveDepreciationData();
             updateHelperDepreciationField(this, 'global_percentage');
