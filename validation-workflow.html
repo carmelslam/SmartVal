@@ -1376,34 +1376,42 @@
       const helper = window.helper || {};
       const system = helper.system || {};
       const final_report = helper.final_report || {};
+      const meta = helper.meta || {};
       
       const reportTypeItems = [
         {
           label: 'סוג דו"ח נבחר',
-          current: system.active_report_types?.final_report || 'לא נבחר',
-          stored: system.active_report_types?.final_report || final_report.report_type || '',
+          current: final_report.report_type || system.active_report_types?.final_report || 'לא נבחר',
+          stored: final_report.report_type || meta.report_type || 'private_opinion',
           field: 'report_type',
-          validation: (val) => val && ['private_opinion', 'global_opinion', 'court_opinion', 'insurance_opinion', 'damage_assessment'].includes(val)
+          validation: (val) => val && val.length > 0
         },
         {
           label: 'תבנית דו"ח',
           current: final_report.template || 'ברירת מחדל',
-          stored: final_report.template || final_report.selected_template || '',
+          stored: final_report.template || 'default_template',
           field: 'report_template',
           validation: (val) => val && val.length > 0
         },
         {
-          label: 'סטטוס טקסטים משפטיים',
-          current: final_report.report_types?.[system.active_report_types?.final_report]?.legal_text ? 'קיים' : 'חסר',
-          stored: 'נדרש',
-          field: 'legal_text_status',
-          validation: (val) => val === 'קיים'
+          label: 'דוח עבור חברה',
+          current: final_report.report_for_company ? 'כן' : 'לא',
+          stored: final_report.report_for_company ? 'כן' : 'לא',
+          field: 'report_for_company',
+          validation: (val) => val === 'כן' || val === 'לא'
         },
         {
-          label: 'סטטוס קבצים מצורפים',
-          current: final_report.report_types?.[system.active_report_types?.final_report]?.attachments ? 'קיים' : 'חסר',
-          stored: 'נדרש',
-          field: 'attachments_status',
+          label: 'בהסכמה',
+          current: final_report.in_agreement ? 'כן' : 'לא',
+          stored: final_report.in_agreement ? 'כן' : 'לא',
+          field: 'in_agreement',
+          validation: (val) => val === 'כן' || val === 'לא'
+        },
+        {
+          label: 'סטטוס טקסטים משפטיים',
+          current: final_report.legal_text ? 'קיים' : 'חסר',
+          stored: final_report.legal_text ? 'קיים' : 'נדרש',
+          field: 'legal_text_status',
           validation: (val) => val === 'קיים'
         }
       ];
