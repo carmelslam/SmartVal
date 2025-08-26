@@ -1,5 +1,5 @@
 // fee-module.js
-import { helper, getFinancialData, syncVehicleData } from './helper.js';
+import { helper, getFinancialData } from './helper.js';
 import { MathEngine } from './math.js';
 import { updateHelperWithEvents, helperEvents, HelperUtils } from './helper-events.js';
 
