@@ -14322,6 +14322,144 @@
     console.log('🚀 Quick test available: quickVatTest()');
     
     
+    // PICTURE-IN-PICTURE OVERLAY FUNCTION
+    function openInPiP(url, title) {
+      console.log('🖼️ Creating PiP overlay for:', url);
+      
+      // Remove any existing PiP windows
+      const existingPiP = document.getElementById('pipOverlay');
+      if (existingPiP) {
+        existingPiP.remove();
+      }
+      
+      // Create overlay container
+      const overlay = document.createElement('div');
+      overlay.id = 'pipOverlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 50px;
+        right: 50px;
+        width: 800px;
+        height: 600px;
+        background: white;
+        border: 2px solid #1e3a8a;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        resize: both;
+        overflow: hidden;
+        font-family: inherit;
+      `;
+      
+      // Create header with title and controls
+      const header = document.createElement('div');
+      header.style.cssText = `
+        background: #1e3a8a;
+        color: white;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move;
+        border-radius: 10px 10px 0 0;
+        font-size: 14px;
+        font-weight: bold;
+      `;
+      header.innerHTML = `
+        <span>${title}</span>
+        <button onclick="document.getElementById('pipOverlay').remove()" style="
+          background: none;
+          border: none;
+          color: white;
+          font-size: 18px;
+          cursor: pointer;
+          padding: 0;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        " onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='none'">×</button>
+      `;
+      
+      // Create iframe container
+      const iframeContainer = document.createElement('div');
+      iframeContainer.style.cssText = `
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      `;
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+      `;
+      iframe.onload = function() {
+        console.log('✅ PiP iframe loaded successfully');
+      };
+      iframe.onerror = function() {
+        console.error('❌ PiP iframe failed to load');
+        iframeContainer.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #666;">
+            <p>שגיאה בטעינת התוכן</p>
+            <button onclick="window.open('${url}', '_blank')" style="
+              background: #1e3a8a;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              margin-top: 10px;
+            ">פתח בחלון חדש</button>
+          </div>
+        `;
+      };
+      
+      // Assemble the PiP window
+      iframeContainer.appendChild(iframe);
+      overlay.appendChild(header);
+      overlay.appendChild(iframeContainer);
+      document.body.appendChild(overlay);
+      
+      // Make draggable
+      let isDragging = false;
+      let startX, startY, initialX, initialY;
+      
+      header.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialX = overlay.offsetLeft;
+        initialY = overlay.offsetTop;
+        overlay.style.cursor = 'grabbing';
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (isDragging) {
+          const deltaX = e.clientX - startX;
+          const deltaY = e.clientY - startY;
+          overlay.style.left = (initialX + deltaX) + 'px';
+          overlay.style.top = (initialY + deltaY) + 'px';
+          overlay.style.right = 'auto'; // Remove right positioning
+        }
+      });
+      
+      document.addEventListener('mouseup', function() {
+        isDragging = false;
+        overlay.style.cursor = 'default';
+      });
+      
+      console.log('✅ PiP overlay created successfully');
+    }
+
     // LOCAL GENERATION FUNCTIONS - No webhooks needed, skip validation
     window.generateEstimateReport = function() {
       console.log('🔧 Generating estimate report locally...');
@@ -14389,26 +14527,11 @@
         console.log('🎯 Direct navigation to estimate report builder:', urlWithParams);
         
         try {
-          // Open in Picture-in-Picture window instead of navigation
-          const pipWindow = window.open(urlWithParams, 'estimateReportPiP', 
-            'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
-          
-          if (pipWindow) {
-            pipWindow.focus();
-            console.log('✅ Estimate report opened in PiP window');
-          } else {
-            console.warn('⚠️ PiP blocked by browser, trying fallback navigation');
-            window.location.href = urlWithParams;
-          }
+          // Create a proper PiP window using iframe approach
+          openInPiP(urlWithParams, 'Estimate Report Builder');
         } catch (error) {
-          console.warn('⚠️ PiP opening failed, trying fallback:', error);
-          const fallbackUrl = 'estimate-report-builder.html?skipValidation=true&fromFinalReportBuilder=true';
-          const fallbackPip = window.open(fallbackUrl, 'estimateReportPiP', 
-            'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
-          
-          if (!fallbackPip) {
-            window.location.href = fallbackUrl;
-          }
+          console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
+          window.location.href = 'estimate-report-builder.html?skipValidation=true&fromFinalReportBuilder=true';
         }
       }, 100);
     };
@@ -14479,26 +14602,11 @@
         console.log('🎯 Direct navigation to expertise builder:', urlWithParams);
         
         try {
-          // Open in Picture-in-Picture window instead of navigation
-          const pipWindow = window.open(urlWithParams, 'expertiseReportPiP', 
-            'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
-          
-          if (pipWindow) {
-            pipWindow.focus();
-            console.log('✅ Expertise report opened in PiP window');
-          } else {
-            console.warn('⚠️ PiP blocked by browser, trying fallback navigation');
-            window.location.href = urlWithParams;
-          }
+          // Create a proper PiP window using iframe approach
+          openInPiP(urlWithParams, 'Expertise Builder');
         } catch (error) {
-          console.warn('⚠️ PiP opening failed, trying fallback:', error);
-          const fallbackUrl = 'expertise builder.html?skipValidation=true&fromFinalReportBuilder=true';
-          const fallbackPip = window.open(fallbackUrl, 'expertiseReportPiP', 
-            'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
-          
-          if (!fallbackPip) {
-            window.location.href = fallbackUrl;
-          }
+          console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
+          window.location.href = 'expertise builder.html?skipValidation=true&fromFinalReportBuilder=true';
         }
       }, 100);
     };
