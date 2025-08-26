@@ -13639,22 +13639,36 @@
     function createPreviewModal() {
       const modal = document.createElement('div');
       modal.id = 'reportPreviewModal';
+      
+      // Get viewport dimensions for responsive sizing
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const isMobile = viewportWidth <= 768;
+      
+      // Calculate responsive dimensions
+      const width = isMobile ? Math.min(viewportWidth - 20, 350) : Math.min(800, viewportWidth - 100);
+      const height = isMobile ? Math.min(viewportHeight - 100, 500) : Math.min(viewportHeight * 0.8, 600);
+      const top = isMobile ? 10 : 50;
+      const right = isMobile ? 10 : 50;
+      
       modal.style.cssText = `
         display: none;
         position: fixed;
-        top: 50px;
-        right: 50px;
-        width: 800px;
-        height: 80vh;
+        top: ${top}px;
+        right: ${right}px;
+        width: ${width}px;
+        height: ${height}px;
         background: white;
         border: 2px solid #333;
         border-radius: 12px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         z-index: 10000;
-        resize: both;
+        resize: ${isMobile ? 'none' : 'both'};
         overflow: auto;
-        min-width: 400px;
-        min-height: 300px;
+        min-width: ${isMobile ? '300px' : '400px'};
+        min-height: ${isMobile ? '250px' : '300px'};
+        max-width: 95vw;
+        max-height: 95vh;
       `;
       
       // Create header
@@ -13662,20 +13676,22 @@
       header.style.cssText = `
         background: #1e40af;
         color: white;
-        padding: 12px 20px;
+        padding: ${isMobile ? '8px 12px' : '12px 20px'};
         display: flex;
         justify-content: space-between;
         align-items: center;
         cursor: move;
         user-select: none;
         border-radius: 10px 10px 0 0;
+        min-height: ${isMobile ? '40px' : '48px'};
+        box-sizing: border-box;
       `;
       header.innerHTML = `
-        <h3 style="margin: 0; font-size: 18px;">תצוגה מקדימה - חוות דעת</h3>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="minimizePreview()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" title="מזער">_</button>
-          <button onclick="maximizePreview()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" title="הגדל">□</button>
-          <button onclick="closePreview()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;" title="סגור">×</button>
+        <h3 style="margin: 0; font-size: ${isMobile ? '14px' : '18px'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">תצוגה מקדימה - חוות דעת</h3>
+        <div style="display: flex; gap: ${isMobile ? '5px' : '10px'}; flex-shrink: 0;">
+          <button onclick="minimizePreview()" style="background: none; border: none; color: white; font-size: ${isMobile ? '16px' : '20px'}; cursor: pointer; width: ${isMobile ? '32px' : '24px'}; height: ${isMobile ? '32px' : '24px'}; touch-action: manipulation;" title="מזער">_</button>
+          <button onclick="maximizePreview()" style="background: none; border: none; color: white; font-size: ${isMobile ? '16px' : '20px'}; cursor: pointer; width: ${isMobile ? '32px' : '24px'}; height: ${isMobile ? '32px' : '24px'}; touch-action: manipulation;" title="הגדל">□</button>
+          <button onclick="closePreview()" style="background: none; border: none; color: white; font-size: ${isMobile ? '20px' : '24px'}; cursor: pointer; width: ${isMobile ? '32px' : '24px'}; height: ${isMobile ? '32px' : '24px'}; touch-action: manipulation;" title="סגור">×</button>
         </div>
       `;
       
@@ -14335,12 +14351,24 @@
       // Create overlay container
       const overlay = document.createElement('div');
       overlay.id = 'pipOverlay';
+      
+      // Get viewport dimensions for responsive sizing
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const isMobile = viewportWidth <= 768;
+      
+      // Calculate responsive dimensions
+      const width = isMobile ? Math.min(viewportWidth - 20, 350) : Math.min(800, viewportWidth - 100);
+      const height = isMobile ? Math.min(viewportHeight - 100, 500) : Math.min(600, viewportHeight - 100);
+      const top = isMobile ? 10 : 50;
+      const right = isMobile ? 10 : 50;
+      
       overlay.style.cssText = `
         position: fixed;
-        top: 50px;
-        right: 50px;
-        width: 800px;
-        height: 600px;
+        top: ${top}px;
+        right: ${right}px;
+        width: ${width}px;
+        height: ${height}px;
         background: white;
         border: 2px solid #1e3a8a;
         border-radius: 12px;
@@ -14348,9 +14376,11 @@
         z-index: 10000;
         display: flex;
         flex-direction: column;
-        resize: both;
+        resize: ${isMobile ? 'none' : 'both'};
         overflow: hidden;
         font-family: inherit;
+        max-width: 95vw;
+        max-height: 95vh;
       `;
       
       // Create header with title and controls
@@ -14358,31 +14388,35 @@
       header.style.cssText = `
         background: #1e3a8a;
         color: white;
-        padding: 12px 16px;
+        padding: ${isMobile ? '8px 12px' : '12px 16px'};
         display: flex;
         justify-content: space-between;
         align-items: center;
         cursor: move;
         border-radius: 10px 10px 0 0;
-        font-size: 14px;
+        font-size: ${isMobile ? '12px' : '14px'};
         font-weight: bold;
+        min-height: ${isMobile ? '40px' : '48px'};
+        box-sizing: border-box;
       `;
       header.innerHTML = `
-        <span>${title}</span>
+        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${title}</span>
         <button onclick="document.getElementById('pipOverlay').remove()" style="
           background: none;
           border: none;
           color: white;
-          font-size: 18px;
+          font-size: ${isMobile ? '20px' : '18px'};
           cursor: pointer;
           padding: 0;
-          width: 24px;
-          height: 24px;
+          width: ${isMobile ? '32px' : '24px'};
+          height: ${isMobile ? '32px' : '24px'};
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-        " onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='none'">×</button>
+          flex-shrink: 0;
+          touch-action: manipulation;
+        " onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='none'" ontouchstart="this.style.background='rgba(255,255,255,0.2)'" ontouchend="this.style.background='none'">×</button>
       `;
       
       // Create iframe container
@@ -14458,6 +14492,30 @@
       });
       
       console.log('✅ PiP overlay created successfully');
+      
+      // Add window resize listener to maintain responsiveness
+      window.addEventListener('resize', function() {
+        const currentOverlay = document.getElementById('pipOverlay');
+        if (currentOverlay) {
+          const newViewportWidth = window.innerWidth;
+          const newViewportHeight = window.innerHeight;
+          const newIsMobile = newViewportWidth <= 768;
+          
+          // Update dimensions on resize
+          const newWidth = newIsMobile ? Math.min(newViewportWidth - 20, 350) : Math.min(800, newViewportWidth - 100);
+          const newHeight = newIsMobile ? Math.min(newViewportHeight - 100, 500) : Math.min(600, newViewportHeight - 100);
+          const newTop = newIsMobile ? 10 : 50;
+          const newRight = newIsMobile ? 10 : 50;
+          
+          currentOverlay.style.width = newWidth + 'px';
+          currentOverlay.style.height = newHeight + 'px';
+          currentOverlay.style.top = newTop + 'px';
+          currentOverlay.style.right = newRight + 'px';
+          currentOverlay.style.resize = newIsMobile ? 'none' : 'both';
+          currentOverlay.style.maxWidth = '95vw';
+          currentOverlay.style.maxHeight = '95vh';
+        }
+      });
     }
 
     // LOCAL GENERATION FUNCTIONS - No webhooks needed, skip validation
