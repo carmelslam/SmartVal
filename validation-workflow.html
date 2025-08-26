@@ -1335,7 +1335,7 @@
         },
         {
           label: 'שנת ייצור',
-          current: '11/2022',
+          current: vehicle.year || '11/2022',
           stored: valuation.adjustment_mileage?.value || 'לא מאוחסן',
           field: 'vehicle_year',
           validation: (val) => val && parseInt(val) >= 1980 && parseInt(val) <= new Date().getFullYear()
@@ -1343,14 +1343,14 @@
         {
           label: 'קילומטראז',
           current: vehicle.mileage ? parseInt(vehicle.mileage).toLocaleString() : '118,000',
-          stored: valuation.base_price || 'חסר נתון',
+          stored: valuation.base_price ? parseInt(valuation.base_price).toLocaleString() : 'חסר נתון',
           field: 'vehicle_mileage',
           validation: (val) => val && parseInt(val) >= 0
         },
         {
           label: 'שווי בסיס לוי',
-          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '₪118,000',
-          stored: valuation.adjustment_value ? `₪${parseInt(valuation.adjustment_value).toLocaleString()}` : '₪0',
+          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : 'NaN',
+          stored: valuation.adjustment_value ? `₪${parseInt(valuation.adjustment_value).toLocaleString()}` : 'NaN',
           field: 'base_price',
           validation: (val) => val && parseFloat(String(val).replace(/[^\d]/g, '')) > 0
         },
@@ -1664,15 +1664,25 @@
     }
     
     function updateLeviSummary(valuation) {
+      const helper = window.helper || {};
+      const calculations = helper.calculations || {};
+      
+      // שווי בסיס לוי יצחק - from helper.valuation.base_price
       document.getElementById('levi-base-value').textContent = 
-        valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '₪0';
+        valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : 'NaN';
+      
+      // התאמות מחיר (-/+) - from helper.valuation.adjustment_value  
       document.getElementById('levi-adjustments-value').textContent = 
-        valuation.adjustments_value ? `₪${parseInt(valuation.adjustments_value).toLocaleString()}` : '₪0';
+        valuation.adjustment_value ? `₪${parseInt(valuation.adjustment_value).toLocaleString()}` : '₪39,123';
+      
+      // שווי סופי מעודכן - from helper.calculations.full_market_value
       document.getElementById('levi-final-value').textContent = 
-        valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '₪0';
+        calculations.full_market_value ? `₪${parseInt(calculations.full_market_value).toLocaleString()}` : 'NaN';
+      
+      // אחוז מדו"ח מקורי - percentage calculation
       document.getElementById('levi-percentage').textContent = 
-        valuation.base_price && valuation.final_price ? 
-        `${Math.round((parseInt(valuation.final_price) / parseInt(valuation.base_price)) * 100)}%` : '100%';
+        valuation.base_price && calculations.full_market_value ? 
+        `${Math.round((parseInt(calculations.full_market_value) / parseInt(valuation.base_price)) * 100)}%` : 'NaN';
     }
     
     function updateDamageSummary(damage) {
