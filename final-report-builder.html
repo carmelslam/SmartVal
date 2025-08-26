@@ -1412,7 +1412,7 @@
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <input type="text" id="globalDep1" placeholder="ירידת ערך (מספר בלבד)" style="direction: ltr; text-align: right;" />
+          <input type="text" id="globalDep1" placeholder="ירידת ערך" style="direction: ltr; text-align: right;" />
           <input type="text" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
         </div>
       </div>
@@ -3169,9 +3169,9 @@
           // Load global depreciation fields from helper.depreciation (single source)
           // Format global depreciation with % symbol if numeric
           const globalPercent = depreciationData.globalDep1 || depreciationData.global_percent || '';
-          // Clean any existing % and load as clean decimal number
+          // Clean and format with % for display
           const cleanPercent = String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '');
-          document.getElementById('globalDep1').value = cleanPercent || '';
+          document.getElementById('globalDep1').value = cleanPercent ? cleanPercent + '%' : '';
           document.getElementById('globalDepValue').value = depreciationData.globalDepValue || 
                                                            depreciationData.global_value || '';
           document.getElementById('garageDays').value = depreciationData.garageDays || 
@@ -11298,7 +11298,10 @@
           // Clean the value to allow decimal numbers
           let value = this.value;
           
-          // Allow only numbers, decimal point, and minus sign - no % processing
+          // Remove % for processing
+          value = value.replace('%', '');
+          
+          // Allow only numbers, decimal point, and minus sign
           value = value.replace(/[^0-9.-]/g, '');
           
           // Ensure only one decimal point
@@ -11307,7 +11310,7 @@
             value = parts[0] + '.' + parts.slice(1).join('');
           }
           
-          // Set the cleaned value without % sign
+          // Keep as clean number during input
           this.value = value;
           
           console.log('Global depreciation changed:', this.value);
@@ -11331,18 +11334,13 @@
           }
         });
         
-        // Ensure data is saved when user finishes editing (on blur)
+        // Add % sign when user finishes editing (on blur) 
         globalDep1.addEventListener('blur', function() {
-          // Just ensure data is saved, no % formatting
-          if (this.value !== '') {
-            // Call the functions that were in the inline handlers
-            saveDepreciationData();
-            updateHelperDepreciationField(this, 'global_percentage');
-            
-            // Trigger the calculation when user finishes editing
-            calculateGlobalDepreciationValue();
-            triggerMathCalculation();
-            saveAndRefreshComplete();
+          if (this.value && !this.value.includes('%') && this.value !== '') {
+            const numValue = parseFloat(this.value);
+            if (!isNaN(numValue)) {
+              this.value = this.value + '%';
+            }
           }
         });
       }
