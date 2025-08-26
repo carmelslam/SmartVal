@@ -2457,12 +2457,20 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // Load totalClaimGross field from damage_assessment.totals["Total with VAT"]
+        // Load totalClaimGross field from damage_assessment.totals["Total with VAT"] with fallback to summary
         const totalClaimGrossField = document.getElementById('totalClaimGross');
         if (totalClaimGrossField) {
-          const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          let source = 'totals["Total with VAT"]';
+          
+          // Fallback to damage_assessment.summary.total_with_vat if totals doesn't exist
+          if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
+            totalWithVAT = helper.damage_assessment.summary.total_with_vat;
+            source = 'summary.total_with_vat';
+          }
+          
           totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-          console.log(`💰 Loaded totalClaimGross from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
+          console.log(`💰 Loaded totalClaimGross from damage_assessment.${source}: ${totalWithVAT}`);
         }
         
         // Load authorizedClaim field - check for saved data first, then fallback to damage assessment
@@ -2486,11 +2494,19 @@
             useValue = `₪${numericValue.toLocaleString()}`;
             console.log(`💰 Loaded authorizedClaim from saved calculations.total_damage: ${numericValue}`);
           } else {
-            // Fallback to damage assessment data
-            const totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+            // Fallback to damage assessment data - check totals first, then summary
+            let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+            let source = 'totals["Total with VAT"]';
+            
+            // Fallback to damage_assessment.summary.total_with_vat if totals doesn't exist
+            if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
+              totalWithVAT = helper.damage_assessment.summary.total_with_vat;
+              source = 'summary.total_with_vat';
+            }
+            
             numericValue = totalWithVAT;
             useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-            console.log(`💰 Loaded authorizedClaim from damage_assessment.totals["Total with VAT"]: ${totalWithVAT}`);
+            console.log(`💰 Loaded authorizedClaim from damage_assessment.${source}: ${totalWithVAT}`);
           }
           
           authorizedClaimField.value = useValue;
