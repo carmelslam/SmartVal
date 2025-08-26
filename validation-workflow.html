@@ -1322,47 +1322,49 @@
       const helper = window.helper || {};
       const valuation = helper.valuation || {};
       const vehicle = helper.vehicle || {};
+      const levisummary = helper.levisummary || {};
+      const calculations = helper.calculations || {};
       
       const leviItems = [
         {
           label: 'קובץ דו"ח לוי',
-          current: valuation.source || 'levi_yitzhak',
-          stored: valuation.levi_code || '',
+          current: 'levi_yitzhak',
+          stored: levisummary.report_date || '',
           field: 'levi_source',
           validation: (val) => val && val.length > 0
         },
         {
           label: 'שנת ייצור',
-          current: vehicle.year || '',
-          stored: valuation.vehicle_year || '',
+          current: vehicle.year || '11/2022',
+          stored: valuation.adjustment_mileage?.value || '',
           field: 'vehicle_year',
           validation: (val) => val && parseInt(val) >= 1980 && parseInt(val) <= new Date().getFullYear()
         },
         {
           label: 'קילומטראז',
-          current: vehicle.mileage || '',
-          stored: vehicle.original_mileage || '',
+          current: vehicle.mileage || 'חסר נתון',
+          stored: valuation.base_price || '',
           field: 'vehicle_mileage',
           validation: (val) => val && parseInt(val) >= 0
         },
         {
           label: 'שווי בסיס לוי',
-          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '₪0',
-          stored: valuation.original_base_price ? `₪${parseInt(valuation.original_base_price).toLocaleString()}` : '₪0',
+          current: valuation.base_price || 'NaN',
+          stored: valuation.adjustment_value ? `₪${parseInt(valuation.adjustment_value).toLocaleString()}` : '₪0',
           field: 'base_price',
           validation: (val) => val && parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
           label: 'התאמות מחיר',
-          current: valuation.adjustments_value ? `₪${parseInt(valuation.adjustments_value).toLocaleString()}` : '₪0',
-          stored: valuation.calculated_adjustments ? `₪${parseInt(valuation.calculated_adjustments).toLocaleString()}` : '₪0',
+          current: valuation.adjustment_value ? `₪${parseInt(valuation.adjustment_value).toLocaleString()}` : '₪0',
+          stored: calculations.full_market_value || '',
           field: 'price_adjustments',
           validation: (val) => true
         },
         {
           label: 'שווי סופי מעודכן',
-          current: valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '₪0',
-          stored: vehicle.market_value ? `₪${parseInt(vehicle.market_value).toLocaleString()}` : '₪0',
+          current: calculations.full_market_value || 'NaN',
+          stored: calculations.full_market_value || '',
           field: 'final_price',
           validation: (val) => val && parseFloat(val.replace(/[^\d]/g, '')) > 0
         }
