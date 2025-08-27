@@ -2372,9 +2372,10 @@
           }
           
           const script = iframeDocument.createElement('script');
+          const vatRateValue = window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 17;
           script.textContent = `
             // COMPREHENSIVE VALIDATION IFRAME SETUP
-            window.VALIDATION_IFRAME_VAT_RATE = ${window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 17};
+            window.VALIDATION_IFRAME_VAT_RATE = ${JSON.stringify(vatRateValue)};
             window.IS_VALIDATION_IFRAME = true;
             
             console.log('Setting up iframe with helper VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
@@ -2733,6 +2734,20 @@
     // Set flag to prevent floating screens from interfering with PiP modals
     window.VALIDATION_WORKFLOW_MODE = true;
     window.preventFloatingScreens = true;
+    
+    // Ensure VAT rate is available globally
+    window.PROTECTED_VAT_RATE = 17;
+    
+    // Override getValueFromAdminHub if it exists to prevent timeouts
+    if (typeof window.getValueFromAdminHub === 'function') {
+      const originalGetValue = window.getValueFromAdminHub;
+      window.getValueFromAdminHub = function(key) {
+        if (key === 'vatRate' || key === 'vat_rate') {
+          return Promise.resolve('17');
+        }
+        return originalGetValue(key).catch(() => '0');
+      };
+    }
   </script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
@@ -2774,9 +2789,17 @@
                           17;
             // console.log('📤 Sending global VAT rate response:', vatRate);
             try {
+              // Send response in multiple formats to ensure compatibility
               event.source.postMessage({
                 type: 'VAT_RATE',
                 vatRate: vatRate
+              }, event.origin);
+              
+              // Also send in the format math.js might expect
+              event.source.postMessage({
+                type: 'VAT_RATE_RESPONSE',
+                vatRate: vatRate,
+                value: vatRate
               }, event.origin);
             } catch (error) {
               console.warn('Failed to send VAT rate:', error);
