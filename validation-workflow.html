@@ -1668,24 +1668,35 @@
       }
       
       container.innerHTML = centers.map((center, index) => {
-        // Debug logging
-        console.log(`🔍 Debug center ${index}:`, center);
-        console.log(`🔍 Debug center.items:`, center.items);
-        
-        // Calculate costs from center.items
+        // Calculate costs from center data structure
         let partsCost = 0;
         let workCost = 0;
         let repairsCost = 0;
         
-        if (center.items && Array.isArray(center.items)) {
-          center.items.forEach(item => {
-            const itemCost = parseFloat(item.total_price || item.price || 0);
-            if (item.type === 'part' || item.category === 'parts') {
-              partsCost += itemCost;
-            } else if (item.type === 'work' || item.category === 'work') {
-              workCost += itemCost;
-            } else if (item.type === 'repair' || item.category === 'repairs') {
-              repairsCost += itemCost;
+        // Try to extract costs from Works or other properties
+        if (center.Works) {
+          // Sum up works costs
+          Object.values(center.Works).forEach(work => {
+            if (typeof work === 'object' && work.cost) {
+              workCost += parseFloat(work.cost) || 0;
+            }
+          });
+        }
+        
+        if (center.Parts) {
+          // Sum up parts costs
+          Object.values(center.Parts).forEach(part => {
+            if (typeof part === 'object' && part.cost) {
+              partsCost += parseFloat(part.cost) || 0;
+            }
+          });
+        }
+        
+        if (center.Repairs) {
+          // Sum up repairs costs
+          Object.values(center.Repairs).forEach(repair => {
+            if (typeof repair === 'object' && repair.cost) {
+              repairsCost += parseFloat(repair.cost) || 0;
             }
           });
         }
@@ -1766,24 +1777,18 @@
       const totals = helper.damage_assessment?.totals || {};
       const totalClaim = helper.claim?.total_claim || 0;
       
-      // Debug logging
-      console.log('🔍 Debug updateDamageSummary:');
-      console.log('🔍 helper.damage_assessment:', helper.damage_assessment);
-      console.log('🔍 totals:', totals);
-      console.log('🔍 helper.claim:', helper.claim);
-      console.log('🔍 totalClaim:', totalClaim);
       
-      // Map from helper.damage_assessment.totals
+      // Map from helper.damage_assessment.totals (using actual property names)
       document.getElementById('damage-parts-cost').textContent = 
-        `₪${(totals.parts_cost || 0).toLocaleString()}`;
+        `₪${parseInt(totals['Total parts'] || 0).toLocaleString()}`;
       document.getElementById('damage-labor-cost').textContent = 
-        `₪${(totals.labor_cost || 0).toLocaleString()}`;
+        `₪${parseInt(totals['Total works'] || 0).toLocaleString()}`;
       document.getElementById('damage-painting-cost').textContent = 
-        `₪${(totals.painting_cost || 0).toLocaleString()}`;
+        `₪${parseInt(totals['Total repairs'] || 0).toLocaleString()}`;
         
-      // Map from helper.claim.total_claim
+      // Use total with VAT for now since claim data is unavailable
       document.getElementById('damage-total-cost').textContent = 
-        `₪${parseInt(totalClaim).toLocaleString()}`;
+        `₪${parseInt(totals['Total with VAT'] || 0).toLocaleString()}`;
     }
     
     function updateFeesSummary(fees) {
