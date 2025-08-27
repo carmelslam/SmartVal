@@ -1842,19 +1842,30 @@
     function loadSummaryValidation() {
       const summary = window.helper?.final_report?.summary || {};
       const finalReport = window.helper?.final_report || {};
-      const currentReportType = finalReport.dropdown_type || 'private_opinion';
       
-      // Debug: Log the report type value
-      console.log('📋 Summary validation - Report type:', currentReportType);
+      // Convert Hebrew report type from builder to English key with fallbacks
+      let hebrewReportType = finalReport.dropdown_type || 
+                           finalReport.report_type || 
+                           window.helper?.reportType ||
+                           window.helper?.meta?.report_type_display ||
+                           window.helper?.workflow?.report_type;
+                           
+      const englishReportType = convertHebrewReportTypeToKey(hebrewReportType);
+      const currentReportType = englishReportType || 'private_opinion';
+      
+      // Enhanced debugging
+      console.log('📋 Summary validation - Hebrew type:', hebrewReportType);
+      console.log('📋 Summary validation - English type:', englishReportType);
+      console.log('📋 Summary validation - Final type:', currentReportType);
       console.log('📋 Final report full object:', finalReport);
       console.log('📋 Helper object paths check:', {
         'helper.final_report': !!window.helper?.final_report,
         'helper.final_report.dropdown_type': window.helper?.final_report?.dropdown_type,
-        'helper.final_report.dropdown_type type': typeof window.helper?.final_report?.dropdown_type
+        'conversion_result': englishReportType
       });
       
-      // Update report type indicator
-      const reportTypeDisplay = getReportTypeDisplayName(currentReportType);
+      // Update report type indicator - show Hebrew name or "לא נבחר" if no type
+      const reportTypeDisplay = hebrewReportType || 'לא נבחר';
       document.getElementById('current-report-type').textContent = reportTypeDisplay;
       
       // Get summary validation items based on report type
@@ -1881,163 +1892,289 @@
       return typeNames[type] || 'לא נבחר';
     }
     
+    // Convert Hebrew report type from builder to English key for validation
+    function convertHebrewReportTypeToKey(hebrewType) {
+      const hebrewToEnglish = {
+        'חוות דעת פרטית': 'private_opinion',
+        'חוות דעת גלובלית': 'global_opinion',
+        'חוות דעת מכירה מצבו הניזוק': 'damaged_sale_opinion',
+        'חוות דעת טוטלוסט': 'total_loss_opinion',
+        'חוות דעת אובדן להלכה': 'legal_total_loss'
+      };
+      return hebrewToEnglish[hebrewType] || null;
+    }
+    
+    // Mirror the final-report-builder's updateSummaryContent() logic for validation
     function getSummaryItemsByReportType(reportType, summary) {
       const helper = window.helper || {};
       
-      // Each report type has completely different structure - no common items
-      // This mirrors the final-report-builder.html dynamic behavior
+      console.log('📋 Creating summary validation for type:', reportType);
       
+      // Mirror exact field structures from final-report-builder.html updateSummaryContent()
       switch(reportType) {
         case 'private_opinion':
-          return getPrivateOpinionSummary(helper, summary);
+          return createPrivateOpinionValidation(helper, summary);
         case 'global_opinion':
-          return getGlobalOpinionSummary(helper, summary);
+          return createGlobalOpinionValidation(helper, summary);
         case 'damaged_sale_opinion':
-          return getDamagedSaleSummary(helper, summary);
+          return createDamagedSaleValidation(helper, summary);
         case 'total_loss_opinion':
-          return getTotalLossSummary(helper, summary);
+          return createTotalLossValidation(helper, summary);
         case 'legal_total_loss':
-          return getLegalTotalLossSummary(helper, summary);
+          return createLegalTotalLossValidation(helper, summary);
         default:
+          console.warn('⚠️ Unknown report type for validation:', reportType);
           return [];
       }
     }
     
-    function getPrivateOpinionSummary(helper, summary) {
+    // Private Opinion Validation - Mirrors builder's 'חוות דעת פרטית' structure
+    function createPrivateOpinionValidation(helper, summary) {
+      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת פרטית'
       return [
         {
-          label: 'שווי שוק',
-          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
-          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
-          field: 'market_value',
+          label: 'ערך השוק של הרכב', // Exact label from builder
+          current: getMarketValueForValidation(helper),
+          stored: summary.market_value || '₪0',
+          field: 'sumMarketValuePrivate', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
-          label: 'סה"כ תביעה (נזקים)',
-          current: helper.claim_data?.total_claim ? `₪${helper.claim_data.total_claim}` : '₪0',
-          stored: helper.damage_assessment?.totals?.['Total with VAT'] ? `₪${helper.damage_assessment.totals['Total with VAT']}` : '₪0',
-          field: 'total_claim',
+          label: 'סה״כ תביעה', // Exact label from builder
+          current: getTotalClaimForValidation(helper),
+          stored: summary.total_claim || '₪0',
+          field: 'sumClaimPrivate', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'פיצוי ירידת ערך',
-          current: helper.depreciation?.globalDepValue ? `₪${helper.depreciation.globalDepValue}` : '₪0',
-          stored: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
-          field: 'dep_compensation',
+          label: 'פיצוי בגין ירידת ערך', // Exact label from builder
+          current: getDepreciationCompensationForValidation(helper),
+          stored: summary.depreciation_compensation || '₪0',
+          field: 'depCompensationPrivate', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'סה"כ לפני הפרשים',
-          current: summary.private_before_differentials ? `₪${summary.private_before_differentials}` : '₪0',
-          stored: summary.private_before_differentials ? `₪${summary.private_before_differentials}` : '₪0',
-          field: 'private_before_differentials',
+          label: 'תוספות והורדות (מידע בלבד)', // Exact label from builder
+          current: getAdjustmentsInfoForValidation(helper),
+          stored: summary.adjustments_info || 'מידע בלבד',
+          field: 'adjustmentsInfoPrivate', // Exact field ID from builder
+          validation: (val) => true // Info only field
+        }
+      ];
+    }
+    
+    // Global Opinion Validation - Mirrors builder's 'חוות דעת גלובלית' structure  
+    function createGlobalOpinionValidation(helper, summary) {
+      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת גלובלית'
+      return [
+        {
+          label: 'ערך השוק של הרכב', // Exact label from builder
+          current: getMarketValueForValidation(helper),
+          stored: summary.market_value || '₪0',
+          field: 'sumMarketValueGlobal', // Exact field ID from builder
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'סה״כ תביעה', // Exact label from builder
+          current: getTotalClaimForValidation(helper),
+          stored: summary.total_claim || '₪0',
+          field: 'sumClaimGlobal', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'סה"כ סופי (אחרי הפרשים)',
-          current: summary.private_after_differentials ? `₪${summary.private_after_differentials}` : '₪0',
-          stored: summary.private_after_differentials ? `₪${summary.private_after_differentials}` : '₪0',
-          field: 'private_after_differentials',
+          label: 'פיצוי בגין ירידת ערך', // Exact label from builder
+          current: getDepreciationCompensationForValidation(helper),
+          stored: summary.depreciation_compensation || '₪0',
+          field: 'sumDepreciation', // Exact field ID from builder
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'תוספות והורדות', // Exact label from builder
+          current: getAdjustmentsForValidation(helper),
+          stored: summary.adjustments || '₪0',
+          field: 'sumAdjustments', // Exact field ID from builder
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה״כ נכלל בחוות הדעת', // Exact label from builder
+          current: getGlobalTotalForValidation(helper, summary),
+          stored: summary.global_total || '₪0',
+          field: 'sumTotalGlobalDynamic', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
       ];
     }
     
-    function getGlobalOpinionSummary(helper, summary) {
+    // Damaged Sale Validation - Mirrors builder's 'חוות דעת מכירה מצבו הניזוק' structure
+    function createDamagedSaleValidation(helper, summary) {
+      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת מכירה מצבו הניזוק'
       return [
         {
-          label: 'שווי שוק',
-          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
-          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
-          field: 'market_value',
+          label: 'ערך השוק של הרכב', // Exact label from builder
+          current: getMarketValueForValidation(helper),
+          stored: summary.market_value || '₪0',
+          field: 'sumMarketValueDamage', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
-          label: 'סה"כ גלובלי',
-          current: summary.global_before_differentials ? `₪${summary.global_before_differentials}` : '₪0',
-          stored: summary.global_before_differentials ? `₪${summary.global_before_differentials}` : '₪0',
-          field: 'global_before_differentials',
+          label: 'ערך המכירה במצבו הניזוק', // Exact label from builder
+          current: getDamagedSaleValueForValidation(helper, summary),
+          stored: summary.damaged_sale_value || '₪0',
+          field: 'sumDamagedSaleValue', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'סה"כ גלובלי סופי (אחרי הפרשים)',
-          current: summary.global_after_differentials ? `₪${summary.global_after_differentials}` : '₪0',
-          stored: summary.global_after_differentials ? `₪${summary.global_after_differentials}` : '₪0',
-          field: 'global_after_differentials',
+          label: 'סה״כ לאחר מכירה', // Exact label from builder
+          current: getDamagedSaleTotalForValidation(helper, summary),
+          stored: summary.damaged_sale_total || '₪0',
+          field: 'sumTotalDamagedSale', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
       ];
     }
     
-    function getDamagedSaleSummary(helper, summary) {
+    // Total Loss Validation - Mirrors builder's 'חוות דעת טוטלוסט' structure
+    function createTotalLossValidation(helper, summary) {
+      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת טוטלוסט'
       return [
         {
-          label: 'שווי שוק',
-          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
-          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
-          field: 'market_value',
+          label: 'ערך השוק של הרכב', // Exact label from builder
+          current: getMarketValueForValidation(helper),
+          stored: summary.market_value || '₪0',
+          field: 'sumMarketValueTotal', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
-          label: 'מחיר מכירה במצב ניזוק',
-          current: summary.damaged_sale_price ? `₪${summary.damaged_sale_price}` : '₪0',
-          stored: summary.damaged_sale_price ? `₪${summary.damaged_sale_price}` : '₪0',
-          field: 'damaged_sale_price',
+          label: 'ערך שרידי הרכב', // Exact label from builder
+          current: getSalvageValueForValidation(helper, summary),
+          stored: summary.salvage_value || '₪0',
+          field: 'sumScrapValue', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'סה"כ נזק אחרי הפרשים',
-          current: summary.damage_total_after_differentials ? `₪${summary.damage_total_after_differentials}` : '₪0',
-          stored: summary.damage_total_after_differentials ? `₪${summary.damage_total_after_differentials}` : '₪0',
-          field: 'damage_total_after_differentials',
+          label: 'תוספת בגין גרירה ואחסנה', // Exact label from builder
+          current: getTowingStorageForValidation(helper, summary),
+          stored: summary.towing_storage || '₪0',
+          field: 'sumTowingStorage', // Exact field ID from builder
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה״כ לאחר מכירת שרידים', // Exact label from builder
+          current: getTotalLossFinalForValidation(helper, summary),
+          stored: summary.total_loss_final || '₪0',
+          field: 'sumTotalTotalLoss', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
       ];
     }
     
-    function getTotalLossSummary(helper, summary) {
+    // Legal Total Loss Validation - Mirrors builder's 'חוות דעת אובדן להלכה' structure
+    function createLegalTotalLossValidation(helper, summary) {
+      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת אובדן להלכה'
       return [
         {
-          label: 'שווי שוק',
-          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
-          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
-          field: 'market_value',
+          label: 'ערך השוק של הרכב', // Exact label from builder
+          current: getMarketValueForValidation(helper),
+          stored: summary.market_value || '₪0',
+          field: 'sumMarketValueLegal', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
-          label: 'ערך גרוטאות',
-          current: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
-          stored: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
-          field: 'salvage_value',
-          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-        },
-        {
-          label: 'סה"כ טוטאל לוס סופי',
-          current: summary.total_loss_after_differentials ? `₪${summary.total_loss_after_differentials}` : '₪0',
-          stored: summary.total_loss_after_differentials ? `₪${summary.total_loss_after_differentials}` : '₪0',
-          field: 'total_loss_after_differentials',
+          label: 'סה״כ נכלל בחוות הדעת', // Exact label from builder
+          current: getLegalTotalLossForValidation(helper, summary),
+          stored: summary.legal_total_loss_amount || '₪0',
+          field: 'sumTotalLegalLoss', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
       ];
     }
     
-    function getLegalTotalLossSummary(helper, summary) {
-      return [
-        {
-          label: 'שווי שוק',
-          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
-          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
-          field: 'market_value',
-          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
-        },
-        {
-          label: 'אובדן להלכה - סה"כ',
-          current: summary.legal_total_loss_amount ? `₪${summary.legal_total_loss_amount}` : '₪0',
-          stored: summary.legal_total_loss_amount ? `₪${summary.legal_total_loss_amount}` : '₪0',
-          field: 'legal_total_loss_amount',
-          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-        }
-      ];
+    // ===== DATA SOURCE FUNCTIONS - MIRROR BUILDER'S EXACT CALCULATIONS =====
+    
+    // Market Value - Mirrors builder's helper.calculations.full_market_value source
+    function getMarketValueForValidation(helper) {
+      const marketValue = helper.calculations?.full_market_value || 0;
+      return marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '₪0';
+    }
+    
+    // Total Claim - Mirrors builder's auto-fill from totalClaim field
+    function getTotalClaimForValidation(helper) {
+      // Mirror builder's logic: helper.damage_centers_summary.total_cost or damage_assessment.totals
+      const claimFromSummary = helper.damage_centers_summary?.total_cost;
+      const claimFromTotals = helper.damage_assessment?.totals?.['Total with VAT'];
+      const totalClaim = claimFromSummary || claimFromTotals || 0;
+      return totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '₪0';
+    }
+    
+    // Depreciation Compensation - Mirrors builder's helper.depreciation.globalDepValue
+    function getDepreciationCompensationForValidation(helper) {
+      const depValue = helper.depreciation?.globalDepValue || 0;
+      return depValue > 0 ? `₪${depValue.toLocaleString()}` : '₪0';
+    }
+    
+    // Adjustments Info - For info-only fields
+    function getAdjustmentsInfoForValidation(helper) {
+      return 'מידע בלבד'; // "Info only" as in builder
+    }
+    
+    // Adjustments - For editable adjustment fields
+    function getAdjustmentsForValidation(helper) {
+      // Calculate total adjustments from Levi and custom adjustments
+      let total = 0;
+      if (helper.levi?.adjustments) {
+        total += helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+      }
+      if (helper.levi?.custom_adjustments) {
+        total += helper.levi.custom_adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+      }
+      return `₪${total.toLocaleString()}`;
+    }
+    
+    // Global Total - Calculated field for global opinion
+    function getGlobalTotalForValidation(helper, summary) {
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
+      const claim = parseFloat(getTotalClaimForValidation(helper).replace(/[^\d]/g, '') || 0);
+      const dep = parseFloat(getDepreciationCompensationForValidation(helper).replace(/[^\d]/g, '') || 0);
+      const adj = parseFloat(getAdjustmentsForValidation(helper).replace(/[^\d]/g, '') || 0);
+      const total = claim + dep + adj;
+      return `₪${total.toLocaleString()}`;
+    }
+    
+    // Damaged Sale Value - From summary or calculated
+    function getDamagedSaleValueForValidation(helper, summary) {
+      return summary.damaged_sale_value || '₪0';
+    }
+    
+    // Damaged Sale Total - Market value - sale value
+    function getDamagedSaleTotalForValidation(helper, summary) {
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
+      const saleValue = parseFloat(summary.damaged_sale_value?.replace(/[^\d]/g, '') || 0);
+      const total = marketValue - saleValue;
+      return total > 0 ? `₪${total.toLocaleString()}` : '₪0';
+    }
+    
+    // Salvage Value - From summary
+    function getSalvageValueForValidation(helper, summary) {
+      return summary.salvage_value || '₪0';
+    }
+    
+    // Towing and Storage - From summary
+    function getTowingStorageForValidation(helper, summary) {
+      return summary.towing_storage || '₪0';
+    }
+    
+    // Total Loss Final - Market value - salvage + towing
+    function getTotalLossFinalForValidation(helper, summary) {
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
+      const salvage = parseFloat(summary.salvage_value?.replace(/[^\d]/g, '') || 0);
+      const towing = parseFloat(summary.towing_storage?.replace(/[^\d]/g, '') || 0);
+      const total = marketValue - salvage + towing;
+      return total > 0 ? `₪${total.toLocaleString()}` : '₪0';
+    }
+    
+    // Legal Total Loss - From summary
+    function getLegalTotalLossForValidation(helper, summary) {
+      return summary.legal_total_loss_amount || '₪0';
     }
     
     
