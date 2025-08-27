@@ -1667,7 +1667,28 @@
         return;
       }
       
-      container.innerHTML = centers.map((center, index) => `
+      container.innerHTML = centers.map((center, index) => {
+        // Calculate costs from center.items
+        let partsCost = 0;
+        let workCost = 0;
+        let repairsCost = 0;
+        
+        if (center.items && Array.isArray(center.items)) {
+          center.items.forEach(item => {
+            const itemCost = parseFloat(item.total_price || item.price || 0);
+            if (item.type === 'part' || item.category === 'parts') {
+              partsCost += itemCost;
+            } else if (item.type === 'work' || item.category === 'work') {
+              workCost += itemCost;
+            } else if (item.type === 'repair' || item.category === 'repairs') {
+              repairsCost += itemCost;
+            }
+          });
+        }
+        
+        const totalCost = partsCost + workCost + repairsCost;
+        
+        return `
         <div class="damage-center">
           <div class="damage-center-header">
             🔧 מוקד נזק ${center.number || index + 1}: ${center.location || center.description || 'לא צוין'}
@@ -1675,23 +1696,24 @@
           <div class="damage-center-content">
             <div class="damage-stat">
               <div class="damage-stat-label">חלקים</div>
-              <div class="damage-stat-value">${center.parts_items?.length || 0}</div>
+              <div class="damage-stat-value">₪${partsCost.toLocaleString()}</div>
             </div>
             <div class="damage-stat">
               <div class="damage-stat-label">עבודות</div>
-              <div class="damage-stat-value">${center.work_items?.length || 0}</div>
+              <div class="damage-stat-value">₪${workCost.toLocaleString()}</div>
             </div>
             <div class="damage-stat">
               <div class="damage-stat-label">תיקונים</div>
-              <div class="damage-stat-value">${center.repairs_items?.length || 0}</div>
+              <div class="damage-stat-value">₪${repairsCost.toLocaleString()}</div>
             </div>
             <div class="damage-stat">
               <div class="damage-stat-label">עלות כוללת</div>
-              <div class="damage-stat-value">₪${(center.calculations?.total_with_vat || center.calculations?.subtotal_before_vat || 0).toLocaleString()}</div>
+              <div class="damage-stat-value">₪${totalCost.toLocaleString()}</div>
             </div>
           </div>
         </div>
-      `).join('');
+        `;
+      }).join('');
     }
     
     function updateLeviSummary(valuation) {
@@ -1736,14 +1758,21 @@
     }
     
     function updateDamageSummary(damage) {
+      const helper = window.helper || {};
+      const totals = helper.damage_assessment?.totals || {};
+      const totalClaim = helper.claim?.total_claim || 0;
+      
+      // Map from helper.damage_assessment.totals
       document.getElementById('damage-parts-cost').textContent = 
-        `₪${(damage.totals?.parts_cost || 0).toLocaleString()}`;
+        `₪${(totals.parts_cost || 0).toLocaleString()}`;
       document.getElementById('damage-labor-cost').textContent = 
-        `₪${(damage.totals?.labor_cost || 0).toLocaleString()}`;
+        `₪${(totals.labor_cost || 0).toLocaleString()}`;
       document.getElementById('damage-painting-cost').textContent = 
-        `₪${(damage.totals?.painting_cost || 0).toLocaleString()}`;
+        `₪${(totals.painting_cost || 0).toLocaleString()}`;
+        
+      // Map from helper.claim.total_claim
       document.getElementById('damage-total-cost').textContent = 
-        `₪${(damage.summary?.total_damage_amount || 0).toLocaleString()}`;
+        `₪${parseInt(totalClaim).toLocaleString()}`;
     }
     
     function updateFeesSummary(fees) {
