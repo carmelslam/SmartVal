@@ -2377,7 +2377,7 @@
             window.VALIDATION_IFRAME_VAT_RATE = ${window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 17};
             window.IS_VALIDATION_IFRAME = true;
             
-            console.log('🛡️ Setting up iframe with helper VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
+            console.log('Setting up iframe with helper VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
             
             // Add save interceptor to notify parent when helper is modified
             let saveInProgress = false;
@@ -2498,7 +2498,7 @@
               };
             }
             
-            console.log('✅ Comprehensive iframe validation setup complete - VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
+            console.log('Comprehensive iframe validation setup complete - VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
           `;
           
           iframeDocument.head.appendChild(script);
@@ -2608,24 +2608,31 @@
       if (iframe) {
         configureIframeForValidation(iframe);
         
-        // Proactively send VAT rate and helper data to the iframe
-        setTimeout(() => {
+        // Immediately send VAT rate to prevent timeout errors
+        const vatRate = window.helper?.calculations?.vat_rate || 
+                      window.PROTECTED_VAT_RATE || 
+                      sessionStorage.getItem('PROTECTED_VAT_RATE') || 
+                      17;
+        
+        // Send VAT rate multiple times to ensure delivery
+        const sendVatRate = () => {
           try {
-            const vatRate = window.helper?.calculations?.vat_rate || 
-                          window.PROTECTED_VAT_RATE || 
-                          sessionStorage.getItem('PROTECTED_VAT_RATE') || 
-                          17;
             iframe.contentWindow.postMessage({
               type: 'VAT_RATE',
               vatRate: vatRate,
               helper: window.helper,
               source: 'validation-workflow'
             }, '*');
-            console.log('📤 Proactively sent VAT rate and helper to iframe:', vatRate);
+            console.log('Sent VAT rate to iframe:', vatRate);
           } catch (error) {
-            console.log('Could not send proactive data (cross-origin):', error);
+            console.log('Could not send data (cross-origin):', error);
           }
-        }, 500);
+        };
+        
+        // Send immediately and then again after short delays
+        sendVatRate();
+        setTimeout(sendVatRate, 100);
+        setTimeout(sendVatRate, 300);
       }
     };
 
