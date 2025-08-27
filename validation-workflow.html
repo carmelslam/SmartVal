@@ -1328,45 +1328,57 @@
       const leviItems = [
         {
           label: 'קובץ דו"ח לוי',
-          current: levisummary.report_date || '19/12/2024',
-          stored: 'levi_yitzhak',
+          current: levisummary.report_date || valuation.report_date || '',
+          stored: levisummary.report_date || valuation.report_date || '',
           field: 'levi_source',
           validation: (val) => val && val.length > 0
         },
         {
           label: 'שנת ייצור',
-          current: valuation.adjustments?.registration?.value || '11/2022',
-          stored: '11/2022',
+          current: vehicle.year || valuation.year || '',
+          stored: vehicle.year || valuation.year || '',
           field: 'vehicle_year',
-          validation: (val) => val && parseInt(val) >= 1980 && parseInt(val) <= new Date().getFullYear()
+          validation: (val) => {
+            const year = parseInt(val);
+            return !isNaN(year) && year >= 1980 && year <= new Date().getFullYear();
+          }
         },
         {
           label: 'קילומטראז',
-          current: valuation.adjustments?.mileage?.value ? parseInt(valuation.adjustments.mileage.value).toLocaleString() : '118,000',
-          stored: '118,000',
+          current: vehicle.mileage || valuation.mileage || valuation.adjustments?.mileage?.value || '',
+          stored: vehicle.mileage || valuation.mileage || valuation.adjustments?.mileage?.value || '',
           field: 'vehicle_mileage',
           validation: (val) => val && parseInt(val) >= 0
         },
         {
-          label: 'שווי בסיס לוי',
-          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : 'NaN',
-          stored: 'NaN',
+          label: 'מחיר חדש בלוי',
+          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '',
+          stored: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '',
           field: 'base_price',
-          validation: (val) => val && parseFloat(String(val).replace(/[^\d]/g, '')) > 0
+          validation: (val) => val && (typeof val === 'number' ? val > 0 : parseFloat(String(val).replace(/[^\d]/g, '')) > 0)
         },
         {
           label: 'התאמות מחיר',
-          current: valuation.adjustments_value ? `₪${Math.abs(parseInt(valuation.adjustments_value)).toLocaleString()}-` : '₪39,123-',
-          stored: '₪39,123',
+          current: valuation.adjustments_value ? `₪${Math.abs(parseInt(valuation.adjustments_value)).toLocaleString()}-` : '',
+          stored: valuation.adjustments_value ? `₪${Math.abs(parseInt(valuation.adjustments_value)).toLocaleString()}-` : '',
           field: 'price_adjustments',
           validation: (val) => true
         },
         {
+          label: 'מחיר שווי שוק לוי',
+          current: valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '',
+          stored: valuation.final_price ? `₪${parseInt(valuation.final_price).toLocaleString()}` : '',
+          field: 'levi_market_value',
+          validation: (val) => val && (typeof val === 'number' ? val > 0 : parseFloat(String(val).replace(/[^\d]/g, '')) > 0)
+        },
+        {
           label: 'שווי סופי מעודכן',
-          current: calculations.full_market_value ? `₪${parseInt(calculations.full_market_value).toLocaleString()}` : '₪78,877',
-          stored: '₪78,877',
+          current: calculations.full_market_value || valuation.final_price ? 
+                   `₪${parseInt(calculations.full_market_value || valuation.final_price).toLocaleString()}` : '',
+          stored: calculations.full_market_value || valuation.final_price ? 
+                  `₪${parseInt(calculations.full_market_value || valuation.final_price).toLocaleString()}` : '',
           field: 'final_price',
-          validation: (val) => val && parseFloat(String(val).replace(/[^\d]/g, '')) > 0
+          validation: (val) => val && (typeof val === 'number' ? val > 0 : parseFloat(String(val).replace(/[^\d]/g, '')) > 0)
         }
       ];
       
