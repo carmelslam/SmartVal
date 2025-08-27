@@ -1533,13 +1533,8 @@
       const damage = window.helper?.damage_assessment || {};
       const centers = window.helper?.centers || [];
       
-      // Debug: Log the exact structure to find correct property name
-      console.log('=== DEBUG: damage_assessment structure ===');
-      console.log('damage keys:', Object.keys(damage));
-      console.log('full damage object:', damage);
-      
-      // Correct path: helper.damage_assessment.damage_centers_summary.(list)
-      const damageCentersSummary = damage.damage_centers_summary || [];
+      // Get damage centers summary object (not array) 
+      const damageCentersSummary = damage.damage_centers_summary || {};
       
       const damageItems = [
         {
@@ -1676,16 +1671,12 @@
       }
       
       container.innerHTML = centers.map((center, index) => {
-        // Debug logging
-        console.log(`🔍 Center ${index}:`, center);
-        console.log(`🔍 damageCentersSummary:`, damageCentersSummary);
-        console.log(`🔍 summaryData[${index}]:`, damageCentersSummary[index]);
-        
         // Get location from helper.centers.(list).Location
         const centerLocation = center.Location || center.location || center.description || 'לא צוין';
         
-        // Get costs from helper.damage_assessment.damage_centers_summary.(list)
-        const summaryData = damageCentersSummary[index] || {};
+        // Get costs from helper.damage_assessment.damage_centers_summary - it's an object with keys like "Damage center 1"
+        const centerKey = `Damage center ${index + 1}`;
+        const summaryData = damageCentersSummary[centerKey] || {};
         
         const partsCost = parseInt(summaryData.Parts || 0);
         const workCost = parseInt(summaryData.Works || 0);
