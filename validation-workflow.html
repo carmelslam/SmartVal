@@ -979,7 +979,7 @@
               <span class="cost-value" id="depreciation-global-amount">₪0</span>
             </div>
             <div class="cost-item">
-              <span class="cost-label">סה״כ ירידת ערך</span>
+              <span class="cost-label">סה״כ מוקדי נזק</span>
               <span class="cost-value" id="depreciation-total-calculated">₪0</span>
             </div>
           </div>
@@ -1489,20 +1489,25 @@
           <!-- Global Depreciation Section -->
           <div class="global-depreciation-section" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #0ea5e9;">
             <h5 style="color: #0c4a6e; margin-bottom: 15px;">ירידת ערך גלובלית</h5>
-            <div>
-              <label>אחוז ירידת ערך גלובלית:</label>
-              <div class="readonly-box" id="global-dep-percentage">${depreciation.global_percentage || '0'}%</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <label>אחוז ירידת ערך גלובלית:</label>
+                <div class="readonly-box" id="global-dep-percentage">${depreciation.global_percentage || '0'}%</div>
+              </div>
+              <div>
+                <label>ערך גלובלי ב-₪:</label>
+                <div class="readonly-box" id="global-dep-value">₪${depreciation.global_amount ? parseInt(depreciation.global_amount).toLocaleString() : '0'}</div>
+              </div>
             </div>
           </div>
           
-          <!-- Total Section -->
-          <div class="total-depreciation-section" style="margin-top: 15px; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
+          <!-- Totals Section -->
+          <div class="totals-depreciation-section" style="margin-top: 15px; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
+            <h5 style="color: #92400e; margin-bottom: 15px;">סיכומים</h5>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <label style="font-weight: bold;">סה״כ ירידת ערך:</label>
-              </div>
-              <div>
-                <div class="readonly-box" style="font-weight: bold; font-size: 16px;" id="total-depreciation-value">₪${depreciation.total_depreciation ? parseInt(depreciation.total_depreciation).toLocaleString() : '0'}</div>
+                <label style="font-weight: bold;">סה״כ מוקדי נזק:</label>
+                <div class="readonly-box" style="font-weight: bold;" id="damage-centers-total">₪0</div>
               </div>
             </div>
           </div>
@@ -1823,9 +1828,21 @@
         globalValueElement.textContent = `₪${globalAmount.toLocaleString()}`;
       }
       
-      const totalDepreciationElement = document.getElementById('total-depreciation-value');
-      if (totalDepreciationElement) {
-        totalDepreciationElement.textContent = `₪${totalCalculated.toLocaleString()}`;
+      const damageCentersTotalElement = document.getElementById('damage-centers-total');
+      if (damageCentersTotalElement) {
+        // Calculate sum of damage centers values
+        let damageCentersTotal = 0;
+        if (depreciation.bulk_items && Array.isArray(depreciation.bulk_items)) {
+          damageCentersTotal = depreciation.bulk_items.reduce((sum, item) => {
+            // Extract numeric value from formatted string like "₪3,549"
+            if (item.value) {
+              const numericValue = item.value.toString().replace(/[₪,]/g, '');
+              return sum + (parseInt(numericValue) || 0);
+            }
+            return sum;
+          }, 0);
+        }
+        damageCentersTotalElement.textContent = `₪${damageCentersTotal.toLocaleString()}`;
       }
       
       // Update summary section elements
@@ -1842,7 +1859,18 @@
       
       const summaryTotalCalculated = document.getElementById('depreciation-total-calculated');
       if (summaryTotalCalculated) {
-        summaryTotalCalculated.textContent = `₪${totalCalculated.toLocaleString()}`;
+        // Calculate sum of damage centers for summary
+        let damageCentersTotal = 0;
+        if (depreciation.bulk_items && Array.isArray(depreciation.bulk_items)) {
+          damageCentersTotal = depreciation.bulk_items.reduce((sum, item) => {
+            if (item.value) {
+              const numericValue = item.value.toString().replace(/[₪,]/g, '');
+              return sum + (parseInt(numericValue) || 0);
+            }
+            return sum;
+          }, 0);
+        }
+        summaryTotalCalculated.textContent = `₪${damageCentersTotal.toLocaleString()}`;
       }
     }
     
