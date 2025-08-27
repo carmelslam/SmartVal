@@ -979,7 +979,7 @@
               <span class="cost-value" id="depreciation-global-amount">₪0</span>
             </div>
             <div class="cost-item">
-              <span class="cost-label">סה"כ ירידת ערך מחושבת</span>
+              <span class="cost-label">סיכום סטטיסטי (גלובלי + מוקדים)</span>
               <span class="cost-value" id="depreciation-total-calculated">₪0</span>
             </div>
           </div>
@@ -1483,7 +1483,7 @@
           
           <!-- Table Body -->
           <div id="depreciation-table-body">
-            ${renderDepreciationTableRows(depreciation.bulk_items || [])}
+            ${renderDepreciationTableRows(depreciation.globalDepValue || [])}
           </div>
           
           <!-- Global Depreciation Section -->
@@ -1503,7 +1503,7 @@
                 <div class="readonly-box" id="global-dep-value">₪${depreciation.global_amount ? parseInt(depreciation.global_amount).toLocaleString() : '0'}</div>
               </div>
               <div>
-                <label style="font-weight: bold;">סה"כ ירידת ערך מחושבת:</label>
+                <label style="font-weight: bold;">סיכום סטטיסטי (גלובלי + מוקדים):</label>
                 <div class="readonly-box" style="font-weight: bold; font-size: 16px;" id="total-depreciation-value">₪${depreciation.total_depreciation ? parseInt(depreciation.total_depreciation).toLocaleString() : '0'}</div>
               </div>
             </div>
@@ -1793,6 +1793,23 @@
     }
     
     function updateDepreciationSummary(depreciation) {
+      // Calculate total from damage center depreciations
+      let centerDepreciationsTotal = 0;
+      if (depreciation.globalDepValue && Array.isArray(depreciation.globalDepValue)) {
+        centerDepreciationsTotal = depreciation.globalDepValue.reduce((sum, item) => {
+          const value = parseInt(item.value) || 0;
+          return sum + value;
+        }, 0);
+      }
+      
+      // Global depreciation amount
+      const globalAmount = parseInt(depreciation.global_amount) || 0;
+      
+      // Total calculated = global + center depreciations (statistical calculation only)
+      const totalCalculated = depreciation.total_depreciation ? 
+        parseInt(depreciation.total_depreciation) : 
+        (globalAmount + centerDepreciationsTotal);
+      
       // Update main table elements
       const globalPercentElement = document.getElementById('global-dep-percentage');
       if (globalPercentElement) {
@@ -1802,14 +1819,12 @@
       
       const globalValueElement = document.getElementById('global-dep-value');
       if (globalValueElement) {
-        globalValueElement.textContent = 
-          depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
+        globalValueElement.textContent = `₪${globalAmount.toLocaleString()}`;
       }
       
       const totalDepreciationElement = document.getElementById('total-depreciation-value');
       if (totalDepreciationElement) {
-        totalDepreciationElement.textContent = 
-          depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+        totalDepreciationElement.textContent = `₪${totalCalculated.toLocaleString()}`;
       }
       
       // Update summary section elements
@@ -1821,14 +1836,12 @@
       
       const summaryGlobalAmount = document.getElementById('depreciation-global-amount');
       if (summaryGlobalAmount) {
-        summaryGlobalAmount.textContent = 
-          depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
+        summaryGlobalAmount.textContent = `₪${globalAmount.toLocaleString()}`;
       }
       
       const summaryTotalCalculated = document.getElementById('depreciation-total-calculated');
       if (summaryTotalCalculated) {
-        summaryTotalCalculated.textContent = 
-          depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+        summaryTotalCalculated.textContent = `₪${totalCalculated.toLocaleString()}`;
       }
     }
     
@@ -2099,7 +2112,7 @@
       
       // Check if there's either global depreciation or per-center depreciation
       const hasGlobalDep = depreciation.global_percentage > 0 || depreciation.global_amount > 0;
-      const hasCenterDep = depreciation.bulk_items && depreciation.bulk_items.length > 0;
+      const hasCenterDep = depreciation.globalDepValue && depreciation.globalDepValue.length > 0;
       const hasTotalDep = depreciation.total_depreciation > 0;
       
       // Valid if there's any depreciation data
