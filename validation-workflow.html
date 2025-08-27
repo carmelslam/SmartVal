@@ -1365,8 +1365,30 @@
         },
         {
           label: 'מחיר בסיס',
-          current: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '',
-          stored: valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : '',
+          current: (() => {
+            if (!valuation.base_price) return '';
+            // Handle case where base_price already includes ₪ symbol
+            const priceStr = String(valuation.base_price);
+            if (priceStr.includes('₪')) {
+              return priceStr.trim();
+            }
+            // Otherwise parse and format
+            const cleanPrice = priceStr.replace(/[^\d]/g, '');
+            const priceNum = parseInt(cleanPrice);
+            return !isNaN(priceNum) ? `₪${priceNum.toLocaleString()}` : '';
+          })(),
+          stored: (() => {
+            if (!valuation.base_price) return '';
+            // Handle case where base_price already includes ₪ symbol
+            const priceStr = String(valuation.base_price);
+            if (priceStr.includes('₪')) {
+              return priceStr.trim();
+            }
+            // Otherwise parse and format
+            const cleanPrice = priceStr.replace(/[^\d]/g, '');
+            const priceNum = parseInt(cleanPrice);
+            return !isNaN(priceNum) ? `₪${priceNum.toLocaleString()}` : '';
+          })(),
           field: 'base_price',
           validation: (val) => val && (typeof val === 'number' ? val > 0 : parseFloat(String(val).replace(/[^\d]/g, '')) > 0)
         },
