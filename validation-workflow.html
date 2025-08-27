@@ -979,10 +979,6 @@
               <span class="cost-value" id="depreciation-global-amount">₪0</span>
             </div>
             <div class="cost-item">
-              <span class="cost-label">ימי מוסך</span>
-              <span class="cost-value" id="depreciation-garage-days">0</span>
-            </div>
-            <div class="cost-item">
               <span class="cost-label">סה"כ ירידת ערך מחושבת</span>
               <span class="cost-value" id="depreciation-total-calculated">₪0</span>
             </div>
@@ -1493,15 +1489,9 @@
           <!-- Global Depreciation Section -->
           <div class="global-depreciation-section" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #0ea5e9;">
             <h5 style="color: #0c4a6e; margin-bottom: 15px;">ירידת ערך גלובלית</h5>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-              <div>
-                <label>אחוז ירידת ערך גלובלית:</label>
-                <div class="readonly-box" id="global-dep-percentage">${depreciation.global_percentage || '0'}%</div>
-              </div>
-              <div>
-                <label>ערך ב-₪:</label>
-                <div class="readonly-box" id="global-dep-value">₪${depreciation.global_amount ? parseInt(depreciation.global_amount).toLocaleString() : '0'}</div>
-              </div>
+            <div>
+              <label>אחוז ירידת ערך גלובלית:</label>
+              <div class="readonly-box" id="global-dep-percentage">${depreciation.global_percentage || '0'}%</div>
             </div>
           </div>
           
@@ -1509,9 +1499,11 @@
           <div class="total-depreciation-section" style="margin-top: 15px; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <label style="font-weight: bold;">סה"כ ירידת ערך מחושבת:</label>
+                <label style="font-weight: bold;">ערך גלובלי ב-₪:</label>
+                <div class="readonly-box" id="global-dep-value">₪${depreciation.global_amount ? parseInt(depreciation.global_amount).toLocaleString() : '0'}</div>
               </div>
               <div>
+                <label style="font-weight: bold;">סה"כ ירידת ערך מחושבת:</label>
                 <div class="readonly-box" style="font-weight: bold; font-size: 16px;" id="total-depreciation-value">₪${depreciation.total_depreciation ? parseInt(depreciation.total_depreciation).toLocaleString() : '0'}</div>
               </div>
             </div>
@@ -1532,7 +1524,7 @@
           <div style="font-weight: bold; color: #374151;">${index + 1}</div>
           <div>${item.damage_description || item.part_name || `מוקד ${index + 1}`}</div>
           <div>${item.repair_type || 'לא צוין'}</div>
-          <div style="font-weight: bold; color: #dc2626;">${item.percentage || 0}%</div>
+          <div style="font-weight: bold; color: #dc2626;">${item.percent || 0}%</div>
           <div style="font-weight: bold; color: #059669;">₪${item.value ? parseInt(item.value).toLocaleString() : '0'}</div>
         </div>
       `).join('');
@@ -1801,6 +1793,7 @@
     }
     
     function updateDepreciationSummary(depreciation) {
+      // Update main table elements
       const globalPercentElement = document.getElementById('global-dep-percentage');
       if (globalPercentElement) {
         globalPercentElement.textContent = 
@@ -1816,6 +1809,25 @@
       const totalDepreciationElement = document.getElementById('total-depreciation-value');
       if (totalDepreciationElement) {
         totalDepreciationElement.textContent = 
+          depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+      }
+      
+      // Update summary section elements
+      const summaryGlobalPercent = document.getElementById('depreciation-global-percent');
+      if (summaryGlobalPercent) {
+        summaryGlobalPercent.textContent = 
+          depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%';
+      }
+      
+      const summaryGlobalAmount = document.getElementById('depreciation-global-amount');
+      if (summaryGlobalAmount) {
+        summaryGlobalAmount.textContent = 
+          depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
+      }
+      
+      const summaryTotalCalculated = document.getElementById('depreciation-total-calculated');
+      if (summaryTotalCalculated) {
+        summaryTotalCalculated.textContent = 
           depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
       }
     }
