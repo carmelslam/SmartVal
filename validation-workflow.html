@@ -1532,7 +1532,9 @@
     function loadDamageValidation() {
       const damage = window.helper?.damage_assessment || {};
       const centers = window.helper?.centers || [];
-      const damageCentersSummary = damage.damage_centers_summary?.list || [];
+      
+      // Correct path: helper.damage_assessment.damage_centers_summary.(list)
+      const damageCentersSummary = damage.damage_centers_summary || [];
       
       const damageItems = [
         {
@@ -1683,7 +1685,11 @@
         const partsCost = parseInt(summaryData.Parts || 0);
         const workCost = parseInt(summaryData.Works || 0);
         const repairsCost = parseInt(summaryData.Repairs || 0);
-        const totalCost = parseInt(summaryData['Total without VAT'] || 0);
+        
+        // Total comes from helper.damage_assessment.totals.Total with VAT
+        const helper = window.helper || {};
+        const totals = helper.damage_assessment?.totals || {};
+        const totalCost = parseInt(totals['Total with VAT'] || 0);
         
         return `
         <div class="damage-center">
