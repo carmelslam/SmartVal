@@ -1483,7 +1483,7 @@
           
           <!-- Table Body -->
           <div id="depreciation-table-body">
-            ${renderDepreciationTableRows(depreciation.bulk_items || [], depreciation.globalDepValue || [])}
+            ${renderDepreciationTableRows(depreciation.bulk_items || [])}
           </div>
           
           <!-- Global Depreciation Section -->
@@ -1512,32 +1512,12 @@
       updateDepreciationSummary(depreciation);
     }
     
-    function renderDepreciationTableRows(bulkItems, globalDepValue) {
+    function renderDepreciationTableRows(bulkItems) {
       if (!bulkItems || !Array.isArray(bulkItems) || bulkItems.length === 0) {
         return '<div style="text-align: center; padding: 20px; color: #64748b;">אין פריטי ירידת ערך</div>';
       }
       
-      // Debug: log the data structures
-      console.log('🔍 Debug - bulkItems:', bulkItems);
-      console.log('🔍 Debug - globalDepValue:', globalDepValue);
-      
       return bulkItems.map((item, index) => {
-        // Get corresponding value from globalDepValue if available
-        let depValue = item.value; // Default to bulk item value
-        
-        if (globalDepValue) {
-          if (Array.isArray(globalDepValue) && globalDepValue[index]) {
-            depValue = globalDepValue[index].value || globalDepValue[index];
-          } else if (typeof globalDepValue === 'object') {
-            // If globalDepValue is not an array, try to access it differently
-            const keys = Object.keys(globalDepValue);
-            if (keys[index]) {
-              depValue = globalDepValue[keys[index]].value || globalDepValue[keys[index]];
-            }
-          }
-        }
-        
-        console.log(`🔍 Debug - Row ${index}: item.value=${item.value}, depValue=${depValue}`);
         
         return `
         <div class="depreciation-row" style="display: grid; grid-template-columns: 80px 2fr 2fr 100px 120px; gap: 12px; padding: 10px; border-bottom: 1px solid #e2e8f0; align-items: center;">
@@ -1545,7 +1525,7 @@
           <div>${item.damage_description || item.part_name || `מוקד ${index + 1}`}</div>
           <div>${item.repair_type || 'לא צוין'}</div>
           <div style="font-weight: bold; color: #dc2626;">${item.percent || 0}%</div>
-          <div style="font-weight: bold; color: #059669;">₪${depValue && !isNaN(parseInt(depValue)) ? parseInt(depValue).toLocaleString() : '0'}</div>
+          <div style="font-weight: bold; color: #059669;">₪${item.value && !isNaN(parseInt(item.value)) ? parseInt(item.value).toLocaleString() : '0'}</div>
         </div>
         `;
       }).join('');
