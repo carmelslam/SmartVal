@@ -1532,6 +1532,7 @@
     function loadDamageValidation() {
       const damage = window.helper?.damage_assessment || {};
       const centers = window.helper?.centers || [];
+      const damageCentersSummary = damage.damage_centers_summary?.list || [];
       
       const damageItems = [
         {
@@ -1544,7 +1545,7 @@
       ];
       
       renderValidationItems('damage-validation-items', damageItems);
-      renderDamageCenters(centers);
+      renderDamageCenters(centers, damageCentersSummary);
       updateDamageSummary(damage);
     }
     
@@ -1653,7 +1654,7 @@
       }).join('');
     }
     
-    function renderDamageCenters(centers) {
+    function renderDamageCenters(centers, damageCentersSummary) {
       const container = document.getElementById('damage-centers-container');
       if (!container) return;
       
@@ -1668,46 +1669,13 @@
       }
       
       container.innerHTML = centers.map((center, index) => {
-        // Debug: log all center properties to find the correct data structure
-        console.log(`🔍 Center ${index} properties:`, Object.keys(center));
-        console.log(`🔍 Center ${index} full object:`, center);
-        console.log(`🔍 center.list:`, center.list);
-        console.log(`🔍 center.List:`, center.List);
+        // Get costs from damage centers summary data
+        const summaryData = damageCentersSummary[index] || {};
         
-        // Calculate costs from center.list or similar property
-        let partsCost = 0;
-        let workCost = 0;
-        let repairsCost = 0;
-        
-        // Try center.list (lowercase)
-        if (center.list && Array.isArray(center.list)) {
-          center.list.forEach(item => {
-            const itemCost = parseFloat(item.total_price || item.price || item.cost || 0);
-            if (item.type === 'part' || item.category === 'parts') {
-              partsCost += itemCost;
-            } else if (item.type === 'work' || item.category === 'work') {
-              workCost += itemCost;
-            } else if (item.type === 'repair' || item.category === 'repairs') {
-              repairsCost += itemCost;
-            }
-          });
-        }
-        
-        // Try center.List (uppercase)
-        if (center.List && Array.isArray(center.List)) {
-          center.List.forEach(item => {
-            const itemCost = parseFloat(item.total_price || item.price || item.cost || 0);
-            if (item.type === 'part' || item.category === 'parts') {
-              partsCost += itemCost;
-            } else if (item.type === 'work' || item.category === 'work') {
-              workCost += itemCost;
-            } else if (item.type === 'repair' || item.category === 'repairs') {
-              repairsCost += itemCost;
-            }
-          });
-        }
-        
-        const totalCost = partsCost + workCost + repairsCost;
+        const partsCost = parseInt(summaryData.Parts || 0);
+        const workCost = parseInt(summaryData.Works || 0);
+        const repairsCost = parseInt(summaryData.Repairs || 0);
+        const totalCost = parseInt(summaryData['Total without VAT'] || 0);
         
         return `
         <div class="damage-center">
