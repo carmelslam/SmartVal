@@ -1469,65 +1469,74 @@
       const valuation = helper.valuation || {};
       const depreciation = valuation.depreciation || {};
       
-      const depreciationItems = [];
+      // Create the depreciation table structure that matches final report builder
+      const container = document.getElementById('depreciation-validation-items');
+      if (!container) return;
       
-      // Global depreciation (matches final report builder structure)
-      depreciationItems.push({
-        label: 'ירידת ערך גלובלית (%)',
-        current: depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%',
-        stored: depreciation.calculated_global_percentage ? `${depreciation.calculated_global_percentage}%` : '0%',
-        field: 'global_depreciation_percent',
-        validation: (val) => {
-          const num = parseFloat(val.replace('%', ''));
-          return num >= 0 && num <= 100;
-        }
-      });
-      
-      depreciationItems.push({
-        label: 'ירידת ערך גלובלית (₪)',
-        current: depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0',
-        stored: depreciation.calculated_global_amount ? `₪${parseInt(depreciation.calculated_global_amount).toLocaleString()}` : '₪0',
-        field: 'global_depreciation_amount',
-        validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-      });
-      
-      // Depreciation per damage center (matches final report builder bulk_items structure)
-      if (depreciation.bulk_items && depreciation.bulk_items.length > 0) {
-        depreciation.bulk_items.forEach((item, index) => {
-          const centerTitle = item.damage_description || item.part_name || `מוקד נזק ${index + 1}`;
+      container.innerHTML = `
+        <div class="depreciation-table-container">
+          <h4>חישוב ירידת ערך לפי מוקדי נזק</h4>
           
-          depreciationItems.push({
-            label: `${centerTitle} - ירידת ערך (%)`,
-            current: item.percentage ? `${item.percentage}%` : '0%',
-            stored: item.percentage ? `${item.percentage}%` : '0%',
-            field: `center_${index}_percentage`,
-            validation: (val) => {
-              const num = parseFloat(val.replace('%', ''));
-              return num >= 0 && num <= 100;
-            }
-          });
+          <!-- Table Header -->
+          <div class="depreciation-table-header" style="display: grid; grid-template-columns: 80px 2fr 2fr 100px 120px; gap: 12px; padding: 10px; background: #f8fafc; border-radius: 8px; font-weight: bold; margin-bottom: 10px;">
+            <div>מס' מוקד</div>
+            <div>החלק הניזוק</div>
+            <div>מהות התיקון</div>
+            <div>% ירידת ערך</div>
+            <div>ערך ב-₪</div>
+          </div>
           
-          depreciationItems.push({
-            label: `${centerTitle} - ירידת ערך (₪)`,
-            current: item.value ? `₪${parseInt(item.value).toLocaleString()}` : '₪0',
-            stored: item.value ? `₪${parseInt(item.value).toLocaleString()}` : '₪0',
-            field: `center_${index}_value`,
-            validation: (val) => parseFloat(String(val).replace(/[^\d.]/g, '')) >= 0
-          });
-        });
+          <!-- Table Body -->
+          <div id="depreciation-table-body">
+            ${renderDepreciationTableRows(depreciation.bulk_items || [])}
+          </div>
+          
+          <!-- Global Depreciation Section -->
+          <div class="global-depreciation-section" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #0ea5e9;">
+            <h5 style="color: #0c4a6e; margin-bottom: 15px;">ירידת ערך גלובלית</h5>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <label>אחוז ירידת ערך גלובלית:</label>
+                <div class="readonly-box" id="global-dep-percentage">${depreciation.global_percentage || '0'}%</div>
+              </div>
+              <div>
+                <label>ערך ב-₪:</label>
+                <div class="readonly-box" id="global-dep-value">₪${depreciation.global_amount ? parseInt(depreciation.global_amount).toLocaleString() : '0'}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Total Section -->
+          <div class="total-depreciation-section" style="margin-top: 15px; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <label style="font-weight: bold;">סה"כ ירידת ערך מחושבת:</label>
+              </div>
+              <div>
+                <div class="readonly-box" style="font-weight: bold; font-size: 16px;" id="total-depreciation-value">₪${depreciation.total_depreciation ? parseInt(depreciation.total_depreciation).toLocaleString() : '0'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      updateDepreciationSummary(depreciation);
+    }
+    
+    function renderDepreciationTableRows(bulkItems) {
+      if (!bulkItems || bulkItems.length === 0) {
+        return '<div style="text-align: center; padding: 20px; color: #64748b;">אין פריטי ירידת ערך</div>';
       }
       
-      // Total depreciation
-      depreciationItems.push({
-        label: 'סה"כ ירידת ערך מחושבת',
-        current: depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0',
-        stored: depreciation.final_calculated_depreciation ? `₪${parseInt(depreciation.final_calculated_depreciation).toLocaleString()}` : '₪0',
-        field: 'total_depreciation',
-        validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-      });
-      
-      renderValidationItems('depreciation-validation-items', depreciationItems);
-      updateDepreciationSummary(depreciation);
+      return bulkItems.map((item, index) => `
+        <div class="depreciation-row" style="display: grid; grid-template-columns: 80px 2fr 2fr 100px 120px; gap: 12px; padding: 10px; border-bottom: 1px solid #e2e8f0; align-items: center;">
+          <div style="font-weight: bold; color: #374151;">${index + 1}</div>
+          <div>${item.damage_description || item.part_name || `מוקד ${index + 1}`}</div>
+          <div>${item.repair_type || 'לא צוין'}</div>
+          <div style="font-weight: bold; color: #dc2626;">${item.percentage || 0}%</div>
+          <div style="font-weight: bold; color: #059669;">₪${item.value ? parseInt(item.value).toLocaleString() : '0'}</div>
+        </div>
+      `).join('');
     }
     
     function loadDamageValidation() {
@@ -2068,8 +2077,13 @@
       const helper = window.helper || {};
       const depreciation = helper.valuation?.depreciation || {};
       
-      // Depreciation can be zero, so we just check if structure exists
-      return true;
+      // Check if there's either global depreciation or per-center depreciation
+      const hasGlobalDep = depreciation.global_percentage > 0 || depreciation.global_amount > 0;
+      const hasCenterDep = depreciation.bulk_items && depreciation.bulk_items.length > 0;
+      const hasTotalDep = depreciation.total_depreciation > 0;
+      
+      // Valid if there's any depreciation data
+      return hasGlobalDep || hasCenterDep || hasTotalDep;
     }
     
     function validateDamageSection() {
