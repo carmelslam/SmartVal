@@ -1469,46 +1469,62 @@
       const valuation = helper.valuation || {};
       const depreciation = valuation.depreciation || {};
       
-      const depreciationItems = [
-        {
-          label: 'ירידת ערך כללית (%)',
-          current: depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%',
-          stored: depreciation.calculated_global_percentage ? `${depreciation.calculated_global_percentage}%` : '0%',
-          field: 'global_depreciation_percent',
-          validation: (val) => {
-            const num = parseFloat(val.replace('%', ''));
-            return num >= 0 && num <= 100;
-          }
-        },
-        {
-          label: 'ירידת ערך כללית (סכום)',
-          current: depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0',
-          stored: depreciation.calculated_global_amount ? `₪${parseInt(depreciation.calculated_global_amount).toLocaleString()}` : '₪0',
-          field: 'global_depreciation_amount',
-          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-        },
-        {
-          label: 'ימי מוסך',
-          current: depreciation.garage_days?.toString() || '0',
-          stored: depreciation.calculated_garage_days?.toString() || '0',
-          field: 'garage_days',
-          validation: (val) => parseInt(val) >= 0
-        },
-        {
-          label: 'מספר פריטי ירידת ערך',
-          current: depreciation.bulk_items?.length?.toString() || '0',
-          stored: depreciation.total_items?.toString() || '0',
-          field: 'depreciation_items_count',
-          validation: (val) => parseInt(val) >= 0
-        },
-        {
-          label: 'סה"כ ירידת ערך מחושבת',
-          current: depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0',
-          stored: depreciation.final_calculated_depreciation ? `₪${parseInt(depreciation.final_calculated_depreciation).toLocaleString()}` : '₪0',
-          field: 'total_depreciation',
-          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+      const depreciationItems = [];
+      
+      // Global depreciation (matches final report builder structure)
+      depreciationItems.push({
+        label: 'ירידת ערך גלובלית (%)',
+        current: depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%',
+        stored: depreciation.calculated_global_percentage ? `${depreciation.calculated_global_percentage}%` : '0%',
+        field: 'global_depreciation_percent',
+        validation: (val) => {
+          const num = parseFloat(val.replace('%', ''));
+          return num >= 0 && num <= 100;
         }
-      ];
+      });
+      
+      depreciationItems.push({
+        label: 'ירידת ערך גלובלית (₪)',
+        current: depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0',
+        stored: depreciation.calculated_global_amount ? `₪${parseInt(depreciation.calculated_global_amount).toLocaleString()}` : '₪0',
+        field: 'global_depreciation_amount',
+        validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+      });
+      
+      // Depreciation per damage center (matches final report builder bulk_items structure)
+      if (depreciation.bulk_items && depreciation.bulk_items.length > 0) {
+        depreciation.bulk_items.forEach((item, index) => {
+          const centerTitle = item.damage_description || item.part_name || `מוקד נזק ${index + 1}`;
+          
+          depreciationItems.push({
+            label: `${centerTitle} - ירידת ערך (%)`,
+            current: item.percentage ? `${item.percentage}%` : '0%',
+            stored: item.percentage ? `${item.percentage}%` : '0%',
+            field: `center_${index}_percentage`,
+            validation: (val) => {
+              const num = parseFloat(val.replace('%', ''));
+              return num >= 0 && num <= 100;
+            }
+          });
+          
+          depreciationItems.push({
+            label: `${centerTitle} - ירידת ערך (₪)`,
+            current: item.value ? `₪${parseInt(item.value).toLocaleString()}` : '₪0',
+            stored: item.value ? `₪${parseInt(item.value).toLocaleString()}` : '₪0',
+            field: `center_${index}_value`,
+            validation: (val) => parseFloat(String(val).replace(/[^\d.]/g, '')) >= 0
+          });
+        });
+      }
+      
+      // Total depreciation
+      depreciationItems.push({
+        label: 'סה"כ ירידת ערך מחושבת',
+        current: depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0',
+        stored: depreciation.final_calculated_depreciation ? `₪${parseInt(depreciation.final_calculated_depreciation).toLocaleString()}` : '₪0',
+        field: 'total_depreciation',
+        validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+      });
       
       renderValidationItems('depreciation-validation-items', depreciationItems);
       updateDepreciationSummary(depreciation);
