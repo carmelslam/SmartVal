@@ -3040,59 +3040,11 @@
       const sumVATInput = document.getElementById('sumVAT');
       const sumTotalInput = document.getElementById('sumTotalClaim');
 
-      function calculateSummaryTotals() {
-        try {
-          // Auto-fill market value from helper.calculations.full_market_value (standardized)
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          const helperMarketValue = helper.calculations?.full_market_value || 0;
-          if (helperMarketValue && helperMarketValue > 0 && sumMarketValueInput) {
-            sumMarketValueInput.value = `₪${helperMarketValue.toLocaleString()}`;
-          }
-          
-          // AUTO-FILL SUMMARY CLAIM FROM CLAIMS SECTION
-          const totalClaimValue = document.getElementById('totalClaim')?.value;
-          if (totalClaimValue && sumClaimInput) {
-            sumClaimInput.value = totalClaimValue;
-          }
-          
-          // AUTO-FILL DEPRECIATION COMPENSATION FROM GLOBAL DEPRECIATION VALUE
-          const globalDepValue = document.getElementById('globalDepValue')?.value;
-          if (globalDepValue && depCompensationInput) {
-            depCompensationInput.value = globalDepValue;
-          }
-          
-          // Get values - market price + claim + compensation - salvage = total
-          const marketValue = parseFloat(sumMarketValueInput?.value.replace(/[₪,]/g, '') || '0') || 0;
-          const claimValue = parseFloat(sumClaimInput?.value.replace(/[₪,]/g, '') || '0') || 0;
-          const depValue = parseFloat(depCompensationInput?.value.replace(/[₪,]/g, '') || '0') || 0;
-          const salvageValue = parseFloat(document.getElementById('salvageValue')?.value.replace(/[₪,]/g, '') || '0') || 0;
-          
-          // Calculate subtotal: claim + compensation - salvage value = subtotal (market price is separate)
-          const subtotal = claimValue + depValue - salvageValue;
-          
-          // Automatic calculation with math.js - Calculate VAT (admin rate on subtotal)
-          const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100;
-          const vat = Math.round(subtotal * vatRate);
-          
-          // Calculate final total (subtotal + VAT) - automatic calculation with math.js
-          const total = subtotal + vat;
-          
-          // Update readonly fields with formatted values - auto-filled from relevant fields
-          if (sumVATInput) {
-            sumVATInput.value = vat ? `₪${vat.toLocaleString()}` : '';
-            sumVATInput.readOnly = true;
-            sumVATInput.style.background = '#f4f6fa';
-          }
-          
-          if (sumTotalInput) {
-            sumTotalInput.value = total ? `₪${total.toLocaleString()}` : '';
-            sumTotalInput.readOnly = true;
-            sumTotalInput.style.background = '#e8f5e8';
-          }
-          
-        } catch (error) {
-          console.error('Error in summary calculations:', error);
-        }
+      // LEGACY FUNCTION REMOVED - This was conflicting with variant-specific calculations
+      // The correct calculateSummaryTotals function is defined later at line 11566
+      function calculateSummaryTotals_LEGACY_DISABLED() {
+        console.warn('⚠️ Legacy calculateSummaryTotals called - this function has been disabled to prevent conflicts');
+        console.warn('✅ The correct variant-specific calculateSummaryTotals function should be used instead');
       }
 
       // Add listeners to trigger calculations for all relevant fields
@@ -4213,47 +4165,10 @@
       }
     }
     
-    // CALCULATE SUMMARY TOTALS - Updates helper with calculated totals
-    function calculateSummaryTotals() {
-      try {
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
-        
-        // Calculate Levi adjustment totals
-        let leviTotal = 0;
-        if (helper.levi?.adjustments) {
-          leviTotal = helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
-        }
-        if (helper.levi?.custom_adjustments) {
-          leviTotal += helper.levi.custom_adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
-        }
-        
-        // Calculate damage center totals
-        let damageTotal = 0;
-        if (helper.expertise?.damage_blocks) {
-          helper.expertise.damage_blocks.forEach(block => {
-            damageTotal += (parseFloat(block.parts_cost) || 0) + (parseFloat(block.work_cost) || 0) + (parseFloat(block.repairs_cost) || 0);
-          });
-        }
-        
-        // Update helper with calculated totals
-        helper.summary_totals = {
-          levi_total: leviTotal,
-          damage_total: damageTotal,
-          total_before_vat: leviTotal + damageTotal,
-          total_with_vat: Math.round((leviTotal + damageTotal) * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100)),
-          calculated_at: new Date().toISOString()
-        };
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Summary totals calculated and updated in helper:', helper.summary_totals);
-        
-        // Trigger floating screen updates when helper changes
-        triggerFloatingScreenRefresh();
-        
-      } catch (error) {
-        console.error('Error calculating summary totals:', error);
-      }
+    // LEGACY FUNCTION DISABLED - This was conflicting with variant-specific calculations  
+    function calculateSummaryTotals_LEGACY_DISABLED_2() {
+      console.warn('⚠️ Another legacy calculateSummaryTotals called - this function has been disabled to prevent conflicts');
+      console.warn('✅ The correct variant-specific calculateSummaryTotals function should be used instead');
     }
 
     // TRIGGER FLOATING SCREEN REFRESH - Updates all helper-dependent floating screens
@@ -11539,6 +11454,7 @@
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueLegal" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumSalvageValueLegal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalLegalLoss" style="background: white; color: #333;" /></div>
           `;
           break;
@@ -11746,15 +11662,15 @@
         helper.final_report.summary.market_value_damage = marketValueField.value;
       }
       
-      // 2. Get sale value from manual input (user specified as manual)
-      const saleValueField = document.getElementById('saleValueDamage');
+      // 2. Get sale value from manual input - use correct field ID from updateSummaryContent
+      const saleValueField = document.getElementById('sumDamagedSaleValue');
       const saleValue = saleValueField ? parseFloat(saleValueField.value.replace(/[₪,]/g, '') || '0') : 0;
       
       // 3. Calculation: Market Value - Sale Value (from user mapping)
       const calculatedTotal = marketValue - saleValue;
       
-      // 4. Update total field
-      const totalField = document.getElementById('afterSaleDamage');
+      // 4. Update total field - use correct field ID from updateSummaryContent
+      const totalField = document.getElementById('sumTotalDamagedSale');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
         totalField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
@@ -11770,8 +11686,8 @@
       console.log('📊 Calculating Total Loss Report');
       
       // Get manual input values (user specified as manual inputs)
-      const salvageField = document.getElementById('salvageValueTotal');
-      const storageField = document.getElementById('storageValueTotal');
+      const salvageField = document.getElementById('sumScrapValue');
+      const storageField = document.getElementById('sumTowingStorage');
       
       const salvageValue = salvageField ? parseFloat(salvageField.value.replace(/[₪,]/g, '') || '0') : 0;
       const storageValue = storageField ? parseFloat(storageField.value.replace(/[₪,]/g, '') || '0') : 0;
@@ -11779,10 +11695,11 @@
       // Calculation: Market Value - Salvage + Storage/Towing (from user mapping)
       const calculatedTotal = marketValue - salvageValue + storageValue;
       
-      // Update UI fields
-      const totalField = document.getElementById('afterSaleTotal');
+      // Update UI fields - Use correct field ID from updateSummaryContent
+      const totalField = document.getElementById('sumTotalTotalLoss');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
+        totalField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
         helper.final_report.summary.total_after_salvage_total = totalField.value;
       }
       
@@ -11793,17 +11710,18 @@
     function calculateLegalLossReport(helper, marketValue) {
       console.log('📊 Calculating Legal Loss Report');
       
-      // Get salvage value from manual input (user specified as manual)
-      const salvageField = document.getElementById('salvageValueLegal');
+      // Get salvage value from manual input - use correct field ID from updated structure
+      const salvageField = document.getElementById('sumSalvageValueLegal');
       const salvageValue = salvageField ? parseFloat(salvageField.value.replace(/[₪,]/g, '') || '0') : 0;
       
       // Calculation: Market Value - Salvage Value (from user mapping)
       const calculatedTotal = marketValue - salvageValue;
       
-      // Update UI fields
-      const totalField = document.getElementById('afterSaleLegal');
+      // Update UI fields - use correct field ID from updateSummaryContent
+      const totalField = document.getElementById('sumTotalLegalLoss');
       if (totalField) {
         totalField.value = `₪${calculatedTotal.toLocaleString()}`;
+        totalField.style.backgroundColor = '#e8f5e8'; // Show it's calculated
         helper.final_report.summary.total_after_salvage_legal = totalField.value;
       }
       
