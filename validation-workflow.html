@@ -1846,7 +1846,12 @@
       
       // Debug: Log the report type value
       console.log('📋 Summary validation - Report type:', currentReportType);
-      console.log('📋 Final report object:', finalReport);
+      console.log('📋 Final report full object:', finalReport);
+      console.log('📋 Helper object paths check:', {
+        'helper.final_report': !!window.helper?.final_report,
+        'helper.final_report.dropdown_type': window.helper?.final_report?.dropdown_type,
+        'helper.final_report.dropdown_type type': typeof window.helper?.final_report?.dropdown_type
+      });
       
       // Update report type indicator
       const reportTypeDisplay = getReportTypeDisplayName(currentReportType);
@@ -1879,169 +1884,162 @@
     function getSummaryItemsByReportType(reportType, summary) {
       const helper = window.helper || {};
       
-      // Get current values from calculations
-      const claimDataTotal = helper.claim_data?.total_claim || 0;
-      const damageAssessmentTotal = helper.damage_assessment?.totals?.['Total with VAT'] || 0;
-      const currentDepCompensation = helper.depreciation?.globalDepValue || 0;
-      const storedDepCompensation = summary.depreciation_compensation || 0;
+      // Each report type has completely different structure - no common items
+      // This mirrors the final-report-builder.html dynamic behavior
       
-      const commonItems = [
+      switch(reportType) {
+        case 'private_opinion':
+          return getPrivateOpinionSummary(helper, summary);
+        case 'global_opinion':
+          return getGlobalOpinionSummary(helper, summary);
+        case 'damaged_sale_opinion':
+          return getDamagedSaleSummary(helper, summary);
+        case 'total_loss_opinion':
+          return getTotalLossSummary(helper, summary);
+        case 'legal_total_loss':
+          return getLegalTotalLossSummary(helper, summary);
+        default:
+          return [];
+      }
+    }
+    
+    function getPrivateOpinionSummary(helper, summary) {
+      return [
         {
           label: 'שווי שוק',
-          current: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
           stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
           field: 'market_value',
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
-          label: 'סה"כ תביעה',
-          current: claimDataTotal ? `₪${claimDataTotal}` : '₪0',
-          stored: damageAssessmentTotal ? `₪${damageAssessmentTotal}` : '₪0',
+          label: 'סה"כ תביעה (נזקים)',
+          current: helper.claim_data?.total_claim ? `₪${helper.claim_data.total_claim}` : '₪0',
+          stored: helper.damage_assessment?.totals?.['Total with VAT'] ? `₪${helper.damage_assessment.totals['Total with VAT']}` : '₪0',
           field: 'total_claim',
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'מע"מ',
-          current: summary.vat ? `₪${summary.vat}` : '₪0',
-          stored: summary.vat ? `₪${summary.vat}` : '₪0',
-          field: 'vat',
+          label: 'פיצוי ירידת ערך',
+          current: helper.depreciation?.globalDepValue ? `₪${helper.depreciation.globalDepValue}` : '₪0',
+          stored: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
+          field: 'dep_compensation',
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
         {
-          label: 'סה"כ כולל מע"מ',
-          current: summary.total_with_vat ? `₪${summary.total_with_vat}` : '₪0',
-          stored: summary.total_with_vat ? `₪${summary.total_with_vat}` : '₪0',
-          field: 'total_with_vat',
+          label: 'סה"כ לפני הפרשים',
+          current: summary.private_before_differentials ? `₪${summary.private_before_differentials}` : '₪0',
+          stored: summary.private_before_differentials ? `₪${summary.private_before_differentials}` : '₪0',
+          field: 'private_before_differentials',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ סופי (אחרי הפרשים)',
+          current: summary.private_after_differentials ? `₪${summary.private_after_differentials}` : '₪0',
+          stored: summary.private_after_differentials ? `₪${summary.private_after_differentials}` : '₪0',
+          field: 'private_after_differentials',
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
       ];
-      
-      // Add report type specific items
-      switch(reportType) {
-        case 'private_opinion':
-        case 'global_opinion':
-          commonItems.push({
-            label: 'פיצוי ירידת ערך',
-            current: currentDepCompensation ? `₪${currentDepCompensation}` : '₪0',
-            stored: storedDepCompensation ? `₪${storedDepCompensation}` : '₪0',
-            field: 'dep_compensation',
-            validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-          });
-          break;
-          
-        case 'damaged_sale_opinion':
-        case 'total_loss_opinion':
-        case 'legal_total_loss':
-          commonItems.push({
-            label: 'ערך גרוטאות',
-            current: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
-            stored: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
-            field: 'salvage_value',
-            validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-          });
-          break;
-      }
-      
-      // Add dynamic summary totals based on report type
-      const dynamicSummaryItems = getDynamicSummaryItems(reportType, summary);
-      commonItems.push(...dynamicSummaryItems);
-      
-      return commonItems;
     }
     
-    function getDynamicSummaryItems(reportType, summary) {
-      const dynamicItems = [];
-      
-      // Based on final-report-builder.html logic, different report types have different final totals
-      switch(reportType) {
-        case 'private_opinion':
-          if (summary.private_before_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ לפני הפרשים',
-              current: `₪${summary.private_before_differentials}`,
-              stored: `₪${summary.private_before_differentials}`,
-              field: 'private_before_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          if (summary.private_after_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ סופי לאחר הפרשים',
-              current: `₪${summary.private_after_differentials}`,
-              stored: `₪${summary.private_after_differentials}`,
-              field: 'private_after_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          break;
-          
-        case 'global_opinion':
-          if (summary.global_before_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ גלובלי לפני הפרשים',
-              current: `₪${summary.global_before_differentials}`,
-              stored: `₪${summary.global_before_differentials}`,
-              field: 'global_before_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          if (summary.global_after_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ גלובלי סופי',
-              current: `₪${summary.global_after_differentials}`,
-              stored: `₪${summary.global_after_differentials}`,
-              field: 'global_after_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          break;
-          
-        case 'damaged_sale_opinion':
-          if (summary.damage_total_before_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ נזק לפני הפרשים',
-              current: `₪${summary.damage_total_before_differentials}`,
-              stored: `₪${summary.damage_total_before_differentials}`,
-              field: 'damage_total_before_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          if (summary.damage_total_after_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ נזק אחרי הפרשים',
-              current: `₪${summary.damage_total_after_differentials}`,
-              stored: `₪${summary.damage_total_after_differentials}`,
-              field: 'damage_total_after_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          break;
-          
-        case 'total_loss_opinion':
-        case 'legal_total_loss':
-          if (summary.total_loss_before_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ טוטאל לוס לפני הפרשים',
-              current: `₪${summary.total_loss_before_differentials}`,
-              stored: `₪${summary.total_loss_before_differentials}`,
-              field: 'total_loss_before_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          if (summary.total_loss_after_differentials) {
-            dynamicItems.push({
-              label: 'סה"כ טוטאל לוס סופי',
-              current: `₪${summary.total_loss_after_differentials}`,
-              stored: `₪${summary.total_loss_after_differentials}`,
-              field: 'total_loss_after_differentials',
-              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
-            });
-          }
-          break;
-      }
-      
-      return dynamicItems;
+    function getGlobalOpinionSummary(helper, summary) {
+      return [
+        {
+          label: 'שווי שוק',
+          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
+          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          field: 'market_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'סה"כ גלובלי',
+          current: summary.global_before_differentials ? `₪${summary.global_before_differentials}` : '₪0',
+          stored: summary.global_before_differentials ? `₪${summary.global_before_differentials}` : '₪0',
+          field: 'global_before_differentials',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ גלובלי סופי (אחרי הפרשים)',
+          current: summary.global_after_differentials ? `₪${summary.global_after_differentials}` : '₪0',
+          stored: summary.global_after_differentials ? `₪${summary.global_after_differentials}` : '₪0',
+          field: 'global_after_differentials',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
     }
+    
+    function getDamagedSaleSummary(helper, summary) {
+      return [
+        {
+          label: 'שווי שוק',
+          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
+          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          field: 'market_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'מחיר מכירה במצב ניזוק',
+          current: summary.damaged_sale_price ? `₪${summary.damaged_sale_price}` : '₪0',
+          stored: summary.damaged_sale_price ? `₪${summary.damaged_sale_price}` : '₪0',
+          field: 'damaged_sale_price',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ נזק אחרי הפרשים',
+          current: summary.damage_total_after_differentials ? `₪${summary.damage_total_after_differentials}` : '₪0',
+          stored: summary.damage_total_after_differentials ? `₪${summary.damage_total_after_differentials}` : '₪0',
+          field: 'damage_total_after_differentials',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
+    }
+    
+    function getTotalLossSummary(helper, summary) {
+      return [
+        {
+          label: 'שווי שוק',
+          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
+          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          field: 'market_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'ערך גרוטאות',
+          current: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
+          stored: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
+          field: 'salvage_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ טוטאל לוס סופי',
+          current: summary.total_loss_after_differentials ? `₪${summary.total_loss_after_differentials}` : '₪0',
+          stored: summary.total_loss_after_differentials ? `₪${summary.total_loss_after_differentials}` : '₪0',
+          field: 'total_loss_after_differentials',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
+    }
+    
+    function getLegalTotalLossSummary(helper, summary) {
+      return [
+        {
+          label: 'שווי שוק',
+          current: helper.levi?.market_value ? `₪${helper.levi.market_value}` : '₪0',
+          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          field: 'market_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'אובדן להלכה - סה"כ',
+          current: summary.legal_total_loss_amount ? `₪${summary.legal_total_loss_amount}` : '₪0',
+          stored: summary.legal_total_loss_amount ? `₪${summary.legal_total_loss_amount}` : '₪0',
+          field: 'legal_total_loss_amount',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
+    }
+    
     
     function loadDiscrepanciesValidation() {
       const differential = window.helper?.final_report?.differential || {};
@@ -2061,12 +2059,8 @@
       if (hasDifferentials && differentialSummary.total_amount_with_vat) {
         discrepanciesHtml += `
           <div class="validation-item">
-            <div class="item-label">סה"כ הפרשים (כולל מע"מ):</div>
+            <div class="item-label">סה"כ הפרשים:</div>
             <div class="item-value">₪${differentialSummary.total_amount_with_vat}</div>
-          </div>
-          <div class="validation-item">
-            <div class="item-label">סה"כ הפרשים (ללא מע"מ):</div>
-            <div class="item-value">₪${differentialSummary.total_amount_without_vat || 0}</div>
           </div>
         `;
         
