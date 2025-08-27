@@ -2070,7 +2070,7 @@
     
     // Legal Total Loss Validation - Mirrors builder's 'חוות דעת אובדן להלכה' structure
     function createLegalTotalLossValidation(helper, summary) {
-      // Mirror exact fields from final-report-builder updateSummaryContent case 'חוות דעת אובדן להלכה'
+      // Mirror exact fields from final-report-builder - Legal Total Loss should have salvage field too
       return [
         {
           label: 'ערך השוק של הרכב', // Exact label from builder
@@ -2080,9 +2080,16 @@
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
         },
         {
+          label: 'ערך שרידי הרכב', // Added missing salvage field
+          current: getSalvageValueForValidation(helper, summary),
+          stored: summary.salvage_value_legal_loss || '₪0',
+          field: 'sumSalvageValueLegal', 
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
           label: 'סה״כ נכלל בחוות הדעת', // Exact label from builder
           current: getLegalTotalLossForValidation(helper, summary),
-          stored: summary.legal_total_loss_amount || '₪0',
+          stored: summary.total_after_salvage_legal || '₪0',
           field: 'sumTotalLegalLoss', // Exact field ID from builder
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         }
@@ -2097,29 +2104,61 @@
       return marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '₪0';
     }
     
-    // Total Claim - Mirrors builder's auto-fill from totalClaim field
+    // Total Claim - Get from helper.final_report.summary first, then fallback to calculated
     function getTotalClaimForValidation(helper) {
-      // Mirror builder's logic: helper.damage_centers_summary.total_cost or damage_assessment.totals
+      // First try to get from final_report.summary where the data actually exists
+      const summary = helper.final_report?.summary || {};
+      const summaryTotalClaim = summary.total_claim || summary.sumClaimPrivate || summary.sumClaimGlobal;
+      
+      if (summaryTotalClaim) {
+        // If it's already formatted with ₪, return as-is, otherwise format it
+        return summaryTotalClaim.toString().includes('₪') ? summaryTotalClaim : `₪${summaryTotalClaim}`;
+      }
+      
+      // Fallback to builder's logic: helper.damage_centers_summary.total_cost or damage_assessment.totals
       const claimFromSummary = helper.damage_centers_summary?.total_cost;
       const claimFromTotals = helper.damage_assessment?.totals?.['Total with VAT'];
       const totalClaim = claimFromSummary || claimFromTotals || 0;
       return totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '₪0';
     }
     
-    // Depreciation Compensation - Mirrors builder's helper.depreciation.globalDepValue
+    // Depreciation Compensation - Get from summary first, then fallback to depreciation
     function getDepreciationCompensationForValidation(helper) {
+      // First try to get from final_report.summary where the data actually exists
+      const summary = helper.final_report?.summary || {};
+      const summaryDepComp = summary.depreciation_compensation || summary.depCompensationPrivate || summary.depCompensationGlobal;
+      
+      if (summaryDepComp) {
+        return summaryDepComp.toString().includes('₪') ? summaryDepComp : `₪${summaryDepComp}`;
+      }
+      
+      // Fallback to builder's logic
       const depValue = helper.depreciation?.globalDepValue || 0;
       return depValue > 0 ? `₪${depValue.toLocaleString()}` : '₪0';
     }
     
-    // Adjustments Info - For info-only fields
+    // Adjustments Info - Get from summary, shows actual adjustment value for info
     function getAdjustmentsInfoForValidation(helper) {
-      return 'מידע בלבד'; // "Info only" as in builder
+      const summary = helper.final_report?.summary || {};
+      const adjustmentInfo = summary.adjustmentsInfoPrivate || summary.adjustments_value;
+      
+      if (adjustmentInfo) {
+        return adjustmentInfo.toString().includes('₪') ? adjustmentInfo : `₪${adjustmentInfo}`;
+      }
+      
+      return 'מידע בלבד'; // "Info only" as fallback
     }
     
-    // Adjustments - For editable adjustment fields
+    // Adjustments - Get from summary first, then calculate
     function getAdjustmentsForValidation(helper) {
-      // Calculate total adjustments from Levi and custom adjustments
+      const summary = helper.final_report?.summary || {};
+      const summaryAdjustments = summary.adjustments_value;
+      
+      if (summaryAdjustments !== undefined && summaryAdjustments !== null) {
+        return summaryAdjustments.toString().includes('₪') ? summaryAdjustments : `₪${summaryAdjustments}`;
+      }
+      
+      // Fallback: Calculate total adjustments from Levi and custom adjustments
       let total = 0;
       if (helper.levi?.adjustments) {
         total += helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
@@ -2130,8 +2169,16 @@
       return `₪${total.toLocaleString()}`;
     }
     
-    // Global Total - Calculated field for global opinion
+    // Global Total - Get from summary first, then calculate
     function getGlobalTotalForValidation(helper, summary) {
+      // Check for pre-calculated values in summary
+      const summaryTotal = summary.sumTotalGlobal || summary.global_after_differentials || summary.sumTotalFinalGlobal;
+      
+      if (summaryTotal && summaryTotal !== '0.00') {
+        return summaryTotal.toString().includes('₪') ? summaryTotal : `₪${summaryTotal}`;
+      }
+      
+      // Fallback: Calculate
       const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
       const claim = parseFloat(getTotalClaimForValidation(helper).replace(/[^\d]/g, '') || 0);
       const dep = parseFloat(getDepreciationCompensationForValidation(helper).replace(/[^\d]/g, '') || 0);
@@ -2140,41 +2187,85 @@
       return `₪${total.toLocaleString()}`;
     }
     
-    // Damaged Sale Value - From summary or calculated
+    // Damaged Sale Value - From summary
     function getDamagedSaleValueForValidation(helper, summary) {
-      return summary.damaged_sale_value || '₪0';
+      const saleValue = summary.sale_value_damaged || summary.saleValueDamage;
+      if (saleValue) {
+        return saleValue.toString().includes('₪') ? saleValue : `₪${saleValue}`;
+      }
+      return '₪0';
     }
     
-    // Damaged Sale Total - Market value - sale value
+    // Damaged Sale Total - Get from summary first
     function getDamagedSaleTotalForValidation(helper, summary) {
+      const summaryTotal = summary.total_after_sale_damage || summary.afterSaleDamage;
+      
+      if (summaryTotal) {
+        return summaryTotal.toString().includes('₪') ? summaryTotal : `₪${summaryTotal}`;
+      }
+      
+      // Fallback: Calculate market value - sale value
       const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
-      const saleValue = parseFloat(summary.damaged_sale_value?.replace(/[^\d]/g, '') || 0);
+      const saleValue = parseFloat((summary.sale_value_damaged || '0').toString().replace(/[^\d]/g, '') || 0);
       const total = marketValue - saleValue;
       return total > 0 ? `₪${total.toLocaleString()}` : '₪0';
     }
     
-    // Salvage Value - From summary
+    // Salvage Value - Get from summary with context-aware selection
     function getSalvageValueForValidation(helper, summary) {
-      return summary.salvage_value || '₪0';
+      // Check different salvage value fields based on context
+      const salvageValue = summary.salvage_value_total_loss || 
+                          summary.salvage_value_legal_loss || 
+                          summary.salvage_value || 
+                          summary.salvage_value_total ||
+                          summary.salvage_value_legal;
+      
+      if (salvageValue) {
+        return salvageValue.toString().includes('₪') ? salvageValue : `₪${salvageValue}`;
+      }
+      return '₪0';
     }
     
     // Towing and Storage - From summary
     function getTowingStorageForValidation(helper, summary) {
-      return summary.towing_storage || '₪0';
+      const towingStorage = summary.storage_towing_costs || 
+                           summary.storage_towing_value_total ||
+                           summary.towing_storage;
+      
+      if (towingStorage) {
+        return towingStorage.toString().includes('₪') ? towingStorage : `₪${towingStorage}`;
+      }
+      return '₪0';
     }
     
-    // Total Loss Final - Market value - salvage + towing
+    // Total Loss Final - Get from summary first
     function getTotalLossFinalForValidation(helper, summary) {
+      const summaryTotal = summary.total_after_salvage_total || 
+                          summary.afterSaleTotal ||
+                          summary.afterSaleLegal;
+      
+      if (summaryTotal) {
+        return summaryTotal.toString().includes('₪') ? summaryTotal : `₪${summaryTotal}`;
+      }
+      
+      // Fallback: Calculate market value - salvage + towing
       const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
-      const salvage = parseFloat(summary.salvage_value?.replace(/[^\d]/g, '') || 0);
-      const towing = parseFloat(summary.towing_storage?.replace(/[^\d]/g, '') || 0);
+      const salvage = parseFloat(getSalvageValueForValidation(helper, summary).replace(/[^\d]/g, '') || 0);
+      const towing = parseFloat(getTowingStorageForValidation(helper, summary).replace(/[^\d]/g, '') || 0);
       const total = marketValue - salvage + towing;
       return total > 0 ? `₪${total.toLocaleString()}` : '₪0';
     }
     
     // Legal Total Loss - From summary
     function getLegalTotalLossForValidation(helper, summary) {
-      return summary.legal_total_loss_amount || '₪0';
+      const legalTotal = summary.total_after_salvage_legal || 
+                        summary.afterSaleLegal ||
+                        summary.legal_total_loss_amount;
+      
+      if (legalTotal) {
+        return legalTotal.toString().includes('₪') ? legalTotal : `₪${legalTotal}`;
+      }
+      return '₪0';
     }
     
     
