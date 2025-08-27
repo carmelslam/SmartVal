@@ -1483,7 +1483,7 @@
           
           <!-- Table Body -->
           <div id="depreciation-table-body">
-            ${renderDepreciationTableRows(depreciation.globalDepValue || [])}
+            ${renderDepreciationTableRows(depreciation.bulk_items || [])}
           </div>
           
           <!-- Global Depreciation Section -->
@@ -1791,10 +1791,10 @@
     }
     
     function updateDepreciationSummary(depreciation) {
-      // Calculate total from damage center depreciations
-      let centerDepreciationsTotal = 0;
-      if (depreciation.globalDepValue && Array.isArray(depreciation.globalDepValue)) {
-        centerDepreciationsTotal = depreciation.globalDepValue.reduce((sum, item) => {
+      // Calculate total from bulk items
+      let bulkItemsTotal = 0;
+      if (depreciation.bulk_items && Array.isArray(depreciation.bulk_items)) {
+        bulkItemsTotal = depreciation.bulk_items.reduce((sum, item) => {
           const value = parseInt(item.value) || 0;
           return sum + value;
         }, 0);
@@ -1803,10 +1803,10 @@
       // Global depreciation amount
       const globalAmount = parseInt(depreciation.global_amount) || 0;
       
-      // Total calculated = global + center depreciations (statistical calculation only)
+      // Total calculated = global + bulk items (statistical calculation only)
       const totalCalculated = depreciation.total_depreciation ? 
         parseInt(depreciation.total_depreciation) : 
-        (globalAmount + centerDepreciationsTotal);
+        (globalAmount + bulkItemsTotal);
       
       // Update main table elements
       const globalPercentElement = document.getElementById('global-dep-percentage');
@@ -2110,7 +2110,7 @@
       
       // Check if there's either global depreciation or per-center depreciation
       const hasGlobalDep = depreciation.global_percentage > 0 || depreciation.global_amount > 0;
-      const hasCenterDep = depreciation.globalDepValue && depreciation.globalDepValue.length > 0;
+      const hasCenterDep = depreciation.bulk_items && depreciation.bulk_items.length > 0;
       const hasTotalDep = depreciation.total_depreciation > 0;
       
       // Valid if there's any depreciation data
