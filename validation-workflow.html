@@ -1668,35 +1668,41 @@
       }
       
       container.innerHTML = centers.map((center, index) => {
-        // Calculate costs from center data structure
+        // Debug: log all center properties to find the correct data structure
+        console.log(`🔍 Center ${index} properties:`, Object.keys(center));
+        console.log(`🔍 Center ${index} full object:`, center);
+        console.log(`🔍 center.list:`, center.list);
+        console.log(`🔍 center.List:`, center.List);
+        
+        // Calculate costs from center.list or similar property
         let partsCost = 0;
         let workCost = 0;
         let repairsCost = 0;
         
-        // Try to extract costs from Works or other properties
-        if (center.Works) {
-          // Sum up works costs
-          Object.values(center.Works).forEach(work => {
-            if (typeof work === 'object' && work.cost) {
-              workCost += parseFloat(work.cost) || 0;
+        // Try center.list (lowercase)
+        if (center.list && Array.isArray(center.list)) {
+          center.list.forEach(item => {
+            const itemCost = parseFloat(item.total_price || item.price || item.cost || 0);
+            if (item.type === 'part' || item.category === 'parts') {
+              partsCost += itemCost;
+            } else if (item.type === 'work' || item.category === 'work') {
+              workCost += itemCost;
+            } else if (item.type === 'repair' || item.category === 'repairs') {
+              repairsCost += itemCost;
             }
           });
         }
         
-        if (center.Parts) {
-          // Sum up parts costs
-          Object.values(center.Parts).forEach(part => {
-            if (typeof part === 'object' && part.cost) {
-              partsCost += parseFloat(part.cost) || 0;
-            }
-          });
-        }
-        
-        if (center.Repairs) {
-          // Sum up repairs costs
-          Object.values(center.Repairs).forEach(repair => {
-            if (typeof repair === 'object' && repair.cost) {
-              repairsCost += parseFloat(repair.cost) || 0;
+        // Try center.List (uppercase)
+        if (center.List && Array.isArray(center.List)) {
+          center.List.forEach(item => {
+            const itemCost = parseFloat(item.total_price || item.price || item.cost || 0);
+            if (item.type === 'part' || item.category === 'parts') {
+              partsCost += itemCost;
+            } else if (item.type === 'work' || item.category === 'work') {
+              workCost += itemCost;
+            } else if (item.type === 'repair' || item.category === 'repairs') {
+              repairsCost += itemCost;
             }
           });
         }
