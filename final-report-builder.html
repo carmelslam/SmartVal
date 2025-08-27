@@ -2795,6 +2795,11 @@
           const savedValue = helper.final_report.summary[helperKey];
           
           if (field) {
+            // Don't overwrite calculated fields if they already have correct calculated values
+            if (['afterSaleDamage', 'afterSaleTotal', 'afterSaleLegal'].includes(fieldId) && field.value && field.value !== `₪${(helper.calculations?.full_market_value || 0).toLocaleString()}`) {
+              console.log(`🔒 Protecting calculated field: ${fieldId} = ${field.value} (not overwriting with ${savedValue})`);
+              return; // Skip this field to preserve calculation
+            }
             // Load saved value if exists
             field.value = savedValue || '';
           }
