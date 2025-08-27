@@ -1708,8 +1708,17 @@
       const calculations = helper.calculations || {};
       
       // שווי בסיס לוי יצחק - from helper.valuation.base_price
-      document.getElementById('levi-base-value').textContent = 
-        valuation.base_price ? `₪${parseInt(valuation.base_price).toLocaleString()}` : 'NaN';
+      const basePrice = (() => {
+        if (!valuation.base_price) return 'לא זמין';
+        const priceStr = String(valuation.base_price);
+        if (priceStr.includes('₪')) {
+          return priceStr.trim();
+        }
+        const cleanPrice = priceStr.replace(/[^\d]/g, '');
+        const priceNum = parseInt(cleanPrice);
+        return !isNaN(priceNum) ? `₪${priceNum.toLocaleString()}` : 'לא זמין';
+      })();
+      document.getElementById('levi-base-value').textContent = basePrice;
       
       // התאמות מחיר (-/+) - from helper.valuation.adjustment_value  
       document.getElementById('levi-adjustments-value').textContent = 
