@@ -1728,10 +1728,20 @@
       document.getElementById('levi-final-value').textContent = 
         calculations.full_market_value ? `₪${parseInt(calculations.full_market_value).toLocaleString()}` : 'NaN';
       
-      // אחוז מדו"ח מקורי - percentage calculation
-      document.getElementById('levi-percentage').textContent = 
-        valuation.base_price && calculations.full_market_value ? 
-        `${Math.round((parseInt(calculations.full_market_value) / parseInt(valuation.base_price)) * 100)}%` : 'NaN';
+      // אחוז מדו"ח מקורי - percentage calculation (Final Value / Base Price * 100)
+      const percentage = (() => {
+        if (!valuation.base_price || !calculations.full_market_value) return 'לא זמין';
+        
+        // Extract numeric values from both prices
+        const basePrice = parseFloat(String(valuation.base_price).replace(/[^\d.]/g, ''));
+        const finalValue = parseFloat(String(calculations.full_market_value).replace(/[^\d.]/g, ''));
+        
+        if (isNaN(basePrice) || isNaN(finalValue) || basePrice === 0) return 'לא זמין';
+        
+        const percentageValue = Math.round((finalValue / basePrice) * 100);
+        return `${percentageValue}%`;
+      })();
+      document.getElementById('levi-percentage').textContent = percentage;
     }
     
     function updateDamageSummary(damage) {
