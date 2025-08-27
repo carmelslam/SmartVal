@@ -1152,7 +1152,7 @@
   </div>
 
   <!-- PIP MODALS FOR VALIDATION WORKFLOW MODULES -->
-  <div class="pip-overlay" id="pipOverlay" onclick="closeAllPipModals()"></div>
+  <div class="pip-overlay" id="pipOverlay" onclick="window.closeAllPipModals()"></div>
   
   <!-- Final Report Builder PiP Modal -->
   <div class="pip-modal" id="finalReportBuilderModal">
@@ -1836,11 +1836,11 @@
     let editSectionTimeout = null;
     
     window.editSection = function(sectionName) {
-      console.log('Edit section requested:', sectionName);
+      // console.log('Edit section requested:', sectionName);
       
       // Prevent rapid multiple clicks
       if (editSectionTimeout) {
-        console.log('Edit section request ignored - too frequent');
+        // console.log('Edit section request ignored - too frequent');
         return;
       }
       
@@ -1851,7 +1851,7 @@
       // Use PiP modals for the inline validation buttons
       const pipModals = {
         'vehicle': () => openPipModal('finalReportBuilderModal'),
-        'reportType': () => openPipModal('finalReportBuilderModal'),
+        'report-type': () => openPipModal('finalReportBuilderModal'),
         'levi': () => {
           // Levi uses the existing floating screen
           if (window.toggleLeviReport) {
@@ -1868,13 +1868,13 @@
       if (pipModals[sectionName]) {
         pipModals[sectionName]();
       } else {
-        console.warn(`Unknown section for editing: ${sectionName}`);
+        // console.warn(`Unknown section for editing: ${sectionName}`);
         alert(`שגיאה: לא ניתן לערוך את הקטע ${sectionName}`);
       }
     };
     
     window.approveSection = function(sectionName) {
-      console.log(`✅ Approving section: ${sectionName}`);
+      // console.log(`✅ Approving section: ${sectionName}`);
       
       // Mark section as completed
       const section = document.getElementById(`section-${sectionName}`);
@@ -1904,7 +1904,7 @@
       }
       
       updateProgress();
-      console.log(`✅ Section ${sectionName} validated successfully`);
+      // console.log(`✅ Section ${sectionName} validated successfully`);
     };
     
     function enableNextSection(sectionName) {
@@ -2183,26 +2183,33 @@
     
     // PIP MODAL FUNCTIONS FOR VALIDATION WORKFLOW MODULES
     window.openPipModal = function(modalId) {
-      console.log('Opening PiP modal:', modalId);
+      // console.log('Opening PiP modal:', modalId);
+      
+      // Prevent floating screens from opening
+      window.preventFloatingScreens = true;
       
       // Check if modal is already open to prevent duplicates
       const modal = document.getElementById(modalId);
       const overlay = document.getElementById('pipOverlay');
       
       if (modal && modal.style.display === 'block') {
-        console.log('Modal already open, ignoring duplicate request');
+        // console.log('Modal already open, ignoring duplicate request');
         return;
       }
       
-      // Close any existing modals before opening new one
-      closeAllPipModals();
+      // Close any existing modals and floating screens before opening new one
+      window.closeAllPipModals();
+      // Close floating screens if they exist
+      if (window.closeAllFloatingScreens) {
+        window.closeAllFloatingScreens();
+      }
       
       // Save validation state before opening modal
       saveValidationState();
       
       // Show overlay and modal
-      overlay.style.display = 'block';
-      modal.style.display = 'block';
+      if (overlay) overlay.style.display = 'block';
+      if (modal) modal.style.display = 'block';
       
       // Load content based on modal type
       loadPipModalContent(modalId);
@@ -2212,7 +2219,7 @@
     };
     
     window.closePipModal = function(modalId) {
-      console.log('Closing PiP modal:', modalId);
+      // console.log('Closing PiP modal:', modalId);
       document.getElementById(modalId).style.display = 'none';
       document.getElementById('pipOverlay').style.display = 'none';
     };
@@ -2655,6 +2662,11 @@
   <script src="onesignal-integration.js"></script>
   
   <!-- FLOATING SCREENS SCRIPTS - COPIED FROM FINAL REPORT BUILDER -->
+  <script>
+    // Set flag to prevent floating screens from interfering with PiP modals
+    window.VALIDATION_WORKFLOW_MODE = true;
+    window.preventFloatingScreens = true;
+  </script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
   <script src="invoice-details-floating.js"></script>
@@ -2662,10 +2674,27 @@
   
   <script>
     // GLOBAL POSTMESSAGE HANDLER FOR ALL IFRAME COMMUNICATION
-    console.log('🔗 Setting up global postMessage handler for VAT rate communication');
+    // console.log('🔗 Setting up global postMessage handler for VAT rate communication');
     
     window.addEventListener('message', function(event) {
-      console.log('📥 Global message received:', event.data);
+      // console.log('📥 Global message received:', event.data);
+      
+      // Origin validation - allow same origin and your trusted domains
+      const allowedOrigins = [
+        window.location.origin,
+        'https://carmelcayouf.com',
+        'https://www.carmelcayouf.com',
+        'file://' // For local development
+      ];
+      
+      const isAllowedOrigin = allowedOrigins.some(origin => 
+        event.origin === origin || event.origin.startsWith('file://')
+      );
+      
+      if (!isAllowedOrigin) {
+        // console.warn('🚫 Blocked message from untrusted origin:', event.origin);
+        return;
+      }
       
       if (event.data && event.data.type) {
         switch(event.data.type) {
@@ -2676,25 +2705,25 @@
                           window.PROTECTED_VAT_RATE || 
                           sessionStorage.getItem('PROTECTED_VAT_RATE') || 
                           17;
-            console.log('📤 Sending global VAT rate response:', vatRate);
+            // console.log('📤 Sending global VAT rate response:', vatRate);
             try {
               event.source.postMessage({
                 type: 'VAT_RATE',
                 vatRate: vatRate
-              }, '*');
+              }, event.origin);
             } catch (error) {
               console.warn('Failed to send VAT rate:', error);
             }
             break;
             
           case 'REQUEST_HELPER_DATA':
-            console.log('📤 Sending global helper data response');
+            // console.log('📤 Sending global helper data response');
             try {
               if (window.helper) {
                 event.source.postMessage({
                   type: 'HELPER_DATA',
                   data: window.helper
-                }, '*');
+                }, event.origin);
               }
             } catch (error) {
               console.warn('Failed to send helper data:', error);
@@ -2702,15 +2731,34 @@
             break;
             
           case 'IFRAME_READY':
-            console.log('📤 Sending iframe ready acknowledgment');
+            // console.log('📤 Sending iframe ready acknowledgment');
             try {
               event.source.postMessage({
                 type: 'PARENT_READY',
                 vatRate: 17,
                 helper: window.helper || null
-              }, '*');
+              }, event.origin);
             } catch (error) {
               console.warn('Failed to send parent ready:', error);
+            }
+            break;
+            
+          case 'UPDATE_HELPER':
+            // console.log('📥 Received helper update from iframe:', event.data);
+            if (event.data.updates) {
+              try {
+                // Update local helper object with changes from iframe
+                Object.keys(event.data.updates).forEach(key => {
+                  if (window.helper && window.helper[key]) {
+                    window.helper[key] = { ...window.helper[key], ...event.data.updates[key] };
+                  }
+                });
+                // console.log('✅ Helper updated with iframe changes');
+                // Reload validation sections to reflect changes
+                initializeValidationSystem();
+              } catch (error) {
+                console.error('Failed to update helper:', error);
+              }
             }
             break;
             
@@ -2720,7 +2768,7 @@
       }
     });
     
-    console.log('✅ Global postMessage handler ready');
+    // console.log('✅ Global postMessage handler ready');
   </script>
 </body>
 </html>
