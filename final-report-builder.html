@@ -2795,9 +2795,20 @@
           const savedValue = helper.final_report.summary[helperKey];
           
           if (field) {
-            // Don't overwrite calculated fields if they already have correct calculated values
-            if (['afterSaleDamage', 'afterSaleTotal', 'afterSaleLegal'].includes(fieldId) && field.value && field.value !== `₪${(helper.calculations?.full_market_value || 0).toLocaleString()}`) {
-              console.log(`🔒 Protecting calculated field: ${fieldId} = ${field.value} (not overwriting with ${savedValue})`);
+            // ENHANCED PROTECTION: Don't overwrite calculated fields if they have calculated values
+            const isCalculatedField = ['afterSaleDamage', 'afterSaleTotal', 'afterSaleLegal'].includes(fieldId);
+            const hasValue = field.value && field.value.trim() !== '';
+            const marketValue = helper.calculations?.full_market_value || 0;
+            const isNotMarketValue = field.value !== `₪${marketValue.toLocaleString()}`;
+            
+            if (isCalculatedField && hasValue && isNotMarketValue) {
+              console.log(`🔒 ENHANCED PROTECTION: Preserving calculated field ${fieldId} = ${field.value} (blocked override with ${savedValue})`);
+              // Also ensure the helper has the correct calculated value
+              if (savedValue !== field.value) {
+                helper.final_report.summary[helperKey] = field.value;
+                sessionStorage.setItem('helper', JSON.stringify(helper));
+                console.log(`🔄 Updated helper with preserved calculation: ${helperKey} = ${field.value}`);
+              }
               return; // Skip this field to preserve calculation
             }
             // Load saved value if exists
@@ -8116,9 +8127,9 @@
         console.log('✅ Summary fields captured:', helper.final_report.summary);
       }
       
-      // Add event listeners to all summary fields
+      // Add event listeners to all summary fields (EXCLUDING calculated fields that get overridden)
       function addSummaryFieldListeners() {
-        const summaryInputs = document.querySelectorAll('.summary-block input[type="text"], .summary-block input[type="date"], .summary-block input[type="number"]');
+        const summaryInputs = document.querySelectorAll('.summary-block input[type="text"]:not(#afterSaleDamage):not(#afterSaleTotal):not(#afterSaleLegal), .summary-block input[type="date"], .summary-block input[type="number"]');
         
         summaryInputs.forEach(input => {
           // Save on input
@@ -8820,11 +8831,16 @@
         
         console.log(`💰 Updated total claim with VAT: ${totalClaimBeforeVAT.toLocaleString()} → ${totalClaimWithVAT.toLocaleString()}`);
         
-        // Trigger summary recalculation
+        // SAFE SUMMARY UPDATE: Update helper directly instead of triggering events that cascade
         setTimeout(() => {
           if (sumClaimField) {
-            const event = new Event('input', { bubbles: true });
-            sumClaimField.dispatchEvent(event);
+            // Update helper directly without triggering event cascade that overrides calculations
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            helper.final_report = helper.final_report || {};
+            helper.final_report.summary = helper.final_report.summary || {};
+            helper.final_report.summary.total_claim = formattedAmount;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            console.log('🔒 SAFE UPDATE: Updated total_claim in helper without triggering calculation overrides');
           }
         }, 100);
         
@@ -12137,26 +12153,9 @@
         setTimeout(() => {
           calculateSummaryTotals();
           
-          // Calculate Private Report total if it exists
-          const sumTotalPrivateField = document.getElementById('sumTotalBeforeDifferentials');
-          if (sumTotalPrivateField) {
-            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-            calculatePrivateReport(helper, marketValue);
-          }
-          
-          // Calculate other report variants totals
-          const sumTotalGlobalField = document.getElementById('sumTotalGlobal') || document.getElementById('sumTotalGlobalDynamic');
-          if (sumTotalGlobalField) {
-            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-            calculateGlobalReport(helper, marketValue);
-          }
-          
-          // Calculate Damaged Sale Report if it exists
-          const afterSaleDamageField = document.getElementById('afterSaleDamage');
-          if (afterSaleDamageField) {
-            const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-            calculateDamagedSaleReport(helper, marketValue);
-          }
+          // NOTE: Removed all duplicate calculation function calls to prevent overrides
+          // All calculations are now handled centrally by calculateSummaryTotals() based on selected report type
+          // This prevents race conditions and duplicate calculations that were overriding correct values
         }, 500);
         
         console.log('✅ CRITICAL FIX: Summary fields initialization completed');
