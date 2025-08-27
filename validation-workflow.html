@@ -1339,8 +1339,15 @@
           stored: vehicle.year || valuation.year || '',
           field: 'vehicle_year',
           validation: (val) => {
-            const year = parseInt(val);
-            return !isNaN(year) && year >= 1980 && year <= new Date().getFullYear();
+            if (!val) return false;
+            // Handle MM/YYYY format or just YYYY
+            let year = val;
+            if (val.includes('/')) {
+              const parts = val.split('/');
+              year = parts.length > 1 ? parts[1] : parts[0];
+            }
+            const yearNum = parseInt(year);
+            return !isNaN(yearNum) && yearNum >= 1980 && yearNum <= new Date().getFullYear();
           }
         },
         {
@@ -1348,7 +1355,13 @@
           current: vehicle.mileage || valuation.mileage || valuation.adjustments?.mileage?.value || '',
           stored: vehicle.mileage || valuation.mileage || valuation.adjustments?.mileage?.value || '',
           field: 'vehicle_mileage',
-          validation: (val) => val && parseInt(val) >= 0
+          validation: (val) => {
+            if (!val) return false;
+            // Remove commas and any non-numeric characters except dots
+            const cleanVal = String(val).replace(/[^\d.]/g, '');
+            const mileage = parseInt(cleanVal);
+            return !isNaN(mileage) && mileage >= 0;
+          }
         },
         {
           label: 'מחיר חדש בלוי',
