@@ -1094,7 +1094,7 @@
               <span class="cost-value" id="fee-subtotal-display">₪0</span>
             </div>
             <div class="cost-item">
-              <span class="cost-label">מע"מ (<span id="fee-vat-rate">17%</span>)</span>
+              <span class="cost-label">מע"מ (<span id="fee-vat-rate">18%</span>)</span>
               <span class="cost-value" id="fee-vat-display">₪0</span>
             </div>
             <div class="cost-item" style="border: 2px solid #16a34a; background: #f0fdf4;">
@@ -1592,8 +1592,8 @@
         },
         {
           label: 'אחוז מע"מ',
-          current: calculations.vat_rate ? `${calculations.vat_rate}%` : '17%',
-          stored: '17%',
+          current: calculations.vat_rate ? `${calculations.vat_rate}%` : `${window.helper?.calculations?.vat_rate || 18}%`,
+          stored: `${window.helper?.calculations?.vat_rate || 18}%`,
           field: 'vat_rate',
           validation: (val) => {
             const num = parseFloat(val.replace('%', ''));
@@ -1785,7 +1785,7 @@
       document.getElementById('fee-subtotal-display').textContent = 
         `₪${calculations.total_before_vat || 0}`;
       document.getElementById('fee-vat-rate').textContent = 
-        `${calculations.vat_rate || 17}%`;
+        `${calculations.vat_rate || window.helper?.calculations?.vat_rate || 18}%`;
       document.getElementById('fee-vat-display').textContent = 
         `₪${calculations.vat_amount || 0}`;
       document.getElementById('fee-total-display').textContent = 
@@ -2413,7 +2413,7 @@
           </div>
           <iframe 
             id="${uniqueId}"
-            src="final-report-builder.html?iframe=true&vatRate=17&unique=${uniqueId}" 
+            src="final-report-builder.html?iframe=true&vatRate=${window.helper?.calculations?.vat_rate || 18}&unique=${uniqueId}" 
             style="width: 100%; height: 100%; border: none; border-radius: 8px;"
             frameborder="0"
             onload="handleIframeLoad('${uniqueId}')"
@@ -2522,7 +2522,7 @@
           }
           
           const script = iframeDocument.createElement('script');
-          const vatRateValue = window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 17;
+          const vatRateValue = window.helper?.calculations?.vat_rate || window.PROTECTED_VAT_RATE || 18;
           script.textContent = `
             // COMPREHENSIVE VALIDATION IFRAME SETUP
             window.VALIDATION_IFRAME_VAT_RATE = ${JSON.stringify(vatRateValue)};
@@ -2664,7 +2664,7 @@
         // Update iframe src with additional parameters for error prevention
         const currentSrc = iframe.src;
         const separator = currentSrc.includes('?') ? '&' : '?';
-        const enhancedSrc = currentSrc + separator + 'validationMode=true&suppressErrors=true&defaultVatRate=17';
+        const enhancedSrc = currentSrc + separator + 'validationMode=true&suppressErrors=true&defaultVatRate=' + (window.helper?.calculations?.vat_rate || 18);
         
         // Only update if different to prevent reload loop
         if (iframe.src !== enhancedSrc) {
@@ -2694,7 +2694,7 @@
                 console.log('📤 Sending VAT rate response...');
                 event.source.postMessage({
                   type: 'VAT_RATE',
-                  vatRate: 17
+                  vatRate: window.helper?.calculations?.vat_rate || 18
                 }, '*');
                 break;
                 
@@ -2886,14 +2886,14 @@
     window.preventFloatingScreens = true;
     
     // Ensure VAT rate is available globally
-    window.PROTECTED_VAT_RATE = 17;
+    window.PROTECTED_VAT_RATE = window.helper?.calculations?.vat_rate || 18;
     
     // Override getValueFromAdminHub if it exists to prevent timeouts
     if (typeof window.getValueFromAdminHub === 'function') {
       const originalGetValue = window.getValueFromAdminHub;
       window.getValueFromAdminHub = function(key) {
         if (key === 'vatRate' || key === 'vat_rate') {
-          return Promise.resolve('17');
+          return Promise.resolve((window.helper?.calculations?.vat_rate || 18).toString());
         }
         return originalGetValue(key).catch(() => '0');
       };
@@ -2936,7 +2936,7 @@
             const vatRate = window.helper?.calculations?.vat_rate || 
                           window.PROTECTED_VAT_RATE || 
                           sessionStorage.getItem('PROTECTED_VAT_RATE') || 
-                          17;
+                          window.helper?.calculations?.vat_rate || 18;
             // console.log('📤 Sending global VAT rate response:', vatRate);
             try {
               // Send response in multiple formats to ensure compatibility

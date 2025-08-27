@@ -83,7 +83,7 @@ window.createDamageCenter = function(location = '', description = '', sourceData
       statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
       totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
       audit_trail: [],
-      settings: { default_vat_percentage: 17 }
+      settings: { default_vat_percentage: 18 }
     };
   }
   
@@ -268,7 +268,7 @@ window.updateDamageCenter = function(centerId, updates = {}) {
       statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
       totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
       audit_trail: [],
-      settings: { default_vat_percentage: 17 }
+      settings: { default_vat_percentage: 18 }
     };
   }
   
@@ -376,7 +376,7 @@ window.calculateDamageCenterTotals = function(centerId) {
       statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
       totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
       audit_trail: [],
-      settings: { default_vat_percentage: 17 }
+      settings: { default_vat_percentage: 18 }
     };
   }
   
@@ -428,7 +428,7 @@ window.calculateDamageCenterTotals = function(centerId) {
   const subtotalBeforeVat = worksTotal + partsTotal + repairsTotal + feesTotal;
   
   // ✅ FIXED: Safe access to VAT percentage with proper null checks
-  let vatPercentage = 17; // Default VAT percentage
+  let vatPercentage = window.helper?.calculations?.vat_rate || 18; // Use system VAT rate
   if (window.helper?.damage_assessment?.settings?.default_vat_percentage) {
     vatPercentage = window.helper.damage_assessment.settings.default_vat_percentage;
   } else if (window.helper?.settings?.default_vat_percentage) {
@@ -490,7 +490,7 @@ window.calculateAllDamageCentersTotals = function() {
       statistics: { total_centers: 0, avg_cost_per_center: 0, most_expensive_center: null },
       totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
       audit_trail: [],
-      settings: { default_vat_percentage: 17 }
+      settings: { default_vat_percentage: 18 }
     };
   }
   
@@ -765,7 +765,8 @@ window.buildComprehensiveDamageAssessment = function() {
       const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);
       const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
       const subtotal = works + parts + repairs;
-      const vat = subtotal * 0.17; // 17% VAT
+      const vatRate = (window.helper?.calculations?.vat_rate || 18) / 100; // Use system VAT rate
+      const vat = subtotal * vatRate;
       const total = subtotal + vat;
       
       // Add to summary with sequential numbering
@@ -2361,7 +2362,7 @@ window.helper = existingHelper || {
   // Settings and configuration
   settings: {
     auto_increment_numbers: true,
-    default_vat_percentage: 17,
+    default_vat_percentage: 18,
     currency: 'ILS',
     allow_multiple_centers: true,
     wizard_mode: true,

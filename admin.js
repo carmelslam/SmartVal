@@ -35,7 +35,7 @@ const AdminPanel = {
 
   save() {
     try {
-      const vatRate = parseFloat(this.vatInput.value || '17');
+      const vatRate = parseFloat(this.vatInput.value || '18');
       
       // Save VAT locally only (no webhook needed)
       localStorage.setItem('globalVAT', vatRate);

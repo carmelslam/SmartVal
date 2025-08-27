@@ -773,7 +773,8 @@
       
       // Calculate subtotals without VAT
       const totalBeforeVat = totalParts + totalWorks + totalRepairs;
-      const vatAmount = Math.round(totalBeforeVat * 0.17);
+      const vatRate = (window.helper?.calculations?.vat_rate || 18) / 100;
+      const vatAmount = Math.round(totalBeforeVat * vatRate);
       const totalWithVatCalculated = totalBeforeVat + vatAmount;
       
       summaryHtml += `
@@ -785,7 +786,7 @@
           <td style="font-weight: bold; color: #dc2626;">${totalBeforeVat} ₪</td>
         </tr>
         <tr style="background: #f1f5f9;">
-          <td colspan="5" class="table-param" style="font-weight: bold; text-align: center;">מע"מ (17%)</td>
+          <td colspan="5" class="table-param" style="font-weight: bold; text-align: center;">מע"מ (${window.helper?.calculations?.vat_rate || 18}%)</td>
           <td style="font-weight: bold; color: #dc2626;">${vatAmount} ₪</td>
         </tr>
         <tr style="background: #1e3a8a; border-top: 2px solid #1e3a8a;">
@@ -821,8 +822,8 @@
       
       const elements = {
         'centers-count': centersCount,
-        'before-tax': helper.financials?.totals?.before_tax || (totalWithVat / 1.17), // Estimate before tax
-        'vat-amount': helper.financials?.taxes?.vat_amount || (totalWithVat - (totalWithVat / 1.17)), // Estimate VAT
+        'before-tax': helper.financials?.totals?.before_tax || (totalWithVat / (1 + (window.helper?.calculations?.vat_rate || 18) / 100)), // Estimate before tax
+        'vat-amount': helper.financials?.taxes?.vat_amount || (totalWithVat - (totalWithVat / (1 + (window.helper?.calculations?.vat_rate || 18) / 100))), // Estimate VAT
         'after-tax': helper.financials?.totals?.after_tax || totalWithVat
       };
       
