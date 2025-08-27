@@ -2422,6 +2422,15 @@
                   };
                 }
               });
+              
+              // Also watch for any button clicks that might save data
+              document.addEventListener('click', function(e) {
+                if (e.target && (e.target.textContent.includes('שמור') || 
+                                e.target.textContent.includes('save') ||
+                                e.target.classList.contains('save-btn'))) {
+                  setTimeout(notifyParent, 500);
+                }
+              }, true);
             }
             
             // OVERRIDE ALL VAT RATE FUNCTIONS
@@ -2825,8 +2834,36 @@
                 }
                 
                 // console.log('✅ Helper updated with iframe changes');
-                // Reload validation sections to reflect changes
-                initializeValidationSystem();
+                // Force a complete refresh of validation sections
+                setTimeout(() => {
+                  // Clear existing content to force re-render
+                  const containers = [
+                    'vehicle-validation-items',
+                    'report-type-items',
+                    'levi-validation-items', 
+                    'depreciation-items',
+                    'damage-centers-container',
+                    'fees-validation-items'
+                  ];
+                  
+                  containers.forEach(id => {
+                    const container = document.getElementById(id);
+                    if (container) container.innerHTML = '';
+                  });
+                  
+                  // Reload validation sections to reflect changes
+                  initializeValidationSystem();
+                  
+                  // Close the modal after successful update
+                  window.closeAllPipModals();
+                  
+                  // Show success message
+                  const successMsg = document.createElement('div');
+                  successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4caf50; color: white; padding: 15px; border-radius: 8px; z-index: 9999;';
+                  successMsg.textContent = '✅ הנתונים עודכנו בהצלחה';
+                  document.body.appendChild(successMsg);
+                  setTimeout(() => successMsg.remove(), 3000);
+                }, 100);
               } catch (error) {
                 console.error('Failed to update helper:', error);
               }
