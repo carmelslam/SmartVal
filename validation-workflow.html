@@ -1112,6 +1112,45 @@
       </div>
     </div>
 
+    <!-- Summary Validation Section -->
+    <div class="validation-section" id="section-summary">
+      <div class="section-header">
+        <h3>📋 אימות סיכום דו"ח סופי</h3>
+        <div class="section-status status-pending" id="summary-status">ממתין לאימות</div>
+      </div>
+      
+      <div class="validation-content">
+        <div class="report-type-indicator" id="report-type-indicator">
+          <div class="info-label">סוג דו"ח נוכחי:</div>
+          <div class="info-value" id="current-report-type">לא נבחר</div>
+        </div>
+        
+        <div class="validation-items" id="summary-validation-items">
+          <!-- Dynamic content will be loaded here -->
+        </div>
+        
+        <div class="discrepancies-section" id="discrepancies-section">
+          <div class="section-title">📊 הפרשים</div>
+          <div id="discrepancies-content">
+            <!-- הפרשים details will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="garage-days-section" id="garage-days-section">
+          <div class="section-title">🔧 ימי מוסך</div>
+          <div id="garage-days-content">
+            <!-- Garage days details will be loaded here -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('summary')" disabled>🔍 בדיקת סיכום אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('summary')">✏️ עריכת סיכום דו"ח</button>
+        <button class="btn btn-success" onclick="approveSection('summary')" disabled>✅ אימות סיכום דו"ח</button>
+      </div>
+    </div>
+
     <!-- Enhanced Final Actions Section -->
     <div class="final-actions" id="final-actions">
       <div class="final-actions-title">🏆 פעולות סיום - דו"ח סופי</div>
@@ -1216,7 +1255,7 @@
     // Global validation state
     let validatedSections = [];
     let currentSection = 0;
-    const totalSections = 6; // Updated: vehicle, reportType, levi, damage, depreciation, fees
+    const totalSections = 7; // Updated: vehicle, reportType, levi, damage, depreciation, fees, summary
     
     // Initialize validation system
     document.addEventListener('DOMContentLoaded', function() {
@@ -1244,9 +1283,10 @@
       loadVehicleValidation();
       loadReportTypeValidation();
       loadLeviValidation();
-      loadDepreciationValidation();
       loadDamageValidation();
+      loadDepreciationValidation();
       loadFeesValidation();
+      loadSummaryValidation();
       
       // Update progress
       updateProgress();
@@ -1799,6 +1839,155 @@
         `₪${calculations.total_with_vat || 0}`;
     }
     
+    function loadSummaryValidation() {
+      const summary = window.helper?.final_report?.summary || {};
+      const finalReport = window.helper?.final_report || {};
+      const currentReportType = finalReport.dropdown_type || 'private_opinion';
+      
+      // Update report type indicator
+      const reportTypeDisplay = getReportTypeDisplayName(currentReportType);
+      document.getElementById('current-report-type').textContent = reportTypeDisplay;
+      
+      // Get summary validation items based on report type
+      const summaryItems = getSummaryItemsByReportType(currentReportType, summary);
+      
+      // Render validation items
+      renderValidationItems('summary-validation-items', summaryItems);
+      
+      // Load discrepancies (הפרשים)
+      loadDiscrepanciesValidation();
+      
+      // Load garage days
+      loadGarageDaysValidation();
+    }
+    
+    function getReportTypeDisplayName(type) {
+      const typeNames = {
+        'private_opinion': 'חוות דעת פרטית',
+        'global_opinion': 'חוות דעת גלובלית',
+        'damaged_sale_opinion': 'חוות דעת מכירה מצבו הניזוק',
+        'total_loss_opinion': 'חוות דעת טוטלוסט',
+        'legal_total_loss': 'חוות דעת אובדן להלכה'
+      };
+      return typeNames[type] || 'לא נבחר';
+    }
+    
+    function getSummaryItemsByReportType(reportType, summary) {
+      const commonItems = [
+        {
+          label: 'שווי שוק',
+          current: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          stored: summary.market_value ? `₪${summary.market_value}` : '₪0',
+          field: 'market_value',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) > 0
+        },
+        {
+          label: 'סה"כ תביעה',
+          current: summary.total_claim ? `₪${summary.total_claim}` : '₪0',
+          stored: summary.total_claim ? `₪${summary.total_claim}` : '₪0',
+          field: 'total_claim',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'מע"מ',
+          current: summary.vat ? `₪${summary.vat}` : '₪0',
+          stored: summary.vat ? `₪${summary.vat}` : '₪0',
+          field: 'vat',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        },
+        {
+          label: 'סה"כ כולל מע"מ',
+          current: summary.total_with_vat ? `₪${summary.total_with_vat}` : '₪0',
+          stored: summary.total_with_vat ? `₪${summary.total_with_vat}` : '₪0',
+          field: 'total_with_vat',
+          validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+        }
+      ];
+      
+      // Add report type specific items
+      switch(reportType) {
+        case 'private_opinion':
+        case 'global_opinion':
+          commonItems.push({
+            label: 'פיצוי ירידת ערך',
+            current: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
+            stored: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
+            field: 'dep_compensation',
+            validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+          });
+          break;
+          
+        case 'damaged_sale_opinion':
+        case 'total_loss_opinion':
+        case 'legal_total_loss':
+          commonItems.push({
+            label: 'ערך גרוטאות',
+            current: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
+            stored: summary.salvage_value ? `₪${summary.salvage_value}` : '₪0',
+            field: 'salvage_value',
+            validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+          });
+          break;
+      }
+      
+      return commonItems;
+    }
+    
+    function loadDiscrepanciesValidation() {
+      const adjustments = window.helper?.valuation?.adjustments || [];
+      const adjustmentsValue = window.helper?.final_report?.summary?.adjustments_value || 0;
+      const hasDiscrepancies = adjustments.length > 0 || adjustmentsValue > 0;
+      
+      let discrepanciesHtml = `
+        <div class="validation-item">
+          <div class="item-label">קיימים הפרשים:</div>
+          <div class="item-value ${hasDiscrepancies ? 'status-warning' : 'status-success'}">
+            ${hasDiscrepancies ? 'כן' : 'לא'}
+          </div>
+        </div>
+      `;
+      
+      if (hasDiscrepancies) {
+        discrepanciesHtml += `
+          <div class="validation-item">
+            <div class="item-label">סה"כ הפרשים:</div>
+            <div class="item-value">₪${adjustmentsValue}</div>
+          </div>
+        `;
+        
+        if (adjustments.length > 0) {
+          discrepanciesHtml += '<div class="discrepancies-list"><div class="item-label">פרטי הפרשים:</div>';
+          adjustments.forEach(adj => {
+            discrepanciesHtml += `
+              <div class="discrepancy-item">
+                • ${adj.description || 'הפרש'}: ₪${adj.amount || 0}
+              </div>
+            `;
+          });
+          discrepanciesHtml += '</div>';
+        }
+      }
+      
+      document.getElementById('discrepancies-content').innerHTML = discrepanciesHtml;
+    }
+    
+    function loadGarageDaysValidation() {
+      const workDays = window.helper?.estimate_work_days || window.helper?.work_days || 0;
+      
+      const garageDaysHtml = `
+        <div class="validation-item">
+          <div class="item-label">ימי עבודה במוסך:</div>
+          <div class="item-value">${workDays} ימים</div>
+        </div>
+        <div class="validation-item">
+          <div class="item-label">מקור הערכה:</div>
+          <div class="item-value">${workDays > 0 ? 'מוגדר במערכת' : 'לא הוגדר'}</div>
+        </div>
+      `;
+      
+      document.getElementById('garage-days-content').innerHTML = garageDaysHtml;
+    }
+    
     function updateDepreciationSummary(depreciation) {
       // Calculate total from bulk items
       let bulkItemsTotal = 0;
@@ -1969,6 +2158,9 @@
         case 'fees':
           isValid = validateFeesSection();
           break;
+        case 'summary':
+          isValid = validateSummarySection();
+          break;
       }
       
       if (isValid) {
@@ -2014,7 +2206,8 @@
           openPipModal('damageCentersModal');
           setTimeout(() => { window.damageModalOpening = false; }, 1000);
         },
-        'fees': () => openPipModal('feeModuleModal')
+        'fees': () => openPipModal('feeModuleModal'),
+        'summary': () => openPipModal('finalReportBuilderModal')
       };
       
       if (pipModals[sectionName]) {
@@ -2049,7 +2242,7 @@
       validatedSections.push(sectionName);
       
       // Enable next section
-      const sections = ['vehicle', 'report-type', 'levi', 'damage', 'depreciation', 'fees'];
+      const sections = ['vehicle', 'report-type', 'levi', 'damage', 'depreciation', 'fees', 'summary'];
       const currentIndex = sections.indexOf(sectionName);
       if (currentIndex < sections.length - 1) {
         enableNextSection(sections[currentIndex + 1]);
@@ -2162,6 +2355,22 @@
       
       return !!(calculations.total_with_vat && 
                parseFloat(calculations.total_with_vat) > 0);
+    }
+    
+    function validateSummarySection() {
+      const helper = window.helper || {};
+      const summary = helper.final_report?.summary || {};
+      
+      // Check that essential summary fields are present
+      const hasMarketValue = summary.market_value && parseFloat(summary.market_value) > 0;
+      const hasTotalClaim = summary.total_claim && parseFloat(summary.total_claim) >= 0;
+      const hasTotalWithVat = summary.total_with_vat && parseFloat(summary.total_with_vat) >= 0;
+      
+      // Check garage days are reasonable
+      const workDays = helper.estimate_work_days || helper.work_days || 0;
+      const hasReasonableGarageDays = workDays >= 0 && workDays <= 365; // Max 1 year
+      
+      return hasMarketValue && hasTotalClaim && hasTotalWithVat && hasReasonableGarageDays;
     }
     
     function showValidationErrors(sectionName) {
