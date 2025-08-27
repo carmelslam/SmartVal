@@ -1877,6 +1877,14 @@
     }
     
     function getSummaryItemsByReportType(reportType, summary) {
+      const helper = window.helper || {};
+      
+      // Get current values from calculations
+      const claimDataTotal = helper.claim_data?.total_claim || 0;
+      const damageAssessmentTotal = helper.damage_assessment?.totals?.['Total with VAT'] || 0;
+      const currentDepCompensation = helper.depreciation?.globalDepValue || 0;
+      const storedDepCompensation = summary.depreciation_compensation || 0;
+      
       const commonItems = [
         {
           label: 'שווי שוק',
@@ -1887,8 +1895,8 @@
         },
         {
           label: 'סה"כ תביעה',
-          current: summary.total_claim ? `₪${summary.total_claim}` : '₪0',
-          stored: summary.total_claim ? `₪${summary.total_claim}` : '₪0',
+          current: claimDataTotal ? `₪${claimDataTotal}` : '₪0',
+          stored: damageAssessmentTotal ? `₪${damageAssessmentTotal}` : '₪0',
           field: 'total_claim',
           validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
         },
@@ -1914,8 +1922,8 @@
         case 'global_opinion':
           commonItems.push({
             label: 'פיצוי ירידת ערך',
-            current: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
-            stored: summary.dep_compensation ? `₪${summary.dep_compensation}` : '₪0',
+            current: currentDepCompensation ? `₪${currentDepCompensation}` : '₪0',
+            stored: storedDepCompensation ? `₪${storedDepCompensation}` : '₪0',
             field: 'dep_compensation',
             validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
           });
@@ -1934,37 +1942,140 @@
           break;
       }
       
+      // Add dynamic summary totals based on report type
+      const dynamicSummaryItems = getDynamicSummaryItems(reportType, summary);
+      commonItems.push(...dynamicSummaryItems);
+      
       return commonItems;
     }
     
+    function getDynamicSummaryItems(reportType, summary) {
+      const dynamicItems = [];
+      
+      // Based on final-report-builder.html logic, different report types have different final totals
+      switch(reportType) {
+        case 'private_opinion':
+          if (summary.private_before_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ לפני הפרשים',
+              current: `₪${summary.private_before_differentials}`,
+              stored: `₪${summary.private_before_differentials}`,
+              field: 'private_before_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          if (summary.private_after_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ סופי לאחר הפרשים',
+              current: `₪${summary.private_after_differentials}`,
+              stored: `₪${summary.private_after_differentials}`,
+              field: 'private_after_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          break;
+          
+        case 'global_opinion':
+          if (summary.global_before_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ גלובלי לפני הפרשים',
+              current: `₪${summary.global_before_differentials}`,
+              stored: `₪${summary.global_before_differentials}`,
+              field: 'global_before_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          if (summary.global_after_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ גלובלי סופי',
+              current: `₪${summary.global_after_differentials}`,
+              stored: `₪${summary.global_after_differentials}`,
+              field: 'global_after_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          break;
+          
+        case 'damaged_sale_opinion':
+          if (summary.damage_total_before_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ נזק לפני הפרשים',
+              current: `₪${summary.damage_total_before_differentials}`,
+              stored: `₪${summary.damage_total_before_differentials}`,
+              field: 'damage_total_before_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          if (summary.damage_total_after_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ נזק אחרי הפרשים',
+              current: `₪${summary.damage_total_after_differentials}`,
+              stored: `₪${summary.damage_total_after_differentials}`,
+              field: 'damage_total_after_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          break;
+          
+        case 'total_loss_opinion':
+        case 'legal_total_loss':
+          if (summary.total_loss_before_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ טוטאל לוס לפני הפרשים',
+              current: `₪${summary.total_loss_before_differentials}`,
+              stored: `₪${summary.total_loss_before_differentials}`,
+              field: 'total_loss_before_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          if (summary.total_loss_after_differentials) {
+            dynamicItems.push({
+              label: 'סה"כ טוטאל לוס סופי',
+              current: `₪${summary.total_loss_after_differentials}`,
+              stored: `₪${summary.total_loss_after_differentials}`,
+              field: 'total_loss_after_differentials',
+              validation: (val) => parseFloat(val.replace(/[^\d]/g, '')) >= 0
+            });
+          }
+          break;
+      }
+      
+      return dynamicItems;
+    }
+    
     function loadDiscrepanciesValidation() {
-      const adjustments = window.helper?.valuation?.adjustments || [];
-      const adjustmentsValue = window.helper?.final_report?.summary?.adjustments_value || 0;
-      const hasDiscrepancies = adjustments.length > 0 || adjustmentsValue > 0;
+      const differential = window.helper?.final_report?.differential || {};
+      const hasDifferentials = differential.has_differentials || false;
+      const differentialItems = differential.items || [];
+      const differentialSummary = differential.summary || {};
       
       let discrepanciesHtml = `
         <div class="validation-item">
           <div class="item-label">קיימים הפרשים:</div>
-          <div class="item-value ${hasDiscrepancies ? 'status-warning' : 'status-success'}">
-            ${hasDiscrepancies ? 'כן' : 'לא'}
+          <div class="item-value ${hasDifferentials ? 'status-warning' : 'status-success'}">
+            ${hasDifferentials ? 'כן' : 'לא'}
           </div>
         </div>
       `;
       
-      if (hasDiscrepancies) {
+      if (hasDifferentials && differentialSummary.total_amount_with_vat) {
         discrepanciesHtml += `
           <div class="validation-item">
-            <div class="item-label">סה"כ הפרשים:</div>
-            <div class="item-value">₪${adjustmentsValue}</div>
+            <div class="item-label">סה"כ הפרשים (כולל מע"מ):</div>
+            <div class="item-value">₪${differentialSummary.total_amount_with_vat}</div>
+          </div>
+          <div class="validation-item">
+            <div class="item-label">סה"כ הפרשים (ללא מע"מ):</div>
+            <div class="item-value">₪${differentialSummary.total_amount_without_vat || 0}</div>
           </div>
         `;
         
-        if (adjustments.length > 0) {
+        if (differentialItems.length > 0) {
           discrepanciesHtml += '<div class="discrepancies-list"><div class="item-label">פרטי הפרשים:</div>';
-          adjustments.forEach(adj => {
+          differentialItems.forEach(item => {
             discrepanciesHtml += `
               <div class="discrepancy-item">
-                • ${adj.description || 'הפרש'}: ₪${adj.amount || 0}
+                • ${item.description || 'הפרש'}: ₪${item.amount || 0}
               </div>
             `;
           });
@@ -1976,16 +2087,16 @@
     }
     
     function loadGarageDaysValidation() {
-      const workDays = window.helper?.estimate_work_days || window.helper?.work_days || 0;
+      const garageDays = window.helper?.depreciation?.garageDays || 0;
       
       const garageDaysHtml = `
         <div class="validation-item">
           <div class="item-label">ימי עבודה במוסך:</div>
-          <div class="item-value">${workDays} ימים</div>
+          <div class="item-value">${garageDays} ימים</div>
         </div>
         <div class="validation-item">
           <div class="item-label">מקור הערכה:</div>
-          <div class="item-value">${workDays > 0 ? 'מוגדר במערכת' : 'לא הוגדר'}</div>
+          <div class="item-value">${garageDays > 0 ? 'מוגדר במערכת הירידת ערך' : 'לא הוגדר'}</div>
         </div>
       `;
       
@@ -2367,12 +2478,14 @@
       
       // Check that essential summary fields are present
       const hasMarketValue = summary.market_value && parseFloat(summary.market_value) > 0;
-      const hasTotalClaim = summary.total_claim && parseFloat(summary.total_claim) >= 0;
+      const claimDataTotal = helper.claim_data?.total_claim || 0;
+      const damageAssessmentTotal = helper.damage_assessment?.totals?.['Total with VAT'] || 0;
+      const hasTotalClaim = claimDataTotal > 0 || damageAssessmentTotal > 0;
       const hasTotalWithVat = summary.total_with_vat && parseFloat(summary.total_with_vat) >= 0;
       
-      // Check garage days are reasonable
-      const workDays = helper.estimate_work_days || helper.work_days || 0;
-      const hasReasonableGarageDays = workDays >= 0 && workDays <= 365; // Max 1 year
+      // Check garage days are reasonable (using correct source)
+      const garageDays = helper.depreciation?.garageDays || 0;
+      const hasReasonableGarageDays = garageDays >= 0 && garageDays <= 365; // Max 1 year
       
       return hasMarketValue && hasTotalClaim && hasTotalWithVat && hasReasonableGarageDays;
     }
