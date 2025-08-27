@@ -1861,7 +1861,13 @@
           }
         },
         'depreciation': () => openPipModal('finalReportBuilderModal'),
-        'damage': () => openPipModal('damageCentersModal'),
+        'damage': () => {
+          // Prevent duplicate damage centers opening
+          if (window.damageModalOpening) return;
+          window.damageModalOpening = true;
+          openPipModal('damageCentersModal');
+          setTimeout(() => { window.damageModalOpening = false; }, 1000);
+        },
         'fees': () => openPipModal('feeModuleModal')
       };
       
@@ -2373,6 +2379,51 @@
             
             console.log('🛡️ Setting up iframe with helper VAT rate:', window.VALIDATION_IFRAME_VAT_RATE);
             
+            // Add save interceptor to notify parent when helper is modified
+            let saveInProgress = false;
+            const originalSaveToLocalStorage = window.saveToLocalStorage;
+            if (typeof originalSaveToLocalStorage === 'function') {
+              window.saveToLocalStorage = function() {
+                if (!saveInProgress) {
+                  saveInProgress = true;
+                  const result = originalSaveToLocalStorage.apply(this, arguments);
+                  // Notify parent window of the update
+                  if (window.parent && window.helper) {
+                    window.parent.postMessage({
+                      type: 'UPDATE_HELPER',
+                      updates: window.helper,
+                      source: 'iframe_save'
+                    }, '*');
+                  }
+                  saveInProgress = false;
+                  return result;
+                }
+              };
+            }
+            
+            // Add helper modification watcher
+            if (window.helper && window.parent) {
+              const notifyParent = () => {
+                window.parent.postMessage({
+                  type: 'UPDATE_HELPER', 
+                  updates: window.helper,
+                  source: 'iframe_modification'
+                }, '*');
+              };
+              
+              // Intercept common save functions
+              ['saveVehicleData', 'saveReportType', 'saveDamageCenters', 'saveFeesData'].forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                  const original = window[funcName];
+                  window[funcName] = function() {
+                    const result = original.apply(this, arguments);
+                    setTimeout(notifyParent, 100);
+                    return result;
+                  };
+                }
+              });
+            }
+            
             // OVERRIDE ALL VAT RATE FUNCTIONS
             window.getVatRate = function() {
               console.log('iframe getVatRate called, returning:', window.VALIDATION_IFRAME_VAT_RATE);
@@ -2747,12 +2798,32 @@
             // console.log('📥 Received helper update from iframe:', event.data);
             if (event.data.updates) {
               try {
-                // Update local helper object with changes from iframe
-                Object.keys(event.data.updates).forEach(key => {
-                  if (window.helper && window.helper[key]) {
-                    window.helper[key] = { ...window.helper[key], ...event.data.updates[key] };
-                  }
-                });
+                // Deep merge the updates into the helper
+                if (!window.helper) {
+                  window.helper = {};
+                }
+                
+                // If updates contain the entire helper object, replace it
+                if (event.data.source === 'iframe_save' || event.data.source === 'iframe_modification') {
+                  window.helper = JSON.parse(JSON.stringify(event.data.updates));
+                } else {
+                  // Otherwise merge specific updates
+                  Object.keys(event.data.updates).forEach(key => {
+                    if (typeof event.data.updates[key] === 'object' && event.data.updates[key] !== null) {
+                      window.helper[key] = { ...window.helper[key], ...event.data.updates[key] };
+                    } else {
+                      window.helper[key] = event.data.updates[key];
+                    }
+                  });
+                }
+                
+                // Save to localStorage
+                if (typeof window.saveToLocalStorage === 'function') {
+                  window.saveToLocalStorage();
+                } else {
+                  localStorage.setItem('helper', JSON.stringify(window.helper));
+                }
+                
                 // console.log('✅ Helper updated with iframe changes');
                 // Reload validation sections to reflect changes
                 initializeValidationSystem();
