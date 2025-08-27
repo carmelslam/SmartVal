@@ -1466,8 +1466,7 @@
     
     function loadDepreciationValidation() {
       const helper = window.helper || {};
-      const valuation = helper.valuation || {};
-      const depreciation = valuation.depreciation || {};
+      const depreciation = helper.depreciation || {};
       
       // Create the depreciation table structure that matches final report builder
       const container = document.getElementById('depreciation-validation-items');
@@ -1802,14 +1801,23 @@
     }
     
     function updateDepreciationSummary(depreciation) {
-      document.getElementById('depreciation-global-percent').textContent = 
-        depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%';
-      document.getElementById('depreciation-global-amount').textContent = 
-        depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
-      document.getElementById('depreciation-garage-days').textContent = 
-        depreciation.garage_days?.toString() || '0';
-      document.getElementById('depreciation-total-calculated').textContent = 
-        depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+      const globalPercentElement = document.getElementById('global-dep-percentage');
+      if (globalPercentElement) {
+        globalPercentElement.textContent = 
+          depreciation.global_percentage ? `${depreciation.global_percentage}%` : '0%';
+      }
+      
+      const globalValueElement = document.getElementById('global-dep-value');
+      if (globalValueElement) {
+        globalValueElement.textContent = 
+          depreciation.global_amount ? `₪${parseInt(depreciation.global_amount).toLocaleString()}` : '₪0';
+      }
+      
+      const totalDepreciationElement = document.getElementById('total-depreciation-value');
+      if (totalDepreciationElement) {
+        totalDepreciationElement.textContent = 
+          depreciation.total_depreciation ? `₪${parseInt(depreciation.total_depreciation).toLocaleString()}` : '₪0';
+      }
     }
     
     function updateLegalValidation(reportType, finalReport) {
@@ -2075,7 +2083,7 @@
     
     function validateDepreciationSection() {
       const helper = window.helper || {};
-      const depreciation = helper.valuation?.depreciation || {};
+      const depreciation = helper.depreciation || {};
       
       // Check if there's either global depreciation or per-center depreciation
       const hasGlobalDep = depreciation.global_percentage > 0 || depreciation.global_amount > 0;
