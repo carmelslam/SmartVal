@@ -17,8 +17,17 @@ const valuationData = getValuationData();
 const financialData = getFinancialData();
 
 function buildFeeSummary() {
-  const fees = financialData.fees || {};
+  // Try multiple sources for fees data
+  const fees = helper.fees || financialData.fees || helper.financials?.fees || {};
   const vatRate = parseFloat(fees.vat_rate) || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
+  
+  console.log('🔍 Fees data sources:', {
+    helper_fees: helper.fees,
+    financialData_fees: financialData.fees,  
+    helper_financials_fees: helper.financials?.fees,
+    chosen_fees: fees,
+    vatRate: vatRate
+  });
   
   // Use MathEngine for consistent calculations
   const subtotal = MathEngine.calculateFeesSubtotal(fees);
