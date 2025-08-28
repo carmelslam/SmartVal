@@ -304,9 +304,12 @@ function createComprehensiveFieldMapping(rawHelper) {
     'meta.phone_number': getValue(rawHelper, ['stakeholders.owner.phone', 'general.owner_phone', 'meta.phone_number'], placeholder),
     'meta.inspection_date': getValue(rawHelper, ['case_info.inspection_date', 'meta.inspection_date'], placeholder),
     'meta.incident_date': getValue(rawHelper, ['case_info.incident_date', 'meta.incident_date'], placeholder),
+    'meta.damage_date': getValue(rawHelper, ['case_info.damage_date', 'meta.damage_date', 'case_info.incident_date'], placeholder),
+    'meta.inspection_location': getValue(rawHelper, ['case_info.inspection_location', 'meta.inspection_location'], placeholder),
     'meta.location': getValue(rawHelper, ['meta.location', 'case_info.location'], placeholder),
     'meta.case_id': getValue(rawHelper, ['case_info.case_id', 'meta.case_id'], placeholder),
     'meta.damage': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage'], placeholder),
+    'meta.damage_type': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage_type', 'meta.damage'], placeholder),
     
     // Vehicle fields - prioritize levisummary and car_details
     'helper.vehicle.model': getValue(rawHelper, ['levisummary.full_model', 'car_details.model', 'vehicle.model'], placeholder),
@@ -316,6 +319,8 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.vehicle.ownership_type': getValue(rawHelper, ['car_details.ownership_type', 'vehicle.ownership_type'], placeholder),
     'helper.vehicle.manufacturer': getValue(rawHelper, ['car_details.manufacturer', 'vehicle.manufacturer'], placeholder),
     'helper.vehicle.model_code': getValue(rawHelper, ['levisummary.model_code', 'car_details.model_code', 'vehicle.model_code'], placeholder),
+    'helper.vehicle.full_description': getValue(rawHelper, ['levisummary.full_description', 'car_details.full_description', 'vehicle.full_description'], placeholder),
+    'helper.vehicle.km_reading': getValue(rawHelper, ['car_details.km_reading', 'vehicle.km_reading', 'car_details.km'], placeholder),
     
     // Damage fields - get from centers data
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
@@ -327,6 +332,7 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.calculations.market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
     'helper.calculations.base_market_value': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
     'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
+    'helper.calculations.full_market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
     
     // Levi/Valuation - PRIMARY SOURCE for all valuation data
     'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
@@ -404,7 +410,9 @@ function transformHelperDataForTemplate(rawHelper) {
       km: fieldMappings['helper.vehicle.km'],
       ownership_type: fieldMappings['helper.vehicle.ownership_type'],
       manufacturer: fieldMappings['helper.vehicle.manufacturer'],
-      model_code: fieldMappings['helper.vehicle.model_code']
+      model_code: fieldMappings['helper.vehicle.model_code'],
+      full_description: fieldMappings['helper.vehicle.full_description'],
+      km_reading: fieldMappings['helper.vehicle.km_reading']
     },
     centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
     meta: {
@@ -416,9 +424,12 @@ function transformHelperDataForTemplate(rawHelper) {
       phone_number: fieldMappings['meta.phone_number'],
       inspection_date: fieldMappings['meta.inspection_date'],
       incident_date: fieldMappings['meta.incident_date'],
+      damage_date: fieldMappings['meta.damage_date'],
+      inspection_location: fieldMappings['meta.inspection_location'],
       location: fieldMappings['meta.location'],
       case_id: fieldMappings['meta.case_id'],
-      damage: fieldMappings['meta.damage']
+      damage: fieldMappings['meta.damage'],
+      damage_type: fieldMappings['meta.damage_type']
     },
     damage: {
       description: fieldMappings['helper.damage.description']
@@ -429,7 +440,8 @@ function transformHelperDataForTemplate(rawHelper) {
       damage_percent: fieldMappings['helper.calculations.damage_percent'],
       market_value: fieldMappings['helper.calculations.market_value'],
       base_market_value: fieldMappings['helper.calculations.base_market_value'],
-      total_compensation: fieldMappings['helper.calculations.total_compensation']
+      total_compensation: fieldMappings['helper.calculations.total_compensation'],
+      full_market_value: fieldMappings['helper.calculations.full_market_value']
     },
     custom_adjustments: {
       full_market_adjustments: fieldMappings['helper.custom_adjustments.full_market_adjustments']
