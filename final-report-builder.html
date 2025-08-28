@@ -11633,6 +11633,7 @@
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueDamage" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">ערך המכירה במצבו הניזוק:</label><input type="text" id="sumDamagedSaleValue" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">שיטת תשלום:</label><input type="text" id="paymentMethod" style="background: white; color: #333;" placeholder="מזומן, צ'ק, העברה בנקאית..." /></div>
             <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalDamagedSale" style="background: white; color: #333;" /></div>
           `;
           break;
@@ -11661,6 +11662,15 @@
       // Load data from helper for the new summary structure
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       loadSummaryFieldsFromHelper(helper);
+      
+      // Re-add event listeners for newly created fields
+      setTimeout(() => {
+        const paymentMethodField = document.getElementById('paymentMethod');
+        if (paymentMethodField) {
+          paymentMethodField.addEventListener('input', loadLegalText);
+          paymentMethodField.addEventListener('input', captureSummaryFields);
+        }
+      }, 50);
     }
     
     // ENHANCED VARIANT-SPECIFIC CALCULATION ENGINE - Based on User Mappings
