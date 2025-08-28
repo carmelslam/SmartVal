@@ -473,15 +473,15 @@ function transformHelperDataForTemplate(rawHelper) {
     base_car_price: fieldMappings['base_car_price'],
     damage_location: fieldMappings['damage_location'],
     
-    // Fees mapping
+    // Fees mapping - create simple fee values
     fees: {
-      media: getValue(rawHelper, ['fees.media', 'financials.fees.media'], 0),
-      office: getValue(rawHelper, ['fees.office', 'financials.fees.office'], 0),
-      travel: getValue(rawHelper, ['fees.travel', 'financials.fees.travel'], 0),
-      subtotal: getValue(rawHelper, ['fees.subtotal', 'financials.fees.subtotal'], 0),
-      vat: getValue(rawHelper, ['fees.vat', 'financials.fees.vat'], 0),
-      vat_rate: getValue(rawHelper, ['fees.vat_rate', 'financials.fees.vat_rate'], 18),
-      total: getValue(rawHelper, ['fees.total', 'financials.fees.total'], 0)
+      media: 0,
+      office: 0,
+      travel: 0,
+      subtotal: 0,
+      vat: 0,
+      vat_rate: 18,
+      total: 0
     }
   };
   
