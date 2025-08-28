@@ -40,6 +40,18 @@ function buildFeeSummary() {
     return fees;
   }
   
+  // Check if fees has calculations already
+  if (fees.calculations) {
+    console.log('📊 Found existing calculations:', fees.calculations);
+    // Use existing calculations if available
+    return {
+      photography: fees.photography || { total: 0 },
+      office: fees.office || { total: 0 },
+      travel: fees.travel || { total: 0 },
+      calculations: fees.calculations
+    };
+  }
+  
   // Get VAT rate - default to 18 if not found
   const vatRate = parseFloat(fees.PROTECTED_VAT_RATE) || parseFloat(fees.vat_rate) || 18;
   
@@ -48,37 +60,45 @@ function buildFeeSummary() {
   const office = parseFloat(fees.office?.total) || parseFloat(fees.office) || parseFloat(fees.office_fee) || 0;
   const travel = parseFloat(fees.travel?.total) || parseFloat(fees.travel) || parseFloat(fees.travel_fee) || 0;
   
-  // Calculate subtotal, VAT and total
-  const subtotal = photography + office + travel;
-  const vat = Math.round(subtotal * (vatRate / 100));
-  const total = subtotal + vat;
+  // If we have the values but no calculations, compute them
+  const hasValues = photography > 0 || office > 0 || travel > 0;
   
-  console.log('💵 Fee calculations:', {
-    photography,
-    office,
-    travel,
-    subtotal,
-    vat,
-    vatRate,
-    total
-  });
+  if (hasValues) {
+    // Calculate subtotal, VAT and total
+    const subtotal = photography + office + travel;
+    const vat = Math.round(subtotal * (vatRate / 100));
+    const total = subtotal + vat;
+    
+    console.log('✅ Calculated values from fees:', {
+      photography, office, travel,
+      subtotal, vat, vatRate, total
+    });
+    
+    return {
+      photography: { total: photography },
+      office: { total: office },
+      travel: { total: travel },
+      calculations: {
+        subtotal: subtotal,
+        vat: vat,
+        vat_rate: vatRate,
+        total: total
+      }
+    };
+  }
   
-  // Return structure that matches template expectations
+  // Default fallback - return zeros
+  console.log('⚠️ No fee values found, returning default structure');
+  
   return {
-    photography: {
-      total: photography
-    },
-    office: {
-      total: office
-    },
-    travel: {
-      total: travel
-    },
+    photography: { total: 0 },
+    office: { total: 0 },
+    travel: { total: 0 },
     calculations: {
-      subtotal: subtotal,
-      vat: vat,
+      subtotal: 0,
+      vat: 0,
       vat_rate: vatRate,
-      total: total
+      total: 0
     }
   };
 }
