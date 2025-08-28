@@ -4828,7 +4828,20 @@
         modelCode: document.getElementById('carModelCode')?.value || helper.car_details?.model_code || helper.levi_report?.model_code,
         damagePercent: document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent,
         depreciation: document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent,
-        damageCenters: helper.expertise?.damage_blocks?.length,
+        damageCenters: (() => {
+          // Try multiple sources for damage centers count
+          if (helper.damage_centers_summary && typeof helper.damage_centers_summary === 'object') {
+            return Object.keys(helper.damage_centers_summary).filter(key => key.startsWith('Damage center')).length || 
+                   Object.keys(helper.damage_centers_summary).length;
+          }
+          if (helper.damage_assessment?.comprehensive?.centers && typeof helper.damage_assessment.comprehensive.centers === 'object') {
+            return Object.keys(helper.damage_assessment.comprehensive.centers).length;
+          }
+          if (helper.expertise?.damage_blocks?.length) {
+            return helper.expertise.damage_blocks.length;
+          }
+          return '1'; // Default fallback
+        })(),
         garageDays: document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days,
         carValue: document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.calculations?.full_market_value ? `₪${helper.calculations.full_market_value.toLocaleString()}` : undefined),
         salvageValue: (() => {
