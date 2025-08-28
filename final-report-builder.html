@@ -3351,6 +3351,9 @@
           // Add event listeners after HTML is created
           setTimeout(addDamageCenterEventListeners, 100);
           
+          // Reposition save button if subtotal exists
+          setTimeout(repositionDamageCentersSaveButton, 150);
+          
         } else {
           damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
         }
@@ -9684,6 +9687,24 @@
       `;
     }
     
+    // REPOSITION DAMAGE CENTERS SAVE BUTTON TO APPEAR BEFORE SUMMARY
+    function repositionDamageCentersSaveButton() {
+      try {
+        const damageCentersSection = document.getElementById('damageCentersSummary');
+        const saveButton = damageCentersSection?.querySelector('.section-save-button');
+        const subtotal = damageCentersSection?.querySelector('#damageCentersSubtotal');
+        
+        if (saveButton && subtotal) {
+          const buttonContainer = saveButton.parentElement;
+          // Move button container to before the subtotal
+          subtotal.parentNode.insertBefore(buttonContainer, subtotal);
+          console.log('✅ Repositioned damage centers save button before summary');
+        }
+      } catch (error) {
+        console.error('Error repositioning damage centers save button:', error);
+      }
+    }
+    
     // LOAD DAMAGE CENTERS FROM HELPER
     function loadDamageCentersFromHelper(damageBlocksOrHelper) {
       try {
@@ -9721,6 +9742,9 @@
         // Add subtotal section
         const subtotalHTML = createDamageCentersSubtotal();
         document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', subtotalHTML);
+        
+        // Reposition save button after subtotal is added
+        setTimeout(repositionDamageCentersSaveButton, 100);
         
         // Add event listeners
         setTimeout(() => {
@@ -10705,14 +10729,20 @@
             // For collapsible sections, add the button to the collapsible content div
             const contentDiv = sectionElement.querySelector('#damageCentersSummary, #priceData, #contactData, #grossCalc, #grossPercentageResult, #fullMarketValue');
             if (contentDiv) {
-              // Special handling for damage centers - insert after content but before summary
+              // Special handling for damage centers - insert before summary if it exists
               if (section.id === 'damage-centers') {
-                const damageCentersContent = contentDiv.querySelector('#damageCentersContent');
-                if (damageCentersContent) {
-                  // Insert button right after damageCentersContent
-                  damageCentersContent.parentNode.insertBefore(buttonContainer, damageCentersContent.nextSibling);
+                const damageCentersSubtotal = contentDiv.querySelector('#damageCentersSubtotal');
+                if (damageCentersSubtotal) {
+                  // Insert button before the summary section
+                  damageCentersSubtotal.parentNode.insertBefore(buttonContainer, damageCentersSubtotal);
                 } else {
-                  contentDiv.appendChild(buttonContainer);
+                  const damageCentersContent = contentDiv.querySelector('#damageCentersContent');
+                  if (damageCentersContent) {
+                    // Insert button right after damageCentersContent if no summary exists
+                    damageCentersContent.parentNode.insertBefore(buttonContainer, damageCentersContent.nextSibling);
+                  } else {
+                    contentDiv.appendChild(buttonContainer);
+                  }
                 }
               } else {
                 contentDiv.appendChild(buttonContainer);
