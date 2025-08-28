@@ -93,6 +93,7 @@ function setupHandlebarsHelpers() {
     // Money formatter helper
     Handlebars.registerHelper('money', function(value) {
       const num = parseFloat(value) || 0;
+      console.log('💰 Money helper called with value:', value, 'converted to:', num);
       return new Handlebars.SafeString(`${num.toLocaleString('he-IL')} ₪`);
     });
     
@@ -609,6 +610,8 @@ function injectReportHTML() {
     };
 
     console.log('📊 Template data prepared:', templateData);
+    console.log('💰 Market value being passed:', transformedHelper.calculations?.market_value);
+    console.log('💰 All calculations:', transformedHelper.calculations);
     console.log('🔍 Centers data structure:', {
       helper_centers: helper.centers,
       centers_length: helper.centers ? helper.centers.length : 'undefined',
