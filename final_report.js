@@ -322,6 +322,7 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.vehicle.model_code': getValue(rawHelper, ['levisummary.model_code', 'car_details.model_code', 'vehicle.model_code'], placeholder),
     'helper.vehicle.full_description': getValue(rawHelper, ['levisummary.full_description', 'car_details.full_description', 'vehicle.full_description'], placeholder),
     'helper.vehicle.km_reading': getValue(rawHelper, ['car_details.km_reading', 'vehicle.km_reading', 'car_details.km'], placeholder),
+    'helper.vehicle.market_value': getValue(rawHelper, ['vehicle.market_value', 'calculations.full_market_value', 'levisummary.final_price'], 0),
     
     // Damage fields - get from centers data
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
@@ -413,7 +414,8 @@ function transformHelperDataForTemplate(rawHelper) {
       manufacturer: fieldMappings['helper.vehicle.manufacturer'],
       model_code: fieldMappings['helper.vehicle.model_code'],
       full_description: fieldMappings['helper.vehicle.full_description'],
-      km_reading: fieldMappings['helper.vehicle.km_reading']
+      km_reading: fieldMappings['helper.vehicle.km_reading'],
+      market_value: fieldMappings['helper.vehicle.market_value']
     },
     centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
     meta: {
