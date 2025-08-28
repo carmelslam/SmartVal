@@ -275,8 +275,14 @@ function getAttachmentsList(helper) {
 }
 
 function getFeesLegalText(helper) {
-  // Direct fallback to the fees disclaimer text from vault file
-  const feesDisclaimerText = `שכר שמאי לפי זמן המושקע בתיק (שעת עבודה (placeholder)
+  // Get hourly rate from helper data structure
+  const hourlyRate = helper.fees?.fees_summary?.assessment?.hourly_rate || 
+                    helper.assessment?.hourly_rate || 
+                    helper.hourly_rate || 
+                    '120'; // default fallback
+  
+  // Direct fallback to the fees disclaimer text from vault file with placeholder replacement
+  const feesDisclaimerText = `שכר שמאי לפי זמן המושקע בתיק (שעת עבודה ${hourlyRate} ש"ח)
 
 הוצאות משרד על פי תחשיב יועץ מס (נסיעות לפי "חשב")
 
