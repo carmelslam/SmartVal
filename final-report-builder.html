@@ -2778,7 +2778,7 @@
         const manualFields = [
           // Damaged Sale variant
           { fieldId: 'saleValueDamage', helperKey: 'sale_value_damaged' },
-          { fieldId: 'paymentMethod', helperKey: 'payment_method' },
+          { fieldId: 'paymentMethod', helperKey: 'paymentMethod' },
           { fieldId: 'afterSaleDamage', helperKey: 'total_after_sale_damage' },
           
           // Total Loss variant  
@@ -4640,7 +4640,7 @@
               
               // DAMAGED SALE VARIANT SPECIFIC FIELDS
               'saleValueDamage': 'sale_value_damaged',           // Manual input: sale value in damaged state
-              'paymentMethod': 'payment_method',                 // Manual input: payment method for damaged sale
+              'paymentMethod': 'paymentMethod',                  // Manual input: payment method for damaged sale
               'afterSaleDamage': 'total_after_sale_damage',      // Calculated: market value - sale value
               
               // TOTAL LOSS VARIANT SPECIFIC FIELDS  
@@ -4908,7 +4908,7 @@
         paymentMethod: (() => {
           // For Damaged Sale variant - payment method from UI field
           const paymentField = document.getElementById('paymentMethod')?.value;
-          const helperPayment = helper.final_report?.payment_method;
+          const helperPayment = helper.final_report?.summary?.paymentMethod;
           
           if (paymentField && paymentField.trim() !== '') {
             return paymentField.trim();
@@ -11663,14 +11663,20 @@
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       loadSummaryFieldsFromHelper(helper);
       
-      // Re-add event listeners for newly created fields
+      // Re-add event listeners for newly created fields and reload values
       setTimeout(() => {
         const paymentMethodField = document.getElementById('paymentMethod');
         if (paymentMethodField) {
+          // Load saved value explicitly
+          const savedPayment = helper.final_report?.summary?.paymentMethod;
+          if (savedPayment) {
+            paymentMethodField.value = savedPayment;
+          }
+          
           paymentMethodField.addEventListener('input', loadLegalText);
           paymentMethodField.addEventListener('input', captureSummaryFields);
         }
-      }, 50);
+      }, 100);
     }
     
     // ENHANCED VARIANT-SPECIFIC CALCULATION ENGINE - Based on User Mappings
