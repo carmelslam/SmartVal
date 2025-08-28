@@ -25,14 +25,23 @@ function buildFeeSummary() {
   const vat = MathEngine.calculateVatAmount(subtotal, vatRate);
   const total = MathEngine.round(subtotal + vat);
   
-  return { 
-    travel: MathEngine.parseNumber(fees.travel_fee), 
-    media: MathEngine.parseNumber(fees.media_fee), 
-    office: MathEngine.parseNumber(fees.office_fee), 
-    vat_rate: vatRate, 
-    vat, 
-    subtotal, 
-    total 
+  // Return structure that matches template expectations
+  return {
+    photography: {
+      total: MathEngine.parseNumber(fees.media_fee) || 0
+    },
+    office: {
+      total: MathEngine.parseNumber(fees.office_fee) || 0
+    },
+    travel: {
+      total: MathEngine.parseNumber(fees.travel_fee) || 0
+    },
+    calculations: {
+      subtotal: subtotal,
+      vat: vat,
+      vat_rate: vatRate,
+      total: total
+    }
   };
 }
 
@@ -95,6 +104,12 @@ function setupHandlebarsHelpers() {
       const num = parseFloat(value) || 0;
       console.log('💰 Money helper called with value:', value, 'converted to:', num);
       return new Handlebars.SafeString(`${num.toLocaleString('he-IL')} ₪`);
+    });
+    
+    // Simple number formatter helper (no currency symbol)
+    Handlebars.registerHelper('number', function(value) {
+      const num = parseFloat(value) || 0;
+      return new Handlebars.SafeString(`${num.toLocaleString('he-IL')}`);
     });
     
     // Percent formatter helper
@@ -463,6 +478,15 @@ function transformHelperDataForTemplate(rawHelper) {
       }
     },
     damage_assessment: rawHelper.damage_assessment || {},
+    
+    // Add fees structure for template compatibility  
+    fees: {
+      fees_summary: (() => {
+        const feesSummary = buildFeeSummary();
+        console.log('🔧 Built fees_summary for helper:', feesSummary);
+        return feesSummary;
+      })()
+    },
     
     // Dynamic legal text and attachments
     final_report_legal_text: fieldMappings['helper.final_report_legal_text'],
