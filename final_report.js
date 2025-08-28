@@ -232,13 +232,14 @@ function createComprehensiveFieldMapping(rawHelper) {
   // Define all final report field mappings based on REAL structure
   const fieldMappings = {
     // Meta fields
-    'meta.report_type_display': getValue(rawHelper, ['final_report.type', 'meta.report_type', 'report_type'], 'דו"ח סופי'),
+    'meta.report_type_display': getValue(rawHelper, ['final_report.type', 'meta.report_type', 'report_type'], 'חוות דעת שמאי פרטית'),
     'meta.client_name': getValue(rawHelper, ['stakeholders.owner.name', 'general.owner_name', 'meta.client_name'], placeholder),
     'meta.address': getValue(rawHelper, ['stakeholders.owner.address', 'general.owner_address', 'meta.address'], placeholder),
     'meta.today': getValue(rawHelper, ['meta.today', 'case_info.inspection_date'], new Date().toLocaleDateString('he-IL')),
     'meta.plate': getValue(rawHelper, ['meta.plate', 'vehicle.plate', 'car_details.plate'], placeholder),
     'meta.phone_number': getValue(rawHelper, ['stakeholders.owner.phone', 'general.owner_phone', 'meta.phone_number'], placeholder),
     'meta.inspection_date': getValue(rawHelper, ['case_info.inspection_date', 'meta.inspection_date'], placeholder),
+    'meta.incident_date': getValue(rawHelper, ['case_info.incident_date', 'meta.incident_date'], placeholder),
     'meta.location': getValue(rawHelper, ['meta.location', 'case_info.location'], placeholder),
     'meta.case_id': getValue(rawHelper, ['case_info.case_id', 'meta.case_id'], placeholder),
     'meta.damage': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage'], placeholder),
@@ -250,6 +251,7 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.vehicle.km': getValue(rawHelper, ['car_details.km', 'vehicle.km'], placeholder),
     'helper.vehicle.ownership_type': getValue(rawHelper, ['car_details.ownership_type', 'vehicle.ownership_type'], placeholder),
     'helper.vehicle.manufacturer': getValue(rawHelper, ['car_details.manufacturer', 'vehicle.manufacturer'], placeholder),
+    'helper.vehicle.model_code': getValue(rawHelper, ['levisummary.model_code', 'car_details.model_code', 'vehicle.model_code'], placeholder),
     
     // Damage fields - get from centers data
     'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
@@ -337,7 +339,8 @@ function transformHelperDataForTemplate(rawHelper) {
       year: fieldMappings['helper.vehicle.year'],
       km: fieldMappings['helper.vehicle.km'],
       ownership_type: fieldMappings['helper.vehicle.ownership_type'],
-      manufacturer: fieldMappings['helper.vehicle.manufacturer']
+      manufacturer: fieldMappings['helper.vehicle.manufacturer'],
+      model_code: fieldMappings['helper.vehicle.model_code']
     },
     centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
     meta: {
@@ -348,6 +351,7 @@ function transformHelperDataForTemplate(rawHelper) {
       plate: fieldMappings['meta.plate'],
       phone_number: fieldMappings['meta.phone_number'],
       inspection_date: fieldMappings['meta.inspection_date'],
+      incident_date: fieldMappings['meta.incident_date'],
       location: fieldMappings['meta.location'],
       case_id: fieldMappings['meta.case_id'],
       damage: fieldMappings['meta.damage']
