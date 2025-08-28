@@ -4866,10 +4866,23 @@
             salvageInput = document.getElementById('salvageValue')?.value;
           }
           
-          const helperSalvage = helper.final_report?.summary?.salvage_value || 
-                               helper.final_report?.salvage_value ||
-                               helper.final_report?.salvage_value_total ||
-                               helper.final_report?.salvage_value_legal;
+          // Enhanced helper data fallback for variant-specific salvage values
+          let helperSalvage = '';
+          if (reportType === 'חוות דעת טוטלוסט') {
+            helperSalvage = helper.final_report?.summary?.salvage_value_total ||
+                           helper.final_report?.summary?.salvageValueTotal ||
+                           helper.salvage_value_total_loss ||
+                           helper.salvageValueTotal;
+          } else if (reportType === 'חוות דעת אובדן להלכה') {
+            helperSalvage = helper.final_report?.summary?.salvage_value_legal ||
+                           helper.final_report?.summary?.salvageValueLegal ||
+                           helper.salvage_value_legal_loss ||
+                           helper.salvageValueLegal;
+          } else {
+            helperSalvage = helper.final_report?.summary?.salvage_value || 
+                           helper.final_report?.salvage_value ||
+                           helper.salvage_value;
+          }
           
           let rawValue = '';
           if (salvageInput && salvageInput.trim() !== '' && salvageInput !== '₪0') {
