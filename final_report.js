@@ -281,7 +281,7 @@ function getFeesLegalText(helper) {
                     helper.hourly_rate || 
                     '120'; // default fallback
   
-  // Direct fallback to the fees disclaimer text from vault file with placeholder replacement
+  // Direct fallback to the fees disclaimer text with proper HTML structure
   const feesDisclaimerText = `שכר שמאי לפי זמן המושקע בתיק (שעת עבודה ${hourlyRate} ש"ח)
 
 הוצאות משרד על פי תחשיב יועץ מס (נסיעות לפי "חשב")
@@ -291,11 +291,11 @@ function getFeesLegalText(helper) {
 חשבונית מס תומצא לאחר קבלת התשלום.
 
 פטור מלא מניכוי מס במקור
-================================================================================================================================================
+<div class="legal-separator"></div>
 חוות דעת זו הינה רכושה הבלעדי של "ירון כיוף שמאות", חל איסור מוחלט לבצע בו כל שימוש, באים לא שולם מלוא התמורה וזו נפרעה בפועל בגינו.
 
 חל איסור מוחלט להעתיק, לצלם, למסור או לעשות שימוש בדו"ח זה, או בחלק ממנו למי שאינו מוסמך ורשאי לכך, לרבות באים לא שילם את התמורה כאמור.
-================================================================================================================================================`;
+<div class="legal-separator"></div>`;
 
   return helper.fees_legal_text || feesDisclaimerText;
 }
