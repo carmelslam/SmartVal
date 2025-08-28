@@ -611,7 +611,13 @@ function injectReportHTML() {
 
     console.log('📊 Template data prepared:', templateData);
     console.log('💰 Market value being passed:', transformedHelper.calculations?.market_value);
+    console.log('💰 Full market value being passed:', transformedHelper.calculations?.full_market_value);
     console.log('💰 All calculations:', transformedHelper.calculations);
+    console.log('🔧 Raw helper market values:', {
+      levi_final: helper.levisummary?.final_price,
+      calculations_market: helper.calculations?.market_value,
+      calculations_full: helper.calculations?.full_market_value
+    });
     console.log('🔍 Centers data structure:', {
       helper_centers: helper.centers,
       centers_length: helper.centers ? helper.centers.length : 'undefined',
