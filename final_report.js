@@ -27,10 +27,10 @@ function buildFeeSummary() {
       office: existing.office || { total: 0 }, 
       travel: existing.travel || { total: 0 },
       calculations: {
-        subtotal: existing.calculations?.fees_subtotal || existing.calculations?.subtotal || 0,
-        vat: existing.calculations?.vat_amount || existing.calculations?.vat || 0,
+        subtotal: Math.round(existing.calculations?.fees_subtotal || existing.calculations?.subtotal || 0),
+        vat: Math.round(existing.calculations?.vat_amount || existing.calculations?.vat || 0),
         vat_rate: existing.calculations?.vat_rate || existing.calculations?.vat_percent || 18,
-        total: existing.calculations?.total_with_vat || existing.calculations?.total || 0
+        total: Math.round(existing.calculations?.total_with_vat || existing.calculations?.total || 0)
       }
     };
   }
@@ -87,14 +87,14 @@ function buildFeeSummary() {
     });
     
     return {
-      photography: { total: photography },
-      office: { total: office },
-      travel: { total: travel },
+      photography: { total: Math.round(photography) },
+      office: { total: Math.round(office) },
+      travel: { total: Math.round(travel) },
       calculations: {
-        subtotal: subtotal,
-        vat: vat,
+        subtotal: Math.round(subtotal),
+        vat: Math.round(vat),
         vat_rate: vatRate,
-        total: total
+        total: Math.round(total)
       }
     };
   }
