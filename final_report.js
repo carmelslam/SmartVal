@@ -310,24 +310,27 @@ function getFeesLegalText(helper) {
 }
 
 function getAssessorCredentials(helper) {
-  // Get assessor credentials from vault - same pattern as legal text
-  if (window.vaultLoader && typeof window.vaultLoader.loadLegalText === 'function') {
+  // Try to get from vault loader first
+  if (window.vaultLoader && typeof window.vaultLoader.getText === 'function') {
     try {
-      const credentialsText = window.vaultLoader.loadLegalText('assessor_credentials', helper);
-      if (credentialsText) {
-        return credentialsText;
+      const vaultText = window.vaultLoader.getText('assessor_credentials', 'text');
+      if (vaultText) {
+        return vaultText;
       }
     } catch (error) {
-      console.warn('Error loading assessor credentials from vault coordinator:', error);
+      console.warn('Error loading assessor credentials from vault loader:', error);
     }
   }
   
-  // Fallback to direct vault access
+  // Try direct vault access  
   const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+  const vaultText = vaultTexts.assessor_credentials?.text;
   
-  return helper.assessor_credentials || 
-         vaultTexts.assessor_credentials?.text || 
-         '';
+  if (vaultText) {
+    return vaultText;
+  }
+  
+  return helper.assessor_credentials || '';
 }
 
 // --- Populate Dynamic Content ---
