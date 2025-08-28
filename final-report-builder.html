@@ -4845,8 +4845,25 @@
         garageDays: document.getElementById('garageDays')?.value || helper.final_report?.work_days || helper.expertise?.depreciation?.work_days,
         carValue: document.getElementById('carMarketValue')?.value || document.getElementById('sumMarketValue')?.value || (helper.calculations?.full_market_value ? `₪${helper.calculations.full_market_value.toLocaleString()}` : undefined),
         salvageValue: (() => {
-          const salvageInput = document.getElementById('salvageValue')?.value;
-          const helperSalvage = helper.final_report?.summary?.salvage_value || helper.final_report?.salvage_value;
+          // Check report type to determine correct salvage field
+          const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
+          let salvageInput;
+          
+          if (reportType === 'חוות דעת טוטלוסט') {
+            // Total Loss variant uses salvageValueTotal
+            salvageInput = document.getElementById('salvageValueTotal')?.value;
+          } else if (reportType === 'חוות דעת אובדן להלכה') {
+            // Legal Loss variant uses salvageValueLegal  
+            salvageInput = document.getElementById('salvageValueLegal')?.value;
+          } else {
+            // Other variants use general salvageValue
+            salvageInput = document.getElementById('salvageValue')?.value;
+          }
+          
+          const helperSalvage = helper.final_report?.summary?.salvage_value || 
+                               helper.final_report?.salvage_value ||
+                               helper.final_report?.salvage_value_total ||
+                               helper.final_report?.salvage_value_legal;
           
           if (salvageInput && salvageInput.trim() !== '' && salvageInput !== '₪0') {
             return salvageInput;
