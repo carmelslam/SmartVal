@@ -332,7 +332,7 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.calculations.market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
     'helper.calculations.base_market_value': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
     'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
-    'helper.calculations.full_market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.full_market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.calculations?.market_value || rawHelper.valuation?.final_price || rawHelper.calculations?.full_market_value || 0,
     
     // Levi/Valuation - PRIMARY SOURCE for all valuation data
     'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
