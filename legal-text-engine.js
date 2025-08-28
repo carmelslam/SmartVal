@@ -47,7 +47,7 @@ class LegalTextEngine {
         'global': vaultData.global?.text || '',
         'total_loss': vaultData.total_loss?.text || '',
         'damaged_sale': vaultData.damaged_sale?.text || '',
-        'legal_loss': vaultData['final_report_אובדן_להלכה']?.text || vaultData['אובדן_להלכה']?.text || '',  // Use final report version
+        'legal_loss': vaultData['legal_loss']?.text || '',  // Use final report version
         
         // Estimate Types
         'estimate_legal_loss': vaultData['estimate_אובדן_להלכה']?.text || '',
@@ -217,7 +217,7 @@ class LegalTextEngine {
       'חוות דעת גלובלית': 'global', 
       'חוות דעת טוטלוסט': 'total_loss',
       'חוות דעת מכירה מצבו הניזוק': 'damaged_sale',
-      'חוות דעת אובדן להלכה': 'final_report_אובדן_להלכה'  // Use final report version
+      'חוות דעת אובדן להלכה': 'legal_loss'  // Use final report version
     };
     
     return mapping[reportType] || 'private';
