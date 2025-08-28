@@ -1346,6 +1346,9 @@
       
       // Update progress
       updateProgress();
+      
+      // Ensure all approval buttons are disabled on initialization
+      ensureApprovalButtonsDisabled();
     }
     
     function loadVehicleValidation() {
@@ -2635,7 +2638,7 @@
       const approveBtn = section.querySelector('.btn-success');
       
       if (approveBtn && approveBtn.disabled) {
-        alert('יש לבצע בדיקה אוטומטית לפני אישור הסעיף');
+        alert('⚠️ לא ניתן לאמת את הסעיף!\n\nיש לבצע בדיקה אוטומטית (כפתור כחול) לפני אישור הסעיף (כפתור ירוק).\n\nסדר הפעולות:\n1️⃣ לחץ על "🔍 בדיקה אוטומטית"\n2️⃣ רק לאחר מכן לחץ על "✅ אימות"');
         return;
       }
       
@@ -2679,14 +2682,24 @@
       }
       
       const nextStatus = nextSection.querySelector('.section-status');
-      const nextButtons = nextSection.querySelectorAll('.btn');
+      const validateBtn = nextSection.querySelector('.btn-validate');
       
       nextSection.classList.add('current');
       if (nextStatus) {
         nextStatus.textContent = 'בבדיקה';
         nextStatus.className = 'section-status status-current';
       }
-      nextButtons.forEach(btn => btn.disabled = false);
+      
+      // Only enable the validation button, NOT the approval button
+      if (validateBtn) {
+        validateBtn.disabled = false;
+      }
+      
+      // Ensure approval button stays disabled until validation is performed
+      const approveBtn = nextSection.querySelector('.btn-success');
+      if (approveBtn) {
+        approveBtn.disabled = true;
+      }
     }
     
     function enableApproval(sectionName) {
@@ -2701,6 +2714,21 @@
         approveBtn.disabled = false;
         approveBtn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
       }
+    }
+    
+    function ensureApprovalButtonsDisabled() {
+      const sections = ['vehicle', 'report-type', 'levi', 'damage', 'depreciation', 'fees', 'summary'];
+      sections.forEach(sectionName => {
+        const section = document.getElementById(`section-${sectionName}`);
+        if (section) {
+          const approveBtn = section.querySelector('.btn-success');
+          if (approveBtn) {
+            approveBtn.disabled = true;
+            approveBtn.style.background = ''; // Reset to default style
+          }
+        }
+      });
+      console.log('🔒 All approval buttons disabled - validation required first');
     }
     
     function validateVehicleSection() {
