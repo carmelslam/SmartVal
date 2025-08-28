@@ -115,44 +115,28 @@
       height: 0;
     }
     
-    /* Action buttons styling */
-    .action-buttons {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 15px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      z-index: 1000;
-    }
-    
-    .action-btn {
-      padding: 12px 20px;
+    /* Control Buttons Styling */
+    .control-btn {
+      padding: 12px 16px;
       border: none;
       border-radius: 8px;
-      font-weight: bold;
-      font-size: 14px;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       color: white;
-      transition: transform 0.2s ease;
     }
     
-    .action-btn:hover {
-      transform: translateY(-2px);
+    .control-btn:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transform: translateY(-1px);
     }
     
-    .btn-home { background: #6b7280; }
-    .btn-submit { background: #10b981; }
-    .btn-preview { background: #3b82f6; }
-    .btn-edit { background: #6b7280; }
+    .edit-btn { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    .preview-btn { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); }
+    .submit-btn { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .home-btn { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
     
     /* Hide buttons during print */
     @media print {
@@ -897,27 +881,61 @@
   </script>
   <script type="module" src="final_report.js"></script>
 
-  <!-- Action buttons - hidden during print -->
-  <div class="action-buttons">
-    <button class="action-btn btn-home" onclick="goHome()">
-      🏠 חזור לדף הבית
-    </button>
-    <button class="action-btn btn-submit" onclick="submitFinalReport()">
-      📄 הפק דו"ח אמיתי
-    </button>
-    <button class="action-btn btn-preview" onclick="previewReport()">
-      👁 תצוגה מקדימה
-    </button>
-    <button class="action-btn btn-edit" onclick="editReport()">
-      ✏️ ערוך אומדן
-    </button>
+  <!-- Action Buttons (Print Hidden) -->
+  <div class="control-buttons no-print">
+    <h3 style="color: #1e3a8a; margin-bottom: 15px;">חוות דעת</h3>
+    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeaa7;">
+      <strong>הודעה חשובה:</strong> לאחר אישור סופי ושליחה תיסגר החוות דעת, יישלח אימייל למוסך ותיווצר חוות דעת סופית לרכב מס׳ <strong>{{helper.vehicle.license_plate}}</strong> בתאריך <strong>{{formatDate helper.case_info.created_date}}</strong>.
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
+      <button type="button" class="control-btn edit-btn" onclick="editFinalReport()">
+        ✏️ עריכת נתונים
+      </button>
+      <button type="button" class="control-btn preview-btn" onclick="printPreview()">
+        🖨️ תצוגה מקדימה להדפסה
+      </button>
+      <button type="button" class="control-btn submit-btn" onclick="submitFinalReport()">
+        📤 הפק דוח סופי
+      </button>
+      <button type="button" class="control-btn home-btn" onclick="window.location.href='selection.html'">
+        🏠 חזור לדף הבחירה
+      </button>
+    </div>
   </div>
 
   <script>
     // Action button functions
-    function goHome() {
-      // Navigate to home page
-      window.location.href = '/';
+    function editFinalReport() {
+      // Navigate to edit final report page
+      window.location.href = '/edit-final-report?case_id={{meta.case_id}}';
+    }
+    
+    function printPreview() {
+      // Create PiP preview window for print preview
+      const printContent = document.documentElement.outerHTML;
+      const previewWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes');
+      
+      if (previewWindow) {
+        previewWindow.document.open();
+        previewWindow.document.write(printContent);
+        previewWindow.document.close();
+        previewWindow.document.title = 'תצוגה מקדימה - דוח סופי';
+        
+        // Hide buttons in preview and focus on print view
+        setTimeout(() => {
+          const controlButtons = previewWindow.document.querySelector('.control-buttons');
+          if (controlButtons) {
+            controlButtons.style.display = 'none';
+          }
+          
+          // Auto-open print dialog after content loads
+          previewWindow.focus();
+          setTimeout(() => {
+            previewWindow.print();
+          }, 500);
+        }, 100);
+      }
     }
     
     function submitFinalReport() {
@@ -934,26 +952,14 @@
         body: JSON.stringify(webhookData)
       }).then(response => {
         if (response.ok) {
-          alert('הדוח נשלח בהצלחה למערכת!');
+          alert('הדוח הסופי נשלח בהצלחה למערכת!');
         } else {
-          alert('שגיאה בשליחת הדוח. אנא נסה שוב.');
+          alert('שגיאה בשליחת הדוח הסופי. אנא נסה שוב.');
         }
       }).catch(error => {
         console.error('Webhook error:', error);
         alert('שגיאת רשת. אנא בדוק את החיבור.');
       });
-    }
-    
-    function previewReport() {
-      // Open preview in iframe (PiP - Picture in Picture)
-      const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-      previewWindow.document.write(document.documentElement.outerHTML);
-      previewWindow.document.title = 'תצוגה מקדימה - ' + '{{meta.case_id}}';
-    }
-    
-    function editReport() {
-      // Navigate to edit final report page
-      window.location.href = '/edit-final-report?case_id={{meta.case_id}}';
     }
   </script>
   </div>
