@@ -4855,7 +4855,37 @@
           }
           return undefined;
         })(),
-        compensation: document.getElementById('depCompensation')?.value || helper.final_report?.summary?.dep_compensation
+        compensation: (() => {
+          // For Global variant - use depCompensation field
+          const depCompField = document.getElementById('depCompensation')?.value;
+          const helperComp = helper.final_report?.summary?.dep_compensation;
+          const globalDepValue = helper.depreciation?.globalDepValue;
+          
+          if (depCompField && depCompField.trim() !== '' && depCompField !== '₪0') {
+            return depCompField;
+          } else if (helperComp && helperComp !== '₪0') {
+            return helperComp;
+          } else if (globalDepValue) {
+            return `₪${globalDepValue.toLocaleString()}`;
+          }
+          return undefined;
+        })(),
+        salePrice: (() => {
+          // For Damaged Sale variant - use saleValueDamage field
+          const saleField = document.getElementById('saleValueDamage')?.value;
+          const helperSale = helper.final_report?.summary?.sale_value_damaged;
+          
+          if (saleField && saleField.trim() !== '' && saleField !== '₪0') {
+            return saleField;
+          } else if (helperSale && helperSale !== '₪0') {
+            return helperSale;
+          }
+          return undefined;
+        })(),
+        paymentMethod: (() => {
+          // For Damaged Sale variant - payment method
+          return helper.final_report?.payment_method || 'מזומן';
+        })()
       };
       
       try {
