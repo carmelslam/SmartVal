@@ -115,6 +115,52 @@
       height: 0;
     }
     
+    /* Action buttons styling */
+    .action-buttons {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+    
+    .action-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: white;
+      transition: transform 0.2s ease;
+    }
+    
+    .action-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .btn-home { background: #6b7280; }
+    .btn-submit { background: #10b981; }
+    .btn-preview { background: #3b82f6; }
+    .btn-edit { background: #6b7280; }
+    
+    /* Hide buttons during print */
+    @media print {
+      .action-buttons {
+        display: none !important;
+      }
+    }
+    
     .credentials-box {
       background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
       border: 2px solid #3b82f6;
@@ -850,6 +896,66 @@
     });
   </script>
   <script type="module" src="final_report.js"></script>
+
+  <!-- Action buttons - hidden during print -->
+  <div class="action-buttons">
+    <button class="action-btn btn-home" onclick="goHome()">
+      🏠 חזור לדף הבית
+    </button>
+    <button class="action-btn btn-submit" onclick="submitFinalReport()">
+      📄 הפק דו"ח אמיתי
+    </button>
+    <button class="action-btn btn-preview" onclick="previewReport()">
+      👁 תצוגה מקדימה
+    </button>
+    <button class="action-btn btn-edit" onclick="editReport()">
+      ✏️ ערוך אומדן
+    </button>
+  </div>
+
+  <script>
+    // Action button functions
+    function goHome() {
+      // Navigate to home page
+      window.location.href = '/';
+    }
+    
+    function submitFinalReport() {
+      // Send webhook to make.com with SUBMIT_FINAL_REPORT action
+      const webhookData = {
+        action: 'SUBMIT_FINAL_REPORT',
+        case_id: '{{meta.case_id}}',
+        timestamp: new Date().toISOString()
+      };
+      
+      fetch('/api/webhook/make', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookData)
+      }).then(response => {
+        if (response.ok) {
+          alert('הדוח נשלח בהצלחה למערכת!');
+        } else {
+          alert('שגיאה בשליחת הדוח. אנא נסה שוב.');
+        }
+      }).catch(error => {
+        console.error('Webhook error:', error);
+        alert('שגיאת רשת. אנא בדוק את החיבור.');
+      });
+    }
+    
+    function previewReport() {
+      // Open preview in iframe (PiP - Picture in Picture)
+      const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+      previewWindow.document.write(document.documentElement.outerHTML);
+      previewWindow.document.title = 'תצוגה מקדימה - ' + '{{meta.case_id}}';
+    }
+    
+    function editReport() {
+      // Navigate to edit final report page
+      window.location.href = '/edit-final-report?case_id={{meta.case_id}}';
+    }
+  </script>
   </div>
 </body>
 </html>
