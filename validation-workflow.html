@@ -2630,10 +2630,18 @@
     };
     
     window.approveSection = function(sectionName) {
+      // Check if validation was performed first
+      const section = document.getElementById(`section-${sectionName}`);
+      const approveBtn = section.querySelector('.btn-success');
+      
+      if (approveBtn && approveBtn.disabled) {
+        alert('יש לבצע בדיקה אוטומטית לפני אישור הסעיף');
+        return;
+      }
+      
       // console.log(`✅ Approving section: ${sectionName}`);
       
       // Mark section as completed
-      const section = document.getElementById(`section-${sectionName}`);
       const status = section.querySelector('.section-status');
       const buttons = section.querySelectorAll('.btn');
       
@@ -2772,18 +2780,36 @@
       const helper = window.helper || {};
       const summary = helper.final_report?.summary || {};
       
-      // Check that essential summary fields are present
-      const hasMarketValue = summary.market_value && parseFloat(summary.market_value) > 0;
-      const claimDataTotal = helper.claim_data?.total_claim || 0;
-      const damageAssessmentTotal = helper.damage_assessment?.totals?.['Total with VAT'] || 0;
-      const hasTotalClaim = claimDataTotal > 0 || damageAssessmentTotal > 0;
-      const hasTotalWithVat = summary.total_with_vat && parseFloat(summary.total_with_vat) >= 0;
+      // Use the same validation functions that the display uses
+      const marketValue = getMarketValueForValidation(helper);
+      const hasMarketValue = marketValue && marketValue !== '₪0' && !marketValue.includes('לא זמין');
       
-      // Check garage days are reasonable (using correct source)
+      const totalClaim = getTotalClaimForValidation(helper);
+      const hasTotalClaim = totalClaim && totalClaim !== '₪0' && !totalClaim.includes('לא זמין');
+      
+      const globalTotal = getGlobalTotalForValidation(helper, summary);
+      const hasGlobalTotal = globalTotal && globalTotal !== '₪0' && !globalTotal.includes('לא זמין');
+      
+      // Check garage days are reasonable
       const garageDays = helper.depreciation?.garageDays || 0;
-      const hasReasonableGarageDays = garageDays >= 0 && garageDays <= 365; // Max 1 year
+      const hasReasonableGarageDays = garageDays >= 0 && garageDays <= 365;
       
-      return hasMarketValue && hasTotalClaim && hasTotalWithVat && hasReasonableGarageDays;
+      // Check we have essential data
+      const hasEssentialData = hasMarketValue && hasTotalClaim && hasReasonableGarageDays;
+      
+      console.log('📋 Summary validation check:', {
+        marketValue: marketValue,
+        hasMarketValue: hasMarketValue,
+        totalClaim: totalClaim,
+        hasTotalClaim: hasTotalClaim,
+        globalTotal: globalTotal,
+        hasGlobalTotal: hasGlobalTotal,
+        garageDays: garageDays,
+        hasReasonableGarageDays: hasReasonableGarageDays,
+        result: hasEssentialData
+      });
+      
+      return hasEssentialData;
     }
     
     function showValidationErrors(sectionName) {
