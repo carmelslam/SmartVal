@@ -11635,7 +11635,7 @@
             break;
             
           case 'חוות דעת מכירה מצבו הניזוק':
-            calculateDamagedSaleReport(helper, marketValue);
+            calculateDamagedSaleReport(helper, marketValue).catch(console.error);
             break;
             
           case 'חוות דעת אובדן להלכה':
@@ -11766,8 +11766,85 @@
       return { beforeDifferentials, afterDifferentials };
     }
     
-    // DAMAGED SALE REPORT CALCULATION (Based on User Mapping)
-    function calculateDamagedSaleReport(helper, marketValue) {
+    // FIELD VALUE HELPER WITH RETRY MECHANISM AND HELPER FALLBACK
+    function getFieldValueWithRetry(fieldId, maxRetries = 3, delayMs = 100) {
+      return new Promise((resolve) => {
+        let attempts = 0;
+        
+        function attemptGetValue() {
+          attempts++;
+          console.log(`🔄 Attempt ${attempts}/${maxRetries} to get value for ${fieldId}`);
+          
+          const field = document.getElementById(fieldId);
+          console.log(`🔍 Field check - exists: ${!!field}, hasValue: ${!!(field && field.value)}, value: "${field?.value}"`);
+          
+          if (field && field.value && field.value.trim() !== '') {
+            const rawValue = field.value || '';
+            const cleanValue = rawValue.replace(/[₪,]/g, '');
+            const parsedValue = parseFloat(cleanValue) || 0;
+            if (parsedValue > 0) {
+              console.log(`✅ Successfully got ${fieldId} DOM value: ${parsedValue}`);
+              resolve(parsedValue);
+              return;
+            }
+          }
+          
+          if (attempts < maxRetries) {
+            console.log(`⏳ Retrying ${fieldId} in ${delayMs}ms...`);
+            setTimeout(attemptGetValue, delayMs);
+          } else {
+            // Final fallback: try to get value from helper data
+            console.log(`🔄 Trying helper data fallback for ${fieldId}`);
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const helperKey = getHelperMappingKey ? getHelperMappingKey(fieldId) : null;
+            console.log(`🔍 Helper fallback - fieldId: ${fieldId}, helperKey: ${helperKey}`);
+            
+            if (helperKey && helper.final_report?.summary?.[helperKey]) {
+              const helperRawValue = helper.final_report.summary[helperKey];
+              const helperValue = String(helperRawValue).replace(/[₪,]/g, '');
+              const parsedHelper = parseFloat(helperValue) || 0;
+              console.log(`✅ Got ${fieldId} from helper fallback: raw="${helperRawValue}", clean="${helperValue}", parsed=${parsedHelper}`);
+              resolve(parsedHelper);
+            } else {
+              console.warn(`❌ Failed to get valid value for ${fieldId} after ${maxRetries} attempts and helper fallback`);
+              console.log(`🔍 Helper debug - helperKey exists: ${!!helperKey}, helper.final_report exists: ${!!helper.final_report}, helper.final_report.summary exists: ${!!helper.final_report?.summary}`);
+              if (helperKey && helper.final_report?.summary) {
+                console.log(`🔍 Available helper keys: ${Object.keys(helper.final_report.summary)}`);
+              }
+              resolve(0);
+            }
+          }
+        }
+        
+        attemptGetValue();
+      });
+    }
+    
+    // TEST FUNCTION FOR FIELD VALUE READING FIX
+    async function testFieldValueReading() {
+      console.log('🧪 Testing field value reading fix...');
+      
+      // Test the retry mechanism
+      const testValue = await getFieldValueWithRetry('saleValueDamage');
+      console.log(`🧪 Test result: saleValueDamage = ${testValue}`);
+      
+      // Test helper data access
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const helperValue = helper.final_report?.summary?.sale_value_damaged;
+      console.log(`🧪 Helper data: helper.final_report.summary.sale_value_damaged = ${helperValue}`);
+      
+      // Test DOM element access
+      const field = document.getElementById('saleValueDamage');
+      console.log(`🧪 DOM element: exists=${!!field}, value="${field?.value}", type="${field?.type}"`);
+      
+      return { testValue, helperValue, domExists: !!field };
+    }
+    
+    // Expose test function globally for debugging
+    window.testFieldValueReading = testFieldValueReading;
+    
+    // DAMAGED SALE REPORT CALCULATION (Based on User Mapping) - ASYNC WITH RETRY
+    async function calculateDamagedSaleReport(helper, marketValue) {
       console.log('📊 Calculating Damaged Sale Report');
       
       // 1. Auto-populate market value for Damaged Sale variant
@@ -11780,9 +11857,10 @@
         helper.final_report.summary.market_value_damage = marketValueField.value;
       }
       
-      // 2. Get sale value from manual input (user specified as manual)
-      const saleValueField = document.getElementById('saleValueDamage');
-      const saleValue = saleValueField ? parseFloat(saleValueField.value.replace(/[₪,]/g, '') || '0') : 0;
+      // 2. Get sale value from manual input with retry mechanism - ENHANCED WITH VALIDATION
+      console.log('🔍 Starting field value retrieval for saleValueDamage');
+      const saleValue = await getFieldValueWithRetry('saleValueDamage');
+      console.log(`📋 Final sale value used in calculation: ${saleValue}`);
       
       // 3. Calculation: Market Value - Sale Value (from user mapping)
       const calculatedTotal = marketValue - saleValue;
@@ -12135,7 +12213,7 @@
                 // Trigger Damaged Sale calculation if this is the sale value field
                 if (fieldId === 'saleValueDamage') {
                   const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-                  calculateDamagedSaleReport(helper, marketValue);
+                  calculateDamagedSaleReport(helper, marketValue).catch(console.error);
                 }
               });
               
@@ -14218,7 +14296,7 @@
           callback: function() {
             const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
             const marketValue = parseFloat(String(helper.calculations?.full_market_value || 0).replace(/[₪,]/g, '')) || 0;
-            calculateDamagedSaleReport(helper, marketValue);
+            calculateDamagedSaleReport(helper, marketValue).catch(console.error);
           }
         },
         {
