@@ -187,6 +187,48 @@ function getAttachmentsList(helper) {
   return attachmentsText;
 }
 
+function getFeesLegalText(helper) {
+  // Get fees legal text from vault - same pattern as legal text
+  if (window.vaultLoader && typeof window.vaultLoader.loadLegalText === 'function') {
+    try {
+      const feesText = window.vaultLoader.loadLegalText('fees_desclaimer', helper);
+      if (feesText) {
+        return feesText;
+      }
+    } catch (error) {
+      console.warn('Error loading fees legal text from vault coordinator:', error);
+    }
+  }
+  
+  // Fallback to direct vault access
+  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+  
+  return helper.fees_legal_text || 
+         vaultTexts.fees_desclaimer?.text || 
+         '';
+}
+
+function getAssessorCredentials(helper) {
+  // Get assessor credentials from vault - same pattern as legal text
+  if (window.vaultLoader && typeof window.vaultLoader.loadLegalText === 'function') {
+    try {
+      const credentialsText = window.vaultLoader.loadLegalText('assessor_credentials', helper);
+      if (credentialsText) {
+        return credentialsText;
+      }
+    } catch (error) {
+      console.warn('Error loading assessor credentials from vault coordinator:', error);
+    }
+  }
+  
+  // Fallback to direct vault access
+  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+  
+  return helper.assessor_credentials || 
+         vaultTexts.assessor_credentials?.text || 
+         '';
+}
+
 // --- Populate Dynamic Content ---
 function populateDynamicContent(helper) {
   // Populate dynamic legal text
@@ -211,6 +253,28 @@ function populateDynamicContent(helper) {
   if (attachmentsElement) {
     const attachmentsList = getAttachmentsList(helper);
     attachmentsElement.innerHTML = attachmentsList;
+  }
+  
+  // Populate dynamic fees legal text from vault
+  const feesLegalTextElement = document.getElementById('dynamic-fees-legal-text');
+  if (feesLegalTextElement) {
+    const feesLegalText = getFeesLegalText(helper);
+    const formattedFeesLegalText = feesLegalText
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    
+    feesLegalTextElement.innerHTML = formattedFeesLegalText;
+  }
+  
+  // Populate dynamic assessor credentials from vault
+  const assessorCredentialsElement = document.getElementById('dynamic-assessor-credentials');
+  if (assessorCredentialsElement) {
+    const assessorCredentials = getAssessorCredentials(helper);
+    const formattedAssessorCredentials = assessorCredentials
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    
+    assessorCredentialsElement.innerHTML = formattedAssessorCredentials;
   }
 }
 
