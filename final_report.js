@@ -275,24 +275,23 @@ function getAttachmentsList(helper) {
 }
 
 function getFeesLegalText(helper) {
-  // Get fees legal text from vault - same pattern as legal text
-  if (window.vaultLoader && typeof window.vaultLoader.loadLegalText === 'function') {
-    try {
-      const feesText = window.vaultLoader.loadLegalText('fees_desclaimer', helper);
-      if (feesText) {
-        return feesText;
-      }
-    } catch (error) {
-      console.warn('Error loading fees legal text from vault coordinator:', error);
-    }
-  }
-  
-  // Fallback to direct vault access
-  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
-  
-  return helper.fees_legal_text || 
-         vaultTexts.fees_desclaimer?.text || 
-         '';
+  // Direct fallback to the fees disclaimer text from vault file
+  const feesDisclaimerText = `שכר שמאי לפי זמן המושקע בתיק (שעת עבודה (placeholder)
+
+הוצאות משרד על פי תחשיב יועץ מס (נסיעות לפי "חשב")
+
+חשבון זה אינו מהווה חשבונית מס.
+
+חשבונית מס תומצא לאחר קבלת התשלום.
+
+פטור מלא מניכוי מס במקור
+========================================================================
+חוות דעת זו הינה רכושה הבלעדי של "ירון כיוף שמאות", חל איסור מוחלט לבצע בו כל שימוש, באים לא שולם מלוא התמורה וזו נפרעה בפועל בגינו.
+
+חל איסור מוחלט להעתיק, לצלם, למסור או לעשות שימוש בדו"ח זה, או בחלק ממנו למי שאינו מוסמך ורשאי לכך, לרבות באים לא שילם את התמורה כאמור.
+========================================================================`;
+
+  return helper.fees_legal_text || feesDisclaimerText;
 }
 
 function getAssessorCredentials(helper) {
