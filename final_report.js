@@ -20,7 +20,19 @@ function buildFeeSummary() {
   // Check if fees_summary already exists in the helper structure
   if (helper.fees?.fees_summary) {
     console.log('✅ Using existing fees_summary from helper.fees:', helper.fees.fees_summary);
-    return helper.fees.fees_summary;
+    // Map the existing structure to template expectations
+    const existing = helper.fees.fees_summary;
+    return {
+      photography: existing.photography || { total: 0 },
+      office: existing.office || { total: 0 }, 
+      travel: existing.travel || { total: 0 },
+      calculations: {
+        subtotal: existing.calculations?.fees_subtotal || existing.calculations?.subtotal || 0,
+        vat: existing.calculations?.vat_amount || existing.calculations?.vat || 0,
+        vat_rate: existing.calculations?.vat_rate || existing.calculations?.vat_percent || 18,
+        total: existing.calculations?.total_with_vat || existing.calculations?.total || 0
+      }
+    };
   }
   
   // Try multiple sources for fees data
