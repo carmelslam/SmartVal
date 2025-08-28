@@ -145,7 +145,8 @@ function buildVaultBlocks() {
     assessor_qual: baseText.assessor_qualifications || '',
     legal_summary: fillVaultTemplate(baseText.legal_summary || '', getReplacementMap()),
     legal_declaration: baseText.legal_declaration || '',
-    fees_desclaimer: getFeesLegalText(helper)
+    fees_desclaimer: getFeesLegalText(helper),
+    assessor_credentials: getAssessorCredentials(helper)
   };
 }
 
