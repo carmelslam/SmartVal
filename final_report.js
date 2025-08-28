@@ -279,25 +279,33 @@ function getFeesLegalText(helper) {
   const hourlyRate = helper.fees?.fees_summary?.assessment?.hourly_rate || 
                     helper.assessment?.hourly_rate || 
                     helper.hourly_rate || 
-                    '120'; // default fallback
+                    '120';
   
-  // Direct fallback to the fees disclaimer text with proper HTML structure
-  const feesDisclaimerText = `שכר שמאי לפי זמן המושקע בתיק (שעת עבודה ${hourlyRate} ש"ח)
-
-הוצאות משרד על פי תחשיב יועץ מס (נסיעות לפי "חשב")
-
-חשבון זה אינו מהווה חשבונית מס.
-
-חשבונית מס תומצא לאחר קבלת התשלום.
-
-פטור מלא מניכוי מס במקור
-<div class="legal-separator"></div>
-חוות דעת זו הינה רכושה הבלעדי של "ירון כיוף שמאות", חל איסור מוחלט לבצע בו כל שימוש, באים לא שולם מלוא התמורה וזו נפרעה בפועל בגינו.
-
-חל איסור מוחלט להעתיק, לצלם, למסור או לעשות שימוש בדו"ח זה, או בחלק ממנו למי שאינו מוסמך ורשאי לכך, לרבות באים לא שילם את התמורה כאמור.
-<div class="legal-separator"></div>`;
-
-  return helper.fees_legal_text || feesDisclaimerText;
+  // Try to get from vault loader first
+  if (window.vaultLoader && typeof window.vaultLoader.getText === 'function') {
+    try {
+      const vaultText = window.vaultLoader.getText('fees_desclaimer', 'text');
+      if (vaultText) {
+        return vaultText
+          .replace('(placeholder)', `${hourlyRate} ש"ח`)
+          .replace(/={72,}/g, '<div class="legal-separator"></div>');
+      }
+    } catch (error) {
+      console.warn('Error loading fees text from vault loader:', error);
+    }
+  }
+  
+  // Try direct vault access  
+  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
+  const vaultText = vaultTexts.fees_desclaimer?.text;
+  
+  if (vaultText) {
+    return vaultText
+      .replace('(placeholder)', `${hourlyRate} ש"ח`)
+      .replace(/={72,}/g, '<div class="legal-separator"></div>');
+  }
+  
+  return helper.fees_legal_text || '';
 }
 
 function getAssessorCredentials(helper) {
