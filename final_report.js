@@ -17,33 +17,62 @@ const valuationData = getValuationData();
 const financialData = getFinancialData();
 
 function buildFeeSummary() {
+  // Check if fees_summary already exists in the helper structure
+  if (helper.fees?.fees_summary) {
+    console.log('✅ Using existing fees_summary from helper.fees:', helper.fees.fees_summary);
+    return helper.fees.fees_summary;
+  }
+  
   // Try multiple sources for fees data
-  const fees = helper.fees || financialData.fees || helper.financials?.fees || {};
-  const vatRate = parseFloat(fees.vat_rate) || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
+  const fees = helper.financials?.fees || helper.fees || financialData.fees || {};
   
   console.log('🔍 Fees data sources:', {
     helper_fees: helper.fees,
-    financialData_fees: financialData.fees,  
     helper_financials_fees: helper.financials?.fees,
+    financialData_fees: financialData.fees,  
     chosen_fees: fees,
-    vatRate: vatRate
+    all_helper: helper
   });
   
-  // Use MathEngine for consistent calculations
-  const subtotal = MathEngine.calculateFeesSubtotal(fees);
-  const vat = MathEngine.calculateVatAmount(subtotal, vatRate);
-  const total = MathEngine.round(subtotal + vat);
+  // Check if fees already has the expected structure
+  if (fees.photography && fees.office && fees.travel && fees.calculations) {
+    console.log('✅ Using existing fees structure:', fees);
+    return fees;
+  }
+  
+  // Get VAT rate - default to 18 if not found
+  const vatRate = parseFloat(fees.PROTECTED_VAT_RATE) || parseFloat(fees.vat_rate) || 18;
+  
+  // Parse fee values - looking at the actual data structure
+  const photography = parseFloat(fees.photography?.total) || parseFloat(fees.photography) || parseFloat(fees.media_fee) || 0;
+  const office = parseFloat(fees.office?.total) || parseFloat(fees.office) || parseFloat(fees.office_fee) || 0;
+  const travel = parseFloat(fees.travel?.total) || parseFloat(fees.travel) || parseFloat(fees.travel_fee) || 0;
+  
+  // Calculate subtotal, VAT and total
+  const subtotal = photography + office + travel;
+  const vat = Math.round(subtotal * (vatRate / 100));
+  const total = subtotal + vat;
+  
+  console.log('💵 Fee calculations:', {
+    photography,
+    office,
+    travel,
+    subtotal,
+    vat,
+    vatRate,
+    total
+  });
   
   // Return structure that matches template expectations
   return {
     photography: {
-      total: MathEngine.parseNumber(fees.media_fee) || 0
+      total: photography
     },
     office: {
-      total: MathEngine.parseNumber(fees.office_fee) || 0
+      total: office
     },
     travel: {
-      total: MathEngine.parseNumber(fees.travel_fee) || 0
+      total: travel
     },
     calculations: {
       subtotal: subtotal,
@@ -489,13 +518,17 @@ function transformHelperDataForTemplate(rawHelper) {
     damage_assessment: rawHelper.damage_assessment || {},
     
     // Add fees structure for template compatibility  
-    fees: {
-      fees_summary: (() => {
-        const feesSummary = buildFeeSummary();
-        console.log('🔧 Built fees_summary for helper:', feesSummary);
-        return feesSummary;
-      })()
-    },
+    fees: (() => {
+      // Preserve original fees structure
+      const originalFees = rawHelper.fees || {};
+      const feesSummary = buildFeeSummary();
+      console.log('🔧 Built fees_summary for helper:', feesSummary);
+      console.log('🔍 Original fees data:', originalFees);
+      return {
+        ...originalFees,
+        fees_summary: feesSummary
+      };
+    })(),
     
     // Dynamic legal text and attachments
     final_report_legal_text: fieldMappings['helper.final_report_legal_text'],
