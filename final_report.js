@@ -926,6 +926,7 @@ function createDamageCenterSectionForFinalReport(center, index) {
       ${generateWorksTableForFinalReport(center.Works)}
       ${generatePartsTableForFinalReport(center.Parts)}
       ${generateRepairsTableForFinalReport(center.Repairs)}
+      ${generateDamageCenterSummaryTable(center)}
     </div>
   `;
 }
@@ -1032,6 +1033,83 @@ function generateRepairsTableForFinalReport(repairs) {
   
   tableHtml += '</tbody></table>';
   return tableHtml;
+}
+
+function generateDamageCenterSummaryTable(center) {
+  // Calculate totals for works, parts, and repairs
+  let worksTotal = 0;
+  let partsTotal = 0;
+  let repairsTotal = 0;
+  
+  // Sum works costs
+  if (center.Works && center.Works.works && Array.isArray(center.Works.works)) {
+    worksTotal = center.Works.works.reduce((sum, work) => {
+      return sum + (parseFloat(work.cost) || 0);
+    }, 0);
+  }
+  
+  // Sum parts costs
+  if (center.Parts && center.Parts.parts_required && Array.isArray(center.Parts.parts_required)) {
+    partsTotal = center.Parts.parts_required.reduce((sum, part) => {
+      return sum + (parseFloat(part.מחיר || part.price) || 0);
+    }, 0);
+  }
+  
+  // Sum repairs costs
+  if (center.Repairs && center.Repairs.repairs && Array.isArray(center.Repairs.repairs)) {
+    repairsTotal = center.Repairs.repairs.reduce((sum, repair) => {
+      return sum + (parseFloat(repair.cost) || 0);
+    }, 0);
+  }
+  
+  // Calculate subtotal and VAT
+  const subtotal = worksTotal + partsTotal + repairsTotal;
+  const vatRate = 18; // Default VAT rate
+  const vatAmount = Math.round(subtotal * (vatRate / 100));
+  const totalWithVat = subtotal + vatAmount;
+  
+  const centerNumber = center['Damage center Number'] || 'לא זמין';
+  const location = center.Location || 'לא צוין';
+  
+  return `
+    <div style="margin-top: 20px; page-break-inside: avoid;">
+      <h4>סיכום מוקד הנזק מספר ${centerNumber} - ${location}</h4>
+      <table class="car-details-table summary-table" style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+        <thead style="background-color: #f8f9fa;">
+          <tr>
+            <th style="text-align: right; padding: 8px; border: 1px solid #dee2e6;">פריט</th>
+            <th style="text-align: right; padding: 8px; border: 1px solid #dee2e6;">עלות</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">סך הכל עבודות</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${worksTotal.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">סך הכל חלקים</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${partsTotal.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">סך הכל תיקונים</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${repairsTotal.toLocaleString()}</td>
+          </tr>
+          <tr style="border-top: 2px solid #007bff;">
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">סך הכל חלקים ועבודות ותיקונים</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">₪ ${subtotal.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">מע"מ ${vatRate}%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${vatAmount.toLocaleString()}</td>
+          </tr>
+          <tr style="background-color: #e3f2fd; font-weight: bold;">
+            <td style="padding: 8px; border: 1px solid #dee2e6;">סך הכל כולל מע"מ</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${totalWithVat.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 window.finalReport = {
