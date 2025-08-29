@@ -3246,40 +3246,14 @@
             }
           }
           
-        } else {
-          // If no saved depreciation data, populate from damage centers
-          console.log('🔄 No saved depreciation data found, populating from damage centers...');
-          console.log('🔍 helper.centers exists:', !!helper.centers);
-          console.log('🔍 helper.centers length:', helper.centers?.length || 0);
-          console.log('🔍 helper.centers content:', helper.centers);
-          
-          // Primary source: helper.centers (from damage center wizard)
-          if (helper.centers && helper.centers.length > 0) {
-            console.log('✅ Found damage centers, auto-populating depreciation table...');
-            
-            // Only populate if depreciation table is empty
-            const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-            console.log('🔍 Existing depreciation rows:', existingRows.length);
-            
-            if (existingRows.length === 0) {
-              // Call updateDepreciationFromDamageCenters to populate the table
-              console.log('🔄 Calling updateDepreciationFromDamageCenters...');
-              updateDepreciationFromDamageCenters([]);
-              console.log('✅ Depreciation table populated from damage centers');
-              
-              // Verify rows were actually created
-              setTimeout(() => {
-                const newRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-                console.log('🔍 Depreciation rows after population:', newRows.length);
-              }, 100);
-            } else {
-              console.log('⚠️ Depreciation table already has rows, skipping auto-population');
-            }
-          } else {
-            console.log('⚠️ No damage centers found in helper.centers');
-            console.log('🔍 Checking other possible sources...');
-            console.log('🔍 helper.damage_centers:', helper.damage_centers);
-            console.log('🔍 helper.expertise:', helper.expertise);
+        }
+        
+        // ALWAYS check and auto-populate from damage centers if table is empty
+        if (helper.centers && helper.centers.length > 0) {
+          const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+          if (existingRows.length === 0) {
+            console.log('🔄 Auto-populating depreciation from damage centers...');
+            updateDepreciationFromDamageCenters([]);
           }
         }
       } catch (error) {
