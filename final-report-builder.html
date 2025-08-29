@@ -3244,84 +3244,23 @@
           
         } else {
           // If no saved depreciation data, populate from damage centers
-          const damageCenterNames = [];
+          console.log('🔄 No saved depreciation data found, populating from damage centers...');
           
           // Primary source: helper.centers (from damage center wizard)
-          
-          // Extract damage center names from helper data - prioritize centers helper
           if (helper.centers && helper.centers.length > 0) {
-            helper.centers.forEach((center, index) => {
-              // Get the actual location and center number properly
-              const location = center.Location || center.damage_center_name || '';
-              const centerDescription = center.Description || '';
-              
-              // Extract just the number from "Damage center Number" field
-              // e.g., "מוקד נזק מס' מוקד נזק מס' 1" -> "1"
-              let centerNum = center["Damage center Number"] || String(index + 1);
-              // Extract all numbers and take the last one
-              const numberMatch = String(centerNum).match(/\d+/g);
-              centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
-              
-              // Check if this center already exists (avoid duplicates)
-              const existingCenter = damageCenterNames.find(item => 
-                (typeof item === 'object' ? item.number : item) === centerNum
-              );
-              
-              if (!existingCenter) {
-                damageCenterNames.push({
-                  name: location,  // The actual location/part name
-                  number: centerNum,  // Just the number (1, 2, 3, etc.)
-                  description: centerDescription
-                });
-              }
-            });
-          } else if (helper.expertise?.damage_blocks) {
-            helper.expertise.damage_blocks.forEach(block => {
-              const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
-              if (centerName && !damageCenterNames.includes(centerName)) {
-                damageCenterNames.push(centerName);
-              }
-            });
-          } else if (helper.damage_blocks) {
-            console.log('🔍 Found damage_blocks in root');
-            helper.damage_blocks.forEach(block => {
-              console.log('🔍 Processing damage block:', block);
-              const centerName = block.damage_center_name || block.name || block.center_name || `מוקד נזק`;
-              console.log('🔍 Center name:', centerName);
-              if (centerName && !damageCenterNames.includes(centerName)) {
-                damageCenterNames.push(centerName);
-              }
-            });
-          } else if (helper.expertise?.damage_centers) {
-            console.log('🔍 Found damage_centers in expertise');
-            helper.expertise.damage_centers.forEach(center => {
-              console.log('🔍 Processing damage center:', center);
-              const centerName = center.name || center.center_name || center.damage_center_name || `מוקד נזק`;
-              console.log('🔍 Center name:', centerName);
-              if (centerName && !damageCenterNames.includes(centerName)) {
-                damageCenterNames.push(centerName);
-              }
-            });
-          } else if (helper.damage_centers) {
-            console.log('🔍 Found damage_centers in root');
-            helper.damage_centers.forEach(center => {
-              console.log('🔍 Processing damage center:', center);
-              const centerName = center.name || center.center_name || center.damage_center_name || `מוקד נזק`;
-              console.log('🔍 Center name:', centerName);
-              if (centerName && !damageCenterNames.includes(centerName)) {
-                damageCenterNames.push(centerName);
-              }
-            });
-          }
-          
-          
-          // Only populate from damage centers if we have NO existing depreciation rows
-          // This prevents clearing manually added rows when refreshing
-          const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-          if (damageCenterNames.length > 0) {
-            // Don't call updateDepreciationFromDamageCenters here as it clears the table
-            // Manual rows are already loaded from helper.depreciation.bulk_items above
+            console.log('✅ Found damage centers, auto-populating depreciation table...');
+            
+            // Only populate if depreciation table is empty
+            const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+            if (existingRows.length === 0) {
+              // Call updateDepreciationFromDamageCenters to populate the table
+              updateDepreciationFromDamageCenters([]);
+              console.log('✅ Depreciation table populated from damage centers');
+            } else {
+              console.log('⚠️ Depreciation table already has rows, skipping auto-population');
+            }
           } else {
+            console.log('⚠️ No damage centers found in helper.centers');
           }
         }
       } catch (error) {
@@ -8729,58 +8668,25 @@
           const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
           const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
           
-          // ✅ FIX: Correct field mapping for depreciation
-          // "החלק הניזוק" should show LOCATION/PART (use centerName which contains the damage location)
+          // ✅ FIXED: Correct field mapping for depreciation from damage centers
+          // "מס' מוקד" should show the center number
+          // "החלק הניזוק" should show LOCATION/PART (use centerName which contains the damage location)  
           // "מהות התיקון" should show WORK ESSENCE/TYPE (use centerDescription which contains work details)
+          const centerNum = centerNumber || (damageCenterNames.indexOf(centerData) + 1); // Fallback to index + 1
           const damageLocation = centerName || ''; // This is the location/part that was damaged
           const workEssence = centerDescription || ''; // This is the essence of work to be done
           
-          const row = document.createElement('div');
-          row.className = 'dep-row';
-          row.style.cssText = 'display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;';
+          // Create depreciation row with proper structure to match addDepField format
+          const depreciationRow = {
+            center_number: centerNum,
+            damaged_part: damageLocation,
+            repair_type: workEssence,
+            percent: '', // Empty for manual input
+            value: ''    // Empty for auto-calculation
+          };
           
-          row.innerHTML = `
-            <div><input type="text" placeholder="מס'" value="${centerNumber || ''}" readonly style="background:#f4f6fa;" title="${centerNumber || ''}" /></div>
-            <div><input type="text" placeholder="החלק הניזוק" value="${damageLocation}" onchange="saveDepreciationData()" title="${damageLocation}" /></div>
-            <div><input type="text" placeholder="מהות התיקון" value="${workEssence}" onchange="saveDepreciationData()" title="${workEssence}" /></div>
-            <div><input type="text" placeholder="ירידת ערך (מספר)" onchange="saveDepreciationData()" title="" style="direction: ltr; text-align: right;" /></div>
-            <div><input type="text" placeholder="ערך ב-₪" onchange="saveDepreciationData()" title="" /></div>
-            <div><button type="button" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
-          `;
-          
-          depreciationTable.appendChild(row);
-          
-          // Add tooltip update listeners to all input fields
-          const inputs = row.querySelectorAll('input');
-          inputs.forEach(input => {
-            input.addEventListener('input', function() {
-              this.title = this.value;
-            });
-          });
-          
-          // Add calculation listener to the percentage field
-          const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
-          const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
-          
-          percentInput.addEventListener('input', function() {
-            // Clean the value to extract the numeric part
-            const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
-            let percent = parseFloat(cleanValue) || 0;
-            
-            // Keep value as clean decimal number without % sign
-            this.value = cleanValue;
-            
-            // Calculate value from market price automatically
-            const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
-            const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
-            const marketValue = parseFloat(marketValueStr) || 0;
-            
-            const calculatedValue = (marketValue * percent) / 100;
-            valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
-            
-            // Update helper with depreciation data
-            updateHelperFromField({ target: this });
-          });
+          // Use existing addDepField function to maintain consistency
+          addDepField(depreciationRow);
         });
         
         
