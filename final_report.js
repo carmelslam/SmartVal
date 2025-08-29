@@ -633,7 +633,8 @@ function transformHelperDataForTemplate(rawHelper) {
     centersData: transformed.centers,
     damageAssessmentExists: !!rawHelper.damage_assessment,
     bulkData: rawHelper.damage_assessment?.damage_centers_summary?.bulk,
-    firstCenterNumber: transformed.centers?.[0]?.['Damage center Number'] || 'NO CENTER NUMBER'
+    firstCenterNumber: transformed.centers?.[0]?.['Damage center Number'] || 'NO CENTER NUMBER',
+    centersBreakdownCreated: transformed.centers_breakdown
   });
   
   return transformed;
