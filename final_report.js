@@ -225,7 +225,8 @@ function setupHandlebarsHelpers() {
         centerKey,
         bulkData,
         bulkKeys: helper.damage_assessment?.damage_centers_summary?.bulk ? Object.keys(helper.damage_assessment.damage_centers_summary.bulk) : 'no bulk data',
-        totalWithVAT: bulkData ? bulkData['Total with VAT'] : 'no bulk data for center'
+        totalWithVAT: bulkData ? bulkData['Total with VAT'] : 'no bulk data for center',
+        allBulkData: helper.damage_assessment?.damage_centers_summary?.bulk
       });
       return bulkData ? (parseFloat(bulkData['Total with VAT']) || 0) : 0;
     });
@@ -610,7 +611,18 @@ function transformHelperDataForTemplate(rawHelper) {
     damage_location: fieldMappings['damage_location'],
     
     // Add damage_centers_summary for template access
-    damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
+    damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {},
+    
+    // Create centers_breakdown for חלוקה למוקדים section
+    centers_breakdown: (() => {
+      const bulk = rawHelper.damage_assessment?.damage_centers_summary?.bulk;
+      if (!bulk) return [];
+      
+      return Object.keys(bulk).map(centerKey => ({
+        name: centerKey,
+        total_with_vat: parseFloat(bulk[centerKey]['Total with VAT']) || 0
+      }));
+    })()
   };
   
   // Field mapping completed via comprehensive system above
