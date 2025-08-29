@@ -1122,7 +1122,7 @@ function generateDamageCenterSummaryTable(center) {
             <td style="padding: 8px; border: 1px solid #dee2e6;">₪ ${repairsTotal.toLocaleString()}</td>
           </tr>
           <tr style="border-top: 2px solid #007bff;">
-            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">סך הכל חלקים ועבודות ותיקונים</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">סך הכל חלקים,עבודות ותיקונים</td>
             <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">₪ ${subtotal.toLocaleString()}</td>
           </tr>
           <tr>
