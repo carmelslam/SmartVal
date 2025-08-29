@@ -1038,39 +1038,64 @@ function generateRepairsTableForFinalReport(repairs) {
 }
 
 function generateDamageCenterSummaryTable(center) {
-  // Calculate totals for works, parts, and repairs
+  // Get totals from damage_assessment.damage_centers_summary.bulk for this specific damage center
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  const centerNumber = center['Damage center Number'] || (center.index + 1);
+  const centerKey = `Damage center ${centerNumber}`;
+  
+  // Look for the center data in damage_assessment.damage_centers_summary.bulk
+  const bulkData = helper.damage_assessment?.damage_centers_summary?.bulk?.[centerKey];
+  
   let worksTotal = 0;
   let partsTotal = 0;
   let repairsTotal = 0;
+  let subtotal = 0;
+  let vatAmount = 0;
+  let totalWithVat = 0;
   
-  // Sum works costs
-  if (center.Works && center.Works.works && Array.isArray(center.Works.works)) {
-    worksTotal = center.Works.works.reduce((sum, work) => {
-      return sum + (parseFloat(work.cost) || 0);
-    }, 0);
+  if (bulkData) {
+    // Use the calculated totals from damage_assessment
+    worksTotal = parseFloat(bulkData.Works) || 0;
+    partsTotal = parseFloat(bulkData.Parts) || 0;
+    repairsTotal = parseFloat(bulkData.Repairs) || 0;
+    subtotal = parseFloat(bulkData['Total without VAT']) || 0;
+    totalWithVat = parseFloat(bulkData['Total with VAT']) || 0;
+    vatAmount = totalWithVat - subtotal;
+  } else {
+    // Fallback to manual calculation if bulk data not found
+    console.warn(`No bulk data found for ${centerKey}, using manual calculation`);
+    
+    // Sum works costs
+    if (center.Works && center.Works.works && Array.isArray(center.Works.works)) {
+      worksTotal = center.Works.works.reduce((sum, work) => {
+        return sum + (parseFloat(work.cost) || 0);
+      }, 0);
+    }
+    
+    // Sum parts costs
+    if (center.Parts && center.Parts.parts_required && Array.isArray(center.Parts.parts_required)) {
+      partsTotal = center.Parts.parts_required.reduce((sum, part) => {
+        // Extract numeric value from price string that might contain currency symbols
+        const priceStr = String(part.מחיר || part.price || 0);
+        const numericPrice = parseFloat(priceStr.replace(/[^\d.-]/g, '')) || 0;
+        return sum + numericPrice;
+      }, 0);
+    }
+    
+    // Sum repairs costs
+    if (center.Repairs && center.Repairs.repairs && Array.isArray(center.Repairs.repairs)) {
+      repairsTotal = center.Repairs.repairs.reduce((sum, repair) => {
+        return sum + (parseFloat(repair.cost) || 0);
+      }, 0);
+    }
+    
+    // Calculate subtotal and VAT
+    subtotal = worksTotal + partsTotal + repairsTotal;
+    const vatRate = 18; // Default VAT rate
+    vatAmount = Math.round(subtotal * (vatRate / 100));
+    totalWithVat = subtotal + vatAmount;
   }
   
-  // Sum parts costs
-  if (center.Parts && center.Parts.parts_required && Array.isArray(center.Parts.parts_required)) {
-    partsTotal = center.Parts.parts_required.reduce((sum, part) => {
-      return sum + (parseFloat(part.מחיר || part.price) || 0);
-    }, 0);
-  }
-  
-  // Sum repairs costs
-  if (center.Repairs && center.Repairs.repairs && Array.isArray(center.Repairs.repairs)) {
-    repairsTotal = center.Repairs.repairs.reduce((sum, repair) => {
-      return sum + (parseFloat(repair.cost) || 0);
-    }, 0);
-  }
-  
-  // Calculate subtotal and VAT
-  const subtotal = worksTotal + partsTotal + repairsTotal;
-  const vatRate = 18; // Default VAT rate
-  const vatAmount = Math.round(subtotal * (vatRate / 100));
-  const totalWithVat = subtotal + vatAmount;
-  
-  const centerNumber = center['Damage center Number'] || 'לא זמין';
   const location = center.Location || 'לא צוין';
   
   return `
