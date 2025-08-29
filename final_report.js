@@ -1102,7 +1102,7 @@ function generateDamageCenterSummaryTable(center) {
   
   return `
     <div style="margin-top: 20px; page-break-inside: avoid;">
-      <h4>סיכום מוקד הנזק מספר ${centerNumber} - ${location}</h4>
+      <h4>סיכום מוקד נזק מספר ${centerNumber} - ${location}</h4>
       <table class="car-details-table summary-table" style="width: 100%; border-collapse: collapse; margin: 10px 0;">
         <thead style="background-color: #f8f9fa;">
           <tr>
