@@ -214,6 +214,14 @@ function setupHandlebarsHelpers() {
     Handlebars.registerHelper('add', function(a, b) {
       return a + b;
     });
+    
+    // Helper to get damage center totals from damage_assessment.damage_centers_summary.bulk
+    Handlebars.registerHelper('getDamageCenterTotal', function(centerNumber) {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const centerKey = `Damage center ${centerNumber}`;
+      const bulkData = helper.damage_assessment?.damage_centers_summary?.bulk?.[centerKey];
+      return bulkData ? (parseFloat(bulkData['Total with VAT']) || 0) : 0;
+    });
   }
 }
 
