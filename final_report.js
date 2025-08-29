@@ -920,8 +920,12 @@ function createDamageCenterSectionForFinalReport(center, index) {
   const centerNumber = center['Damage center Number'] || (index + 1);
   const location = center.Location || 'לא צוין';
   
+  // Add page break before each damage center (except the first one)
+  const pageBreakBefore = index > 0 ? '<div style="page-break-before: always;"></div>' : '';
+  
   return `
-    <div class="car-details">
+    ${pageBreakBefore}
+    <div class="car-details" style="page-break-inside: avoid;">
       <div class="car-details-title">מוקד הנזק מספר ${centerNumber} - ${location}</div>
       ${generateWorksTableForFinalReport(center.Works)}
       ${generatePartsTableForFinalReport(center.Parts)}
