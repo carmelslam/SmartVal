@@ -220,6 +220,13 @@ function setupHandlebarsHelpers() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const centerKey = `Damage center ${centerNumber}`;
       const bulkData = helper.damage_assessment?.damage_centers_summary?.bulk?.[centerKey];
+      console.log('🔍 getDamageCenterTotal called:', {
+        centerNumber,
+        centerKey,
+        bulkData,
+        bulkKeys: helper.damage_assessment?.damage_centers_summary?.bulk ? Object.keys(helper.damage_assessment.damage_centers_summary.bulk) : 'no bulk data',
+        totalWithVAT: bulkData ? bulkData['Total with VAT'] : 'no bulk data for center'
+      });
       return bulkData ? (parseFloat(bulkData['Total with VAT']) || 0) : 0;
     });
   }
@@ -600,13 +607,20 @@ function transformHelperDataForTemplate(rawHelper) {
     
     // Additional fields for complete mapping
     base_car_price: fieldMappings['base_car_price'],
-    damage_location: fieldMappings['damage_location']
+    damage_location: fieldMappings['damage_location'],
+    
+    // Add damage_centers_summary for template access
+    damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
   };
   
   // Field mapping completed via comprehensive system above
   console.log('✅ Comprehensive field mapping applied:', {
     mappedFields: Object.keys(fieldMappings).length,
-    placeholderFields: Object.values(fieldMappings).filter(v => v === "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת").length
+    placeholderFields: Object.values(fieldMappings).filter(v => v === "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת").length,
+    centersCount: transformed.centers?.length || 0,
+    centersData: transformed.centers,
+    damageAssessmentExists: !!rawHelper.damage_assessment,
+    bulkData: rawHelper.damage_assessment?.damage_centers_summary?.bulk
   });
   
   return transformed;
