@@ -525,25 +525,7 @@ function transformHelperDataForTemplate(rawHelper) {
       km_reading: fieldMappings['helper.vehicle.km_reading'],
       market_value: fieldMappings['helper.vehicle.market_value']
     },
-    centers: (() => {
-      const rawCenters = rawHelper.centers || rawHelper.damage_assessment?.centers || [];
-      const bulkData = rawHelper.damage_assessment?.damage_centers_summary?.bulk;
-      
-      // Ensure each center has proper summary data
-      return rawCenters.map((center, index) => {
-        const centerNumber = center['Damage center Number'] || (index + 1);
-        const centerKey = `Damage center ${centerNumber}`;
-        const bulkSummary = bulkData?.[centerKey];
-        
-        return {
-          ...center,
-          // Ensure summary exists with Total with VAT
-          summary: bulkSummary ? {
-            'Total with VAT': bulkSummary['Total with VAT']
-          } : (center.summary || { 'Total with VAT': 0 })
-        };
-      });
-    })(),
+    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
       client_name: fieldMappings['meta.client_name'],
