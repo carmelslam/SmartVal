@@ -1043,6 +1043,9 @@ function generateDamageCenterSummaryTable(center) {
   const centerNumber = center['Damage center Number'] || (center.index + 1);
   const centerKey = `Damage center ${centerNumber}`;
   
+  // Get VAT rate from calculations.vat_rate
+  const vatRate = helper.calculations?.vat_rate || 18;
+  
   // Look for the center data in damage_assessment.damage_centers_summary.bulk
   const bulkData = helper.damage_assessment?.damage_centers_summary?.bulk?.[centerKey];
   
@@ -1091,7 +1094,6 @@ function generateDamageCenterSummaryTable(center) {
     
     // Calculate subtotal and VAT
     subtotal = worksTotal + partsTotal + repairsTotal;
-    const vatRate = 18; // Default VAT rate
     vatAmount = Math.round(subtotal * (vatRate / 100));
     totalWithVat = subtotal + vatAmount;
   }
