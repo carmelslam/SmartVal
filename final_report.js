@@ -214,22 +214,6 @@ function setupHandlebarsHelpers() {
     Handlebars.registerHelper('add', function(a, b) {
       return a + b;
     });
-    
-    // Helper to get damage center totals from damage_assessment.damage_centers_summary.bulk
-    Handlebars.registerHelper('getDamageCenterTotal', function(centerNumber) {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const centerKey = `Damage center ${centerNumber}`;
-      const bulkData = helper.damage_assessment?.damage_centers_summary?.bulk?.[centerKey];
-      console.log('🔍 getDamageCenterTotal called:', {
-        centerNumber,
-        centerKey,
-        bulkData,
-        bulkKeys: helper.damage_assessment?.damage_centers_summary?.bulk ? Object.keys(helper.damage_assessment.damage_centers_summary.bulk) : 'no bulk data',
-        totalWithVAT: bulkData ? bulkData['Total with VAT'] : 'no bulk data for center',
-        allBulkData: helper.damage_assessment?.damage_centers_summary?.bulk
-      });
-      return bulkData ? (parseFloat(bulkData['Total with VAT']) || 0) : 0;
-    });
   }
 }
 
@@ -541,7 +525,25 @@ function transformHelperDataForTemplate(rawHelper) {
       km_reading: fieldMappings['helper.vehicle.km_reading'],
       market_value: fieldMappings['helper.vehicle.market_value']
     },
-    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
+    centers: (() => {
+      const rawCenters = rawHelper.centers || rawHelper.damage_assessment?.centers || [];
+      const bulkData = rawHelper.damage_assessment?.damage_centers_summary?.bulk;
+      
+      // Ensure each center has proper summary data
+      return rawCenters.map((center, index) => {
+        const centerNumber = center['Damage center Number'] || (index + 1);
+        const centerKey = `Damage center ${centerNumber}`;
+        const bulkSummary = bulkData?.[centerKey];
+        
+        return {
+          ...center,
+          // Ensure summary exists with Total with VAT
+          summary: bulkSummary ? {
+            'Total with VAT': bulkSummary['Total with VAT']
+          } : (center.summary || { 'Total with VAT': 0 })
+        };
+      });
+    })(),
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
       client_name: fieldMappings['meta.client_name'],
@@ -611,18 +613,7 @@ function transformHelperDataForTemplate(rawHelper) {
     damage_location: fieldMappings['damage_location'],
     
     // Add damage_centers_summary for template access
-    damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {},
-    
-    // Create centers_breakdown for חלוקה למוקדים section
-    centers_breakdown: (() => {
-      const bulk = rawHelper.damage_assessment?.damage_centers_summary?.bulk;
-      if (!bulk) return [];
-      
-      return Object.keys(bulk).map(centerKey => ({
-        name: centerKey,
-        total_with_vat: parseFloat(bulk[centerKey]['Total with VAT']) || 0
-      }));
-    })()
+    damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
   };
   
   // Field mapping completed via comprehensive system above
@@ -633,8 +624,9 @@ function transformHelperDataForTemplate(rawHelper) {
     centersData: transformed.centers,
     damageAssessmentExists: !!rawHelper.damage_assessment,
     bulkData: rawHelper.damage_assessment?.damage_centers_summary?.bulk,
-    firstCenterNumber: transformed.centers?.[0]?.['Damage center Number'] || 'NO CENTER NUMBER',
-    centersBreakdownCreated: transformed.centers_breakdown
+    firstCenterStructure: transformed.centers?.[0] || 'NO CENTER',
+    firstCenterSummary: transformed.centers?.[0]?.summary || 'NO SUMMARY',
+    firstCenterTotalVAT: transformed.centers?.[0]?.summary?.['Total with VAT'] || 'NO TOTAL VAT'
   });
   
   return transformed;
