@@ -8676,17 +8676,59 @@
           const damageLocation = centerName || ''; // This is the location/part that was damaged
           const workEssence = centerDescription || ''; // This is the essence of work to be done
           
-          // Create depreciation row with proper structure to match addDepField format
-          const depreciationRow = {
-            center_number: centerNum,
-            damaged_part: damageLocation,
-            repair_type: workEssence,
-            percent: '', // Empty for manual input
-            value: ''    // Empty for auto-calculation
-          };
+          // Create row directly in the table
+          const row = document.createElement('div');
+          row.className = 'dep-row';
+          row.style.cssText = 'display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:10px; margin-bottom:8px;';
           
-          // Use existing addDepField function to maintain consistency
-          addDepField(depreciationRow);
+          row.innerHTML = `
+            <div><input type="text" placeholder="מס' מוקד" value="${centerNum || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${centerNum || ''}" /></div>
+            <div><input type="text" placeholder="החלק הניזוק" value="${damageLocation}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${damageLocation}" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="${workEssence}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${workEssence}" /></div>
+            <div><input type="text" placeholder="ירידת ערך (מספר)" value="" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="" style="direction: ltr; text-align: right;" /></div>
+            <div><input type="text" placeholder="ערך ב-₪" value="" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="" /></div>
+            <div><button class="btn remove" onclick="removeDepField('${row.id || 'depRow_' + Date.now()}')">מחק</button></div>
+          `;
+          
+          // Set unique ID for the row
+          row.id = 'depRow_' + Date.now() + '_' + (damageCenterNames.indexOf(centerData));
+          
+          // Append to table
+          depreciationTable.appendChild(row);
+          
+          // Add tooltip update listeners to all input fields
+          const inputs = row.querySelectorAll('input');
+          inputs.forEach(input => {
+            input.addEventListener('input', function() {
+              this.title = this.value;
+            });
+          });
+          
+          // Add auto-calculation functionality to the percentage field
+          const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
+          const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+          
+          if (percentInput && valueInput) {
+            percentInput.addEventListener('input', function() {
+              // Clean the value to extract the numeric part
+              const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
+              let percent = parseFloat(cleanValue) || 0;
+              
+              // Keep value as clean decimal number without % sign
+              this.value = cleanValue;
+              
+              // Calculate value from market price automatically
+              const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+              const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+              const marketValue = parseFloat(marketValueStr) || 0;
+              
+              const calculatedValue = (marketValue * percent) / 100;
+              valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+              
+              // Save data after calculation
+              saveDepreciationData();
+            });
+          }
         });
         
         
