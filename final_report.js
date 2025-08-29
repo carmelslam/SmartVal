@@ -982,7 +982,9 @@ function generatePartsTableForFinalReport(parts) {
   parts.parts_required.forEach((part, index) => {
     const rowNum = index + 1;
     const name = part.name || '';
-    const price = part.מחיר || part.price || 0;
+    const rawPrice = part.מחיר || part.price || 0;
+    // Check if price already contains currency symbol
+    const price = String(rawPrice).includes('₪') ? rawPrice : `${rawPrice} ₪`;
     const source = part.source || '';
     const description = part.תיאור || part.description || '';
     
@@ -990,7 +992,7 @@ function generatePartsTableForFinalReport(parts) {
       <tr>
         <td>${rowNum}</td>
         <td>${name}</td>
-        <td>${price} ₪</td>
+        <td>${price}</td>
         <td>${source}</td>
         <td>${description}</td>
       </tr>
