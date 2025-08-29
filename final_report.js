@@ -209,6 +209,11 @@ function setupHandlebarsHelpers() {
     Handlebars.registerHelper('length', function(arr) {
       return Array.isArray(arr) ? arr.length : 0;
     });
+    
+    // Add helper for index + 1
+    Handlebars.registerHelper('add', function(a, b) {
+      return a + b;
+    });
   }
 }
 
