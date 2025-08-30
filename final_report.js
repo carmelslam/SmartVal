@@ -422,11 +422,10 @@ function populateDynamicContent(helper) {
     console.log('Original legal text content:', legalTextElement.textContent);
     
     let formattedText = legalTextElement.textContent
-      // Add proper line breaks after license number and before key sentences
-      .replace(/מס'\s*1097\.\s*נותן/g, 'מס\' 1097.\n\nנותן')
-      .replace(/מס'\s*(\d+)\.\s*נותן/g, 'מס\' $1.\n\nנותן')
-      .replace(/מס'\s*(\d+)\.\s*הנני/g, 'מס\' $1.\n\nהנני')
-      .replace(/משפט\.\s*הנני/g, 'משפט.\n\nהנני')
+      // Format license number with comma, no line break, separate third sentence
+      .replace(/מס'\s*1097\.\s*נותן/g, 'מס\' 1097, נותן')
+      .replace(/מס'\s*(\d+)\.\s*נותן/g, 'מס\' $1, נותן') 
+      .replace(/מס'\s*(\d+)\.\s*הנני/g, 'מס\' $1, הנני')
       .replace(/משפט\.\s*דין/g, 'משפט.\n\nדין')
       .replace(/משפט\.\s*הדין/g, 'משפט.\n\nהדין')
       .replace(/מטרת מסמך זה - ([^:]+):/g, '<strong>מטרת מסמך זה - $1:</strong><br>')
