@@ -430,9 +430,9 @@ function populateDynamicContent(helper) {
       .replace(/משפט\.\s*הדין/g, 'משפט.\n\nהדין')
       .replace(/מטרת מסמך זה - ([^:]+):/g, '<strong>מטרת מסמך זה - $1:</strong><br>')
       .replace(/הצהרת שמאי:/g, '<br><strong>הצהרה:</strong><br>')
-      .replace(/(\d+\.\s)([^\n]+)/g, '<div style="display: flex; align-items: flex-start; margin-bottom: 8px; text-align: right;"><span style="margin-left: 10px; flex-shrink: 0;">$1</span><span style="flex: 1;">$2</span></div>')
+      .replace(/(\d+\.\s)([^\n]+)/g, '<div style="display: flex; align-items: flex-start; margin-bottom: 4px; text-align: right;"><span style="margin-left: 10px; flex-shrink: 0;">$1</span><span style="flex: 1;">$2</span></div>')
       .replace(/\n/g, '<br>')
-      .replace(/---/g, '<br><hr style="border: 1px solid #ccc; margin: 10px 0;"><br>');
+      .replace(/---/g, '<br><hr style="border: 1px solid #ccc; margin: 5px 0;"><br>');
     
     // Debug: log final formatted content
     console.log('Formatted legal text content:', formattedText);
