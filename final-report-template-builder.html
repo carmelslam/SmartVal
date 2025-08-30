@@ -1096,27 +1096,21 @@
       // Get case_id from meta data or URL
       const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
       
-      // Get clean HTML content for PDF conversion (without buttons and draft elements)
-      const cleanHTML = document.documentElement.outerHTML
-        .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
-        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
-      
-      // Send webhook to make.com with SUBMIT_FINAL_REPORT action
+      // Send smaller payload without full HTML to avoid Make.com size limits
       const webhookData = {
         action: 'SUBMIT_FINAL_REPORT',
         case_id: caseId,
         timestamp: new Date().toISOString(),
         report_type: window.helper?.meta?.report_type || 'final_report',
-        html_content: cleanHTML,
         plate_number: window.helper?.vehicle?.plate || window.helper?.meta?.plate || '',
         owner_name: window.helper?.meta?.client_name || '',
         inspection_date: window.helper?.case_info?.inspection_date || window.helper?.meta?.inspection_date || '',
-        today_date: new Date().toLocaleDateString('he-IL')
+        today_date: new Date().toLocaleDateString('he-IL'),
+        report_url: window.location.href
       };
       
       console.log('Sending webhook with data size:', JSON.stringify(webhookData).length);
-      console.log('HTML content size:', cleanHTML.length);
-      console.log('Webhook payload:', { ...webhookData, html_content: '[HTML_CONTENT_TRUNCATED]' });
+      console.log('Webhook payload:', webhookData);
       
       // Use the proper sendToWebhook function
       window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
