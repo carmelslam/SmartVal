@@ -1037,9 +1037,7 @@
   <script>
     // Action button functions
     function editFinalReport() {
-      const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
-      const builderUrl = `final-report-builder.html?case_id=${caseId}`;
-      window.open(builderUrl, '_blank');
+      openPipModal('finalReportBuilderModal');
     }
     
     function viewPreview() {
@@ -1218,7 +1216,67 @@
         });
     }
 
+    // PIP MODAL SYSTEM
+    window.openPipModal = function(modalId) {
+      document.getElementById(modalId).style.display = 'block';
+      document.getElementById('pipOverlay').style.display = 'block';
+      loadPipModalContent(modalId);
+    };
+    
+    window.closePipModal = function(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+      document.getElementById('pipOverlay').style.display = 'none';
+    };
+    
+    function loadPipModalContent(modalId) {
+      const contentDiv = document.getElementById('finalReportBuilderContent');
+      const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
+      const uniqueId = 'iframe_' + Date.now();
+      
+      contentDiv.innerHTML = `
+        <div style="height: calc(80vh - 70px); position: relative;">
+          <iframe 
+            id="${uniqueId}"
+            src="final-report-builder.html?case_id=${caseId}" 
+            style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+            frameborder="0">
+          </iframe>
+        </div>
+      `;
+    }
   </script>
+
+  <!-- PIP MODAL -->
+  <div class="pip-overlay" id="pipOverlay" onclick="closePipModal('finalReportBuilderModal')"></div>
+  
+  <div class="pip-modal" id="finalReportBuilderModal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 1200px; max-height: 80vh; background: white; border: 2px solid #3b82f6; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); z-index: 2000; display: none; overflow: hidden; direction: rtl;">
+    <div class="pip-modal-header" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="pip-modal-title" style="font-size: 18px; font-weight: bold;">📋 בונה דו"ח סופי</div>
+      <div class="pip-modal-controls">
+        <button onclick="closePipModal('finalReportBuilderModal')" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="סגור">✕</button>
+      </div>
+    </div>
+    <div class="pip-modal-content" id="finalReportBuilderContent" style="padding: 20px; max-height: calc(80vh - 70px); overflow-y: auto;">
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">📋</div>
+        <div style="font-size: 18px; margin-bottom: 15px;">בונה דו"ח סופי</div>
+        <div style="color: #64748b;">טוען ממשק עריכה...</div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .pip-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1999;
+      display: none;
+    }
+  </style>
   </div>
 </body>
 </html>
