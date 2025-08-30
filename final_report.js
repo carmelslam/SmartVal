@@ -531,7 +531,7 @@ function transformHelperDataForTemplate(rawHelper) {
       const centerSummary = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
       return {
         ...center,
-        total_with_vat: centerSummary?.["Total with VAT"] || 0
+        total_with_vat: rawHelper.damage_assessment?.damage_centers_summary?.[`Damage center ${center["Damage center Number"]}`]?.["Total with VAT"] || 0
       };
     }),
     meta: {
