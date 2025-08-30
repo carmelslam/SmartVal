@@ -359,7 +359,32 @@ function getAssessorCredentials(helper) {
 
 // --- Populate Dynamic Content ---
 function populateDynamicContent(helper) {
-  // Legal text and attachments are now handled by template Handlebars variables
+  // Format legal text and attachments for proper display
+  const legalTextElement = document.getElementById('dynamic-legal-text');
+  if (legalTextElement && legalTextElement.textContent) {
+    // Format legal text with proper HTML structure
+    let formattedText = legalTextElement.textContent
+      .replace(/מטרת מסמך זה - ([^:]+):/g, '<strong>מטרת מסמך זה - $1:</strong><br>')
+      .replace(/הצהרת שמאי:/g, '<br><strong>הצהרת שמאי:</strong><br>')
+      .replace(/(\d+\.\s)/g, '<br>$1')
+      .replace(/\n/g, '<br>')
+      .replace(/---/g, '<br><hr style="border: 1px solid #ccc; margin: 10px 0;"><br>');
+    
+    legalTextElement.innerHTML = formattedText;
+  }
+  
+  const attachmentsElement = document.getElementById('dynamic-attachments');
+  if (attachmentsElement && attachmentsElement.textContent) {
+    // Format attachments as clean list
+    let attachmentsList = attachmentsElement.textContent
+      .split('\n')
+      .filter(line => line.trim() !== '')
+      .map(line => line.replace(/^\*\*(.+)\*\*$/, '<strong>$1</strong>'))
+      .map(line => line.startsWith('<strong>') ? line : `• ${line}`)
+      .join('<br>');
+    
+    attachmentsElement.innerHTML = attachmentsList;
+  }
   
   // Populate dynamic fees legal text from vault
   const feesLegalTextElement = document.getElementById('dynamic-fees-legal-text');
