@@ -178,7 +178,51 @@ export const sessionEngine = {
   },
 
   getDataSourceForFinal() {
-    return this.hasEstimate() ? this.helper.estimate?.snapshot : this.helper;
+    console.log('🔍 SessionEngine: Getting data source for final report...');
+    
+    // Priority 1: Use estimate snapshot if available and valid
+    if (this.hasEstimate() && this.helper.estimate?.snapshot) {
+      console.log('✅ Using estimate snapshot as data source');
+      const snapshot = this.helper.estimate.snapshot;
+      
+      // Validate snapshot has required data
+      if (snapshot.centers || snapshot.damage_assessment?.centers || snapshot.car_details) {
+        return snapshot;
+      } else {
+        console.warn('⚠️ Estimate snapshot exists but lacks critical data, falling back to main helper');
+      }
+    }
+    
+    // Priority 2: Use main helper data
+    if (this.helper && Object.keys(this.helper).length > 0) {
+      console.log('✅ Using main helper as data source');
+      return this.helper;
+    }
+    
+    // Priority 3: Try to reload from sessionStorage
+    console.warn('⚠️ SessionEngine helper is empty, attempting to reload...');
+    const helperData = sessionStorage.getItem('helper');
+    if (helperData) {
+      try {
+        const parsedHelper = JSON.parse(helperData);
+        console.log('✅ Reloaded helper from sessionStorage');
+        this.helper = parsedHelper;
+        return parsedHelper;
+      } catch (error) {
+        console.error('❌ Failed to parse helper from sessionStorage:', error);
+      }
+    }
+    
+    // Priority 4: Return empty helper structure with placeholders
+    console.error('❌ No valid data source found, returning empty helper structure');
+    return {
+      meta: { report_stage: 'empty' },
+      centers: [],
+      damage_assessment: { centers: [], totals: {} },
+      car_details: {},
+      stakeholders: { owner: {} },
+      case_info: {}
+    };
   },
 
   isFinalized() {

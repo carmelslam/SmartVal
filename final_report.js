@@ -397,66 +397,65 @@ function createComprehensiveFieldMapping(rawHelper) {
   console.log('🔍 ACTUAL HELPER STRUCTURE:', rawHelper);
   console.log('🔍 Helper keys:', Object.keys(rawHelper));
   console.log('🔍 Centers:', rawHelper.centers);
+  console.log('🔍 Damage assessment centers:', rawHelper.damage_assessment?.centers);
   console.log('🔍 Levisummary:', rawHelper.levisummary);
-  console.log('🔍 Levisummary base_price:', rawHelper.levisummary?.base_price);
-  console.log('🔍 Levisummary final_price:', rawHelper.levisummary?.final_price);
-  console.log('🔍 Levisummary adjustments:', rawHelper.levisummary?.adjustments);
   console.log('🔍 Car details:', rawHelper.car_details);
-  console.log('🔍 Damage assessment:', rawHelper.damage_assessment);
+  console.log('🔍 Stakeholders:', rawHelper.stakeholders);
+  console.log('🔍 Case info:', rawHelper.case_info);
   
-  // Define all final report field mappings based on REAL structure
+  // Define all final report field mappings based on ACTUAL helper structure
   const fieldMappings = {
-    // Meta fields
-    'meta.report_type_display': getValue(rawHelper, ['final_report.type', 'meta.report_type', 'report_type'], 'חוות דעת שמאי פרטית'),
-    'meta.client_name': getValue(rawHelper, ['stakeholders.owner.name', 'general.owner_name', 'meta.client_name'], placeholder),
-    'meta.address': getValue(rawHelper, ['stakeholders.owner.address', 'general.owner_address', 'meta.address'], placeholder),
-    'meta.today': getValue(rawHelper, ['meta.today', 'case_info.inspection_date'], new Date().toLocaleDateString('he-IL')),
-    'meta.plate': getValue(rawHelper, ['meta.plate', 'vehicle.plate', 'car_details.plate'], placeholder),
-    'meta.phone_number': getValue(rawHelper, ['stakeholders.owner.phone', 'general.owner_phone', 'meta.phone_number'], placeholder),
+    // Meta fields - use case_info and stakeholders as primary sources
+    'meta.report_type_display': getValue(rawHelper, ['final_report_type', 'report_type'], 'חוות דעת שמאי פרטית'),
+    'meta.client_name': getValue(rawHelper, ['stakeholders.owner.name', 'case_info.client_name', 'meta.client_name'], placeholder),
+    'meta.address': getValue(rawHelper, ['stakeholders.owner.address', 'case_info.address', 'meta.address'], placeholder),
+    'meta.today': getValue(rawHelper, ['case_info.inspection_date', 'meta.today'], new Date().toLocaleDateString('he-IL')),
+    'meta.plate': getValue(rawHelper, ['car_details.plate', 'vehicle.plate', 'meta.plate'], placeholder),
+    'meta.phone_number': getValue(rawHelper, ['stakeholders.owner.phone', 'case_info.phone_number', 'meta.phone_number'], placeholder),
     'meta.inspection_date': getValue(rawHelper, ['case_info.inspection_date', 'meta.inspection_date'], placeholder),
-    'meta.incident_date': getValue(rawHelper, ['case_info.incident_date', 'meta.incident_date'], placeholder),
-    'meta.damage_date': getValue(rawHelper, ['case_info.damage_date', 'meta.damage_date', 'case_info.incident_date'], placeholder),
+    'meta.incident_date': getValue(rawHelper, ['case_info.incident_date', 'case_info.damage_date', 'meta.incident_date'], placeholder),
+    'meta.damage_date': getValue(rawHelper, ['case_info.damage_date', 'case_info.incident_date', 'meta.damage_date'], placeholder),
     'meta.inspection_location': getValue(rawHelper, ['case_info.inspection_location', 'meta.inspection_location'], placeholder),
-    'meta.location': getValue(rawHelper, ['meta.location', 'case_info.location'], placeholder),
+    'meta.location': getValue(rawHelper, ['case_info.inspection_location', 'case_info.location', 'meta.location'], placeholder),
     'meta.case_id': getValue(rawHelper, ['case_info.case_id', 'meta.case_id'], placeholder),
-    'meta.damage': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage'], placeholder),
-    'meta.damage_type': getValue(rawHelper, ['damage_info.damage_type', 'meta.damage_type', 'meta.damage'], placeholder),
+    'meta.damage': getValue(rawHelper, ['case_info.damage_type', 'damage_info.damage_type', 'meta.damage'], placeholder),
+    'meta.damage_type': getValue(rawHelper, ['case_info.damage_type', 'damage_info.damage_type', 'meta.damage_type'], placeholder),
     
-    // Vehicle fields - prioritize levisummary and car_details
-    'helper.vehicle.model': getValue(rawHelper, ['levisummary.full_model', 'car_details.model', 'vehicle.model'], placeholder),
+    // Vehicle fields - prioritize car_details, then levisummary, then vehicle
+    'helper.vehicle.model': getValue(rawHelper, ['car_details.model', 'vehicle.model', 'levisummary.model'], placeholder),
     'helper.vehicle.chassis': getValue(rawHelper, ['car_details.chassis', 'vehicle.chassis'], placeholder),
     'helper.vehicle.year': getValue(rawHelper, ['car_details.year', 'vehicle.year'], placeholder),
-    'helper.vehicle.km': getValue(rawHelper, ['car_details.km', 'vehicle.km'], placeholder),
+    'helper.vehicle.km': getValue(rawHelper, ['car_details.km', 'vehicle.km', 'car_details.km_reading'], placeholder),
     'helper.vehicle.ownership_type': getValue(rawHelper, ['car_details.ownership_type', 'vehicle.ownership_type'], placeholder),
     'helper.vehicle.manufacturer': getValue(rawHelper, ['car_details.manufacturer', 'vehicle.manufacturer'], placeholder),
-    'helper.vehicle.model_code': getValue(rawHelper, ['levisummary.model_code', 'car_details.model_code', 'vehicle.model_code'], placeholder),
-    'helper.vehicle.full_description': getValue(rawHelper, ['levisummary.full_description', 'car_details.full_description', 'vehicle.full_description'], placeholder),
-    'helper.vehicle.km_reading': getValue(rawHelper, ['car_details.km_reading', 'vehicle.km_reading', 'car_details.km'], placeholder),
-    'helper.vehicle.market_value': getValue(rawHelper, ['vehicle.market_value', 'calculations.full_market_value', 'levisummary.final_price'], 0),
+    'helper.vehicle.model_code': getValue(rawHelper, ['car_details.model_code', 'vehicle.model_code', 'levisummary.model_code'], placeholder),
+    'helper.vehicle.full_description': getValue(rawHelper, ['car_details.full_description', 'levisummary.full_description', 'vehicle.full_description'], placeholder),
+    'helper.vehicle.km_reading': getValue(rawHelper, ['car_details.km_reading', 'car_details.km', 'vehicle.km_reading'], placeholder),
+    'helper.vehicle.market_value': getValue(rawHelper, ['levisummary.final_price', 'calculations.market_value', 'vehicle.market_value'], 0),
     
-    // Damage fields - get from centers data
-    'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'damage.description'], placeholder),
+    // Damage fields - get from damage_info and case_info
+    'helper.damage.description': getValue(rawHelper, ['damage_info.description', 'case_info.damage_description', 'damage.description'], placeholder),
     
-    // Calculations - get from centers and damage_assessment totals (consumers, not feeders)
+    // Calculations - FIXED: Use direct property access instead of nested paths
     'helper.calculations.total_damage': rawHelper.damage_assessment?.totals?.['Total with VAT'] || rawHelper.calculations?.total_damage || 0,
-    'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
+    'helper.calculations.vehicle_value_gross': rawHelper.levisummary?.final_price || rawHelper.calculations?.vehicle_value_gross || 0,
     'helper.calculations.damage_percent': rawHelper.calculations?.damage_percent || '0%',
-    'helper.calculations.market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.valuation?.final_price || 0,
-    'helper.calculations.base_market_value': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
+    'helper.calculations.market_value': rawHelper.levisummary?.final_price || rawHelper.calculations?.market_value || 0,
+    'helper.calculations.base_market_value': rawHelper.levisummary?.base_price || rawHelper.calculations?.base_market_value || 0,
     'helper.calculations.total_compensation': rawHelper.calculations?.total_compensation || 0,
-    'helper.calculations.full_market_value': rawHelper.levisummary?.final_price || rawHelper.levisummary?.['מחיר סופי לרכב'] || rawHelper.calculations?.market_value || rawHelper.valuation?.final_price || rawHelper.calculations?.full_market_value || 0,
+    'helper.calculations.full_market_value': rawHelper.levisummary?.final_price || rawHelper.calculations?.full_market_value || 0,
     
     // Levi/Valuation - PRIMARY SOURCE for all valuation data
-    'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.levisummary?.['מחיר בסיס'] || rawHelper.valuation?.base_price || 0,
+    'helper.vehicle_value_base': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
     'helper.levi.adjustments': rawHelper.levisummary?.adjustments || rawHelper.levi_data?.adjustments || [],
     
-    // Depreciation
-    'helper.depreciation.global_percent': getValue(rawHelper, ['depreciation.global_percent'], '0%'),
-    'helper.depreciation.global_amount': getValue(rawHelper, ['depreciation.global_amount'], 0),
-    'helper.expertise.depreciation.centers': getValue(rawHelper, ['expertise.depreciation.centers'], []),
+    // Depreciation - FIXED: Direct property access
+    'helper.depreciation.global_percent': rawHelper.depreciation?.global_percent || '0%',
+    'helper.depreciation.global_amount': rawHelper.depreciation?.global_amount || 0,
+    'helper.depreciation.bulk_items': rawHelper.depreciation?.bulk_items || [],
     
-    // Custom adjustments for market value table - PRIORITIZE LEVI SUMMARY
-    'helper.custom_adjustments.full_market_adjustments': rawHelper.levisummary?.adjustments || rawHelper.custom_adjustments?.full_market_adjustments || rawHelper.levi_data?.adjustments || [],
+    // Custom adjustments for market value table - Use levisummary as primary source
+    'helper.custom_adjustments.full_market_adjustments': rawHelper.levisummary?.adjustments || rawHelper.custom_adjustments?.full_market_adjustments || [],
     
     // Dynamic legal text and attachments
     'helper.final_report_legal_text': rawHelper.final_report_legal_text || '',
@@ -465,10 +464,17 @@ function createComprehensiveFieldMapping(rawHelper) {
     
     // Additional mappings for commonly missed fields  
     'base_car_price': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
-    'damage_location': rawHelper.centers?.[0]?.Location || rawHelper.damage_info?.location || placeholder
+    'damage_location': rawHelper.centers?.[0]?.Location || rawHelper.damage_assessment?.centers?.[0]?.Location || placeholder
   };
   
-  console.log('🔍 Field mapping created:', fieldMappings);
+  console.log('✅ Field mapping created with', Object.keys(fieldMappings).length, 'mappings');
+  console.log('🔍 Sample mappings:', {
+    client_name: fieldMappings['meta.client_name'],
+    vehicle_model: fieldMappings['helper.vehicle.model'],
+    market_value: fieldMappings['helper.calculations.market_value'],
+    total_damage: fieldMappings['helper.calculations.total_damage']
+  });
+  
   return fieldMappings;
 }
 
@@ -502,24 +508,28 @@ function getNestedValue(obj, path) {
 
 // --- Transform Helper Data for Template ---
 function transformHelperDataForTemplate(rawHelper) {
-  // Debug centers data mapping
-  console.log('🔄 Transforming helper data:', {
-    rawHelper_centers: rawHelper.centers,
-    rawHelper_damage_assessment_centers: rawHelper.damage_assessment?.centers,
-    has_centers: !!(rawHelper.centers && rawHelper.centers.length > 0),
-    has_damage_assessment_centers: !!(rawHelper.damage_assessment?.centers && rawHelper.damage_assessment.centers.length > 0)
-  });
+  console.log('🔄 Transforming helper data for template...');
   
-  // DEBUG: Show complete damage_assessment structure
-  console.log('🎯 COMPLETE damage_assessment structure:', rawHelper.damage_assessment);
-  console.log('🎯 damage_centers_summary keys:', Object.keys(rawHelper.damage_assessment?.damage_centers_summary || {}));
-  console.log('🎯 damage_centers_summary full:', rawHelper.damage_assessment?.damage_centers_summary);
+  // CRITICAL: Determine the correct data source for centers
+  let centersSource = rawHelper.centers || rawHelper.damage_assessment?.centers || [];
+  let totalDamageSource = rawHelper.damage_assessment?.totals?.['Total with VAT'] || 0;
+  
+  console.log('🎯 Data sources identified:', {
+    centers_count: centersSource.length,
+    centers_source: centersSource.length > 0 ? 'found' : 'empty',
+    total_damage: totalDamageSource,
+    damage_assessment_exists: !!rawHelper.damage_assessment,
+    levisummary_exists: !!rawHelper.levisummary,
+    car_details_exists: !!rawHelper.car_details,
+    stakeholders_exists: !!rawHelper.stakeholders
+  });
 
   // Create comprehensive field mapping
   const fieldMappings = createComprehensiveFieldMapping(rawHelper);
 
-  // Ensure basic structure exists with mapped values
+  // Transform helper data to template-compatible structure
   const transformed = {
+    // Vehicle information - use mapped values from createComprehensiveFieldMapping
     vehicle: {
       model: fieldMappings['helper.vehicle.model'],
       chassis: fieldMappings['helper.vehicle.chassis'],
@@ -530,46 +540,39 @@ function transformHelperDataForTemplate(rawHelper) {
       model_code: fieldMappings['helper.vehicle.model_code'],
       full_description: fieldMappings['helper.vehicle.full_description'],
       km_reading: fieldMappings['helper.vehicle.km_reading'],
-      market_value: fieldMappings['helper.vehicle.market_value']
+      market_value: fieldMappings['helper.vehicle.market_value'],
+      plate: fieldMappings['meta.plate']
     },
-    centers: (rawHelper.centers || rawHelper.damage_assessment?.centers || []).map((center, index) => {
-      // DEBUG: Log each center being processed
-      console.log(`🔍 DEBUG Center ${index + 1}:`, center);
-      console.log(`🔍 Center field names:`, Object.keys(center));
-      console.log(`🔍 Damage center Number:`, center["Damage center Number"]);
-      console.log(`🔍 Location:`, center.Location);
-      console.log(`🔍 Number field:`, center.number);
-      
-      // Add total_with_vat from damage_assessment.damage_centers_summary
+    
+    // Centers - CRITICAL: Enhanced centers processing with proper totals
+    centers: centersSource.map((center, index) => {
       const centerNumber = center["Damage center Number"] || center.number || (index + 1);
       const centerKey = `Damage center ${centerNumber}`;
+      
+      // Get totals from damage_centers_summary
       const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
       const totalWithVat = summaryData?.["Total with VAT"] || 0;
       
-      console.log(`🔍 Center ${centerNumber} summary lookup:`, {
-        centerKey: centerKey,
+      console.log(`🔧 Processing center ${centerNumber}:`, {
+        originalCenter: center,
+        centerKey,
         summaryExists: !!summaryData,
-        summaryData: summaryData,
-        totalWithVat: totalWithVat,
-        fullSummaryStructure: rawHelper.damage_assessment?.damage_centers_summary
+        totalWithVat
       });
       
-      const result = {
+      return {
         ...center,
-        total_with_vat: totalWithVat
+        "Damage center Number": centerNumber,
+        total_with_vat: totalWithVat,
+        // Ensure all required fields exist
+        Location: center.Location || 'לא צוין',
+        Description: center.Description || '',
+        Works: center.Works || { works: [] },
+        Parts: center.Parts || { parts_required: [] },
+        Repairs: center.Repairs || { repairs: [] }
       };
-      
-      console.log(`✅ CENTER ${centerNumber} FINAL RESULT:`, {
-        centerNumber,
-        location: center.Location,
-        totalWithVat,
-        resultStructure: result,
-        hasTotal: result.total_with_vat !== undefined,
-        totalValue: result.total_with_vat
-      });
-      
-      return result;
     }),
+    // Meta information - CRITICAL for report headers
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
       client_name: fieldMappings['meta.client_name'],
@@ -650,20 +653,108 @@ function transformHelperDataForTemplate(rawHelper) {
     damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
   };
   
-  // Field mapping completed via comprehensive system above
-  console.log('✅ Comprehensive field mapping applied:', {
+  // VALIDATION: Log transformation results  
+  console.log('✅ Helper data transformation completed:', {
     mappedFields: Object.keys(fieldMappings).length,
     placeholderFields: Object.values(fieldMappings).filter(v => v === "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת").length,
     centersCount: transformed.centers?.length || 0,
-    centersData: transformed.centers,
+    hasValidCenters: transformed.centers && transformed.centers.length > 0,
     damageAssessmentExists: !!rawHelper.damage_assessment,
-    bulkData: rawHelper.damage_assessment?.damage_centers_summary?.bulk,
-    firstCenterStructure: transformed.centers?.[0] || 'NO CENTER',
-    firstCenterSummary: transformed.centers?.[0]?.summary || 'NO SUMMARY',
-    firstCenterTotalVAT: transformed.centers?.[0]?.summary?.['Total with VAT'] || 'NO TOTAL VAT'
+    totalDamage: transformed.calculations?.total_damage,
+    marketValue: transformed.calculations?.market_value,
+    clientName: transformed.meta?.client_name,
+    vehicleModel: transformed.vehicle?.model,
+    firstCenterTotalVAT: transformed.centers?.[0]?.total_with_vat || 0
   });
+
+  // VALIDATION: Check for missing critical data
+  const missingCriticalData = [];
+  if (!transformed.meta?.client_name || transformed.meta.client_name.includes('נתונים אלו ימולאו')) {
+    missingCriticalData.push('client_name');
+  }
+  if (!transformed.meta?.case_id || transformed.meta.case_id.includes('נתונים אלו ימולאו')) {
+    missingCriticalData.push('case_id');
+  }
+  if (!transformed.vehicle?.model || transformed.vehicle.model.includes('נתונים אלו ימולאו')) {
+    missingCriticalData.push('vehicle_model');
+  }
+  if (!transformed.centers || transformed.centers.length === 0) {
+    missingCriticalData.push('damage_centers');
+  }
+
+  if (missingCriticalData.length > 0) {
+    console.warn('⚠️ Missing critical data for template:', missingCriticalData);
+  }
   
   return transformed;
+}
+
+// --- Data Validation Function ---
+function validateHelperDataForTemplate(helper) {
+  console.log('🔍 Validating helper data for template...');
+  
+  const missingFields = [];
+  const warnings = [];
+  
+  // Check for critical data sections
+  if (!helper.car_details && !helper.vehicle && !helper.levisummary) {
+    missingFields.push('נתוני רכב');
+  }
+  
+  if (!helper.stakeholders?.owner?.name && !helper.case_info?.client_name) {
+    missingFields.push('שם לקוח');
+  }
+  
+  if (!helper.case_info?.case_id) {
+    missingFields.push('מספר תיק');
+  }
+  
+  // Check centers data (critical for damage assessment)
+  const hasCenters = (helper.centers && helper.centers.length > 0) || 
+                    (helper.damage_assessment?.centers && helper.damage_assessment.centers.length > 0);
+  
+  if (!hasCenters) {
+    warnings.push('מוקדי נזק');
+  }
+  
+  // Check financial data
+  if (!helper.levisummary?.final_price && !helper.calculations?.market_value) {
+    warnings.push('שווי רכב');
+  }
+  
+  // Determine validation result
+  let isValid = true;
+  let severity = 'warning';
+  let message = 'הדוח מוכן להצגה';
+  let details = '';
+  
+  if (missingFields.length > 0) {
+    isValid = false;
+    severity = 'error';
+    message = 'חסרים נתונים קריטיים להצגת הדוח';
+    details = 'אנא השלם את הנתונים החסרים דרך המערכת';
+  } else if (warnings.length > 0) {
+    // Allow with warnings but show them
+    message = 'הדוח יוצג עם נתונים חלקיים';
+    details = `חסרים נתונים לא קריטיים: ${warnings.join(', ')}`;
+  }
+  
+  console.log('✅ Validation completed:', {
+    isValid,
+    severity,
+    missingFields,
+    warnings,
+    message
+  });
+  
+  return {
+    isValid,
+    severity,
+    message,
+    details,
+    missingFields,
+    warnings
+  };
 }
 
 // --- Inject Final Report ---
@@ -684,12 +775,14 @@ function injectReportHTML() {
     return;
   }
 
-  // Check if we have minimal required data
-  if (!helper.vehicle && !helper.centers && !helper.meta && !helper.car_details) {
+  // ENHANCED: Comprehensive data validation
+  const validationResult = validateHelperDataForTemplate(helper);
+  if (!validationResult.isValid) {
     container.innerHTML = `
-      <div style="border: 2px solid orange; padding: 20px; font-size: 16px; color: orange; text-align: center;">
-        📋 נתונים אלו ימולאו לאחר סיום בניית חוות הדעת<br>
-        <small>אנא השלם את תהליך האקספרטיזה כדי לראות את הדו"ח המלא</small>
+      <div style="border: 2px solid ${validationResult.severity === 'error' ? 'red' : 'orange'}; padding: 20px; font-size: 16px; color: ${validationResult.severity === 'error' ? 'red' : 'orange'}; text-align: center;">
+        ${validationResult.severity === 'error' ? '❌' : '⚠️'} ${validationResult.message}<br>
+        <small>${validationResult.details}</small>
+        ${validationResult.missingFields.length > 0 ? `<br><br><strong>חסרים:</strong> ${validationResult.missingFields.join(', ')}` : ''}
       </div>
     `;
     return;
