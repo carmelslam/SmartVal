@@ -692,7 +692,7 @@
           {{#each helper.centers}}
           <tr>
             <td>מוקד {{this.["Damage center Number"]}} - {{this.Location}}</td>
-            <td>{{this.Summary.["Total with VAT"]}} ₪</td>
+            <td>{{money this.total_with_vat}}</td>
           </tr>
           {{/each}}
           <tr>
@@ -712,21 +712,25 @@
       <div class="car-details-title">ערך הרכב לנזק גולמי</div>
       <table class="car-details-table">
         <tr><th>מרכיב</th><th>תוספת \ הפחתה</th><th>אחוז</th><th>ערך</th><th>מחיר מצטבר</th></tr>
-        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>-</td><td>-</td><td>{{helper.valuation.base_price}} ₪</td><td>{{helper.valuation.base_price}} ₪</td></tr>
+        <tr><td>ערך הרכב ע"פ מחירון כולל מע"מ</td><td>-</td><td>-</td><td>{{money helper.calculations.base_market_value}}</td><td>{{money helper.calculations.base_market_value}}</td></tr>
+        {{#each helper.custom_adjustments.full_market_adjustments}}
         <tr>
-          <td>{{helper.valuation.adjustments.features.value}}</td>
-          <td>{{#if helper.valuation.adjustments.features.amount}}{{#if (gt helper.valuation.adjustments.features.amount 0)}}תוספת{{else}}הפחתה{{/if}}{{else}}-{{/if}}</td>
-          <td>{{helper.valuation.adjustments.features.percent}}%</td>
-          <td>{{helper.valuation.adjustments.features.amount}}</td>
-          <td>{{helper.valuation.adjustments.features.cumulative}}</td>
+          <td>{{this.description}}</td>
+          <td>{{#if this.percentage}}{{#if (eq this.type 'plus')}}תוספת{{else}}הפחתה{{/if}}{{else}}-{{/if}}</td>
+          <td>{{#if this.percentage}}{{this.percentage}}%{{else}}-{{/if}}</td>
+          <td>{{#if (eq this.type 'minus')}}-{{/if}}{{money this.value}}</td>
+          <td>{{money this.cumulative}}</td>
         </tr>
+        {{/each}}
+        {{#each helper.levi.adjustments}}
         <tr>
-          <td>{{helper.valuation.adjustments.registration.value}}</td>
-          <td>{{#if helper.valuation.adjustments.registration.amount}}{{#if (gt helper.valuation.adjustments.registration.amount 0)}}תוספת{{else}}הפחתה{{/if}}{{else}}-{{/if}}</td>
-          <td>{{helper.valuation.adjustments.registration.percent}}%</td>
-          <td>{{helper.valuation.adjustments.registration.amount}}</td>
-          <td>{{helper.valuation.adjustments.registration.cumulative}}</td>
+          <td>{{this.label}}</td>
+          <td>{{#if (gt this.amount 0)}}תוספת{{else}}הפחתה{{/if}}</td>
+          <td>{{this.percent}}%</td>
+          <td>{{money this.amount}}</td>
+          <td>{{money this.cumulative}}</td>
         </tr>
+        {{/each}}
         <tr><td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>{{helper.calculations.vehicle_value_gross}} ₪</strong></td></tr>
       </table>
     </div>

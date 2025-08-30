@@ -525,7 +525,15 @@ function transformHelperDataForTemplate(rawHelper) {
       km_reading: fieldMappings['helper.vehicle.km_reading'],
       market_value: fieldMappings['helper.vehicle.market_value']
     },
-    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
+    centers: (rawHelper.centers || rawHelper.damage_assessment?.centers || []).map(center => {
+      // Add total_with_vat from damage_assessment.damage_centers_summary
+      const centerKey = `Damage center ${center["Damage center Number"] || center.number || 1}`;
+      const centerSummary = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
+      return {
+        ...center,
+        total_with_vat: centerSummary?.["Total with VAT"] || 0
+      };
+    }),
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
       client_name: fieldMappings['meta.client_name'],
@@ -561,9 +569,17 @@ function transformHelperDataForTemplate(rawHelper) {
     levi: {
       adjustments: fieldMappings['helper.levi.adjustments']
     },
+    valuation: {
+      base_price: rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
+      adjustments: {
+        features: rawHelper.levisummary?.adjustments?.[0] || {},
+        registration: rawHelper.levisummary?.adjustments?.[1] || {}
+      }
+    },
     depreciation: {
       global_percent: fieldMappings['helper.depreciation.global_percent'],
-      global_amount: fieldMappings['helper.depreciation.global_amount']
+      global_amount: fieldMappings['helper.depreciation.global_amount'],
+      bulk_items: rawHelper.depreciation?.bulk_items || []
     },
     expertise: {
       depreciation: {
