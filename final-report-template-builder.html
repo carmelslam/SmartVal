@@ -677,7 +677,7 @@
   </div>
 
  
-  {{#if helper.centers}}
+  {{#if helper.damage_assessment.damage_centers_summary}}
   <div class="section">
     <div class="car-details">
       <div class="car-details-title">חלוקה למוקדים</div>
@@ -689,12 +689,14 @@
           </tr>
         </thead>
         <tbody>
-          {{#each helper.centers}}
-          <tr>
-            <td>מוקד {{this.["Damage center Number"]}} - {{this.Location}}</td>
-            <td>{{money this.total_with_vat}}</td>
-          </tr>
-          {{/each}}
+          {{#with helper.damage_assessment.damage_centers_summary}}
+            {{#each this}}
+            <tr>
+              <td>{{@key}}</td>
+              <td>{{money this.["Total with VAT"]}}</td>
+            </tr>
+            {{/each}}
+          {{/with}}
           <tr>
             <td><strong>סה"כ כלל המוקדים כולל מע"מ</strong></td>
             <td><strong>{{money helper.damage_assessment.totals.["Total with VAT"]}}</strong></td>
@@ -729,24 +731,20 @@
           </tr>
         </thead>
         <tbody>
-          <!-- Test 1: Direct access to damage_centers_summary -->
-          {{#if helper.damage_assessment.damage_centers_summary}}
-            {{#each helper.damage_assessment.damage_centers_summary}}
-            <tr>
-              <td>{{@key}}</td>
+          <!-- Test 1: Fixed approach with 'with' helper -->
+          {{#with helper.damage_assessment.damage_centers_summary}}
+            {{#each this}}
+            <tr style="background: #e8f5e8;">
+              <td>✅ {{@key}}</td>
               <td>מיקום נזק</td>
               <td>{{this.["Total with VAT"]}} ₪</td>
             </tr>
             {{/each}}
           {{else}}
             <tr><td colspan="3" style="background: #ffebee; padding: 15px;">
-              ❌ אין נתוני damage_centers_summary<br>
-              <small style="direction: ltr; font-size: 10px;">
-                Object keys: {{#each helper.damage_assessment.damage_centers_summary}}{{@key}}, {{/each}}<br>
-                Is empty: {{#unless helper.damage_assessment.damage_centers_summary}}TRUE{{else}}FALSE{{/unless}}
-              </small>
+              ❌ No data in damage_centers_summary
             </td></tr>
-          {{/if}}
+          {{/with}}
           
           <!-- Test 2: Show total from totals -->
           <tr style="background: #e0f2fe;">
