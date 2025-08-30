@@ -381,6 +381,25 @@ function getAssessorCredentials(helper) {
 
 // --- Populate Dynamic Content ---
 function populateDynamicContent(helper) {
+  // Populate action button message fields with JavaScript (since Handlebars isn't working)
+  const plateElement = document.getElementById('dynamic-plate');
+  const inspectionDateElement = document.getElementById('dynamic-inspection-date');
+  const todayDateElement = document.getElementById('dynamic-today-date');
+  
+  if (plateElement && helper.vehicle?.plate) {
+    plateElement.textContent = helper.vehicle.plate;
+  }
+  
+  if (inspectionDateElement && helper.case_info?.inspection_date) {
+    const date = new Date(helper.case_info.inspection_date);
+    inspectionDateElement.textContent = date.toLocaleDateString('he-IL');
+  }
+  
+  if (todayDateElement) {
+    const today = new Date();
+    todayDateElement.textContent = today.toLocaleDateString('he-IL');
+  }
+  
   // Format legal text and attachments for proper display
   const legalTextElement = document.getElementById('dynamic-legal-text');
   if (legalTextElement && legalTextElement.textContent) {
