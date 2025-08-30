@@ -142,7 +142,14 @@
     @media print {
       .action-buttons,
       .control-buttons,
-      .no-print {
+      .no-print,
+      button,
+      .control-btn {
+        display: none !important;
+      }
+      
+      /* Also hide any elements with watermark text */
+      div[style*="טיוטה בלבד"] {
         display: none !important;
       }
     }
@@ -1103,7 +1110,11 @@
       // Get clean HTML content for PDF conversion (without buttons and draft elements)
       const cleanHTML = document.documentElement.outerHTML
         .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
-        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
+        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
+        .replace(/<div[^>]*style="[^"]*position:fixed[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
+        .replace(/טיוטה בלבד/g, '')
+        .replace(/<button[\s\S]*?<\/button>/g, '')
+        .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
       
       // Use the same format as final_report.js for consistency with Make.com
       const webhookData = {
