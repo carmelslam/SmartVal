@@ -363,16 +363,24 @@ function populateDynamicContent(helper) {
   const legalTextElement = document.getElementById('dynamic-legal-text');
   if (legalTextElement && legalTextElement.textContent) {
     // Format legal text with proper HTML structure
+    // Debug: log original content
+    console.log('Original legal text content:', legalTextElement.textContent);
+    
     let formattedText = legalTextElement.textContent
-      // Fix license number line breaks (multiple patterns)
-      .replace(/מס'\s*\n\s*1097/g, 'מס\' 1097')
-      .replace(/מס'\s*\n\s*(\d+)/g, 'מס\' $1')
-      .replace(/אני החת"מ:([^.]*)מס'\s*\n\s*(\d+)/g, 'אני החת"מ:$1מס\' $2')
+      // Fix license number line breaks (multiple aggressive patterns)
+      .replace(/מס'\s*[\n\r]\s*1097/g, 'מס\' 1097')
+      .replace(/מס'\s*[\n\r]\s*(\d+)/g, 'מס\' $1')
+      .replace(/מס'\s+[\n\r]\s*(\d+)/g, 'מס\' $1')
+      .replace(/אני החת"מ:([^.]*?)מס'\s*[\n\r]\s*(\d+)/g, 'אני החת"מ:$1מס\' $2')
+      .replace(/תעודת שמאי\s*מס'\s*[\n\r]\s*(\d+)/g, 'תעודת שמאי מס\' $1')
       .replace(/מטרת מסמך זה - ([^:]+):/g, '<strong>מטרת מסמך זה - $1:</strong><br>')
       .replace(/הצהרת שמאי:/g, '<br><strong>הצהרה:</strong><br>')
       .replace(/(\d+\.\s)([^\n]+)/g, '<div style="display: flex; align-items: flex-start; margin-bottom: 8px; text-align: right;"><span style="margin-left: 10px; flex-shrink: 0;">$1</span><span style="flex: 1;">$2</span></div>')
       .replace(/\n/g, '<br>')
       .replace(/---/g, '<br><hr style="border: 1px solid #ccc; margin: 10px 0;"><br>');
+    
+    // Debug: log final formatted content
+    console.log('Formatted legal text content:', formattedText);
     
     legalTextElement.innerHTML = formattedText;
   }
