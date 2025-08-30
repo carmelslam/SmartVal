@@ -422,12 +422,13 @@ function populateDynamicContent(helper) {
     console.log('Original legal text content:', legalTextElement.textContent);
     
     let formattedText = legalTextElement.textContent
-      // Fix license number line breaks (multiple aggressive patterns)
-      .replace(/מס'\s*[\n\r]\s*1097/g, 'מס\' 1097')
-      .replace(/מס'\s*[\n\r]\s*(\d+)/g, 'מס\' $1')
-      .replace(/מס'\s+[\n\r]\s*(\d+)/g, 'מס\' $1')
-      .replace(/אני החת"מ:([^.]*?)מס'\s*[\n\r]\s*(\d+)/g, 'אני החת"מ:$1מס\' $2')
-      .replace(/תעודת שמאי\s*מס'\s*[\n\r]\s*(\d+)/g, 'תעודת שמאי מס\' $1')
+      // Add proper line breaks after license number and before key sentences
+      .replace(/מס'\s*1097\.\s*נותן/g, 'מס\' 1097.\n\nנותן')
+      .replace(/מס'\s*(\d+)\.\s*נותן/g, 'מס\' $1.\n\nנותן')
+      .replace(/מס'\s*(\d+)\.\s*הנני/g, 'מס\' $1.\n\nהנני')
+      .replace(/משפט\.\s*הנני/g, 'משפט.\n\nהנני')
+      .replace(/משפט\.\s*דין/g, 'משפט.\n\nדין')
+      .replace(/משפט\.\s*הדין/g, 'משפט.\n\nהדין')
       .replace(/מטרת מסמך זה - ([^:]+):/g, '<strong>מטרת מסמך זה - $1:</strong><br>')
       .replace(/הצהרת שמאי:/g, '<br><strong>הצהרה:</strong><br>')
       .replace(/(\d+\.\s)([^\n]+)/g, '<div style="display: flex; align-items: flex-start; margin-bottom: 8px; text-align: right;"><span style="margin-left: 10px; flex-shrink: 0;">$1</span><span style="flex: 1;">$2</span></div>')
