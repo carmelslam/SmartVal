@@ -1211,3 +1211,21 @@ window.finalReport = {
 };
 
 console.log('✅ final_report.js loaded with session logic, fees, watermark, and vault rendering');
+
+// DEBUG: Check if we can see the helper data immediately
+console.log('🎯 IMMEDIATE HELPER CHECK:', window.helper);
+console.log('🎯 SESSION STORAGE HELPER:', JSON.parse(sessionStorage.getItem('helper') || '{}'));
+
+// Initialize immediately 
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 final_report.js DOMContentLoaded - initializing...');
+  initializeFinalReport();
+});
+
+// Also try immediate initialization if DOM is already loaded
+if (document.readyState === 'loading') {
+  console.log('📄 DOM still loading, waiting for DOMContentLoaded');
+} else {
+  console.log('📄 DOM already loaded, initializing immediately');
+  setTimeout(() => initializeFinalReport(), 100);
+}
