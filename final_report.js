@@ -1,5 +1,7 @@
 // final_report.js — Final Report Generation Engine (updated: draft logic = meta.core)
 
+console.log('🚀 FINAL_REPORT.JS STARTING TO LOAD...');
+
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
 import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
