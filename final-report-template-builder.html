@@ -971,6 +971,10 @@
     });
   </script>
   <script type="module" src="final_report.js"></script>
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
+    window.sendToWebhook = sendToWebhook;
+  </script>
 
   <!-- Action Buttons (Print Hidden) -->
   <div class="control-buttons no-print">
@@ -1092,31 +1096,36 @@
       // Get case_id from meta data or URL
       const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
       
+      // Get clean HTML content for PDF conversion (without buttons and draft elements)
+      const cleanHTML = document.documentElement.outerHTML
+        .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
+        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
+      
       // Send webhook to make.com with SUBMIT_FINAL_REPORT action
       const webhookData = {
         action: 'SUBMIT_FINAL_REPORT',
         case_id: caseId,
         timestamp: new Date().toISOString(),
-        report_type: window.helper?.meta?.report_type || 'final_report'
+        report_type: window.helper?.meta?.report_type || 'final_report',
+        html_content: cleanHTML,
+        plate_number: window.helper?.vehicle?.plate || window.helper?.meta?.plate || '',
+        owner_name: window.helper?.meta?.client_name || '',
+        inspection_date: window.helper?.case_info?.inspection_date || window.helper?.meta?.inspection_date || '',
+        today_date: new Date().toLocaleDateString('he-IL')
       };
       
       console.log('Sending webhook:', webhookData);
       
-      fetch('https://hook.eu2.make.com/humgj4nyifchtnivuatdrh6u9slj8xrh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(webhookData)
-      }).then(response => {
-        console.log('Webhook response:', response);
-        if (response.ok) {
+      // Use the proper sendToWebhook function
+      window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
+        .then(response => {
+          console.log('Webhook response:', response);
           alert('הדוח הסופי נשלח בהצלחה למערכת!');
-        } else {
+        })
+        .catch(error => {
+          console.error('Webhook error:', error);
           alert('שגיאה בשליחת הדוח הסופי. אנא נסה שוב.');
-        }
-      }).catch(error => {
-        console.error('Webhook error:', error);
-        alert('שגיאת רשת. אנא בדוק את החיבור.');
-      });
+        });
     }
   </script>
   </div>
