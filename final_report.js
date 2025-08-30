@@ -236,9 +236,31 @@ function setupHandlebarsHelpers() {
       return a + b;
     });
     
+    // formatDate helper (from expertise builder.html)
+    Handlebars.registerHelper('formatDate', function(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('he-IL');
+      } catch (error) {
+        console.error('Date formatting error:', error);
+        return '';
+      }
+    });
+    
     // DEBUG: Helper to log data in template
     Handlebars.registerHelper('debug', function(context) {
       console.log('🔍 TEMPLATE DEBUG:', context);
+      return '';
+    });
+    
+    // DEBUG: Helper to check helper object specifically
+    Handlebars.registerHelper('debugHelper', function() {
+      console.log('🔍 HELPER DEBUG:', this.helper);
+      console.log('🔍 HELPER.VEHICLE:', this.helper?.vehicle);
+      console.log('🔍 HELPER.TODAY:', this.helper?.today);
+      console.log('🔍 HELPER.CASE_INFO:', this.helper?.case_info);
       return '';
     });
     
