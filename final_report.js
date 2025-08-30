@@ -173,6 +173,17 @@ function getReplacementMap() {
 // --- Handlebars Helpers ---
 function setupHandlebarsHelpers() {
   if (typeof Handlebars !== 'undefined') {
+    // FORENSIC DEBUG HELPER: Capture template context
+    Handlebars.registerHelper('debugCenters', function() {
+      console.log('🔍 HANDLEBARS CONTEXT DEBUG - CENTERS:');
+      console.log('  this.helper:', !!this.helper);
+      console.log('  this.helper.centers:', this.helper?.centers);
+      console.log('  this.helper.centers length:', this.helper?.centers?.length);
+      console.log('  this.helper.damage_assessment:', !!this.helper?.damage_assessment);
+      console.log('  Full context keys:', Object.keys(this));
+      return '';
+    });
+
     // Money formatter helper
     Handlebars.registerHelper('money', function(value) {
       const num = parseFloat(value) || 0;
@@ -536,7 +547,8 @@ function getNestedValue(obj, path) {
 
 // --- Transform Helper Data for Template ---
 function transformHelperDataForTemplate(rawHelper) {
-  console.log('🔄 Transforming helper data for template...');
+  console.log('🔥 TRANSFORMATION ENTRY: transformHelperDataForTemplate() called');
+  console.log('🔍 RAW HELPER STRUCTURE:', Object.keys(rawHelper));
   
   // AGGRESSIVE FIX: Always use damage_centers_summary to create centers
   let centersSource = [];
@@ -865,8 +877,12 @@ function validateHelperDataForTemplate(helper) {
 
 // --- Inject Final Report ---
 function injectReportHTML() {
+  console.log('🔥 ENTRY POINT: injectReportHTML() called');
   const container = document.getElementById("report-output");
-  if (!container) return;
+  if (!container) {
+    console.log('❌ FATAL: No report-output container found');
+    return;
+  }
 
   // Setup Handlebars helpers
   setupHandlebarsHelpers();
