@@ -359,29 +359,7 @@ function getAssessorCredentials(helper) {
 
 // --- Populate Dynamic Content ---
 function populateDynamicContent(helper) {
-  // Populate dynamic legal text
-  const legalTextElement = document.getElementById('dynamic-legal-text');
-  if (legalTextElement) {
-    const legalText = generateLegalText(helper);
-    // Convert newlines to HTML breaks and format
-    const formattedLegalText = legalText
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>');
-    
-    legalTextElement.innerHTML = `
-      <strong>הערות:</strong><br>
-      ${formattedLegalText}<br><br>
-      <strong>הצהרת שמאי:</strong><br>
-      ${formattedLegalText}
-    `;
-  }
-  
-  // Populate dynamic attachments
-  const attachmentsElement = document.getElementById('dynamic-attachments');
-  if (attachmentsElement) {
-    const attachmentsList = getAttachmentsList(helper);
-    attachmentsElement.innerHTML = attachmentsList;
-  }
+  // Legal text and attachments are now handled by template Handlebars variables
   
   // Populate dynamic fees legal text from vault
   const feesLegalTextElement = document.getElementById('dynamic-fees-legal-text');
