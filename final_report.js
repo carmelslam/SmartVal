@@ -504,6 +504,11 @@ function createComprehensiveFieldMapping(rawHelper) {
     'helper.final_report_type': rawHelper.final_report_type || rawHelper.report_type || 'default',
     'helper.final_report_attachments': rawHelper.final_report_attachments || '',
     
+    // Action button message fields
+    'helper.vehicle.plate': rawHelper.vehicle?.plate || rawHelper.meta?.plate || rawHelper.car_details?.plate || '',
+    'helper.case_info.inspection_date': rawHelper.case_info?.inspection_date || rawHelper.meta?.inspection_date || '',
+    'helper.today': new Date().toLocaleDateString('he-IL'),
+    
     // Additional mappings for commonly missed fields  
     'base_car_price': rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
     'damage_location': rawHelper.centers?.[0]?.Location || rawHelper.damage_assessment?.centers?.[0]?.Location || placeholder
@@ -776,6 +781,15 @@ function transformHelperDataForTemplate(rawHelper) {
     final_report_legal_text: fieldMappings['helper.final_report_legal_text'],
     final_report_type: fieldMappings['helper.final_report_type'],  
     final_report_attachments: fieldMappings['helper.final_report_attachments'],
+    
+    // Action button message data
+    vehicle: {
+      plate: fieldMappings['helper.vehicle.plate']
+    },
+    case_info: {
+      inspection_date: fieldMappings['helper.case_info.inspection_date']
+    },
+    today: fieldMappings['helper.today'],
     
     // Additional fields for complete mapping
     base_car_price: fieldMappings['base_car_price'],
