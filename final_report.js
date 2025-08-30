@@ -507,6 +507,11 @@ function transformHelperDataForTemplate(rawHelper) {
     has_centers: !!(rawHelper.centers && rawHelper.centers.length > 0),
     has_damage_assessment_centers: !!(rawHelper.damage_assessment?.centers && rawHelper.damage_assessment.centers.length > 0)
   });
+  
+  // DEBUG: Show complete damage_assessment structure
+  console.log('🎯 COMPLETE damage_assessment structure:', rawHelper.damage_assessment);
+  console.log('🎯 damage_centers_summary keys:', Object.keys(rawHelper.damage_assessment?.damage_centers_summary || {}));
+  console.log('🎯 damage_centers_summary full:', rawHelper.damage_assessment?.damage_centers_summary);
 
   // Create comprehensive field mapping
   const fieldMappings = createComprehensiveFieldMapping(rawHelper);
@@ -525,13 +530,31 @@ function transformHelperDataForTemplate(rawHelper) {
       km_reading: fieldMappings['helper.vehicle.km_reading'],
       market_value: fieldMappings['helper.vehicle.market_value']
     },
-    centers: (rawHelper.centers || rawHelper.damage_assessment?.centers || []).map(center => {
+    centers: (rawHelper.centers || rawHelper.damage_assessment?.centers || []).map((center, index) => {
+      // DEBUG: Log each center being processed
+      console.log(`🔍 DEBUG Center ${index + 1}:`, center);
+      console.log(`🔍 Center field names:`, Object.keys(center));
+      console.log(`🔍 Damage center Number:`, center["Damage center Number"]);
+      console.log(`🔍 Location:`, center.Location);
+      console.log(`🔍 Number field:`, center.number);
+      
       // Add total_with_vat from damage_assessment.damage_centers_summary
-      const centerKey = `Damage center ${center["Damage center Number"] || center.number || 1}`;
-      const centerSummary = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
+      const centerNumber = center["Damage center Number"] || center.number || (index + 1);
+      const centerKey = `Damage center ${centerNumber}`;
+      const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
+      const totalWithVat = summaryData?.["Total with VAT"] || 0;
+      
+      console.log(`🔍 Center ${centerNumber} summary lookup:`, {
+        centerKey: centerKey,
+        summaryExists: !!summaryData,
+        summaryData: summaryData,
+        totalWithVat: totalWithVat,
+        fullSummaryStructure: rawHelper.damage_assessment?.damage_centers_summary
+      });
+      
       return {
         ...center,
-        total_with_vat: rawHelper.damage_assessment?.damage_centers_summary?.[`Damage center ${center["Damage center Number"]}`]?.["Total with VAT"] || 0
+        total_with_vat: totalWithVat
       };
     }),
     meta: {
@@ -773,6 +796,15 @@ function injectReportHTML() {
       centers_length: helper.centers ? helper.centers.length : 'undefined',
       first_center: helper.centers && helper.centers[0] ? helper.centers[0] : 'none'
     });
+    console.log('🎯 FINAL CENTERS BEING PASSED TO TEMPLATE:', transformedHelper.centers);
+    console.log('🎯 EACH CENTER STRUCTURE:', transformedHelper.centers?.map((c, i) => ({
+      index: i,
+      centerNumber: c["Damage center Number"],
+      location: c.Location,
+      totalWithVat: c.total_with_vat,
+      allKeys: Object.keys(c)
+    })));
+    console.log('🎯 DAMAGE ASSESSMENT TOTALS:', templateData.helper.damage_assessment?.totals);
 
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
