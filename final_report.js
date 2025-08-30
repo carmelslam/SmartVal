@@ -552,10 +552,21 @@ function transformHelperDataForTemplate(rawHelper) {
         fullSummaryStructure: rawHelper.damage_assessment?.damage_centers_summary
       });
       
-      return {
+      const result = {
         ...center,
         total_with_vat: totalWithVat
       };
+      
+      console.log(`✅ CENTER ${centerNumber} FINAL RESULT:`, {
+        centerNumber,
+        location: center.Location,
+        totalWithVat,
+        resultStructure: result,
+        hasTotal: result.total_with_vat !== undefined,
+        totalValue: result.total_with_vat
+      });
+      
+      return result;
     }),
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
