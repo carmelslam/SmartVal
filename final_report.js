@@ -432,15 +432,25 @@ function populateDynamicContent(helper) {
 function createComprehensiveFieldMapping(rawHelper) {
   const placeholder = "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת";
   
-  // DEBUG: Log the actual helper structure
-  console.log('🔍 ACTUAL HELPER STRUCTURE:', rawHelper);
-  console.log('🔍 Helper keys:', Object.keys(rawHelper));
-  console.log('🔍 Centers:', rawHelper.centers);
-  console.log('🔍 Damage assessment centers:', rawHelper.damage_assessment?.centers);
-  console.log('🔍 Levisummary:', rawHelper.levisummary);
-  console.log('🔍 Car details:', rawHelper.car_details);
-  console.log('🔍 Stakeholders:', rawHelper.stakeholders);
-  console.log('🔍 Case info:', rawHelper.case_info);
+  // Enhanced helper structure debugging
+  console.log('� Starting comprehensive field mapping...');
+  
+  // Normalize centers data first
+  let normalizedCenters = [];
+  if (rawHelper.centers && rawHelper.centers.length > 0) {
+    normalizedCenters = rawHelper.centers;
+  } else if (rawHelper.damage_assessment?.centers && rawHelper.damage_assessment.centers.length > 0) {
+    normalizedCenters = rawHelper.damage_assessment.centers;
+  }
+  
+  // DEBUG: Log critical data structures
+  console.log('🔍 Critical Data Structures:', {
+    centers_count: normalizedCenters.length,
+    has_vehicle_data: !!(rawHelper.car_details || rawHelper.vehicle || rawHelper.levisummary),
+    has_client_data: !!(rawHelper.stakeholders?.owner?.name || rawHelper.case_info?.client_name),
+    has_case_id: !!rawHelper.case_info?.case_id,
+    damage_assessment: !!rawHelper.damage_assessment
+  });
   
   // Define all final report field mappings based on ACTUAL helper structure
   const fieldMappings = {
@@ -809,27 +819,48 @@ function transformHelperDataForTemplate(rawHelper) {
 
 // --- Data Validation Function ---
 function validateHelperDataForTemplate(helper) {
-  console.log('🔍 Validating helper data for template...');
+  console.log('🔍 Validating helper data for template...', helper);
   
   const missingFields = [];
   const warnings = [];
+  const critical = [];
   
-  // Check for critical data sections
+  // Check for critical data sections with detailed logging
   if (!helper.car_details && !helper.vehicle && !helper.levisummary) {
-    missingFields.push('נתוני רכב');
+    critical.push('נתוני רכב');
+    console.log('❌ Missing vehicle data:', {
+      car_details: !!helper.car_details,
+      vehicle: !!helper.vehicle,
+      levisummary: !!helper.levisummary
+    });
   }
   
   if (!helper.stakeholders?.owner?.name && !helper.case_info?.client_name) {
-    missingFields.push('שם לקוח');
+    critical.push('שם לקוח');
+    console.log('❌ Missing client name:', {
+      stakeholder_name: helper.stakeholders?.owner?.name,
+      case_info_name: helper.case_info?.client_name
+    });
   }
   
   if (!helper.case_info?.case_id) {
-    missingFields.push('מספר תיק');
+    critical.push('מספר תיק');
   }
   
-  // Check centers data (critical for damage assessment)
-  const hasCenters = (helper.centers && helper.centers.length > 0) || 
-                    (helper.damage_assessment?.centers && helper.damage_assessment.centers.length > 0);
+  // Enhanced centers data validation
+  let centersData = null;
+  if (helper.centers && helper.centers.length > 0) {
+    centersData = helper.centers;
+  } else if (helper.damage_assessment?.centers && helper.damage_assessment.centers.length > 0) {
+    centersData = helper.damage_assessment.centers;
+  }
+  
+  const hasCenters = !!centersData;
+  console.log('🔍 Centers validation:', {
+    helper_centers: helper.centers?.length || 0,
+    damage_assessment_centers: helper.damage_assessment?.centers?.length || 0,
+    centersFound: hasCenters
+  });
   
   if (!hasCenters) {
     warnings.push('מוקדי נזק');
