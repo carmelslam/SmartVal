@@ -990,6 +990,21 @@ function injectReportHTML() {
       }
     }
     console.log('🎯 DAMAGE ASSESSMENT TOTALS:', templateData.helper.damage_assessment?.totals);
+    
+    // CRITICAL DEBUG: Verify template data structure right before render
+    console.log('🚨 TEMPLATE DEBUG - RIGHT BEFORE RENDER:');
+    console.log('templateData.helper.centers EXISTS:', !!templateData.helper.centers);
+    console.log('templateData.helper.centers LENGTH:', templateData.helper.centers?.length || 0);
+    console.log('templateData.helper.centers CONTENT:', templateData.helper.centers);
+    
+    // Force ensure centers exist in template data
+    if (!templateData.helper.centers || templateData.helper.centers.length === 0) {
+      console.log('🔧 EMERGENCY: Adding centers to templateData');
+      if (transformedHelper.centers?.length > 0) {
+        templateData.helper.centers = transformedHelper.centers;
+        console.log('✅ Centers added to templateData:', templateData.helper.centers.length);
+      }
+    }
 
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
