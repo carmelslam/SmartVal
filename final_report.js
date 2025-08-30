@@ -538,13 +538,12 @@ function getNestedValue(obj, path) {
 function transformHelperDataForTemplate(rawHelper) {
   console.log('🔄 Transforming helper data for template...');
   
-  // CRITICAL: Determine the correct data source for centers
-  let centersSource = rawHelper.centers || rawHelper.damage_assessment?.centers || [];
+  // AGGRESSIVE FIX: Always use damage_centers_summary to create centers
+  let centersSource = [];
   let totalDamageSource = rawHelper.damage_assessment?.totals?.['Total with VAT'] || 0;
   
-  // EMERGENCY FIX: If no centers found but damage_centers_summary exists, create centers from summary
-  if ((!centersSource || centersSource.length === 0) && rawHelper.damage_assessment?.damage_centers_summary) {
-    console.log('🚨 EMERGENCY FIX: Creating centers from damage_centers_summary');
+  if (rawHelper.damage_assessment?.damage_centers_summary) {
+    console.log('🔧 AGGRESSIVE FIX: Creating centers from damage_centers_summary');
     const summaryKeys = Object.keys(rawHelper.damage_assessment.damage_centers_summary);
     centersSource = summaryKeys.map((key, index) => {
       const centerNumber = key.replace('Damage center ', '') || (index + 1);
@@ -554,7 +553,9 @@ function transformHelperDataForTemplate(rawHelper) {
         "Description": `תיאור מוקד נזק ${centerNumber}`
       };
     });
-    console.log('🔧 Created centers from summary:', centersSource);
+    console.log('✅ FORCED centers creation:', centersSource.length);
+  } else {
+    console.log('❌ NO damage_centers_summary found');
   }
   
   // DEBUG: Critical data source analysis for "חלוקה למוקדים" section
