@@ -555,10 +555,44 @@ function getNestedValue(obj, path) {
   return current;
 }
 
+// Register Handlebars helpers for flexible data access
+function registerHandlebarsHelpers() {
+  if (typeof Handlebars !== 'undefined') {
+    // Helper to get center data from any valid source
+    Handlebars.registerHelper('getCenters', function(helper) {
+      return helper.damage_assessment?.centers || helper.centers || [];
+    });
+
+    // Helper to get center total
+    Handlebars.registerHelper('getCenterTotal', function(helper, centerNumber) {
+      const key = `Damage center ${centerNumber}`;
+      return helper.damage_assessment?.damage_centers_summary?.[key]?.['Total with VAT'] || 0;
+    });
+
+    // Helper to get center works
+    Handlebars.registerHelper('getCenterWorks', function(center) {
+      return center.Works?.works || [];
+    });
+
+    // Helper to get center parts
+    Handlebars.registerHelper('getCenterParts', function(center) {
+      return center.Parts?.parts_required || [];
+    });
+
+    // Helper to get center repairs
+    Handlebars.registerHelper('getCenterRepairs', function(center) {
+      return center.Repairs?.repairs || [];
+    });
+  }
+}
+
 // --- Transform Helper Data for Template ---
 function transformHelperDataForTemplate(rawHelper) {
   console.log('🔥 TRANSFORMATION ENTRY: transformHelperDataForTemplate() called');
   console.log('🔍 RAW HELPER STRUCTURE:', Object.keys(rawHelper));
+  
+  // Register helpers for template
+  registerHandlebarsHelpers();
   
   // AGGRESSIVE FIX: Always use damage_centers_summary to create centers
   let centersSource = [];
@@ -597,9 +631,12 @@ function transformHelperDataForTemplate(rawHelper) {
   // Create comprehensive field mapping
   const fieldMappings = createComprehensiveFieldMapping(rawHelper);
 
-  // Transform helper data to template-compatible structure
+  // Transform helper data to template-compatible structure while preserving original helper structure
   const transformed = {
-    // Vehicle information - use mapped values from createComprehensiveFieldMapping
+    // Pass through the original helper
+    helper: rawHelper,
+    
+    // Add transformed data as additional properties
     vehicle: {
       model: fieldMappings['helper.vehicle.model'],
       chassis: fieldMappings['helper.vehicle.chassis'],
@@ -1057,10 +1094,18 @@ function injectReportHTML() {
     // Use Handlebars to compile and render
     if (typeof Handlebars !== 'undefined') {
       try {
-        console.log('🔧 Attempting to compile template...');
+        console.log('🔧 Attempting to compile template with data:', templateData);
         const template = Handlebars.compile(decodedTemplate);
         console.log('✅ Template compiled successfully');
-        const rendered = template(templateData);
+        
+        // Ensure helper data is fully available to template
+        const renderData = {
+          ...templateData,
+          helper: window.helper || sessionStorage.getItem('helper')
+        };
+        
+        console.log('🔧 Rendering template with data:', renderData);
+        const rendered = template(renderData);
         console.log('✅ Template rendered successfully');
         container.innerHTML = applyDraftWatermark(rendered);
         

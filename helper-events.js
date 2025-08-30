@@ -430,35 +430,15 @@ export function initializeHelperEvents() {
   setupCrossModuleSync();
   setupStorageSync();
   
-  // Enhanced initialization for final report template
+  // Auto-bind forms on page load
   document.addEventListener('DOMContentLoaded', () => {
-    // Auto-bind forms
+    // Look for forms with data-helper-section attribute
     const forms = document.querySelectorAll('[data-helper-section]');
     forms.forEach(form => {
       const section = form.getAttribute('data-helper-section');
       if (section) {
         bindFormToHelper(form, section);
       }
-    });
-    
-    // Setup listeners for final report template
-    helperEvents.on('*', (eventData) => {
-      if (window.finalReport && typeof window.finalReport.init === 'function') {
-        console.log('🔄 Helper data changed, updating final report...');
-        window.finalReport.init();
-      }
-    });
-    
-    // Monitor critical sections for final report
-    ['centers', 'damage_assessment', 'vehicle', 'case_info', 'stakeholders'].forEach(section => {
-      helperEvents.on(section, (eventData) => {
-        if (document.querySelector('.report-container')) {
-          console.log(`📝 Critical section ${section} updated, refreshing report...`);
-          if (window.finalReport && typeof window.finalReport.init === 'function') {
-            window.finalReport.init();
-          }
-        }
-      });
     });
   });
   
