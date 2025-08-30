@@ -216,6 +216,17 @@ function setupHandlebarsHelpers() {
     Handlebars.registerHelper('add', function(a, b) {
       return a + b;
     });
+    
+    // DEBUG: Helper to log data in template
+    Handlebars.registerHelper('debug', function(context) {
+      console.log('🔍 TEMPLATE DEBUG:', context);
+      return '';
+    });
+    
+    // JSON stringify helper for debugging
+    Handlebars.registerHelper('json', function(context) {
+      return JSON.stringify(context, null, 2);
+    });
   }
 }
 
