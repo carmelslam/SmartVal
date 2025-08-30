@@ -514,15 +514,19 @@ function transformHelperDataForTemplate(rawHelper) {
   let centersSource = rawHelper.centers || rawHelper.damage_assessment?.centers || [];
   let totalDamageSource = rawHelper.damage_assessment?.totals?.['Total with VAT'] || 0;
   
-  console.log('🎯 Data sources identified:', {
+  // DEBUG: Critical data source analysis for "חלוקה למוקדים" section
+  console.log('🎯 DATA SOURCES FOR "חלוקה למוקדים":', {
     centers_count: centersSource.length,
     centers_source: centersSource.length > 0 ? 'found' : 'empty',
     total_damage: totalDamageSource,
     damage_assessment_exists: !!rawHelper.damage_assessment,
-    levisummary_exists: !!rawHelper.levisummary,
-    car_details_exists: !!rawHelper.car_details,
-    stakeholders_exists: !!rawHelper.stakeholders
+    damage_centers_summary_exists: !!rawHelper.damage_assessment?.damage_centers_summary,
+    damage_centers_summary_keys: Object.keys(rawHelper.damage_assessment?.damage_centers_summary || {}),
+    damage_totals_exists: !!rawHelper.damage_assessment?.totals,
+    damage_totals_total_with_vat: rawHelper.damage_assessment?.totals?.["Total with VAT"]
   });
+  
+  console.log('🔍 DETAILED DAMAGE CENTERS SUMMARY STRUCTURE:', rawHelper.damage_assessment?.damage_centers_summary);
 
   // Create comprehensive field mapping
   const fieldMappings = createComprehensiveFieldMapping(rawHelper);
@@ -544,33 +548,47 @@ function transformHelperDataForTemplate(rawHelper) {
       plate: fieldMappings['meta.plate']
     },
     
-    // Centers - CRITICAL: Enhanced centers processing with proper totals
+    // Centers - CRITICAL: Fixed centers processing for "חלוקה למוקדים" section
     centers: centersSource.map((center, index) => {
       const centerNumber = center["Damage center Number"] || center.number || (index + 1);
       const centerKey = `Damage center ${centerNumber}`;
       
-      // Get totals from damage_centers_summary
+      // EXACT mapping as requested: damage_assessment.damage_centers_summary["Damage center X"]["Total with VAT"]
       const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
       const totalWithVat = summaryData?.["Total with VAT"] || 0;
       
-      console.log(`🔧 Processing center ${centerNumber}:`, {
-        originalCenter: center,
+      // DEBUG: Enhanced logging for "חלוקה למוקדים" troubleshooting
+      console.log(`🎯 CENTER ${centerNumber} DATA MAPPING:`, {
         centerKey,
-        summaryExists: !!summaryData,
-        totalWithVat
+        centerNumber,
+        location: center.Location,
+        summaryData,
+        totalWithVat,
+        fullSummaryStructure: rawHelper.damage_assessment?.damage_centers_summary,
+        hasValidTotal: totalWithVat > 0
       });
       
-      return {
+      // Return center with exact fields needed by template
+      const processedCenter = {
         ...center,
-        "Damage center Number": centerNumber,
-        total_with_vat: totalWithVat,
-        // Ensure all required fields exist
-        Location: center.Location || 'לא צוין',
+        "Damage center Number": centerNumber,  // Template uses: {{this.["Damage center Number"]}}
+        Location: center.Location || 'לא צוין',           // Template uses: {{this.Location}}
+        total_with_vat: totalWithVat,          // Template uses: {{this.total_with_vat}}
+        // Preserve other fields
         Description: center.Description || '',
         Works: center.Works || { works: [] },
         Parts: center.Parts || { parts_required: [] },
         Repairs: center.Repairs || { repairs: [] }
       };
+      
+      console.log(`✅ CENTER ${centerNumber} PROCESSED:`, {
+        hasNumber: !!processedCenter["Damage center Number"],
+        hasLocation: !!processedCenter.Location,
+        hasTotalVat: processedCenter.total_with_vat,
+        readyForTemplate: !!(processedCenter["Damage center Number"] && processedCenter.Location)
+      });
+      
+      return processedCenter;
     }),
     // Meta information - CRITICAL for report headers
     meta: {
@@ -625,7 +643,14 @@ function transformHelperDataForTemplate(rawHelper) {
         centers: fieldMappings['helper.expertise.depreciation.centers']
       }
     },
-    damage_assessment: rawHelper.damage_assessment || {},
+    // CRITICAL: Ensure damage_assessment.totals exists for "סה"כ כלל המוקדים" row
+    damage_assessment: {
+      ...rawHelper.damage_assessment,
+      totals: rawHelper.damage_assessment?.totals || { "Total with VAT": 0 },
+      // Preserve other damage_assessment fields
+      centers: rawHelper.damage_assessment?.centers || [],
+      damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
+    },
     
     // Add fees structure for template compatibility  
     fees: (() => {
@@ -653,18 +678,38 @@ function transformHelperDataForTemplate(rawHelper) {
     damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
   };
   
-  // VALIDATION: Log transformation results  
+  // VALIDATION: Enhanced logging for "חלוקה למוקדים" section
+  console.log('🎯 FINAL VALIDATION FOR "חלוקה למוקדים" SECTION:');
+  console.log('📊 Centers Array:', transformed.centers?.map((c, i) => ({
+    index: i,
+    centerNumber: c["Damage center Number"],
+    location: c.Location,
+    totalWithVat: c.total_with_vat,
+    hasRequiredFields: !!(c["Damage center Number"] && c.Location && (c.total_with_vat !== undefined))
+  })));
+  
+  console.log('💰 Damage Assessment Totals:', {
+    exists: !!transformed.damage_assessment?.totals,
+    totalWithVAT: transformed.damage_assessment?.totals?.["Total with VAT"],
+    fullTotalsObject: transformed.damage_assessment?.totals
+  });
+  
+  console.log('🔍 Raw Source Data Check:', {
+    rawDamageAssessment: !!rawHelper.damage_assessment,
+    rawCenters: rawHelper.centers?.length || 0,
+    rawDamageAssessmentCenters: rawHelper.damage_assessment?.centers?.length || 0,
+    rawDamageCentersSummary: Object.keys(rawHelper.damage_assessment?.damage_centers_summary || {}),
+    rawTotals: rawHelper.damage_assessment?.totals
+  });
+
   console.log('✅ Helper data transformation completed:', {
     mappedFields: Object.keys(fieldMappings).length,
-    placeholderFields: Object.values(fieldMappings).filter(v => v === "נתונים אלו ימולאו לאחר סיום בניית חוות הדעת").length,
     centersCount: transformed.centers?.length || 0,
+    centersWithValidTotals: transformed.centers?.filter(c => c.total_with_vat > 0).length || 0,
     hasValidCenters: transformed.centers && transformed.centers.length > 0,
-    damageAssessmentExists: !!rawHelper.damage_assessment,
-    totalDamage: transformed.calculations?.total_damage,
-    marketValue: transformed.calculations?.market_value,
+    damageAssessmentTotalExists: !!transformed.damage_assessment?.totals?.["Total with VAT"],
     clientName: transformed.meta?.client_name,
-    vehicleModel: transformed.vehicle?.model,
-    firstCenterTotalVAT: transformed.centers?.[0]?.total_with_vat || 0
+    vehicleModel: transformed.vehicle?.model
   });
 
   // VALIDATION: Check for missing critical data
