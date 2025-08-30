@@ -639,10 +639,32 @@ function transformHelperDataForTemplate(rawHelper) {
   // Create comprehensive field mapping
   const fieldMappings = createComprehensiveFieldMapping(rawHelper);
 
-  // Transform helper data to template-compatible structure while preserving original helper structure
+  // CRITICAL FIX: Convert damage_centers_summary object to centers array like working sections
+  const centersArray = [];
+  if (rawHelper.damage_assessment?.damage_centers_summary) {
+    for (const [centerKey, centerData] of Object.entries(rawHelper.damage_assessment.damage_centers_summary)) {
+      centersArray.push({
+        key: centerKey,
+        centerNumber: centerKey.replace('Damage center ', ''),
+        totalWithVat: centerData["Total with VAT"] || 0,
+        totalWithoutVat: centerData["Total without VAT"] || 0,
+        works: centerData["Works"] || 0,
+        parts: centerData["Parts"] || 0,
+        repairs: centerData["Repairs"] || 0,
+        location: `מוקד נזק ${centerKey.replace('Damage center ', '')}`
+      });
+    }
+  }
+  
+  console.log('✅ Converted object to centers array:', centersArray);
+  
+  // Transform helper data to template-compatible structure
   const transformed = {
-    // Pass through the original helper
-    helper: rawHelper,
+    // Pass through the original helper but ADD the centers array
+    helper: {
+      ...rawHelper,
+      centers: centersArray  // Replace empty centers with proper array
+    },
     
     // Add transformed data as additional properties
     vehicle: {
