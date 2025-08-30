@@ -705,6 +705,89 @@
   </div>
   {{/if}}
 
+  <!-- NEW TEST SECTION: חלוקה למוקדים - Built from scratch -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">🧪 חלוקה למוקדים - מבחן חדש</div>
+      
+      <!-- DEBUG: Show raw data structure -->
+      <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-size: 12px; direction: ltr;">
+        <strong>DEBUG INFO:</strong><br>
+        Helper exists: {{#if helper}}YES{{else}}NO{{/if}}<br>
+        Damage assessment exists: {{#if helper.damage_assessment}}YES{{else}}NO{{/if}}<br>
+        Centers count: {{#if helper.centers}}{{helper.centers.length}}{{else}}0{{/if}}<br>
+        Damage centers summary exists: {{#if helper.damage_assessment.damage_centers_summary}}YES{{else}}NO{{/if}}
+      </div>
+      
+      <!-- Simple table with direct mapping -->
+      <table class="car-details-table">
+        <thead>
+          <tr>
+            <th>מוקד</th>
+            <th>מיקום</th>
+            <th>עלות כולל מע"מ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Test 1: Direct access to damage_centers_summary -->
+          {{#if helper.damage_assessment.damage_centers_summary}}
+            {{#each helper.damage_assessment.damage_centers_summary}}
+            <tr>
+              <td>{{@key}}</td>
+              <td>מיקום נזק</td>
+              <td>{{this.["Total with VAT"]}} ₪</td>
+            </tr>
+            {{/each}}
+          {{else}}
+            <tr><td colspan="3">אין נתוני damage_centers_summary</td></tr>
+          {{/if}}
+          
+          <!-- Test 2: Show total from totals -->
+          <tr style="background: #e0f2fe;">
+            <td><strong>סה"כ כלל המוקדים</strong></td>
+            <td>-</td>
+            <td><strong>
+              {{#if helper.damage_assessment.totals}}
+                {{helper.damage_assessment.totals.["Total with VAT"]}} ₪
+              {{else}}
+                אין נתוני totals
+              {{/if}}
+            </strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Test 3: Show centers array if it exists -->
+      {{#if helper.centers}}
+      <div style="margin-top: 20px;">
+        <h4>מבחן: רשימת מוקדי נזק מ-centers</h4>
+        <table class="car-details-table">
+          <thead>
+            <tr>
+              <th>מספר מוקד</th>
+              <th>מיקום</th>
+              <th>עלות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each helper.centers}}
+            <tr>
+              <td>{{this.["Damage center Number"]}}</td>
+              <td>{{this.Location}}</td>
+              <td>{{this.total_with_vat}} ₪</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div style="background: #fff3cd; padding: 10px; margin: 10px 0;">
+        אין נתונים ב-helper.centers
+      </div>
+      {{/if}}
+
+    </div>
+  </div>
 
   <!-- Section 4.5 - Vehicle Value for Gross Damage -->
   <div class="section">
