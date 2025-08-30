@@ -379,8 +379,8 @@ function populateDynamicContent(helper) {
     let attachmentsList = attachmentsElement.textContent
       .split('\n')
       .filter(line => line.trim() !== '')
-      .map(line => line.replace(/^\*\*(.+)\*\*$/, '<strong>$1</strong>'))
-      .map(line => line.startsWith('<strong>') ? line : `• ${line}`)
+      .map(line => line.replace(/\*\*(.+)\*\*/g, '<strong>$1</strong>'))
+      .map(line => `• ${line}`)
       .join('<br>');
     
     attachmentsElement.innerHTML = attachmentsList;
