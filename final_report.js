@@ -763,6 +763,34 @@ function transformHelperDataForTemplate(rawHelper) {
     console.warn('⚠️ Missing critical data for template:', missingCriticalData);
   }
   
+  // FINAL SAFETY CHECK: Ensure centers exist
+  if (!transformed.centers || transformed.centers.length === 0) {
+    console.log('🚨 FINAL CHECK: Centers still empty, attempting last resort fix');
+    if (rawHelper.damage_assessment?.centers?.length > 0) {
+      transformed.centers = rawHelper.damage_assessment.centers.map((center, index) => {
+        const centerNumber = center["Damage center Number"] || center.number || (index + 1);
+        const centerKey = `Damage center ${centerNumber}`;
+        const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey] || {};
+        
+        return {
+          ...center,
+          "Damage center Number": centerNumber,
+          Location: center.Location || center.location || 'לא צוין',
+          Summary: {
+            "Total with VAT": summaryData["Total with VAT"] || 0,
+            "Total without VAT": summaryData["Total without VAT"] || 0,
+            "Works": summaryData["Works"] || 0,
+            "Parts": summaryData["Parts"] || 0,
+            "Repairs": summaryData["Repairs"] || 0
+          }
+        };
+      });
+      console.log('✅ Centers restored from damage_assessment:', transformed.centers.length);
+    }
+  }
+  
+  console.log('🏁 FINAL TRANSFORMED CENTERS:', transformed.centers);
+  
   return transformed;
 }
 
@@ -946,6 +974,21 @@ function injectReportHTML() {
       totalWithVat: c.total_with_vat,
       allKeys: Object.keys(c)
     })));
+    
+    // CRITICAL FIX: Ensure centers is properly set in templateData
+    if (!transformedHelper.centers || transformedHelper.centers.length === 0) {
+      console.log('⚠️ WARNING: transformedHelper.centers is empty!');
+      // Try alternative sources
+      if (helper.damage_assessment?.centers?.length > 0) {
+        console.log('🔧 Using damage_assessment.centers as fallback');
+        transformedHelper.centers = helper.damage_assessment.centers;
+      } else if (helper.centers?.length > 0) {
+        console.log('🔧 Using helper.centers directly');
+        transformedHelper.centers = helper.centers;
+      } else {
+        console.log('🚨 ERROR: No centers found anywhere!');
+      }
+    }
     console.log('🎯 DAMAGE ASSESSMENT TOTALS:', templateData.helper.damage_assessment?.totals);
 
     // Use Handlebars to compile and render
