@@ -387,17 +387,23 @@ function populateDynamicContent(helper) {
   const todayDateElement = document.getElementById('dynamic-today-date');
   
   if (plateElement && helper.vehicle?.plate) {
-    plateElement.textContent = helper.vehicle.plate;
+    plateElement.innerHTML = `<strong>${helper.vehicle.plate}</strong>`;
   }
   
   if (inspectionDateElement && helper.case_info?.inspection_date) {
     const date = new Date(helper.case_info.inspection_date);
-    inspectionDateElement.textContent = date.toLocaleDateString('he-IL');
+    inspectionDateElement.innerHTML = `<strong>${date.toLocaleDateString('he-IL')}</strong>`;
   }
   
   if (todayDateElement) {
     const today = new Date();
-    todayDateElement.textContent = today.toLocaleDateString('he-IL');
+    const dateStr = today.toLocaleDateString('he-IL');
+    const timeStr = today.toLocaleTimeString('he-IL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jerusalem'
+    });
+    todayDateElement.innerHTML = `<strong>${dateStr} ${timeStr}</strong>`;
   }
   
   // Format legal text and attachments for proper display
