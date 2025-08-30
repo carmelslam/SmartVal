@@ -138,9 +138,11 @@
     .submit-btn { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
     .home-btn { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
     
-    /* Hide buttons during print */
+    /* Hide buttons and notice during print */
     @media print {
-      .action-buttons {
+      .action-buttons,
+      .control-buttons,
+      .no-print {
         display: none !important;
       }
     }
@@ -980,9 +982,12 @@
       תאריך יצירת חוות הדעת הינו תאריך אישור הנוסח הסופי : <span id="dynamic-today-date">{{formatDate helper.today}}</span>.
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px;">
       <button type="button" class="control-btn edit-btn" onclick="editFinalReport()">
         ✏️ עריכת נתונים
+      </button>
+      <button type="button" class="control-btn preview-btn" onclick="viewPreview()">
+        👁️ תצוגה מקדימה
       </button>
       <button type="button" class="control-btn preview-btn" onclick="printPreview()">
         🖨️ תצוגה מקדימה להדפסה
@@ -999,12 +1004,38 @@
   <script>
     // Action button functions
     function editFinalReport() {
-      // Navigate to edit final report page
-      window.location.href = '/edit-final-report?case_id={{meta.case_id}}';
+      // Open final report builder in PiP iframe
+      const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
+      const builderUrl = `final-report-builder.html?case_id=${caseId}`;
+      
+      // Create PiP window with iframe
+      const pipWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      
+      if (pipWindow) {
+        pipWindow.document.open();
+        pipWindow.document.write(`
+          <!DOCTYPE html>
+          <html dir="rtl">
+          <head>
+            <meta charset="utf-8">
+            <title>עריכת חוות דעת - ${caseId}</title>
+            <style>
+              body { margin: 0; padding: 0; font-family: 'Heebo', Arial, sans-serif; }
+              iframe { width: 100%; height: 100vh; border: none; }
+            </style>
+          </head>
+          <body>
+            <iframe src="${builderUrl}" allow="clipboard-write"></iframe>
+          </body>
+          </html>
+        `);
+        pipWindow.document.close();
+        pipWindow.focus();
+      }
     }
     
-    function printPreview() {
-      // Create PiP preview window for print preview
+    function viewPreview() {
+      // Open PiP preview window (no print dialog)
       const printContent = document.documentElement.outerHTML;
       const previewWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes');
       
@@ -1012,37 +1043,71 @@
         previewWindow.document.open();
         previewWindow.document.write(printContent);
         previewWindow.document.close();
-        previewWindow.document.title = 'תצוגה מקדימה - דוח סופי';
+        previewWindow.document.title = 'תצוגה מקדימה - דוח';
         
-        // Hide buttons in preview and focus on print view
+        // Hide buttons in preview window
         setTimeout(() => {
           const controlButtons = previewWindow.document.querySelector('.control-buttons');
           if (controlButtons) {
             controlButtons.style.display = 'none';
           }
-          
-          // Auto-open print dialog after content loads
           previewWindow.focus();
-          setTimeout(() => {
-            previewWindow.print();
-          }, 500);
         }, 100);
       }
     }
     
+    function printPreview() {
+      // Remove draft watermark temporarily for print
+      const watermarkElement = document.querySelector('[style*="טיוטה בלבד"]');
+      const watermarkParent = watermarkElement?.parentNode;
+      const watermarkNextSibling = watermarkElement?.nextSibling;
+      
+      if (watermarkElement) {
+        watermarkElement.remove();
+      }
+      
+      // Open device print dialog directly
+      window.print();
+      
+      // Restore watermark after print dialog closes
+      setTimeout(() => {
+        if (watermarkParent && watermarkElement) {
+          watermarkParent.insertBefore(watermarkElement, watermarkNextSibling);
+        }
+      }, 1000);
+    }
+    
     function submitFinalReport() {
+      // Remove draft watermark before submission
+      const watermarkElement = document.querySelector('[style*="טיוטה בלבד"]');
+      if (watermarkElement) {
+        watermarkElement.remove();
+      }
+      
+      // Set report as finalized
+      if (window.finalReport && window.finalReport.isDraft !== undefined) {
+        window.finalReport.isDraft = false;
+      }
+      
+      // Get case_id from meta data or URL
+      const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
+      
       // Send webhook to make.com with SUBMIT_FINAL_REPORT action
       const webhookData = {
         action: 'SUBMIT_FINAL_REPORT',
-        case_id: '{{meta.case_id}}',
-        timestamp: new Date().toISOString()
+        case_id: caseId,
+        timestamp: new Date().toISOString(),
+        report_type: window.helper?.meta?.report_type || 'final_report'
       };
       
-      fetch('/api/webhook/make', {
+      console.log('Sending webhook:', webhookData);
+      
+      fetch('/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookData)
       }).then(response => {
+        console.log('Webhook response:', response);
         if (response.ok) {
           alert('הדוח הסופי נשלח בהצלחה למערכת!');
         } else {
