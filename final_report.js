@@ -643,13 +643,11 @@ function transformHelperDataForTemplate(rawHelper) {
         centers: fieldMappings['helper.expertise.depreciation.centers']
       }
     },
-    // CRITICAL: Ensure damage_assessment.totals exists for "סה"כ כלל המוקדים" row
-    damage_assessment: {
-      ...rawHelper.damage_assessment,
-      totals: rawHelper.damage_assessment?.totals || { "Total with VAT": 0 },
-      // Preserve other damage_assessment fields
-      centers: rawHelper.damage_assessment?.centers || [],
-      damage_centers_summary: rawHelper.damage_assessment?.damage_centers_summary || {}
+    // CRITICAL: Direct pass-through of damage_assessment data
+    damage_assessment: rawHelper.damage_assessment || {
+      totals: { "Total with VAT": 0 },
+      centers: [],
+      damage_centers_summary: {}
     },
     
     // Add fees structure for template compatibility  
@@ -875,6 +873,14 @@ function injectReportHTML() {
     // Build template data
     const vaultBlocks = buildVaultBlocks();
     const feeSummary = buildFeeSummary();
+    
+    // 🚨 CRITICAL DEBUG: Log what's actually being passed to template
+    console.log('🚨 TEMPLATE DATA DEBUG:');
+    console.log('transformedHelper.damage_assessment:', transformedHelper.damage_assessment);
+    console.log('damage_centers_summary keys:', Object.keys(transformedHelper.damage_assessment?.damage_centers_summary || {}));
+    console.log('damage_centers_summary content:', transformedHelper.damage_assessment?.damage_centers_summary);
+    console.log('totals:', transformedHelper.damage_assessment?.totals);
+    
     const templateData = { 
       helper: transformedHelper, 
       vault: vaultBlocks, 
