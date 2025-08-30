@@ -664,55 +664,6 @@ function transformHelperDataForTemplate(rawHelper) {
   });
   
   return transformed;
-  
-  if (!transformed.meta.address) {
-    transformed.meta.address = rawHelper.stakeholders?.owner?.address || 
-                              rawHelper.client?.address || '';
-  }
-  
-  if (!transformed.meta.phone_number) {
-    transformed.meta.phone_number = rawHelper.stakeholders?.owner?.phone || 
-                                   rawHelper.client?.phone || '';
-  }
-  
-  if (!transformed.meta.plate) {
-    transformed.meta.plate = rawHelper.vehicle?.plate || 
-                            rawHelper.car_details?.plate || 
-                            rawHelper.case_info?.plate || '';
-  }
-  
-  if (!transformed.meta.inspection_date) {
-    transformed.meta.inspection_date = rawHelper.case_info?.inspection_date || 
-                                      new Date().toLocaleDateString('he-IL');
-  }
-  
-  if (!transformed.meta.location) {
-    transformed.meta.location = rawHelper.case_info?.inspection_location || '';
-  }
-  
-  if (!transformed.meta.damage) {
-    transformed.meta.damage = rawHelper.case_info?.damage_type || 'תאונתי';
-  }
-  
-  if (!transformed.meta.today) {
-    transformed.meta.today = new Date().toLocaleDateString('he-IL');
-  }
-  
-  if (!transformed.meta.case_id) {
-    transformed.meta.case_id = rawHelper.case_info?.case_id || 
-                              `YC-${transformed.meta.plate}-2025`;
-  }
-  
-  if (!transformed.meta.report_type_display) {
-    transformed.meta.report_type_display = 'חוות דעת שמאי פרטית';
-  }
-  
-  // Ensure damage description exists
-  if (!transformed.damage.description) {
-    transformed.damage.description = 'בבדיקת הרכב הנדון נוכחנו בנזקים תאונתיים הדורשים תיקון על פי הפירוט להלן.';
-  }
-  
-  return transformed;
 }
 
 // --- Inject Final Report ---
