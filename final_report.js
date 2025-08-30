@@ -227,6 +227,23 @@ function setupHandlebarsHelpers() {
     Handlebars.registerHelper('json', function(context) {
       return JSON.stringify(context, null, 2);
     });
+    
+    // Custom helper to iterate over object properties (for damage_centers_summary)
+    Handlebars.registerHelper('eachProperty', function(context, options) {
+      let ret = '';
+      if (context && typeof context === 'object') {
+        for (let key in context) {
+          if (context.hasOwnProperty(key)) {
+            ret += options.fn({
+              key: key,
+              value: context[key],
+              ...context[key]
+            });
+          }
+        }
+      }
+      return ret;
+    });
   }
 }
 
