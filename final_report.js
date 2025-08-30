@@ -576,48 +576,8 @@ function transformHelperDataForTemplate(rawHelper) {
       plate: fieldMappings['meta.plate']
     },
     
-    // Centers - CRITICAL: Fixed centers processing for "חלוקה למוקדים" section
-    centers: centersSource.map((center, index) => {
-      const centerNumber = center["Damage center Number"] || center.number || (index + 1);
-      const centerKey = `Damage center ${centerNumber}`;
-      
-      // EXACT mapping as requested: damage_assessment.damage_centers_summary["Damage center X"]["Total with VAT"]
-      const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
-      const totalWithVat = summaryData?.["Total with VAT"] || 0;
-      
-      // DEBUG: Enhanced logging for "חלוקה למוקדים" troubleshooting
-      console.log(`🎯 CENTER ${centerNumber} DATA MAPPING:`, {
-        centerKey,
-        centerNumber,
-        location: center.Location,
-        summaryData,
-        totalWithVat,
-        fullSummaryStructure: rawHelper.damage_assessment?.damage_centers_summary,
-        hasValidTotal: totalWithVat > 0
-      });
-      
-      // Return center with exact fields needed by template
-      const processedCenter = {
-        ...center,
-        "Damage center Number": centerNumber,  // Template uses: {{this.["Damage center Number"]}}
-        Location: center.Location || 'לא צוין',           // Template uses: {{this.Location}}
-        total_with_vat: totalWithVat,          // Template uses: {{this.total_with_vat}}
-        // Preserve other fields
-        Description: center.Description || '',
-        Works: center.Works || { works: [] },
-        Parts: center.Parts || { parts_required: [] },
-        Repairs: center.Repairs || { repairs: [] }
-      };
-      
-      console.log(`✅ CENTER ${centerNumber} PROCESSED:`, {
-        hasNumber: !!processedCenter["Damage center Number"],
-        hasLocation: !!processedCenter.Location,
-        hasTotalVat: processedCenter.total_with_vat,
-        readyForTemplate: !!(processedCenter["Damage center Number"] && processedCenter.Location)
-      });
-      
-      return processedCenter;
-    }),
+    // Centers - CRITICAL: DIRECT PASS-THROUGH - NO TRANSFORMATION  
+    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
     // Meta information - CRITICAL for report headers
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
@@ -671,12 +631,8 @@ function transformHelperDataForTemplate(rawHelper) {
         centers: fieldMappings['helper.expertise.depreciation.centers']
       }
     },
-    // CRITICAL: Direct pass-through of damage_assessment data
-    damage_assessment: rawHelper.damage_assessment || {
-      totals: { "Total with VAT": 0 },
-      centers: [],
-      damage_centers_summary: {}
-    },
+    // CRITICAL: FIXED - Direct pass-through without fallback corruption
+    damage_assessment: rawHelper.damage_assessment,
     
     // Add fees structure for template compatibility  
     fees: (() => {
