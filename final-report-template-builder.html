@@ -1093,20 +1093,17 @@
         window.finalReport.isDraft = false;
       }
       
-      // Get case_id from meta data or URL
-      const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
+      // Get clean HTML content for PDF conversion (without buttons and draft elements)
+      const cleanHTML = document.documentElement.outerHTML
+        .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
+        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
       
-      // Send smaller payload without full HTML to avoid Make.com size limits
+      // Use the same format as final_report.js for consistency with Make.com
       const webhookData = {
-        action: 'SUBMIT_FINAL_REPORT',
-        case_id: caseId,
-        timestamp: new Date().toISOString(),
+        html: cleanHTML,
+        meta: window.helper?.meta || {},
         report_type: window.helper?.meta?.report_type || 'final_report',
-        plate_number: window.helper?.vehicle?.plate || window.helper?.meta?.plate || '',
-        owner_name: window.helper?.meta?.client_name || '',
-        inspection_date: window.helper?.case_info?.inspection_date || window.helper?.meta?.inspection_date || '',
-        today_date: new Date().toLocaleDateString('he-IL'),
-        report_url: window.location.href
+        date: new Date().toISOString()
       };
       
       console.log('Sending webhook with data size:', JSON.stringify(webhookData).length);
