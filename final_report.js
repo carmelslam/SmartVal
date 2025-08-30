@@ -576,8 +576,43 @@ function transformHelperDataForTemplate(rawHelper) {
       plate: fieldMappings['meta.plate']
     },
     
-    // Centers - CRITICAL: DIRECT PASS-THROUGH - NO TRANSFORMATION  
-    centers: rawHelper.centers || rawHelper.damage_assessment?.centers || [],
+    // Centers - CRITICAL: Fixed centers structure with Summary object (Opus fix)
+    centers: centersSource.map((center, index) => {
+      const centerNumber = center["Damage center Number"] || center.number || (index + 1);
+      const centerKey = `Damage center ${centerNumber}`;
+      
+      // Get totals from damage_centers_summary as originally intended
+      const summaryData = rawHelper.damage_assessment?.damage_centers_summary?.[centerKey];
+      const totalWithVat = summaryData?.["Total with VAT"] || 0;
+      const totalWithoutVat = summaryData?.["Total without VAT"] || 0;
+      const worksTotal = summaryData?.["Works"] || 0;
+      const partsTotal = summaryData?.["Parts"] || 0;
+      const repairsTotal = summaryData?.["Repairs"] || 0;
+      
+      console.log(`🔧 Processing center ${centerNumber} with Summary structure:`, {
+        centerKey,
+        summaryData,
+        totalWithVat
+      });
+      
+      return {
+        ...center,
+        "Damage center Number": centerNumber,
+        Location: center.Location || 'לא צוין',
+        Description: center.Description || '',
+        Works: center.Works || { works: [] },
+        Parts: center.Parts || { parts_required: [] },
+        Repairs: center.Repairs || { repairs: [] },
+        // CRITICAL FIX: Add Summary object structure that template expects
+        Summary: {
+          "Total with VAT": totalWithVat,
+          "Total without VAT": totalWithoutVat,
+          "Works": worksTotal,
+          "Parts": partsTotal,
+          "Repairs": repairsTotal
+        }
+      };
+    }),
     // Meta information - CRITICAL for report headers
     meta: {
       report_type_display: fieldMappings['meta.report_type_display'],
