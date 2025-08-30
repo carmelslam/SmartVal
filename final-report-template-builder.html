@@ -1015,56 +1015,159 @@
   <script>
     // Action button functions
     function editFinalReport() {
-      // Open final report builder in PiP iframe
+      // Create iframe overlay within current page
       const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
       const builderUrl = `final-report-builder.html?case_id=${caseId}`;
       
-      // Create PiP window with iframe
-      const pipWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'edit-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
       
-      if (pipWindow) {
-        pipWindow.document.open();
-        pipWindow.document.write(`
-          <!DOCTYPE html>
-          <html dir="rtl">
-          <head>
-            <meta charset="utf-8">
-            <title>עריכת חוות דעת - ${caseId}</title>
-            <style>
-              body { margin: 0; padding: 0; font-family: 'Heebo', Arial, sans-serif; }
-              iframe { width: 100%; height: 100vh; border: none; }
-            </style>
-          </head>
-          <body>
-            <iframe src="${builderUrl}" allow="clipboard-write"></iframe>
-          </body>
-          </html>
-        `);
-        pipWindow.document.close();
-        pipWindow.focus();
-      }
+      // Create iframe container
+      const iframeContainer = document.createElement('div');
+      iframeContainer.style.cssText = `
+        width: 95%;
+        height: 95%;
+        background: white;
+        border-radius: 10px;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      `;
+      
+      // Create close button
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕ סגור';
+      closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10001;
+        padding: 8px 16px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      `;
+      closeBtn.onclick = () => document.body.removeChild(overlay);
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = builderUrl;
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 10px;
+      `;
+      iframe.allow = 'clipboard-write';
+      
+      // Assemble overlay
+      iframeContainer.appendChild(closeBtn);
+      iframeContainer.appendChild(iframe);
+      overlay.appendChild(iframeContainer);
+      document.body.appendChild(overlay);
+      
+      // Close on overlay click (but not iframe click)
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      };
     }
     
     function viewPreview() {
-      // Open PiP preview window (no print dialog)
-      const printContent = document.documentElement.outerHTML;
-      const previewWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes');
+      // Create iframe overlay for preview within current page
+      const cleanContent = document.documentElement.outerHTML
+        .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
+        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
       
-      if (previewWindow) {
-        previewWindow.document.open();
-        previewWindow.document.write(printContent);
-        previewWindow.document.close();
-        previewWindow.document.title = 'תצוגה מקדימה - דוח';
-        
-        // Hide buttons in preview window
-        setTimeout(() => {
-          const controlButtons = previewWindow.document.querySelector('.control-buttons');
-          if (controlButtons) {
-            controlButtons.style.display = 'none';
-          }
-          previewWindow.focus();
-        }, 100);
-      }
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'preview-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      // Create iframe container
+      const iframeContainer = document.createElement('div');
+      iframeContainer.style.cssText = `
+        width: 90%;
+        height: 90%;
+        background: white;
+        border-radius: 10px;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      `;
+      
+      // Create close button
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕ סגור תצוגה';
+      closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10001;
+        padding: 8px 16px;
+        background: #6f42c1;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      `;
+      closeBtn.onclick = () => document.body.removeChild(overlay);
+      
+      // Create iframe with clean content
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 10px;
+      `;
+      
+      // Write clean content to iframe
+      iframe.onload = () => {
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(cleanContent);
+        iframe.contentDocument.close();
+      };
+      
+      // Assemble overlay
+      iframeContainer.appendChild(closeBtn);
+      iframeContainer.appendChild(iframe);
+      overlay.appendChild(iframeContainer);
+      document.body.appendChild(overlay);
+      
+      // Close on overlay click
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      };
     }
     
     function printPreview() {
