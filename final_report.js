@@ -281,45 +281,15 @@ function getReportTitle() {
 
 // --- Legal Text Generation ---
 function generateLegalText(helper) {
-  // Get legal text from builder first, then fallback to vault (matching estimate pattern)
-  const builderLegalText = helper.final_report_legal_text || '';
+  // Get legal text from helper.final_report (validated data)
+  const legalText = helper.final_report?.legal_text || '';
   
-  // If builder has text, use it
-  if (builderLegalText) {
-    return builderLegalText;
-  }
-  
-  // Use coordinator pattern like estimate report
-  const finalReportType = helper.final_report_type || helper.report_type || 'default';
-  
-  if (window.vaultLoader && typeof window.vaultLoader.loadLegalText === 'function') {
-    try {
-      const legalTextKey = `final_${finalReportType}`;
-      const coordinatedText = window.vaultLoader.loadLegalText(legalTextKey, helper);
-      if (coordinatedText) {
-        return coordinatedText;
-      }
-    } catch (error) {
-      console.warn('Error loading legal text from vault coordinator:', error);
-    }
-  }
-  
-  // Fallback to direct vault access - should be completely dynamic
-  const vaultTexts = window.vaultTexts || helper.vault?.legal_texts || {};
-  
-  const legalText = helper.legal_texts?.[`final_${finalReportType}`] || 
-                   helper.legal_texts?.final_default ||
-                   vaultTexts[`final_${finalReportType}`]?.text ||
-                   vaultTexts.final_default?.text ||
-                   '';
-  
-  // Return only what's in the vault - no hardcoded fallbacks
   return legalText;
 }
 
 function getAttachmentsList(helper) {
-  // Get attachments from helper (saved from final-report-builder)
-  let attachmentsText = helper.final_report_attachments || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nחיפוש חלפים משומשים\nצילום רישיון הרכב\nשכר טרחה';
+  // Get attachments from helper.final_report (validated data)
+  let attachmentsText = helper.final_report?.attachments || '';
   
   // Convert plain text to HTML for display
   attachmentsText = attachmentsText
