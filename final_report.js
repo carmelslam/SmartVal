@@ -10,13 +10,21 @@ import { vaultLoader } from './vault-loader.js';
 const vault = window.vaultTexts || {};
 import { sessionEngine } from './session.js';
 
-let helper = sessionEngine.getDataSourceForFinal();
+// Try to use sessionEngine, fallback to direct access
+let helper;
+try {
+  helper = sessionEngine.getDataSourceForFinal();
+  console.log('✅ Got helper from sessionEngine:', Object.keys(helper));
+} catch (error) {
+  console.log('⚠️ SessionEngine failed, using direct sessionStorage:', error);
+  helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+}
 
-// Use standardized data access functions
-const vehicleData = getVehicleData();
-const damageData = getDamageData();
-const valuationData = getValuationData();
-const financialData = getFinancialData();
+// Use helper data directly to avoid import issues
+const vehicleData = helper.vehicle || {};
+const damageData = helper.damage_assessment || {};
+const valuationData = helper.levisummary || {};
+const financialData = helper.fees || {};
 
 function buildFeeSummary() {
   // Check if fees_summary already exists in the helper structure
