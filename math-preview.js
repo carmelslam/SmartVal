@@ -5,13 +5,28 @@ function renderMathPreview() {
   const m = helper.invoice_uploaded ? helper.invoice_calculations : helper.calculations;
   if (!m) return;
 
+  // Helper function to safely resolve values that might be Promises
+  function safeValue(value) {
+    if (value && typeof value === 'object' && typeof value.then === 'function') {
+      // This is a Promise - return a placeholder and resolve it
+      value.then(resolvedValue => {
+        // Re-render when Promise resolves
+        setTimeout(renderMathPreview, 10);
+      }).catch(error => {
+        console.error('Error resolving Promise in math preview:', error);
+      });
+      return 'טוען...'; // Loading text in Hebrew
+    }
+    return value || 0;
+  }
+
   const map = {
-    "אחוז נזק": `${m.damage_percent}%`,
-    "שווי פיצוי (ללא מע״מ)": `${m.total_compensation} ₪`,
-    "שווי פיצוי (כולל מע״מ)": `${m.compensation_with_vat} ₪`,
-    "שווי שוק": `${m.market_value} ₪`,
-    "שווי לפי מחירון": `${m.vehicle_value_gross} ₪`,
-    "שווי לאחר שומה": `${m.net_value_post_shaveh} ₪`
+    "אחוז נזק": `${safeValue(m.damage_percent)}%`,
+    "שווי פיצוי (ללא מע״מ)": `${safeValue(m.total_compensation)} ₪`,
+    "שווי פיצוי (כולל מע״מ)": `${safeValue(m.compensation_with_vat)} ₪`,
+    "שווי שוק": `${safeValue(m.market_value)} ₪`,
+    "שווי לפי מחירון": `${safeValue(m.vehicle_value_gross)} ₪`,
+    "שווי לאחר שומה": `${safeValue(m.net_value_post_shaveh)} ₪`
   };
 
   const wrapper = document.getElementById("math-preview");

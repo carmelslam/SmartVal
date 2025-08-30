@@ -194,6 +194,11 @@ function setupHandlebarsHelpers() {
 
     // Money formatter helper
     Handlebars.registerHelper('money', function(value) {
+      // Check if value is a Promise
+      if (value && typeof value === 'object' && typeof value.then === 'function') {
+        console.warn('💰 Money helper received Promise object:', value);
+        return new Handlebars.SafeString('טוען...');
+      }
       const num = parseFloat(value) || 0;
       console.log('💰 Money helper called with value:', value, 'converted to:', num);
       return new Handlebars.SafeString(`${num.toLocaleString('he-IL')} ₪`);
@@ -201,12 +206,22 @@ function setupHandlebarsHelpers() {
     
     // Simple number formatter helper (no currency symbol)
     Handlebars.registerHelper('number', function(value) {
+      // Check if value is a Promise
+      if (value && typeof value === 'object' && typeof value.then === 'function') {
+        console.warn('🔢 Number helper received Promise object:', value);
+        return new Handlebars.SafeString('טוען...');
+      }
       const num = parseFloat(value) || 0;
       return new Handlebars.SafeString(`${num.toLocaleString('he-IL')}`);
     });
     
     // Percent formatter helper
     Handlebars.registerHelper('percent', function(value) {
+      // Check if value is a Promise
+      if (value && typeof value === 'object' && typeof value.then === 'function') {
+        console.warn('📊 Percent helper received Promise object:', value);
+        return new Handlebars.SafeString('טוען...');
+      }
       const num = parseFloat(value) || 0;
       return new Handlebars.SafeString(`${num}%`);
     });

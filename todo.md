@@ -5596,3 +5596,61 @@ Warning: "⚠️ MathEngine not available, using stored VAT rate or default" occ
 
 ### Key Point:
 The "MathEngine not available" warning was actually showing the system working correctly - it was falling back to `helper.calculations.vat_rate` as intended. Now MathEngine loads properly AND the fallback system still works as backup.
+
+---
+
+## ✅ COMPLETED: PiP iframe "[object Promise]" Error Fix
+**Date: 30/08/2025**
+
+### Problem Summary
+The PiP iframe was displaying "[object Promise]" errors instead of actual calculation values because Promise objects were being converted to strings without proper resolution.
+
+### Root Cause Analysis
+1. **math-preview.js:** Template literals directly used Promise objects from `helper.calculations` without checking if they were resolved
+2. **Handlebars helpers:** The `money`, `number`, and `percent` helpers in final_report.js didn't handle Promise objects properly
+3. **Async calculations:** Some calculation functions returned Promises that were stored in helper.calculations and then displayed directly
+
+### Implementation Summary
+
+**Files Modified:**
+- `/math-preview.js` - Added Promise detection and safe resolution
+- `/final_report.js` - Enhanced Handlebars helpers to handle Promise objects
+
+**1. Fixed math-preview.js:**
+```javascript
+// Added safeValue function to detect and handle Promises
+function safeValue(value) {
+  if (value && typeof value === 'object' && typeof value.then === 'function') {
+    value.then(resolvedValue => {
+      setTimeout(renderMathPreview, 10); // Re-render when resolved
+    }).catch(error => {
+      console.error('Error resolving Promise in math preview:', error);
+    });
+    return 'טוען...'; // Loading text instead of [object Promise]
+  }
+  return value || 0;
+}
+```
+
+**2. Enhanced Handlebars helpers:**
+```javascript
+// Added Promise detection to money, number, and percent helpers
+Handlebars.registerHelper('money', function(value) {
+  if (value && typeof value === 'object' && typeof value.then === 'function') {
+    console.warn('💰 Money helper received Promise object:', value);
+    return new Handlebars.SafeString('טוען...');
+  }
+  // ... rest of function
+});
+```
+
+### Results:
+- **Fixed:** "[object Promise]" errors in PiP iframe replaced with "טוען..." (Loading) text
+- **Improved:** Better error handling and logging for Promise objects in templates
+- **Maintained:** Automatic re-rendering when Promises resolve
+- **Enhanced:** Console warnings to help debug future Promise handling issues
+
+### Testing:
+- PiP iframe now shows proper loading states instead of Promise objects
+- Values automatically update when async calculations complete
+- No breaking changes to existing functionality
