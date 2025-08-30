@@ -406,6 +406,14 @@ function populateDynamicContent(helper) {
     todayDateElement.innerHTML = `<strong>${dateStr} ${timeStr}</strong>`;
   }
   
+  // Populate header dates in page 1 and page 2 with today's date (no time)
+  const headerDateElements = document.querySelectorAll('.header-date-today');
+  headerDateElements.forEach(element => {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('he-IL');
+    element.textContent = dateStr;
+  });
+  
   // Format legal text and attachments for proper display
   const legalTextElement = document.getElementById('dynamic-legal-text');
   if (legalTextElement && legalTextElement.textContent) {
