@@ -1114,17 +1114,21 @@
         today_date: new Date().toLocaleDateString('he-IL')
       };
       
-      console.log('Sending webhook:', webhookData);
+      console.log('Sending webhook with data size:', JSON.stringify(webhookData).length);
+      console.log('HTML content size:', cleanHTML.length);
+      console.log('Webhook payload:', { ...webhookData, html_content: '[HTML_CONTENT_TRUNCATED]' });
       
       // Use the proper sendToWebhook function
       window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
         .then(response => {
-          console.log('Webhook response:', response);
+          console.log('Webhook success response:', response);
           alert('הדוח הסופי נשלח בהצלחה למערכת!');
         })
         .catch(error => {
-          console.error('Webhook error:', error);
-          alert('שגיאה בשליחת הדוח הסופי. אנא נסה שוב.');
+          console.error('Webhook error details:', error);
+          console.error('Error type:', typeof error);
+          console.error('Error message:', error.message);
+          alert(`שגיאה בשליחת הדוח הסופי: ${error.message || 'שגיאה לא ידועה'}`);
         });
     }
   </script>
