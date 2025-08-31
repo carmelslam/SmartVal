@@ -9628,7 +9628,10 @@
         // Recalculate totals with category-specific deductions
         const finalRawTotal = finalTotalWorks + finalTotalParts + finalTotalRepairs;
         finalTotalWithoutVat = finalRawTotal - otherDiff; // Other differentials affect overall total
-        finalTotalWithVat = finalTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100) - otherDiffWithVat;
+        
+        // Apply VAT to the final amount (after subtracting "other" differentials without VAT)
+        const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18);
+        finalTotalWithVat = finalTotalWithoutVat * (1 + vatRate / 100);
         
         console.log('📉 Applying category-specific differentials:', {
           worksDiff, partsDiff, repairsDiff, otherDiff,
