@@ -13015,15 +13015,11 @@
           </div>
         </div>
         
-        <!-- Row 2: Costs (4 fields) - Responsive -->
-        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+        <!-- Row 2: Costs (3 fields) - Responsive -->
+        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר ללא מע״מ</label>
             <input type="number" class="diff-amount" placeholder="0" value="${amount}" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">סכום לחלוקה</label>
-            <input type="number" class="diff-distributed-amount" placeholder="0" value="${data.distributed_amount || amount}" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #007bff; font-size:14px; background:#e3f2fd;">
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">ערך מע״מ</label>
@@ -13440,38 +13436,38 @@
         rows.forEach(row => {
           const damageCenterSelect = row.querySelector('.diff-damage-center');
           const natureSelect = row.querySelector('.diff-nature-dropdown');
-          const distributedAmountInput = row.querySelector('.diff-distributed-amount');
+          const amountInput = row.querySelector('.diff-amount');
           
-          if (damageCenterSelect && natureSelect && distributedAmountInput) {
+          if (damageCenterSelect && natureSelect && amountInput) {
             const selectedCenter = damageCenterSelect.value;
             const nature = natureSelect.value;
-            const distributedAmount = parseFloat(distributedAmountInput.value) || 0;
+            const amount = parseFloat(amountInput.value) || 0;
             
-            if (selectedCenter && nature && distributedAmount !== 0) {
+            if (selectedCenter && nature && amount !== 0) {
               // Apply differential to specific category
               const vatRate = getVatRate();
-              const distributedWithVat = Math.round(distributedAmount * (1 + vatRate));
+              const amountWithVat = Math.round(amount * (1 + vatRate));
               
               switch(nature) {
                 case 'parts':
-                  helper.damage_assessment.totals_after_differentials['Total parts'] += distributedAmount;
+                  helper.damage_assessment.totals_after_differentials['Total parts'] += amount;
                   break;
                 case 'works':
-                  helper.damage_assessment.totals_after_differentials['Total works'] += distributedAmount;
+                  helper.damage_assessment.totals_after_differentials['Total works'] += amount;
                   break;
                 case 'repairs':
-                  helper.damage_assessment.totals_after_differentials['Total repairs'] += distributedAmount;
+                  helper.damage_assessment.totals_after_differentials['Total repairs'] += amount;
                   break;
                 case 'other':
-                  helper.damage_assessment.totals_after_differentials['Other'] += distributedAmount;
+                  helper.damage_assessment.totals_after_differentials['Other'] += amount;
                   break;
               }
               
               // Update total with VAT
               if (nature !== 'other') {
-                helper.damage_assessment.totals_after_differentials['Total with VAT'] += distributedWithVat;
+                helper.damage_assessment.totals_after_differentials['Total with VAT'] += amountWithVat;
               } else {
-                helper.damage_assessment.totals_after_differentials['Total with VAT'] += distributedAmount;
+                helper.damage_assessment.totals_after_differentials['Total with VAT'] += amount;
               }
             }
           }
