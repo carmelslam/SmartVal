@@ -12972,12 +12972,30 @@
       
       console.log('🔍 Creating differential row with data:', data);
       
+      // Get available damage centers for dropdown
+      const helper = window.helper || {};
+      const damageCenters = helper.centers || [];
+      
+      let damageCenterOptions = '<option value="">בחר מוקד נזק</option>';
+      damageCenters.forEach((center, index) => {
+        const centerNumber = center['Damage center Number'] || (index + 1);
+        const centerLocation = center.Location || `מוקד ${centerNumber}`;
+        const isSelected = data.damage_center_id === centerNumber ? 'selected' : '';
+        damageCenterOptions += `<option value="${centerNumber}" ${isSelected}>מוקד ${centerNumber} - ${centerLocation}</option>`;
+      });
+
       div.innerHTML = `
-        <!-- Row 1: Details (3 fields) - Responsive -->
-        <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <!-- Row 1: Details (4 fields) - Responsive -->
+        <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">חלק</label>
             <input type="text" class="diff-part" placeholder="הזן חלק" value="${data.part || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מוקד נזק</label>
+            <select class="diff-damage-center" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+              ${damageCenterOptions}
+            </select>
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מהות ההפרש</label>
@@ -12997,11 +13015,15 @@
           </div>
         </div>
         
-        <!-- Row 2: Costs (3 fields) - Responsive -->
-        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+        <!-- Row 2: Costs (4 fields) - Responsive -->
+        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר ללא מע״מ</label>
-            <input type="number" class="diff-amount" placeholder="0" value="${amount}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+            <input type="number" class="diff-amount" placeholder="0" value="${amount}" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">סכום לחלוקה</label>
+            <input type="number" class="diff-distributed-amount" placeholder="0" value="${data.distributed_amount || amount}" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #007bff; font-size:14px; background:#e3f2fd;">
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">ערך מע״מ</label>
@@ -13392,9 +13414,82 @@
         if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
       }
       
-      
+      // Update damage centers after differential calculations
+      updateDifferentialCalculations();
     }
     
+    // NEW: Update differential calculations per damage center
+    function updateDifferentialCalculations() {
+      try {
+        const helper = window.helper || {};
+        const originalTotals = helper.damage_assessment?.totals || {};
+        const damageCenters = helper.centers || [];
+        
+        // Initialize totals_after_differentials with original values
+        if (!helper.damage_assessment) helper.damage_assessment = {};
+        helper.damage_assessment.totals_after_differentials = {
+          'Total parts': parseInt(originalTotals['Total parts'] || 0),
+          'Total works': parseInt(originalTotals['Total works'] || 0),
+          'Total repairs': parseInt(originalTotals['Total repairs'] || 0),
+          'Other': 0,
+          'Total with VAT': parseInt(originalTotals['Total with VAT'] || 0)
+        };
+        
+        // Process each differential row
+        const rows = document.querySelectorAll('#differentialsRows .differential-row');
+        rows.forEach(row => {
+          const damageCenterSelect = row.querySelector('.diff-damage-center');
+          const natureSelect = row.querySelector('.diff-nature-dropdown');
+          const distributedAmountInput = row.querySelector('.diff-distributed-amount');
+          
+          if (damageCenterSelect && natureSelect && distributedAmountInput) {
+            const selectedCenter = damageCenterSelect.value;
+            const nature = natureSelect.value;
+            const distributedAmount = parseFloat(distributedAmountInput.value) || 0;
+            
+            if (selectedCenter && nature && distributedAmount !== 0) {
+              // Apply differential to specific category
+              const vatRate = getVatRate();
+              const distributedWithVat = Math.round(distributedAmount * (1 + vatRate));
+              
+              switch(nature) {
+                case 'parts':
+                  helper.damage_assessment.totals_after_differentials['Total parts'] += distributedAmount;
+                  break;
+                case 'works':
+                  helper.damage_assessment.totals_after_differentials['Total works'] += distributedAmount;
+                  break;
+                case 'repairs':
+                  helper.damage_assessment.totals_after_differentials['Total repairs'] += distributedAmount;
+                  break;
+                case 'other':
+                  helper.damage_assessment.totals_after_differentials['Other'] += distributedAmount;
+                  break;
+              }
+              
+              // Update total with VAT
+              if (nature !== 'other') {
+                helper.damage_assessment.totals_after_differentials['Total with VAT'] += distributedWithVat;
+              } else {
+                helper.damage_assessment.totals_after_differentials['Total with VAT'] += distributedAmount;
+              }
+            }
+          }
+        });
+        
+        // Update session storage and window.helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        // Refresh damage centers container layout
+        setTimeout(refreshDamageCentersContainerLayout, 100);
+        
+        console.log('🔄 Updated differential calculations:', helper.damage_assessment.totals_after_differentials);
+        
+      } catch (error) {
+        console.error('Error updating differential calculations:', error);
+      }
+    }
     
     // Save differentials data with user feedback
     function saveDifferentials() {
