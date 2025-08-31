@@ -2509,39 +2509,41 @@
           totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
         
-        // Load authorizedClaim field - check for saved data first, then fallback to damage assessment
+        // Load authorizedClaim field - prioritize totals_after_differentials, then check saved data
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // Check for saved values first
-          const savedClaimValue = helper.claims_data?.total_claim;
-          const savedCalculationValue = helper.calculations?.total_damage;
-          
           let useValue = '';
           let numericValue = 0;
           
-          if (savedClaimValue && savedClaimValue !== '' && savedClaimValue !== '0' && savedClaimValue !== '00') {
-            // Use saved claim value
-            useValue = savedClaimValue;
-            numericValue = parseFloat(savedClaimValue.replace(/[₪,]/g, '')) || 0;
-          } else if (savedCalculationValue && savedCalculationValue > 0) {
-            // Use saved calculation value
-            numericValue = savedCalculationValue;
+          // Priority 1: Check for totals_after_differentials first (most current data)
+          if (helper.damage_assessment?.totals_after_differentials?.["Total with VAT"]) {
+            numericValue = helper.damage_assessment.totals_after_differentials["Total with VAT"];
             useValue = `₪${numericValue.toLocaleString()}`;
-          } else {
-            // Fallback to damage assessment data - check totals_after_differentials first, then totals, then damage_centers_summary
-            let totalWithVAT = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] || 
-                               helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-            let source = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] ? 
-                        'totals_after_differentials["Total with VAT"]' : 'totals["Total with VAT"]';
+            console.log('✅ Using totals_after_differentials for authorizedClaim:', numericValue);
+          }
+          // Priority 2: Fallback to original totals
+          else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+            numericValue = helper.damage_assessment.totals["Total with VAT"];
+            useValue = `₪${numericValue.toLocaleString()}`;
+            console.log('✅ Using original totals for authorizedClaim:', numericValue);
+          }
+          // Priority 3: Check for manually saved values
+          else {
+            const savedClaimValue = helper.claims_data?.total_claim;
+            const savedCalculationValue = helper.calculations?.total_damage;
             
-            // Fallback to damage_centers_summary.total_cost if totals doesn't exist
-            if (!totalWithVAT && helper.damage_centers_summary?.total_cost) {
-              totalWithVAT = helper.damage_centers_summary.total_cost;
-              source = 'damage_centers_summary.total_cost';
+            if (savedClaimValue && savedClaimValue !== '' && savedClaimValue !== '0' && savedClaimValue !== '00') {
+              useValue = savedClaimValue;
+              numericValue = parseFloat(savedClaimValue.replace(/[₪,]/g, '')) || 0;
+            } else if (savedCalculationValue && savedCalculationValue > 0) {
+              numericValue = savedCalculationValue;
+              useValue = `₪${numericValue.toLocaleString()}`;
+            } else {
+              // Final fallback to damage_centers_summary
+              let totalWithVAT = helper.damage_centers_summary?.total_cost || 0;
+              numericValue = totalWithVAT;
+              useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
             }
-            
-            numericValue = totalWithVAT;
-            useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
           }
           
           authorizedClaimField.value = useValue;
@@ -9728,30 +9730,39 @@
       
       console.log('📊 Saved totals_after_differentials to helper:', helper.damage_assessment.totals_after_differentials);
       
-      // Update authorizedClaim field to reflect after-differentials value
+      // Update authorizedClaim field - always update whether differentials exist or not
       const authorizedClaimField = document.getElementById('authorizedClaim');
-      if (authorizedClaimField && hasDifferentials) {
-        const afterDiffTotal = helper.damage_assessment.totals_after_differentials["Total with VAT"];
-        authorizedClaimField.value = `₪${afterDiffTotal.toLocaleString()}`;
+      if (authorizedClaimField) {
+        let claimTotal, claimValue;
         
-        // Also update helper.claims_data.total_claim
+        if (hasDifferentials) {
+          // Use after-differentials value when differentials exist
+          claimTotal = helper.damage_assessment.totals_after_differentials["Total with VAT"];
+          claimValue = `₪${claimTotal.toLocaleString()}`;
+          console.log('🔄 Updated authorizedClaim to after-differentials value:', claimTotal);
+        } else {
+          // Use original totals when no differentials
+          claimTotal = helper.damage_assessment?.totals?.["Total with VAT"] || finalTotalWithVat;
+          claimValue = `₪${claimTotal.toLocaleString()}`;
+          console.log('🔄 Updated authorizedClaim to original value (no differentials):', claimTotal);
+        }
+        
+        authorizedClaimField.value = claimValue;
+        
+        // Update helper data
         if (!helper.claims_data) helper.claims_data = {};
-        helper.claims_data.total_claim = authorizedClaimField.value;
-        
-        // Update calculations.total_damage as well
         if (!helper.calculations) helper.calculations = {};
-        helper.calculations.total_damage = afterDiffTotal;
+        helper.claims_data.total_claim = claimValue;
+        helper.calculations.total_damage = claimTotal;
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         if (window.helper) {
           if (!window.helper.claims_data) window.helper.claims_data = {};
           if (!window.helper.calculations) window.helper.calculations = {};
-          window.helper.claims_data.total_claim = authorizedClaimField.value;
-          window.helper.calculations.total_damage = afterDiffTotal;
+          window.helper.claims_data.total_claim = claimValue;
+          window.helper.calculations.total_damage = claimTotal;
         }
-        
-        console.log('🔄 Updated authorizedClaim field to after-differentials value:', afterDiffTotal);
         
         // Trigger gross percentage recalculation
         setTimeout(() => {
