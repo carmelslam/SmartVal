@@ -2031,6 +2031,16 @@
 
     // SAVE DEPRECIATION DATA TO HELPER
     function saveDepreciationData() {
+      console.log('💾 SAVE DATA BUTTON CLICKED!');
+      const button = document.querySelector('.save-btn');
+      
+      // Show visual feedback
+      if (button) {
+        button.style.background = '#059669';
+        button.innerHTML = '⏳ שומר...';
+        button.disabled = true;
+      }
+      
       try {
         // Get helper data from sessionStorage (single source of truth) to ensure consistency
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -2112,7 +2122,35 @@
         if (typeof broadcastHelperUpdate === 'function') {
           broadcastHelperUpdate(['depreciation'], 'depreciation_update');
         }
+        
+        console.log('✅ DATA SAVED SUCCESSFULLY!');
+        
+        // Show success feedback
+        setTimeout(() => {
+          if (button) {
+            button.style.background = '#16a34a';
+            button.innerHTML = '✅ נשמר!';
+            setTimeout(() => {
+              button.style.background = '#ef4444';
+              button.innerHTML = 'שמור נתונים';
+              button.disabled = false;
+            }, 1500);
+          }
+        }, 500);
+        
       } catch (error) {
+        console.error('❌ SAVE ERROR:', error);
+        
+        // Show error feedback
+        if (button) {
+          button.style.background = '#dc2626';
+          button.innerHTML = '❌ שגיאה';
+          setTimeout(() => {
+            button.style.background = '#ef4444';
+            button.innerHTML = 'שמור נתונים';
+            button.disabled = false;
+          }, 2000);
+        }
       }
     }
 
@@ -12884,7 +12922,56 @@
         console.log('✅ Added new differential row');
         updateDifferentialsSummary();
         setTimeout(saveDifferentialsToHelper, 100);
+        
+        // Force reattach event listeners to all existing rows
+        setTimeout(reattachDifferentialEventListeners, 100);
       }
+    }
+    
+    // Force reattach event listeners to all differential rows
+    function reattachDifferentialEventListeners() {
+      console.log('🔗 REATTACHING ALL DIFFERENTIAL EVENT LISTENERS');
+      const rows = document.querySelectorAll('#differentialsRows .differential-row');
+      
+      rows.forEach((row, index) => {
+        const partField = row.querySelector('.diff-part');
+        const natureField = row.querySelector('.diff-nature');
+        const reasonField = row.querySelector('.diff-reason');
+        
+        console.log(`🔗 Row ${index} - Reattaching to:`, {
+          partField: !!partField,
+          natureField: !!natureField,
+          reasonField: !!reasonField
+        });
+        
+        // Remove existing listeners and add new ones
+        if (partField) {
+          partField.replaceWith(partField.cloneNode(true));
+          const newPartField = row.querySelector('.diff-part');
+          newPartField.addEventListener('input', (e) => {
+            console.log('🔥 PART INPUT (REATTACHED):', e.target.value);
+            setTimeout(saveDifferentialsToHelper, 100);
+          });
+        }
+        
+        if (natureField) {
+          natureField.replaceWith(natureField.cloneNode(true));
+          const newNatureField = row.querySelector('.diff-nature');
+          newNatureField.addEventListener('input', (e) => {
+            console.log('🔥 NATURE INPUT (REATTACHED):', e.target.value);
+            setTimeout(saveDifferentialsToHelper, 100);
+          });
+        }
+        
+        if (reasonField) {
+          reasonField.replaceWith(reasonField.cloneNode(true));
+          const newReasonField = row.querySelector('.diff-reason');
+          newReasonField.addEventListener('input', (e) => {
+            console.log('🔥 REASON INPUT (REATTACHED):', e.target.value);
+            setTimeout(saveDifferentialsToHelper, 100);
+          });
+        }
+      });
     }
     
     // Auto-save differential data to helper
