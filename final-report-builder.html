@@ -13346,7 +13346,14 @@
     
     // Load differential data from helper on page load
     function loadDifferentialData() {
+      // Prevent multiple loads
+      if (window.differentialDataLoaded) {
+        console.log('⚠️ Differential data already loaded, skipping...');
+        return;
+      }
+      
       try {
+        console.log('📖 LOADING DIFFERENTIAL DATA FROM HELPER...');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         console.log('🔍 Checking for differential data in helper.final_report:', helper.final_report);
         const differentialData = helper.final_report?.differential;
@@ -13367,18 +13374,38 @@
         const hasDiffCheckbox = document.getElementById('hasDifferentials');
         if (hasDiffCheckbox) {
           hasDiffCheckbox.checked = differentialData.has_differentials;
-          // Trigger the toggle to show the table
-          toggleDifferentialsTable();
+          
+          // MANUALLY show/hide elements WITHOUT calling toggleDifferentialsTable to avoid overwriting data
+          const table = document.getElementById('differentialsTable');
+          const summary = document.getElementById('differentialsSummary');
+          const saveSection = document.getElementById('differentialsSaveSection');
+          
+          if (differentialData.has_differentials) {
+            table.style.display = 'block';
+            summary.style.display = 'block';
+            saveSection.style.display = 'block';
+          }
+          
+          console.log('✅ Checkbox set to:', differentialData.has_differentials, 'without triggering toggle');
         }
         
         // Load each differential item
         const container = document.getElementById('differentialsRows');
-        if (container && differentialData.items) {
+        if (container && differentialData.items && differentialData.items.length > 0) {
+          console.log('📋 Loading', differentialData.items.length, 'differential items:', differentialData.items);
+          
           // Clear existing rows
           container.innerHTML = '';
           
           // Add each differential item
-          differentialData.items.forEach(item => {
+          differentialData.items.forEach((item, index) => {
+            console.log(`📝 Loading item ${index}:`, {
+              part: item.part,
+              nature: item.nature, 
+              reason: item.reason,
+              amount: item.amount_without_vat
+            });
+            
             const row = createDifferentialRow({
               part: item.part || '',
               nature: item.nature || '',
@@ -13395,6 +13422,8 @@
           setTimeout(reattachDifferentialEventListeners, 200);
         }
         
+        // Mark as loaded to prevent multiple loads
+        window.differentialDataLoaded = true;
         console.log('✅ Differential data loaded successfully');
       } catch (error) {
         console.error('❌ Error loading differential data:', error);
