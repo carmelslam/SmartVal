@@ -20,6 +20,16 @@ try {
   helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
 }
 
+// Debug summary data for template
+console.log('🔍 Summary data debug:', {
+  'final_report.summary': helper.final_report?.summary,
+  'calculations.full_market_value': helper.calculations?.full_market_value,
+  'valuation.market_value': helper.valuation?.market_value,
+  'levisummary.final_price': helper.levisummary?.final_price,
+  'damage_assessment.totals': helper.damage_assessment?.totals,
+  'calculations.total_damage': helper.calculations?.total_damage
+});
+
 // Use helper data directly to avoid import issues
 const vehicleData = helper.vehicle || {};
 const damageData = helper.damage_assessment || {};

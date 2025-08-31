@@ -569,7 +569,7 @@
         <td><strong>קוד דגם:</strong> {{helper.vehicle.model_code}}</td>
       </tr>
       <tr>
-        <td><strong>תאריך האירוع:</strong> {{meta.damage_date}}</td>
+        <td><strong>תאריך האירוע:</strong> {{meta.damage_date}}</td>
         <td><strong>מקום הבדיקה:</strong> {{meta.inspection_location}}</td>
       </tr>
       <tr>
@@ -1020,89 +1020,160 @@
   <div class="section">
     <div class="car-details">
       <div class="car-details-title">סיכום חוות הדעת</div>
+      
+      <!-- Private Opinion Summary -->
+      {{#if (eq helper.final_report.report_type "חוות דעת פרטית")}}
       <table class="car-details-table">
         <tr>
           <th>סעיף</th>
           <th>שווי</th>
         </tr>
-        
-        <!-- Common Fields for All Report Types -->
         <tr>
-          <td>ערך שוק</td>
+          <td>ערך השוק של הרכב</td>
           <td>{{money (or helper.final_report.summary.market_value helper.calculations.full_market_value helper.valuation.market_value)}}</td>
         </tr>
         <tr>
-          <td>סה"כ תביעה</td>
+          <td>סה״כ תביעה</td>
           <td>{{money (or helper.final_report.summary.total_claim helper.damage_centers_summary.total_cost helper.calculations.total_damage)}}</td>
         </tr>
         <tr>
           <td>פיצוי בגין ירידת ערך</td>
           <td>{{money (or helper.final_report.summary.depreciation_compensation helper.depreciation.global_amount helper.depreciation.globalDepValue)}}</td>
         </tr>
-        
-        <!-- Global Opinion - Additional Fields -->
-        {{#if (eq helper.final_report.report_type "חוות דעת גלובלית")}}
         <tr>
-          <td>התאמות</td>
+          <td>תוספות והורדות (מידע בלבד)</td>
           <td>{{money (or helper.final_report.summary.adjustments helper.levi.total_adjustments 0)}}</td>
         </tr>
-        {{/if}}
-        
-        <!-- Damaged Sale Opinion - Additional Fields -->
-        {{#if (eq helper.final_report.report_type "חוות דעת מכירה פגומה")}}
-        <tr>
-          <td>שווי במכירה פגומה</td>
-          <td>{{money (or helper.final_report.summary.damaged_sale_value helper.calculations.damaged_sale_value 0)}}</td>
-        </tr>
-        {{/if}}
-        
-        <!-- Total Loss Opinion - Additional Fields -->
-        {{#if (eq helper.final_report.report_type "חוות דעת אובדן מוחלט")}}
-        <tr>
-          <td>שווי שברים</td>
-          <td>{{money (or helper.final_report.summary.salvage_value helper.calculations.salvage_value 0)}}</td>
-        </tr>
-        {{/if}}
-        
-        <!-- Legal Total Loss - Additional Fields -->
-        {{#if (eq helper.final_report.report_type "אובדן מוחלט משפטי")}}
-        <tr>
-          <td>אובדן מוחלט משפטי</td>
-          <td>{{money (or helper.final_report.summary.legal_total_loss helper.calculations.legal_total_loss 0)}}</td>
-        </tr>
-        {{/if}}
-        
         <tr>
           <td></td>
           <td></td>
         </tr>
-        
-        <!-- Final Total Row - Different for Each Type -->
         <tr>
-          <td><strong>
-            {{#if (eq helper.final_report.report_type "חוות דעת פרטית")}}
-              סה"כ נכלל בחוות הדעת
-            {{else if (eq helper.final_report.report_type "חוות דעת גלובלית")}}
-              סה"כ גלובלי
-            {{else if (eq helper.final_report.report_type "חוות דעת מכירה פגומה")}}
-              סה"כ נכלל בחוות הדעת
-            {{else if (eq helper.final_report.report_type "חוות דעת אובדן מוחלט")}}
-              סה"כ נכלל בחוות הדעת
-            {{else if (eq helper.final_report.report_type "אובדן מוחלט משפטי")}}
-              סה"כ נכלל בחוות הדעת
-            {{else}}
-              סה"כ נכלל בחוות הדעת
-            {{/if}}
-          </strong></td>
-          <td><strong>
-            {{#if (eq helper.final_report.report_type "חוות דעת גלובלית")}}
-              {{money (or helper.final_report.summary.global_total helper.calculations.global_total helper.calculations.total_compensation)}}
-            {{else}}
-              {{money (or helper.final_report.summary.final_total helper.calculations.total_compensation helper.calculations.total_damage)}}
-            {{/if}}
-          </strong></td>
+          <td><strong>סה״כ נכלל בחוות הדעת</strong></td>
+          <td><strong>{{money (or helper.final_report.summary.final_total helper.calculations.total_compensation)}}</strong></td>
         </tr>
       </table>
+      {{/if}}
+      
+      <!-- Global Opinion Summary -->
+      {{#if (eq helper.final_report.report_type "חוות דעת גלובלית")}}
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>ערך השוק של הרכב</td>
+          <td>{{money (or helper.final_report.summary.market_value helper.calculations.full_market_value helper.valuation.market_value)}}</td>
+        </tr>
+        <tr>
+          <td>סה״כ תביעה</td>
+          <td>{{money (or helper.final_report.summary.total_claim helper.damage_centers_summary.total_cost helper.calculations.total_damage)}}</td>
+        </tr>
+        <tr>
+          <td>פיצוי בגין ירידת ערך</td>
+          <td>{{money (or helper.final_report.summary.depreciation_compensation helper.depreciation.global_amount helper.depreciation.globalDepValue)}}</td>
+        </tr>
+        <tr>
+          <td>תוספות והורדות</td>
+          <td>{{money (or helper.final_report.summary.adjustments helper.levi.total_adjustments 0)}}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה״כ נכלל בחוות הדעת</strong></td>
+          <td><strong>{{money (or helper.final_report.summary.global_total helper.calculations.global_total helper.calculations.total_compensation)}}</strong></td>
+        </tr>
+      </table>
+      {{/if}}
+      
+      <!-- Damaged Sale Summary -->
+      {{#if (eq helper.final_report.report_type "חוות דעת מכירה מצבו הניזוק")}}
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>ערך השוק של הרכב</td>
+          <td>{{money (or helper.final_report.summary.market_value helper.calculations.full_market_value helper.valuation.market_value)}}</td>
+        </tr>
+        <tr>
+          <td>ערך המכירה במצבו הניזוק</td>
+          <td>{{money (or helper.final_report.summary.damaged_sale_value helper.calculations.damaged_sale_value 0)}}</td>
+        </tr>
+        <tr>
+          <td>שיטת תשלום</td>
+          <td>{{or helper.final_report.summary.payment_method "מזומן"}}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה״כ לאחר מכירה</strong></td>
+          <td><strong>{{money (or helper.final_report.summary.after_sale_total helper.calculations.damaged_sale_total)}}</strong></td>
+        </tr>
+      </table>
+      {{/if}}
+      
+      <!-- Total Loss Summary -->
+      {{#if (eq helper.final_report.report_type "חוות דעת טוטלוסט")}}
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>ערך השוק של הרכב</td>
+          <td>{{money (or helper.final_report.summary.market_value helper.calculations.full_market_value helper.valuation.market_value)}}</td>
+        </tr>
+        <tr>
+          <td>ערך שרידי הרכב</td>
+          <td>{{money (or helper.final_report.summary.salvage_value helper.calculations.salvage_value 0)}}</td>
+        </tr>
+        <tr>
+          <td>תוספת גרירה ואחסנה</td>
+          <td>{{money (or helper.final_report.summary.towing_storage helper.calculations.towing_storage 0)}}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה״כ לאחר מכירת שרידים</strong></td>
+          <td><strong>{{money (or helper.final_report.summary.after_salvage_total helper.calculations.total_loss_total)}}</strong></td>
+        </tr>
+      </table>
+      {{/if}}
+      
+      <!-- Legal Total Loss Summary -->
+      {{#if (eq helper.final_report.report_type "חוות דעת אובדן להלכה")}}
+      <table class="car-details-table">
+        <tr>
+          <th>סעיף</th>
+          <th>שווי</th>
+        </tr>
+        <tr>
+          <td>ערך השוק של הרכב</td>
+          <td>{{money (or helper.final_report.summary.market_value helper.calculations.full_market_value helper.valuation.market_value)}}</td>
+        </tr>
+        <tr>
+          <td>ערך שרידי הרכב</td>
+          <td>{{money (or helper.final_report.summary.salvage_value helper.calculations.salvage_value 0)}}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>סה״כ לאחר מכירת שרידים</strong></td>
+          <td><strong>{{money (or helper.final_report.summary.legal_total helper.calculations.legal_total_loss)}}</strong></td>
+        </tr>
+      </table>
+      {{/if}}
     </div>
   </div>
 
