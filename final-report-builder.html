@@ -2494,11 +2494,13 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // Load totalClaimGross field from damage_assessment.totals["Total with VAT"] with fallback to summary
+        // Load totalClaimGross field from damage_assessment.totals_after_differentials with fallback to totals
         const totalClaimGrossField = document.getElementById('totalClaimGross');
         if (totalClaimGrossField) {
-          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-          let source = 'totals["Total with VAT"]';
+          let totalWithVAT = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] || 
+                             helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          let source = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] ? 
+                      'totals_after_differentials["Total with VAT"]' : 'totals["Total with VAT"]';
           
           // Fallback to damage_assessment.summary.total_with_vat if totals doesn't exist
           if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
@@ -9727,6 +9729,46 @@
       });
       
       console.log('📊 Saved totals_after_differentials to helper:', helper.damage_assessment.totals_after_differentials);
+      
+      // Update authorizedClaim field to reflect after-differentials value
+      const authorizedClaimField = document.getElementById('authorizedClaim');
+      if (authorizedClaimField && hasDifferentials) {
+        const afterDiffTotal = helper.damage_assessment.totals_after_differentials["Total with VAT"];
+        authorizedClaimField.value = `₪${afterDiffTotal.toLocaleString()}`;
+        
+        // Also update helper.claims_data.total_claim
+        if (!helper.claims_data) helper.claims_data = {};
+        helper.claims_data.total_claim = authorizedClaimField.value;
+        
+        // Update calculations.total_damage as well
+        if (!helper.calculations) helper.calculations = {};
+        helper.calculations.total_damage = afterDiffTotal;
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (window.helper) {
+          if (!window.helper.claims_data) window.helper.claims_data = {};
+          if (!window.helper.calculations) window.helper.calculations = {};
+          window.helper.claims_data.total_claim = authorizedClaimField.value;
+          window.helper.calculations.total_damage = afterDiffTotal;
+        }
+        
+        console.log('🔄 Updated authorizedClaim field to after-differentials value:', afterDiffTotal);
+        
+        // Also update totalClaimGross field
+        const totalClaimGrossField = document.getElementById('totalClaimGross');
+        if (totalClaimGrossField) {
+          totalClaimGrossField.value = `₪${afterDiffTotal.toLocaleString()}`;
+          console.log('🔄 Updated totalClaimGross field to after-differentials value:', afterDiffTotal);
+        }
+        
+        // Trigger gross percentage recalculation
+        setTimeout(() => {
+          if (typeof updateGrossPercentageField === 'function') {
+            updateGrossPercentageField();
+          }
+        }, 100);
+      }
     }
     
     // CREATE הפרשים SECTION FOR DAMAGE CENTERS AREA
