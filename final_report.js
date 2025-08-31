@@ -241,6 +241,18 @@ function setupHandlebarsHelpers() {
       return a === b;
     });
     
+    // Or helper for fallback values
+    Handlebars.registerHelper('or', function(...args) {
+      // Remove the last argument which is the Handlebars options object
+      const values = args.slice(0, -1);
+      for (let value of values) {
+        if (value !== null && value !== undefined && value !== '' && value !== 0) {
+          return value;
+        }
+      }
+      return values[values.length - 1] || '';
+    });
+    
     // Length helper
     Handlebars.registerHelper('length', function(arr) {
       return Array.isArray(arr) ? arr.length : 0;
