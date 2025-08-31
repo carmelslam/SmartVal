@@ -1472,40 +1472,6 @@
       <br><br>
   </div>
     </div>
-    <!-- הפרשים SECTION -->
-    <div class="form-section" id="differentialsSection">
-      <h3>הפרשים</h3>
-      <label style="margin-bottom:5px;">האם קיימים הפרשים?
-        <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable(); setTimeout(saveDifferentialsToHelper, 100);">
-      </label>
-      
-      <div id="differentialsTable" style="display:none; margin-top:15px;">
-        <!-- Mobile-optimized header - No static header needed for 2-row layout -->
-        <div id="differentialsRows"></div>
-        <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
-      </div>
-      <div id="differentialsSummary" style="display:none; margin-top:15px;">
-        <div class="form-grid">
-          <div>
-            <label>סה"כ הפרשים (ללא מע"מ):</label>
-            <div class="readonly-box" id="totalDifferentials">₪0</div>
-          </div>
-          <div>
-            <label>סה"כ מע"מ:</label>
-            <div class="readonly-box" id="totalVAT">₪0</div>
-          </div>
-          <div>
-            <label>סה"כ הפרשים כולל מע"מ:</label>
-            <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Save button inside differentials section with proper styling -->
-      <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
-        <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer; transition: all 0.3s ease;">שמור הפרשים</button>
-      </div>
-    </div> <!-- Close differentials section -->
     </div> <!-- Close depreciationContent -->
     <br><br>
 
@@ -9612,10 +9578,32 @@
         });
       });
       
-      const totalWithoutVat = totalWorks + totalParts + totalRepairs;
-      const totalWithVat = totalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
+      let rawTotalWithoutVat = totalWorks + totalParts + totalRepairs;
+      let rawTotalWithVat = rawTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
-      // Update subtotal display elements
+      // Subtract differentials if they exist
+      let finalTotalWithoutVat = rawTotalWithoutVat;
+      let finalTotalWithVat = rawTotalWithVat;
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.final_report?.differential?.has_differentials && helper.final_report?.differential?.summary) {
+        const diffWithoutVat = helper.final_report.differential.summary.total_amount_without_vat || 0;
+        const diffWithVat = helper.final_report.differential.summary.total_amount_with_vat || 0;
+        
+        finalTotalWithoutVat = rawTotalWithoutVat - diffWithoutVat;
+        finalTotalWithVat = rawTotalWithVat - diffWithVat;
+        
+        console.log('📉 Applying differentials to damage centers subtotal:', {
+          rawWithoutVat: rawTotalWithoutVat,
+          diffWithoutVat: diffWithoutVat,
+          finalWithoutVat: finalTotalWithoutVat,
+          rawWithVat: rawTotalWithVat,
+          diffWithVat: diffWithVat,
+          finalWithVat: finalTotalWithVat
+        });
+      }
+      
+      // Update subtotal display elements with final amounts (after differentials)
       const totalWorksElement = document.getElementById('totalWorksSubtotal');
       const totalPartsElement = document.getElementById('totalPartsSubtotal');
       const totalRepairsElement = document.getElementById('totalRepairsSubtotal');
@@ -9625,43 +9613,109 @@
       if (totalWorksElement) totalWorksElement.textContent = `₪${totalWorks.toLocaleString()}`;
       if (totalPartsElement) totalPartsElement.textContent = `₪${totalParts.toLocaleString()}`;
       if (totalRepairsElement) totalRepairsElement.textContent = `₪${totalRepairs.toLocaleString()}`;
-      if (totalWithoutVatElement) totalWithoutVatElement.textContent = `₪${Math.round(totalWithoutVat).toLocaleString()}`;
-      if (totalWithVatElement) totalWithVatElement.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+      if (totalWithoutVatElement) totalWithoutVatElement.textContent = `₪${Math.round(finalTotalWithoutVat).toLocaleString()}`;
+      if (totalWithVatElement) totalWithVatElement.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
+      
+      // Show/hide "אחרי הפרשים" overlays based on differentials existence
+      const hasDifferentials = helper.final_report?.differential?.has_differentials && 
+                              helper.final_report?.differential?.summary &&
+                              (helper.final_report.differential.summary.total_amount_without_vat > 0 || 
+                               helper.final_report.differential.summary.total_amount_with_vat > 0);
+      
+      const overlayElements = [
+        'afterDiffOverlay-works',
+        'afterDiffOverlay-parts', 
+        'afterDiffOverlay-repairs',
+        'afterDiffOverlay-withoutVat',
+        'afterDiffOverlay-withVat'
+      ];
+      
+      overlayElements.forEach(overlayId => {
+        const overlay = document.getElementById(overlayId);
+        if (overlay) {
+          overlay.style.display = hasDifferentials ? 'block' : 'none';
+        }
+      });
       
       console.log('💰 Updated damage centers subtotal:', {
         works: totalWorks,
         parts: totalParts,
         repairs: totalRepairs,
-        withoutVat: totalWithoutVat,
-        withVat: totalWithVat
+        finalWithoutVat: finalTotalWithoutVat,
+        finalWithVat: finalTotalWithVat,
+        showingDifferentialsOverlay: hasDifferentials
       });
     }
     
+    // CREATE הפרשים SECTION FOR DAMAGE CENTERS AREA
+    function createDifferentialsSection() {
+      return `
+        <div class="form-section" id="differentialsSection" style="margin-top: 20px;">
+          <h3>הפרשים</h3>
+          <label style="margin-bottom:5px;">האם קיימים הפרשים?
+            <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable(); setTimeout(saveDifferentialsToHelper, 100);">
+          </label>
+          
+          <div id="differentialsTable" style="display:none; margin-top:15px;">
+            <!-- Mobile-optimized header - No static header needed for 2-row layout -->
+            <div id="differentialsRows"></div>
+            <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
+          </div>
+          <div id="differentialsSummary" style="display:none; margin-top:15px;">
+            <div class="form-grid">
+              <div>
+                <label>סה"כ הפרשים (ללא מע"מ):</label>
+                <div class="readonly-box" id="totalDifferentials">₪0</div>
+              </div>
+              <div>
+                <label>סה"כ מע"מ:</label>
+                <div class="readonly-box" id="totalVAT">₪0</div>
+              </div>
+              <div>
+                <label>סה"כ הפרשים כולל מע"מ:</label>
+                <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Save button inside differentials section with proper styling -->
+          <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
+            <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer; transition: all 0.3s ease;">שמור הפרשים</button>
+          </div>
+        </div>
+      `;
+    }
+
     // CREATE DAMAGE CENTERS SUBTOTAL SECTION
     function createDamageCentersSubtotal() {
       return `
         <div id="damageCentersSubtotal" style="background: #f8f9fa; border: 2px solid #28a745; border-radius: 6px; padding: 12px; margin-top: 15px;">
           <h4 style="margin: 0 0 10px 0; color: #28a745; text-align: center; font-size: 14px; font-weight: bold;">🧮 סיכום כללי - מרכזי נזק</h4>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px;">
-            <div style="background: #17a2b8; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+            <div style="background: #17a2b8; color: white; padding: 8px; border-radius: 4px; text-align: center; position: relative;">
+              <div style="position: absolute; top: 2px; right: 2px; font-size: 9px; color: #ff4444; font-weight: bold; display: none;" id="afterDiffOverlay-works">אחרי הפרשים</div>
               <div style="font-size: 16px; font-weight: bold;" id="totalWorksSubtotal">₪0</div>
               <div style="font-size: 10px; opacity: 0.9;">סה"כ עבודות</div>
             </div>
-            <div style="background: #28a745; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+            <div style="background: #28a745; color: white; padding: 8px; border-radius: 4px; text-align: center; position: relative;">
+              <div style="position: absolute; top: 2px; right: 2px; font-size: 9px; color: #ff4444; font-weight: bold; display: none;" id="afterDiffOverlay-parts">אחרי הפרשים</div>
               <div style="font-size: 16px; font-weight: bold;" id="totalPartsSubtotal">₪0</div>
               <div style="font-size: 10px; opacity: 0.9;">סה"כ חלקים</div>
             </div>
-            <div style="background: #ffc107; color: #212529; padding: 8px; border-radius: 4px; text-align: center;">
+            <div style="background: #ffc107; color: #212529; padding: 8px; border-radius: 4px; text-align: center; position: relative;">
+              <div style="position: absolute; top: 2px; right: 2px; font-size: 9px; color: #ff4444; font-weight: bold; display: none;" id="afterDiffOverlay-repairs">אחרי הפרשים</div>
               <div style="font-size: 16px; font-weight: bold;" id="totalRepairsSubtotal">₪0</div>
               <div style="font-size: 10px; opacity: 0.9;">סה"כ תיקונים</div>
             </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div style="background: #6c757d; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+            <div style="background: #6c757d; color: white; padding: 8px; border-radius: 4px; text-align: center; position: relative;">
+              <div style="position: absolute; top: 2px; right: 2px; font-size: 9px; color: #ff4444; font-weight: bold; display: none;" id="afterDiffOverlay-withoutVat">אחרי הפרשים</div>
               <div style="font-size: 18px; font-weight: bold;" id="totalWithoutVatSubtotal">₪0</div>
               <div style="font-size: 11px; opacity: 0.9;">סה"כ ללא מע"מ</div>
             </div>
-            <div style="background: #dc3545; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+            <div style="background: #dc3545; color: white; padding: 8px; border-radius: 4px; text-align: center; position: relative;">
+              <div style="position: absolute; top: 2px; right: 2px; font-size: 9px; color: #ff4444; font-weight: bold; display: none;" id="afterDiffOverlay-withVat">אחרי הפרשים</div>
               <div style="font-size: 18px; font-weight: bold;" id="totalWithVatSubtotal">₪0</div>
               <div style="font-size: 11px; opacity: 0.9;">סה"כ כולל מע"מ</div>
             </div>
@@ -9722,9 +9776,13 @@
           document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
         });
         
-        // Add subtotal section
+        // Add הפרשים section before subtotal
+        const differentialsHTML = createDifferentialsSection();
+        document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', differentialsHTML);
+        
+        // Add subtotal section after differentials
         const subtotalHTML = createDamageCentersSubtotal();
-        document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', subtotalHTML);
+        document.getElementById('differentialsSection').insertAdjacentHTML('afterend', subtotalHTML);
         
         // Reposition save button after subtotal is added
         setTimeout(repositionDamageCentersSaveButton, 100);
@@ -12905,7 +12963,6 @@
       }
       
       // Update summary sections to show/hide differentials impact
-      updateSummaryWithDifferentials();
     }
     
     // Alias for toggleDifferentialsTable to match HTML onclick
@@ -12913,19 +12970,6 @@
       return toggleDifferentialsTable();
     }
     
-    // Update summary sections to show/hide differentials impact
-    function updateSummaryWithDifferentials() {
-      const hasDifferentials = document.getElementById('hasDifferentials')?.checked || false;
-      
-      // Show/hide differentials final fields in each summary type
-      const summaryTypes = ['private', 'global', 'damage', 'totalLoss', 'legalLoss'];
-      summaryTypes.forEach(type => {
-        const afterDiffElement = document.getElementById(`sumTotalAfterDifferentials-${type}`);
-        if (afterDiffElement) {
-          afterDiffElement.style.display = hasDifferentials ? 'block' : 'none';
-        }
-      });
-    }
     
     function addDifferentialRow() {
       const container = document.getElementById('differentialsRows');
@@ -13118,91 +13162,9 @@
         if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
       }
       
-      // Show/hide after differentials fields and calculate final totals
-      const reportType = document.getElementById('reportType')?.value || '';
-      const hasDifferentials = rows.length > 0;
       
-      if (hasDifferentials) {
-        // Show after differentials fields for each summary type
-        const afterDifferentialsFields = [
-          'sumTotalAfterDifferentials-private',
-          'sumTotalAfterDifferentials-global', 
-          'sumTotalAfterDifferentials-damage',
-          'sumTotalAfterDifferentials-totalLoss',
-          'sumTotalAfterDifferentials-legalLoss'
-        ];
-        
-        afterDifferentialsFields.forEach(fieldId => {
-          const field = document.getElementById(fieldId);
-          if (field) field.style.display = 'block';
-        });
-        
-        // Calculate after differentials totals
-        calculateAfterDifferentialsTotals(totalWithVat);
-      } else {
-        // Hide after differentials fields when no differentials
-        const afterDifferentialsFields = [
-          'sumTotalAfterDifferentials-private',
-          'sumTotalAfterDifferentials-global',
-          'sumTotalAfterDifferentials-damage', 
-          'sumTotalAfterDifferentials-totalLoss',
-          'sumTotalAfterDifferentials-legalLoss'
-        ];
-        
-        afterDifferentialsFields.forEach(fieldId => {
-          const field = document.getElementById(fieldId);
-          if (field) field.style.display = 'none';
-        });
-      }
-      
-      // Update main summary calculations - show הפרשים in summary
-      updateMainSummaryWithDifferentials(totalWithVat);
     }
     
-    // Calculate after differentials totals for all summary types
-    function calculateAfterDifferentialsTotals(differentialsTotal) {
-      // Get the "before differentials" values and calculate "after differentials"
-      
-      // Private summary
-      const sumTotalBeforeDiff = parseFloat(document.getElementById('sumTotalBeforeDifferentials')?.value?.replace(/[₪,]/g, '') || '0') || 0;
-      const sumTotalFinalField = document.getElementById('sumTotalFinal');
-      if (sumTotalFinalField) {
-        const finalValue = sumTotalBeforeDiff - differentialsTotal;
-        sumTotalFinalField.value = `₪${finalValue.toLocaleString()}`;
-      }
-      
-      // Global summary
-      const sumTotalGlobal = parseFloat(document.getElementById('sumTotalGlobal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
-      const sumTotalFinalGlobalField = document.getElementById('sumTotalFinalGlobal');
-      if (sumTotalFinalGlobalField) {
-        const finalValueGlobal = sumTotalGlobal - differentialsTotal;
-        sumTotalFinalGlobalField.value = `₪${finalValueGlobal.toLocaleString()}`;
-      }
-      
-      // Damage summary
-      const afterSaleDamage = parseFloat(document.getElementById('afterSaleDamage')?.value?.replace(/[₪,]/g, '') || '0') || 0;
-      const afterSaleDamageFinalField = document.getElementById('afterSaleDamageFinal');
-      if (afterSaleDamageFinalField) {
-        const finalValueDamage = afterSaleDamage - differentialsTotal;
-        afterSaleDamageFinalField.value = `₪${finalValueDamage.toLocaleString()}`;
-      }
-      
-      // Total Loss summary
-      const afterSaleTotal = parseFloat(document.getElementById('afterSaleTotal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
-      const afterSaleTotalFinalField = document.getElementById('afterSaleTotalFinal');
-      if (afterSaleTotalFinalField) {
-        const finalValueTotal = afterSaleTotal - differentialsTotal;
-        afterSaleTotalFinalField.value = `₪${finalValueTotal.toLocaleString()}`;
-      }
-      
-      // Legal Loss summary
-      const afterSaleLegal = parseFloat(document.getElementById('afterSaleLegal')?.value?.replace(/[₪,]/g, '') || '0') || 0;
-      const afterSaleLegalFinalField = document.getElementById('afterSaleLegalFinal');
-      if (afterSaleLegalFinalField) {
-        const finalValueLegal = afterSaleLegal - differentialsTotal;
-        afterSaleLegalFinalField.value = `₪${finalValueLegal.toLocaleString()}`;
-      }
-    }
     
     // Save differentials data with user feedback
     function saveDifferentials() {
@@ -13445,29 +13407,6 @@
       }
     }
     
-    function updateMainSummaryWithDifferentials(differencesTotal) {
-      // Show differentials impact in all summary types
-      const summaryTypes = [
-        { finalId: 'sumTotalFinal', beforeId: 'sumTotal' },
-        { finalId: 'sumTotalFinalGlobal', beforeId: 'sumTotalGlobal' },
-        { finalId: 'afterSaleDamageFinal', beforeId: 'afterSaleDamage' },
-        { finalId: 'afterSaleTotalFinal', beforeId: 'afterSaleTotal' },
-        { finalId: 'afterSaleLegalFinal', beforeId: 'afterSaleLegal' }
-      ];
-      
-      summaryTypes.forEach(({ finalId, beforeId }) => {
-        const finalElement = document.getElementById(finalId);
-        const beforeElement = document.getElementById(beforeId);
-        
-        if (finalElement && beforeElement) {
-          const beforeValue = parseFloat(beforeElement.value) || 0;
-          const finalValue = beforeValue - differencesTotal; // Subtract הפרשים
-          finalElement.value = finalValue.toFixed(2);
-        }
-      });
-      
-      console.log(`✅ הפרשים field now appears in summary: -${differencesTotal}`);
-    }
     
 
     // Get VAT rate based on company selection
@@ -14051,8 +13990,6 @@
     window.updateDifferentialsSummary = updateDifferentialsSummary;
     window.toggleDifferentials = toggleDifferentials;
     window.toggleDifferentialsTable = toggleDifferentialsTable;
-    window.updateSummaryWithDifferentials = updateSummaryWithDifferentials;
-    window.updateMainSummaryWithDifferentials = updateMainSummaryWithDifferentials;
     window.updateFinalReportDate = updateFinalReportDate;
     window.saveDepreciationData = saveDepreciationData;
     window.continueToValidation = continueToValidation;
