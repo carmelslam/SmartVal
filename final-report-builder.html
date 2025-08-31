@@ -2494,13 +2494,11 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // Load totalClaimGross field from damage_assessment.totals_after_differentials with fallback to totals
+        // Load totalClaimGross field from original damage_assessment.totals["Total with VAT"] 
         const totalClaimGrossField = document.getElementById('totalClaimGross');
         if (totalClaimGrossField) {
-          let totalWithVAT = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] || 
-                             helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-          let source = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] ? 
-                      'totals_after_differentials["Total with VAT"]' : 'totals["Total with VAT"]';
+          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+          let source = 'totals["Total with VAT"]';
           
           // Fallback to damage_assessment.summary.total_with_vat if totals doesn't exist
           if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
@@ -9754,13 +9752,6 @@
         }
         
         console.log('🔄 Updated authorizedClaim field to after-differentials value:', afterDiffTotal);
-        
-        // Also update totalClaimGross field
-        const totalClaimGrossField = document.getElementById('totalClaimGross');
-        if (totalClaimGrossField) {
-          totalClaimGrossField.value = `₪${afterDiffTotal.toLocaleString()}`;
-          console.log('🔄 Updated totalClaimGross field to after-differentials value:', afterDiffTotal);
-        }
         
         // Trigger gross percentage recalculation
         setTimeout(() => {
