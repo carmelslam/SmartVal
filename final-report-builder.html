@@ -1265,7 +1265,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossPercentageResult')">אחוז הנזק הגולמי - בסיס הרכב בלבד (הצג/הסתר)</button>
       <div id="grossPercentageResult" style="display:none;">
         <div class="form-grid">
-          <div><label>סה״כ עלות נזקים:</label><input type="text" id="totalClaimGross" style="background: #f8f9fa;" readonly /></div>
+          <div><label>סה״כ עלות נזקים: <span style="color: #dc3545; font-size: 11px;">(לפי חשבונית/הערכה)</span></label><input type="text" id="totalClaimGross" style="background: #f8f9fa;" readonly /></div>
           <div><label>ערך הרכב לנזק גולמי:</label><input type="text" id="leviPriceList" style="background: #f8f9fa;" readonly /></div>
         </div>
         
@@ -2528,9 +2528,11 @@
             numericValue = savedCalculationValue;
             useValue = `₪${numericValue.toLocaleString()}`;
           } else {
-            // Fallback to damage assessment data - check totals first, then damage_centers_summary
-            let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-            let source = 'totals["Total with VAT"]';
+            // Fallback to damage assessment data - check totals_after_differentials first, then totals, then damage_centers_summary
+            let totalWithVAT = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] || 
+                               helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+            let source = helper.damage_assessment?.totals_after_differentials?.["Total with VAT"] ? 
+                        'totals_after_differentials["Total with VAT"]' : 'totals["Total with VAT"]';
             
             // Fallback to damage_centers_summary.total_cost if totals doesn't exist
             if (!totalWithVAT && helper.damage_centers_summary?.total_cost) {
