@@ -587,7 +587,22 @@ function createComprehensiveFieldMapping(rawHelper) {
     // Depreciation - FIXED: Direct property access
     'helper.depreciation.global_percent': rawHelper.depreciation?.global_percent || '0%',
     'helper.depreciation.global_amount': rawHelper.depreciation?.global_amount || 0,
+    'helper.depreciation.globalDepValue': rawHelper.depreciation?.global_amount || rawHelper.depreciation?.globalDepValue || 0,
     'helper.depreciation.bulk_items': rawHelper.depreciation?.bulk_items || [],
+    
+    // Claims data - for summary tables
+    'helper.claims_data.total_claim': rawHelper.damage_assessment?.totals?.['Total with VAT'] || rawHelper.calculations?.total_damage || 0,
+    
+    // Final report summary fields
+    'helper.final_report.summary.private_total': rawHelper.calculations?.total_compensation || 0,
+    'helper.final_report.summary.global_total': rawHelper.calculations?.global_total || rawHelper.calculations?.total_compensation || 0,
+    'helper.final_report.summary.damaged_sale_value': rawHelper.final_report?.summary?.damaged_sale_value || 0,
+    'helper.final_report.summary.payment_method': rawHelper.final_report?.summary?.payment_method || 'מזומן',
+    'helper.final_report.summary.salvage_value': rawHelper.final_report?.summary?.salvage_value || 0,
+    'helper.final_report.summary.towing_storage': rawHelper.final_report?.summary?.towing_storage || 0,
+    'helper.final_report.summary.after_sale_total': rawHelper.final_report?.summary?.after_sale_total || 0,
+    'helper.final_report.summary.after_salvage_total': rawHelper.final_report?.summary?.after_salvage_total || 0,
+    'helper.final_report.summary.legal_total': rawHelper.final_report?.summary?.legal_total || 0,
     
     // Custom adjustments for market value table - Use levisummary as primary source
     'helper.custom_adjustments.full_market_adjustments': rawHelper.levisummary?.adjustments || rawHelper.custom_adjustments?.full_market_adjustments || [],
