@@ -9581,25 +9581,59 @@
       let rawTotalWithoutVat = totalWorks + totalParts + totalRepairs;
       let rawTotalWithVat = rawTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
-      // Subtract differentials if they exist
+      // Calculate category-specific differentials
+      let finalTotalWorks = totalWorks;
+      let finalTotalParts = totalParts;
+      let finalTotalRepairs = totalRepairs;
       let finalTotalWithoutVat = rawTotalWithoutVat;
       let finalTotalWithVat = rawTotalWithVat;
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (helper.final_report?.differential?.has_differentials && helper.final_report?.differential?.summary) {
-        const diffWithoutVat = helper.final_report.differential.summary.total_amount_without_vat || 0;
-        const diffWithVat = helper.final_report.differential.summary.total_amount_with_vat || 0;
+      if (helper.final_report?.differential?.has_differentials && helper.final_report?.differential?.items) {
+        const differentialItems = helper.final_report.differential.items;
         
-        finalTotalWithoutVat = rawTotalWithoutVat - diffWithoutVat;
-        finalTotalWithVat = rawTotalWithVat - diffWithVat;
+        // Calculate category-specific differential totals
+        let worksDiff = 0, partsDiff = 0, repairsDiff = 0, otherDiff = 0;
+        let worksDiffWithVat = 0, partsDiffWithVat = 0, repairsDiffWithVat = 0, otherDiffWithVat = 0;
         
-        console.log('📉 Applying differentials to damage centers subtotal:', {
-          rawWithoutVat: rawTotalWithoutVat,
-          diffWithoutVat: diffWithoutVat,
-          finalWithoutVat: finalTotalWithoutVat,
-          rawWithVat: rawTotalWithVat,
-          diffWithVat: diffWithVat,
-          finalWithVat: finalTotalWithVat
+        differentialItems.forEach(item => {
+          const amount = item.amount_without_vat || 0;
+          const amountWithVat = item.amount_with_vat || 0;
+          
+          switch(item.nature) {
+            case 'works':
+              worksDiff += amount;
+              worksDiffWithVat += amountWithVat;
+              break;
+            case 'parts':
+              partsDiff += amount;
+              partsDiffWithVat += amountWithVat;
+              break;
+            case 'repairs':
+              repairsDiff += amount;
+              repairsDiffWithVat += amountWithVat;
+              break;
+            default:
+              otherDiff += amount;
+              otherDiffWithVat += amountWithVat;
+              break;
+          }
+        });
+        
+        // Apply category-specific differentials
+        finalTotalWorks = Math.max(0, totalWorks - worksDiff);
+        finalTotalParts = Math.max(0, totalParts - partsDiff);
+        finalTotalRepairs = Math.max(0, totalRepairs - repairsDiff);
+        
+        // Recalculate totals with category-specific deductions
+        const finalRawTotal = finalTotalWorks + finalTotalParts + finalTotalRepairs;
+        finalTotalWithoutVat = finalRawTotal - otherDiff; // Other differentials affect overall total
+        finalTotalWithVat = finalTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100) - otherDiffWithVat;
+        
+        console.log('📉 Applying category-specific differentials:', {
+          worksDiff, partsDiff, repairsDiff, otherDiff,
+          finalTotalWorks, finalTotalParts, finalTotalRepairs,
+          finalTotalWithoutVat, finalTotalWithVat
         });
       }
       
@@ -9630,9 +9664,9 @@
         const totalWithoutVatSubtotal = document.getElementById('totalWithoutVatSubtotal');
         const totalWithVatSubtotal = document.getElementById('totalWithVatSubtotal');
         
-        if (totalWorksSubtotal) totalWorksSubtotal.textContent = `₪${totalWorks.toLocaleString()}`;
-        if (totalPartsSubtotal) totalPartsSubtotal.textContent = `₪${totalParts.toLocaleString()}`;
-        if (totalRepairsSubtotal) totalRepairsSubtotal.textContent = `₪${totalRepairs.toLocaleString()}`;
+        if (totalWorksSubtotal) totalWorksSubtotal.textContent = `₪${Math.round(finalTotalWorks).toLocaleString()}`;
+        if (totalPartsSubtotal) totalPartsSubtotal.textContent = `₪${Math.round(finalTotalParts).toLocaleString()}`;
+        if (totalRepairsSubtotal) totalRepairsSubtotal.textContent = `₪${Math.round(finalTotalRepairs).toLocaleString()}`;
         if (totalWithoutVatSubtotal) totalWithoutVatSubtotal.textContent = `₪${Math.round(finalTotalWithoutVat).toLocaleString()}`;
         if (totalWithVatSubtotal) totalWithVatSubtotal.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
         
@@ -9644,17 +9678,20 @@
         const totalWithoutVatElement = document.getElementById('totalWithoutVatSubtotal');
         const totalWithVatElement = document.getElementById('totalWithVatSubtotal');
         
-        if (totalWorksElement) totalWorksElement.textContent = `₪${totalWorks.toLocaleString()}`;
-        if (totalPartsElement) totalPartsElement.textContent = `₪${totalParts.toLocaleString()}`;
-        if (totalRepairsElement) totalRepairsElement.textContent = `₪${totalRepairs.toLocaleString()}`;
+        if (totalWorksElement) totalWorksElement.textContent = `₪${Math.round(finalTotalWorks).toLocaleString()}`;
+        if (totalPartsElement) totalPartsElement.textContent = `₪${Math.round(finalTotalParts).toLocaleString()}`;
+        if (totalRepairsElement) totalRepairsElement.textContent = `₪${Math.round(finalTotalRepairs).toLocaleString()}`;
         if (totalWithoutVatElement) totalWithoutVatElement.textContent = `₪${Math.round(finalTotalWithoutVat).toLocaleString()}`;
         if (totalWithVatElement) totalWithVatElement.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
       }
       
       console.log('💰 Updated damage centers subtotal:', {
-        works: totalWorks,
-        parts: totalParts,
-        repairs: totalRepairs,
+        originalWorks: totalWorks,
+        originalParts: totalParts,
+        originalRepairs: totalRepairs,
+        finalWorks: finalTotalWorks,
+        finalParts: finalTotalParts,
+        finalRepairs: finalTotalRepairs,
         finalWithoutVat: finalTotalWithoutVat,
         finalWithVat: finalTotalWithVat,
         showingDifferentialsOverlay: hasDifferentials
@@ -9800,6 +9837,25 @@
           </div>
         `;
       }
+    }
+    
+    // HANDLE NATURE DROPDOWN CHANGES - SHOW/HIDE OTHER TEXT FIELD
+    function toggleNatureOtherField(dropdown) {
+      const row = dropdown.closest('.differential-row');
+      const otherField = row.querySelector('.diff-nature-other');
+      const hiddenField = row.querySelector('.diff-nature');
+      
+      if (dropdown.value === 'other') {
+        otherField.style.display = 'block';
+        otherField.focus();
+        hiddenField.value = otherField.value;
+      } else {
+        otherField.style.display = 'none';
+        hiddenField.value = dropdown.value;
+      }
+      
+      console.log('🔄 Nature changed to:', dropdown.value);
+      setTimeout(saveDifferentialsToHelper, 100);
     }
     
     // REFRESH DAMAGE CENTERS CONTAINER LAYOUT WHEN DIFFERENTIALS TOGGLE
@@ -12878,7 +12934,15 @@
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מהות ההפרש</label>
-            <input type="text" class="diff-nature" placeholder="הזן מהות" value="${data.nature || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+            <select class="diff-nature-dropdown" onchange="toggleNatureOtherField(this)" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; margin-bottom: 5px;">
+              <option value="">בחר מהות</option>
+              <option value="parts" ${data.nature === 'parts' ? 'selected' : ''}>חלקים</option>
+              <option value="works" ${data.nature === 'works' ? 'selected' : ''}>עבודות</option>
+              <option value="repairs" ${data.nature === 'repairs' ? 'selected' : ''}>תיקונים</option>
+              <option value="other" ${data.nature && !['parts', 'works', 'repairs'].includes(data.nature) ? 'selected' : ''}>אחר</option>
+            </select>
+            <input type="text" class="diff-nature-other" placeholder="פרט מהות אחרת" value="${data.nature && !['parts', 'works', 'repairs'].includes(data.nature) ? data.nature : ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; display: ${data.nature && !['parts', 'works', 'repairs'].includes(data.nature) ? 'block' : 'none'};">
+            <input type="hidden" class="diff-nature" value="${data.nature || ''}">
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">סיבת ההפרש</label>
@@ -12957,12 +13021,14 @@
       // Add auto-save to text inputs with delay to ensure data is captured
       setTimeout(() => {
         const partField = div.querySelector('.diff-part');
-        const natureField = div.querySelector('.diff-nature');
+        const natureDropdown = div.querySelector('.diff-nature-dropdown');
+        const natureOtherField = div.querySelector('.diff-nature-other');
         const reasonField = div.querySelector('.diff-reason');
         
         console.log('🔗 ATTACHING EVENT LISTENERS:', {
           partField: !!partField,
-          natureField: !!natureField,
+          natureDropdown: !!natureDropdown,
+          natureOtherField: !!natureOtherField,
           reasonField: !!reasonField
         });
         
@@ -12973,9 +13039,18 @@
           });
         }
         
-        if (natureField) {
-          natureField.addEventListener('input', (e) => {
-            console.log('🔥 NATURE INPUT EVENT:', e.target.value);
+        if (natureDropdown) {
+          natureDropdown.addEventListener('change', (e) => {
+            console.log('🔥 NATURE DROPDOWN EVENT:', e.target.value);
+            toggleNatureOtherField(e.target);
+          });
+        }
+        
+        if (natureOtherField) {
+          natureOtherField.addEventListener('input', (e) => {
+            console.log('🔥 NATURE OTHER INPUT EVENT:', e.target.value);
+            const hiddenField = div.querySelector('.diff-nature');
+            if (hiddenField) hiddenField.value = e.target.value;
             setTimeout(saveDifferentialsToHelper, 100);
           });
         }
@@ -13104,12 +13179,14 @@
       
       rows.forEach((row, index) => {
         const partField = row.querySelector('.diff-part');
-        const natureField = row.querySelector('.diff-nature');
+        const natureDropdown = row.querySelector('.diff-nature-dropdown');
+        const natureOtherField = row.querySelector('.diff-nature-other');
         const reasonField = row.querySelector('.diff-reason');
         
         console.log(`🔗 Row ${index} - Reattaching to:`, {
           partField: !!partField,
-          natureField: !!natureField,
+          natureDropdown: !!natureDropdown,
+          natureOtherField: !!natureOtherField,
           reasonField: !!reasonField
         });
         
@@ -13123,11 +13200,22 @@
           });
         }
         
-        if (natureField) {
-          natureField.replaceWith(natureField.cloneNode(true));
-          const newNatureField = row.querySelector('.diff-nature');
-          newNatureField.addEventListener('input', (e) => {
-            console.log('🔥 NATURE INPUT (REATTACHED):', e.target.value);
+        if (natureDropdown) {
+          natureDropdown.replaceWith(natureDropdown.cloneNode(true));
+          const newNatureDropdown = row.querySelector('.diff-nature-dropdown');
+          newNatureDropdown.addEventListener('change', (e) => {
+            console.log('🔥 NATURE DROPDOWN (REATTACHED):', e.target.value);
+            toggleNatureOtherField(e.target);
+          });
+        }
+        
+        if (natureOtherField) {
+          natureOtherField.replaceWith(natureOtherField.cloneNode(true));
+          const newNatureOtherField = row.querySelector('.diff-nature-other');
+          newNatureOtherField.addEventListener('input', (e) => {
+            console.log('🔥 NATURE OTHER INPUT (REATTACHED):', e.target.value);
+            const hiddenField = row.querySelector('.diff-nature');
+            if (hiddenField) hiddenField.value = e.target.value;
             setTimeout(saveDifferentialsToHelper, 100);
           });
         }
@@ -14104,6 +14192,7 @@
     window.addDifferentialRow = addDifferentialRow;
     window.updateDifferentialsSummary = updateDifferentialsSummary;
     window.refreshDamageCentersContainerLayout = refreshDamageCentersContainerLayout;
+    window.toggleNatureOtherField = toggleNatureOtherField;
     window.toggleDifferentials = toggleDifferentials;
     window.toggleDifferentialsTable = toggleDifferentialsTable;
     window.updateFinalReportDate = updateFinalReportDate;
