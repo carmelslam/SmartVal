@@ -9685,6 +9685,30 @@
         if (totalWithVatElement) totalWithVatElement.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
       }
       
+      // Update helper with after differentials totals
+      if (!helper.damage_assessment) helper.damage_assessment = {};
+      if (!helper.damage_assessment.totals_after_differentials) {
+        helper.damage_assessment.totals_after_differentials = {};
+      }
+      
+      helper.damage_assessment.totals_after_differentials = {
+        "Total works": Math.round(finalTotalWorks),
+        "Total parts": Math.round(finalTotalParts), 
+        "Total repairs": Math.round(finalTotalRepairs),
+        "Total without VAT": Math.round(finalTotalWithoutVat),
+        "Total with VAT": Math.round(finalTotalWithVat),
+        "last_updated": new Date().toISOString()
+      };
+      
+      // Save updated helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Also update window.helper
+      if (window.helper) {
+        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
+        window.helper.damage_assessment.totals_after_differentials = helper.damage_assessment.totals_after_differentials;
+      }
+      
       console.log('💰 Updated damage centers subtotal:', {
         originalWorks: totalWorks,
         originalParts: totalParts,
@@ -9696,6 +9720,8 @@
         finalWithVat: finalTotalWithVat,
         showingDifferentialsOverlay: hasDifferentials
       });
+      
+      console.log('📊 Saved totals_after_differentials to helper:', helper.damage_assessment.totals_after_differentials);
     }
     
     // CREATE הפרשים SECTION FOR DAMAGE CENTERS AREA
