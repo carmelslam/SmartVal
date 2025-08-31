@@ -1027,25 +1027,29 @@
           <!-- Will be populated with damage centers -->
         </div>
 
-        <!-- Damage Cost Summary -->
+        <!-- Damage Cost Summary (After Differentials) -->
         <div class="cost-summary">
           <div class="cost-summary-title">💰 סיכום עלויות נזק מעודכן</div>
           <div class="cost-grid">
             <div class="cost-item">
               <span class="cost-label">חלקי חילוף</span>
-              <span class="cost-value" id="damage-parts-cost">₪0</span>
+              <span class="cost-value" id="damage-parts-cost-after">₪0</span>
             </div>
             <div class="cost-item">
               <span class="cost-label">עבודות תיקון</span>
-              <span class="cost-value" id="damage-labor-cost">₪0</span>
+              <span class="cost-value" id="damage-labor-cost-after">₪0</span>
             </div>
             <div class="cost-item">
               <span class="cost-label">עבודות</span>
-              <span class="cost-value" id="damage-painting-cost">₪0</span>
+              <span class="cost-value" id="damage-painting-cost-after">₪0</span>
+            </div>
+            <div class="cost-item">
+              <span class="cost-label">אחר</span>
+              <span class="cost-value" id="damage-other-cost-after">₪0</span>
             </div>
             <div class="cost-item">
               <span class="cost-label">סה"כ עלויות נזק</span>
-              <span class="cost-value" id="damage-total-cost">₪0</span>
+              <span class="cost-value" id="damage-total-cost-after">₪0</span>
             </div>
           </div>
         </div>
@@ -1838,7 +1842,7 @@
     }
 
     function createAfterDifferentialsContainer(centers, totalsAfterDifferentials) {
-      if (!totalsAfterDifferentials || !centers.length) {
+      if (!centers.length) {
         return `
           <div style="text-align: center; padding: 20px; color: #64748b;">
             <strong>נתונים לא זמינים</strong>
@@ -1846,40 +1850,42 @@
         `;
       }
 
-      // Get the summary data for after differentials
-      const partsCost = parseInt(totalsAfterDifferentials.Parts || 0);
-      const worksCost = parseInt(totalsAfterDifferentials.Works || 0);
-      const repairsCost = parseInt(totalsAfterDifferentials.Repairs || 0);
-      const otherCost = parseInt(totalsAfterDifferentials.Other || 0);
-      const totalWithVat = parseInt(totalsAfterDifferentials['Total with VAT'] || 0);
+      // Get the original damage centers summary data
+      const helper = window.helper || {};
+      const damageCentersSummary = helper.damage_assessment?.damage_centers_summary || {};
+      
+      // Calculate totals from original damage centers
+      let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalWithVat = 0;
+      
+      centers.forEach((center, index) => {
+        const centerKey = `Damage center ${index + 1}`;
+        const summaryData = damageCentersSummary[centerKey] || {};
+        
+        totalParts += parseInt(summaryData.Parts || 0);
+        totalWorks += parseInt(summaryData.Works || 0);
+        totalRepairs += parseInt(summaryData.Repairs || 0);
+        totalWithVat += parseInt(summaryData['Total with VAT'] || 0);
+      });
 
       return `
-        <div class="damage-center" style="border-color: #ffc107;">
-          <div class="damage-center-header" style="color: #856404;">
-            🔧 סיכום לאחר הפרשים
-          </div>
-          <div class="damage-center-content">
-            <div class="damage-stat">
-              <div class="damage-stat-label">חלקים</div>
-              <div class="damage-stat-value">₪${partsCost.toLocaleString()}</div>
+        <div class="cost-summary" style="border: 2px solid #007bff; background: white;">
+          <div class="cost-summary-title" style="color: #007bff;">💰 סה״כ עלות נזקים: (לפי חשבונית/הערכה)</div>
+          <div class="cost-grid">
+            <div class="cost-item">
+              <span class="cost-label">חלקי חילוף</span>
+              <span class="cost-value">₪${totalParts.toLocaleString()}</span>
             </div>
-            <div class="damage-stat">
-              <div class="damage-stat-label">עבודות</div>
-              <div class="damage-stat-value">₪${worksCost.toLocaleString()}</div>
+            <div class="cost-item">
+              <span class="cost-label">עבודות תיקון</span>
+              <span class="cost-value">₪${totalWorks.toLocaleString()}</span>
             </div>
-            <div class="damage-stat">
-              <div class="damage-stat-label">תיקונים</div>
-              <div class="damage-stat-value">₪${repairsCost.toLocaleString()}</div>
+            <div class="cost-item">
+              <span class="cost-label">עבודות</span>
+              <span class="cost-value">₪${totalRepairs.toLocaleString()}</span>
             </div>
-            ${otherCost > 0 ? `
-            <div class="damage-stat">
-              <div class="damage-stat-label">אחר</div>
-              <div class="damage-stat-value">₪${otherCost.toLocaleString()}</div>
-            </div>
-            ` : ''}
-            <div class="damage-stat">
-              <div class="damage-stat-label">עלות כוללת</div>
-              <div class="damage-stat-value">₪${totalWithVat.toLocaleString()}</div>
+            <div class="cost-item">
+              <span class="cost-label">סה"כ עלויות נזק</span>
+              <span class="cost-value">₪${totalWithVat.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -1905,11 +1911,11 @@
             </div>
             <div class="validation-item">
               <div class="item-label">חלקים:</div>
-              <div class="item-value">${item.parts || 'לא צוין'}</div>
+              <div class="item-value">${item.part || item.parts || 'לא צוין'}</div>
             </div>
             <div class="validation-item">
               <div class="item-label">סכום:</div>
-              <div class="item-value">₪${item.amount || 0}</div>
+              <div class="item-value">₪${item.amount_with_vat || item.amount || 0}</div>
             </div>
             <div class="validation-item">
               <div class="item-label">ימי מוסך:</div>
@@ -1968,20 +1974,37 @@
     function updateDamageSummary(damage) {
       const helper = window.helper || {};
       const totals = helper.damage_assessment?.totals || {};
+      const totalsAfterDifferentials = helper.damage_assessment?.totals_after_differentials || {};
       const totalClaim = helper.claim?.total_claim || 0;
       
+      // Check if differentials exist to determine which data to use
+      const differential = helper.final_report?.differential || {};
+      const hasDifferentials = differential.has_differentials || false;
       
-      // Map from helper.damage_assessment.totals (using actual property names)
-      document.getElementById('damage-parts-cost').textContent = 
-        `₪${parseInt(totals['Total parts'] || 0).toLocaleString()}`;
-      document.getElementById('damage-labor-cost').textContent = 
-        `₪${parseInt(totals['Total works'] || 0).toLocaleString()}`;
-      document.getElementById('damage-painting-cost').textContent = 
-        `₪${parseInt(totals['Total repairs'] || 0).toLocaleString()}`;
-        
-      // Use total with VAT for now since claim data is unavailable
-      document.getElementById('damage-total-cost').textContent = 
-        `₪${parseInt(totals['Total with VAT'] || 0).toLocaleString()}`;
+      if (hasDifferentials && Object.keys(totalsAfterDifferentials).length > 0) {
+        // Use after-differentials data for the 💰 סיכום עלויות נזק מעודכן section
+        document.getElementById('damage-parts-cost-after').textContent = 
+          `₪${parseInt(totalsAfterDifferentials.Parts || 0).toLocaleString()}`;
+        document.getElementById('damage-labor-cost-after').textContent = 
+          `₪${parseInt(totalsAfterDifferentials.Works || 0).toLocaleString()}`;
+        document.getElementById('damage-painting-cost-after').textContent = 
+          `₪${parseInt(totalsAfterDifferentials.Repairs || 0).toLocaleString()}`;
+        document.getElementById('damage-other-cost-after').textContent = 
+          `₪${parseInt(totalsAfterDifferentials.Other || 0).toLocaleString()}`;
+        document.getElementById('damage-total-cost-after').textContent = 
+          `₪${parseInt(totalsAfterDifferentials['Total with VAT'] || 0).toLocaleString()}`;
+      } else {
+        // Use original totals data when no differentials exist
+        document.getElementById('damage-parts-cost-after').textContent = 
+          `₪${parseInt(totals['Total parts'] || 0).toLocaleString()}`;
+        document.getElementById('damage-labor-cost-after').textContent = 
+          `₪${parseInt(totals['Total works'] || 0).toLocaleString()}`;
+        document.getElementById('damage-painting-cost-after').textContent = 
+          `₪${parseInt(totals['Total repairs'] || 0).toLocaleString()}`;
+        document.getElementById('damage-other-cost-after').textContent = '₪0';
+        document.getElementById('damage-total-cost-after').textContent = 
+          `₪${parseInt(totals['Total with VAT'] || 0).toLocaleString()}`;
+      }
     }
     
     function updateFeesSummary(fees) {
