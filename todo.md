@@ -27,6 +27,21 @@
 3. Test with exact field names from console/screenshots
 4. Verify currency formatting doesn't create double symbols
 
+
+
+⏺ Perfect! The issue was with the {{#each}}
+  loop - it wasn't iterating properly over
+  the differential items array. By using
+  direct array index access like {{helper.fin
+  al_report.differential.items.0.part}}, it
+  works just like the summary section.
+
+  The key was following the same pattern that
+   was already working with the summary data
+  - direct object property access instead of
+  Handlebars loops for this specific data
+  structure.
+
 ---
 
 # DAMAGE CENTERS MAPPING FIXES - IMPLEMENTATION REPORT
