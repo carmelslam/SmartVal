@@ -12829,10 +12829,22 @@
     }
     
     function toggleDifferentialsTable() {
+      console.log('🔄 TOGGLE DIFFERENTIALS TABLE CALLED');
       const checkbox = document.getElementById('hasDifferentials');
       const table = document.getElementById('differentialsTable');
       const summary = document.getElementById('differentialsSummary');
       const saveSection = document.getElementById('differentialsSaveSection');
+      
+      console.log('📋 Checkbox state:', checkbox?.checked);
+      
+      // IMMEDIATE HELPER UPDATE - sync checkbox state to helper
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.final_report) helper.final_report = {};
+      if (!helper.final_report.differential) helper.final_report.differential = {};
+      
+      helper.final_report.differential.has_differentials = checkbox?.checked || false;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('💾 Updated helper.final_report.differential.has_differentials =', checkbox?.checked);
       
       if (checkbox.checked) {
         table.style.display = 'block';
@@ -12873,7 +12885,8 @@
           container.innerHTML = '';
           updateDifferentialsSummary();
         }
-        // Save the unchecked state
+        // CLEAR DIFFERENTIAL DATA when unchecked
+        console.log('🗑️ CLEARING DIFFERENTIAL DATA - checkbox unchecked');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper.final_report) helper.final_report = {};
         helper.final_report.differential = {
@@ -14014,6 +14027,10 @@
     window.updateFinalReportField = updateFinalReportField;
     window.loadDifferentialData = loadDifferentialData;
     window.reattachDifferentialEventListeners = reattachDifferentialEventListeners;
+    window.saveDifferentials = saveDifferentials;
+    window.saveDifferentialsToHelper = saveDifferentialsToHelper;
+    window.addDifferentialRow = addDifferentialRow;
+    window.toggleDifferentialsTable = toggleDifferentialsTable;
     window.testDifferentialSave = () => {
       console.log('🧪 MANUAL TEST: Reattaching listeners and saving...');
       reattachDifferentialEventListeners();
