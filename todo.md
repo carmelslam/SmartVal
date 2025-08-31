@@ -1,3 +1,34 @@
+# SUMMARY TABLES MAPPING TROUBLESHOOTING GUIDE
+**Last Updated: 31/08/2025**
+
+## ⚠️ CRITICAL MAPPING & CURRENCY FORMATTING RULES
+
+### Data Mapping Rules:
+1. **NEVER INVENT FIELD NAMES** - Always use exact field names from console data or user-provided screenshots
+2. **Check existing working tables first** - If damage centers/valuation tables work with complex data, use the same direct access pattern
+3. **Use direct object access** - `{{helper.final_report.summary.field_name}}` instead of complex fallback chains
+4. **Each report type has its own fields**:
+   - Private: `private_total`
+   - Global: `global_before_differentials`  
+   - Damaged Sale: `total_after_sale_damage`
+   - Total Loss: `total_after_salvage_total`
+   - Legal Loss: `total_after_salvage_legal`
+
+### Currency Formatting Rules:
+1. **Check console data first** - If field shows `"₪419900"` or `"₪6,440"`, data already has currency
+2. **Use `{{money}}` helper ONLY for raw numbers** - Not for fields that already include ₪ symbol
+3. **NEVER mix currency formats in same table** - Either all fields use `{{money}}` or all use direct display
+4. **For fields with existing ₪**: Use `{{helper.field}}` directly (no extra ₪)
+5. **For raw numeric fields**: Use `{{money helper.field}}` to add currency formatting
+
+### Debugging Process:
+1. Check browser console for actual data structure and values
+2. Look for working examples in same template (damage centers, valuation tables)
+3. Test with exact field names from console/screenshots
+4. Verify currency formatting doesn't create double symbols
+
+---
+
 # DAMAGE CENTERS MAPPING FIXES - IMPLEMENTATION REPORT
 **Created: 20/08/2025**
 
