@@ -10173,13 +10173,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership');" title="">
+          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_type');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_type'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -10194,13 +10194,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'owners');" title="">
+          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_history');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'owners'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_history'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -10509,13 +10509,13 @@
         
         console.log('🔄 Auto-populating market adjustments from valuation.adjustments:', adjustments);
         
-        // Categories mapping to container IDs
+        // Categories mapping to container IDs - EXACT MATCH WITH FINAL REPORT
         const categoryMapping = {
           features: 'fullFeaturesAdjustmentsList',
           registration: 'fullRegistrationAdjustmentsList', 
           mileage: 'mileageAdjustmentsList',
-          ownership: 'ownershipAdjustmentsList',
-          owners: 'ownersAdjustmentsList',
+          ownership_type: 'ownershipAdjustmentsList',
+          ownership_history: 'ownersAdjustmentsList',
           additional: 'allAdjustmentsList'
         };
         
@@ -10524,16 +10524,35 @@
           const container = document.getElementById(containerId);
           const adjustmentData = adjustments[category];
           
-          if (container && adjustmentData && (adjustmentData.percent || adjustmentData.amount || adjustmentData.reason)) {
+          if (container && adjustmentData && (adjustmentData.percent || adjustmentData.percentage || adjustmentData.amount)) {
             // Clear existing rows first
             container.innerHTML = '';
             
+            // Extract percentage - handle "9%" string format and negative values (EXACT MATCH WITH FINAL REPORT)
+            let percent = 0;
+            if (adjustmentData.percent) {
+              const percentStr = String(adjustmentData.percent).replace(/[%\s]/g, '');
+              percent = parseFloat(percentStr) || 0;
+            } else if (adjustmentData.percentage) {
+              const percentStr = String(adjustmentData.percentage).replace(/[%\s]/g, '');
+              percent = parseFloat(percentStr) || 0;
+            }
+            
+            // Extract amount - handle "ש 29,588" format (EXACT MATCH WITH FINAL REPORT)
+            let amount = 0;
+            if (adjustmentData.amount) {
+              const amountStr = String(adjustmentData.amount).replace(/[₪,\sש]/g, '');
+              amount = parseFloat(amountStr) || 0;
+            }
+            
+            // Use VALUE field for description as per final report requirements
+            const description = adjustmentData.value || adjustmentData.description || adjustmentData.reason || '';
+            const type = adjustmentData.type || 'plus';
+            
             // Create populated row
             const rowId = `${category}Adj_${Date.now()}`;
-            const percentValue = adjustmentData.percent || '';
-            const amountValue = adjustmentData.amount ? adjustmentData.amount.toLocaleString() : '';
-            const description = adjustmentData.reason || '';
-            const type = adjustmentData.type || 'plus';
+            const percentValue = percent ? percent.toString() : '';
+            const amountValue = amount ? amount.toLocaleString() : '';
             
             const newRow = `
               <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
