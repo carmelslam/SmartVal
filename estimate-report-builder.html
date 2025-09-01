@@ -837,19 +837,10 @@
       const fromExpertise = urlParams.get('from') === 'expertise';
       const fromFinalReportBuilder = urlParams.get('fromFinalReportBuilder') === 'true' || sessionStorage.getItem('fromFinalReportBuilder') === 'true';
       
-      // Allow access if coming from final-report-builder, expertise or skipping validation, even without selectedReportType
-      if (!helperData || (!skipValidation && !fromExpertise && !fromFinalReportBuilder && selectedReportType !== 'estimate')) {
-        console.error('❌ Missing required data for estimate report builder');
-        alert('שגיאה: נתונים חסרים לבניית אומדן. חוזר לדף הבחירה...');
-        window.location.href = 'selection.html';
-        return;
-      }
-      
-      if (!validationCompleted && !skipValidation && !fromExpertise && !fromFinalReportBuilder) {
-        console.warn('⚠️ Validation not completed, redirecting to validation');
-        alert('יש להשלים תחילה את תהליך האימות');
-        window.location.href = 'estimate-validation.html';
-        return;
+      // Validation removed - allow direct access to estimate report builder
+      if (!helperData) {
+        console.warn('⚠️ No helper data found, will proceed with empty data');
+        helperData = {};
       }
       
       if (skipValidation || fromExpertise || fromFinalReportBuilder) {
@@ -2244,13 +2235,8 @@
     function testPrintPreview() {
       console.log('🖨️ Testing print preview...');
       
-      // Validate data first
-      const validation = validateEstimateData();
-      if (!validation.valid) {
-        console.error('❌ Validation failed:', validation.errors);
-        alert('לא ניתן להדפיס - יש שגיאות בנתונים:\n' + validation.errors.join('\n'));
-        return false;
-      }
+      // Validation removed - allow printing without validation
+      console.log('✅ Print preview - validation requirement removed');
       
       // Test print functionality
       try {
@@ -2405,14 +2391,7 @@
       console.log('🔍 Access mode detected:', accessMode);
       
       if (accessMode === 'builder') {
-        // Builder mode: require validation
-        const validationCompleted = sessionStorage.getItem('estimateValidationCompleted');
-        if (!validationCompleted) {
-          console.warn('⚠️ Validation required for builder mode, redirecting...');
-          alert('יש להשלים תחילה את תהליך האימות');
-          window.location.href = 'estimate-validation.html';
-          return;
-        }
+        console.log('✅ Builder mode - validation requirement removed');
       }
       
       // Add draft watermark if in draft mode
@@ -2421,24 +2400,10 @@
       // Start real-time helper watcher
       startEstimateHelperWatcher();
       
-      // Run validation and injection on load
+      // Run injection on load - validation dependency removed
       setTimeout(() => {
-        if (accessMode === 'builder') {
-          const validation = validateEstimateData();
-          if (validation.errors.length > 0) {
-            console.warn('⚠️ Data validation errors found:', validation.errors);
-          }
-          if (validation.warnings.length > 0) {
-            console.warn('⚠️ Data validation warnings:', validation.warnings);
-          }
-          
-          // Always inject in builder mode after validation
-          injectEstimateHTML();
-        } else {
-          // Draft mode: always show content without strict validation
-          console.log('📄 Draft mode: showing content without validation');
-          injectEstimateHTML();
-        }
+        console.log('✅ Injecting content without validation requirements');
+        injectEstimateHTML();
       }, 1000);
     });
   </script>
