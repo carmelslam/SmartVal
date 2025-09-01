@@ -2024,6 +2024,9 @@
           from_financials: financials
         });
         
+        // Load full market value data from valuation.adjustments
+        loadFullMarketValueData();
+        
         // Update gross market value field with calculated value
         updateGrossMarketValueField();
         
@@ -10440,7 +10443,7 @@
       }
     }
     
-    // Sync adjustment to estimate helper (adapted for estimate workflow)
+    // SYNC ADJUSTMENT TO HELPER - EXACT COPY FROM FINAL REPORT (adapted for estimate workflow)
     function syncAdjustmentToEstimateHelper(element, category) {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -10454,41 +10457,133 @@
         const value = inputs[2]?.value || '';
         const type = select?.value || 'plus';
         
-        // Initialize estimate adjustments structure
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        if (!helper.estimate.adjustments[category]) helper.estimate.adjustments[category] = [];
+        // Initialize valuation.adjustments structure (main data store)
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = {};
         
-        // Find or create adjustment entry
-        const rowId = row.id;
-        let adjustmentIndex = helper.estimate.adjustments[category].findIndex(adj => adj.row_id === rowId);
+        // Save to valuation.adjustments (single source of truth)
+        const parsedPercent = parseFloat(percentage) || 0;
+        const parsedAmount = parseFloat(value?.replace(/[₪,]/g, '')) || 0;
         
-        const adjustmentData = {
-          row_id: rowId,
-          description: description,
+        helper.valuation.adjustments[category] = {
+          percent: parsedPercent,
+          amount: parsedAmount,
+          reason: description,
           type: type,
-          percentage: percentage,
-          value: value,
           last_updated: new Date().toISOString()
         };
         
-        if (adjustmentIndex >= 0) {
-          helper.estimate.adjustments[category][adjustmentIndex] = adjustmentData;
-        } else {
-          helper.estimate.adjustments[category].push(adjustmentData);
-        }
+        // Also save reference copy to estimate.adjustments for estimate-specific tracking
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        helper.estimate.adjustments[category] = {
+          ...helper.valuation.adjustments[category],
+          source: 'estimate_builder'
+        };
         
         // Save using updateHelper pattern
         if (typeof updateHelper === 'function') {
-          updateHelper('estimate', helper.estimate, 'estimate_builder_adjustment_sync');
+          updateHelper('valuation', helper.valuation, 'estimate_builder_adjustment_sync');
+          updateHelper('estimate', helper.estimate, 'estimate_builder_adjustment_reference');
         } else {
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
-        console.log('💾 Synced adjustment to estimate helper:', { category, adjustmentData });
+        console.log('💾 Synced adjustment to valuation.adjustments and estimate reference:', { 
+          category, 
+          valuation_data: helper.valuation.adjustments[category],
+          estimate_reference: helper.estimate.adjustments[category]
+        });
         
       } catch (error) {
-        console.error('❌ Error syncing adjustment to estimate helper:', error);
+        console.error('❌ Error syncing adjustment to helper:', error);
+      }
+    }
+    
+    // AUTO-POPULATE MARKET ADJUSTMENTS FROM HELPER - EXACT COPY FROM FINAL REPORT
+    function autoPopulateMarketAdjustments() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const adjustments = helper.valuation?.adjustments || {};
+        
+        console.log('🔄 Auto-populating market adjustments from valuation.adjustments:', adjustments);
+        
+        // Categories mapping to container IDs
+        const categoryMapping = {
+          features: 'fullFeaturesAdjustmentsList',
+          registration: 'fullRegistrationAdjustmentsList', 
+          mileage: 'mileageAdjustmentsList',
+          ownership: 'ownershipAdjustmentsList',
+          owners: 'ownersAdjustmentsList',
+          additional: 'allAdjustmentsList'
+        };
+        
+        // Populate each category
+        Object.entries(categoryMapping).forEach(([category, containerId]) => {
+          const container = document.getElementById(containerId);
+          const adjustmentData = adjustments[category];
+          
+          if (container && adjustmentData && (adjustmentData.percent || adjustmentData.amount || adjustmentData.reason)) {
+            // Clear existing rows first
+            container.innerHTML = '';
+            
+            // Create populated row
+            const rowId = `${category}Adj_${Date.now()}`;
+            const percentValue = adjustmentData.percent || '';
+            const amountValue = adjustmentData.amount ? adjustmentData.amount.toLocaleString() : '';
+            const description = adjustmentData.reason || '';
+            const type = adjustmentData.type || 'plus';
+            
+            const newRow = `
+              <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                <div><input type="text" placeholder="תיאור התאמה" value="${description}" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, '${category}');" /></div>
+                <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, '${category}');">
+                  <option value="plus" ${type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                  <option value="minus" ${type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                </select></div>
+                <div><input type="text" placeholder="אחוז" value="${percentValue}" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, '${category}');" /></div>
+                <div><input type="text" placeholder="₪" value="${amountValue}" onchange="updateFullMarketValueCalculation(); syncAdjustmentToEstimateHelper(this, '${category}');" /></div>
+                <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+              </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', newRow);
+            console.log(`✅ Populated ${category} adjustment:`, adjustmentData);
+          }
+        });
+        
+        // Trigger calculation after populating
+        setTimeout(() => {
+          updateFullMarketValueCalculation();
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Error auto-populating market adjustments:', error);
+      }
+    }
+    
+    // LOAD FULL MARKET VALUE DATA - EXACT COPY FROM FINAL REPORT
+    function loadFullMarketValueData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Load base price into fullBasicPrice field
+        const basePrice = helper.valuation?.base_price || helper.levisummary?.base_price || 0;
+        const fullBasicPriceField = document.getElementById('fullBasicPrice');
+        if (fullBasicPriceField && basePrice) {
+          fullBasicPriceField.value = `₪${basePrice.toLocaleString()}`;
+        }
+        
+        // Auto-populate adjustments after short delay to ensure DOM is ready
+        setTimeout(() => {
+          autoPopulateMarketAdjustments();
+        }, 100);
+        
+        console.log('📊 Loaded full market value data from helper');
+        
+      } catch (error) {
+        console.error('❌ Error loading full market value data:', error);
       }
     }
     
