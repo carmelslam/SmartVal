@@ -11145,10 +11145,34 @@
     window.refreshHelperVatRate = function() {
       console.log('🔄 Refreshing helper VAT rate from admin hub...');
       
-      // FORCE ADMIN RATE: Based on your feedback, admin rate should be 18%
-      let adminRate = 18; // TRUE admin rate
+      // GET ACTUAL ADMIN VAT RATE from storage (connected to admin vat-input field)
+      let adminRate = 18; // Default fallback
       
-      console.log('🔄 FORCING admin VAT rate to 18% (as per admin hub setting)');
+      // Method 1: Try sessionStorage (most recent admin setting)
+      const sessionVat = sessionStorage.getItem('globalVAT');
+      if (sessionVat && !isNaN(sessionVat)) {
+        adminRate = parseFloat(sessionVat);
+        console.log('✅ Got admin VAT rate from sessionStorage (globalVAT):', adminRate + '%');
+      }
+      // Method 2: Try localStorage (persistent admin setting) 
+      else {
+        const localVat = localStorage.getItem('globalVAT');
+        if (localVat && !isNaN(localVat)) {
+          adminRate = parseFloat(localVat);
+          console.log('✅ Got admin VAT rate from localStorage (globalVAT):', adminRate + '%');
+        }
+        // Method 3: Try MathEngine as final option
+        else {
+          try {
+            if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+              adminRate = MathEngine.getVatRate();
+              console.log('✅ Got admin VAT rate from MathEngine:', adminRate + '%');
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not get admin VAT rate, using default 18%:', e);
+          }
+        }
+      }
       
       // Ensure helper structure exists
       if (!window.helper) {
