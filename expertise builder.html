@@ -5,7 +5,10 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
     
-    @page { size: A4; margin: 0; }
+    @page { 
+      size: A4; 
+      margin: 42mm 12mm 30mm; /* top right/left bottom */
+    }
     body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
           font-family:'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif; }
     
@@ -31,10 +34,12 @@
       }
     }
     .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
-    .page{ position:relative; z-index:1; padding:25mm 15mm 20mm 15mm; }
-    
-    /* Page 2 and onward - increased top padding */
-    .page:not(:first-child) { padding-top: 35mm; }
+    .page {
+      position: relative;
+      z-index: 1;
+      padding: 12mm;
+      box-sizing: border-box;
+    }
     
     /* Draft watermark styles */
     .draft-watermark { 
@@ -247,6 +252,24 @@
     table, table *, .outer-border, .outer-border * {
       border-color: #1e3a8a !important;
     }
+    
+    /* ✅ Pagination hygiene - Keep content blocks intact */
+    .section, .text-box, .credentials-box, .car-details, tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    
+    /* Repeat table headers on every page */
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    
+    /* Strong bottom border on headers for clean page breaks */
+    thead th {
+      border-bottom: 3px solid #1e3a8a !important;
+    }
+    
+    /* Force page breaks when needed */
+    .page-break { break-before: page; page-break-before: always; }
     
     .header-bottom-bold th {
       border-bottom: 3px solid #1e3a8a !important;
