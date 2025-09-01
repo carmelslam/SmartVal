@@ -11141,25 +11141,66 @@
       }
     };
 
-    // Helper function to get admin VAT rate (fallback implementation)
+    // Helper function to get admin VAT rate and reset source (restored from backup)
     window.refreshHelperVatRate = function() {
-      // Try to get from MathEngine admin hub first
-      if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
-        try {
-          const adminRate = MathEngine.getVatRate();
-          console.log('✅ Retrieved admin VAT rate:', adminRate + '%');
-          return adminRate || 18;
-        } catch (e) {
-          console.warn('Could not get admin VAT rate:', e);
+      console.log('🔄 Refreshing helper VAT rate from admin hub...');
+      
+      // CRITICAL FIX: Explicitly reset to admin source and clear manual override
+      let adminRate = 18; // Default fallback
+      
+      try {
+        if (typeof MathEngine !== 'undefined' && MathEngine?.getVatRate) {
+          adminRate = MathEngine.getVatRate();
+          console.log('📊 Got admin VAT rate from MathEngine:', adminRate + '%');
         }
+      } catch (e) {
+        console.warn('⚠️ Could not get admin VAT rate, using default:', e);
       }
       
-      // Fallback to 18% default
-      console.warn('⚠️ MathEngine not available, using fallback rate');
-      return 18;
+      // Ensure helper structure exists
+      if (!window.helper) {
+        window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      }
+      if (!window.helper.calculations) {
+        window.helper.calculations = {};
+      }
+      
+      // CRITICAL FIX: Explicitly reset source to admin_hub and clear manual override
+      const oldRate = window.helper.calculations.vat_rate;
+      const oldSource = window.helper.calculations.vat_rate_source;
+      
+      window.helper.calculations.vat_rate = adminRate;
+      window.helper.calculations.vat_rate_source = 'admin_hub'; // RESET TO ADMIN
+      window.helper.calculations.vat_rate_updated = new Date().toISOString();
+      
+      console.log(`🔄 VAT reset: ${oldRate}% (${oldSource}) → ${adminRate}% (admin_hub)`);
+      
+      // Save to session storage
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      } catch (e) {
+        console.warn('⚠️ Could not save VAT reset to session storage');
+      }
+      
+      // Broadcast VAT rate change event
+      try {
+        const event = new CustomEvent('vatRateChanged', {
+          detail: { 
+            newVatRate: adminRate,
+            timestamp: new Date().toISOString(),
+            source: 'admin_hub'
+          }
+        });
+        window.dispatchEvent(event);
+        console.log('📢 VAT rate reset broadcasted to all modules:', adminRate + '%');
+      } catch (e) {
+        console.warn('⚠️ Could not broadcast VAT rate change event');
+      }
+      
+      return adminRate;
     };
 
-    // Update VAT rate for estimate builder
+    // Update VAT rate for estimate builder (manual override)
     window.updateVatRateEstimate = function() {
       const input = document.getElementById('vat-rate-input');
       const newRate = parseFloat(input.value);
@@ -11169,61 +11210,49 @@
         return;
       }
       
-      if (window.setHelperVatRate && window.setHelperVatRate(newRate, 'manual')) {
-        alert(`שיעור המע"מ עודכן ל-${newRate}%`);
-        window.initVatDisplayEstimate(); // Refresh display
-        
-        // Update cost displays that actually exist
-        if (typeof updateAllCostDisplays === 'function') {
-          updateAllCostDisplays();
-        }
-        if (typeof updateDamageCentersSubtotal === 'function') {
-          updateDamageCentersSubtotal();
-        }
-        
-      } else {
-        alert('שגיאה בעדכון שיעור המע"מ');
+      // Manually save to helper with 'manual' source
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.calculations) helper.calculations = {};
+      
+      const oldRate = helper.calculations.vat_rate;
+      const oldSource = helper.calculations.vat_rate_source;
+      
+      helper.calculations.vat_rate = newRate;
+      helper.calculations.vat_rate_source = 'manual'; // Mark as manual override
+      helper.calculations.vat_rate_updated = new Date().toISOString();
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log(`💼 VAT manual override: ${oldRate}% (${oldSource}) → ${newRate}% (manual)`);
+      
+      alert(`שיעור המע"מ עודכן ל-${newRate}%`);
+      window.initVatDisplayEstimate(); // Refresh display
+      
+      // Update cost displays that actually exist
+      if (typeof updateAllCostDisplays === 'function') {
+        updateAllCostDisplays();
+      }
+      if (typeof updateDamageCentersSubtotal === 'function') {
+        updateDamageCentersSubtotal();
       }
     };
 
-    // Reset VAT rate from admin for estimate builder  
+    // Reset VAT rate from admin for estimate builder (restored from backup)
     window.resetVatRateFromAdminEstimate = function() {
       if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
-        // Get admin rate directly from MathEngine, not from helper
-        let adminRate = 18; // fallback
-        
-        try {
-          if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
-            adminRate = MathEngine.getVatRate();
-            console.log('✅ Got admin VAT rate from MathEngine:', adminRate + '%');
-          } else {
-            console.warn('⚠️ MathEngine not available, using default 18%');
+        if (window.refreshHelperVatRate) {
+          const adminRate = window.refreshHelperVatRate();
+          document.getElementById('vat-rate-input').value = adminRate;
+          window.initVatDisplayEstimate();
+          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+          
+          // Update cost displays that actually exist
+          if (typeof updateAllCostDisplays === 'function') {
+            updateAllCostDisplays();
           }
-        } catch (e) {
-          console.error('❌ Error getting admin VAT rate:', e);
-        }
-        
-        // Force update helper with admin rate and admin source
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper.calculations) helper.calculations = {};
-        
-        helper.calculations.vat_rate = adminRate;
-        helper.calculations.vat_rate_source = 'admin_hub';
-        helper.calculations.vat_rate_updated = new Date().toISOString();
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        // Update display
-        document.getElementById('vat-rate-input').value = adminRate;
-        window.initVatDisplayEstimate();
-        alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
-        
-        // Update cost displays that actually exist
-        if (typeof updateAllCostDisplays === 'function') {
-          updateAllCostDisplays();
-        }
-        if (typeof updateDamageCentersSubtotal === 'function') {
-          updateDamageCentersSubtotal();
+          if (typeof updateDamageCentersSubtotal === 'function') {
+            updateDamageCentersSubtotal();
+          }
         }
       }
     };
