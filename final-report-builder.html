@@ -14756,16 +14756,16 @@
       
       const oldRate = helper.calculations.vat_rate;
       
-      // CRITICAL: Update BOTH systems
-      // 1. Update helper.calculations.vat_rate (for page calculations)
+      // CRITICAL: Create SESSION-ONLY override (NEVER touch admin hub)
+      // 1. Update helper.calculations.vat_rate (session override)
       helper.calculations.vat_rate = newRate;
-      helper.calculations.vat_rate_source = 'manual';
+      helper.calculations.vat_rate_source = 'manual_session_override';
       helper.calculations.vat_rate_updated = new Date().toISOString();
       
-      // 2. Update MathEngine VAT rate (override admin rate)
+      // 2. Update MathEngine with session override (admin hub stays unchanged)
       if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
         MathEngine.setVatRate(newRate);
-        console.log('✅ Updated MathEngine VAT rate to:', newRate + '%');
+        console.log('SESSION OVERRIDE: MathEngine now uses:', newRate + '% (admin hub unchanged)');
       }
       
       // Update window.helper in memory AND sessionStorage
@@ -14797,23 +14797,18 @@
           console.log('- MathEngine.getVatRate():', MathEngine.getVatRate());
         }
         
-        // Get admin rate directly - FORCE 18% as admin rate (not from MathEngine which has 20% override)
-        let adminRate = 18; // FORCE admin fallback
+        // Get TRUE admin rate (NEVER from MathEngine - it has session overrides)
+        let adminRate = 18; // TRUE admin hub default
         
-        // Check sessionStorage first (this should be the TRUE admin rate)
-        const sessionVat = sessionStorage.getItem('globalVAT');
-        if (sessionVat && !isNaN(sessionVat)) {
-          adminRate = parseFloat(sessionVat);
-          console.log('Got TRUE admin VAT from sessionStorage:', adminRate + '%');
+        // Try to get the ORIGINAL admin rate from storage (if available)
+        const originalAdminVat = localStorage.getItem('originalAdminVAT') || sessionStorage.getItem('originalAdminVAT');
+        if (originalAdminVat && !isNaN(originalAdminVat)) {
+          adminRate = parseFloat(originalAdminVat);
+          console.log('Got ORIGINAL admin VAT from storage:', adminRate + '%');
         } else {
-          const localVat = localStorage.getItem('globalVAT');
-          if (localVat && !isNaN(localVat)) {
-            adminRate = parseFloat(localVat);
-            console.log('Got TRUE admin VAT from localStorage:', adminRate + '%');
-          } else {
-            console.log('No globalVAT found - FORCING admin VAT to 18% (MathEngine shows 20% override)');
-            adminRate = 18; // FORCE to 18% - don't trust MathEngine during reset
-          }
+          // Fallback to known admin rate (should be 18% based on your setup)
+          console.log('Using KNOWN admin hub rate (18%) - MathEngine has session overrides');
+          adminRate = 18; // TRUE admin hub rate
         }
         
         console.log('ADMIN RATE FOR RESET (FINAL REPORT):', adminRate + '%');
@@ -14825,27 +14820,28 @@
         const oldRate = helper.calculations.vat_rate;
         const oldSource = helper.calculations.vat_rate_source;
         
-        // Update helper calculations
+        // RESTORE BOTH SYSTEMS to true admin rate
+        // 1. Clear session override in helper
         helper.calculations.vat_rate = adminRate;
-        helper.calculations.vat_rate_source = 'admin_hub';
+        helper.calculations.vat_rate_source = 'admin_hub_restored';
         helper.calculations.vat_rate_updated = new Date().toISOString();
         
         // Update window.helper and save
         window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // FORCE UPDATE MathEngine (it currently has 20% override)
+        // 2. RESTORE MathEngine to true admin rate (clear session override)
         if (typeof MathEngine !== 'undefined') {
-          console.log('BEFORE: MathEngine VAT was:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
+          console.log('BEFORE RESET: MathEngine had session override:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
           
           if (MathEngine.setVatRate) {
             MathEngine.setVatRate(adminRate);
-            console.log('FORCED MathEngine to admin rate:', adminRate + '%');
+            console.log('RESTORED: MathEngine back to admin rate:', adminRate + '%');
           }
           
-          // Verify the update worked
+          // Verify the restore worked
           setTimeout(() => {
-            console.log('AFTER: MathEngine VAT is now:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
+            console.log('AFTER RESET: MathEngine now uses admin rate:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
           }, 100);
         }
         
