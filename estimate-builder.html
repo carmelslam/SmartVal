@@ -11144,15 +11144,18 @@
     // Helper function to get admin VAT rate (fallback implementation)
     window.refreshHelperVatRate = function() {
       // Try to get from MathEngine admin hub first
-      if (typeof MathEngine !== 'undefined' && MathEngine.loadAdminHubVatRate) {
+      if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
         try {
-          return MathEngine.loadAdminHubVatRate() || 18;
+          const adminRate = MathEngine.getVatRate();
+          console.log('✅ Retrieved admin VAT rate:', adminRate + '%');
+          return adminRate || 18;
         } catch (e) {
           console.warn('Could not get admin VAT rate:', e);
         }
       }
       
       // Fallback to 18% default
+      console.warn('⚠️ MathEngine not available, using fallback rate');
       return 18;
     };
 
@@ -11186,14 +11189,32 @@
     // Reset VAT rate from admin for estimate builder  
     window.resetVatRateFromAdminEstimate = function() {
       if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
-        const adminRate = window.refreshHelperVatRate();
-        document.getElementById('vat-rate-input').value = adminRate;
+        // Get admin rate directly from MathEngine, not from helper
+        let adminRate = 18; // fallback
         
-        // Update helper with admin rate
-        if (window.setHelperVatRate) {
-          window.setHelperVatRate(adminRate, 'admin_hub');
+        try {
+          if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+            adminRate = MathEngine.getVatRate();
+            console.log('✅ Got admin VAT rate from MathEngine:', adminRate + '%');
+          } else {
+            console.warn('⚠️ MathEngine not available, using default 18%');
+          }
+        } catch (e) {
+          console.error('❌ Error getting admin VAT rate:', e);
         }
         
+        // Force update helper with admin rate and admin source
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.calculations) helper.calculations = {};
+        
+        helper.calculations.vat_rate = adminRate;
+        helper.calculations.vat_rate_source = 'admin_hub';
+        helper.calculations.vat_rate_updated = new Date().toISOString();
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update display
+        document.getElementById('vat-rate-input').value = adminRate;
         window.initVatDisplayEstimate();
         alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
         
