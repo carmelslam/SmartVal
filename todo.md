@@ -5702,7 +5702,7 @@ Handlebars.registerHelper('money', function(value) {
 - Values automatically update when async calculations complete
 - No breaking changes to existing functionality
 
-**THE ESTIMATE REPORT**
+**THE ESTIMATE REPORT WORKFLOW**
 1. Compare the estimate builder page with the final report builder page, both page are essentially the same while the final report builder has more details inside 
 2. The estimate report doesn’t  require : differentials , in agreement or for company fields, 
 3. all the other sections are required as follows :

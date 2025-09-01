@@ -960,39 +960,17 @@
 
     <!-- VEHICLE DATA - EDITABLE FROM HELPER -->
     <div class="form-section">
-      <h3>נתוני רכב</h3>
-      <div class="form-grid" id="vehicleData">
-        <div>
-          <label>מספר רכב:</label>
-          <input type="text" id="carPlate" />
-        </div>
-        <div>
-          <label>תוצרת:</label>
-          <input type="text" id="carManufacturer" />
-        </div>
-        <div>
-          <label>דגם:</label>
-          <input type="text" id="carModel" />
-        </div>
-        <div>
-          <label>שנת ייצור:</label>
-          <input type="text" id="carYear" />
-        </div>
-        <div>
-          <label>קוד דגם:</label>
-          <input type="text" id="carModelCode" />
-        </div>
-        <div>
-          <label>מחיר בסיס:</label>
-          <input type="text" id="carBasePrice" onchange="updateHelperFromVehicleField(this);" />
-        </div>
-        <div>
-          <label>ערך השוק של הרכב:</label>
-          <input type="text" id="carMarketValue" onchange="updateHelperFromVehicleField(this);" />
-        </div>
-        <div>
-          <label>תאריך הפקה:</label>
-          <input type="date" id="carReportDate" onchange="updateHelperFromVehicleField(this);" />
+      <button class="collapsible-btn" type="button" onclick="toggleSection('vehicleData')">נתוני רכב (הצג/הסתר)</button>
+      <div id="vehicleData" style="display:none;">
+        <div class="form-grid">
+          <div><label>מספר רכב:</label><input type="text" id="carPlate" onchange="updateHelperFromField(event);" /></div>
+          <div><label>תוצרת:</label><input type="text" id="carManufacturer" onchange="updateHelperFromField(event);" /></div>
+          <div><label>דגם:</label><input type="text" id="carModel" onchange="updateHelperFromField(event);" /></div>
+          <div><label>שנת ייצור:</label><input type="text" id="carYear" onchange="updateHelperFromField(event);" /></div>
+          <div><label>קוד דגם:</label><input type="text" id="carModelCode" onchange="updateHelperFromField(event);" /></div>
+          <div><label>מחיר בסיס:</label><input type="text" id="carBasePrice" onchange="updateHelperFromField(event);" /></div>
+          <div><label>ערך השוק של הרכב:</label><input type="text" id="carMarketValue" onchange="updateHelperFromField(event);" /></div>
+          <div><label>תאריך הפקה:</label><input type="date" id="carReportDate" onchange="updateHelperFromField(event);" /></div>
         </div>
       </div>
     </div>
@@ -1011,19 +989,24 @@
           <div><label>סוכן ביטוח:</label><input type="text" id="insuranceAgent" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
           <div><label>טלפון סוכן ביטוח:</label><input type="text" id="agentPhone" onchange="updateHelperFromContactField(this); triggerFloatingScreenRefresh();" /></div>
           <div><label>אימייל סוכן ביטוח:</label><input type="text" id="agentEmail" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>שם מוסך:</label><input type="text" id="garageName" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>טלפון מוסך:</label><input type="text" id="garagePhone" onchange="updateHelperFromContactField(this);" /></div>
+          <div><label>אימייל מוסך:</label><input type="text" id="garageEmail" onchange="updateHelperFromContactField(this);" /></div>
         </div>
       </div>
     </div>
 
     <!-- DAMAGE CENTERS SUMMARY SECTION - EDITABLE -->
     <div class="form-section">
-      <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
-      <div id="damageCentersSummary">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
+      <div id="damageCentersSummary" style="display:none;">
+        <h3>סיכום מוקדי נזק (ניתן לעריכה) </h3>
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
         <button type="button" class="btn add" onclick="addNewDamageCenter()" style="margin-top: 10px;">הוסף מוקד נזק חדש</button>
       </div>
+    </div>
     </div>
 
     <!-- GROSS DAMAGE PERCENTAGE CALCULATION -->
@@ -1160,7 +1143,9 @@
 
     <!-- DEPRECIATION CALCULATION SECTION -->
     <div class="form-section" id="depreciationSection">
-      <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
+      <button class="collapsible-btn" type="button" onclick="toggleSection('depreciationContent')">חישוב ירידת ערך לפי מוקדי נזק (הצג/הסתר)</button>
+      <div id="depreciationContent" style="display: none;">
+        <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
@@ -1180,6 +1165,7 @@
       <div style="margin-top:14px;">
         <label>ימי מוסך משוערים:</label>
         <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" />
+      </div>
       </div>
     </div>
 
@@ -3570,11 +3556,44 @@
           }
         }
         
+        // ENHANCED DATA PERSISTENCE: Write to both source fields and helper.estimate for reference
+        // Initialize helper.estimate if not exists
+        helper.estimate = helper.estimate || {};
+        
+        // Write complete state to helper.estimate for historical reference
+        helper.estimate.vehicle_data = {
+          plate: helper.car_details?.plate || helper.vehicle?.plate_number,
+          manufacturer: helper.car_details?.manufacturer || helper.vehicle?.manufacturer,
+          model: helper.car_details?.model || helper.vehicle?.model,
+          year: helper.car_details?.year || helper.vehicle?.year,
+          model_code: helper.car_details?.model_code || helper.vehicle?.model_code,
+          base_price: helper.car_details?.base_price,
+          market_value: helper.car_details?.market_value || helper.vehicle?.market_value,
+          report_date: helper.car_details?.report_date
+        };
+        
+        helper.estimate.contact_data = {
+          owner_name: helper.client?.name,
+          owner_address: helper.client?.address, 
+          owner_phone: helper.client?.phone,
+          insurance_company: helper.client?.insurance_company,
+          insurance_email: helper.client?.insurance_email,
+          insurance_agent: helper.client?.insurance_agent,
+          agent_phone: helper.client?.insurance_agent_phone,
+          agent_email: helper.client?.insurance_agent_email
+        };
+        
+        helper.estimate.claims_data = helper.claims_data || {};
+        helper.estimate.summary_data = helper.estimate_summary || {};
+        helper.estimate.work_days = helper.estimate_work_days;
+        helper.estimate.timestamp = new Date().toISOString();
+        
         // Save updated helper using proper function  
         if (typeof updateHelper === 'function') {
           updateHelper('car_details', helper.car_details, 'estimate_builder_field_update');
           updateHelper('vehicle', helper.vehicle, 'estimate_builder_field_update');
           updateHelper('estimate_summary', helper.estimate_summary, 'estimate_builder_field_update');
+          updateHelper('estimate', helper.estimate, 'estimate_builder_reference_update');
         } else {
           // Fallback for compatibility
           sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -6934,6 +6953,20 @@
           total_cost: (block.parts_cost || 0) + (block.work_cost || 0) + (block.repairs_cost || 0)
         }));
         
+        // ENHANCED DATA PERSISTENCE: Write to both source fields and helper.estimate for reference
+        // Initialize helper.estimate if not exists
+        helper.estimate = helper.estimate || {};
+        
+        // Write damage centers data to helper.estimate for historical reference
+        helper.estimate.damage_centers_data = {
+          damage_blocks: helper.expertise.damage_blocks,
+          total_centers: helper.expertise.damage_blocks.length,
+          total_parts_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.parts_cost || 0), 0),
+          total_work_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.work_cost || 0), 0),
+          total_repairs_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.repairs_cost || 0), 0),
+          timestamp: new Date().toISOString()
+        };
+        
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
@@ -9228,11 +9261,32 @@
           legacyMappings[fieldId]();
         }
         
+        // ENHANCED DATA PERSISTENCE: Write to both source fields and helper.estimate for reference
+        // Initialize helper.estimate if not exists
+        helper.estimate = helper.estimate || {};
+        
+        // Write current contact data to helper.estimate for historical reference
+        helper.estimate.contact_data = {
+          owner_name: helper.stakeholders?.owner?.name,
+          owner_address: helper.stakeholders?.owner?.address,
+          owner_phone: helper.stakeholders?.owner?.phone,
+          insurance_company: helper.stakeholders?.insurance?.company,
+          insurance_email: helper.stakeholders?.insurance?.email,
+          insurance_agent: helper.stakeholders?.insurance?.agent?.name,
+          agent_phone: helper.stakeholders?.insurance?.agent?.phone,
+          agent_email: helper.stakeholders?.insurance?.agent?.email,
+          garage_name: helper.stakeholders?.garage?.name,
+          garage_phone: helper.stakeholders?.garage?.phone,
+          garage_email: helper.stakeholders?.garage?.email
+        };
+        
+        helper.estimate.timestamp = new Date().toISOString();
+        
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         localStorage.setItem('helper', JSON.stringify(helper));
         
-        console.log(`💾 Helper updated for field: ${fieldId}`);
+        console.log(`💾 Helper updated for field: ${fieldId} (including estimate reference)`);
         
       } catch (error) {
         console.error('❌ Error updating helper from contact field:', error);
