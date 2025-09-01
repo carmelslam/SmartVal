@@ -2263,29 +2263,72 @@
       }
     }
 
-    // LOAD DAMAGE CENTERS SUMMARY - EDITABLE CARDS
+    // ESTIMATE-SPECIFIC DAMAGE CENTERS LOADING FUNCTION
     function loadDamageCentersSummary(helper) {
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
-        // ✅ BIDIRECTIONAL SYNC: Try damage_blocks first, then damage_centers
+        // ESTIMATE WORKFLOW: Load from multiple sources with preference for estimate data
         let damageData = null;
-        if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
-          damageData = helper.expertise.damage_blocks;
-          console.log('🔍 Loading from helper.expertise.damage_blocks');
-        } else if (helper.damage_centers && helper.damage_centers.length > 0) {
-          damageData = helper.damage_centers.map(center => ({
+        
+        // First priority: Load from estimate data if exists
+        if (helper.estimate?.damage_centers && helper.estimate.damage_centers.length > 0) {
+          damageData = helper.estimate.damage_centers.map(center => ({
             damage_center_name: center.center_name,
-            area_name: center.area_name,
-            description: center.description,
-            parts: center.parts || [],
-            works: center.works || [],
-            repairs: center.repairs || [],
-            parts_cost: center.parts ? center.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0) : 0,
-            work_cost: center.works ? center.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0) : 0,
-            repairs_cost: center.repairs ? center.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0) : 0
+            area_name: center.center_location,
+            description: center.damage_description,
+            parts: center.estimated_parts?.map(p => ({
+              name: p.name,
+              desc: p.description,
+              price: p.estimated_cost,
+              source: p.source
+            })) || [],
+            works: center.estimated_works?.map(w => ({
+              type: w.work_type,
+              note: w.work_notes,
+              cost: w.estimated_cost
+            })) || [],
+            repairs: center.estimated_repairs?.map(r => ({
+              description: r.repair_description,
+              cost: r.estimated_cost
+            })) || [],
+            parts_cost: center.costs_breakdown?.parts_cost || 0,
+            work_cost: center.costs_breakdown?.work_cost || 0,
+            repairs_cost: center.costs_breakdown?.repairs_cost || 0
           }));
-          console.log('🔍 Loading from helper.damage_centers and converting to damage_blocks format');
+          console.log('📊 Loading estimate damage centers from helper.estimate.damage_centers');
+        }
+        // Second priority: Load from helper.centers (source data)
+        else if (helper.centers && helper.centers.length > 0) {
+          damageData = helper.centers.map(center => ({
+            damage_center_name: center.Location || `מוקד נזק ${center['Damage center Number'] || ''}`,
+            area_name: center.Location,
+            description: center.Description,
+            parts: center.Parts?.parts_required?.map(p => ({
+              name: p.name,
+              desc: p.desc,
+              price: p.price,
+              source: p.source
+            })) || [],
+            works: center.Works?.works?.map(w => ({
+              type: w.type,
+              note: w.note,
+              cost: w.cost
+            })) || [],
+            repairs: center.Repairs?.repairs?.map(r => ({
+              description: r.description,
+              cost: r.cost
+            })) || [],
+            parts_cost: center.Parts?.parts_meta?.total_cost || 0,
+            work_cost: center.Works?.works_meta?.total_cost || 0,
+            repairs_cost: center.Repairs?.repairs_meta?.total_cost || 0
+          }));
+          console.log('📋 Loading damage centers from helper.centers (source data)');
+        }
+        // Third priority: Load from damage_blocks (compatibility)
+        else if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+          damageData = helper.expertise.damage_blocks;
+          console.log('🔄 Loading from helper.expertise.damage_blocks (compatibility)');
         }
         
         if (damageData && damageData.length > 0) {
@@ -2301,11 +2344,14 @@
           // Add event listeners after HTML is created
           setTimeout(addDamageCenterEventListeners, 100);
           
+          console.log(`✅ Loaded ${damageData.length} damage centers for estimate`);
+          
         } else {
           damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
+          console.log('ℹ️ No damage centers found, showing empty state');
         }
       } catch (error) {
-        console.error('Error loading damage centers summary:', error);
+        console.error('❌ Error loading estimate damage centers summary:', error);
         document.getElementById('damageCentersContent').innerHTML = '<div style="color: #dc3545; text-align: center;">שגיאה בטעינת נתוני מוקדי נזק</div>';
       }
     }
