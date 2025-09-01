@@ -1422,7 +1422,8 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('depreciationContent')">חישוב ירידת ערך לפי מוקדי נזק (הצג/הסתר)</button>
       <div id="depreciationContent" style="display: none;">
         <h3>חישוב ירידת ערך לפי מוקדי נזק</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;">
+      <div style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:14px; margin-bottom:10px;">
+        <div><label>מס' מוקד:</label></div>
         <div><label>החלק הניזוק:</label></div>
         <div><label>מהות התיקון:</label></div>
         <div><label>% ירידת ערך:</label></div>
@@ -1434,13 +1435,13 @@
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <input type="text" id="globalDep1" placeholder="% ירידת ערך" onchange="saveDepreciationData();" />
+          <input type="text" id="globalDep1" placeholder="ירידת ערך" style="direction: ltr; text-align: right;" onchange="saveDepreciationData();" />
           <input type="text" id="globalDepValue" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" />
         </div>
       </div>
       <div style="margin-top:14px;">
         <label>ימי מוסך משוערים:</label>
-        <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" />
+        <input type="number" id="garageDays" placeholder="מספר ימי עבודה" style="width: 200px;" onchange="saveDepreciationData();" />
       </div>
       </div>
     </div>
@@ -1672,17 +1673,17 @@
     function addDepField(data = {}) {
       const container = document.getElementById('depreciationBulkTable');
       if (!container) {
-        console.error('Depreciation bulk table container not found');
         return;
       }
       
       const rowId = 'depRow_' + Date.now();
       const newRow = `
-        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:2fr 2fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="%" value="${data.percent || ''}" onchange="saveDepreciationData();" /></div>
-          <div><input type="text" placeholder="₪" value="${data.value || ''}" onchange="saveDepreciationData();" /></div>
+        <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || ''}" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" /></div>
+          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}" style="direction: ltr; text-align: right;" /></div>
+          <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="₪${data.value || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1691,19 +1692,28 @@
       
       // Add auto-calculation functionality to the percentage field
       const row = document.getElementById(rowId);
-      const percentInput = row.querySelector('input[placeholder="%"]');
-      const valueInput = row.querySelector('input[placeholder="₪"]');
+      
+      // Add tooltip update listeners to all input fields
+      const inputs = row.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.addEventListener('input', function() {
+          this.title = this.value;
+        });
+      });
+      const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
+      
+      const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
       
       percentInput.addEventListener('input', function() {
-        let percent = parseFloat(this.value) || 0;
+        // Clean the value to extract the numeric part
+        const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
+        let percent = parseFloat(cleanValue) || 0;
         
-        // Auto-add % symbol if not present and user enters a number
-        if (this.value && !this.value.includes('%') && !isNaN(percent)) {
-          this.value = percent + '%';
-        }
+        // Keep value as clean decimal number without % sign
+        this.value = cleanValue;
         
         // Calculate value from market price automatically
-        const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+        const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue') || document.getElementById('basicPrice');
         const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
         const marketValue = parseFloat(marketValueStr) || 0;
         
@@ -1731,11 +1741,13 @@
         // Get global depreciation values
         const globalPercent = document.getElementById('globalDep1')?.value || '';
         const globalValue = document.getElementById('globalDepValue')?.value || '';
+        const garageDays = document.getElementById('garageDays')?.value || '';
         
         // Collect depreciation data
         const depreciationData = {
           global_percent: globalPercent,
           global_value: globalValue,
+          work_days_impact: garageDays,
           bulk_items: []
         };
         
@@ -1743,12 +1755,14 @@
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
         depRows.forEach(row => {
           const inputs = row.querySelectorAll('input');
-          if (inputs.length >= 4) {
+          if (inputs.length >= 5) {
             const item = {
-              damaged_part: inputs[0].value,
-              repair_type: inputs[1].value,
-              percent: inputs[2].value,
-              value: inputs[3].value
+              center_number: inputs[0].value,
+              damaged_part: inputs[1].value,
+              repair_type: inputs[2].value,
+              // Clean percent value to remove % and handle decimals properly
+              percent: inputs[3].value.replace('%', '').replace(/[^0-9.-]/g, ''),
+              value: inputs[4].value
             };
             console.log('💾 Saving depreciation item:', item);
             depreciationData.bulk_items.push(item);
@@ -2605,6 +2619,7 @@
           // Load global depreciation
           document.getElementById('globalDep1').value = helper.estimate_depreciation.global_percent || '';
           document.getElementById('globalDepValue').value = helper.estimate_depreciation.global_value || '';
+          document.getElementById('garageDays').value = helper.estimate_depreciation.work_days_impact || '';
           
           // Load bulk depreciation table
           if (helper.estimate_depreciation.bulk_items) {
