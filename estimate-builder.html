@@ -1569,6 +1569,34 @@
       </div>
     </div>
 
+    <!-- VAT RATE SETTINGS -->
+    <div class="form-section" id="vat-settings" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+      <h3 style="color: #856404;">🏛️ הגדרות מע"מ</h3>
+      <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+        <div style="font-size: 14px; color: #495057; margin-bottom: 10px;">
+          <strong>מקור שיעור מע"מ נוכחי:</strong> <span id="vat-source-display">טוען...</span><br>
+          <strong>עדכון אחרון:</strong> <span id="vat-updated-display">טוען...</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <label style="font-weight: bold; color: #495057;">שיעור מע"מ (%):</label>
+          <input type="number" id="vat-rate-input" min="0" max="100" step="0.1" 
+                 style="width: 80px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" 
+                 value="" placeholder="18">
+          <button type="button" onclick="updateVatRateEstimate()" 
+                  style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+            עדכן מע"מ
+          </button>
+          <button type="button" onclick="resetVatRateFromAdminEstimate()" 
+                  style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+            אפס לערך מנהל
+          </button>
+        </div>
+        <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
+          💡 שינוי שיעור המע"מ ישפיע על כל החישובים בדו"ח זה. השינוי לא ישפיע על המקרים האחרים.
+        </div>
+      </div>
+    </div>
+
     <!-- Navigation Buttons -->
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
@@ -10194,6 +10222,14 @@
       
       // Initialize expertise button state
       initializeExpertiseButtonState();
+      
+      // Initialize VAT display
+      setTimeout(function() {
+        if (typeof window.initVatDisplayEstimate === 'function') {
+          window.initVatDisplayEstimate();
+          console.log('🏛️ VAT display initialized for estimate builder');
+        }
+      }, 1000);
     });
 
     // Initialize expertise button state based on existing data
@@ -11045,6 +11081,120 @@
         console.error('❌ Error loading full market value data:', error);
       }
     }
+    
+    // ============================
+    // VAT MANAGEMENT FUNCTIONS
+    // ============================
+    
+    // Initialize VAT display for estimate builder
+    window.initVatDisplayEstimate = async function() {
+      try {
+        // Try to get actual VAT rate from admin hub via MathEngine
+        let adminVatRate = null;
+        let vatSource = 'default';
+        
+        if (typeof MathEngine !== 'undefined' && MathEngine.loadAdminHubVatRate) {
+          try {
+            adminVatRate = await MathEngine.loadAdminHubVatRate();
+            if (adminVatRate !== null) {
+              vatSource = 'admin_hub';
+              console.log('✅ Loaded VAT rate from admin hub:', adminVatRate + '%');
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not load VAT rate from admin hub:', e);
+          }
+        }
+        
+        // Fallback to helper or default
+        if (adminVatRate === null) {
+          adminVatRate = window.getHelperVatRate ? window.getHelperVatRate() : 18;
+          vatSource = window.helper?.calculations?.vat_rate ? 'helper' : 'default';
+        }
+        
+        // Update MathEngine with admin rate
+        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate && vatSource === 'admin_hub') {
+          MathEngine.setVatRate(adminVatRate);
+        }
+        
+        // Update display
+        const vatInput = document.getElementById('vat-rate-input');
+        if (vatInput) vatInput.value = adminVatRate;
+        
+        const sourceDisplay = document.getElementById('vat-source-display');
+        const updatedDisplay = document.getElementById('vat-updated-display');
+        if (sourceDisplay) {
+          sourceDisplay.textContent = vatSource === 'admin_hub' ? 'מנהל מערכת' : 
+                                      vatSource === 'helper' ? 'נתוני מערכת' : 'ברירת מחדל';
+        }
+        if (updatedDisplay) {
+          updatedDisplay.textContent = vatSource === 'admin_hub' ? 
+            new Date().toLocaleString('he-IL') : 'לא עודכן מאדמין';
+        }
+        
+        console.log(`📊 VAT display initialized for estimate: ${adminVatRate}% (${vatSource})`);
+        
+      } catch (e) {
+        console.warn('⚠️ Could not initialize VAT display for estimate:', e);
+        // Fallback initialization
+        const vatInput = document.getElementById('vat-rate-input');
+        if (vatInput) vatInput.value = 18;
+      }
+    };
+
+    // Update VAT rate for estimate builder
+    window.updateVatRateEstimate = function() {
+      const input = document.getElementById('vat-rate-input');
+      const newRate = parseFloat(input.value);
+      
+      if (isNaN(newRate) || newRate < 0 || newRate > 100) {
+        alert('אנא הזן שיעור מע"מ חוקי (0-100)');
+        return;
+      }
+      
+      if (window.setHelperVatRate && window.setHelperVatRate(newRate, 'manual')) {
+        alert(`שיעור המע"מ עודכן ל-${newRate}%`);
+        window.initVatDisplayEstimate(); // Refresh display
+        
+        // Trigger calculations refresh
+        if (typeof refreshAllCalculationsEstimate === 'function') {
+          refreshAllCalculationsEstimate();
+        }
+        
+        // Update all cost displays
+        updateAllCostDisplays();
+        updateMarketValueAdjustmentsSubtotal();
+        updateFeaturesAdjustmentsSubtotal();
+        updateDamageCentersSubtotal();
+        updateEstimateSummaryFromData();
+        
+      } else {
+        alert('שגיאה בעדכון שיעור המע"מ');
+      }
+    };
+
+    // Reset VAT rate from admin for estimate builder  
+    window.resetVatRateFromAdminEstimate = function() {
+      if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
+        if (window.refreshHelperVatRate) {
+          const adminRate = window.refreshHelperVatRate();
+          document.getElementById('vat-rate-input').value = adminRate;
+          window.initVatDisplayEstimate();
+          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+          
+          // Trigger calculations refresh for estimate
+          if (typeof refreshAllCalculationsEstimate === 'function') {
+            refreshAllCalculationsEstimate();
+          }
+          
+          // Update all cost displays
+          updateAllCostDisplays();
+          updateMarketValueAdjustmentsSubtotal();
+          updateFeaturesAdjustmentsSubtotal();
+          updateDamageCentersSubtotal();
+          updateEstimateSummaryFromData();
+        }
+      }
+    };
     
   </script>
   
