@@ -11286,22 +11286,82 @@
       }
     };
 
-    // Reset VAT rate from admin for estimate builder (restored from backup)
+    // Reset VAT rate from admin for estimate builder (DIRECT IMPLEMENTATION)
     window.resetVatRateFromAdminEstimate = function() {
       if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
-        if (window.refreshHelperVatRate) {
-          const adminRate = window.refreshHelperVatRate();
-          document.getElementById('vat-rate-input').value = adminRate;
-          window.initVatDisplayEstimate();
-          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
-          
-          // Update cost displays that actually exist
-          if (typeof updateAllCostDisplays === 'function') {
-            updateAllCostDisplays();
+        
+        // DIRECT ADMIN RATE RETRIEVAL (bypass helper.js function)
+        console.log('🔍 DEBUGGING VAT SOURCES FOR RESET:');
+        console.log('- sessionStorage globalVAT:', sessionStorage.getItem('globalVAT'));
+        console.log('- localStorage globalVAT:', localStorage.getItem('globalVAT'));
+        console.log('- MathEngine available:', typeof MathEngine !== 'undefined');
+        if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+          console.log('- MathEngine.getVatRate():', MathEngine.getVatRate());
+        }
+        
+        // Get admin rate directly
+        let adminRate = 18; // Default fallback
+        
+        const sessionVat = sessionStorage.getItem('globalVAT');
+        if (sessionVat && !isNaN(sessionVat)) {
+          adminRate = parseFloat(sessionVat);
+          console.log('✅ Got admin VAT from sessionStorage:', adminRate + '%');
+        } else {
+          const localVat = localStorage.getItem('globalVAT');
+          if (localVat && !isNaN(localVat)) {
+            adminRate = parseFloat(localVat);
+            console.log('✅ Got admin VAT from localStorage:', adminRate + '%');
+          } else {
+            try {
+              if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+                adminRate = MathEngine.getVatRate();
+                console.log('✅ Got admin VAT from MathEngine:', adminRate + '%');
+              } else {
+                console.log('⚠️ Using default admin VAT:', adminRate + '%');
+              }
+            } catch (e) {
+              console.warn('⚠️ Error getting admin VAT:', e);
+            }
           }
-          if (typeof updateDamageCentersSubtotal === 'function') {
-            updateDamageCentersSubtotal();
-          }
+        }
+        
+        console.log('📊 ADMIN RATE FOR RESET:', adminRate + '%');
+        
+        // DIRECTLY UPDATE BOTH SYSTEMS
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.calculations) helper.calculations = {};
+        
+        const oldRate = helper.calculations.vat_rate;
+        const oldSource = helper.calculations.vat_rate_source;
+        
+        // Update helper calculations
+        helper.calculations.vat_rate = adminRate;
+        helper.calculations.vat_rate_source = 'admin_hub';
+        helper.calculations.vat_rate_updated = new Date().toISOString();
+        
+        // Update window.helper and save
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update MathEngine
+        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+          MathEngine.setVatRate(adminRate);
+          console.log('✅ Updated MathEngine to admin rate:', adminRate + '%');
+        }
+        
+        console.log(`🔄 RESET COMPLETE: ${oldRate}% (${oldSource}) → ${adminRate}% (admin_hub)`);
+        
+        // Update display
+        document.getElementById('vat-rate-input').value = adminRate;
+        window.initVatDisplayEstimate();
+        alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+        
+        // Update calculations
+        if (typeof updateAllCostDisplays === 'function') {
+          updateAllCostDisplays();
+        }
+        if (typeof updateDamageCentersSubtotal === 'function') {
+          updateDamageCentersSubtotal();
         }
       }
     };
