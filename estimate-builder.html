@@ -10442,16 +10442,28 @@
         const value = inputs[2]?.value || '';
         const type = select?.value || 'plus';
         
+        // Determine which container this row belongs to for unique naming
+        const container = element.closest('[id]');
+        const containerId = container?.id || '';
+        let adjustmentKey = category;
+        
+        // Use container-specific keys to prevent conflicts between sections
+        if (containerId === 'fullFeaturesAdjustmentsList') {
+          adjustmentKey = 'full_market_features';
+        } else if (containerId === 'featuresAdjustmentsList') {
+          adjustmentKey = 'features';
+        }
+        
         // Initialize valuation.adjustments structure (main data store)
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = {};
+        if (!helper.valuation.adjustments[adjustmentKey]) helper.valuation.adjustments[adjustmentKey] = {};
         
         // Save to valuation.adjustments (single source of truth)
         const parsedPercent = parseFloat(percentage) || 0;
         const parsedAmount = parseFloat(value?.replace(/[₪,]/g, '')) || 0;
         
-        helper.valuation.adjustments[category] = {
+        helper.valuation.adjustments[adjustmentKey] = {
           percent: parsedPercent,
           amount: parsedAmount,
           reason: description,
@@ -10462,8 +10474,8 @@
         // Also save reference copy to estimate.adjustments for estimate-specific tracking
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        helper.estimate.adjustments[category] = {
-          ...helper.valuation.adjustments[category],
+        helper.estimate.adjustments[adjustmentKey] = {
+          ...helper.valuation.adjustments[adjustmentKey],
           source: 'estimate_builder'
         };
         
@@ -10476,9 +10488,11 @@
         }
         
         console.log('💾 Synced adjustment to valuation.adjustments and estimate reference:', { 
-          category, 
-          valuation_data: helper.valuation.adjustments[category],
-          estimate_reference: helper.estimate.adjustments[category]
+          original_category: category,
+          adjustment_key: adjustmentKey,
+          container_id: containerId,
+          valuation_data: helper.valuation.adjustments[adjustmentKey],
+          estimate_reference: helper.estimate.adjustments[adjustmentKey]
         });
         
       } catch (error) {
@@ -10494,9 +10508,9 @@
         
         console.log('🔄 Auto-populating market adjustments from valuation.adjustments:', adjustments);
         
-        // Categories mapping to container IDs - EXACT MATCH WITH FINAL REPORT
+        // Categories mapping to container IDs - PREVENT CONFLICTS WITH MULTIPLE FEATURES SECTIONS
         const categoryMapping = {
-          features: 'fullFeaturesAdjustmentsList',
+          full_market_features: 'fullFeaturesAdjustmentsList',  // Full market value features section
           registration: 'fullRegistrationAdjustmentsList', 
           mileage: 'mileageAdjustmentsList',
           ownership_type: 'ownershipAdjustmentsList',
