@@ -875,6 +875,116 @@
       font-weight: 600;
       color: white;
     }
+
+    /* Estimate Preview PiP Window Styles */
+    .estimate-preview-pip {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(3px);
+    }
+
+    .pip-container {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      height: 90%;
+      max-width: 1400px;
+      max-height: 900px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      resize: both;
+      position: relative;
+    }
+
+    .pip-header {
+      background: #1e3a8a;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      user-select: none;
+    }
+
+    .pip-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .pip-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pip-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .pip-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .pip-content {
+      flex: 1;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .pip-content.minimized {
+      display: none;
+    }
+
+    .pip-container.minimized {
+      height: auto;
+      width: 350px;
+    }
+
+    /* Mobile optimization for PiP */
+    @media (max-width: 768px) {
+      .pip-container {
+        width: 95%;
+        height: 85%;
+        margin: 20px;
+      }
+
+      .pip-header {
+        padding: 12px 16px;
+      }
+
+      .pip-header h3 {
+        font-size: 16px;
+      }
+
+      .pip-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1801,12 +1911,22 @@
     };
 
     window.previewEstimate = function() {
-      // First save all data
-      window.saveEstimate();
-      
-      // Set report type and navigate
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      window.location.href = 'estimate-validation.html';
+      try {
+        // First save all data
+        window.saveEstimate();
+        
+        // Set report type for the preview
+        sessionStorage.setItem('selectedReportType', 'estimate');
+        
+        // Show PiP window with estimate report
+        showEstimatePreviewPip();
+        
+      } catch (error) {
+        console.error('Error opening estimate preview:', error);
+        // Fallback to old behavior
+        sessionStorage.setItem('selectedReportType', 'estimate');
+        window.location.href = 'estimate-validation.html';
+      }
     };
 
     window.generateEstimate = function() {
@@ -1817,6 +1937,109 @@
       sessionStorage.setItem('selectedReportType', 'estimate');
       window.location.href = 'estimate-report-builder.html';
     };
+
+    // ESTIMATE PREVIEW PiP FUNCTIONS
+    function showEstimatePreviewPip() {
+      const pipOverlay = document.getElementById('estimatePreviewPip');
+      const iframe = document.getElementById('estimatePreviewFrame');
+      
+      // Show the PiP overlay
+      pipOverlay.style.display = 'flex';
+      
+      // Load the estimate report builder in the iframe
+      iframe.src = 'estimate-report-builder.html';
+      
+      // Setup PiP controls
+      setupPipControls();
+      
+      console.log('📱 Opened estimate preview in PiP window');
+    }
+
+    function setupPipControls() {
+      const minimizeBtn = document.getElementById('minimizePipBtn');
+      const maximizeBtn = document.getElementById('maximizePipBtn');
+      const closeBtn = document.getElementById('closePipBtn');
+      const pipContent = document.getElementById('pipContent');
+      const pipContainer = document.querySelector('.pip-container');
+      
+      // Minimize/Restore functionality
+      minimizeBtn.onclick = function() {
+        pipContent.classList.toggle('minimized');
+        pipContainer.classList.toggle('minimized');
+        minimizeBtn.textContent = pipContent.classList.contains('minimized') ? '▢' : '_';
+      };
+      
+      // Maximize/Restore functionality
+      maximizeBtn.onclick = function() {
+        pipContainer.style.width = pipContainer.style.width === '100%' ? '90%' : '100%';
+        pipContainer.style.height = pipContainer.style.height === '100%' ? '90%' : '100%';
+        maximizeBtn.textContent = pipContainer.style.width === '100%' ? '❐' : '⬜';
+      };
+      
+      // Close functionality
+      closeBtn.onclick = function() {
+        const pipOverlay = document.getElementById('estimatePreviewPip');
+        const iframe = document.getElementById('estimatePreviewFrame');
+        pipOverlay.style.display = 'none';
+        iframe.src = ''; // Clear iframe to stop loading
+        console.log('📱 Closed estimate preview PiP window');
+      };
+      
+      // Click outside to close
+      document.getElementById('estimatePreviewPip').onclick = function(e) {
+        if (e.target === this) {
+          closeBtn.click();
+        }
+      };
+      
+      // Make draggable
+      makePipDraggable();
+    }
+
+    function makePipDraggable() {
+      const header = document.querySelector('.pip-header');
+      const container = document.querySelector('.pip-container');
+      let isDragging = false;
+      let currentX;
+      let currentY;
+      let initialX;
+      let initialY;
+      let xOffset = 0;
+      let yOffset = 0;
+
+      header.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', dragMove);
+      document.addEventListener('mouseup', dragEnd);
+
+      function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+
+        if (e.target === header || header.contains(e.target)) {
+          isDragging = true;
+          container.style.position = 'fixed';
+        }
+      }
+
+      function dragMove(e) {
+        if (isDragging) {
+          e.preventDefault();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+
+          xOffset = currentX;
+          yOffset = currentY;
+
+          container.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        }
+      }
+
+      function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+      }
+    }
 
     // Convert various date formats to YYYY-MM-DD for date input
     function convertToDateInputFormat(dateString) {
@@ -10612,6 +10835,23 @@
   </script>
   
   
+  <!-- Estimate Preview PiP Window -->
+  <div id="estimatePreviewPip" class="estimate-preview-pip" style="display: none;">
+    <div class="pip-container">
+      <div class="pip-header">
+        <h3 id="pipTitle">תצוגה מקדימה - אומדן</h3>
+        <div class="pip-controls">
+          <button id="minimizePipBtn" class="pip-btn minimize">_</button>
+          <button id="maximizePipBtn" class="pip-btn maximize">⬜</button>
+          <button id="closePipBtn" class="pip-btn close">×</button>
+        </div>
+      </div>
+      <div id="pipContent" class="pip-content">
+        <iframe id="estimatePreviewFrame" src="" width="100%" height="100%" frameborder="0"></iframe>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="auth.js"></script>
   <script src="helper.js" type="module"></script>
   <script src="internal-browser.js"></script>
