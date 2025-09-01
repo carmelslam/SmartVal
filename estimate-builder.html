@@ -6764,6 +6764,13 @@
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
         
+        // Clean up any legacy valuation.adjustments.estimate data (should not exist)
+        if (helper.valuation.adjustments.estimate) {
+          console.log('🧹 Cleaning up legacy valuation.adjustments.estimate data');
+          delete helper.valuation.adjustments.estimate;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        
         if (helper.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) {
           Object.entries(helper.valuation.adjustments).forEach(([category, adjData]) => {
             if (adjData && (adjData.percent || adjData.amount) && adjData.description) {
@@ -10320,6 +10327,13 @@
       try {
         console.log('📝 Estimate Builder: Initializing with ENHANCED helper integration...');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Clean up any legacy valuation.adjustments.estimate data at initialization
+        if (helper.valuation?.adjustments?.estimate) {
+          console.log('🧹 INIT: Removing legacy valuation.adjustments.estimate data');
+          delete helper.valuation.adjustments.estimate;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
         
         // ENHANCED: Create initial builder state from proper helper paths
         const initialState = {
