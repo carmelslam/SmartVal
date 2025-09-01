@@ -14797,29 +14797,22 @@
           console.log('- MathEngine.getVatRate():', MathEngine.getVatRate());
         }
         
-        // Get admin rate directly
-        let adminRate = 18; // Default fallback
+        // Get admin rate directly - FORCE 18% as admin rate (not from MathEngine which has 20% override)
+        let adminRate = 18; // FORCE admin fallback
         
+        // Check sessionStorage first (this should be the TRUE admin rate)
         const sessionVat = sessionStorage.getItem('globalVAT');
         if (sessionVat && !isNaN(sessionVat)) {
           adminRate = parseFloat(sessionVat);
-          console.log('✅ Got admin VAT from sessionStorage:', adminRate + '%');
+          console.log('✅ Got TRUE admin VAT from sessionStorage:', adminRate + '%');
         } else {
           const localVat = localStorage.getItem('globalVAT');
           if (localVat && !isNaN(localVat)) {
             adminRate = parseFloat(localVat);
-            console.log('✅ Got admin VAT from localStorage:', adminRate + '%');
+            console.log('✅ Got TRUE admin VAT from localStorage:', adminRate + '%');
           } else {
-            try {
-              if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
-                adminRate = MathEngine.getVatRate();
-                console.log('✅ Got admin VAT from MathEngine:', adminRate + '%');
-              } else {
-                console.log('⚠️ Using default admin VAT:', adminRate + '%');
-              }
-            } catch (e) {
-              console.warn('⚠️ Error getting admin VAT:', e);
-            }
+            console.log('⚠️ No globalVAT found - FORCING admin VAT to 18% (MathEngine shows 20% override)');
+            adminRate = 18; // FORCE to 18% - don't trust MathEngine during reset
           }
         }
         
@@ -14841,10 +14834,19 @@
         window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Update MathEngine
-        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
-          MathEngine.setVatRate(adminRate);
-          console.log('✅ Updated MathEngine to admin rate:', adminRate + '%');
+        // FORCE UPDATE MathEngine (it currently has 20% override)
+        if (typeof MathEngine !== 'undefined') {
+          console.log('🔧 BEFORE: MathEngine VAT was:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
+          
+          if (MathEngine.setVatRate) {
+            MathEngine.setVatRate(adminRate);
+            console.log('✅ FORCED MathEngine to admin rate:', adminRate + '%');
+          }
+          
+          // Verify the update worked
+          setTimeout(() => {
+            console.log('🔧 AFTER: MathEngine VAT is now:', MathEngine.getVatRate ? MathEngine.getVatRate() : 'unknown');
+          }, 100);
         }
         
         console.log(`🔄 FINAL REPORT RESET COMPLETE: ${oldRate}% (${oldSource}) → ${adminRate}% (admin_hub)`);
