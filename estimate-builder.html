@@ -11169,11 +11169,20 @@
       const oldRate = window.helper.calculations.vat_rate;
       const oldSource = window.helper.calculations.vat_rate_source;
       
+      // CRITICAL: Reset BOTH systems to admin rate
+      // 1. Reset helper.calculations.vat_rate (for page calculations)
       window.helper.calculations.vat_rate = adminRate;
       window.helper.calculations.vat_rate_source = 'admin_hub'; // RESET TO ADMIN
       window.helper.calculations.vat_rate_updated = new Date().toISOString();
       
-      console.log(`🔄 VAT reset: ${oldRate}% (${oldSource}) → ${adminRate}% (admin_hub)`);
+      // 2. Reset MathEngine to use admin rate (remove manual override)
+      if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+        MathEngine.setVatRate(adminRate);
+        console.log('✅ Reset MathEngine VAT rate to admin:', adminRate + '%');
+      }
+      
+      console.log(`🔄 DUAL VAT RESET: helper.calculations.vat_rate AND MathEngine reset to admin ${adminRate}% (was ${oldRate}% ${oldSource})`);
+      console.log('Current helper.calculations.vat_rate:', window.helper.calculations.vat_rate);
       
       // Save to session storage
       try {
@@ -11200,7 +11209,7 @@
       return adminRate;
     };
 
-    // Update VAT rate for estimate builder (manual override)
+    // Update VAT rate for estimate builder (DIRECT UPDATE TO calculations.vat_rate)
     window.updateVatRateEstimate = function() {
       const input = document.getElementById('vat-rate-input');
       const newRate = parseFloat(input.value);
@@ -11210,25 +11219,35 @@
         return;
       }
       
-      // Manually save to helper with 'manual' source
+      // DIRECT UPDATE: Write directly to calculations.vat_rate (where all calculations read from)
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (!helper.calculations) helper.calculations = {};
       
       const oldRate = helper.calculations.vat_rate;
-      const oldSource = helper.calculations.vat_rate_source;
       
+      // CRITICAL: Update BOTH systems
+      // 1. Update helper.calculations.vat_rate (for page calculations)
       helper.calculations.vat_rate = newRate;
-      helper.calculations.vat_rate_source = 'manual'; // Mark as manual override
+      helper.calculations.vat_rate_source = 'manual';
       helper.calculations.vat_rate_updated = new Date().toISOString();
       
+      // 2. Update MathEngine VAT rate (override admin rate)
+      if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+        MathEngine.setVatRate(newRate);
+        console.log('✅ Updated MathEngine VAT rate to:', newRate + '%');
+      }
+      
+      // Update window.helper in memory AND sessionStorage
+      window.helper = helper;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      console.log(`💼 VAT manual override: ${oldRate}% (${oldSource}) → ${newRate}% (manual)`);
+      console.log(`✅ DUAL VAT UPDATE: helper.calculations.vat_rate AND MathEngine changed to ${newRate}%`);
+      console.log('Current helper.calculations.vat_rate:', helper.calculations.vat_rate);
       
       alert(`שיעור המע"מ עודכן ל-${newRate}%`);
-      window.initVatDisplayEstimate(); // Refresh display
+      window.initVatDisplayEstimate();
       
-      // Update cost displays that actually exist
+      // Force refresh all calculations that use VAT rate
       if (typeof updateAllCostDisplays === 'function') {
         updateAllCostDisplays();
       }
