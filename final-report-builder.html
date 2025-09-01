@@ -14740,7 +14740,7 @@
       }
     };
     
-    // Update VAT rate manually
+    // Update VAT rate manually (DIRECT UPDATE TO calculations.vat_rate)
     window.updateVatRate = function() {
       const input = document.getElementById('vat-rate-input');
       const newRate = parseFloat(input.value);
@@ -14750,32 +14750,113 @@
         return;
       }
       
-      if (window.setHelperVatRate && window.setHelperVatRate(newRate, 'manual')) {
-        alert(`שיעור המע"מ עודכן ל-${newRate}%`);
-        window.initVatDisplay(); // Refresh display
+      // DIRECT UPDATE: Write directly to calculations.vat_rate (where all calculations read from)
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.calculations) helper.calculations = {};
+      
+      const oldRate = helper.calculations.vat_rate;
+      
+      // CRITICAL: Update BOTH systems
+      // 1. Update helper.calculations.vat_rate (for page calculations)
+      helper.calculations.vat_rate = newRate;
+      helper.calculations.vat_rate_source = 'manual';
+      helper.calculations.vat_rate_updated = new Date().toISOString();
+      
+      // 2. Update MathEngine VAT rate (override admin rate)
+      if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+        MathEngine.setVatRate(newRate);
+        console.log('✅ Updated MathEngine VAT rate to:', newRate + '%');
+      }
+      
+      // Update window.helper in memory AND sessionStorage
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log(`✅ DUAL VAT UPDATE: helper.calculations.vat_rate AND MathEngine changed to ${newRate}%`);
+      console.log('Current helper.calculations.vat_rate:', helper.calculations.vat_rate);
+      
+      alert(`שיעור המע"מ עודכן ל-${newRate}%`);
+      window.initVatDisplay(); // Refresh display
+      
+      // Trigger calculations refresh
+      if (typeof refreshAllCalculations === 'function') {
+        refreshAllCalculations();
+      }
+    };
+    
+    // Reset VAT rate to admin hub value (DIRECT IMPLEMENTATION)
+    window.resetVatRateFromAdmin = function() {
+      if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
+        
+        // DIRECT ADMIN RATE RETRIEVAL (same as working estimate builder)
+        console.log('🔍 DEBUGGING VAT SOURCES FOR RESET (FINAL REPORT):');
+        console.log('- sessionStorage globalVAT:', sessionStorage.getItem('globalVAT'));
+        console.log('- localStorage globalVAT:', localStorage.getItem('globalVAT'));
+        console.log('- MathEngine available:', typeof MathEngine !== 'undefined');
+        if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+          console.log('- MathEngine.getVatRate():', MathEngine.getVatRate());
+        }
+        
+        // Get admin rate directly
+        let adminRate = 18; // Default fallback
+        
+        const sessionVat = sessionStorage.getItem('globalVAT');
+        if (sessionVat && !isNaN(sessionVat)) {
+          adminRate = parseFloat(sessionVat);
+          console.log('✅ Got admin VAT from sessionStorage:', adminRate + '%');
+        } else {
+          const localVat = localStorage.getItem('globalVAT');
+          if (localVat && !isNaN(localVat)) {
+            adminRate = parseFloat(localVat);
+            console.log('✅ Got admin VAT from localStorage:', adminRate + '%');
+          } else {
+            try {
+              if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+                adminRate = MathEngine.getVatRate();
+                console.log('✅ Got admin VAT from MathEngine:', adminRate + '%');
+              } else {
+                console.log('⚠️ Using default admin VAT:', adminRate + '%');
+              }
+            } catch (e) {
+              console.warn('⚠️ Error getting admin VAT:', e);
+            }
+          }
+        }
+        
+        console.log('📊 ADMIN RATE FOR RESET (FINAL REPORT):', adminRate + '%');
+        
+        // DIRECTLY UPDATE BOTH SYSTEMS
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.calculations) helper.calculations = {};
+        
+        const oldRate = helper.calculations.vat_rate;
+        const oldSource = helper.calculations.vat_rate_source;
+        
+        // Update helper calculations
+        helper.calculations.vat_rate = adminRate;
+        helper.calculations.vat_rate_source = 'admin_hub';
+        helper.calculations.vat_rate_updated = new Date().toISOString();
+        
+        // Update window.helper and save
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update MathEngine
+        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+          MathEngine.setVatRate(adminRate);
+          console.log('✅ Updated MathEngine to admin rate:', adminRate + '%');
+        }
+        
+        console.log(`🔄 FINAL REPORT RESET COMPLETE: ${oldRate}% (${oldSource}) → ${adminRate}% (admin_hub)`);
+        
+        // Update display
+        document.getElementById('vat-rate-input').value = adminRate;
+        window.initVatDisplay();
+        alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
         
         // Trigger calculations refresh
         if (typeof refreshAllCalculations === 'function') {
           refreshAllCalculations();
-        }
-      } else {
-        alert('שגיאה בעדכון שיעור המע"מ');
-      }
-    };
-    
-    // Reset VAT rate to admin hub value
-    window.resetVatRateFromAdmin = function() {
-      if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
-        if (window.refreshHelperVatRate) {
-          const adminRate = window.refreshHelperVatRate();
-          document.getElementById('vat-rate-input').value = adminRate;
-          window.initVatDisplay();
-          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
-          
-          // Trigger calculations refresh
-          if (typeof refreshAllCalculations === 'function') {
-            refreshAllCalculations();
-          }
         }
       }
     };
