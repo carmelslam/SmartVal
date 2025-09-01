@@ -7308,9 +7308,15 @@
         
         console.log('📝 Updated estimate.damage_centers_totals:', helper.estimate.damage_centers_totals);
         
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Both sections saved to sessionStorage');
+        // Save updated helper using the SAME pattern as claims_data.total_claim
+        if (typeof updateHelper === 'function') {
+          updateHelper('damage_assessment', helper.damage_assessment, 'estimate_builder_damage_summary_update');
+          updateHelper('estimate', helper.estimate, 'estimate_builder_totals_update');
+        } else {
+          // Fallback for compatibility (same as claims_data pattern)
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        console.log('✅ Both sections saved using updateHelper pattern');
         
       } catch (error) {
         console.error('❌ Error updating helper sections:', error);
