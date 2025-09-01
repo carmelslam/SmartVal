@@ -7292,9 +7292,9 @@
             </div>
           </div>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 15px;">
-          <button type="button" class="btn add" onclick="addNewDamageCenter()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">הוסף מוקד נזק חדש</button>
+        <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
           <button type="button" class="btn save-btn" id="damageCenterSaveBtn" onclick="saveDamageCenterChangesWithFeedback()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease;">שמור</button>
+          <button type="button" class="btn add" onclick="addNewDamageCenter()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">הוסף מוקד נזק חדש</button>
         </div>
         <div style="text-align: center; margin-top: 10px;">
           <button type="button" class="btn section-collapse-button" onclick="toggleSection('damageCentersSummary')" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">כווץ סעיף</button>
@@ -9047,15 +9047,15 @@
     
     // Function to add Save and Refresh buttons to sections with editable fields
     function addSectionButtons() {
-      // Define sections that should have save/refresh buttons (EXCLUDING damage-centers)
+      // Define sections that should have save buttons (NO REFRESH) and collapse buttons where applicable
       const sections = [
-        { id: 'vehicle-data', selector: '#carPlate', name: 'נתוני הרכב', collapsible: false },
-        { id: 'contact-data', selector: '#contactData', name: 'פרטי קשר', collapsible: true },
+        { id: 'vehicle-data', selector: '#carPlate', name: 'נתוני הרכב', collapsible: true, collapseTarget: 'vehicleData' },
+        { id: 'contact-data', selector: '#contactData', name: 'פרטי קשר', collapsible: true, collapseTarget: 'contactData' },
         // REMOVED: damage-centers section - has its own buttons in the totals container
-        { id: 'gross-calculation', selector: '#grossCalc', name: 'חישוב אחוז נזק ברוטו', collapsible: true },
-        { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true },
-        { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true },
-        { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך לפי מוקדי נזק', collapsible: false },
+        { id: 'gross-calculation', selector: '#grossCalc', name: 'חישוב אחוז נזק ברוטו', collapsible: true, collapseTarget: 'grossCalc' },
+        { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true, collapseTarget: 'grossPercentageResult' },
+        { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true, collapseTarget: 'fullMarketValue' },
+        { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך לפי מוקדי נזק', collapsible: true, collapseTarget: 'depreciationContent' },
         { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן', collapsible: false },
         { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות', collapsible: false },
         { id: 'legal-text', selector: '#legal-text-content', name: 'טקסט משפטי', collapsible: false }
@@ -9101,7 +9101,7 @@
           
           // Create Save button matching existing style
           const saveButton = document.createElement('button');
-          saveButton.className = 'btn';
+          saveButton.className = 'btn section-save-button';
           saveButton.textContent = 'שמור';
           saveButton.style.cssText = `
             background: #28a745;
@@ -9120,30 +9120,39 @@
           saveButton.onmouseout = function() { this.style.background = '#28a745'; };
           saveButton.onclick = function() { saveSectionData(section.id); };
           
-          // Create Refresh button matching existing style
-          const refreshButton = document.createElement('button');
-          refreshButton.className = 'btn';
-          refreshButton.textContent = 'רענן';
-          refreshButton.style.cssText = `
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            display: inline-block;
-            width: auto;
-            margin: 0;
-            transition: background-color 0.3s;
-          `;
-          refreshButton.onmouseover = function() { this.style.background = '#138496'; };
-          refreshButton.onmouseout = function() { this.style.background = '#17a2b8'; };
-          refreshButton.onclick = function() { refreshSectionData(section.id); };
+          // Create Collapse button for collapsible sections
+          let collapseButton = null;
+          if (section.collapsible) {
+            collapseButton = document.createElement('button');
+            collapseButton.className = 'btn section-collapse-button';
+            collapseButton.textContent = 'כווץ';
+            collapseButton.style.cssText = `
+              background: #6c757d;
+              color: white;
+              border: none;
+              padding: 8px 18px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 16px;
+              display: inline-block;
+              width: auto;
+              margin: 0;
+              transition: background-color 0.3s;
+            `;
+            collapseButton.onmouseover = function() { this.style.background = '#5a6268'; };
+            collapseButton.onmouseout = function() { this.style.background = '#6c757d'; };
+            collapseButton.onclick = function() { 
+              // Use the collapseTarget if specified, otherwise try to find it
+              const targetId = section.collapseTarget || section.id;
+              toggleSection(targetId);
+            };
+          }
           
-          // Add buttons to container
+          // Add buttons to container - NO REFRESH BUTTON
           buttonContainer.appendChild(saveButton);
-          buttonContainer.appendChild(refreshButton);
+          if (collapseButton) {
+            buttonContainer.appendChild(collapseButton);
+          }
           
           // For collapsible sections, add at the end
           // For non-collapsible sections, add at the end of the section
