@@ -9064,8 +9064,10 @@
       sections.forEach(section => {
         let sectionElement = null;
         
-        // For collapsible sections, find by ID
-        if (section.collapsible) {
+        // For collapsible sections, find the collapsible content area (where buttons should go)
+        if (section.collapsible && section.collapseTarget) {
+          sectionElement = document.getElementById(section.collapseTarget);
+        } else if (section.collapsible) {
           sectionElement = document.getElementById(section.selector.replace('#', ''));
         } else {
           // For non-collapsible sections, find by selector and get parent form-section
@@ -9088,7 +9090,7 @@
             existingButtons.remove();
           }
           
-          console.log(`✅ Adding buttons to section: ${section.name} (${section.id})`);
+          console.log(`✅ Adding buttons to section: ${section.name} (${section.id}) -> Target: ${section.collapseTarget || 'main'}`);
           
           // Create button container with proper styling - LEFT ALIGNED
           const buttonContainer = document.createElement('div');
