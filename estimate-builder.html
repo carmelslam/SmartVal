@@ -1445,6 +1445,39 @@
       </div>
       </div>
     </div>
+    
+    <!-- CLAIMS DATA SECTION - COPIED FROM FINAL REPORT -->
+    <div class="form-section">
+      <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
+      <div id="priceData" style="display:none;">
+        <div class="form-grid">
+          <div>
+            <label>סה״כ תביעה (סכום מוקדי נזק):</label>
+            <div class="readonly-box" id="totalClaim">0</div>
+          </div>
+          <div>
+            <label>חישוב הערך לנזק גולמי:</label>
+            <div class="readonly-box" id="grossDamageValue">יחושב אוטומטית מהתאמות לוי</div>
+          </div>
+          <div>
+            <label>חישוב האחוז הגולמי:</label>
+            <div class="readonly-box" id="grossPercentage">יחושב אוטומטית</div>
+          </div>
+          <div>
+            <label>מחיר שוק (בסיס + התאמות):</label>
+            <div class="readonly-box" id="marketPriceCalculated">יחושב אוטומטית</div>
+          </div>
+          <div>
+            <label>ערך השוק של הרכב (לפי דו״ח לוי יצחק): </label>
+            <div class="readonly-box" id="finalMarketValue">יחושב מהתאמות לוי</div>
+          </div>
+          <div>
+            <label>אישור חברת ביטוח (אופציונלי):</label>
+            <input type="text" id="insuranceAuthorization" placeholder="₪" onchange="updateClaimsDataFromField(this, 'authorized_claim');" style="direction: ltr; text-align: right;" />
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- SUMMARY SECTION WITH ORANGE STYLING -->
     <div class="form-section" style="background: linear-gradient(135deg, #ff8c00 0%, #ff7300 100%); color: white; border-radius: 12px; padding: 20px;">
@@ -2135,6 +2168,51 @@
         initialX = currentX;
         initialY = currentY;
         isDragging = false;
+      }
+    }
+    
+    // UPDATE CLAIMS DATA FROM FIELD - COPIED FROM FINAL REPORT
+    function updateClaimsDataFromField(element, claimsKey) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper.claims_data) helper.claims_data = {};
+        
+        let value = element.value;
+        const fieldId = element.id;
+        
+        console.log(`💰 Claims data field change: ${fieldId} -> claims_data.${claimsKey} = "${value}"`);
+        
+        // Format currency fields
+        if (claimsKey === 'authorized_claim' && value) {
+          // Remove existing currency symbols and format properly
+          value = value.replace(/[₪,]/g, '').trim();
+          if (value && !isNaN(value)) {
+            const numericValue = parseInt(value);
+            value = `₪${numericValue.toLocaleString()}`;
+          }
+        }
+        
+        // Update claims_data
+        helper.claims_data[claimsKey] = value;
+        
+        // Also update calculations.authorized_claim when authorized_claim is updated
+        if (claimsKey === 'authorized_claim') {
+          if (!helper.calculations) helper.calculations = {};
+          helper.calculations.authorized_claim = value;
+        }
+        
+        // Save to helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ Updated claims_data.${claimsKey} = "${value}"`);
+        
+        // Trigger floating screen refresh
+        if (typeof triggerFloatingScreenRefresh === 'function') {
+          triggerFloatingScreenRefresh();
+        }
+        
+      } catch (error) {
+        console.error('Error updating claims data:', error);
       }
     }
 
@@ -9617,6 +9695,7 @@
         // { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true, collapseTarget: 'grossPercentageResult' },
         { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true, collapseTarget: 'fullMarketValue' },
         { id: 'depreciation', selector: '#globalDep1', name: 'חישוב ירידת ערך לפי מוקדי נזק', collapsible: true, collapseTarget: 'depreciationContent' },
+        { id: 'claims-data', selector: '#priceData', name: 'נתוני תביעה', collapsible: true, collapseTarget: 'priceData' },
         { id: 'summary', selector: '#sumMarketValue', name: 'סיכום האומדן', collapsible: false },
         { id: 'notes', selector: '#additional-notes', name: 'הערות נוספות', collapsible: false },
         { id: 'legal-text', selector: '#legal-text-content', name: 'טקסט משפטי', collapsible: false }
