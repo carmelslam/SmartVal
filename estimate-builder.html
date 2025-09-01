@@ -1000,7 +1000,7 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
           <div>
             <label>מספר רכב:</label>
-            <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required>
+            <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="off">
           </div>
           <div>
             <label>סיסמה (אופציונלי):</label>
@@ -5788,6 +5788,8 @@
           if (basicPrice === 0) {
             if (helper.valuation?.base_price) {
               basicPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+            } else if (helper.calculations?.base_market_value) {
+              basicPrice = parseFloat(helper.calculations.base_market_value.toString().replace(/[₪,]/g, ''));
             } else if (helper.levi_report?.base_price) {
               basicPrice = parseFloat(helper.levi_report.base_price);
             } else if (helper.expertise?.levi_report?.base_price) {
@@ -8564,13 +8566,19 @@
               updateGrossMarketValueCalculation();
             }, 100);
           } else {
-            console.warn('⚠️ No base price found in helper, basic price field will be empty');
-            console.log('Debug helper data:', {
-              levi_report: helper.levi_report,
-              expertise: helper.expertise,
-              levisummary: helper.levisummary,
-              car_details: helper.car_details
-            });
+            // Check if the field already has a value before warning
+            const currentValue = basicPriceField?.value || '';
+            if (!currentValue || currentValue.replace(/[₪,\s]/g, '') === '0') {
+              console.warn('⚠️ No base price found in helper, basic price field will be empty');
+              console.log('Debug helper data:', {
+                levi_report: helper.levi_report,
+                expertise: helper.expertise,
+                levisummary: helper.levisummary,
+                car_details: helper.car_details
+              });
+            } else {
+              console.log('✅ Basic price field already has value:', currentValue);
+            }
             
             // Enhanced debugging: Log full helper structure
             console.group('🔍 FULL HELPER STRUCTURE DEBUG');
