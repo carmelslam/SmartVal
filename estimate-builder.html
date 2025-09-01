@@ -7259,53 +7259,58 @@
       const totalWithVatSubtotal = document.getElementById('totalWithVatSubtotal');
       if (totalWithVatSubtotal) totalWithVatSubtotal.innerText = formatCurrency(finalTotalWithVat);
       
-      // 1. Update damage_assessment.summary with corresponding fields
-      if (!helper.damage_assessment) {
-        helper.damage_assessment = {};
-        console.log('🔧 Created damage_assessment object');
+      // Update both sections in one block to prevent interruption
+      try {
+        // 1. Update damage_assessment.summary with corresponding fields
+        if (!helper.damage_assessment) {
+          helper.damage_assessment = {};
+          console.log('🔧 Created damage_assessment object');
+        }
+        if (!helper.damage_assessment.summary) {
+          helper.damage_assessment.summary = {};
+          console.log('🔧 Created damage_assessment.summary object');
+        }
+        
+        helper.damage_assessment.summary.total_works = finalTotalWorks;
+        helper.damage_assessment.summary.total_parts = finalTotalParts;
+        helper.damage_assessment.summary.total_repairs = finalTotalRepairs;
+        helper.damage_assessment.summary.total_without_vat = finalTotalWithoutVat;
+        helper.damage_assessment.summary.total_with_vat = finalTotalWithVat;
+        helper.damage_assessment.summary.vat_rate = vatRate;
+        helper.damage_assessment.summary.last_updated = new Date().toISOString();
+        
+        console.log('📝 Updated damage_assessment.summary:', helper.damage_assessment.summary);
+        
+        // 2. Update estimate.damage_centers_totals subsection
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.damage_centers_totals) helper.estimate.damage_centers_totals = {};
+        
+        helper.estimate.damage_centers_totals = {
+          works_total: finalTotalWorks,
+          parts_total: finalTotalParts,
+          repairs_total: finalTotalRepairs,
+          subtotal_without_vat: finalTotalWithoutVat,
+          subtotal_with_vat: finalTotalWithVat,
+          vat_rate: vatRate,
+          last_updated: new Date().toISOString()
+        };
+        
+        console.log('📝 Updated estimate.damage_centers_totals:', helper.estimate.damage_centers_totals);
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Both sections saved to sessionStorage');
+        
+      } catch (error) {
+        console.error('❌ Error updating helper sections:', error);
       }
-      if (!helper.damage_assessment.summary) {
-        helper.damage_assessment.summary = {};
-        console.log('🔧 Created damage_assessment.summary object');
-      }
-      
-      helper.damage_assessment.summary.total_works = finalTotalWorks;
-      helper.damage_assessment.summary.total_parts = finalTotalParts;
-      helper.damage_assessment.summary.total_repairs = finalTotalRepairs;
-      helper.damage_assessment.summary.total_without_vat = finalTotalWithoutVat;
-      helper.damage_assessment.summary.total_with_vat = finalTotalWithVat;
-      helper.damage_assessment.summary.vat_rate = vatRate; // Use core system VAT rate
-      
-      console.log('📝 Updated damage_assessment.summary:', {
-        total_works: finalTotalWorks,
-        total_parts: finalTotalParts,
-        total_repairs: finalTotalRepairs,
-        total_without_vat: finalTotalWithoutVat,
-        total_with_vat: finalTotalWithVat,
-        vat_rate: vatRate
-      });
-      
-      // 2. Update estimate.damage_centers with totals subsection
-      if (!helper.estimate) helper.estimate = {};
-      if (!helper.estimate.damage_centers_totals) helper.estimate.damage_centers_totals = {};
-      
-      helper.estimate.damage_centers_totals = {
-        works_total: finalTotalWorks,
-        parts_total: finalTotalParts,
-        repairs_total: finalTotalRepairs,
-        subtotal_without_vat: finalTotalWithoutVat,
-        subtotal_with_vat: finalTotalWithVat,
-        vat_rate: vatRate, // Use core system VAT rate
-        last_updated: new Date().toISOString()
-      };
-      
-      // Save updated helper
-      sessionStorage.setItem('helper', JSON.stringify(helper));
       
       // Verify the data was saved correctly
       const savedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('💰 BEFORE SAVE - damage_assessment.summary:', helper.damage_assessment?.summary);
+      console.log('💰 BEFORE SAVE - estimate.damage_centers_totals:', helper.estimate?.damage_centers_totals);
       console.log('💾 AFTER SAVE - damage_assessment.summary:', savedHelper.damage_assessment?.summary);
+      console.log('💾 AFTER SAVE - estimate.damage_centers_totals:', savedHelper.estimate?.damage_centers_totals);
       
       console.log('💰 Updated damage centers subtotal and helper data:', {
         originalWorks: totalWorks,
