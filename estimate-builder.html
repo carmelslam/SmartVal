@@ -6951,11 +6951,22 @@
         if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
         
         // Clean up any redundant damage_assessment.centers (duplicate section)
+        // BUT preserve damage_assessment.summary which contains totals data
         if (helper.damage_assessment?.centers) {
           console.log('🧹 Cleaning up redundant damage_assessment.centers');
           delete helper.damage_assessment.centers;
-          if (Object.keys(helper.damage_assessment).length === 0) {
+          
+          // Only delete damage_assessment object if it has no important data left
+          // Preserve .summary, .totals, and any other important sections
+          const remainingKeys = Object.keys(helper.damage_assessment);
+          const importantSections = ['summary', 'totals', 'total_centers', 'total_items', 'last_updated', 'totals_after_differentials'];
+          const hasImportantData = remainingKeys.some(key => importantSections.includes(key));
+          
+          if (!hasImportantData && remainingKeys.length === 0) {
+            console.log('🧹 Deleting empty damage_assessment object');
             delete helper.damage_assessment;
+          } else {
+            console.log('🔒 Preserving damage_assessment with important sections:', remainingKeys);
           }
         }
         
