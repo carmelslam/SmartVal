@@ -11141,6 +11141,21 @@
       }
     };
 
+    // Helper function to get admin VAT rate (fallback implementation)
+    window.refreshHelperVatRate = function() {
+      // Try to get from MathEngine admin hub first
+      if (typeof MathEngine !== 'undefined' && MathEngine.loadAdminHubVatRate) {
+        try {
+          return MathEngine.loadAdminHubVatRate() || 18;
+        } catch (e) {
+          console.warn('Could not get admin VAT rate:', e);
+        }
+      }
+      
+      // Fallback to 18% default
+      return 18;
+    };
+
     // Update VAT rate for estimate builder
     window.updateVatRateEstimate = function() {
       const input = document.getElementById('vat-rate-input');
@@ -11155,17 +11170,13 @@
         alert(`שיעור המע"מ עודכן ל-${newRate}%`);
         window.initVatDisplayEstimate(); // Refresh display
         
-        // Trigger calculations refresh
-        if (typeof refreshAllCalculationsEstimate === 'function') {
-          refreshAllCalculationsEstimate();
+        // Update cost displays that actually exist
+        if (typeof updateAllCostDisplays === 'function') {
+          updateAllCostDisplays();
         }
-        
-        // Update all cost displays
-        updateAllCostDisplays();
-        updateMarketValueAdjustmentsSubtotal();
-        updateFeaturesAdjustmentsSubtotal();
-        updateDamageCentersSubtotal();
-        updateEstimateSummaryFromData();
+        if (typeof updateDamageCentersSubtotal === 'function') {
+          updateDamageCentersSubtotal();
+        }
         
       } else {
         alert('שגיאה בעדכון שיעור המע"מ');
@@ -11175,23 +11186,23 @@
     // Reset VAT rate from admin for estimate builder  
     window.resetVatRateFromAdminEstimate = function() {
       if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
-        if (window.refreshHelperVatRate) {
-          const adminRate = window.refreshHelperVatRate();
-          document.getElementById('vat-rate-input').value = adminRate;
-          window.initVatDisplayEstimate();
-          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
-          
-          // Trigger calculations refresh for estimate
-          if (typeof refreshAllCalculationsEstimate === 'function') {
-            refreshAllCalculationsEstimate();
-          }
-          
-          // Update all cost displays
+        const adminRate = window.refreshHelperVatRate();
+        document.getElementById('vat-rate-input').value = adminRate;
+        
+        // Update helper with admin rate
+        if (window.setHelperVatRate) {
+          window.setHelperVatRate(adminRate, 'admin_hub');
+        }
+        
+        window.initVatDisplayEstimate();
+        alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+        
+        // Update cost displays that actually exist
+        if (typeof updateAllCostDisplays === 'function') {
           updateAllCostDisplays();
-          updateMarketValueAdjustmentsSubtotal();
-          updateFeaturesAdjustmentsSubtotal();
+        }
+        if (typeof updateDamageCentersSubtotal === 'function') {
           updateDamageCentersSubtotal();
-          updateEstimateSummaryFromData();
         }
       }
     };
