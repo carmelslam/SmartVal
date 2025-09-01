@@ -2215,6 +2215,34 @@
         console.error('Error updating claims data:', error);
       }
     }
+    
+    // SHOW FLOATING PDF - Simple PiP for expertise PDFs
+    function showFloatingPDF(pdfUrl, title) {
+      try {
+        // Use the existing PiP system but for PDFs
+        const pipOverlay = document.getElementById('estimatePreviewPip');
+        const iframe = document.getElementById('estimatePreviewFrame');
+        const pipTitle = document.getElementById('pipTitle');
+        
+        if (pipOverlay && iframe && pipTitle) {
+          // Show the PiP overlay
+          pipOverlay.style.display = 'flex';
+          
+          // Set title and load PDF
+          pipTitle.textContent = title || 'מציג PDF';
+          iframe.src = pdfUrl;
+          
+          console.log('📄 Opened PDF in PiP window:', title);
+        } else {
+          // Fallback: Open in new window
+          window.open(pdfUrl, '_blank');
+        }
+      } catch (error) {
+        console.error('Error showing floating PDF:', error);
+        // Fallback: Open in new window
+        window.open(pdfUrl, '_blank');
+      }
+    }
 
     // Convert various date formats to YYYY-MM-DD for date input
     function convertToDateInputFormat(dateString) {
@@ -9966,50 +9994,20 @@
         return;
       }
       
-      const requestBtn = document.getElementById('builderRequestExpertiseBtn');
-      const originalText = requestBtn.textContent;
-      
       try {
-        requestBtn.disabled = true;
-        requestBtn.textContent = 'מבקש אקספירטיזה...';
+        // Save current estimate data before redirecting
+        window.saveEstimate();
         
-        const caseData = JSON.parse(helper);
-        const payload = {
-          plate: plateNumber,
-          case_id: caseData.meta?.case_id,
-          helper: caseData
-        };
+        // Set report type for expertise
+        sessionStorage.setItem('selectedReportType', 'expertise');
         
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('CALL_EXPERTISE', payload);
-        
-        if (response?.success) {
-          const successMessage = response.message || 'האקספירטיזה נשלחה בהצלחה! בדוק את האימייל שלך לקבלת הקובץ.';
-          alert(successMessage);
-          
-          if (response.pdf_url) {
-            showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
-            
-            // Update helper with expertise data
-            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-            if (!helper.expertise) helper.expertise = {};
-            helper.expertise.document_url = response.pdf_url;
-            helper.expertise.requested_at = new Date().toISOString();
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            
-            // Update button states
-            initializeExpertiseButtonState();
-          }
-        } else {
-          alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-        }
+        // Navigate to expertise builder with current data
+        console.log('🔄 Opening expertise builder...');
+        window.location.href = 'expertise-builder.html';
         
       } catch (error) {
-        console.error('Error requesting expertise:', error);
-        alert('שגיאה בשליחת בקשה לאקספירטיזה. אנא נסה שוב.');
-      } finally {
-        requestBtn.disabled = false;
-        requestBtn.textContent = originalText;
+        console.error('Error opening expertise builder:', error);
+        alert('שגיאה בפתיחת בונה האקספירטיזה. נסה שוב.');
       }
     };
     
