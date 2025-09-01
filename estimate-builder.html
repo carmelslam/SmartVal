@@ -11145,6 +11145,15 @@
     window.refreshHelperVatRate = function() {
       console.log('🔄 Refreshing helper VAT rate from admin hub...');
       
+      // DEBUG: Check all possible admin VAT sources
+      console.log('🔍 DEBUGGING VAT SOURCES:');
+      console.log('- sessionStorage globalVAT:', sessionStorage.getItem('globalVAT'));
+      console.log('- localStorage globalVAT:', localStorage.getItem('globalVAT'));
+      console.log('- MathEngine available:', typeof MathEngine !== 'undefined');
+      if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+        console.log('- MathEngine.getVatRate():', MathEngine.getVatRate());
+      }
+      
       // GET ACTUAL ADMIN VAT RATE from storage (connected to admin vat-input field)
       let adminRate = 18; // Default fallback
       
@@ -11152,27 +11161,31 @@
       const sessionVat = sessionStorage.getItem('globalVAT');
       if (sessionVat && !isNaN(sessionVat)) {
         adminRate = parseFloat(sessionVat);
-        console.log('✅ Got admin VAT rate from sessionStorage (globalVAT):', adminRate + '%');
+        console.log('✅ Using admin VAT rate from sessionStorage (globalVAT):', adminRate + '%');
       }
       // Method 2: Try localStorage (persistent admin setting) 
       else {
         const localVat = localStorage.getItem('globalVAT');
         if (localVat && !isNaN(localVat)) {
           adminRate = parseFloat(localVat);
-          console.log('✅ Got admin VAT rate from localStorage (globalVAT):', adminRate + '%');
+          console.log('✅ Using admin VAT rate from localStorage (globalVAT):', adminRate + '%');
         }
         // Method 3: Try MathEngine as final option
         else {
           try {
             if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
               adminRate = MathEngine.getVatRate();
-              console.log('✅ Got admin VAT rate from MathEngine:', adminRate + '%');
+              console.log('✅ Using admin VAT rate from MathEngine:', adminRate + '%');
+            } else {
+              console.log('⚠️ MathEngine not available, using default fallback:', adminRate + '%');
             }
           } catch (e) {
             console.warn('⚠️ Could not get admin VAT rate, using default 18%:', e);
           }
         }
       }
+      
+      console.log('📊 FINAL ADMIN RATE DETERMINED:', adminRate + '%');
       
       // Ensure helper structure exists
       if (!window.helper) {
