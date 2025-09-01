@@ -10948,8 +10948,13 @@
           last_updated: new Date().toISOString()
         };
         
-        // Note: Adjustments are stored in valuation.adjustments only (universal storage)
-        // The estimate section references valuation.adjustments directly, no duplicate needed
+        // Also save reference copy to helper.estimate.adjustments for user control and reference
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        helper.estimate.adjustments[adjustmentKey] = {
+          ...helper.valuation.adjustments[adjustmentKey],
+          source: 'estimate_builder'
+        };
         
         // Save using updateHelper pattern
         if (typeof updateHelper === 'function') {
@@ -10959,11 +10964,12 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
-        console.log('💾 Synced adjustment to universal valuation.adjustments storage:', { 
+        console.log('💾 Synced adjustment to valuation.adjustments and estimate shadow:', { 
           original_category: category,
           adjustment_key: adjustmentKey,
           container_id: containerId,
-          valuation_data: helper.valuation.adjustments[adjustmentKey]
+          valuation_data: helper.valuation.adjustments[adjustmentKey],
+          estimate_shadow: helper.estimate.adjustments[adjustmentKey]
         });
         
       } catch (error) {
