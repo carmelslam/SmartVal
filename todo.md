@@ -5701,3 +5701,33 @@ Handlebars.registerHelper('money', function(value) {
 - PiP iframe now shows proper loading states instead of Promise objects
 - Values automatically update when async calculations complete
 - No breaking changes to existing functionality
+
+**THE ESTIMATE REPORT**
+1. Compare the estimate builder page with the final report builder page, both page are essentially the same while the final report builder has more details inside 
+2. The estimate report doesn’t  require : differentials , in agreement or for company fields, 
+3. all the other sections are required as follows :
+    * נתוני רכב
+    * נתוני התקשרות 
+    * סיכום מוקדי נזק 
+    * ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד
+    * אחוז הנזק הגולמי - בסיס הרכב בלבד 
+    * ערך השוק המלא - כולל גורמי שימוש
+    * חישוב ירידת ערך לפי מוקדי נזק
+    * ימי מוסך משוערים:
+4. Those are the sections you are required to compare , all the other sections in the estimate builder, should and need to stay UNTOUCHED . 
+5. When you compare the defined sections above , between the final report builder and the estimate builder, you need to take in consideration the following :
+    * The exact structure and styling including the collapsing features, totals and styling
+    * The exact mapping from the helper 
+    * The math logic for each section, 
+    * The two way data flow ability from and to the helper. 
+6. THE FINAL REPORT BUILDER IS THE MASTER AND IT SHOUKD NOT BE CHANGED, ALTERED OR TAMPERED WITH, ALL WORKS NEED TO BE ON THE ESTIMATE REPORT.
+7. The task is to change the estimate report sections, that I mentioned before ( and nothing else) with the exact sections from the final report builder with the exception of differentials , in agreement and company fields, 
+8. The work needs to be surgical   and accurate , no need to for overcomplexity or hard coding tasks 
+9. THE HELPER SHOULD NOT BE TOUCHED OR CHANGED 
+10. More unique differences to take in consideration :
+    1. The final report builder writes and creates a final report section in the helper: helper.final_report, the estimate report has its own section and every piece of data captured in the estimate builder UI should go to the helper estimate section : helper.estimate.
+    2. The sources of the data from the helper are identical, also the estimate fields can write back on the data source fields in the helper - like the final report builder can - but any new data like calculations, depreciations , legal texts, attachments , notes and so on , that are generated on the UI , need to write on the helper.estimate. section .
+    3. I also want that teh estimate writes on the helper.estimate. all the image centers and valuations so I can have a historic reference for changes in the case . This doesn’t  cancel the need to update the actual source fields in the helper 
+            1. Example : the estimate receives data of damage centers from helper.centers, if the user changes data lets say for the parts required  using the estimate UI , the those changes will be registered both on the helper.centers relevant fields (the data source ) and on the estimate section (reference) which will mean in the end tae the full damage centers will also be in the estimate as reference even if no changes were made- THIS IS JUST ONE EXAMPLE AND ITS THE RUKE FOR ALL THE FIELD SIN THE UI. 
+    4. You will need to study ho the helper. Final report behaves, though its not the same since the final report is the final case status and it doesn’t  require reference in the section, what is important to pay attention is how the final report UI is distributing data and receiving data 
+    5. DO NOT TAMPER OR TOUCH ANYTHING ELSE IN THE SYSTEM NOT OTHER ODALS , NOT OTHER HALPER SECTIONS, NOT FLOATING SCREENS OR ANYTHING ELSE THAT IS NOT THE ESTIMATE BUILDER AND ITS JAVASCRIPT .
