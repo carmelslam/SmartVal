@@ -7219,8 +7219,12 @@
         });
       });
       
+      // Get VAT rate from core system definition
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const vatRate = helper.calculations?.vat_rate || 18; // Always use calculations.vat_rate
+      
       let rawTotalWithoutVat = totalWorks + totalParts + totalRepairs;
-      let rawTotalWithVat = rawTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
+      let rawTotalWithVat = rawTotalWithoutVat * (1 + vatRate / 100);
       
       // For estimate builder, no differentials, so use simple totals
       let finalTotalWorks = totalWorks;
@@ -7249,7 +7253,35 @@
       const totalWithVatSubtotal = document.getElementById('totalWithVatSubtotal');
       if (totalWithVatSubtotal) totalWithVatSubtotal.innerText = formatCurrency(finalTotalWithVat);
       
-      console.log('💰 Updated damage centers subtotal:', {
+      // 1. Update damage_assessment.summary with corresponding fields
+      if (!helper.damage_assessment) helper.damage_assessment = {};
+      if (!helper.damage_assessment.summary) helper.damage_assessment.summary = {};
+      
+      helper.damage_assessment.summary.total_works = finalTotalWorks;
+      helper.damage_assessment.summary.total_parts = finalTotalParts;
+      helper.damage_assessment.summary.total_repairs = finalTotalRepairs;
+      helper.damage_assessment.summary.total_without_vat = finalTotalWithoutVat;
+      helper.damage_assessment.summary.total_with_vat = finalTotalWithVat;
+      helper.damage_assessment.summary.vat_rate = vatRate; // Use core system VAT rate
+      
+      // 2. Update estimate.damage_centers with totals subsection
+      if (!helper.estimate) helper.estimate = {};
+      if (!helper.estimate.damage_centers_totals) helper.estimate.damage_centers_totals = {};
+      
+      helper.estimate.damage_centers_totals = {
+        works_total: finalTotalWorks,
+        parts_total: finalTotalParts,
+        repairs_total: finalTotalRepairs,
+        subtotal_without_vat: finalTotalWithoutVat,
+        subtotal_with_vat: finalTotalWithVat,
+        vat_rate: vatRate, // Use core system VAT rate
+        last_updated: new Date().toISOString()
+      };
+      
+      // Save updated helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('💰 Updated damage centers subtotal and helper data:', {
         originalWorks: totalWorks,
         originalParts: totalParts,
         originalRepairs: totalRepairs,
@@ -7257,7 +7289,9 @@
         finalParts: finalTotalParts,
         finalRepairs: finalTotalRepairs,
         finalWithoutVat: finalTotalWithoutVat,
-        finalWithVat: finalTotalWithVat
+        finalWithVat: finalTotalWithVat,
+        damage_assessment_summary: helper.damage_assessment.summary,
+        estimate_totals: helper.estimate.damage_centers_totals
       });
     }
 
