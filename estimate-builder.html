@@ -6848,28 +6848,29 @@
     }
 
     // SAVE DAMAGE CENTER CHANGES TO HELPER
+    // ESTIMATE-SPECIFIC DAMAGE CENTERS SAVE FUNCTION
     function saveDamageCenterChanges() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Initialize expertise.damage_blocks if not exists
-        if (!helper.expertise) helper.expertise = {};
-        if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
+        // ESTIMATE WORKFLOW: Initialize helper.estimate as primary storage
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
         
-        // Clear existing damage blocks
-        helper.expertise.damage_blocks = [];
+        // Clear existing estimate damage centers
+        helper.estimate.damage_centers = [];
         
-        // Store damage center names for depreciation section
-        const damageCenterNames = [];
+        // Store damage center names for estimate depreciation section
+        const estimateDamageCenterNames = [];
         
-        // Collect data from all damage center cards
+        // Collect data from all damage center cards for ESTIMATE
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
           const centerName = card.querySelector('.damage-center-name').value;
           const centerAreaName = card.querySelector('.damage-center-area-name').value;
           const centerDescription = card.querySelector('.damage-center-description').value;
           
-          // Collect parts
-          const parts = [];
+          // Collect parts for estimate
+          const estimateParts = [];
           card.querySelectorAll('.part-row').forEach(row => {
             const name = row.querySelector('.part-name').value;
             const desc = row.querySelector('.part-desc').value;
@@ -6877,12 +6878,18 @@
             const source = row.querySelector('.part-source').value;
             
             if (name.trim()) {
-              parts.push({ name, desc, price: parseFloat(price) || 0, source });
+              estimateParts.push({ 
+                name, 
+                description: desc, 
+                estimated_cost: parseFloat(price) || 0, 
+                source,
+                estimate_status: 'preliminary'
+              });
             }
           });
           
-          // Collect works
-          const works = [];
+          // Collect works for estimate
+          const estimateWorks = [];
           card.querySelectorAll('.work-row').forEach(row => {
             let type = row.querySelector('.work-type').value;
             const note = row.querySelector('.work-note').value;
@@ -6897,88 +6904,137 @@
             }
             
             if (type) {
-              works.push({ type, note, cost });
+              estimateWorks.push({ 
+                work_type: type, 
+                work_notes: note, 
+                estimated_cost: cost,
+                estimate_status: 'preliminary'
+              });
             }
           });
           
-          // Collect repairs
-          const repairs = [];
+          // Collect repairs for estimate
+          const estimateRepairs = [];
           card.querySelectorAll('.repair-row').forEach(row => {
             const text = row.querySelector('.repair-text').value;
             const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
             
             if (text.trim()) {
-              repairs.push({ description: text, cost });
+              estimateRepairs.push({ 
+                repair_description: text, 
+                estimated_cost: cost,
+                estimate_status: 'preliminary'
+              });
             }
           });
           
-          // Calculate costs using individual cost fields
-          const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
-          const workCost = works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
-          const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
-          const totalCost = partsCost + workCost + repairsCost;
+          // Calculate estimate costs
+          const estimatedPartsCost = estimateParts.reduce((sum, part) => sum + (parseFloat(part.estimated_cost) || 0), 0);
+          const estimatedWorkCost = estimateWorks.reduce((sum, work) => sum + (parseFloat(work.estimated_cost) || 0), 0);
+          const estimatedRepairsCost = estimateRepairs.reduce((sum, repair) => sum + (parseFloat(repair.estimated_cost) || 0), 0);
+          const totalEstimatedCost = estimatedPartsCost + estimatedWorkCost + estimatedRepairsCost;
           
-          helper.expertise.damage_blocks.push({
-            damage_center_name: centerName,
-            area_name: centerAreaName,
-            description: centerDescription,
-            parts,
-            works,
-            repairs,
-            parts_cost: partsCost,
-            work_cost: workCost,
-            repairs_cost: repairsCost
+          // Save to helper.estimate.damage_centers (PRIMARY for estimates)
+          helper.estimate.damage_centers.push({
+            estimate_center_id: index + 1,
+            center_name: centerName,
+            center_location: centerAreaName,
+            damage_description: centerDescription,
+            estimated_parts: estimateParts,
+            estimated_works: estimateWorks,
+            estimated_repairs: estimateRepairs,
+            costs_breakdown: {
+              parts_cost: estimatedPartsCost,
+              work_cost: estimatedWorkCost,
+              repairs_cost: estimatedRepairsCost,
+              total_cost: totalEstimatedCost
+            },
+            estimate_confidence: 'preliminary',
+            last_updated: new Date().toISOString()
           });
           
-          // Store damage center name for depreciation section
+          // Also update source data for compatibility (helper.centers if exists)
+          if (!helper.centers) helper.centers = [];
+          helper.centers[index] = {
+            Id: `estimate_${Date.now()}_${index + 1}`,
+            "Damage center Number": index + 1,
+            Location: centerAreaName,
+            Description: centerDescription,
+            Parts: {
+              parts_required: estimateParts.map(p => ({
+                name: p.name,
+                desc: p.description,
+                price: p.estimated_cost,
+                source: p.source
+              })),
+              parts_meta: {
+                total_items: estimateParts.length,
+                total_cost: estimatedPartsCost
+              }
+            },
+            Works: {
+              works: estimateWorks.map(w => ({
+                type: w.work_type,
+                note: w.work_notes,
+                cost: w.estimated_cost
+              })),
+              works_meta: {
+                total_items: estimateWorks.length,
+                total_cost: estimatedWorkCost
+              }
+            },
+            Repairs: {
+              repairs: estimateRepairs.map(r => ({
+                description: r.repair_description,
+                cost: r.estimated_cost
+              })),
+              repairs_meta: {
+                total_items: estimateRepairs.length,
+                total_cost: estimatedRepairsCost
+              }
+            }
+          };
+          
+          // Store damage center name for estimate depreciation section
           if (centerName.trim()) {
-            damageCenterNames.push(centerName.trim());
+            estimateDamageCenterNames.push({
+              name: centerName.trim(),
+              location: centerAreaName.trim(),
+              estimated_cost: totalEstimatedCost
+            });
           }
           
           // Update cost display for this card
-          updateCostDisplay(card, partsCost, workCost, repairsCost);
+          updateCostDisplay(card, estimatedPartsCost, estimatedWorkCost, estimatedRepairsCost);
         });
         
-        // ✅ BIDIRECTIONAL SYNC: Update helper.damage_centers to match damage_blocks
-        if (!helper.damage_centers) helper.damage_centers = [];
-        helper.damage_centers = helper.expertise.damage_blocks.map((block, index) => ({
-          center_id: index + 1,
-          center_name: block.damage_center_name,
-          area_name: block.area_name,
-          description: block.description,
-          parts: block.parts,
-          works: block.works,
-          repairs: block.repairs,
-          total_cost: (block.parts_cost || 0) + (block.work_cost || 0) + (block.repairs_cost || 0)
-        }));
-        
-        // ENHANCED DATA PERSISTENCE: Write to both source fields and helper.estimate for reference
-        // Initialize helper.estimate if not exists
-        helper.estimate = helper.estimate || {};
-        
-        // Write damage centers data to helper.estimate for historical reference
-        helper.estimate.damage_centers_data = {
-          damage_blocks: helper.expertise.damage_blocks,
-          total_centers: helper.expertise.damage_blocks.length,
-          total_parts_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.parts_cost || 0), 0),
-          total_work_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.work_cost || 0), 0),
-          total_repairs_cost: helper.expertise.damage_blocks.reduce((sum, block) => sum + (block.repairs_cost || 0), 0),
-          timestamp: new Date().toISOString()
+        // Calculate estimate summary totals
+        const estimateTotals = {
+          total_centers: helper.estimate.damage_centers.length,
+          total_parts_cost: helper.estimate.damage_centers.reduce((sum, center) => sum + (center.costs_breakdown.parts_cost || 0), 0),
+          total_work_cost: helper.estimate.damage_centers.reduce((sum, center) => sum + (center.costs_breakdown.work_cost || 0), 0),
+          total_repairs_cost: helper.estimate.damage_centers.reduce((sum, center) => sum + (center.costs_breakdown.repairs_cost || 0), 0),
+          grand_total: helper.estimate.damage_centers.reduce((sum, center) => sum + (center.costs_breakdown.total_cost || 0), 0),
+          last_updated: new Date().toISOString()
         };
+        
+        helper.estimate.damage_summary = estimateTotals;
+        helper.estimate.timestamp = new Date().toISOString();
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Update depreciation section with damage center names
-        updateDepreciationFromDamageCenters(damageCenterNames);
+        // Update estimate depreciation section with damage center names
+        updateEstimateDepreciationFromDamageCenters(estimateDamageCenterNames);
         
         // Trigger floating screen refresh
         triggerFloatingScreenRefresh();
         
-        console.log('Damage centers saved:', helper.expertise.damage_blocks);
+        console.log('📊 Estimate damage centers saved:', helper.estimate.damage_centers);
+        console.log('💰 Estimate totals:', estimateTotals);
         
       } catch (error) {
-        console.error('Error saving damage center changes:', error);
+        console.error('❌ Error saving estimate damage center changes:', error);
       }
     }
     
@@ -7043,6 +7099,139 @@
         
       } catch (error) {
         console.error('Error updating depreciation from damage centers:', error);
+      }
+    }
+    
+    // ESTIMATE-SPECIFIC DEPRECIATION UPDATE FUNCTION  
+    function updateEstimateDepreciationFromDamageCenters(estimateDamageCenterNames) {
+      try {
+        console.log('🔄 updateEstimateDepreciationFromDamageCenters called with:', estimateDamageCenterNames);
+        
+        const depreciationTable = document.getElementById('depreciationBulkTable');
+        if (!depreciationTable) {
+          console.log('❌ depreciationBulkTable not found');
+          return;
+        }
+        
+        // Clear existing depreciation rows  
+        depreciationTable.innerHTML = '';
+        console.log('🧹 Cleared estimate depreciation table');
+        
+        // Add a row for each estimate damage center
+        estimateDamageCenterNames.forEach(centerData => {
+          console.log('🔄 Adding estimate depreciation row for:', centerData);
+          const row = document.createElement('div');
+          row.className = 'dep-row';
+          row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 120px 120px 80px; gap:14px; margin-bottom:10px;';
+          
+          row.innerHTML = `
+            <div><input type="text" placeholder="החלק הניזוק" value="${centerData.name} - ${centerData.location}" onchange="saveEstimateDepreciationData()" /></div>
+            <div><input type="text" placeholder="מהות התיקון" value="תיקון לפי אומדן" onchange="saveEstimateDepreciationData()" /></div>
+            <div><input type="text" placeholder="% ירידת ערך" onchange="saveEstimateDepreciationData(); calculateEstimateDepreciation(this);" /></div>
+            <div><input type="text" placeholder="ערך ב-₪" readonly style="background:#f4f6fa;" /></div>
+            <div><button type="button" onclick="this.parentElement.parentElement.remove(); saveEstimateDepreciationData();" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">מחק</button></div>
+          `;
+          
+          depreciationTable.appendChild(row);
+          
+          // Add calculation listener to the percentage field for estimate
+          const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+          const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+          
+          percentInput.addEventListener('input', function() {
+            calculateEstimateDepreciation(this);
+            saveEstimateDepreciationData();
+          });
+        });
+        
+        console.log('✅ Estimate depreciation section updated with damage centers:', estimateDamageCenterNames);
+        
+      } catch (error) {
+        console.error('❌ Error updating estimate depreciation from damage centers:', error);
+      }
+    }
+    
+    // CALCULATE ESTIMATE DEPRECIATION VALUE
+    function calculateEstimateDepreciation(percentInput) {
+      try {
+        const row = percentInput.closest('.dep-row');
+        const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+        
+        let percent = parseFloat(percentInput.value) || 0;
+        
+        // Auto-add % symbol if not present and user enters a number
+        if (percentInput.value && !percentInput.value.includes('%') && !isNaN(percent)) {
+          percentInput.value = percent + '%';
+        }
+        
+        // Calculate value from estimate market price  
+        const estimateMarketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+        const marketValueStr = estimateMarketValueField?.value.replace(/[₪,]/g, '') || '0';
+        const marketValue = parseFloat(marketValueStr) || 0;
+        
+        const calculatedValue = (marketValue * percent) / 100;
+        valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+        
+        console.log(`💰 Estimate depreciation calculated: ${percent}% of ₪${marketValue.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+        
+      } catch (error) {
+        console.error('❌ Error calculating estimate depreciation:', error);
+      }
+    }
+    
+    // SAVE ESTIMATE DEPRECIATION DATA TO HELPER.ESTIMATE
+    function saveEstimateDepreciationData() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize estimate depreciation section
+        if (!helper.estimate) helper.estimate = {};
+        helper.estimate.depreciation = {
+          depreciation_items: [],
+          total_depreciation: 0,
+          last_updated: new Date().toISOString()
+        };
+        
+        // Collect depreciation data for estimate
+        document.querySelectorAll('#depreciationBulkTable .dep-row').forEach(row => {
+          const damagedPart = row.querySelector('input[placeholder="החלק הניזוק"]').value;
+          const repairType = row.querySelector('input[placeholder="מהות התיקון"]').value;
+          const percentage = row.querySelector('input[placeholder="% ירידת ערך"]').value;
+          const value = row.querySelector('input[placeholder="ערך ב-₪"]').value;
+          
+          if (damagedPart.trim() || repairType.trim() || percentage.trim()) {
+            helper.estimate.depreciation.depreciation_items.push({
+              damaged_part: damagedPart,
+              repair_type: repairType,
+              depreciation_percentage: percentage,
+              depreciation_value: parseFloat(value.replace(/[₪,]/g, '')) || 0,
+              estimate_based: true
+            });
+          }
+        });
+        
+        // Calculate total depreciation for estimate
+        helper.estimate.depreciation.total_depreciation = helper.estimate.depreciation.depreciation_items.reduce(
+          (sum, item) => sum + (item.depreciation_value || 0), 0
+        );
+        
+        // Also get global depreciation for estimate
+        const globalDepField = document.getElementById('globalDep1');
+        const globalDepValue = document.getElementById('globalDepValue');
+        if (globalDepField && globalDepField.value) {
+          helper.estimate.depreciation.global_depreciation = {
+            percentage: globalDepField.value,
+            value: parseFloat(globalDepValue.value.replace(/[₪,]/g, '')) || 0
+          };
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('📊 Estimate depreciation data saved:', helper.estimate.depreciation);
+        
+      } catch (error) {
+        console.error('❌ Error saving estimate depreciation data:', error);
       }
     }
 
