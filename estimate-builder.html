@@ -1110,7 +1110,7 @@
             הצג אקספירטיזה PDF
           </button>
           <button class="nav-btn" id="builderRequestExpertiseBtn" onclick="requestExpertiseForBuilder()" style="background: #059669; color: white;">
-            בקש אקספירטיזה
+            צור אקספירטיזה
           </button>
         </div>
       </div>
@@ -9981,43 +9981,68 @@
     
     // Request expertise for builder
     window.requestExpertiseForBuilder = async function() {
-      const plateNumber = document.getElementById('builderPlateInput').value.trim();
-      const helper = sessionStorage.getItem('helper');
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
-        return;
-      }
-      
-      if (!helper) {
+      if (!helper || !helper.meta?.case_id) {
         alert('נתוני התיק לא נמצאו במערכת');
         return;
       }
       
+      const requestBtn = document.getElementById('builderRequestExpertiseBtn');
+      const originalText = requestBtn.textContent;
+      
       try {
-        // Save current estimate data before redirecting
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'יוצר אקספירטיזה...';
+        
+        // Save current estimate data before creating expertise
         window.saveEstimate();
         
-        // Set report type for expertise
-        sessionStorage.setItem('selectedReportType', 'expertise');
+        // Prepare payload with current case data (no plate input needed)
+        const payload = {
+          case_id: helper.meta.case_id,
+          plate: helper.meta?.plate || helper.car_details?.plate || 'לא_זמין',
+          helper: helper
+        };
         
-        // Navigate to expertise builder with current data
-        console.log('🔄 Opening expertise builder...');
-        window.location.href = 'expertise-builder.html';
+        console.log('🔄 Creating expertise with current case data...');
+        
+        const { sendToWebhook } = await import('./webhook.js');
+        const response = await sendToWebhook('CALL_EXPERTISE', payload);
+        
+        if (response?.success) {
+          const successMessage = response.message || 'האקספירטיזה נוצרה בהצלחה!';
+          alert(successMessage);
+          
+          if (response.pdf_url) {
+            showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+            
+            // Update helper with expertise data
+            if (!helper.expertise) helper.expertise = {};
+            helper.expertise.document_url = response.pdf_url;
+            helper.expertise.created_at = new Date().toISOString();
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        } else {
+          const errorMessage = response?.error || 'שגיאה ביצירת האקספירטיזה. נסה שוב.';
+          alert(errorMessage);
+        }
         
       } catch (error) {
-        console.error('Error opening expertise builder:', error);
-        alert('שגיאה בפתיחת בונה האקספירטיזה. נסה שוב.');
+        console.error('Error creating expertise:', error);
+        alert('שגיאה בחיבור לשרת. נסה שוב מאוחר יותר.');
+      } finally {
+        requestBtn.disabled = false;
+        requestBtn.textContent = originalText;
       }
     };
     
     // Fetch expertise PDF for builder
     window.fetchExpertisePDFForBuilder = async function() {
-      const plateNumber = document.getElementById('builderPlateInput').value.trim();
-      const helper = sessionStorage.getItem('helper');
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
+      if (!helper || !helper.meta?.case_id) {
+        alert('נתוני התיק לא נמצאו במערכת');
         return;
       }
       
@@ -10028,12 +10053,14 @@
         fetchBtn.disabled = true;
         fetchBtn.textContent = 'טוען PDF...';
         
-        const caseData = helper ? JSON.parse(helper) : null;
+        // Use current case data (no plate input needed)
         const payload = {
-          plate: plateNumber,
-          case_id: caseData?.meta?.case_id,
+          case_id: helper.meta.case_id,
+          plate: helper.meta?.plate || helper.car_details?.plate || 'לא_זמין',
           document_type: 'expertise'
         };
+        
+        console.log('🔄 Fetching expertise PDF for current case...');
         
         const { sendToWebhook } = await import('./webhook.js');
         const response = await sendToWebhook('FETCH_EXPERTISE_PDF', payload);
