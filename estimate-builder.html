@@ -7141,6 +7141,57 @@
       }
     }
 
+    // SAVE DAMAGE CENTERS WITH VISUAL FEEDBACK
+    function saveDamageCenterChangesWithFeedback() {
+      const saveBtn = document.getElementById('damageCenterSaveBtn');
+      if (!saveBtn) return;
+      
+      try {
+        // Show loading state
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'שומר...';
+        saveBtn.style.background = '#6c757d';
+        saveBtn.disabled = true;
+        
+        // Save the changes
+        saveDamageCenterChanges();
+        
+        // Show success state
+        setTimeout(() => {
+          saveBtn.textContent = '✅ נשמר';
+          saveBtn.style.background = '#28a745';
+          
+          // Show success message matching other sections
+          showSectionMessage('damage-centers', '✅ מרכזי נזק נשמרו בהצלחה', 'success');
+          
+          // Reset button after 2 seconds
+          setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.background = '#007bff';
+            saveBtn.disabled = false;
+          }, 2000);
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error saving damage centers:', error);
+        
+        // Show error state
+        setTimeout(() => {
+          saveBtn.textContent = '❌ שגיאה';
+          saveBtn.style.background = '#dc3545';
+          
+          showSectionMessage('damage-centers', '❌ שגיאה בשמירת מרכזי נזק', 'error');
+          
+          // Reset button after 3 seconds
+          setTimeout(() => {
+            saveBtn.textContent = 'שמור';
+            saveBtn.style.background = '#007bff';
+            saveBtn.disabled = false;
+          }, 3000);
+        }, 500);
+      }
+    }
+
     // UPDATE DAMAGE CENTERS SUBTOTAL DISPLAY
     function updateDamageCentersSubtotal() {
       let totalWorks = 0;
@@ -7241,9 +7292,9 @@
             </div>
           </div>
         </div>
-        <div style="display: flex; justify-content: center; gap: 15px; margin-top: 15px;">
+        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 15px;">
           <button type="button" class="btn add" onclick="addNewDamageCenter()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">הוסף מוקד נזק חדש</button>
-          <button type="button" class="btn save-btn" onclick="saveDamageCenterChanges()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
+          <button type="button" class="btn save-btn" id="damageCenterSaveBtn" onclick="saveDamageCenterChangesWithFeedback()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease;">שמור</button>
         </div>
         <div style="text-align: center; margin-top: 10px;">
           <button type="button" class="btn section-collapse-button" onclick="toggleSection('damageCentersSummary')" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">כווץ סעיף</button>
