@@ -1910,30 +1910,54 @@
         
         // Load car details (now editable) and sync vehicle structure
         if (helper.car_details || helper.meta) {
-          document.getElementById('carPlate').value = helper.meta?.plate || helper.car_details?.plate || '';
-          document.getElementById('carManufacturer').value = helper.car_details?.manufacturer || '';
-          document.getElementById('carModel').value = helper.car_details?.model || '';
-          document.getElementById('carYear').value = helper.car_details?.year || '';
-          document.getElementById('carModelCode').value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
+          // Add defensive null checks for all DOM elements
+          const carPlate = document.getElementById('carPlate');
+          if (carPlate) carPlate.value = helper.meta?.plate || helper.car_details?.plate || '';
+          
+          const carManufacturer = document.getElementById('carManufacturer');
+          if (carManufacturer) carManufacturer.value = helper.car_details?.manufacturer || '';
+          
+          const carModel = document.getElementById('carModel');
+          if (carModel) carModel.value = helper.car_details?.model || '';
+          
+          const carYear = document.getElementById('carYear');
+          if (carYear) carYear.value = helper.car_details?.year || '';
+          
+          const carModelCode = document.getElementById('carModelCode');
+          if (carModelCode) carModelCode.value = helper.car_details?.model_code || helper.vehicle?.model_code || '';
+          
           // Base price from standardized valuation structure (with legacy fallback)
           const rawBasePrice = helper.valuation?.base_price || helper.car_details?.base_price || helper.levi_report?.base_price;
           // Clean any existing currency symbols and parse as number
           const basePrice = rawBasePrice ? parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) : null;
-          document.getElementById('carBasePrice').value = basePrice ? `₪${basePrice.toLocaleString()}` : '';
+          
+          const carBasePrice = document.getElementById('carBasePrice');
+          if (carBasePrice) carBasePrice.value = basePrice ? `₪${basePrice.toLocaleString()}` : '';
           
           // Also populate the basicPrice field (marked price field) with levi base price
           const basicPriceField = document.getElementById('basicPrice');
           if (basicPriceField && basePrice) {
             basicPriceField.value = `₪${basePrice.toLocaleString()}`;
           }
+          
+          // Also populate the fullBasicPrice field for full market value calculations
+          const fullBasicPriceField = document.getElementById('fullBasicPrice');
+          if (fullBasicPriceField && basePrice) {
+            fullBasicPriceField.value = `₪${basePrice.toLocaleString()}`;
+          }
+          
           // Market value from standardized vehicle structure (with legacy fallback) 
           const rawMarketValue = helper.vehicle?.market_value || helper.expertise?.calculations?.market_value || helper.valuation?.market_value;
           // Clean any existing currency symbols and parse as number
           const marketValue = rawMarketValue ? parseFloat(String(rawMarketValue).replace(/[₪,]/g, '')) : null;
-          document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+          
+          const carMarketValue = document.getElementById('carMarketValue');
+          if (carMarketValue) carMarketValue.value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
+          
           // Issue date from standardized case_info structure (with legacy fallback)
           const issueDate = helper.case_info?.issue_date || helper.car_details?.report_date || helper.levi_report?.report_date || '';
-          document.getElementById('carReportDate').value = convertToDateInputFormat(issueDate);
+          const carReportDate = document.getElementById('carReportDate');
+          if (carReportDate) carReportDate.value = convertToDateInputFormat(issueDate);
           
           // Ensure vehicle structure is populated on load
           const vehicleData = {
@@ -1966,20 +1990,32 @@
         const financials = helper.financials || {};
         
         // Load with proper field mapping priority: manual input > calculated data > valuation data
-        document.getElementById('totalClaim').value = claimsData.total_claim || 
-          (damageAssessment.total_damage_amount ? `₪${damageAssessment.total_damage_amount.toLocaleString()}` : '') ||
-          (financials.totals?.total_compensation ? `₪${financials.totals.total_compensation.toLocaleString()}` : '');
+        const totalClaimField = document.getElementById('totalClaim');
+        if (totalClaimField) {
+          totalClaimField.value = claimsData.total_claim || 
+            (damageAssessment.total_damage_amount ? `₪${damageAssessment.total_damage_amount.toLocaleString()}` : '') ||
+            (financials.totals?.total_compensation ? `₪${financials.totals.total_compensation.toLocaleString()}` : '');
+        }
           
-        document.getElementById('leviPriceList').value = claimsData.gross_value || 
-          (valuation.final_price ? `₪${valuation.final_price.toLocaleString()}` : '') ||
-          (valuation.calculations?.market_price?.total ? `₪${valuation.calculations.market_price.total.toLocaleString()}` : '');
+        const leviPriceListField = document.getElementById('leviPriceList');
+        if (leviPriceListField) {
+          leviPriceListField.value = claimsData.gross_value || 
+            (valuation.final_price ? `₪${valuation.final_price.toLocaleString()}` : '') ||
+            (valuation.calculations?.market_price?.total ? `₪${valuation.calculations.market_price.total.toLocaleString()}` : '');
+        }
           
-        document.getElementById('grossPercent').value = claimsData.gross_percent || 
-          (damageAssessment.damage_percentage ? `${damageAssessment.damage_percentage}%` : '');
+        const grossPercentField = document.getElementById('grossPercent');
+        if (grossPercentField) {
+          grossPercentField.value = claimsData.gross_percent || 
+            (damageAssessment.damage_percentage ? `${damageAssessment.damage_percentage}%` : '');
+        }
           
-        document.getElementById('authorizedClaim').value = claimsData.authorized_claim || 
+        const authorizedClaimField = document.getElementById('authorizedClaim');
+        if (authorizedClaimField) {
+          authorizedClaimField.value = claimsData.authorized_claim || 
           (financials.totals?.after_tax ? `₪${financials.totals.after_tax.toLocaleString()}` : '') ||
           (damageAssessment.total_damage_amount ? `₪${damageAssessment.total_damage_amount.toLocaleString()}` : '');
+        }
           
         console.log('💰 PHASE 2.4: Loaded claims data with correct field mapping:', { 
           from_claims_data: claimsData, 
