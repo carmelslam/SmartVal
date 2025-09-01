@@ -4668,7 +4668,7 @@
       
       console.log('🔍 Mileage data extracted:', { percent: mileagePercent, amount: mileageAmount });
       
-      const mileageDescription = mileageData.description || 'מס ק"מ';
+      const mileageDescription = mileageData.value || 'מס ק"מ';
 
       if (mileagePercent || mileageAmount) {
         addFullMarketAdjustment();
@@ -10519,14 +10519,18 @@
           additional: 'allAdjustmentsList'
         };
         
-        // Populate each category
+        // Populate each category - PREVENT DUPLICATION
         Object.entries(categoryMapping).forEach(([category, containerId]) => {
           const container = document.getElementById(containerId);
           const adjustmentData = adjustments[category];
           
           if (container && adjustmentData && (adjustmentData.percent || adjustmentData.percentage || adjustmentData.amount)) {
-            // Clear existing rows first
-            container.innerHTML = '';
+            // ONLY clear if there are no existing rows - PREVENT DUPLICATION
+            const existingRows = container.querySelectorAll('.adjustment-row');
+            if (existingRows.length > 0) {
+              console.log(`⚠️ Skipping ${category} - already has ${existingRows.length} rows`);
+              return; // Skip this category to prevent duplication
+            }
             
             // Extract percentage - handle "9%" string format and negative values (EXACT MATCH WITH FINAL REPORT)
             let percent = 0;
