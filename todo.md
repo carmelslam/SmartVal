@@ -5724,7 +5724,7 @@ Handlebars.registerHelper('money', function(value) {
 7. The task is to change the estimate report sections, that I mentioned before ( and nothing else) with the exact sections from the final report builder with the exception of differentials , in agreement and company fields, 
 8. The work needs to be surgical   and accurate , no need to for overcomplexity or hard coding tasks 
 9. THE HELPER SHOULD NOT BE TOUCHED OR CHANGED 
-10. More unique differences to take in consideration :
+10. More unique differences to take in consideration 
     1. The final report builder writes and creates a final report section in the helper: helper.final_report, the estimate report has its own section and every piece of data captured in the estimate builder UI should go to the helper estimate section : helper.estimate.
     2. The sources of the data from the helper are identical, also the estimate fields can write back on the data source fields in the helper - like the final report builder can - but any new data like calculations, depreciations , legal texts, attachments , notes and so on , that are generated on the UI , need to write on the helper.estimate. section .
     3. I also want that teh estimate writes on the helper.estimate. all the image centers and valuations so I can have a historic reference for changes in the case . This doesn’t  cancel the need to update the actual source fields in the helper 

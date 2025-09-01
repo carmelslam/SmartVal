@@ -6760,7 +6760,11 @@
         
         // FOLLOW HELPER ARCHITECTURE: Load ONLY from helper.valuation.adjustments
         // The helper is god - everyone else adjusts to it
-        if (helper.valuation?.adjustments) {
+        // Ensure helper.valuation.adjustments is initialized
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        if (helper.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) {
           Object.entries(helper.valuation.adjustments).forEach(([category, adjData]) => {
             if (adjData && (adjData.percent || adjData.amount) && adjData.description) {
               const adjustmentType = (adjData.percent < 0 || adjData.amount < 0) ? 'minus' : 'plus';
@@ -10944,13 +10948,8 @@
           last_updated: new Date().toISOString()
         };
         
-        // Also save reference copy to estimate.adjustments for estimate-specific tracking
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        helper.estimate.adjustments[adjustmentKey] = {
-          ...helper.valuation.adjustments[adjustmentKey],
-          source: 'estimate_builder'
-        };
+        // Note: Adjustments are stored in valuation.adjustments only (universal storage)
+        // The estimate section references valuation.adjustments directly, no duplicate needed
         
         // Save using updateHelper pattern
         if (typeof updateHelper === 'function') {
@@ -10960,12 +10959,11 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
-        console.log('💾 Synced adjustment to valuation.adjustments and estimate reference:', { 
+        console.log('💾 Synced adjustment to universal valuation.adjustments storage:', { 
           original_category: category,
           adjustment_key: adjustmentKey,
           container_id: containerId,
-          valuation_data: helper.valuation.adjustments[adjustmentKey],
-          estimate_reference: helper.estimate.adjustments[adjustmentKey]
+          valuation_data: helper.valuation.adjustments[adjustmentKey]
         });
         
       } catch (error) {
