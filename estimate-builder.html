@@ -7233,6 +7233,12 @@
       let finalTotalWithoutVat = rawTotalWithoutVat;
       let finalTotalWithVat = rawTotalWithVat;
       
+      console.log('🧮 Calculated totals:', {
+        totalWorks, totalParts, totalRepairs, 
+        finalTotalWithoutVat, finalTotalWithVat, vatRate,
+        cardsFound: document.querySelectorAll('.editable-damage-card').length
+      });
+      
       // Update display elements
       const formatCurrency = (amount) => amount > 0 ? `₪${Math.round(amount).toLocaleString()}` : '₪0';
       
@@ -7315,6 +7321,22 @@
         helper_saved_successfully: !!savedHelper.damage_assessment?.summary
       });
     }
+
+    // MANUAL TEST FUNCTION - Force update helper data
+    window.testDamageCentersUpdate = function() {
+      console.log('🧪 TESTING: Manual trigger of updateDamageCentersSubtotal');
+      updateDamageCentersSubtotal();
+      
+      // Also check current helper state
+      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 Current helper state check:');
+      console.log('damage_assessment exists:', !!currentHelper.damage_assessment);
+      console.log('damage_assessment.summary exists:', !!currentHelper.damage_assessment?.summary);
+      console.log('estimate exists:', !!currentHelper.estimate);
+      console.log('estimate.damage_centers_totals exists:', !!currentHelper.estimate?.damage_centers_totals);
+      console.log('Full damage_assessment.summary:', currentHelper.damage_assessment?.summary);
+      console.log('Full estimate.damage_centers_totals:', currentHelper.estimate?.damage_centers_totals);
+    };
 
     // CREATE DAMAGE CENTERS SUBTOTAL SECTION
     function createDamageCentersSubtotal() {
