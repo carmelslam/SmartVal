@@ -804,7 +804,7 @@
     // Vehicle basic info
     document.getElementById("vehicle-manufacturer").textContent = formatValue(helper.vehicle?.manufacturer);
     document.getElementById("vehicle-model").textContent = formatValue(helper.vehicle?.model);
-    document.getElementById("vehicle-model-type").textContent = formatValue(helper.vehicle?.model_type);
+    document.getElementById("vehicle-model-type").textContent = formatValue(helper.levisummary?.category || helper.vehicle?.model_type);
     document.getElementById("vehicle-type").textContent = formatValue(helper.vehicle?.vehicle_type);
     document.getElementById("vehicle-trim").textContent = formatValue(helper.vehicle?.trim);
     document.getElementById("vehicle-chassis").textContent = formatValue(helper.vehicle?.chassis);
