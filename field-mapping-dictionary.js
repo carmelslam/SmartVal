@@ -61,7 +61,9 @@ export const HEBREW_TO_ENGLISH = {
   'נפח': 'engine_volume',
   'סוג דלק': 'fuel_type',
   'דלק': 'fuel_type',
-  'מספר דגם הרכב': 'vehicle_model_code',  // CRITICAL: Open case webhook field - separate from Levi code
+  'קוד דגם טכני': 'vehicle_model_code',    // Updated field name in webhook
+  'מספר דגם הרכב': 'vehicle_model_code',  // Legacy support
+  'מספר דגם': 'internal_model_number',   // New field - internal model number  
   'קוד דגם': 'levi_code',               // CRITICAL: Levi webhook field - separate from vehicle model code
   'דגם מנוע': 'engine_model',
   'מנוע': 'engine_model',
