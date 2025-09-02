@@ -3952,6 +3952,67 @@ window.populateAllFormsWithRetry = function(maxRetries = 3, delay = 1000) {
 }
 
 // Simple helper update functions
+// Sync damage_date across all sections when case_info.damage_date changes
+window.syncDamageDate = function() {
+  console.log('🔄 syncDamageDate called - checking helper state:', window.helper?.case_info);
+  
+  if (window.helper?.case_info?.damage_date) {
+    const damageDate = window.helper.case_info.damage_date;
+    console.log(`🔄 Found damage date to sync: ${damageDate}`);
+    
+    // Initialize sections if needed
+    if (!window.helper.vehicle) {
+      window.helper.vehicle = {};
+      console.log('🔧 Initialized vehicle section');
+    }
+    if (!window.helper.car_details) {
+      window.helper.car_details = {};
+      console.log('🔧 Initialized car_details section');
+    }
+    
+    // Sync to other sections
+    window.helper.vehicle.damage_date = damageDate;
+    window.helper.car_details.damage_date = damageDate;
+    
+    console.log(`✅ Damage date synced across all sections: ${damageDate}`);
+    console.log('📊 Vehicle section after sync:', window.helper.vehicle);
+    console.log('📊 Car_details section after sync:', window.helper.car_details);
+    
+    saveHelperToAllStorageLocations();
+  } else {
+    console.log('❌ No damage date found in case_info to sync');
+    console.log('📊 Current helper structure:', window.helper);
+  }
+};
+
+// Debug function to test damage date sync manually
+window.testDamageSync = function(testDate = '2024-01-15') {
+  console.log('🧪 Testing damage date sync with test date:', testDate);
+  
+  // Ensure helper structure exists
+  if (!window.helper) window.helper = {};
+  if (!window.helper.case_info) window.helper.case_info = {};
+  
+  // Set test damage date
+  window.helper.case_info.damage_date = testDate;
+  console.log('🧪 Set test damage date in case_info:', window.helper.case_info.damage_date);
+  
+  // Call sync function
+  window.syncDamageDate();
+  
+  // Check results
+  console.log('🧪 Test Results:');
+  console.log('  - case_info.damage_date:', window.helper.case_info?.damage_date);
+  console.log('  - vehicle.damage_date:', window.helper.vehicle?.damage_date);
+  console.log('  - car_details.damage_date:', window.helper.car_details?.damage_date);
+  
+  return {
+    case_info: window.helper.case_info?.damage_date,
+    vehicle: window.helper.vehicle?.damage_date,
+    car_details: window.helper.car_details?.damage_date
+  };
+};
+
 window.updateHelper = function(field, value) {
   if (!window.helper) initializeHelper();
 
@@ -4491,11 +4552,14 @@ window.setupUniversalInputCapture = function() {
           console.log(`📝 Manual input captured: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
           
-          // Special handling for damage_date - propagate to all sections
+          // Special handling for damage_date - sync to all sections after setting case_info
           if (fieldId === 'damage_date_independent') {
-            setNestedValue(window.helper, 'vehicle.damage_date', value);
-            setNestedValue(window.helper, 'car_details.damage_date', value);
-            console.log(`🔄 Damage date propagated to all sections: ${value}`);
+            console.log('🔥 Input event: Calling syncDamageDate for damage_date_independent');
+            // Call sync function to update vehicle and car_details sections
+            setTimeout(() => {
+              console.log('🔥 Timeout executed: About to call syncDamageDate');
+              window.syncDamageDate();
+            }, 100);
           }
           
           // Update meta info  
@@ -4514,11 +4578,14 @@ window.setupUniversalInputCapture = function() {
           console.log(`✅ Manual input confirmed: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
           
-          // Special handling for damage_date - propagate to all sections
+          // Special handling for damage_date - sync to all sections after setting case_info
           if (fieldId === 'damage_date_independent') {
-            setNestedValue(window.helper, 'vehicle.damage_date', value);
-            setNestedValue(window.helper, 'car_details.damage_date', value);
-            console.log(`🔄 Damage date confirmed and propagated to all sections: ${value}`);
+            console.log('🔥 Input event: Calling syncDamageDate for damage_date_independent');
+            // Call sync function to update vehicle and car_details sections
+            setTimeout(() => {
+              console.log('🔥 Timeout executed: About to call syncDamageDate');
+              window.syncDamageDate();
+            }, 100);
           }
           
           window.helper.meta.last_updated = new Date().toISOString();
