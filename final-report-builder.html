@@ -2082,18 +2082,19 @@
         
         console.log('✅ DATA SAVED SUCCESSFULLY!');
         
-        // Show success feedback
-        setTimeout(() => {
-          if (button) {
-            button.style.background = '#16a34a';
-            button.innerHTML = '✅ נשמר!';
-            setTimeout(() => {
-              button.style.background = '#ef4444';
-              button.innerHTML = 'שמור נתונים';
-              button.disabled = false;
-            }, 1500);
-          }
-        }, 500);
+        // Show success message using the standard message system
+        showSectionMessage('depreciation', '✅ נתוני ירידת ערך נשמרו בהצלחה', 'success');
+        
+        // Show success feedback on button
+        if (button) {
+          button.style.background = '#16a34a';
+          button.innerHTML = '✅ נשמר!';
+          setTimeout(() => {
+            button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            button.innerHTML = 'שמור נתונים';
+            button.disabled = false;
+          }, 2000);
+        }
         
       } catch (error) {
         console.error('❌ SAVE ERROR:', error);
@@ -8005,6 +8006,10 @@
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', () => {
       
+      // Initialize window.helper from sessionStorage FIRST
+      window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
+      
       // Clean up deprecated data structures
       cleanupDeprecatedData();
       
@@ -9322,7 +9327,11 @@
     function loadHelperData() {
       try {
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
+        // Ensure window.helper is initialized from sessionStorage
+        if (!window.helper || Object.keys(window.helper).length === 0) {
+          window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        }
+        const helper = window.helper;
         
         console.log('📥 Loading helper data:', helper);
         
