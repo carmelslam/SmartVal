@@ -1353,18 +1353,23 @@ window.setVehicleField = function(fieldName, value, source = 'manual') {
   window.helper.vehicle[fieldName] = value;
   
   // Remove any duplicate references to this field in other sections
-  const sectionsToClean = ['meta', 'car_details', 'case_info', 'general_info', 'expertise'];
-  let cleanedCount = 0;
-  
-  sectionsToClean.forEach(section => {
-    if (window.helper[section] && window.helper[section][fieldName]) {
-      delete window.helper[section][fieldName];
-      cleanedCount++;
+  // Exception: damage_date should exist in multiple sections as identification parameter
+  if (fieldName !== 'damage_date') {
+    const sectionsToClean = ['meta', 'car_details', 'case_info', 'general_info', 'expertise'];
+    let cleanedCount = 0;
+    
+    sectionsToClean.forEach(section => {
+      if (window.helper[section] && window.helper[section][fieldName]) {
+        delete window.helper[section][fieldName];
+        cleanedCount++;
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned ${cleanedCount} duplicate references to ${fieldName}`);
     }
-  });
-  
-  if (cleanedCount > 0) {
-    console.log(`🧹 Cleaned ${cleanedCount} duplicate references to ${fieldName}`);
+  } else {
+    console.log(`🔄 Preserving damage_date in multiple sections as identification parameter`);
   }
   
   saveHelperToAllStorageLocations();
@@ -1451,7 +1456,7 @@ window.fixHelperStructure = function() {
   // Ensure car_details section only contains appropriate data
   if (window.helper.car_details) {
     // Keep only valid car_details fields - most should be moved to vehicle section
-    const validCarDetailsFields = ['inspection_notes', 'damage_notes'];
+    const validCarDetailsFields = ['inspection_notes', 'damage_notes', 'damage_date'];
     const currentFields = Object.keys(window.helper.car_details);
     
     currentFields.forEach(field => {
@@ -2208,8 +2213,14 @@ window.helper = existingHelper || {
     features: '',
     condition: '',
     market_value: 0,
+    damage_date: '',        // Identification parameter - synced from case_info
     created_at: '',
     updated_at: ''
+  },
+  car_details: {
+    damage_date: '',        // Identification parameter - synced from case_info
+    inspection_notes: '',
+    damage_notes: ''
   },
   case_info: {
     case_id: '',  // Will be set dynamically as YC-PLATENUMBER-YEAR
@@ -4458,6 +4469,7 @@ window.setupUniversalInputCapture = function() {
     // Case fields
     'damageDate': 'case_info.damage_date',
     'damage_date': 'case_info.damage_date',
+    'damage_date_independent': 'case_info.damage_date', // Form field from general_info.html
     'damage_type': 'case_info.damage_type',
     'location': 'case_info.inspection_location',
     'inspection_location': 'case_info.inspection_location'
@@ -4479,6 +4491,13 @@ window.setupUniversalInputCapture = function() {
           console.log(`📝 Manual input captured: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
           
+          // Special handling for damage_date - propagate to all sections
+          if (fieldId === 'damage_date_independent') {
+            setNestedValue(window.helper, 'vehicle.damage_date', value);
+            setNestedValue(window.helper, 'car_details.damage_date', value);
+            console.log(`🔄 Damage date propagated to all sections: ${value}`);
+          }
+          
           // Update meta info  
           window.helper.meta.last_updated = new Date().toISOString();
           saveHelperToAllStorageLocations();
@@ -4494,6 +4513,14 @@ window.setupUniversalInputCapture = function() {
         if (value && value !== '') {
           console.log(`✅ Manual input confirmed: ${fieldId} = ${value}`);
           setNestedValue(window.helper, helperPath, value);
+          
+          // Special handling for damage_date - propagate to all sections
+          if (fieldId === 'damage_date_independent') {
+            setNestedValue(window.helper, 'vehicle.damage_date', value);
+            setNestedValue(window.helper, 'car_details.damage_date', value);
+            console.log(`🔄 Damage date confirmed and propagated to all sections: ${value}`);
+          }
+          
           window.helper.meta.last_updated = new Date().toISOString();
           saveHelperToAllStorageLocations();
         }
