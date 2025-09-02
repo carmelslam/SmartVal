@@ -664,11 +664,15 @@
       
       // HELPER ARCHITECTURE: Check if helper is available and up-to-date
       if (window.helper) {
-        console.log('🔍 Fresh helper data from window.helper:', window.helper);
-        console.log('🔍 Helper.car_details:', window.helper.car_details);
-        console.log('🔍 Helper.vehicle:', window.helper.vehicle);
-        console.log('🔍 Helper.meta:', window.helper.meta);
-        console.log('🔍 Helper.stakeholders:', window.helper.stakeholders);
+        // Reduced logging: Only log when data actually changes or on first load
+        if (!window.lastHelperLogTime || (Date.now() - window.lastHelperLogTime) > 5000) {
+          console.log('🔍 Fresh helper data from window.helper:', window.helper);
+          console.log('🔍 Helper.car_details:', window.helper.car_details);
+          console.log('🔍 Helper.vehicle:', window.helper.vehicle);
+          console.log('🔍 Helper.meta:', window.helper.meta);
+          console.log('🔍 Helper.stakeholders:', window.helper.stakeholders);
+          window.lastHelperLogTime = Date.now();
+        }
       } else {
         console.warn('⚠️ window.helper not available during refresh');
       }

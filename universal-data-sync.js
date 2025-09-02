@@ -2,14 +2,20 @@
 (function() {
   console.log('🔄 Universal Data Sync Module loaded');
   
+  // Global sync debouncer
+  let syncTimeout = null;
+  
   // Watch for helper updates and sync to all expected locations
   const originalSetItem = sessionStorage.setItem;
   sessionStorage.setItem = function(key, value) {
     originalSetItem.call(this, key, value);
     
-    // If helper was updated, sync data everywhere
+    // If helper was updated, sync data everywhere with debouncing
     if (key === 'helper') {
-      syncHelperDataEverywhere();
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+      }
+      syncTimeout = setTimeout(syncHelperDataEverywhere, 100);
     }
   };
   

@@ -3903,7 +3903,10 @@ window.populateAllForms = function() {
     }
   });
   
-  console.log(`✅ Form population completed: ${updated} fields updated`);
+  // Only log when fields were actually updated
+  if (updated > 0) {
+    console.log(`✅ Form population completed: ${updated} fields updated`);
+  }
   
   // Update helper timestamp
   if (window.helper.meta) window.helper.meta.last_updated = new Date().toISOString();
