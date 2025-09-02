@@ -2757,6 +2757,10 @@ window.helper = existingHelper || {
 };
 
 // 🔧 Ensure VAT rate is always populated from admin hub on helper initialization
+if (!window.helper.calculations) {
+  window.helper.calculations = {};
+}
+
 if (!window.helper.calculations.vat_rate) {
   try {
     window.helper.calculations.vat_rate = (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) ? 
