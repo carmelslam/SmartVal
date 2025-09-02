@@ -2012,6 +2012,7 @@
         
         // Collect data from all depreciation rows
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+        console.log('💾 Collecting data from', depRows.length, 'depreciation rows');
         
         depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
@@ -2024,6 +2025,7 @@
               percent: inputs[3].value,
               value: inputs[4].value
             };
+            console.log(`  Row ${index + 1}:`, item);
             depreciationData.bulk_items.push(item);
           }
         });
@@ -3191,10 +3193,14 @@
         console.log('🔄 Loading depreciation data, helper:', helper);
         console.log('🔍 helper.centers:', helper.centers);
         console.log('🔍 helper.depreciation:', helper.depreciation);
+        console.log('🔍 helper.final_report?.depreciation:', helper.final_report?.depreciation);
         
-        // ✅ 2-WAY DATA FLOW: Load depreciation data from helper.depreciation (single source of truth)
-        // Depreciation is ONLY for final report and estimate workflows, NOT expertise
-        const depreciationData = helper.depreciation || helper.final_report?.depreciation || null;
+        // ✅ 2-WAY DATA FLOW: Check both locations for depreciation data
+        // The save function writes to both helper.depreciation AND helper.final_report.depreciation
+        const depreciationData = helper.final_report?.depreciation || helper.depreciation || null;
+        
+        console.log('📊 Depreciation data found:', depreciationData);
+        console.log('📊 Bulk items:', depreciationData?.bulk_items);
         
         if (depreciationData) {
           
@@ -3222,16 +3228,21 @@
             }
             
             if (needsUpdate) {
-              // Regenerate from damage centers with correct mapping
-              updateDepreciationFromDamageCenters([]);
-            } else {
+              // Don't regenerate - just load the existing data even if format is old
+              console.log('⚠️ Old format detected but preserving existing manual data');
+            }
+            
+            // Always load existing saved data
+            if (depreciationData.bulk_items.length > 0) {
               // Load existing data
               const depreciationContainer = document.getElementById('depreciationBulkTable');
               if (depreciationContainer) {
                 depreciationContainer.innerHTML = '';
               }
               
-              depreciationData.bulk_items.forEach(item => {
+              console.log('📋 Loading bulk items:', depreciationData.bulk_items);
+              depreciationData.bulk_items.forEach((item, index) => {
+                console.log(`  Item ${index + 1}:`, item);
                 addDepField(item);
               });
               
@@ -3245,10 +3256,13 @@
         }
         
         // ALWAYS check and auto-populate from damage centers if table is empty
+        // BUT ONLY if there's no saved depreciation data
         if (helper.centers && helper.centers.length > 0) {
           const existingRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
-          if (existingRows.length === 0) {
-            console.log('🔄 Auto-populating depreciation from damage centers...');
+          const hasDepreciationData = depreciationData && depreciationData.bulk_items && depreciationData.bulk_items.length > 0;
+          
+          if (existingRows.length === 0 && !hasDepreciationData) {
+            console.log('🔄 Auto-populating depreciation from damage centers (no saved data found)...');
             updateDepreciationFromDamageCenters([]);
           }
         }
