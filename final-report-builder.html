@@ -8024,6 +8024,12 @@
       window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
       
+      // Debug depreciation data locations
+      console.log('🔍 DEBUG - Depreciation data locations:');
+      console.log('  helper.depreciation:', window.helper.depreciation);
+      console.log('  helper.final_report?.depreciation:', window.helper.final_report?.depreciation);
+      console.log('  helper.expertise?.depreciation:', window.helper.expertise?.depreciation);
+      
       // Clean up deprecated data structures
       cleanupDeprecatedData();
       
@@ -8614,8 +8620,8 @@
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Update depreciation section with damage center names
-        updateDepreciationFromDamageCenters(damageCenterNames);
+        // DON'T auto-update depreciation - preserve manual entries
+        // updateDepreciationFromDamageCenters(damageCenterNames);
         
         // Update/recreate damage_assessment summary sections with current data
         updateDamageAssessmentSummary(helper);
@@ -8667,8 +8673,13 @@
           return;
         }
         
-        // Clear existing depreciation rows
-        depreciationTable.innerHTML = '';
+        // DON'T clear existing depreciation rows - preserve manual data!
+        // Only add new rows if the table is empty
+        const existingRows = depreciationTable.querySelectorAll('.dep-row');
+        if (existingRows.length > 0) {
+          console.log('⚠️ Depreciation table already has data - preserving existing manual entries');
+          return;
+        }
         
         // Add a row for each damage center
         damageCenterNames.forEach(centerData => {
@@ -10054,8 +10065,8 @@
           addDamageCenterEventListeners();
           updateAllCostDisplays();
           
-          // Update depreciation table with damage centers
-          updateDepreciationFromDamageCenters([]);
+          // DON'T auto-update depreciation - preserve manual entries
+          // updateDepreciationFromDamageCenters([]);
           // Update damage assessment totals
           updateDamageAssessmentSummary(window.helper || {});
         }, 100);
@@ -10784,8 +10795,8 @@
         setTimeout(() => {
           addDamageCenterEventListeners();
           updateAllCostDisplays();
-          // Update depreciation table with damage centers
-          updateDepreciationFromDamageCenters([]);
+          // DON'T auto-update depreciation - preserve manual entries
+          // updateDepreciationFromDamageCenters([]);
           // Update damage assessment totals
           updateDamageAssessmentSummary(window.helper || {});
         }, 100);
