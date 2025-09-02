@@ -1203,6 +1203,11 @@
           <label class="form-label">תיאור הנזק</label>
           <textarea class="form-textarea" id="damageDescription" placeholder="תאר את הנזק בפירוט..." rows="6" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 16px; resize: vertical;"></textarea>
         </div>
+        
+        <div class="form-group">
+          <label class="form-label">מהות התיקון</label>
+          <textarea class="form-textarea" id="repairNature" placeholder="תאר את מהות התיקון הנדרש..." rows="4" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 16px; resize: vertical;"></textarea>
+        </div>
       </div>
       
       <!-- Step 3: Work Needed -->
@@ -2583,6 +2588,8 @@
         case 2:
           const description = document.getElementById('damageDescription');
           const descValue = description.value.trim();
+          const repairNature = document.getElementById('repairNature');
+          const repairValue = repairNature.value.trim();
           
           if (!descValue) {
             showValidationError('damageDescription', 'אנא הזן תיאור מפורט של הנזק');
@@ -2596,7 +2603,20 @@
             return false;
           }
           
+          if (!repairValue) {
+            showValidationError('repairNature', 'אנא הזן תיאור מהות התיקון');
+            repairNature.focus();
+            return false;
+          }
+          
+          if (repairValue.length < 5) {
+            showValidationError('repairNature', 'מהות התיקון חייב להכיל לפחות 5 תווים');
+            repairNature.focus();
+            return false;
+          }
+          
           clearValidationError('damageDescription');
+          clearValidationError('repairNature');
           break;
           
         case 3:
@@ -3051,29 +3071,37 @@
           break;
           
         case 2:
-          // ✅ FIXED: Save description to current_damage_center per documentation
+          // ✅ FIXED: Save description and repair nature to current_damage_center per documentation
           const damageDescriptionInput = document.getElementById('damageDescription');
           const description = damageDescriptionInput?.value?.trim() || 'תיאור לא צוין';
           
-          console.log('🔍 === STEP 2 DESCRIPTION SAVE ===');
-          console.log('🔍 Description value:', description);
+          const repairNatureInput = document.getElementById('repairNature');
+          const repairNature = repairNatureInput?.value?.trim() || 'מהות תיקון לא צוינה';
           
-          // Save to current_damage_center.Description
+          console.log('🔍 === STEP 2 DESCRIPTION & REPAIR NATURE SAVE ===');
+          console.log('🔍 Description value:', description);
+          console.log('🔍 Repair Nature value:', repairNature);
+          
+          // Save to current_damage_center.Description and RepairNature
           if (helper.current_damage_center) {
             helper.current_damage_center.Description = description;
+            helper.current_damage_center.RepairNature = repairNature;
             
             // Update tracking variables
             damageCenterData.description = description;
+            damageCenterData.repairNature = repairNature;
             moduleData.description = description;
+            moduleData.repairNature = repairNature;
             
             console.log('✅ Description saved to current_damage_center.Description:', description);
-            showUserNotification(`תיאור נזק נוסף למוקד ${damageCenterData.number}`, 'success', 2000);
+            console.log('✅ Repair Nature saved to current_damage_center.RepairNature:', repairNature);
+            showUserNotification(`תיאור נזק ומהות התיקון נוספו למוקד ${damageCenterData.number}`, 'success', 2000);
           } else {
             console.error('❌ current_damage_center not found!');
-            showUserNotification('שגיאה בשמירת תיאור', 'error', 2000);
+            showUserNotification('שגיאה בשמירת תיאור ומהות התיקון', 'error', 2000);
           }
           
-          console.log('✅ Step 2 - Description saved to current_damage_center');
+          console.log('✅ Step 2 - Description and Repair Nature saved to current_damage_center');
           break;
           
         case 3:
@@ -3908,7 +3936,12 @@
             
             <div class="damage-center-content" id="content-${index}">
               <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-radius: 8px;">
-                <strong>תיאור הנזק:</strong> ${description}
+                <div style="margin-bottom: 10px;">
+                  <strong>תיאור הנזק:</strong> ${description}
+                </div>
+                ${center.RepairNature ? `<div style="margin-bottom: 10px;">
+                  <strong>מהות התיקון:</strong> ${center.RepairNature}
+                </div>` : ''}
               </div>
               
               <div class="cost-breakdown-row">
@@ -6068,6 +6101,7 @@
                 מוקד ${centerNumber} - ${location}
               </div>
               ${description ? `<div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">${description}${description.length >= 100 ? '...' : ''}</div>` : ''}
+              ${center.RepairNature ? `<div style="font-size: 12px; color: #7c3aed; margin-bottom: 4px;"><strong>מהות התיקון:</strong> ${center.RepairNature.length >= 80 ? center.RepairNature.substring(0, 80) + '...' : center.RepairNature}</div>` : ''}
               <div style="font-size: 12px; color: #059669; font-weight: bold;">
                 ${totalCost > 0 ? `₪${totalCost.toLocaleString()}` : 'ללא עלות מתועדת'}
               </div>
