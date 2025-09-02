@@ -1917,12 +1917,11 @@
       const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
       
       percentInput.addEventListener('input', function() {
-        // Clean the value to extract the numeric part
+        // Clean the value to extract the numeric part for calculation only
         const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
         let percent = parseFloat(cleanValue) || 0;
         
-        // Keep value as clean decimal number without % sign
-        this.value = cleanValue;
+        // Don't modify the input value - keep it as the user entered it
         
         // Calculate value from market price automatically
         const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
@@ -2021,8 +2020,8 @@
               center_number: inputs[0].value,
               damaged_part: inputs[1].value,
               repair_type: inputs[2].value,
-              // Clean percent value to remove % and handle decimals properly
-              percent: inputs[3].value.replace('%', '').replace(/[^0-9.-]/g, ''),
+              // Keep percent value as entered by user
+              percent: inputs[3].value,
               value: inputs[4].value
             };
             depreciationData.bulk_items.push(item);
@@ -2037,8 +2036,8 @@
         try {
           
           helper.depreciation = {
-            // Form field names (for direct loading) - clean the percent value (remove % first)
-            globalDep1: globalPercent.replace('%', '').replace(/[^0-9.-]/g, ''),
+            // Form field names (for direct loading) - keep the value as entered by user
+            globalDep1: globalPercent,
             globalDepValue: globalValue,
             garageDays: document.getElementById('garageDays')?.value || '',
             
@@ -2070,7 +2069,11 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         if (window.helper) {
           window.helper.depreciation = helper.depreciation;
+          window.helper.final_report = helper.final_report;
         }
+        
+        console.log('✅ Depreciation data saved successfully:', helper.depreciation);
+        console.log('✅ Updated window.helper:', window.helper);
         
         // Trigger helper update broadcast for real-time sync
         if (typeof broadcastHelperUpdate === 'function') {
@@ -3197,9 +3200,8 @@
           // Load global depreciation fields from helper.depreciation (single source)
           // Format global depreciation with % symbol if numeric
           const globalPercent = depreciationData.globalDep1 || depreciationData.global_percent || '';
-          // Clean and format with % for display
-          const cleanPercent = String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '');
-          document.getElementById('globalDep1').value = cleanPercent ? cleanPercent + '%' : '';
+          // Keep the value as is - don't add % if it's already there
+          document.getElementById('globalDep1').value = globalPercent;
           document.getElementById('globalDepValue').value = depreciationData.globalDepValue || 
                                                            depreciationData.global_value || '';
           document.getElementById('garageDays').value = depreciationData.garageDays || 
