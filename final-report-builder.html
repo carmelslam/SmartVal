@@ -2229,26 +2229,30 @@
       });
       
       // Collect adjustment data (תוספות והורדות)
+      // FIXED: Features should be single object, not array
       const adjustmentsData = {
-        features: [],
+        features: {},
         registration: [],
         final_report: [],
         full_market: []
       };
       
       // Collect feature adjustments (תוספות מאפיינים)
+      // FIXED: Features should be single object, not array - only take first/primary row
       const featureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-      featureRows.forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
+      if (featureRows.length > 0) {
+        const firstRow = featureRows[0]; // Only process first row as primary features adjustment
+        const inputs = firstRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
-          adjustmentsData.features.push({
-            description: inputs[0].value,
+          adjustmentsData.features = {
+            description: inputs[0].value || 'מאפיינים',
             type: inputs[1].value,
             percentage: parseFloat(inputs[2].value) || 0,
-            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
-          });
+            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+            source: firstRow.getAttribute('data-source') || 'manual'
+          };
         }
-      });
+      }
       
       // Collect registration adjustments (עליה לכביש)
       const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');

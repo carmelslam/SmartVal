@@ -2446,10 +2446,13 @@ window.helper = existingHelper || {
         owner_count: 0
       },
       features: {
+        description: 'מאפיינים', // Hebrew word "features"
+        value: '', // Webhook content like "adventure, חירורן ,פנורמי ,נפתח גג"
         percent: 0,
         amount: 0,
         cumulative: 0,
         reason: '',
+        'תיאור מאפיינים': '', // Hebrew descriptive field
         feature_list: []
       },
       market_factors: {
@@ -3479,11 +3482,11 @@ function processDirectData(data, result) {
     'ערך ש"ח מספר בעלים': ['valuation.adjustments.ownership_history.amount'],
     'שווי מצטבר מספר בעלים': ['valuation.adjustments.ownership_history.cumulative'],
     
-    // Features adjustments
-    'מאפיינים': ['valuation.adjustments.features.description'],
-    'ערך מאפיינים': ['valuation.adjustments.features.value'],
-    'תיאור מאפיינים': ['valuation.adjustments.features.תיאור מאפיינים'],
-    'תיאור מאפיינים:': ['valuation.adjustments.features.תיאור מאפיינים'],
+    // Features adjustments - CORRECTED: Based on user clarification
+    'מאפיינים': ['valuation.adjustments.features.description'], // Hebrew word "features" → description
+    'ערך מאפיינים': ['valuation.adjustments.features.value'], // Webhook content "adventure, חירורן..." → value
+    'תיאור מאפיינים': ['valuation.adjustments.features.תיאור מאפיינים'], // Hebrew descriptive field
+    'תיאור מאפיינים:': ['valuation.adjustments.features.תיאור מאפיינים'], // Same with colon
     'מחיר מאפיינים %': ['valuation.adjustments.features.percent'],
     'ערך ש"ח מאפיינים': ['valuation.adjustments.features.amount'],
     'שווי מצטבר מאפיינים': ['valuation.adjustments.features.cumulative'],
