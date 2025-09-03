@@ -8,8 +8,8 @@
       top: 50px;
       left: 50%;
       transform: translateX(-50%);
-      max-width: 900px;
-      width: 95vw;
+      max-width: 750px;
+      width: 80vw;
       max-height: 85vh;
       background: white;
       border: 1px solid #0066cc;
