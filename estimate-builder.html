@@ -10831,8 +10831,18 @@
               amount = parseFloat(amountStr) || 0;
             }
             
-            // Use VALUE field for description as per final report requirements
-            const description = adjustmentData.value || adjustmentData.description || adjustmentData.reason || '';
+            // Use appropriate field for description based on adjustment type
+            let description;
+            if (category === 'mileage') {
+              // For mileage, use description field first (contains "מס ק״מ"), not value field
+              description = adjustmentData.description || adjustmentData.reason || 'מס ק״מ';
+            } else if (category === 'ownership_history') {
+              // For ownership history, use description field first (contains "מספר בעלים"), not value field
+              description = adjustmentData.description || adjustmentData.reason || 'מספר בעלים';
+            } else {
+              // For other adjustments (features, ownership_type), use value field for description as per final report requirements
+              description = adjustmentData.value || adjustmentData.description || adjustmentData.reason || '';
+            }
             
             // Determine if this is a reduction (negative percent or amount) - EXACT MATCH WITH FINAL REPORT
             const isReduction = percent < 0 || amount < 0;
