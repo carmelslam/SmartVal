@@ -6470,172 +6470,10 @@
       }
     }
     
-    // Load data from helper for full market value calculation
-    function loadFullMarketValueData() {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        console.log('🔄 Loading full market value data...');
-        console.log('📊 Helper levi_report adjustments:', helper.levi_report?.adjustments);
-        console.log('📊 Helper custom full_market_adjustments:', helper.custom_adjustments?.full_market_adjustments);
-        
-        // Load basic price (same as gross calculation)
-        const fullBasicPriceField = document.getElementById('fullBasicPrice');
-        const basicPriceField = document.getElementById('basicPrice');
-        if (fullBasicPriceField && basicPriceField) {
-          fullBasicPriceField.value = basicPriceField.value;
-        } else if (fullBasicPriceField && helper.levi_report?.base_price) {
-          fullBasicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
-        }
-        
-        // AGGRESSIVE FIX: Clear container completely and verify it's empty
-        const container = document.getElementById('allAdjustmentsList');
-        if (container) {
-          // Remove all child elements one by one to ensure proper cleanup
-          while (container.firstChild) {
-            container.removeChild(container.firstChild);
-          }
-          // Double-check with innerHTML as backup
-          container.innerHTML = '';
-          // Force DOM refresh
-          container.offsetHeight;
-          console.log('🧹 Cleared allAdjustmentsList container, children count:', container.children.length);
-          
-          // Add a flag to prevent duplicate loading
-          if (container.hasAttribute('data-loading')) {
-            console.log('⚠️ Container already being loaded, skipping duplicate load');
-            return;
-          }
-          console.log('🔄 Setting loading flag on container');
-          container.setAttribute('data-loading', 'true');
-        }
-        
-        // Create a unified adjustments array to prevent duplicates
-        const allAdjustments = [];
-        const seenAdjustments = new Set();
-        
-        // FOLLOW HELPER ARCHITECTURE: Load ONLY from helper.valuation.adjustments
-        // The helper is god - everyone else adjusts to it
-        // Ensure helper.valuation.adjustments is initialized
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        
-        // Clean up any legacy valuation.adjustments.estimate data (should not exist)
-        if (helper.valuation.adjustments.estimate) {
-          console.log('🧹 Cleaning up legacy valuation.adjustments.estimate data');
-          delete helper.valuation.adjustments.estimate;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-        }
-        
-        if (helper.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) {
-          Object.entries(helper.valuation.adjustments).forEach(([category, adjData]) => {
-            if (adjData && (adjData.percent || adjData.amount) && adjData.description) {
-              const adjustmentType = (adjData.percent < 0 || adjData.amount < 0) ? 'minus' : 'plus';
-              const key = `${category}-${adjData.description}`;
-              if (!seenAdjustments.has(key)) {
-                allAdjustments.push({
-                  description: adjData.description || adjData.reason || `התאמה - ${category}`,
-                  percentage: Math.abs(adjData.percent || 0),
-                  value: Math.abs(adjData.amount || 0),
-                  type: adjustmentType,
-                  source: 'levi',
-                  category: category
-                });
-                seenAdjustments.add(key);
-                console.log('✅ Added adjustment from helper.valuation:', adjData.description, adjData.percent);
-              }
-            }
-          });
-        }
-        
-        // Add custom adjustments only if they're not duplicates
-        if (helper.custom_adjustments?.full_market_adjustments) {
-          helper.custom_adjustments.full_market_adjustments.forEach(adj => {
-            const adjustmentType = adj.type || 'plus';
-            const key = `${adj.description}-${adj.percentage || adj.percent || 0}-${adjustmentType}`;
-            if (!seenAdjustments.has(key)) {
-              allAdjustments.push({
-                description: adj.description || 'התאמה מותאמת',
-                percentage: adj.percentage || adj.percent || 0,
-                value: adj.value || 0,
-                type: adjustmentType,
-                source: 'custom'
-              });
-              seenAdjustments.add(key);
-              console.log('✅ Added custom adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
-            } else {
-              console.log('⚠️ Skipped duplicate custom adjustment:', adj.description, adj.percentage || adj.percent || 0, adjustmentType);
-            }
-          });
-        }
-        
-        console.log(`📊 Total unique adjustments to load: ${allAdjustments.length}`);
-        
-        // Now load all unique adjustments
-        allAdjustments.forEach((adj, index) => {
-          console.log(`📝 Loading adjustment ${index + 1}/${allAdjustments.length}:`, adj);
-          addFullMarketAdjustment();
-          const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input');
-            inputs[0].value = adj.description; // description
-            lastRow.querySelector('select').value = adj.type;
-            inputs[1].value = adj.percentage || ''; // percentage
-            inputs[2].value = adj.value ? `₪${Math.abs(adj.value).toLocaleString()}` : ''; // value
-            
-            // ADD EVENT LISTENERS TO LOADED ROWS FOR TWO-WAY DATA BINDING
-            inputs.forEach(input => {
-              input.addEventListener('change', () => {
-                updateFullMarketValueCalculation();
-              });
-            });
-            lastRow.querySelector('select').addEventListener('change', () => {
-              updateFullMarketValueCalculation();
-            });
-            
-            console.log(`✅ Loaded row with event listeners: ${adj.description} - ${adj.type} - ${adj.percentage}% - ₪${adj.value}`);
-          } else {
-            console.log('❌ Failed to find last row after adding adjustment');
-          }
-        });
-        
-        // Calculate initial full market value
-        updateFullMarketValueCalculation();
-        
-        // Add validation logic after calculation
-        setTimeout(() => {
-          const currentValue = document.getElementById('fullMarketValueResult')?.value;
-          if (currentValue) {
-            const numericValue = parseFloat(currentValue.replace(/[₪,]/g, '')) || 0;
-            // If wrong value detected, force correct calculation
-            if (numericValue === 80487 || numericValue === 128620 || numericValue > 100000) {
-              console.log('🚨 LOAD DATA: Wrong value detected:', numericValue, '- Forcing recalculation');
-              updateFullMarketValueCalculation();
-            }
-          }
-        }, 200);
-        
-        // CRITICAL: Add market adjustments from helper.valuation.adjustments after loading existing data
-        setTimeout(() => {
-          autoPopulateMarketAdjustments();
-        }, 100);
-        
-        // Remove loading flag
-        if (container) {
-          container.removeAttribute('data-loading');
-        }
-        
-        console.log('✅ Full market value data loading completed');
-        
-      } catch (error) {
-        console.error('Error loading full market value data:', error);
-        // Remove loading flag on error too
-        const container = document.getElementById('allAdjustmentsList');
-        if (container) {
-          container.removeAttribute('data-loading');
-        }
-      }
-    }
+    // REMOVED: First buggy loadFullMarketValueData() function that caused duplicate calls
+    // The correct version is defined later around line 10839
+    // REMOVED: Buggy duplicate loadFullMarketValueData function that was causing duplicate autoPopulateMarketAdjustments calls
+    // The correct loadFullMarketValueData function is located around line 10839
     
     
     // FULL MARKET ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
@@ -10756,8 +10594,10 @@
         console.log('🔄 Auto-populating market adjustments from valuation.adjustments:', adjustments);
         
         // Categories mapping to container IDs - PREVENT CONFLICTS WITH MULTIPLE FEATURES SECTIONS
+        // Handle both incoming data names (features, mileage) and internal names (full_market_features)
         const categoryMapping = {
           full_market_features: 'fullFeaturesAdjustmentsList',  // Full market value features section
+          features: 'fullFeaturesAdjustmentsList',              // Also check for incoming Levi data
           registration: 'fullRegistrationAdjustmentsList', 
           mileage: 'mileageAdjustmentsList',
           ownership_type: 'ownershipAdjustmentsList',
@@ -10766,17 +10606,27 @@
         };
         
         // Populate each category - PREVENT DUPLICATION
+        const processedContainers = new Set(); // Track which containers we've already populated
         Object.entries(categoryMapping).forEach(([category, containerId]) => {
           const container = document.getElementById(containerId);
           const adjustmentData = adjustments[category];
           
           if (container && adjustmentData && (adjustmentData.percent || adjustmentData.percentage || adjustmentData.amount)) {
+            // PREVENT MULTIPLE ENTRIES FOR SAME CONTAINER (features + full_market_features both map to fullFeaturesAdjustmentsList)
+            if (processedContainers.has(containerId)) {
+              console.log(`⚠️ Skipping ${category} - container ${containerId} already processed`);
+              return;
+            }
+            
             // ONLY clear if there are no existing rows - PREVENT DUPLICATION
             const existingRows = container.querySelectorAll('.adjustment-row');
             if (existingRows.length > 0) {
               console.log(`⚠️ Skipping ${category} - already has ${existingRows.length} rows`);
               return; // Skip this category to prevent duplication
             }
+            
+            // Mark this container as processed
+            processedContainers.add(containerId);
             
             // Extract percentage - handle "9%" string format and negative values (EXACT MATCH WITH FINAL REPORT)
             let percent = 0;
