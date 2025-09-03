@@ -1975,10 +1975,10 @@
       });
       
       // Collect adjustment data (תוספות והורדות)
-      // FIXED: Features should be single object, not array
+      // FIXED: Both features and registration should be single objects, not arrays
       const adjustmentsData = {
         features: {},
-        registration: [],
+        registration: {},
         estimate: [],
         full_market: []
       };
@@ -2001,18 +2001,20 @@
       }
       
       // Collect registration adjustments (עליה לכביש)
+      // FIXED: Registration should be single object, not array - only take first/primary row
       const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-      registrationRows.forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
+      if (registrationRows.length > 0) {
+        const firstRow = registrationRows[0]; // Only process first row as primary registration adjustment
+        const inputs = firstRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
-          adjustmentsData.registration.push({
+          adjustmentsData.registration = {
             description: inputs[0].value,
             type: inputs[1].value,
             percentage: parseFloat(inputs[2].value) || 0,
             value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
-          });
+          };
         }
-      });
+      }
       
       // Collect estimate adjustments (התאמות אומדן)
       const estimateRows = document.querySelectorAll('#allAdjustmentsRows-estimate div[data-source="custom"]');
@@ -2054,7 +2056,16 @@
         updateHelper('estimate_work_days', garageDays, 'estimate_builder_save');
         updateHelper('estimate_summary', summaryData, 'estimate_builder_save');
         updateHelper('estimate_depreciation', depreciationData, 'estimate_builder_save');
-        updateHelper('valuation', { adjustments: adjustmentsData }, 'estimate_builder_save');
+        
+        // CRITICAL FIX: Don't overwrite entire valuation, only update adjustments
+        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (currentHelper.valuation) {
+          currentHelper.valuation.adjustments = adjustmentsData;
+          updateHelper('valuation', currentHelper.valuation, 'estimate_builder_save');
+        } else {
+          updateHelper('valuation', { adjustments: adjustmentsData }, 'estimate_builder_save');
+        }
+        
         updateHelper('estimate_legal_text', legalText, 'estimate_builder_save');
       } else {
         // 🔧 PHASE 2.4: Fallback - use window.helper (single source)
