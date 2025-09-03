@@ -5315,7 +5315,12 @@
         if (registrationContainer) registrationContainer.innerHTML = '';
 
         const leviData = helper.valuation?.adjustments || {};
-        const featuresData = leviData.features || {};
+        let featuresData = leviData.features || {};
+        // FEATURES ARRAY FALLBACK: Handle corrupted features data
+        if (Array.isArray(featuresData)) {
+          console.log(`⚠️ FEATURES ARRAY in loadGrossAdjustments: ${featuresData.length} entries, using first valid`);
+          featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
+        }
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
@@ -5515,7 +5520,12 @@
       
       // Get Levi data from valuation adjustments (primary) or fallback sources
       const leviData = helper.valuation?.adjustments || helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
-      const featuresData = leviData.features || {};
+      let featuresData = leviData.features || {};
+      // FEATURES ARRAY FALLBACK: Handle corrupted features data
+      if (Array.isArray(featuresData)) {
+        console.log(`⚠️ FEATURES ARRAY in autoPopulateFromLevi: ${featuresData.length} entries, using first valid`);
+        featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
+      }
       const registrationData = leviData.registration || {};
       
       // Auto-populate features adjustments (מאפיינים) - GROSS section only
@@ -5658,8 +5668,15 @@
       ];
       
       adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-        const adjData = adjustments[key];
+        let adjData = adjustments[key];
         console.log(`🔍 Processing ${key}:`, adjData);
+        
+        // FEATURES ARRAY FALLBACK: Handle corrupted features data (array instead of object)
+        if (key === 'features' && Array.isArray(adjData)) {
+          console.log(`⚠️ FEATURES ARRAY DETECTED: Found ${adjData.length} entries, using first valid entry`);
+          adjData = adjData.find(f => f && (f.amount || f.percent || f.percentage)) || adjData[0] || {};
+          console.log('📊 Selected features entry:', adjData);
+        }
         
         if (adjData && (adjData.percent || adjData.percentage || adjData.amount)) {
           // Extract percentage - handle "9%" string format and negative values
@@ -6649,7 +6666,12 @@
         const adjustments = helper.valuation?.adjustments || {};
         
         // Load features adjustments using EXACT working logic
-        const featuresData = adjustments['features'];
+        let featuresData = adjustments['features'];
+        // FEATURES ARRAY FALLBACK: Handle corrupted features data
+        if (Array.isArray(featuresData)) {
+          console.log(`⚠️ FEATURES ARRAY in loadFullMarketValueData: ${featuresData.length} entries, using first valid`);
+          featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
+        }
         if (featuresData && (featuresData.percent || featuresData.percentage || featuresData.amount)) {
           let percent = 0;
           if (featuresData.percent) {

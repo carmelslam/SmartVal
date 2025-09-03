@@ -1058,27 +1058,34 @@
     );
 
     // FIXED: Features adjustments - READ ACTUAL VALUE, NOT DESCRIPTION
+    // FEATURES ARRAY FALLBACK: Handle corrupted features data
+    let featuresAdj = helper.valuation?.adjustments?.features || {};
+    if (Array.isArray(featuresAdj)) {
+      console.log(`⚠️ FEATURES ARRAY in levi display: ${featuresAdj.length} entries, using first valid`);
+      featuresAdj = featuresAdj.find(f => f && (f.amount || f.percent || f.percentage)) || featuresAdj[0] || {};
+    }
+    
     document.getElementById("levi-features").textContent = formatValue(
-      helper.valuation?.adjustments?.features?.value ||
+      featuresAdj.value ||
       result['ערך מאפיינים'] || result['מאפיינים'] || "-"
     );
     
     document.getElementById("levi-features-percent").textContent = formatPercent(
-      helper.valuation?.adjustments?.features?.percent
+      featuresAdj.percent
     );
     document.getElementById("levi-features-value").textContent = formatPrice(
-      helper.valuation?.adjustments?.features?.amount ||
+      featuresAdj.amount ||
       result['ערך ש"ח מאפיינים'] || 
       result['ערך ש״ח מאפיינים']
     );
     document.getElementById("levi-features-total").textContent = formatPrice(
-      helper.valuation?.adjustments?.features?.cumulative ||
+      featuresAdj.cumulative ||
       result['שווי מצטבר מאפיינים'] || 0
     );
 
     // Features description - read from helper.valuation.adjustments.features
     document.getElementById("levi-features-description").textContent = formatValue(
-      helper.valuation?.adjustments?.features?.['תיאור מאפיינים'] ||
+      featuresAdj['תיאור מאפיינים'] ||
       result['מאפיינים'] || // Fallback to direct webhook field
       '-'
     );
@@ -1093,12 +1100,19 @@
     });
 
     // CRITICAL: Store current helper.valuation.adjustments data for edit mode access
+    // FEATURES ARRAY FALLBACK: Handle corrupted features data
+    let featuresData = helper.valuation?.adjustments?.features || {};
+    if (Array.isArray(featuresData)) {
+      console.log(`⚠️ FEATURES ARRAY in levi-floating: ${featuresData.length} entries, using first valid`);
+      featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
+    }
+    
     window.currentLeviData = {
       registration: helper.valuation?.adjustments?.registration || {},
       ownership_type: helper.valuation?.adjustments?.ownership_type || {},
       mileage: helper.valuation?.adjustments?.mileage || {},
       ownership_history: helper.valuation?.adjustments?.ownership_history || {},
-      features: helper.valuation?.adjustments?.features || {}
+      features: featuresData
     };
   }
 

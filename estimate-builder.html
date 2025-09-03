@@ -4689,7 +4689,12 @@
         let featureItems = [];
         
         // Load ONLY features data for GROSS calculation (independent of other adjustments)
-        const featuresData = adjustments.features || {};
+        // FALLBACK: Handle both array and object structures
+        let featuresData = adjustments.features || {};
+        if (Array.isArray(featuresData)) {
+          console.log('🔧 Features is array with', featuresData.length, 'items - using first valid entry');
+          featuresData = featuresData.find(f => f && (f.amount || f.percent)) || featuresData[0] || {};
+        }
         if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
           featureItems = [{
             description: featuresData.reason || featuresData.description || '',
@@ -10633,6 +10638,7 @@
         // Categories mapping to container IDs - PREVENT CONFLICTS WITH MULTIPLE FEATURES SECTIONS
         const categoryMapping = {
           full_market_features: 'fullFeaturesAdjustmentsList',  // Full market value features section
+          features: 'fullFeaturesAdjustmentsList',              // RESTORED: Handle corrupted features data
           registration: 'fullRegistrationAdjustmentsList', 
           mileage: 'mileageAdjustmentsList',
           ownership_type: 'ownershipAdjustmentsList',
@@ -10640,10 +10646,23 @@
           additional: 'allAdjustmentsList'
         };
         
-        // Populate each category - PREVENT DUPLICATION
+        // Populate each category - PREVENT DUPLICATION  
+        const processedContainers = new Set(); // Track processed containers
         Object.entries(categoryMapping).forEach(([category, containerId]) => {
           const container = document.getElementById(containerId);
-          const adjustmentData = adjustments[category];
+          let adjustmentData = adjustments[category];
+          
+          // Skip if container already processed
+          if (processedContainers.has(containerId)) {
+            return;
+          }
+          
+          // CRITICAL FIX: Handle corrupted array data
+          if (Array.isArray(adjustmentData) && adjustmentData.length > 0) {
+            console.log(`⚠️ Found ${category} as array with ${adjustmentData.length} entries - fixing...`);
+            // Take the first valid entry from the array
+            adjustmentData = adjustmentData.find(item => item && (item.percent || item.percentage || item.amount)) || adjustmentData[0];
+          }
           
           if (container && adjustmentData && (adjustmentData.percent || adjustmentData.percentage || adjustmentData.amount)) {
             // ONLY clear if there are no existing rows - PREVENT DUPLICATION
@@ -10652,6 +10671,8 @@
               console.log(`⚠️ Skipping ${category} - already has ${existingRows.length} rows`);
               return; // Skip this category to prevent duplication
             }
+            
+            processedContainers.add(containerId);
             
             // Extract percentage - handle "9%" string format and negative values (EXACT MATCH WITH FINAL REPORT)
             let percent = 0;
