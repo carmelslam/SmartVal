@@ -4712,7 +4712,7 @@
 
         featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
-            addFeatureAdjustment();
+            addFeatureAdjustment('levi');
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -4761,7 +4761,7 @@
           showRegistration = true;
         }
         if (showRegistration && typeof addRegistrationAdjustment === 'function') {
-          addRegistrationAdjustment();
+          addRegistrationAdjustment('levi');
           const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
           if (row) {
             const inputs = row.querySelectorAll('input, select');
@@ -4810,12 +4810,12 @@
     // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
     
     // Add feature adjustment row
-    function addFeatureAdjustment() {
+    function addFeatureAdjustment(source = 'manual') {
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
@@ -4827,17 +4827,22 @@
         </div>
       `;
       
+      // Apply background styling for auto-populated rows
       container.insertAdjacentHTML('beforeend', newRow);
+      const addedRow = document.getElementById(rowId);
+      if (source === 'levi' || source === 'auto') {
+        addedRow.style.background = '#f0f8ff';
+      }
       updateGrossMarketValueCalculation();
     }
     
     // Add registration adjustment row
-    function addRegistrationAdjustment() {
+    function addRegistrationAdjustment(source = 'manual') {
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
@@ -4849,7 +4854,12 @@
         </div>
       `;
       
+      // Apply background styling for auto-populated rows
       container.insertAdjacentHTML('beforeend', newRow);
+      const addedRow = document.getElementById(rowId);
+      if (source === 'levi' || source === 'auto') {
+        addedRow.style.background = '#f0f8ff';
+      }
       updateGrossMarketValueCalculation();
     }
     
@@ -4919,7 +4929,7 @@
       
       if (featuresPercent || featuresAmount) {
         if (typeof addFeatureAdjustment === 'function') {
-          addFeatureAdjustment();
+          addFeatureAdjustment('levi');
         }
         
         const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
@@ -4931,9 +4941,6 @@
             inputs[1].value = String(featuresPercent).includes('-') ? 'minus' : 'plus';
             inputs[2].value = Math.abs(parseFloat(String(featuresPercent).replace(/[%\s+]/g, ''))) || '';
             inputs[3].value = featuresAmount ? `₪${Math.abs(parseFloat(String(featuresAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
-            
-            lastRow.setAttribute('data-source', 'levi');
-            lastRow.style.background = '#f0f8ff';
           }
         }
       }
@@ -4954,7 +4961,7 @@
       
       if (registrationPercent || registrationAmount) {
         if (typeof addRegistrationAdjustment === 'function') {
-          addRegistrationAdjustment();
+          addRegistrationAdjustment('levi');
         }
         
         const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
@@ -4966,9 +4973,6 @@
             inputs[1].value = String(registrationPercent).includes('-') ? 'minus' : 'plus';
             inputs[2].value = Math.abs(parseFloat(String(registrationPercent).replace(/[%\s+]/g, ''))) || '';
             inputs[3].value = registrationAmount ? `₪${Math.abs(parseFloat(String(registrationAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
-            
-            lastRow.setAttribute('data-source', 'levi');
-            lastRow.style.background = '#f0f8ff';
           }
         }
       }
@@ -5839,7 +5843,7 @@
           console.log('🔧 Loading features adjustments from Levi:', featuresAdjustments);
           
           featuresAdjustments.forEach(adj => {
-            addFeatureAdjustment();
+            addFeatureAdjustment('levi');
             // Populate the last added row with data
             const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (lastRow) {
@@ -5874,7 +5878,7 @@
           console.log('🔧 Loading registration adjustments from Levi:', registrationAdjustments);
           
           registrationAdjustments.forEach(adj => {
-            addRegistrationAdjustment();
+            addRegistrationAdjustment('levi');
             // Populate the last added row with data
             const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (lastRow) {
@@ -5902,7 +5906,7 @@
           
           if (registrationValue !== 0) {
             console.log('🔧 Loading registration from expertise.levi_report.adjustments:', regAdj);
-            addRegistrationAdjustment();
+            addRegistrationAdjustment('levi');
             const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (lastRow) {
               lastRow.querySelector('input[type="text"]:first-of-type').value = 'עליה לכביש';
@@ -5919,7 +5923,7 @@
           
           if (featuresValue !== 0) {
             console.log('🔧 Loading features from expertise.levi_report.adjustments:', featAdj);
-            addFeatureAdjustment();
+            addFeatureAdjustment('levi');
             const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (lastRow) {
               lastRow.querySelector('input[type="text"]:first-of-type').value = 'מאפיינים';
@@ -5939,7 +5943,7 @@
             if (value !== 0) {
               if (desc.includes('עליה לכביש') || desc.includes('registration')) {
                 console.log('🔧 Loading registration from levisummary:', adj);
-                addRegistrationAdjustment();
+                addRegistrationAdjustment('levi');
                 const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
                 if (lastRow) {
                   lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || 'עליה לכביש';
@@ -5948,7 +5952,7 @@
                 }
               } else if (desc.includes('מאפיינים') || desc.includes('features')) {
                 console.log('🔧 Loading features from levisummary:', adj);
-                addFeatureAdjustment();
+                addFeatureAdjustment('levi');
                 const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
                 if (lastRow) {
                   lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || 'מאפיינים';
@@ -9272,9 +9276,9 @@
       adjustments.forEach(adj => {
         // Use existing add functions
         if (containerSelector.includes('features')) {
-          addFeatureAdjustment();
+          addFeatureAdjustment('levi');
         } else if (containerSelector.includes('registration')) {
-          addRegistrationAdjustment();
+          addRegistrationAdjustment('levi');
         } else if (containerSelector.includes('allAdjustments')) {
           addFullMarketAdjustment();
         }
