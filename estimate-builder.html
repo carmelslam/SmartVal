@@ -1983,11 +1983,10 @@
         const inputs = firstRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
           adjustmentsData.features = {
-            description: 'מאפיינים', // Fixed Hebrew word for features
-            value: inputs[0].value || '', // UI תיאור -> value field (reason for adjustment)
+            description: inputs[0].value || 'מאפיינים',
             type: inputs[1].value,
-            percent: inputs[2].value || '0%', // UI אחוז -> percent field
-            amount: inputs[3].value || '₪0', // UI ערך -> amount field (money)
+            percentage: parseFloat(inputs[2].value) || 0,
+            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
             source: firstRow.getAttribute('data-source') || 'manual'
           };
         }
@@ -4715,45 +4714,31 @@
         
         console.log('🚗 Loading Features for GROSS calculation only:', featureItems);
 
-        featureItems.forEach(item => {
-          if (typeof addFeatureAdjustment === 'function') {
-            addFeatureAdjustment('levi');
-            const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (row) {
-              const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent) || 0;
-              
-              console.log('🔍 Loading feature adjustment:', {
-                item: item,
-                amount: amount,
-                percent: percent,
-                isNegative: (amount < 0 || percent < 0)
-              });
-              
-              if (inputs.length >= 4) {
-                // Use the real property value for the description if available
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
-                inputs[0].value = desc;
-                
-                // Determine type based on negative values in helper data
-                const isNegative = (amount < 0 || percent < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-                console.log(`📝 Set type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
-              
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                
-                // If amount exists in helper, use it; otherwise calculate from percentage
-                if (amount) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
-                  // Trigger calculation from percentage × base price
-                  setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
-                }
-              }
-            }
+        // ⚠️ CRITICAL FIX: Treat features as single object, not array like mileage
+        if (featureItems.length > 0) {
+          const firstFeature = featureItems[0]; // Use only the first/primary feature data
+          console.log('🔧 Features single object fix - using first feature:', firstFeature);
+          
+          // Ensure features is object in helper structure
+          if (!helper.valuation.adjustments.features) {
+            helper.valuation.adjustments.features = {};
           }
-        });
+          
+          const amount = parseFloat(firstFeature.amount) || 0;
+          const percent = parseFloat(firstFeature.percent) || 0;
+          
+          // Populate single features object directly - no UI rows needed for gross calculation
+          helper.valuation.adjustments.features = {
+            description: firstFeature.description || 'מאפיינים',
+            value: firstFeature.value || '',
+            percent: percent + '%',
+            amount: `₪${Math.abs(amount).toLocaleString()}`,
+            cumulative: firstFeature.cumulative || '',
+            type: amount >= 0 ? 'plus' : 'minus'
+          };
+          
+          console.log('✅ Features set as single object for gross calc:', helper.valuation.adjustments.features);
+        }
 
         // ===== Registration Adjustment (GROSS SECTION ONLY) =====
         // Load ONLY from helper.valuation.adjustments.registration - single source of truth
@@ -4933,21 +4918,21 @@
       const featuresDescription = featuresData.description || featuresData.reason || 'תוספות מאפיינים';
       
       if (featuresPercent || featuresAmount) {
-        if (typeof addFeatureAdjustment === 'function') {
-          addFeatureAdjustment('levi');
+        // ⚠️ CRITICAL FIX: Don't create UI row, populate single features object
+        if (!helper.valuation.adjustments.features) {
+          helper.valuation.adjustments.features = {};
         }
         
-        const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow) {
-          const inputs = lastRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            inputs[0].value = featuresDescription || 'תוספות מאפיינים (מלוי יצחק)';
-            inputs[1].value = String(featuresPercent).includes('-') ? 'minus' : 'plus';
-            inputs[2].value = Math.abs(parseFloat(String(featuresPercent).replace(/[%\s+]/g, ''))) || '';
-            inputs[3].value = featuresAmount ? `₪${Math.abs(parseFloat(String(featuresAmount).replace(/[₪,\s]/g, ''))).toLocaleString()}` : '';
-          }
-        }
+        helper.valuation.adjustments.features = {
+          description: featuresDescription || 'מאפיינים',
+          value: featuresData.value || '',
+          percent: featuresPercent || '',
+          amount: featuresAmount || '',
+          cumulative: featuresData.cumulative || '',
+          type: String(featuresPercent).includes('-') ? 'minus' : 'plus'
+        };
+        
+        console.log('✅ Features set as single object from Levi data:', helper.valuation.adjustments.features);
       }
       
       // Auto-populate registration adjustments (עליה לכביש) - GROSS section only  
@@ -5847,26 +5832,25 @@
           
           console.log('🔧 Loading features adjustments from Levi:', featuresAdjustments);
           
-          featuresAdjustments.forEach(adj => {
-            addFeatureAdjustment('levi');
-            // Populate the last added row with data
-            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input[type="text"]');
-              inputs[0].value = adj.description || '';
-              lastRow.querySelector('select').value = adj.value >= 0 ? 'plus' : 'minus';
-              inputs[1].value = (adj.percentage || adj.percent) ? `${adj.percentage || adj.percent}%` : '';
-              inputs[2].value = `₪${Math.abs(adj.value).toLocaleString()}`;
-              
-              // Trigger calculation for the percentage field
-              const percentInput = inputs[1];
-              if (percentInput && percentInput.value) {
-                setTimeout(() => {
-                  calculateAdjustmentValue(percentInput);
-                }, 100);
-              }
+          // ⚠️ CRITICAL FIX: Use only first feature adjustment as single object
+          if (featuresAdjustments.length > 0) {
+            const firstFeature = featuresAdjustments[0];
+            
+            if (!helper.valuation.adjustments.features) {
+              helper.valuation.adjustments.features = {};
             }
-          });
+            
+            helper.valuation.adjustments.features = {
+              description: firstFeature.description || 'מאפיינים',
+              value: firstFeature.value || '',
+              percent: (firstFeature.percentage || firstFeature.percent) ? `${firstFeature.percentage || firstFeature.percent}%` : '',
+              amount: `₪${Math.abs(firstFeature.value || 0).toLocaleString()}`,
+              cumulative: firstFeature.cumulative || '',
+              type: firstFeature.value >= 0 ? 'plus' : 'minus'
+            };
+            
+            console.log('✅ Features set as single object from Levi adjustments:', helper.valuation.adjustments.features);
+          }
         }
         
         // Load registration adjustments from helper (from Levi data) - FIXED
@@ -5928,13 +5912,22 @@
           
           if (featuresValue !== 0) {
             console.log('🔧 Loading features from expertise.levi_report.adjustments:', featAdj);
-            addFeatureAdjustment('levi');
-            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (lastRow) {
-              lastRow.querySelector('input[type="text"]:first-of-type').value = 'מאפיינים';
-              lastRow.querySelector('select').value = featuresValue >= 0 ? 'plus' : 'minus';
-              lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(featuresValue).toLocaleString()}`;
+            
+            // ⚠️ CRITICAL FIX: Set as single object, not UI row
+            if (!helper.valuation.adjustments.features) {
+              helper.valuation.adjustments.features = {};
             }
+            
+            helper.valuation.adjustments.features = {
+              description: 'מאפיינים',
+              value: featAdj.value || '',
+              percent: featAdj.percent || '',
+              amount: `₪${Math.abs(featuresValue).toLocaleString()}`,
+              cumulative: featAdj.cumulative || '',
+              type: featuresValue >= 0 ? 'plus' : 'minus'
+            };
+            
+            console.log('✅ Features set as single object from expertise:', helper.valuation.adjustments.features);
           }
         }
         
@@ -5957,13 +5950,22 @@
                 }
               } else if (desc.includes('מאפיינים') || desc.includes('features')) {
                 console.log('🔧 Loading features from levisummary:', adj);
-                addFeatureAdjustment('levi');
-                const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
-                if (lastRow) {
-                  lastRow.querySelector('input[type="text"]:first-of-type').value = adj.description || 'מאפיינים';
-                  lastRow.querySelector('select').value = value >= 0 ? 'plus' : 'minus';
-                  lastRow.querySelector('input[type="text"]:last-of-type').value = `₪${Math.abs(value).toLocaleString()}`;
+                
+                // ⚠️ CRITICAL FIX: Set as single object, not UI row
+                if (!helper.valuation.adjustments.features) {
+                  helper.valuation.adjustments.features = {};
                 }
+                
+                helper.valuation.adjustments.features = {
+                  description: adj.description || 'מאפיינים',
+                  value: adj.value || '',
+                  percent: adj.percent || '',
+                  amount: `₪${Math.abs(value).toLocaleString()}`,
+                  cumulative: adj.cumulative || '',
+                  type: value >= 0 ? 'plus' : 'minus'
+                };
+                
+                console.log('✅ Features set as single object from levisummary:', helper.valuation.adjustments.features);
               }
             }
           });
@@ -9278,28 +9280,46 @@
       container.innerHTML = '';
       
       // Add each adjustment
-      adjustments.forEach(adj => {
-        // Use existing add functions
-        if (containerSelector.includes('features')) {
+      if (containerSelector.includes('features')) {
+        // ⚠️ CRITICAL FIX: Features should be single object, use only first adjustment
+        if (adjustments.length > 0) {
+          const firstAdj = adjustments[0];
           addFeatureAdjustment('levi');
-        } else if (containerSelector.includes('registration')) {
-          addRegistrationAdjustment('levi');
-        } else if (containerSelector.includes('allAdjustments')) {
-          addFullMarketAdjustment();
-        }
-        
-        // Fill the last added row
-        const lastRow = container.querySelector('div:last-child');
-        if (lastRow) {
-          const inputs = lastRow.querySelectorAll('input');
-          const select = lastRow.querySelector('select');
           
-          if (inputs[0]) inputs[0].value = adj.description;
-          if (inputs[1]) inputs[1].value = adj.percentage;
-          if (inputs[2]) inputs[2].value = adj.value;
-          if (select) select.value = adj.type;
+          // Fill the row immediately 
+          const lastRow = container.querySelector('div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input');
+            const select = lastRow.querySelector('select');
+            
+            if (inputs[0]) inputs[0].value = firstAdj.description;
+            if (select) select.value = firstAdj.type;
+            if (inputs[1]) inputs[1].value = firstAdj.percent;
+            if (inputs[2]) inputs[2].value = firstAdj.amount;
+          }
         }
-      });
+      } else {
+        // For other adjustments (registration, etc.), keep forEach logic
+        adjustments.forEach(adj => {
+          if (containerSelector.includes('registration')) {
+            addRegistrationAdjustment('levi');
+          } else if (containerSelector.includes('allAdjustments')) {
+            addFullMarketAdjustment();
+          }
+          
+          // Fill the last added row
+          const lastRow = container.querySelector('div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input');
+            const select = lastRow.querySelector('select');
+            
+            if (inputs[0]) inputs[0].value = adj.description;
+            if (inputs[1]) inputs[1].value = adj.percentage;
+            if (inputs[2]) inputs[2].value = adj.value;
+            if (select) select.value = adj.type;
+          }
+        });
+      }
     }
     
     // Helper function to restore depreciation data
