@@ -6082,6 +6082,63 @@
           });
         }
         
+        // POPULATE FEATURES FROM VALUATION.ADJUSTMENTS - COPY FROM WORKING SECTION
+        const adjustments = helper.valuation?.adjustments || {};
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        let featuresData = adjustments.features;
+        
+        // Handle corrupted array data - same as working section
+        if (Array.isArray(featuresData) && featuresData.length > 0) {
+          console.log(`⚠️ Found features as array with ${featuresData.length} entries - fixing...`);
+          featuresData = featuresData.find(item => item && (item.percent || item.percentage || item.amount)) || featuresData[0];
+        }
+        
+        if (featuresContainer && featuresData && (featuresData.percent || featuresData.percentage || featuresData.amount)) {
+          // Only populate if no existing rows
+          const existingRows = featuresContainer.querySelectorAll('.adjustment-row');
+          if (existingRows.length === 0) {
+            // Extract data exactly like working section
+            let percent = 0;
+            if (featuresData.percent) {
+              const percentStr = String(featuresData.percent).replace(/[%\s]/g, '');
+              percent = parseFloat(percentStr) || 0;
+            } else if (featuresData.percentage) {
+              percent = parseFloat(featuresData.percentage) || 0;
+            }
+            
+            let amount = 0;
+            if (featuresData.amount) {
+              const amountStr = String(featuresData.amount).replace(/[₪,\sש]/g, '');
+              amount = parseFloat(amountStr) || 0;
+            }
+            
+            const description = featuresData.value || featuresData.description || featuresData.reason || '';
+            const isReduction = percent < 0 || amount < 0;
+            const type = featuresData.type || (isReduction ? 'minus' : 'plus');
+            
+            // Create populated row - exact same format as working section
+            const rowId = `featuresAdj_${Date.now()}`;
+            const percentValue = percent ? percent.toString() : '';
+            const amountValue = amount ? amount.toLocaleString() : '';
+            
+            const newRow = `
+              <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                <div><input type="text" placeholder="תיאור המאפיין" value="${description}" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+                <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
+                  <option value="plus" ${type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                  <option value="minus" ${type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                </select></div>
+                <div><input type="text" placeholder="%" value="${percentValue}" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+                <div><input type="text" placeholder="₪" value="${amountValue}" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+                <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+              </div>
+            `;
+            
+            featuresContainer.insertAdjacentHTML('beforeend', newRow);
+            console.log(`✅ Populated features adjustment in gross section:`, featuresData);
+          }
+        }
+        
         // Calculate initial gross market value
         updateGrossMarketValueCalculation();
         
