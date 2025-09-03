@@ -9556,28 +9556,32 @@
         const totalWithoutVAT = totalWorks + totalParts + totalRepairs;
         const totalWithVAT = totalWithoutVAT * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
         
-        // Update or create damage_assessment section
+        // Update or create damage_assessment section - PRESERVE comprehensive section
         if (!helper.damage_assessment) helper.damage_assessment = {};
         
-        helper.damage_assessment = {
-          total_centers: totalCenters,
-          total_items: totalCenters,
-          summary: {
-            total_works: totalWorks,
-            total_parts: totalParts,
-            total_repairs: totalRepairs,
-            total_without_vat: Math.round(totalWithoutVAT),
-            total_with_vat: Math.round(totalWithVAT)
-          },
-          totals: {
-            "Total works": totalWorks,
-            "Total parts": totalParts,
-            "Total repairs": totalRepairs,
-            "Total without VAT": Math.round(totalWithoutVAT),
-            "Total with VAT": Math.round(totalWithVAT)
-          },
-          last_updated: new Date().toISOString()
+        // Update only the specific sections, preserving comprehensive and other existing data
+        helper.damage_assessment.total_centers = totalCenters;
+        helper.damage_assessment.total_items = totalCenters;
+        
+        helper.damage_assessment.summary = {
+          total_works: totalWorks,
+          total_parts: totalParts,
+          total_repairs: totalRepairs,
+          total_without_vat: Math.round(totalWithoutVAT),
+          total_with_vat: Math.round(totalWithVAT)
         };
+        
+        helper.damage_assessment.totals = {
+          "Total works": totalWorks,
+          "Total parts": totalParts,
+          "Total repairs": totalRepairs,
+          "Total without VAT": Math.round(totalWithoutVAT),
+          "Total with VAT": Math.round(totalWithVAT)
+        };
+        
+        helper.damage_assessment.last_updated = new Date().toISOString();
+        
+        // Preserve existing comprehensive section if it exists
         
         console.log('✅ Updated damage_assessment summary:', helper.damage_assessment);
         
