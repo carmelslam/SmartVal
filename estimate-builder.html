@@ -1994,7 +1994,8 @@
             description: inputs[0].value || 'מאפיינים',
             type: inputs[1].value,
             percentage: parseFloat(inputs[2].value) || 0,
-            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+            amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+            reason: inputs[0].value || 'מאפיינים', // Add reason field for description
             source: firstRow.getAttribute('data-source') || 'manual'
           };
         }
@@ -6118,11 +6119,22 @@
               amount = parseFloat(amountStr) || 0;
             }
             
-            const description = featuresData.reason || featuresData.value || featuresData.description || '';
+            // Try to get description from the proper webhook field
+            let description = '';
+            
+            // First check if we have the Hebrew description from webhook
+            if (helper.data && helper.data['עדכון אופיינים']) {
+              description = helper.data['עדכון אופיינים'];
+              console.log('🎯 Found Hebrew description from webhook:', description);
+            } else {
+              // Fallback to standard fields
+              description = featuresData.description || featuresData.reason || '';
+            }
+            
             const isReduction = percent < 0 || amount < 0;
             const type = featuresData.type || (isReduction ? 'minus' : 'plus');
             
-            console.log('🎯 Description value:', description, 'from featuresData:', featuresData);
+            console.log('🎯 Final description value:', description, 'from featuresData:', featuresData);
             
             // Create populated row - exact same format as working section
             const rowId = `featuresAdj_${Date.now()}`;
@@ -9288,8 +9300,10 @@
           } else if (sectionId === 'damage-centers' && manualData.damageCenters) {
             restoreDamageCentersData(manualData.damageCenters);
           } else if (sectionId === 'gross-calculation' && manualData.featuresAdjustments) {
-            restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
-            restoreAdjustmentData('#registrationAdjustmentsList', manualData.registrationAdjustments);
+            // DISABLED: Old restore function conflicts with new population logic
+            // restoreAdjustmentData('#featuresAdjustmentsList', manualData.featuresAdjustments);
+            // restoreAdjustmentData('#registrationAdjustmentsList', manualData.registrationAdjustments);
+            console.log('⚠️ Skipping old restoreAdjustmentData - using new population logic instead');
           } else if (sectionId === 'full-market-value' && manualData.allAdjustments) {
             restoreAdjustmentData('#allAdjustmentsList', manualData.allAdjustments);
           } else if (sectionId === 'depreciation' && manualData.depreciationRows) {
