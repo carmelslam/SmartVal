@@ -3970,13 +3970,11 @@ window.syncDamageDate = function() {
       console.log('🔧 Initialized car_details section');
     }
     
-    // Sync to other sections
-    window.helper.vehicle.damage_date = damageDate;
-    window.helper.car_details.damage_date = damageDate;
+    // REMOVED: No longer sync damage_date to vehicle/car_details sections (they were displaying wrong data)
+    // Only case_info.damage_date should contain the actual damage date
     
-    console.log(`✅ Damage date synced across all sections: ${damageDate}`);
-    console.log('📊 Vehicle section after sync:', window.helper.vehicle);
-    console.log('📊 Car_details section after sync:', window.helper.car_details);
+    console.log(`✅ Damage date set in case_info only: ${damageDate}`);
+    console.log('📊 Case_info section:', window.helper.case_info);
     
     saveHelperToAllStorageLocations();
   } else {
@@ -4003,13 +4001,13 @@ window.testDamageSync = function(testDate = '2024-01-15') {
   // Check results
   console.log('🧪 Test Results:');
   console.log('  - case_info.damage_date:', window.helper.case_info?.damage_date);
-  console.log('  - vehicle.damage_date:', window.helper.vehicle?.damage_date);
-  console.log('  - car_details.damage_date:', window.helper.car_details?.damage_date);
+  console.log('  - vehicle.damage_date: (no longer synced)');
+  console.log('  - car_details.damage_date: (no longer synced)');
   
   return {
     case_info: window.helper.case_info?.damage_date,
-    vehicle: window.helper.vehicle?.damage_date,
-    car_details: window.helper.car_details?.damage_date
+    vehicle: '(no longer synced)',
+    car_details: '(no longer synced)'
   };
 };
 
