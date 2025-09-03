@@ -5026,24 +5026,33 @@
         // Initialize helper structure
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
-        // Find existing adjustment by row ID or add new one
-        const rowId = row.id;
-        
-        // DEFENSIVE CHECK: Ensure it's still an array before findIndex
-        if (!Array.isArray(helper.valuation.adjustments[category])) {
-          helper.valuation.adjustments[category] = [];
-        }
-        
-        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
-        
-        adjustmentData.rowId = rowId;
-        
-        if (existingIndex >= 0) {
-          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
+        // ESTIMATE-SPECIFIC FIX: Features and registration should be single objects, not arrays
+        if (category === 'features' || category === 'registration') {
+          // For features and registration in GROSS section, use single object structure
+          helper.valuation.adjustments[category] = adjustmentData;
+          console.log(`✅ Updated ${category} as single object:`, adjustmentData);
         } else {
-          helper.valuation.adjustments[category].push(adjustmentData);
+          // For other categories (mileage, ownership, etc.), keep array structure if needed
+          if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
+          
+          // Find existing adjustment by row ID or add new one
+          const rowId = row.id;
+          
+          // DEFENSIVE CHECK: Ensure it's still an array before findIndex
+          if (!Array.isArray(helper.valuation.adjustments[category])) {
+            helper.valuation.adjustments[category] = [];
+          }
+          
+          const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
+          
+          adjustmentData.rowId = rowId;
+          
+          if (existingIndex >= 0) {
+            helper.valuation.adjustments[category][existingIndex] = adjustmentData;
+          } else {
+            helper.valuation.adjustments[category].push(adjustmentData);
+          }
         }
         
         // Save to storage using proper function
@@ -5136,26 +5145,35 @@
         // Initialize helper structure
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
         
-        // Find existing adjustment by row ID or add new one
-        const rowId = row.id;
-        
-        // DEFENSIVE CHECK: Ensure it's still an array before findIndex
-        if (!Array.isArray(helper.valuation.adjustments[category])) {
-          helper.valuation.adjustments[category] = [];
-        }
-        
-        const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
-        
-        adjustmentData.rowId = rowId;
-        
-        if (existingIndex >= 0) {
-          helper.valuation.adjustments[category][existingIndex] = adjustmentData;
-          console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
+        // ESTIMATE-SPECIFIC FIX: Features and registration should be single objects, not arrays
+        if (category === 'features' || category === 'registration') {
+          // For features and registration in GROSS section, use single object structure
+          helper.valuation.adjustments[category] = adjustmentData;
+          console.log(`✅ Updated ${category} as single object (second function):`, adjustmentData);
         } else {
-          helper.valuation.adjustments[category].push(adjustmentData);
-          console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
+          // For other categories (mileage, ownership, etc.), keep array structure if needed
+          if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
+          
+          // Find existing adjustment by row ID or add new one
+          const rowId = row.id;
+          
+          // DEFENSIVE CHECK: Ensure it's still an array before findIndex
+          if (!Array.isArray(helper.valuation.adjustments[category])) {
+            helper.valuation.adjustments[category] = [];
+          }
+          
+          const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
+          
+          adjustmentData.rowId = rowId;
+          
+          if (existingIndex >= 0) {
+            helper.valuation.adjustments[category][existingIndex] = adjustmentData;
+            console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
+          } else {
+            helper.valuation.adjustments[category].push(adjustmentData);
+            console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
+          }
         }
         
         // Save to storage using proper function
@@ -9921,6 +9939,25 @@
       try {
         console.log('📝 Estimate Builder: Initializing with ENHANCED helper integration...');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // ESTIMATE-SPECIFIC FIX: Clean up corrupted features array data
+        if (helper.valuation?.adjustments?.features && Array.isArray(helper.valuation.adjustments.features)) {
+          console.log('🧹 CLEANING: Found features as array with', helper.valuation.adjustments.features.length, 'entries');
+          // Keep only the first valid entry and convert to object
+          const firstValidFeature = helper.valuation.adjustments.features.find(f => f && (f.percent || f.percentage || f.amount));
+          if (firstValidFeature) {
+            helper.valuation.adjustments.features = {
+              description: firstValidFeature.description || firstValidFeature.reason || 'מאפיינים',
+              type: firstValidFeature.type || 'plus',
+              percent: firstValidFeature.percent || firstValidFeature.percentage || 0,
+              amount: firstValidFeature.amount || firstValidFeature.value || 0,
+              value: firstValidFeature.value || firstValidFeature.description || '',
+              category: 'features'
+            };
+            console.log('✅ Converted features array to single object:', helper.valuation.adjustments.features);
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          }
+        }
         
         // Clean up any legacy valuation.adjustments.estimate data at initialization
         if (helper.valuation?.adjustments?.estimate) {
