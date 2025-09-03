@@ -2440,18 +2440,19 @@
           }
           
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          // ✅ FIX: Final report date - always use today's date as default (clear any old wrong dates)
+          // ✅ FIX: Final report date - load saved date or default to today's date
           const todaysDate = new Date().toISOString().split('T')[0];
-          const finalReportDate = todaysDate; // Force today's date
+          const savedReportDate = helper.final_report?.report_date;
+          const finalReportDate = savedReportDate || todaysDate; // Use saved date or default to today
           const topDateField = document.getElementById('finalReportDate');
           const summaryDateField = document.getElementById('finalReportDateSummary');
           
           if (topDateField) topDateField.value = convertToDateInputFormat(finalReportDate);
           if (summaryDateField) summaryDateField.value = convertToDateInputFormat(finalReportDate);
           
-          // Initialize/update final report section with today's date
+          // Initialize final report section if it doesn't exist
           if (!helper.final_report) helper.final_report = {};
-          helper.final_report.report_date = finalReportDate;
+          if (!helper.final_report.report_date) helper.final_report.report_date = todaysDate;
           helper.final_report.generated_date = new Date().toISOString();
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
