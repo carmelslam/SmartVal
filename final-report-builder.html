@@ -1157,7 +1157,7 @@
           <div><label>קוד דגם:</label><input type="text" id="carModelCode" onchange="updateHelperFromField(event);" /></div>
           <div><label>מחיר בסיס:</label><input type="text" id="carBasePrice" onchange="updateHelperFromVehicleField(this);" /></div>
           <div><label>ערך השוק של הרכב:</label><input type="text" id="carMarketValue" onchange="updateHelperFromVehicleField(this);" /></div>
-          <div><label>תאריך חוות הדעת (דוח סופי):</label><input type="date" id="finalReportDate" onchange="updateFinalReportDateField(this);" /></div>
+          <div><label>תאריך חוות הדעת (דוח סופי):</label><input type="date" id="finalReportDate" onchange="updateFinalReportDate(this);" /></div>
         </div>
       </div>
     </div>
@@ -1524,7 +1524,7 @@
           <label style="color: #1e3a8a; font-weight: bold; font-size: 14px;">תאריך חוות הדעת:</label>
         </div>
         <div>
-          <input type="date" id="finalReportDateSummary" onchange="updateFinalReportDateField(this);" style="background: white; color: #333; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;" />
+          <input type="date" id="finalReportDateSummary" onchange="updateFinalReportDate(this);" style="background: white; color: #333; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;" />
         </div>
       </div>
       <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
@@ -2446,8 +2446,16 @@
           const topDateField = document.getElementById('finalReportDate');
           const summaryDateField = document.getElementById('finalReportDateSummary');
           
-          if (topDateField) topDateField.value = convertToDateInputFormat(finalReportDate);
-          if (summaryDateField) summaryDateField.value = convertToDateInputFormat(finalReportDate);
+          console.log('🔍 Loading date fields - savedReportDate:', savedReportDate, 'finalReportDate:', finalReportDate);
+          
+          if (topDateField) {
+            topDateField.value = convertToDateInputFormat(finalReportDate);
+            console.log('🔍 Set topDateField value to:', topDateField.value);
+          }
+          if (summaryDateField) {
+            summaryDateField.value = convertToDateInputFormat(finalReportDate);
+            console.log('🔍 Set summaryDateField value to:', summaryDateField.value);
+          }
           
           // Initialize final report section if it doesn't exist  
           if (!helper.final_report) helper.final_report = {};
@@ -14317,6 +14325,8 @@
 
     // NEW: Handle final report date completely separate from everything else
     function updateFinalReportDate(element) {
+      console.log('🚀 updateFinalReportDate called! Element:', element.id, 'Value:', element.value);
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const value = element.value;
       
@@ -14329,6 +14339,8 @@
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
+      console.log('💾 Saved to helper.final_report.report_date:', value);
+      
       // Sync both final report date fields
       const topField = document.getElementById('finalReportDate');
       const summaryField = document.getElementById('finalReportDateSummary');
@@ -14340,7 +14352,12 @@
 
     // Alias for the same function
     function updateFinalReportDateField(element) {
+      console.log('🔍 updateFinalReportDateField called with element:', element.id, 'value:', element.value);
       updateFinalReportDate(element);
+      
+      // Additional verification log
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 After save - final_report.report_date:', helper.final_report?.report_date);
     }
 
     // New workflow functions
