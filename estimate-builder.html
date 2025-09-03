@@ -6164,6 +6164,188 @@
       }
     }
     
+    // COMPREHENSIVE ESTIMATE MIRROR FUNCTION - Captures ALL estimate data for history
+    function mirrorAllDataToEstimate() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize estimate as complete mirror
+        if (!helper.estimate) helper.estimate = {};
+        
+        // 1. VEHICLE DATA - Complete mirror
+        helper.estimate.vehicle_data = {
+          plate: document.getElementById('carPlate')?.value || helper.car_details?.plate || helper.vehicle?.plate_number,
+          manufacturer: document.getElementById('carManufacturer')?.value || helper.car_details?.manufacturer,
+          model: document.getElementById('carModel')?.value || helper.car_details?.model,
+          year: document.getElementById('carYear')?.value || helper.car_details?.year,
+          model_code: document.getElementById('carModelCode')?.value || helper.car_details?.model_code,
+          base_price: document.getElementById('carBasePrice')?.value || helper.car_details?.base_price,
+          market_value: document.getElementById('carMarketValue')?.value || helper.car_details?.market_value,
+          report_date: document.getElementById('carReportDate')?.value || helper.car_details?.report_date
+        };
+        
+        // 2. CONTACT DATA - Complete mirror
+        helper.estimate.contact_data = {
+          client_name: document.getElementById('clientName')?.value || helper.client?.name,
+          client_address: document.getElementById('clientAddress')?.value || helper.client?.address,
+          client_phone: document.getElementById('clientPhone')?.value || helper.client?.phone,
+          client_email: document.getElementById('clientEmail')?.value || helper.client?.email,
+          insurance_company: document.getElementById('insuranceCompany')?.value || helper.client?.insurance_company,
+          insurance_phone: document.getElementById('insurancePhone')?.value || helper.client?.insurance_phone,
+          insurance_email: document.getElementById('insuranceEmail')?.value || helper.client?.insurance_email,
+          agent_name: document.getElementById('agentName')?.value || helper.client?.insurance_agent_name,
+          agent_phone: document.getElementById('agentPhone')?.value || helper.client?.insurance_agent_phone,
+          agent_email: document.getElementById('agentEmail')?.value || helper.client?.insurance_agent_email
+        };
+        
+        // 3. GROSS MARKET VALUE - Complete mirror
+        helper.estimate.gross_market_value = {
+          basic_price: document.getElementById('basicPrice')?.value || helper.calculations?.base_market_value,
+          features_adjustments: collectAdjustmentsFromUI('featuresAdjustmentsList'),
+          registration_adjustments: collectAdjustmentsFromUI('registrationAdjustmentsList'),
+          gross_value_result: document.getElementById('grossMarketValueResult')?.value || helper.calculations?.vehicle_value_gross,
+          gross_percentage: document.getElementById('grossPercentageValue')?.value || helper.calculations?.gross_damage_percent
+        };
+        
+        // 4. FULL MARKET VALUE - Complete mirror
+        helper.estimate.full_market_value = {
+          basic_price: document.getElementById('fullBasicPrice')?.value,
+          all_adjustments: collectAdjustmentsFromUI('allAdjustmentsList'),
+          features_adjustments: collectAdjustmentsFromUI('fullFeaturesAdjustmentsList'),
+          registration_adjustments: collectAdjustmentsFromUI('fullRegistrationAdjustmentsList'),
+          mileage_adjustments: collectAdjustmentsFromUI('mileageAdjustmentsList'),
+          ownership_adjustments: collectAdjustmentsFromUI('ownershipAdjustmentsList'),
+          owners_adjustments: collectAdjustmentsFromUI('ownersAdjustmentsList'),
+          additional_adjustments: collectAdjustmentsFromUI('additionalAdjustmentsList'),
+          full_value_result: document.getElementById('fullMarketValueResult')?.value
+        };
+        
+        // 5. ESTIMATE ADJUSTMENTS - Complete mirror
+        helper.estimate.estimate_adjustments = collectAdjustmentsFromUI('estimateAdjustmentsList');
+        
+        // 6. SUMMARY DATA - Complete mirror
+        helper.estimate.summary_data = {
+          market_value: document.getElementById('sumMarketValue')?.value,
+          claim_amount: document.getElementById('sumClaim')?.value,
+          vat_amount: document.getElementById('sumVAT')?.value,
+          total_claim: document.getElementById('sumTotalClaim')?.value
+        };
+        
+        // 7. DEPRECIATION DATA - Complete mirror
+        helper.estimate.depreciation = {
+          compensation_value: document.getElementById('depCompensation')?.value,
+          salvage_value: document.getElementById('salvageValue')?.value,
+          global_depreciation_1: document.getElementById('globalDep1')?.value,
+          global_depreciation_1_value: document.getElementById('globalDepValue')?.value,
+          global_depreciation_2: document.getElementById('globalDep2')?.value,
+          global_depreciation_2_value: document.getElementById('globalDepValue2')?.value,
+          garage_days: document.getElementById('garageDays')?.value,
+          depreciation_rows: collectDepreciationRows()
+        };
+        
+        // 8. DAMAGE CENTERS - Already being saved
+        // Keep existing damage_centers and damage_centers_totals
+        
+        // 9. METADATA
+        helper.estimate.metadata = {
+          timestamp: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          source: 'estimate_builder',
+          version: '2.0'
+        };
+        
+        // 10. LEGAL TEXT & ATTACHMENTS
+        helper.estimate.legal_text = document.getElementById('legal-text-content')?.value || helper.estimate_legal_text;
+        helper.estimate.attachments = document.getElementById('attachments-content')?.value || helper.estimate_attachments;
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        if (typeof updateHelper === 'function') {
+          updateHelper('estimate', helper.estimate, 'estimate_builder_comprehensive_mirror');
+        }
+        
+        console.log('📸 Complete estimate data mirrored to helper.estimate:', helper.estimate);
+        
+      } catch (error) {
+        console.error('❌ Error mirroring data to estimate:', error);
+      }
+    }
+    
+    // Helper function to collect adjustments from UI
+    function collectAdjustmentsFromUI(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return [];
+      
+      const adjustments = [];
+      const rows = container.querySelectorAll('.adjustment-row');
+      
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const select = row.querySelector('select');
+        
+        if (inputs.length >= 3) {
+          adjustments.push({
+            description: inputs[0]?.value || '',
+            type: select?.value || 'plus',
+            percentage: inputs[1]?.value || '',
+            value: inputs[2]?.value || ''
+          });
+        }
+      });
+      
+      return adjustments;
+    }
+    
+    // Helper function to collect depreciation rows
+    function collectDepreciationRows() {
+      const rows = [];
+      const depreciationRows = document.querySelectorAll('.depreciation-row');
+      
+      depreciationRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length >= 3) {
+          rows.push({
+            damaged_part: inputs[0]?.value || '',
+            repair_type: inputs[1]?.value || '',
+            percentage: inputs[2]?.value || '',
+            value: inputs[3]?.value || ''
+          });
+        }
+      });
+      
+      return rows;
+    }
+    
+    // Call mirrorAllDataToEstimate on any data change
+    function attachMirrorListeners() {
+      // Add listeners to all input fields to mirror on change
+      const allInputs = document.querySelectorAll('input, select, textarea');
+      allInputs.forEach(input => {
+        input.addEventListener('change', () => {
+          setTimeout(() => mirrorAllDataToEstimate(), 100);
+        });
+      });
+      
+      // Also mirror on calculation updates
+      const originalUpdateGross = window.updateGrossMarketValueCalculation;
+      window.updateGrossMarketValueCalculation = function() {
+        originalUpdateGross.apply(this, arguments);
+        setTimeout(() => mirrorAllDataToEstimate(), 100);
+      };
+      
+      const originalUpdateFull = window.updateFullMarketValueCalculation;
+      window.updateFullMarketValueCalculation = function() {
+        originalUpdateFull.apply(this, arguments);
+        setTimeout(() => mirrorAllDataToEstimate(), 100);
+      };
+    }
+    
+    // Initialize mirror listeners when page loads
+    setTimeout(() => {
+      attachMirrorListeners();
+      mirrorAllDataToEstimate(); // Initial mirror
+    }, 1000);
+    
     // Load data for second bulk (gross percentage)
     function loadSecondBulkData() {
       try {
