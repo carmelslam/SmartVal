@@ -530,9 +530,9 @@ window.calculateAllDamageCentersTotals = function() {
   
   // Update global totals
   window.helper.damage_assessment.totals = {
-    all_centers_subtotal: totalSubtotal,
-    all_centers_vat: totalVat,
-    all_centers_total: totalWithVat,
+    all_centers_subtotal: Math.round(totalSubtotal),
+    all_centers_vat: Math.round(totalVat),
+    all_centers_total: Math.round(totalWithVat),
     breakdown: breakdownTotals,
     by_location: byLocation,
     last_calculated: new Date().toISOString(),
@@ -801,9 +801,9 @@ window.buildComprehensiveDamageAssessment = function() {
     const assessment = {
       centers: allCenters,
       totals: { 
-        all_centers_subtotal: totalWithoutVAT, 
-        all_centers_vat: totalWithVAT - totalWithoutVAT, 
-        all_centers_total: totalWithVAT 
+        all_centers_subtotal: Math.round(totalWithoutVAT), 
+        all_centers_vat: Math.round(totalWithVAT - totalWithoutVAT), 
+        all_centers_total: Math.round(totalWithVAT) 
       },
       summary: { 
         total_centers: allCenters.length, 
