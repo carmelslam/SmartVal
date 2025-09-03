@@ -839,29 +839,10 @@ function transformHelperDataForTemplate(rawHelper) {
     },
     valuation: {
       base_price: rawHelper.levisummary?.base_price || rawHelper.valuation?.base_price || 0,
-      adjustments: (() => {
-        // Get adjustments from proper source
-        const adjustments = rawHelper.valuation?.adjustments || {};
-        
-        // FEATURES ARRAY FALLBACK: Handle corrupted features data
-        let features = adjustments.features || rawHelper.levisummary?.adjustments?.[0] || {};
-        if (Array.isArray(features)) {
-          console.log(`⚠️ FEATURES ARRAY in final_report.js: ${features.length} entries, using first valid`);
-          features = features.find(f => f && (f.amount || f.percent || f.percentage)) || features[0] || {};
-        }
-        
-        // Get registration data
-        const registration = adjustments.registration || rawHelper.levisummary?.adjustments?.[1] || {};
-        
-        // Return clean adjustments object
-        return {
-          features: features,
-          registration: registration,
-          mileage: adjustments.mileage || {},
-          ownership_type: adjustments.ownership_type || {},
-          ownership_history: adjustments.ownership_history || {}
-        };
-      })()
+      adjustments: {
+        features: rawHelper.levisummary?.adjustments?.[0] || {},
+        registration: rawHelper.levisummary?.adjustments?.[1] || {}
+      }
     },
     depreciation: {
       global_percent: fieldMappings['helper.depreciation.global_percent'],

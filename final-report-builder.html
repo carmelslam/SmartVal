@@ -2229,30 +2229,26 @@
       });
       
       // Collect adjustment data (תוספות והורדות)
-      // FIXED: Features should be single object, not array
       const adjustmentsData = {
-        features: {},
+        features: [],
         registration: [],
         final_report: [],
         full_market: []
       };
       
       // Collect feature adjustments (תוספות מאפיינים)
-      // FIXED: Features should be single object, not array - only take first/primary row
       const featureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-      if (featureRows.length > 0) {
-        const firstRow = featureRows[0]; // Only process first row as primary features adjustment
-        const inputs = firstRow.querySelectorAll('input, select');
+      featureRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
         if (inputs.length >= 4) {
-          adjustmentsData.features = {
-            description: inputs[0].value || 'מאפיינים',
+          adjustmentsData.features.push({
+            description: inputs[0].value,
             type: inputs[1].value,
             percentage: parseFloat(inputs[2].value) || 0,
-            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-            source: firstRow.getAttribute('data-source') || 'manual'
-          };
+            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
+          });
         }
-      }
+      });
       
       // Collect registration adjustments (עליה לכביש)
       const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
@@ -5319,12 +5315,7 @@
         if (registrationContainer) registrationContainer.innerHTML = '';
 
         const leviData = helper.valuation?.adjustments || {};
-        let featuresData = leviData.features || {};
-        // FEATURES ARRAY FALLBACK: Handle corrupted features data
-        if (Array.isArray(featuresData)) {
-          console.log(`⚠️ FEATURES ARRAY in loadGrossAdjustments: ${featuresData.length} entries, using first valid`);
-          featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
-        }
+        const featuresData = leviData.features || {};
         const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
@@ -5524,12 +5515,7 @@
       
       // Get Levi data from valuation adjustments (primary) or fallback sources
       const leviData = helper.valuation?.adjustments || helper.levisummary || helper.levi_report || helper.expertise?.levi_report || {};
-      let featuresData = leviData.features || {};
-      // FEATURES ARRAY FALLBACK: Handle corrupted features data
-      if (Array.isArray(featuresData)) {
-        console.log(`⚠️ FEATURES ARRAY in autoPopulateFromLevi: ${featuresData.length} entries, using first valid`);
-        featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
-      }
+      const featuresData = leviData.features || {};
       const registrationData = leviData.registration || {};
       
       // Auto-populate features adjustments (מאפיינים) - GROSS section only
@@ -5672,15 +5658,8 @@
       ];
       
       adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-        let adjData = adjustments[key];
+        const adjData = adjustments[key];
         console.log(`🔍 Processing ${key}:`, adjData);
-        
-        // FEATURES ARRAY FALLBACK: Handle corrupted features data (array instead of object)
-        if (key === 'features' && Array.isArray(adjData)) {
-          console.log(`⚠️ FEATURES ARRAY DETECTED: Found ${adjData.length} entries, using first valid entry`);
-          adjData = adjData.find(f => f && (f.amount || f.percent || f.percentage)) || adjData[0] || {};
-          console.log('📊 Selected features entry:', adjData);
-        }
         
         if (adjData && (adjData.percent || adjData.percentage || adjData.amount)) {
           // Extract percentage - handle "9%" string format and negative values
@@ -6606,6 +6585,11 @@
         if (typeof updateHelper === 'function') {
           updateHelper('calculations', helper.calculations);
         }
+        // Calculate and restore adjustments_value
+        if (typeof window.calculateValuationAdjustments === 'function') {
+          window.calculateValuationAdjustments();
+        }
+        
         if (typeof saveHelperToStorage === 'function') {
           saveHelperToStorage();
         }
@@ -6670,12 +6654,7 @@
         const adjustments = helper.valuation?.adjustments || {};
         
         // Load features adjustments using EXACT working logic
-        let featuresData = adjustments['features'];
-        // FEATURES ARRAY FALLBACK: Handle corrupted features data
-        if (Array.isArray(featuresData)) {
-          console.log(`⚠️ FEATURES ARRAY in loadFullMarketValueData: ${featuresData.length} entries, using first valid`);
-          featuresData = featuresData.find(f => f && (f.amount || f.percent || f.percentage)) || featuresData[0] || {};
-        }
+        const featuresData = adjustments['features'];
         if (featuresData && (featuresData.percent || featuresData.percentage || featuresData.amount)) {
           let percent = 0;
           if (featuresData.percent) {
@@ -13261,19 +13240,19 @@
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('💾 Updated helper.final_report.differential.has_differentials =', checkbox?.checked);
       
-      if (checkbox?.checked) {
-        if (table) table.style.display = 'block';
-        if (summary) summary.style.display = 'block';
-        if (saveSection) saveSection.style.display = 'block';
+      if (checkbox.checked) {
+        table.style.display = 'block';
+        summary.style.display = 'block';
+        saveSection.style.display = 'block';
         // Add first row automatically
         const container = document.getElementById('differentialsRows');
         if (container && container.children.length === 0) {
           addDifferentialRow();
         }
       } else {
-        if (table) table.style.display = 'none';
-        if (summary) summary.style.display = 'none';
-        if (saveSection) saveSection.style.display = 'none';
+        table.style.display = 'none';
+        summary.style.display = 'none';
+        saveSection.style.display = 'none';
         // Clear all differential rows when hiding
         const container = document.getElementById('differentialsRows');
         if (container) {
