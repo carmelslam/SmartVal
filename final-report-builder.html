@@ -1157,7 +1157,7 @@
           <div><label>קוד דגם:</label><input type="text" id="carModelCode" onchange="updateHelperFromField(event);" /></div>
           <div><label>מחיר בסיס:</label><input type="text" id="carBasePrice" onchange="updateHelperFromVehicleField(this);" /></div>
           <div><label>ערך השוק של הרכב:</label><input type="text" id="carMarketValue" onchange="updateHelperFromVehicleField(this);" /></div>
-          <div><label>תאריך חוות הדעת (דוח סופי):</label><input type="date" id="finalReportDate" onchange="alert('Date changed: ' + this.value); var h=JSON.parse(sessionStorage.getItem('helper')||'{}'); if(!h.final_report) h.final_report={}; h.final_report.report_date=this.value; sessionStorage.setItem('helper',JSON.stringify(h)); console.log('Saved date:', this.value);" /></div>
+          <div><label>תאריך חוות הדעת (דוח סופי):</label><input type="date" id="finalReportDate" onchange="updateHelperFromField(event);" /></div>
         </div>
       </div>
     </div>
@@ -1524,7 +1524,7 @@
           <label style="color: #1e3a8a; font-weight: bold; font-size: 14px;">תאריך חוות הדעת:</label>
         </div>
         <div>
-          <input type="date" id="finalReportDateSummary" onchange="alert('Date changed: ' + this.value); var h=JSON.parse(sessionStorage.getItem('helper')||'{}'); if(!h.final_report) h.final_report={}; h.final_report.report_date=this.value; sessionStorage.setItem('helper',JSON.stringify(h)); console.log('Saved date:', this.value); document.getElementById('finalReportDate').value=this.value;" style="background: white; color: #333; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;" />
+          <input type="date" id="finalReportDateSummary" onchange="updateHelperFromField(event);" style="background: white; color: #333; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;" />
         </div>
       </div>
       <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
@@ -1741,7 +1741,6 @@
   <script src="legal-text-engine.js"></script>
   
   <script>
-    console.log('🚨 BASIC TEST - JavaScript is running!');
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
     window.toggleFloatingScreen = function(screenType) {
@@ -2440,29 +2439,13 @@
           }
           
           document.getElementById('carMarketValue').value = marketValue ? `₪${marketValue.toLocaleString()}` : '';
-          // ✅ FIX: Final report date fields - load from final_report.report_date
-          const savedReportDate = helper.final_report?.report_date;
-          const finalReportDate = savedReportDate || new Date().toISOString().split('T')[0];
+          // Load finalReportDate from helper like other fields
+          const finalReportDateValue = helper.finalReportDate || new Date().toISOString().split('T')[0];
           const topDateField = document.getElementById('finalReportDate');
           const summaryDateField = document.getElementById('finalReportDateSummary');
           
-          console.log('🔍 Loading date fields - savedReportDate:', savedReportDate, 'finalReportDate:', finalReportDate);
-          
-          if (topDateField) {
-            topDateField.value = convertToDateInputFormat(finalReportDate);
-            console.log('🔍 Set topDateField value to:', topDateField.value);
-          }
-          if (summaryDateField) {
-            summaryDateField.value = convertToDateInputFormat(finalReportDate);
-            console.log('🔍 Set summaryDateField value to:', summaryDateField.value);
-          }
-          
-          // Initialize final report section if it doesn't exist  
-          if (!helper.final_report) helper.final_report = {};
-          // DON'T overwrite existing report_date - only set if completely missing
-          if (!helper.final_report.report_date) helper.final_report.report_date = new Date().toISOString().split('T')[0];
-          helper.final_report.generated_date = new Date().toISOString();
-          sessionStorage.setItem('helper', JSON.stringify(helper));
+          if (topDateField) topDateField.value = convertToDateInputFormat(finalReportDateValue);
+          if (summaryDateField) summaryDateField.value = convertToDateInputFormat(finalReportDateValue);
           
           // Load saved full market value from helper if it exists
           const savedFullMarketValue = helper.calculations?.full_market_value;
