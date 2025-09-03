@@ -5030,7 +5030,8 @@
           description: inputs[0].value || '',
           type: inputs[1].value || 'plus',
           percentage: parseFloat(inputs[2].value) || 0,
-          value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          reason: inputs[0].value || '', // Add reason field
           category: category,
           source: row.getAttribute('data-source') || 'manual',
           timestamp: new Date().toISOString()
@@ -5067,6 +5068,12 @@
             helper.valuation.adjustments[category].push(adjustmentData);
           }
         }
+        
+        // CRITICAL FIX: Also update helper.estimate for immediate estimate registration
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        helper.estimate.adjustments[category] = adjustmentData;
+        console.log(`🔄 Also updated helper.estimate.adjustments.${category}:`, adjustmentData);
         
         // Save to storage using proper function
         if (typeof updateHelper === 'function') {
@@ -5132,80 +5139,7 @@
       }
     }
     
-    /**
-     * Enhanced two-way data binding: sync individual adjustment changes to helper
-     */
-    function syncAdjustmentToHelper(element, category) {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
-        if (!row) return;
-        
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length < 4) return;
-        
-        const adjustmentData = {
-          description: inputs[0].value || '',
-          type: inputs[1].value || 'plus',
-          percentage: parseFloat(inputs[2].value) || 0,
-          value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-          category: category,
-          source: row.getAttribute('data-source') || 'manual',
-          timestamp: new Date().toISOString()
-        };
-        
-        // Initialize helper structure
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        
-        // ESTIMATE-SPECIFIC FIX: Features and registration should be single objects, not arrays
-        if (category === 'features' || category === 'registration') {
-          // For features and registration in GROSS section, use single object structure
-          helper.valuation.adjustments[category] = adjustmentData;
-          console.log(`✅ Updated ${category} as single object (second function):`, adjustmentData);
-        } else {
-          // For other categories (mileage, ownership, etc.), keep array structure if needed
-          if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
-          
-          // Find existing adjustment by row ID or add new one
-          const rowId = row.id;
-          
-          // DEFENSIVE CHECK: Ensure it's still an array before findIndex
-          if (!Array.isArray(helper.valuation.adjustments[category])) {
-            helper.valuation.adjustments[category] = [];
-          }
-          
-          const existingIndex = helper.valuation.adjustments[category].findIndex(adj => adj.rowId === rowId);
-          
-          adjustmentData.rowId = rowId;
-          
-          if (existingIndex >= 0) {
-            helper.valuation.adjustments[category][existingIndex] = adjustmentData;
-            console.log(`🔄 Updated ${category} adjustment:`, adjustmentData);
-          } else {
-            helper.valuation.adjustments[category].push(adjustmentData);
-            console.log(`➕ Added new ${category} adjustment:`, adjustmentData);
-          }
-        }
-        
-        // Save to storage using proper function
-        if (typeof updateHelper === 'function') {
-          updateHelper('valuation', helper.valuation, 'estimate_builder_adjustment_sync_2');
-        } else {
-          // Fallback for compatibility
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-        }
-        
-        // Trigger UI updates
-        if (window.forcePopulateFields) {
-          window.forcePopulateFields();
-        }
-        
-      } catch (error) {
-        console.error('❌ Error syncing adjustment to helper:', error);
-      }
-    }
+    // REMOVED: Duplicate syncAdjustmentToHelper function - using the main one above
     
     /**
      * Listen for helper updates to trigger re-population when Levi data changes
@@ -6174,6 +6108,11 @@
           // Recalculate final values
           updateGrossMarketValueCalculation();
         }, 300);
+        
+        // Load from helper.valuation.adjustments (two-way sync)
+        setTimeout(() => {
+          loadAdjustmentsFromHelper();
+        }, 200);
         
         // Load second bulk data if available
         setTimeout(() => {
