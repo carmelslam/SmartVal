@@ -558,7 +558,6 @@
       </div>
       <div class="validation-buttons">
         <button class="btn btn-validate" onclick="validateSection('vehicle')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('vehicle')">עריכה ידנית</button>
         <button class="btn btn-success" onclick="approveSection('vehicle')" disabled>אימות פרטי רכב</button>
       </div>
     </div>
@@ -622,7 +621,6 @@
       </div>
       <div class="validation-buttons">
         <button class="btn btn-validate" onclick="validateSection('levi')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('levi')">עריכה ידנית</button>
         <button class="btn btn-success" onclick="approveSection('levi')" disabled>אימות דו"ח לוי</button>
       </div>
     </div>
@@ -705,7 +703,7 @@
       </div>
       <div class="validation-buttons">
         <button class="btn btn-validate" onclick="validateSection('damage')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('damage')">עריכה ידנית</button>
+        <button class="btn btn-edit" onclick="openDamageCenterWizardPiP()">עריכה ידנית</button>
         <button class="btn btn-success" onclick="approveSection('damage')" disabled>אימות מוקדי נזק</button>
       </div>
     </div>
@@ -758,7 +756,6 @@
       </div>
       <div class="validation-buttons">
         <button class="btn btn-validate" onclick="validateSection('summary')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('summary')">עריכה ידנית</button>
         <button class="btn btn-success" onclick="approveSection('summary')" disabled>אימות סיכום</button>
       </div>
     </div>
@@ -2210,6 +2207,82 @@
       }
     };
     
+    // Damage Center Wizard PiP function
+    window.openDamageCenterWizardPiP = function() {
+      // Create floating modal for damage center wizard
+      const modal = document.createElement('div');
+      modal.id = 'damageCenterWizardModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.8);
+        z-index: 99999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      `;
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        width: 95vw;
+        height: 95vh;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      `;
+      
+      const modalHeader = document.createElement('div');
+      modalHeader.style.cssText = `
+        background: #2c3e50;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        direction: rtl;
+      `;
+      modalHeader.innerHTML = `
+        <span>אשף עריכת מוקדי נזק</span>
+        <button onclick="closeDamageCenterWizardPiP()" style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">✕ סגור</button>
+      `;
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = `
+        width: 100%;
+        height: calc(100% - 60px);
+        border: none;
+        border-radius: 0 0 12px 12px;
+      `;
+      iframe.src = 'legacy files /damage-center-flow.html';
+      
+      modalContent.appendChild(modalHeader);
+      modalContent.appendChild(iframe);
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      
+      // Close modal when clicking outside
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeDamageCenterWizardPiP();
+        }
+      });
+    };
+
+    window.closeDamageCenterWizardPiP = function() {
+      const modal = document.getElementById('damageCenterWizardModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
+
     // Define showBrowserMenuUnderToggle function (exact copy from builder)
     function showBrowserMenuUnderToggle() {
       const menu = document.createElement('div');
