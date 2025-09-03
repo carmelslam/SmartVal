@@ -10,7 +10,7 @@ export function carDetails() {
   container.innerHTML = `
     <div class="module">
       <h2>פרטי רכב שהתקבלו</h2>
-      <label>מספר תיק: YC-${getNestedValue(helper, 'vehicle.plate', '')}-${new Date().getFullYear()}</label><br/>
+      <label>מספר תיק: YC-${getNestedValue(helper, 'vehicle.plate', '').replace(/[-\\/]/g, '')}-${new Date().getFullYear()}</label><br/>
       <label>מספר רכב: <input type="text" id="plate" value="${getNestedValue(helper, 'vehicle.plate', '')}" /></label><br/>
       <label>שם היצרן: <input type="text" id="manufacturer" value="${getNestedValue(helper, 'vehicle.manufacturer', '')}" /></label><br/>
       <label>דגם: <input type="text" id="model" value="${getNestedValue(helper, 'vehicle.model', '')}" /></label><br/>

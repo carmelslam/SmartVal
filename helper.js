@@ -4132,7 +4132,7 @@ window.updateHelper = function(field, value) {
     
     if (plateValue) {
       const currentYear = new Date().getFullYear();
-      const dynamicCaseId = `YC-${plateValue}-${currentYear}`;
+      const dynamicCaseId = `YC-${plateValue.replace(/[-\/]/g, '')}-${currentYear}`;
       if (window.helper.meta) window.helper.meta.case_id = dynamicCaseId;
       if (window.helper.case_info) window.helper.case_info.case_id = dynamicCaseId;
       console.log(`✅ Auto-updated case_id to: ${dynamicCaseId}`);

@@ -45,7 +45,7 @@ export function initialInput() {
       if (window.helper && window.helper.case_info) {
         // Force correct case_info structure
         const currentYear = new Date().getFullYear();
-        const correctCaseId = `YC-${meta.plate}-${currentYear}`;
+        const correctCaseId = `YC-${meta.plate.replace(/[-\\/]/g, '')}-${currentYear}`;
         
         console.log('🔧 Setting case_id to:', correctCaseId);
         window.helper.case_info.case_id = correctCaseId;
