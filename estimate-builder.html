@@ -5020,8 +5020,11 @@
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
-        if (!row) return;
+        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"], .adjustment-row');
+        if (!row) {
+          console.warn('⚠️ syncAdjustmentToHelper: Could not find row element for', element);
+          return;
+        }
         
         const inputs = row.querySelectorAll('input, select');
         if (inputs.length < 4) return;
@@ -5031,11 +5034,17 @@
           type: inputs[1].value || 'plus',
           percentage: parseFloat(inputs[2].value) || 0,
           amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-          reason: inputs[0].value || '', // Add reason field
           category: category,
           source: row.getAttribute('data-source') || 'manual',
           timestamp: new Date().toISOString()
         };
+        
+        // CRITICAL FIX: Also update the original webhook source for features
+        if (category === 'features' && helper.data) {
+          // Update the Hebrew webhook field that originally populated this UI
+          helper.data['עדכון אופיינים'] = inputs[0].value || '';
+          console.log(`🔄 Updated webhook source עדכון אופיינים:`, inputs[0].value);
+        }
         
         // Initialize helper structure
         if (!helper.valuation) helper.valuation = {};
@@ -5045,7 +5054,8 @@
         if (category === 'features' || category === 'registration') {
           // For features and registration in GROSS section, use single object structure
           helper.valuation.adjustments[category] = adjustmentData;
-          console.log(`✅ Updated ${category} as single object:`, adjustmentData);
+          console.log(`✅ syncAdjustmentToHelper: Updated ${category} as single object:`, adjustmentData);
+          console.log(`🔄 Current helper.valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
         } else {
           // For other categories (mileage, ownership, etc.), keep array structure if needed
           if (!helper.valuation.adjustments[category]) helper.valuation.adjustments[category] = [];
@@ -5166,11 +5176,20 @@
             if (newRow) {
               const inputs = newRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = adjustments.features.description || adjustments.features.reason || '';
+                // Prefer updated webhook source over stored description
+                let description = adjustments.features.description || '';
+                if (helper.data && helper.data['עדכון אופיינים']) {
+                  description = helper.data['עדכון אופיינים'];
+                  console.log('🎯 Using updated webhook description:', description);
+                } else if (adjustments.features.reason) {
+                  description = adjustments.features.reason;
+                }
+                
+                inputs[0].value = description;
                 inputs[1].value = adjustments.features.type || 'plus';
                 inputs[2].value = adjustments.features.percentage || '';
                 inputs[3].value = adjustments.features.amount ? `₪${adjustments.features.amount.toLocaleString()}` : '';
-                console.log('✅ Populated features from helper.valuation.adjustments');
+                console.log('✅ Populated features from helper.valuation.adjustments with description:', description);
               }
             }
           }
@@ -8356,6 +8375,8 @@
     window.loadGrossAdjustments = loadGrossAdjustments;
     window.updateGrossMarketValueCalculation = updateGrossMarketValueCalculation;
     window.loadGrossCalculationData = loadGrossCalculationData;
+    window.loadAdjustmentsFromHelper = loadAdjustmentsFromHelper;
+    window.syncAdjustmentToHelper = syncAdjustmentToHelper;
     
     // FORCE MANUAL CALCULATION - Last resort function
     function forceManualCalculation() {
