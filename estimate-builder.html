@@ -1991,11 +1991,11 @@
         const inputs = firstRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
           adjustmentsData.features = {
-            description: inputs[0].value || 'מאפיינים',
+            description: 'מאפיינים', // Fixed Hebrew description
+            value: inputs[0].value || '', // תיאור maps to value field
             type: inputs[1].value,
             percentage: parseFloat(inputs[2].value) || 0,
             amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-            reason: inputs[0].value || 'מאפיינים', // Add reason field for description
             source: firstRow.getAttribute('data-source') || 'manual'
           };
         }
@@ -5730,12 +5730,16 @@
         
         // Update valuation adjustments with aggregated data
         if (parameterData.features.value !== 0) {
+          // Get the actual תיאור text from UI
+          const featuresInput = document.querySelector('#featuresAdjustmentsList input[placeholder="תיאור המאפיין"]');
+          const valueText = featuresInput ? featuresInput.value : '';
+          
           helper.valuation.adjustments.features = {
             description: 'מאפיינים',
+            value: valueText, // תיאור text goes in value field
             type: parameterData.features.value >= 0 ? 'plus' : 'minus',
             percentage: Math.abs(parameterData.features.percent),
             amount: Math.abs(parameterData.features.value),
-            reason: 'מאפיינים',
             category: 'features',
             source: 'manual'
           };

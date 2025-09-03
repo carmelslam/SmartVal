@@ -2451,7 +2451,6 @@ window.helper = existingHelper || {
         percent: 0,
         amount: 0,
         cumulative: 0,
-        reason: '',
         'תיאור מאפיינים': '', // Hebrew descriptive field
         feature_list: []
       },
