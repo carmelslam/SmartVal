@@ -5139,7 +5139,100 @@
       }
     }
     
-    // REMOVED: Duplicate syncAdjustmentToHelper function - using the main one above
+    /**
+     * Load adjustments from helper.valuation.adjustments to populate UI (two-way sync)
+     */
+    function loadAdjustmentsFromHelper() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔄 Loading adjustments from helper.valuation.adjustments...');
+        
+        if (!helper.valuation?.adjustments) {
+          console.log('⚠️ No helper.valuation.adjustments found');
+          return;
+        }
+        
+        const adjustments = helper.valuation.adjustments;
+        console.log('📊 Found adjustments in helper:', adjustments);
+        
+        // Load features adjustments
+        if (adjustments.features) {
+          const featuresContainer = document.getElementById('featuresAdjustmentsList');
+          if (featuresContainer && featuresContainer.children.length === 0) { // Only if empty
+            console.log('🔄 Loading features from helper:', adjustments.features);
+            
+            addFeatureAdjustment('helper');
+            const newRow = featuresContainer.lastElementChild;
+            if (newRow) {
+              const inputs = newRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.features.description || adjustments.features.reason || '';
+                inputs[1].value = adjustments.features.type || 'plus';
+                inputs[2].value = adjustments.features.percentage || '';
+                inputs[3].value = adjustments.features.amount ? `₪${adjustments.features.amount.toLocaleString()}` : '';
+                console.log('✅ Populated features from helper.valuation.adjustments');
+              }
+            }
+          }
+        }
+        
+        // Load registration adjustments
+        if (adjustments.registration) {
+          const registrationContainer = document.getElementById('registrationAdjustmentsList');
+          if (registrationContainer && registrationContainer.children.length === 0) { // Only if empty
+            console.log('🔄 Loading registration from helper:', adjustments.registration);
+            
+            addRegistrationAdjustment('helper');
+            const newRow = registrationContainer.lastElementChild;
+            if (newRow) {
+              const inputs = newRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.registration.description || adjustments.registration.reason || '';
+                inputs[1].value = adjustments.registration.type || 'plus';
+                inputs[2].value = adjustments.registration.percentage || '';
+                inputs[3].value = adjustments.registration.amount ? `₪${adjustments.registration.amount.toLocaleString()}` : '';
+                console.log('✅ Populated registration from helper.valuation.adjustments');
+              }
+            }
+          }
+        }
+        
+        // Load other adjustments (mileage, ownership, owners) to estimate section
+        const estimateContainer = document.getElementById('allAdjustmentsRows-estimate');
+        if (estimateContainer) {
+          ['mileage', 'ownership', 'owners'].forEach(category => {
+            if (adjustments[category]) {
+              const categoryAdjustments = Array.isArray(adjustments[category]) ? adjustments[category] : [adjustments[category]];
+              categoryAdjustments.forEach(adj => {
+                if (adj && adj.description && !document.querySelector(`[data-category="${category}"][data-helper-loaded="true"]`)) {
+                  console.log(`🔄 Loading ${category} adjustment from helper:`, adj);
+                  
+                  // Add a row for this adjustment
+                  const rowId = `adj_${category}_${Date.now()}`;
+                  const newRow = `
+                    <div id="${rowId}" class="adjustment-row" data-category="${category}" data-helper-loaded="true" data-user-created="true" data-source="helper" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                      <div><input type="text" placeholder="תיאור התאמה" value="${adj.description || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+                      <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');">
+                        <option value="plus" ${adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                        <option value="minus" ${adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                      </select></div>
+                      <div><input type="text" placeholder="%" value="${adj.percentage || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+                      <div><input type="text" placeholder="₪" value="${adj.amount ? adj.amount.toLocaleString() : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+                      <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+                    </div>
+                  `;
+                  estimateContainer.insertAdjacentHTML('beforeend', newRow);
+                  console.log(`✅ Added ${category} adjustment from helper.valuation.adjustments`);
+                }
+              });
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('❌ Error loading adjustments from helper:', error);
+      }
+    }
     
     /**
      * Listen for helper updates to trigger re-population when Levi data changes
@@ -5616,6 +5709,70 @@
           'ערך ש״ח מספר בעלים': parameterData.owners.value,
           'שווי מצטבר מספר בעלים': parameterData.owners.total
         });
+        
+        // CRITICAL FIX: Also update helper.valuation.adjustments for two-way sync
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        // Update valuation adjustments with aggregated data
+        if (parameterData.features.value !== 0) {
+          helper.valuation.adjustments.features = {
+            description: 'מאפיינים',
+            type: parameterData.features.value >= 0 ? 'plus' : 'minus',
+            percentage: Math.abs(parameterData.features.percent),
+            amount: Math.abs(parameterData.features.value),
+            reason: 'מאפיינים',
+            category: 'features',
+            source: 'manual'
+          };
+        }
+        
+        if (parameterData.registration.value !== 0) {
+          helper.valuation.adjustments.registration = {
+            description: 'עליה לכביש',
+            type: parameterData.registration.value >= 0 ? 'plus' : 'minus',
+            percentage: Math.abs(parameterData.registration.percent),
+            amount: Math.abs(parameterData.registration.value),
+            reason: 'עליה לכביש',
+            category: 'registration',
+            source: 'manual'
+          };
+        }
+        
+        if (parameterData.ownership.value !== 0) {
+          helper.valuation.adjustments.ownership = {
+            description: 'בעלות',
+            type: parameterData.ownership.value >= 0 ? 'plus' : 'minus',
+            percentage: Math.abs(parameterData.ownership.percent),
+            amount: Math.abs(parameterData.ownership.value),
+            category: 'ownership',
+            source: 'manual'
+          };
+        }
+        
+        if (parameterData.km.value !== 0) {
+          helper.valuation.adjustments.mileage = {
+            description: 'מס ק״מ',
+            type: parameterData.km.value >= 0 ? 'plus' : 'minus',
+            percentage: Math.abs(parameterData.km.percent),
+            amount: Math.abs(parameterData.km.value),
+            category: 'mileage',
+            source: 'manual'
+          };
+        }
+        
+        if (parameterData.owners.value !== 0) {
+          helper.valuation.adjustments.owners = {
+            description: 'מספר בעלים',
+            type: parameterData.owners.value >= 0 ? 'plus' : 'minus',
+            percentage: Math.abs(parameterData.owners.percent),
+            amount: Math.abs(parameterData.owners.value),
+            category: 'owners',
+            source: 'manual'
+          };
+        }
+        
+        console.log('🔄 Updated helper.valuation.adjustments for two-way sync:', helper.valuation.adjustments);
         
         // Update helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
