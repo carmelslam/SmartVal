@@ -185,6 +185,8 @@ class LegalTextEngine {
       '%ירידת_ערך%': values.depreciation || '[ירידת ערך]',
       '%מוקדי_נזק%': values.damageCenters || '[מספר מוקדים]',
       '%מספר_מוקדים%': values.damageCenters || '[מספר מוקדים]',
+      '%סיכום%': values.summary || '[סיכום]',
+      '%סיכום_גלובלי%': values.globalSummary || '[סיכום גלובלי]',
       '%ימי_מוסך%': values.garageDays || '[ימי מוסך]',
       '%שווי_רכב%': values.carValue || '[שווי רכב]',
       '%שווי_שרידים%': values.salvageValue || '[שווי שרידים]',

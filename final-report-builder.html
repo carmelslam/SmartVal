@@ -4785,7 +4785,12 @@
         damagePercent: document.getElementById('grossPercent')?.value || helper.claims_data?.gross_percent || calculateDamagePercentage() || helper.expertise?.calculations?.damage_percent,
         depreciation: document.getElementById('globalDep1')?.value || helper.final_report?.depreciation?.global_percent,
         damageCenters: (() => {
-          // Try multiple sources for damage centers count
+          // Primary source: damage_assessment.total_centers
+          if (helper.damage_assessment?.total_centers) {
+            return helper.damage_assessment.total_centers.toString();
+          }
+          
+          // Fallback: Try multiple sources for damage centers count
           if (helper.damage_centers_summary && typeof helper.damage_centers_summary === 'object') {
             return Object.keys(helper.damage_centers_summary).filter(key => key.startsWith('Damage center')).length || 
                    Object.keys(helper.damage_centers_summary).length;
@@ -4853,13 +4858,16 @@
           return undefined;
         })(),
         compensation: (() => {
-          // For Global variant - use depCompensation field
+          // For Global variant - prioritize final_report.summary.global_before_differentials
+          const globalSummary = helper.final_report?.summary?.global_before_differentials;
           const depCompField = document.getElementById('depCompensation')?.value;
           const helperComp = helper.final_report?.summary?.dep_compensation;
           const globalDepValue = helper.depreciation?.globalDepValue;
           
           let rawValue = '';
-          if (depCompField && depCompField.trim() !== '' && depCompField !== '₪0') {
+          if (globalSummary && globalSummary !== '₪0') {
+            rawValue = globalSummary;
+          } else if (depCompField && depCompField.trim() !== '' && depCompField !== '₪0') {
             rawValue = depCompField;
           } else if (helperComp && helperComp !== '₪0') {
             rawValue = helperComp;
