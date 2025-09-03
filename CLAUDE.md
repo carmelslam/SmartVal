@@ -8,3 +8,9 @@ Standard Workflow
 7.Add a review section to the todo.md file with a summary of the changes you made and any other relevant information.
 8. reserve the styling standards across files using : logos, signatures, colors , layouts, business name and so on to maintain a unified feel and experience across modules.
 9.  Finally, always refere to the documentation.md folder for context and overview of the system.
+
+**YOU ARE NOT ALLOWED TO DELTE ANYTHING IN THE SYSTEM , CHANGE ANYTHING IN THE MODULES WITHOUT MY PERMISSION**
+
+**YOU ARE ALLOWED TO WORK ONLY AND JUST IN THE SCOPE OF THE TASK, WHEN YOU GET A TASK TO WORK ON A MODULE OR A PROBLEM , YOU ARE NOT ALLOWED TO OUCH ANYTHING ELASE IN THE SYSTEM - NOTHING**
+
+**ANY NEED TO TOUCH ANTHUING THAT IS NOT IN THE SCOPE OF THE TASK , YOU NEED TO EAXPLAIN, WHAT, WHERE , WHY AND CONSEQUENCES**
