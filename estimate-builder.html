@@ -5030,7 +5030,8 @@
         if (inputs.length < 4) return;
         
         const adjustmentData = {
-          description: inputs[0].value || '',
+          description: 'מאפיינים', // Keep Hebrew description fixed
+          value: inputs[0].value || '', // תיאור maps to value field
           type: inputs[1].value || 'plus',
           percentage: parseFloat(inputs[2].value) || 0,
           amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
@@ -5176,20 +5177,14 @@
             if (newRow) {
               const inputs = newRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // Prefer updated webhook source over stored description
-                let description = adjustments.features.description || '';
-                if (helper.data && helper.data['עדכון אופיינים']) {
-                  description = helper.data['עדכון אופיינים'];
-                  console.log('🎯 Using updated webhook description:', description);
-                } else if (adjustments.features.reason) {
-                  description = adjustments.features.reason;
-                }
+                // תיאור reads from VALUE field, not description
+                const valueText = adjustments.features.value || '';
                 
-                inputs[0].value = description;
+                inputs[0].value = valueText; // תיאור maps to value field
                 inputs[1].value = adjustments.features.type || 'plus';
                 inputs[2].value = adjustments.features.percentage || '';
                 inputs[3].value = adjustments.features.amount ? `₪${adjustments.features.amount.toLocaleString()}` : '';
-                console.log('✅ Populated features from helper.valuation.adjustments with description:', description);
+                console.log('✅ Populated features תיאור from value field:', valueText);
               }
             }
           }
@@ -6229,17 +6224,9 @@
               amount = parseFloat(amountStr) || 0;
             }
             
-            // Try to get description from the proper webhook field
-            let description = '';
-            
-            // First check if we have the Hebrew description from webhook
-            if (helper.data && helper.data['עדכון אופיינים']) {
-              description = helper.data['עדכון אופיינים'];
-              console.log('🎯 Found Hebrew description from webhook:', description);
-            } else {
-              // Fallback to standard fields
-              description = featuresData.description || featuresData.reason || '';
-            }
+            // תיאור field should read from VALUE field
+            const description = featuresData.value || '';
+            console.log('🎯 תיאור reading from value field:', description);
             
             const isReduction = percent < 0 || amount < 0;
             const type = featuresData.type || (isReduction ? 'minus' : 'plus');
