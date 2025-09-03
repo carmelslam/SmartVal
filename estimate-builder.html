@@ -3212,21 +3212,14 @@
       }
     }
     
-    // TRANSFORM LEVI DATA TO VALUATION STRUCTURE - WITH COORDINATION
+    // TRANSFORM LEVI DATA TO VALUATION STRUCTURE - Critical Data Flow Fix
     function populateValuationAdjustmentsFromLevi(helper) {
       try {
-        // Wait if autoPopulate is in progress to avoid conflicts
-        if (window.autoPopulateInProgress) {
-          console.log('⚠️ AutoPopulate in progress, delaying Levi transformation');
-          setTimeout(() => populateValuationAdjustmentsFromLevi(helper), 100);
-          return;
-        }
-        
         // Initialize valuation structure if needed
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
         
-        console.log('🔄 Transforming Levi data to valuation structure (COORDINATED)...');
+        console.log('🔄 Transforming Levi data to valuation structure...');
         console.log('Levi adjustments:', helper.levi_report?.adjustments);
         console.log('Current valuation adjustments:', helper.valuation.adjustments);
         
@@ -9112,15 +9105,14 @@
           // OVERRIDE: Skip the normal function and force our correct calculation
           console.log('🚨 SECTION REFRESH: Bypassing normal calculation, forcing correct two-phase method');
           
-          // Load data first, then populate adjustments, then calculate
+          // Call the load function first to populate data
           loadFullMarketValueData();
           
-          // Single controlled sequence instead of multiple overlapping timeouts
-          setTimeout(() => {
-            autoPopulateMarketAdjustments();
-            // Calculate after population is complete
-            setTimeout(() => updateFullMarketValueCalculation(), 50);
-          }, 100);
+          // Add multiple validation layers with different delays
+          setTimeout(() => updateFullMarketValueCalculation(), 50);
+          setTimeout(() => updateFullMarketValueCalculation(), 100);
+          setTimeout(() => updateFullMarketValueCalculation(), 200);
+          setTimeout(() => updateFullMarketValueCalculation(), 300);
           
           // Final validation with forced correction
           setTimeout(() => {
@@ -10593,37 +10585,17 @@
       }
     }
     
-    // AUTO-POPULATE MARKET ADJUSTMENTS FROM HELPER - WITH GLOBAL EXECUTION LOCK
+    // AUTO-POPULATE MARKET ADJUSTMENTS FROM HELPER - EXACT COPY FROM FINAL REPORT
     function autoPopulateMarketAdjustments() {
-      // GLOBAL EXECUTION LOCK - Prevent multiple simultaneous executions
-      if (window.autoPopulateInProgress) {
-        console.log('⚠️ AutoPopulate already in progress, skipping duplicate call');
-        return;
-      }
-      
-      // Check if already populated recently (within last 2 seconds)
-      const lastExecution = parseInt(sessionStorage.getItem('lastAutoPopulateTime') || '0');
-      const now = Date.now();
-      if (now - lastExecution < 2000) {
-        console.log('⚠️ AutoPopulate executed recently, preventing rapid duplication');
-        return;
-      }
-      
-      // Set locks
-      window.autoPopulateInProgress = true;
-      sessionStorage.setItem('lastAutoPopulateTime', now.toString());
-      
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         const adjustments = helper.valuation?.adjustments || {};
         
-        console.log('🔄 Auto-populating market adjustments from valuation.adjustments (LOCKED EXECUTION):', adjustments);
+        console.log('🔄 Auto-populating market adjustments from valuation.adjustments:', adjustments);
         
         // Categories mapping to container IDs - PREVENT CONFLICTS WITH MULTIPLE FEATURES SECTIONS
-        // Handle both incoming data names (features, mileage) and internal names (full_market_features)
         const categoryMapping = {
           full_market_features: 'fullFeaturesAdjustmentsList',  // Full market value features section
-          features: 'fullFeaturesAdjustmentsList',              // Also check for incoming Levi data
           registration: 'fullRegistrationAdjustmentsList', 
           mileage: 'mileageAdjustmentsList',
           ownership_type: 'ownershipAdjustmentsList',
@@ -10632,27 +10604,17 @@
         };
         
         // Populate each category - PREVENT DUPLICATION
-        const processedContainers = new Set(); // Track which containers we've already populated
         Object.entries(categoryMapping).forEach(([category, containerId]) => {
           const container = document.getElementById(containerId);
           const adjustmentData = adjustments[category];
           
           if (container && adjustmentData && (adjustmentData.percent || adjustmentData.percentage || adjustmentData.amount)) {
-            // PREVENT MULTIPLE ENTRIES FOR SAME CONTAINER (features + full_market_features both map to fullFeaturesAdjustmentsList)
-            if (processedContainers.has(containerId)) {
-              console.log(`⚠️ Skipping ${category} - container ${containerId} already processed`);
-              return;
-            }
-            
             // ONLY clear if there are no existing rows - PREVENT DUPLICATION
             const existingRows = container.querySelectorAll('.adjustment-row');
             if (existingRows.length > 0) {
               console.log(`⚠️ Skipping ${category} - already has ${existingRows.length} rows`);
               return; // Skip this category to prevent duplication
             }
-            
-            // Mark this container as processed
-            processedContainers.add(containerId);
             
             // Extract percentage - handle "9%" string format and negative values (EXACT MATCH WITH FINAL REPORT)
             let percent = 0;
@@ -10708,10 +10670,6 @@
         
       } catch (error) {
         console.error('❌ Error auto-populating market adjustments:', error);
-      } finally {
-        // ALWAYS release the global lock
-        window.autoPopulateInProgress = false;
-        console.log('🔓 AutoPopulate lock released');
       }
     }
     
@@ -10727,10 +10685,12 @@
           fullBasicPriceField.value = `₪${basePrice.toLocaleString()}`;
         }
         
-        // REMOVED: Redundant autoPopulateMarketAdjustments call that was causing recursive duplication
-        // The autoPopulate function should be called separately by the initialization sequence
+        // Auto-populate adjustments after short delay to ensure DOM is ready
+        setTimeout(() => {
+          autoPopulateMarketAdjustments();
+        }, 100);
         
-        console.log('📊 Loaded full market value data from helper (no auto-populate call)');
+        console.log('📊 Loaded full market value data from helper');
         
       } catch (error) {
         console.error('❌ Error loading full market value data:', error);
