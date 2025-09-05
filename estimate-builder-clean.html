@@ -1509,57 +1509,52 @@
     };
     
     // Save damage center changes with feedback
-    // Debounce timer for saving
-    let saveDamageCenterTimer = null;
-    
-    // SAVE DAMAGE CENTER CHANGES - 2-WAY DATA FLOW IMPLEMENTATION
+    // FIXED DAMAGE CENTERS SAVE FUNCTION - Using DOM-First Pattern from estimate-builder.html
     function saveDamageCenterChanges() {
       try {
-        console.log('🔄 Starting saveDamageCenterChanges...');
-        
-        // CHECK IF DOM ELEMENTS EXIST BEFORE CLEARING
-        const damageCenterCards = document.querySelectorAll('.editable-damage-card');
-        if (!damageCenterCards || damageCenterCards.length === 0) {
-          console.log('⚠️ No damage center cards found in DOM, skipping save');
-          return true; // Return true to indicate no error
-        }
-        
-        const helper = window.helper || {};
+        // 🔧 CRITICAL: Use window.helper directly (not const) to ensure we're updating the live object
+        window.helper = window.helper || {};
         
         // Initialize centers if not exists
-        if (!helper.centers) helper.centers = [];
+        if (!window.helper.centers) window.helper.centers = [];
         
-        // Initialize estimate shadow if not exists
-        if (!helper.estimate) {
-          helper.estimate = {
-            created_at: new Date().toISOString(),
-            last_updated: new Date().toISOString()
-          };
-        }
+        // 🆕 ESTIMATE WORKFLOW: Initialize estimate structure
+        if (!window.helper.estimate) window.helper.estimate = {};
+        if (!window.helper.estimate.damage_centers) window.helper.estimate.damage_centers = [];
         
         // Clean up any redundant damage_assessment.centers (duplicate section)
-        if (helper.damage_assessment?.centers) {
+        // BUT preserve damage_assessment.summary which contains totals data
+        if (window.helper.damage_assessment?.centers) {
           console.log('🧹 Cleaning up redundant damage_assessment.centers');
-          delete helper.damage_assessment.centers;
-          if (Object.keys(helper.damage_assessment).length === 0) {
-            delete helper.damage_assessment;
+          delete window.helper.damage_assessment.centers;
+          
+          // Only delete damage_assessment object if it has no important data left
+          // Preserve .summary, .totals, and any other important sections
+          const remainingKeys = Object.keys(window.helper.damage_assessment);
+          const importantSections = ['summary', 'totals', 'total_centers', 'total_items', 'last_updated', 'totals_after_differentials'];
+          const hasImportantData = remainingKeys.some(key => importantSections.includes(key));
+          
+          if (!hasImportantData && remainingKeys.length === 0) {
+            console.log('🧹 Deleting empty damage_assessment object');
+            delete window.helper.damage_assessment;
+          } else {
+            console.log('🔒 Preserving damage_assessment with important sections:', remainingKeys);
           }
         }
         
         // Also maintain expertise.damage_blocks for backward compatibility
-        if (!helper.expertise) helper.expertise = {};
-        if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
+        if (!window.helper.expertise) window.helper.expertise = {};
+        if (!window.helper.expertise.damage_blocks) window.helper.expertise.damage_blocks = [];
         
-        console.log(`📊 Found ${damageCenterCards.length} damage center cards to save`);
-        
-        // Clear both structures ONLY if we have data to replace it with
-        helper.centers = [];
-        helper.expertise.damage_blocks = [];
+        // 🔥 CRITICAL FIX: Collect ALL data from DOM BEFORE clearing arrays
+        const collectedCenters = [];
+        const collectedDamageBlocks = [];
+        const collectedEstimateCenters = [];
         
         // Store damage center names for depreciation section
         const damageCenterNames = [];
         
-        // Collect data from all damage center cards
+        // 🔥 FIRST: Collect ALL data from DOM elements into temporary arrays
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
           // Extract just the number from the damage center number field
           const centerNumberField = card.querySelector('.damage-center-number').value;
@@ -1647,15 +1642,32 @@
               }
             },
             Summary: {
-              "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17))
+              "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : 18) / 100)
             }
           };
           
-          // Save to helper.centers (primary source)
-          helper.centers.push(centerObject);
+          // 🔥 Add to temporary collections (not directly to helper)
+          collectedCenters.push(centerObject);
           
-          // Also save to damage_blocks for backward compatibility
-          helper.expertise.damage_blocks.push({
+          // 🆕 ESTIMATE WORKFLOW: Prepare estimate structure
+          collectedEstimateCenters.push({
+            center_number: centerNumber || (index + 1),
+            location: centerLocation,
+            description: centerDescription,
+            parts: parts,
+            works: works,
+            repairs: repairs,
+            costs: {
+              parts_cost: partsCost,
+              work_cost: workCost,
+              repairs_cost: repairsCost,
+              total_cost: totalCost,
+              total_with_vat: totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : 18) / 100)
+            }
+          });
+          
+          // Also prepare damage_blocks for backward compatibility
+          collectedDamageBlocks.push({
             damage_center_name: centerLocation,
             damage_center_number: index + 1,
             center_header: centerNumber,
@@ -1673,8 +1685,7 @@
             damageCenterNames.push({
               name: centerLocation.trim(),
               number: centerNumber || (index + 1),
-              description: centerDescription || '',
-              RepairNature: '' // This will be populated from helper.centers when available
+              description: centerDescription || ''
             });
           }
           
@@ -1682,33 +1693,65 @@
           updateCostDisplay(card, partsCost, workCost, repairsCost);
         });
         
-        // CREATE SHADOW IN helper.estimate
-        helper.estimate.damage_centers = helper.centers;
-        helper.estimate.last_updated = new Date().toISOString();
+        // 🔥 NOW clear and rebuild arrays with collected data
+        window.helper.centers = collectedCenters;
+        window.helper.expertise.damage_blocks = collectedDamageBlocks;
+        window.helper.estimate.damage_centers = collectedEstimateCenters;
         
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        window.helper = helper;
+        // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
+        const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
+        const totalEstimateWithVAT = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_with_vat, 0);
         
-        console.log('✅ Damage centers saved with 2-way data flow:', {
-          centers: helper.centers,
-          expertise_damage_blocks: helper.expertise.damage_blocks,
-          estimate_shadow: helper.estimate.damage_centers
-        });
+        if (!window.helper.calculations) window.helper.calculations = {};
+        window.helper.calculations.total_estimate = totalEstimateCost;
+        window.helper.calculations.total_estimate_with_vat = totalEstimateWithVAT;
         
-        // Trigger any listeners that depend on damage centers
+        // Initialize damage assessment if needed
+        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
+        
+        // Save damage assessment summary and totals
+        window.helper.damage_assessment.summary = {
+          total_centers: document.querySelectorAll('.editable-damage-card').length,
+          total_parts: document.querySelectorAll('.part-row').length,
+          total_works: document.querySelectorAll('.work-row').length,
+          total_repairs: document.querySelectorAll('.repair-row').length,
+          damage_center_names: damageCenterNames,
+          last_updated: new Date().toISOString()
+        };
+        
+        // Save updated centers count
+        window.helper.damage_assessment.total_centers = document.querySelectorAll('.editable-damage-card').length;
+        
+        // 🔥 CRITICAL: Update estimate metadata
+        if (!window.helper.estimate.metadata) window.helper.estimate.metadata = {};
+        window.helper.estimate.metadata.damage_centers_count = document.querySelectorAll('.editable-damage-card').length;
+        window.helper.estimate.metadata.last_updated = new Date().toISOString();
+        
+        // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        
+        // Update depreciation section with damage center names
         if (typeof updateDepreciationFromDamageCenters === 'function') {
           updateDepreciationFromDamageCenters(damageCenterNames);
         }
         
-        // Update damage assessment summary if function exists
-        if (typeof updateDamageAssessmentSummary === 'function') {
-          updateDamageAssessmentSummary(helper);
+        // Trigger floating screen refresh
+        if (typeof triggerFloatingScreenRefresh === 'function') {
+          triggerFloatingScreenRefresh();
         }
+        
+        console.log('✅ Damage centers saved to multiple locations:');
+        console.log('- window.helper.centers:', window.helper.centers);
+        console.log('- window.helper.estimate.damage_centers:', window.helper.estimate.damage_centers);
+        console.log('- window.helper.expertise.damage_blocks:', window.helper.expertise.damage_blocks);
+        console.log('- Calculations:', window.helper.calculations);
+        
+        // Update damage centers totals display
+        setTimeout(updateDamageCentersSubtotal, 100);
         
         return true;
       } catch (error) {
-        console.error('❌ Error saving damage centers:', error);
+        console.error('Error saving damage center changes:', error);
         return false;
       }
     }
@@ -2336,20 +2379,6 @@
       }, 200);
     };
 
-    // DEBOUNCED SAVE FUNCTION
-    function debouncedSaveDamageCenters() {
-      // Clear existing timer
-      if (saveDamageCenterTimer) {
-        clearTimeout(saveDamageCenterTimer);
-      }
-      
-      // Set new timer
-      saveDamageCenterTimer = setTimeout(() => {
-        console.log('⏱️ Debounced save triggered');
-        saveDamageCenterChanges();
-      }, 500); // 500ms delay
-    }
-    
     // ADD DAMAGE CENTER EVENT LISTENERS - AUTO-SAVE ON CHANGE
     function addDamageCenterEventListeners() {
       const selectors = '.damage-center-number, .damage-center-location, .damage-center-description, .part-name, .part-desc, .part-price, .part-source, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost';
@@ -2357,18 +2386,14 @@
       document.querySelectorAll(selectors).forEach(input => {
         // Check if already has listeners
         if (!input.hasAttribute('data-listeners-added')) {
-          // Only save on change and blur, not on every keystroke
           input.addEventListener('change', () => {
-            console.log(`📝 Change event on ${input.className}`);
-            debouncedSaveDamageCenters();
+            saveDamageCenterChanges();
             updateAllCostDisplays();
           });
           input.addEventListener('blur', () => {
-            console.log(`👁️ Blur event on ${input.className}`);
-            debouncedSaveDamageCenters();
+            saveDamageCenterChanges();
             updateAllCostDisplays();
           });
-          // Update display only (no save) on input
           input.addEventListener('input', () => {
             updateAllCostDisplays();
           });
