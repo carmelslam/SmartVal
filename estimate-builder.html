@@ -7552,52 +7552,52 @@
     }
 
     // SAVE DAMAGE CENTER CHANGES TO HELPER
-    // WORKING DAMAGE CENTERS SAVE FUNCTION (ADAPTED FOR ESTIMATE)
+    // FIXED DAMAGE CENTERS SAVE FUNCTION - Using DOM-First Pattern from final-report-builder
     function saveDamageCenterChanges() {
       try {
-        // 🔧 2-WAY DATA FLOW: Save back to helper.centers (the source of truth)
-        const helper = window.helper || {};
+        // 🔧 CRITICAL: Use window.helper directly (not const) to ensure we're updating the live object
+        window.helper = window.helper || {};
         
         // Initialize centers if not exists
-        if (!helper.centers) helper.centers = [];
+        if (!window.helper.centers) window.helper.centers = [];
         
         // 🆕 ESTIMATE WORKFLOW: Initialize estimate structure
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
+        if (!window.helper.estimate) window.helper.estimate = {};
+        if (!window.helper.estimate.damage_centers) window.helper.estimate.damage_centers = [];
         
         // Clean up any redundant damage_assessment.centers (duplicate section)
         // BUT preserve damage_assessment.summary which contains totals data
-        if (helper.damage_assessment?.centers) {
+        if (window.helper.damage_assessment?.centers) {
           console.log('🧹 Cleaning up redundant damage_assessment.centers');
-          delete helper.damage_assessment.centers;
+          delete window.helper.damage_assessment.centers;
           
           // Only delete damage_assessment object if it has no important data left
           // Preserve .summary, .totals, and any other important sections
-          const remainingKeys = Object.keys(helper.damage_assessment);
+          const remainingKeys = Object.keys(window.helper.damage_assessment);
           const importantSections = ['summary', 'totals', 'total_centers', 'total_items', 'last_updated', 'totals_after_differentials'];
           const hasImportantData = remainingKeys.some(key => importantSections.includes(key));
           
           if (!hasImportantData && remainingKeys.length === 0) {
             console.log('🧹 Deleting empty damage_assessment object');
-            delete helper.damage_assessment;
+            delete window.helper.damage_assessment;
           } else {
             console.log('🔒 Preserving damage_assessment with important sections:', remainingKeys);
           }
         }
         
         // Also maintain expertise.damage_blocks for backward compatibility
-        if (!helper.expertise) helper.expertise = {};
-        if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
+        if (!window.helper.expertise) window.helper.expertise = {};
+        if (!window.helper.expertise.damage_blocks) window.helper.expertise.damage_blocks = [];
         
-        // Clear all structures
-        helper.centers = [];
-        helper.expertise.damage_blocks = [];
-        helper.estimate.damage_centers = [];
+        // 🔥 CRITICAL FIX: Collect ALL data from DOM BEFORE clearing arrays
+        const collectedCenters = [];
+        const collectedDamageBlocks = [];
+        const collectedEstimateCenters = [];
         
         // Store damage center names for depreciation section
         const damageCenterNames = [];
         
-        // Collect data from all damage center cards
+        // 🔥 FIRST: Collect ALL data from DOM elements into temporary arrays
         document.querySelectorAll('.editable-damage-card').forEach((card, index) => {
           // Extract just the number from the damage center number field
           const centerNumberField = card.querySelector('.damage-center-number').value;
@@ -7689,11 +7689,11 @@
             }
           };
           
-          // Save to helper.centers (primary source)
-          helper.centers.push(centerObject);
+          // 🔥 Add to temporary collections (not directly to helper)
+          collectedCenters.push(centerObject);
           
-          // 🆕 ESTIMATE WORKFLOW: Save to helper.estimate.damage_centers
-          helper.estimate.damage_centers.push({
+          // 🆕 ESTIMATE WORKFLOW: Prepare estimate structure
+          collectedEstimateCenters.push({
             center_number: centerNumber || (index + 1),
             location: centerLocation,
             description: centerDescription,
@@ -7709,8 +7709,8 @@
             }
           });
           
-          // Also save to damage_blocks for backward compatibility
-          helper.expertise.damage_blocks.push({
+          // Also prepare damage_blocks for backward compatibility
+          collectedDamageBlocks.push({
             damage_center_name: centerLocation,
             damage_center_number: index + 1,
             center_header: centerNumber,
@@ -7736,16 +7736,42 @@
           updateCostDisplay(card, partsCost, workCost, repairsCost);
         });
         
+        // 🔥 NOW clear and rebuild arrays with collected data
+        window.helper.centers = collectedCenters;
+        window.helper.expertise.damage_blocks = collectedDamageBlocks;
+        window.helper.estimate.damage_centers = collectedEstimateCenters;
+        
         // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
-        const totalEstimateCost = helper.estimate.damage_centers.reduce((sum, center) => sum + center.costs.total_cost, 0);
-        const totalEstimateWithVAT = helper.estimate.damage_centers.reduce((sum, center) => sum + center.costs.total_with_vat, 0);
+        const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
+        const totalEstimateWithVAT = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_with_vat, 0);
         
-        if (!helper.calculations) helper.calculations = {};
-        helper.calculations.total_estimate = totalEstimateCost;
-        helper.calculations.total_estimate_with_vat = totalEstimateWithVAT;
+        if (!window.helper.calculations) window.helper.calculations = {};
+        window.helper.calculations.total_estimate = totalEstimateCost;
+        window.helper.calculations.total_estimate_with_vat = totalEstimateWithVAT;
         
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Initialize damage assessment if needed
+        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
+        
+        // Save damage assessment summary and totals
+        window.helper.damage_assessment.summary = {
+          total_centers: document.querySelectorAll('.editable-damage-card').length,
+          total_parts: document.querySelectorAll('.part-row').length,
+          total_works: document.querySelectorAll('.work-row').length,
+          total_repairs: document.querySelectorAll('.repair-row').length,
+          damage_center_names: damageCenterNames,
+          last_updated: new Date().toISOString()
+        };
+        
+        // Save updated centers count
+        window.helper.damage_assessment.total_centers = document.querySelectorAll('.editable-damage-card').length;
+        
+        // 🔥 CRITICAL: Update estimate metadata
+        if (!window.helper.estimate.metadata) window.helper.estimate.metadata = {};
+        window.helper.estimate.metadata.damage_centers_count = document.querySelectorAll('.editable-damage-card').length;
+        window.helper.estimate.metadata.last_updated = new Date().toISOString();
+        
+        // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
         // Update depreciation section with damage center names
         updateDepreciationFromDamageCenters(damageCenterNames);
@@ -7754,10 +7780,10 @@
         triggerFloatingScreenRefresh();
         
         console.log('✅ Damage centers saved to multiple locations:');
-        console.log('- helper.centers:', helper.centers);
-        console.log('- helper.estimate.damage_centers:', helper.estimate.damage_centers);
-        console.log('- helper.expertise.damage_blocks:', helper.expertise.damage_blocks);
-        console.log('- Calculations:', helper.calculations);
+        console.log('- window.helper.centers:', window.helper.centers);
+        console.log('- window.helper.estimate.damage_centers:', window.helper.estimate.damage_centers);
+        console.log('- window.helper.expertise.damage_blocks:', window.helper.expertise.damage_blocks);
+        console.log('- Calculations:', window.helper.calculations);
         
         // Update damage centers totals display
         setTimeout(updateDamageCentersSubtotal, 100);

@@ -584,7 +584,12 @@
     <div class="form-section">
       <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
       <div id="damageCentersSummary" style="display:none;">
-        <h3>סיכום מוקדי נזק (ניתן לעריכה) </h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
+          <button type="button" class="btn btn-success" onclick="saveDamageCenterChangesWithFeedback(event)" style="padding: 8px 16px;">
+            💾 שמור שינויים
+          </button>
+        </div>
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
@@ -1504,9 +1509,21 @@
     };
     
     // Save damage center changes with feedback
+    // Debounce timer for saving
+    let saveDamageCenterTimer = null;
+    
     // SAVE DAMAGE CENTER CHANGES - 2-WAY DATA FLOW IMPLEMENTATION
     function saveDamageCenterChanges() {
       try {
+        console.log('🔄 Starting saveDamageCenterChanges...');
+        
+        // CHECK IF DOM ELEMENTS EXIST BEFORE CLEARING
+        const damageCenterCards = document.querySelectorAll('.editable-damage-card');
+        if (!damageCenterCards || damageCenterCards.length === 0) {
+          console.log('⚠️ No damage center cards found in DOM, skipping save');
+          return true; // Return true to indicate no error
+        }
+        
         const helper = window.helper || {};
         
         // Initialize centers if not exists
@@ -1533,7 +1550,9 @@
         if (!helper.expertise) helper.expertise = {};
         if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
         
-        // Clear both structures
+        console.log(`📊 Found ${damageCenterCards.length} damage center cards to save`);
+        
+        // Clear both structures ONLY if we have data to replace it with
         helper.centers = [];
         helper.expertise.damage_blocks = [];
         
@@ -1694,7 +1713,7 @@
       }
     }
 
-    function saveDamageCenterChangesWithFeedback() {
+    function saveDamageCenterChangesWithFeedback(event) {
       const button = event.target;
       const originalText = button.textContent;
       
@@ -1704,7 +1723,6 @@
       if (saveDamageCenterChanges()) {
         button.style.background = '#28a745';
         button.textContent = '✓ נשמר!';
-        showMessage('נתוני מוקדי הנזק נשמרו בהצלחה', 'success');
         
         setTimeout(() => {
           button.disabled = false;
@@ -1714,7 +1732,6 @@
       } else {
         button.style.background = '#dc3545';
         button.textContent = '✗ שגיאה';
-        showMessage('שגיאה בשמירת נתוני מוקדי הנזק', 'error');
         
         setTimeout(() => {
           button.disabled = false;
@@ -2058,7 +2075,7 @@
           </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות:</label>
-            <input type="number" value="${workCost}" placeholder="עלות" class="work-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateCostDisplay(this.closest('.damage-center-card'))" />
+            <input type="number" value="${workCost}" placeholder="עלות" class="work-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
           </div>
           <div style="align-self: end;">
             <button onclick="estimateRemoveWorkRow(${centerIndex}, ${workIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
@@ -2280,6 +2297,59 @@
       // Part suggestions functionality would go here
     };
 
+    // ADD NEW DAMAGE CENTER
+    window.addNewDamageCenter = function() {
+      const editableContainer = document.getElementById('editableDamageCenters');
+      if (!editableContainer) {
+        // Create the container if it doesn't exist
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        damageCentersContent.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
+      }
+      
+      const container = document.getElementById('editableDamageCenters');
+      const newIndex = container.children.length;
+      
+      // Create new empty damage center
+      const newCenter = {
+        damage_center_name: `מוקד נזק ${newIndex + 1}`,
+        damage_center_number: newIndex + 1,
+        description: '',
+        parts: [],
+        works: [],
+        repairs: []
+      };
+      
+      const newCardHTML = createEditableDamageCenterCard(newCenter, newIndex);
+      container.insertAdjacentHTML('beforeend', newCardHTML);
+      
+      // Add event listeners to the new card
+      setTimeout(() => {
+        addDamageCenterEventListeners();
+        // Focus on the name field
+        const nameField = container.querySelector(`[data-center-index="${newIndex}"] .damage-center-location`);
+        if (nameField) nameField.focus();
+      }, 100);
+      
+      // Save the new damage center
+      setTimeout(() => {
+        saveDamageCenterChanges();
+      }, 200);
+    };
+
+    // DEBOUNCED SAVE FUNCTION
+    function debouncedSaveDamageCenters() {
+      // Clear existing timer
+      if (saveDamageCenterTimer) {
+        clearTimeout(saveDamageCenterTimer);
+      }
+      
+      // Set new timer
+      saveDamageCenterTimer = setTimeout(() => {
+        console.log('⏱️ Debounced save triggered');
+        saveDamageCenterChanges();
+      }, 500); // 500ms delay
+    }
+    
     // ADD DAMAGE CENTER EVENT LISTENERS - AUTO-SAVE ON CHANGE
     function addDamageCenterEventListeners() {
       const selectors = '.damage-center-number, .damage-center-location, .damage-center-description, .part-name, .part-desc, .part-price, .part-source, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost';
@@ -2287,21 +2357,24 @@
       document.querySelectorAll(selectors).forEach(input => {
         // Check if already has listeners
         if (!input.hasAttribute('data-listeners-added')) {
+          // Only save on change and blur, not on every keystroke
           input.addEventListener('change', () => {
-            saveDamageCenterChanges();
+            console.log(`📝 Change event on ${input.className}`);
+            debouncedSaveDamageCenters();
             updateAllCostDisplays();
           });
           input.addEventListener('blur', () => {
-            saveDamageCenterChanges();
+            console.log(`👁️ Blur event on ${input.className}`);
+            debouncedSaveDamageCenters();
             updateAllCostDisplays();
           });
+          // Update display only (no save) on input
           input.addEventListener('input', () => {
             updateAllCostDisplays();
           });
           
           // Mark as having listeners to prevent duplicates
           input.setAttribute('data-listeners-added', 'true');
-          console.log(`📝 Added event listeners to: ${input.className}`);
         }
       });
       
