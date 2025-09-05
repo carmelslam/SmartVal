@@ -584,16 +584,17 @@
     <div class="form-section">
       <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
       <div id="damageCentersSummary" style="display:none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
-          <button type="button" class="btn btn-success" onclick="saveDamageCenterChangesWithFeedback(event)" style="padding: 8px 16px;">
-            💾 שמור שינויים
-          </button>
-        </div>
+        <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
-        <button type="button" class="btn add" onclick="addNewDamageCenter()" style="margin-top: 10px;">הוסף מוקד נזק חדש</button>
+        <!-- Buttons will be added dynamically after the totals -->
+        <div id="damageCenterButtons" style="display: none;">
+          <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
+            <button type="button" class="btn save-btn" onclick="saveDamageCenterChangesWithFeedback(event)" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
+            <button type="button" class="btn add" onclick="addNewDamageCenter()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">הוסף מוקד נזק חדש</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2474,7 +2475,7 @@
       return adaptedBlock;
     }
 
-    // CREATE DAMAGE CENTERS SUBTOTAL
+    // CREATE DAMAGE CENTERS SUBTOTAL - FROM ORIGINAL
     function createDamageCentersSubtotal() {
       const existingSubtotal = document.getElementById('damageCentersSubtotal');
       if (existingSubtotal) {
@@ -2485,69 +2486,101 @@
       if (!damageCentersContent) return;
       
       const subtotalHTML = `
-        <div id="damageCentersSubtotal" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; color: #1e3a8a; font-size: 18px;">סיכום מוקדי נזק</h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
-              <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">לפני מע"מ</div>
-                <div id="totalBeforeVAT" style="font-size: 20px; font-weight: bold; color: #1e3a8a;">₪0</div>
-              </div>
-              <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">מע"מ ${window.getHelperVatRate ? window.getHelperVatRate() : 18}%</div>
-                <div id="vatAmount" style="font-size: 20px; font-weight: bold; color: #dc3545;">₪0</div>
-              </div>
-              <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">סה"כ כולל מע"מ</div>
-                <div id="totalWithVAT" style="font-size: 20px; font-weight: bold; color: #28a745;">₪0</div>
-              </div>
+        <div id="damageCentersSubtotal" style="background: #f8f9fa; border: 2px solid #28a745; border-radius: 6px; padding: 12px; margin-top: 15px;">
+          <h4 style="margin: 0 0 10px 0; color: #28a745; text-align: center; font-size: 14px; font-weight: bold;">🧮 סיכום כללי - מרכזי נזק</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px;">
+            <div style="background: #ffc107; color: #212529; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalRepairsSubtotal">₪0</div>
+              <div style="font-size: 10px;">סה"כ תיקונים</div>
+            </div>
+            <div style="background: #28a745; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalPartsSubtotal">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">סה"כ חלקים</div>
+            </div>
+            <div style="background: #17a2b8; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalWorksSubtotal">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">סה"כ עבודות</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div style="background: #dc3545; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 18px; font-weight: bold;" id="totalWithVatSubtotal">₪0</div>
+              <div style="font-size: 11px; opacity: 0.9;">סה"כ כולל מע"מ</div>
+            </div>
+            <div style="background: #6c757d; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 18px; font-weight: bold;" id="totalWithoutVatSubtotal">₪0</div>
+              <div style="font-size: 11px; opacity: 0.9;">סה"כ ללא מע"מ</div>
             </div>
           </div>
         </div>
       `;
       
       damageCentersContent.insertAdjacentHTML('afterend', subtotalHTML);
+      
+      // Move the buttons div to after subtotal
+      const buttonsDiv = document.getElementById('damageCenterButtons');
+      if (buttonsDiv) {
+        buttonsDiv.style.display = 'block';
+        const subtotalElement = document.getElementById('damageCentersSubtotal');
+        if (subtotalElement && subtotalElement.parentNode) {
+          subtotalElement.parentNode.insertBefore(buttonsDiv, subtotalElement.nextSibling);
+        }
+      }
+      
+      // Add collapse button after buttons
+      const collapseButtonHTML = `
+        <div style="text-align: center; margin-top: 10px;">
+          <button type="button" class="btn section-collapse-button" onclick="toggleSection('damageCentersSummary')" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">כווץ סעיף</button>
+        </div>
+      `;
+      
+      const buttonsElement = document.getElementById('damageCenterButtons');
+      if (buttonsElement) {
+        buttonsElement.insertAdjacentHTML('afterend', collapseButtonHTML);
+      }
     }
 
     // UPDATE DAMAGE CENTERS SUBTOTAL
     function updateDamageCentersSubtotal() {
-      let totalBeforeVAT = 0;
+      let totalParts = 0;
+      let totalWorks = 0;
+      let totalRepairs = 0;
       
-      // Calculate total from all damage centers
+      // Calculate totals from all damage centers
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        let cardTotal = 0;
-        
         // Parts
         card.querySelectorAll('.part-row .part-price').forEach(input => {
-          cardTotal += parseFloat(input.value) || 0;
+          totalParts += parseFloat(input.value) || 0;
         });
         
         // Works
         card.querySelectorAll('.work-row .work-cost').forEach(input => {
-          cardTotal += parseFloat(input.value) || 0;
+          totalWorks += parseFloat(input.value) || 0;
         });
         
         // Repairs
         card.querySelectorAll('.repair-row .repair-cost').forEach(input => {
-          cardTotal += parseFloat(input.value) || 0;
+          totalRepairs += parseFloat(input.value) || 0;
         });
-        
-        totalBeforeVAT += cardTotal;
       });
       
-      // Calculate VAT
+      // Calculate totals
+      const totalBeforeVAT = totalParts + totalWorks + totalRepairs;
       const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17);
-      const vatAmount = totalBeforeVAT * vatRate;
-      const totalWithVAT = totalBeforeVAT + vatAmount;
+      const totalWithVAT = totalBeforeVAT * (1 + vatRate);
       
-      // Update display
-      const beforeVATElement = document.getElementById('totalBeforeVAT');
-      const vatElement = document.getElementById('vatAmount');
-      const withVATElement = document.getElementById('totalWithVAT');
+      // Update displays
+      const partsElement = document.getElementById('totalPartsSubtotal');
+      const worksElement = document.getElementById('totalWorksSubtotal');
+      const repairsElement = document.getElementById('totalRepairsSubtotal');
+      const withoutVatElement = document.getElementById('totalWithoutVatSubtotal');
+      const withVatElement = document.getElementById('totalWithVatSubtotal');
       
-      if (beforeVATElement) beforeVATElement.textContent = `₪${totalBeforeVAT.toLocaleString()}`;
-      if (vatElement) vatElement.textContent = `₪${Math.round(vatAmount).toLocaleString()}`;
-      if (withVATElement) withVATElement.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      if (partsElement) partsElement.textContent = `₪${totalParts.toLocaleString()}`;
+      if (worksElement) worksElement.textContent = `₪${totalWorks.toLocaleString()}`;
+      if (repairsElement) repairsElement.textContent = `₪${totalRepairs.toLocaleString()}`;
+      if (withoutVatElement) withoutVatElement.textContent = `₪${totalBeforeVAT.toLocaleString()}`;
+      if (withVatElement) withVatElement.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
     }
 
     function createEditableDamageCenterCard(block, index) {
