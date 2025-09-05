@@ -1254,7 +1254,8 @@
       });
       
       const totalCost = partsCost + worksCost + repairsCost;
-      const totalWithVAT = totalCost * 1.17;
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17);
+      const totalWithVAT = totalCost * (1 + vatRate);
       
       // Update display elements
       const workDisplay = card.querySelector('.work-costs-display');
@@ -1346,7 +1347,8 @@
       });
       
       const totalWithoutVat = totalWorks + totalParts + totalRepairs;
-      const totalWithVat = totalWithoutVat * 1.17;
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17);
+      const totalWithVat = totalWithoutVat * (1 + vatRate);
       
       // Update displays
       const totalPartsDisplay = document.getElementById('totalPartsCost');
@@ -1367,7 +1369,7 @@
       // Update claims data fields
       const totalClaimField = document.getElementById('totalClaim');
       if (totalClaimField) {
-        totalClaimField.value = `₪${totalBeforeVAT.toLocaleString()}`;
+        totalClaimField.value = `₪${totalWithoutVat.toLocaleString()}`;
       }
       
       // Update damage percentage calculation
@@ -1722,7 +1724,8 @@
       const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
       
       // Get VAT rate
-      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17) * 100;
+      const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : 0.17;
+      const vatPercentage = vatRate * 100;
       
       // Calculate costs from parts, works, repairs
       const partsCost = block.parts?.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0) || 0;
@@ -1730,7 +1733,7 @@
       const repairsCost = block.repairs?.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0) || 0;
       
       const totalBeforeVat = partsCost + worksCost + repairsCost;
-      const totalWithVAT = totalBeforeVat * (1 + vatRate / 100);
+      const totalWithVAT = totalBeforeVat * (1 + vatRate);
       
       // Get existing parts, works, repairs from block
       const parts = block.parts || [];
@@ -2168,7 +2171,8 @@
       }
       
       const totalCost = workCosts + partsCosts + repairsCosts;
-      const totalWithVAT = totalCost * 1.17;
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17);
+      const totalWithVAT = totalCost * (1 + vatRate);
       
       const parts = block.parts || [];
       const works = block.works || [];
