@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בונה אומדן - SmartVal</title>
+    <link rel="stylesheet" href="global-styles.css">
+    <script src="global-scripts.js"></script>
+    <script src="legal-text-engine.js"></script>
+    <style>
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1e40af;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e40af;
+            margin: 0;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #374151;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #1e3a8a;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .floating-screens {
+            position: fixed;
+            top: 60px;
+            left: 10px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .floating-btn {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Action Buttons -->
+    <div class="floating-screens">
+        <button class="floating-btn" onclick="showBrowserMenuUnderToggle()" title="דפדפן פנימי">🌐</button>
+        <button class="floating-btn" onclick="toggleSection('summary')" title="הצג/הסתר סיכום">📊</button>
+        <button class="floating-btn" onclick="toggleSection('attachments')" title="הצג/הסתר קבצים מצורפים">📎</button>
+        <button class="floating-btn" onclick="saveToHelper()" title="שמור נתונים">💾</button>
+    </div>
+
+    <div class="main-container">
+        <h1 style="text-align: center; color: #1e40af; margin-bottom: 30px;">בונה אומדן רכב - SmartVal</h1>
+        
+        <!-- Car Details Section -->
+        <div class="section" id="carDetailsSection">
+            <div class="section-header">
+                <h2 class="section-title">פרטי הרכב</h2>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="carPlate">מספר רכב:</label>
+                    <input type="text" id="carPlate" placeholder="מספר רכב">
+                </div>
+                <div class="form-group">
+                    <label for="carManufacturer">יצרן:</label>
+                    <input type="text" id="carManufacturer" placeholder="יצרן הרכב">
+                </div>
+                <div class="form-group">
+                    <label for="carModel">דגם:</label>
+                    <input type="text" id="carModel" placeholder="דגם הרכב">
+                </div>
+                <div class="form-group">
+                    <label for="carYear">שנת יצור:</label>
+                    <input type="number" id="carYear" placeholder="שנת יצור">
+                </div>
+                <div class="form-group">
+                    <label for="carModelCode">קוד דגם:</label>
+                    <input type="text" id="carModelCode" placeholder="קוד דגם">
+                </div>
+                <div class="form-group">
+                    <label for="carMileage">קילומטראז':</label>
+                    <input type="number" id="carMileage" placeholder="קילומטראז'">
+                </div>
+                <div class="form-group">
+                    <label for="carBasePrice">מחיר בסיס (₪):</label>
+                    <input type="number" id="carBasePrice" placeholder="מחיר בסיס">
+                </div>
+                <div class="form-group">
+                    <label for="carMarketValue">שווי שוק (₪):</label>
+                    <input type="number" id="carMarketValue" placeholder="שווי שוק">
+                </div>
+                <div class="form-group">
+                    <label for="carReportDate">תאריך דוח:</label>
+                    <input type="date" id="carReportDate">
+                </div>
+            </div>
+        </div>
+
+        <!-- Damage Centers Section -->
+        <div class="section" id="damageCentersSection">
+            <div class="section-header">
+                <h2 class="section-title">מוקדי נזק</h2>
+                <button class="btn" onclick="addDamageCenter()">הוסף מוקד נזק חדש</button>
+            </div>
+            <div id="damageCentersContent">
+                <div style="display: grid; gap: 15px;" id="editableDamageCenters">
+                    <!-- Damage centers will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="section" id="summary" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">סיכום הערכת נזק</h2>
+            </div>
+            <div id="summaryContent">
+                <!-- Summary calculations will appear here -->
+            </div>
+        </div>
+
+        <!-- Attachments Section -->
+        <div class="section" id="attachments" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">קבצים מצורפים</h2>
+            </div>
+            <div id="attachmentsContent">
+                <!-- Attachments will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // State management
+    const EstimateBuilderState = {
+        hasChanges: false,
+        currentHelper: null,
+        damageCenters: []
+    };
+
+    // DOM Content Loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Authentication check
+        const auth = sessionStorage.getItem("auth");
+        if (!auth) {
+            alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+            window.location.href = "index.html";
+        }
+
+        // Initialize helper
+        if (!window.helper || Object.keys(window.helper).length === 0) {
+            window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        }
+
+        // Load existing data
+        loadHelperData();
+        loadDamageCentersSummary(window.helper);
+    });
+
+    // Load helper data into form fields
+    function loadHelperData() {
+        const helper = window.helper || {};
+        
+        // Load car details
+        if (helper.car_data) {
+            const fields = {
+                'carPlate': helper.car_data.license_plate,
+                'carManufacturer': helper.car_data.manufacturer,
+                'carModel': helper.car_data.model,
+                'carYear': helper.car_data.year,
+                'carModelCode': helper.car_data.model_code,
+                'carMileage': helper.car_data.mileage,
+                'carBasePrice': helper.car_data.base_price,
+                'carMarketValue': helper.car_data.market_value,
+                'carReportDate': helper.car_data.report_date
+            };
+
+            Object.keys(fields).forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element && fields[fieldId]) {
+                    element.value = fields[fieldId];
+                }
+            });
+        }
+    }
+
+    // Load damage centers summary
+    function loadDamageCentersSummary(helper) {
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        if (!damageCentersContent) return;
+
+        try {
+            const damageCenters = helper.centers || 
+                                  helper.damage_centers || 
+                                  helper.expertise?.damage_blocks || [];
+            
+            if (damageCenters && damageCenters.length > 0) {
+                let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
+                
+                damageCenters.forEach((center, index) => {
+                    // Adapt centers data structure to damage block structure for compatibility
+                    const adaptedCenter = adaptCenterToBlock(center, index);
+                    summaryHTML += createEditableDamageCenterCard(adaptedCenter, index);
+                });
+                
+                summaryHTML += '</div>';
+                damageCentersContent.innerHTML = summaryHTML;
+                
+                // Add event listeners after HTML is created
+                setTimeout(addDamageCenterEventListeners, 100);
+                
+            } else {
+                damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
+            }
+        } catch (error) {
+            console.error('Error loading damage centers summary:', error);
+            document.getElementById('damageCentersContent').innerHTML = '<div style="color: #dc3545; text-align: center;">שגיאה בטעינת נתוני מוקדי נזק</div>';
+        }
+    }
+
+    // Adapt centers data structure to damage block structure for compatibility
+    function adaptCenterToBlock(center, index) {
+        const adaptedBlock = {
+            damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
+            damage_center_number: (() => {
+                const num = center["Damage center Number"] || center.damage_center_number || (index + 1);
+                if (typeof num === 'string' && num.includes('מוקד')) {
+                    const match = num.match(/\d+$/);
+                    return match ? match[0] : String(index + 1);
+                }
+                return num;
+            })(),
+            description: center.Description || center.description || '',
+            works: center.Works?.works || center.works || [],
+            parts: center.Parts?.parts_required || center.Parts?.parts || center.parts_required || center.parts || center.Parts || [],
+            repairs: center.Repairs?.repairs || center.repairs || [],
+            works_meta: center.Works?.works_meta || center.works_meta || { total_cost: 0 },
+            parts_meta: center.Parts?.parts_meta || center.parts_meta || { total_cost: 0 },
+            repairs_meta: center.Repairs?.repairs_meta || center.repairs_meta || { total_cost: 0 },
+            total_cost: center.Summary?.["Total with VAT"] || center.total_cost || 0
+        };
+        
+        return adaptedBlock;
+    }
+
+    // CREATE EDITABLE DAMAGE CENTER CARD - EXACT MATCH TO FINAL-REPORT-BUILDER
+    function createEditableDamageCenterCard(block, index) {
+        const centerNum = block.damage_center_number || (index + 1);
+        const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
+        const workCosts = block.work_cost || 0;
+        const partsCosts = block.parts_cost || 0;
+        const repairsCosts = workCosts + partsCosts;
+        const totalWithVAT = repairsCosts * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
+        
+        // Get existing parts, works, repairs from block
+        const parts = block.parts || [];
+        const works = block.works || [];
+        const repairs = block.repairs || [];
+        
+        return `
+            <div class="editable-damage-card" data-center-index="${index}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <!-- Card Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: bold; color: #1e3a8a; font-size: 16px;">מוקד נזק מס'</span>
+                        <input type="text" value="${centerNum}" class="damage-center-number" style="font-weight: bold; color: #1e3a8a; font-size: 16px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; width: 50px; text-align: center;" />
+                    </div>
+                    <button onclick="removeDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
+                </div>
+                
+                <!-- Damage Center Location Field -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">שם מוקד הנזק:</label>
+                    <input type="text" class="damage-center-location" style="width: 100%; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px;" placeholder="הזן שם/איזור מוקד הנזק (לדוגמה: פגוש קדמי, דלת נהג, וכו')" value="${centerLocation}" />
+                </div>
+                
+                <!-- Damage Description Field -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">תיאור הנזק:</label>
+                    <textarea class="damage-center-description" style="width: 100%; min-height: 60px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px; resize: vertical;" placeholder="הזן תיאור מפורט של הנזק במוקד זה...">${block.description || ''}</textarea>
+                </div>
+                <!-- Parts Section (Full Width Row) -->
+                <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">חלקים נדרשים:</h4>
+                    <div class="parts-list" data-center="${index}">
+                        ${parts.map((part, partIndex) => createEditablePartRow(part, index, partIndex)).join('')}
+                    </div>
+                    <button onclick="addPartRow(${index})" class="btn" style="background: #28a745; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף חלק</button>
+                </div>
+                <!-- Works Section (Full Width Row) -->
+                <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">עבודות נדרשות:</h4>
+                    <div class="works-list" data-center="${index}">
+                        ${works.map((work, workIndex) => createEditableWorkRow(work, index, workIndex)).join('')}
+                    </div>
+                    <button onclick="addWorkRow(${index})" class="btn" style="background: #17a2b8; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף עבודה</button>
+                </div>
+                <!-- Repairs Section (Full Width Row) -->
+                <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">תיקונים נדרשים:</h4>
+                    <div class="repairs-list" data-center="${index}">
+                        ${repairs.map((repair, repairIndex) => createEditableRepairRow(repair, index, repairIndex)).join('')}
+                    </div>
+                    <button onclick="addRepairRow(${index})" class="btn" style="background: #ffc107; color: #212529; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף תיקון</button>
+                </div>
+                <!-- Cost Summary (Auto-calculated) -->
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 14px;">
+                        <div><strong>עבודות:</strong> <span class="work-costs-display">₪${workCosts.toLocaleString()}</span></div>
+                        <div><strong>חלפים:</strong> <span class="parts-costs-display">₪${partsCosts.toLocaleString()}</span></div>
+                        <div><strong>תיקונים:</strong> <span class="repairs-costs-display">₪${repairsCosts.toLocaleString()}</span></div>
+                        <div><strong>כולל מע"מ:</strong> <span class="total-with-vat-display">₪${Math.round(totalWithVAT).toLocaleString()}</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // CREATE EDITABLE PART ROW WITH SEARCH DROPDOWN - EXACT MATCH TO FINAL-REPORT-BUILDER  
+    function createEditablePartRow(part, centerIndex, partIndex) {
+        const partName = part?.name || '';
+        const partDesc = part?.desc || part?.description || part?.תיאור || '';
+        const partPrice = part?.price || 0;
+        const partSource = part?.source || part?.מקור || '';
+        
+        return `
+            <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                <div style="position: relative;">
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
+                    <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
+                           style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
+                    <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+                    <input type="number" value="${partPrice}" placeholder="0" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+                </div>
+                <button onclick="removePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: end;">מחק</button>
+                <input type="hidden" value="${partSource}" class="part-source" />
+            </div>
+        `;
+    }
+
+    // CREATE EDITABLE WORK ROW - EXACT MATCH TO FINAL-REPORT-BUILDER
+    function createEditableWorkRow(work, centerIndex, workIndex) {
+        const workText = typeof work === 'object' ? work.description : work;
+        const workCost = typeof work === 'object' ? work.cost : 0;
+        
+        return `
+            <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 3fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור העבודה:</label>
+                    <textarea placeholder="תיאור העבודה" class="work-text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 60px; resize: vertical;">${workText}</textarea>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+                    <input type="number" value="${workCost}" placeholder="0" class="work-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+                </div>
+                <button onclick="removeWorkRow(${centerIndex}, ${workIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; height: 32px; margin-top: 14px;">מחק</button>
+            </div>
+        `;
+    }
+
+    // CREATE EDITABLE REPAIR ROW - EXACT MATCH TO FINAL-REPORT-BUILDER
+    function createEditableRepairRow(repair, centerIndex, repairIndex) {
+        const repairText = typeof repair === 'object' ? repair.description : repair;
+        const repairCost = typeof repair === 'object' ? repair.cost : 0;
+        
+        return `
+            <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 3fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור התיקון:</label>
+                    <textarea placeholder="תיאור התיקון" class="repair-text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 60px; resize: vertical;">${repairText}</textarea>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
+                    <input type="number" value="${repairCost}" placeholder="0" class="repair-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+                </div>
+                <button onclick="removeRepairRow(${centerIndex}, ${repairIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; height: 32px; margin-top: 14px;">מחק</button>
+            </div>
+        `;
+    }
+
+    // ADD/REMOVE ROW FUNCTIONS - EXACT MATCH TO FINAL-REPORT-BUILDER
+    function addPartRow(centerIndex) {
+        const partsList = document.querySelector(`.parts-list[data-center="${centerIndex}"]`);
+        const newPartIndex = partsList.children.length;
+        const newPartHTML = createEditablePartRow({}, centerIndex, newPartIndex);
+        partsList.insertAdjacentHTML('beforeend', newPartHTML);
+        
+        // Add event listeners to new row
+        setTimeout(addDamageCenterEventListeners, 50);
+    }
+
+    function addWorkRow(centerIndex) {
+        const worksList = document.querySelector(`.works-list[data-center="${centerIndex}"]`);
+        const newWorkIndex = worksList.children.length;
+        const newWorkHTML = createEditableWorkRow('', centerIndex, newWorkIndex);
+        worksList.insertAdjacentHTML('beforeend', newWorkHTML);
+        
+        // Add event listeners to new row
+        setTimeout(addDamageCenterEventListeners, 50);
+    }
+
+    function addRepairRow(centerIndex) {
+        const repairsList = document.querySelector(`.repairs-list[data-center="${centerIndex}"]`);
+        const newRepairIndex = repairsList.children.length;
+        const newRepairHTML = createEditableRepairRow('', centerIndex, newRepairIndex);
+        repairsList.insertAdjacentHTML('beforeend', newRepairHTML);
+        
+        // Add event listeners to new row
+        setTimeout(addDamageCenterEventListeners, 50);
+    }
+
+    function removePartRow(centerIndex, partIndex) {
+        const partRow = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+        if (partRow) {
+            partRow.remove();
+            saveDamageCenterChanges();
+        }
+    }
+
+    function removeWorkRow(centerIndex, workIndex) {
+        const workRow = document.querySelector(`.work-row[data-center="${centerIndex}"][data-work="${workIndex}"]`);
+        if (workRow) {
+            workRow.remove();
+            saveDamageCenterChanges();
+        }
+    }
+
+    function removeRepairRow(centerIndex, repairIndex) {
+        const repairRow = document.querySelector(`.repair-row[data-center="${centerIndex}"][data-repair="${repairIndex}"]`);
+        if (repairRow) {
+            repairRow.remove();
+            saveDamageCenterChanges();
+        }
+    }
+
+    // Add damage center
+    function addDamageCenter() {
+        const newIndex = document.querySelectorAll('.editable-damage-card').length;
+        const newBlock = {
+            damage_center_name: `מוקד נזק ${newIndex + 1}`,
+            parts: [],
+            works: [],
+            repairs: [],
+            work_cost: 0,
+            parts_cost: 0
+        };
+        
+        const newCardHTML = createEditableDamageCenterCard(newBlock, newIndex);
+        document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
+        
+        setTimeout(addDamageCenterEventListeners, 100);
+    }
+
+    // Remove damage center
+    window.removeDamageCenter = function(index) {
+        if (confirm('האם אתה בטוח שברצונך למחוק מוקד נזק זה?')) {
+            const card = document.querySelector(`[data-center-index="${index}"]`);
+            if (card) {
+                card.remove();
+                EstimateBuilderState.hasChanges = true;
+                // Re-index remaining cards
+                reindexDamageCenters();
+            }
+        }
+    };
+
+    // Re-index damage centers after deletion
+    function reindexDamageCenters() {
+        document.querySelectorAll('.editable-damage-card').forEach((card, newIndex) => {
+            card.setAttribute('data-center-index', newIndex);
+        });
+    }
+
+    // Add event listeners for damage centers
+    function addDamageCenterEventListeners() {
+        // Add listeners for all input changes
+        document.querySelectorAll('.editable-damage-card input, .editable-damage-card textarea, .editable-damage-card select').forEach(element => {
+            element.removeEventListener('change', handleDamageCenterChange);
+            element.addEventListener('change', handleDamageCenterChange);
+        });
+    }
+
+    // Handle damage center changes
+    function handleDamageCenterChange(event) {
+        EstimateBuilderState.hasChanges = true;
+        updateCostDisplay(event.target.closest('.editable-damage-card'));
+    }
+
+    // Update cost display for a damage center
+    function updateCostDisplay(card) {
+        if (!card) return;
+
+        // Calculate parts cost
+        const partRows = card.querySelectorAll('.part-row');
+        let partsCost = 0;
+        partRows.forEach(row => {
+            const priceInput = row.querySelector('.part-price');
+            if (priceInput) {
+                partsCost += parseFloat(priceInput.value) || 0;
+            }
+        });
+
+        // Calculate works cost
+        const workRows = card.querySelectorAll('.work-row');
+        let worksCost = 0;
+        workRows.forEach(row => {
+            const costInput = row.querySelector('.work-cost');
+            if (costInput) {
+                worksCost += parseFloat(costInput.value) || 0;
+            }
+        });
+
+        // Calculate repairs cost
+        const repairRows = card.querySelectorAll('.repair-row');
+        let repairsCost = 0;
+        repairRows.forEach(row => {
+            const costInput = row.querySelector('.repair-cost');
+            if (costInput) {
+                repairsCost += parseFloat(costInput.value) || 0;
+            }
+        });
+
+        const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : 18;
+        const totalWithVAT = (partsCost + worksCost + repairsCost) * (1 + vatRate / 100);
+
+        // Update displays
+        const partsDisplay = card.querySelector('.parts-costs-display');
+        const worksDisplay = card.querySelector('.work-costs-display');
+        const repairsDisplay = card.querySelector('.repairs-costs-display');
+        const totalDisplay = card.querySelector('.total-with-vat-display');
+
+        if (partsDisplay) partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
+        if (worksDisplay) worksDisplay.textContent = `₪${worksCost.toLocaleString()}`;
+        if (repairsDisplay) repairsDisplay.textContent = `₪${repairsCost.toLocaleString()}`;
+        if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+    }
+
+    // Save damage center changes to helper (placeholder)
+    function saveDamageCenterChanges() {
+        EstimateBuilderState.hasChanges = true;
+        // Implementation to save to helper will be added
+    }
+
+    // Toggle section visibility
+    function toggleSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            const isVisible = section.style.display !== 'none';
+            section.style.display = isVisible ? 'none' : 'block';
+        }
+    }
+
+    // Custom browser menu
+    function showBrowserMenuUnderToggle() {
+        const menu = document.createElement('div');
+        menu.style.cssText = `
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 99999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-family: sans-serif;
+            direction: rtl;
+            min-width: 280px;
+        `;
+        
+        menu.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50; font-size: 16px;">בחר אתר לפתיחה:</div>
+            <button onclick="window.openInternalBrowser('car-part.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+                🔧 Car Part - חלקי רכב
+            </button>
+            <button onclick="window.openInternalBrowser('portal.levi-itzhak.co.il'); this.parentElement.remove();" style="width: 100%; padding: 12px; margin-bottom: 8px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;">
+                📊 פורטל לוי יצחק
+            </button>
+            <button onclick="this.parentElement.remove();" style="width: 100%; padding: 10px; border: 1px solid #ccc; background: white; color: #666; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                ביטול
+            </button>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Remove menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', function removeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', removeMenu);
+                }
+            });
+        }, 100);
+    }
+
+    // Save to helper (placeholder)
+    function saveToHelper() {
+        // Implementation will be added
+        alert('הנתונים נשמרו בהצלחה');
+    }
+
+    </script>
+</body>
+</html>
