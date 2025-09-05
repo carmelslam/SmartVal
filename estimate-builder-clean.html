@@ -876,6 +876,9 @@
     function initializeEstimateBuilder() {
       console.log('🚀 Initializing Estimate Builder (Clean Version)');
       
+      // Set initialization flag
+      isInitializing = true;
+      
       // Load data from helper
       loadDataFromHelper();
       loadDamageCentersSummary(window.helper || {});
@@ -891,6 +894,12 @@
       
       // Initialize floating screens
       initializeFloatingScreens();
+      
+      // Clear initialization flag after delay
+      setTimeout(() => {
+        isInitializing = false;
+        console.log('✅ Initialization complete - auto-save enabled');
+      }, 1000);
       
       console.log('✅ Estimate Builder initialized successfully');
     }
@@ -1209,7 +1218,7 @@
       }, 100);
     }
 
-    function addDamageCenterEventListeners() {
+    function addDamageCenterEventListeners_OLD_REMOVE() {
       // 2-WAY DATA FLOW: Add listeners to ALL fields for auto-save
       const selectors = '.damage-center-location, .damage-center-description, .part-name, .part-desc, .part-price, .part-source, .work-name, .work-type, .work-cost, .repair-text, .repair-cost';
       
@@ -1417,100 +1426,18 @@
       EstimateBuilderState.hasChanges = true;
     };
     
-    // Save damage center changes
-    window.saveDamageCenterChanges = function() {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Initialize centers if not exists
-        if (!helper.centers) helper.centers = [];
-        
-        // Initialize estimate structure
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
-        
-        // Clear all structures
-        helper.centers = [];
-        helper.estimate.damage_centers = [];
-        
-        // Collect data from all damage center cards
-        document.querySelectorAll('.damage-center-card').forEach((card, index) => {
-          const centerNumber = index + 1;
-          const centerLocation = card.querySelector('.damage-center-location').value;
-          const centerDescription = card.querySelector('.damage-center-description').value;
-          
-          // Collect parts
-          const parts = [];
-          card.querySelectorAll('.part-row').forEach(row => {
-            const name = row.querySelector('.part-name').value;
-            const desc = row.querySelector('.part-desc').value;
-            const price = parseFloat(row.querySelector('.part-price').value) || 0;
-            const source = row.querySelector('.part-source').value;
-            
-            if (name || price) {
-              parts.push({ name, desc, price, source });
-            }
-          });
-          
-          // Collect works
-          const works = [];
-          card.querySelectorAll('.work-row').forEach(row => {
-            const name = row.querySelector('.work-name').value;
-            const type = row.querySelector('.work-type').value;
-            const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
-            
-            if (name || cost) {
-              works.push({ name, type, cost });
-            }
-          });
-          
-          // Create center object
-          const centerData = {
-            "Damage center Number": centerNumber,
-            "Location": centerLocation,
-            "Description": centerDescription,
-            "Parts": { parts_required: parts },
-            "Works": { works: works },
-            "Repairs": { repairs: [] }
-          };
-          
-          helper.centers.push(centerData);
-          
-          // Also save to estimate structure
-          helper.estimate.damage_centers.push({
-            center_number: centerNumber,
-            center_name: centerLocation,
-            center_location: centerLocation,
-            damage_description: centerDescription,
-            parts: parts,
-            works: works,
-            costs_breakdown: {
-              parts_cost: parts.reduce((sum, p) => sum + p.price, 0),
-              work_cost: works.reduce((sum, w) => sum + w.cost, 0)
-            }
-          });
-        });
-        
-        // Save to session storage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        // Update window.helper if exists
-        if (window.helper) {
-          window.helper = helper;
-        }
-        
-        console.log('✅ Damage centers saved successfully');
-        return true;
-        
-      } catch (error) {
-        console.error('❌ Error saving damage centers:', error);
-        return false;
-      }
-    };
+    // Global flag to prevent saving during initialization
+    let isInitializing = true;
     
     // Save damage center changes with feedback
     // FIXED DAMAGE CENTERS SAVE FUNCTION - Using DOM-First Pattern from estimate-builder.html
-    function saveDamageCenterChanges() {
+    window.saveDamageCenterChanges = function saveDamageCenterChanges() {
+      // Don't save during initialization
+      if (isInitializing) {
+        console.log('⏸️ Skipping save during initialization');
+        return true;
+      }
+      
       try {
         // 🔧 CRITICAL: Use window.helper directly (not const) to ensure we're updating the live object
         window.helper = window.helper || {};
