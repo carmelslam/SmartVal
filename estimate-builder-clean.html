@@ -585,9 +585,11 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
       <div id="damageCentersSummary" style="display:none;">
         <h3>סיכום מוקדי נזק (ניתן לעריכה)</h3>
-        <div id="damageCentersContainer"></div>
-        <button type="button" class="btn btn-secondary" onclick="addNewDamageCenter()">+ הוסף מוקד נזק חדש</button>
-        <button type="button" class="btn btn-primary" onclick="saveDamageCenterChangesWithFeedback()">שמור שינויים במוקדי נזק</button>
+        <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
+          <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="addNewDamageCenter()" style="margin-top: 10px;">+ הוסף מוקד נזק חדש</button>
+        <button type="button" class="btn btn-primary" onclick="saveDamageCenterChangesWithFeedback()" style="margin-top: 10px;">שמור שינויים במוקדי נזק</button>
       </div>
     </div>
 
@@ -835,6 +837,7 @@
   </div>
 
   <!-- Load external scripts -->
+  <script src="legal-text-engine.js"></script>
   <script type="module" src="auth.js"></script>
   <script src="helper.js" type="module"></script>
   <script src="internal-browser.js"></script>
@@ -1172,7 +1175,401 @@
 
     function addNewDamageCenter() {
       console.log('➕ Add new damage center');
-      // Implementation here
+      const editableDamageCenters = document.getElementById('editableDamageCenters');
+      if (!editableDamageCenters) {
+        // Create container if doesn't exist
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        damageCentersContent.innerHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters"></div>';
+      }
+      
+      const newIndex = document.querySelectorAll('.damage-center-card').length;
+      const newBlock = {
+        damage_center_name: `מוקד נזק ${newIndex + 1}`,
+        damage_center_number: newIndex + 1,
+        description: '',
+        parts: [],
+        works: [],
+        repairs: []
+      };
+      
+      const newCardHTML = createEditableDamageCenterCard(newBlock, newIndex);
+      document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
+      
+      // Add event listeners to the new card
+      setTimeout(addDamageCenterEventListeners, 100);
+    }
+    
+    // Add event listeners for damage centers
+    function addDamageCenterEventListeners() {
+      // Add listeners for all input changes
+      document.querySelectorAll('.damage-center-card input, .damage-center-card textarea, .damage-center-card select').forEach(element => {
+        element.removeEventListener('change', handleDamageCenterChange);
+        element.addEventListener('change', handleDamageCenterChange);
+      });
+    }
+    
+    // Handle damage center changes
+    function handleDamageCenterChange(event) {
+      EstimateBuilderState.hasChanges = true;
+      updateCostDisplay(event.target.closest('.damage-center-card'));
+    }
+    
+    // Remove damage center
+    window.removeDamageCenter = function(index) {
+      if (confirm('האם אתה בטוח שברצונך למחוק מוקד נזק זה?')) {
+        const card = document.querySelector(`[data-center-index="${index}"]`);
+        if (card) {
+          card.remove();
+          EstimateBuilderState.hasChanges = true;
+          // Re-index remaining cards
+          reindexDamageCenters();
+        }
+      }
+    };
+    
+    // Re-index damage centers after deletion
+    function reindexDamageCenters() {
+      document.querySelectorAll('.damage-center-card').forEach((card, newIndex) => {
+        card.setAttribute('data-center-index', newIndex);
+        const header = card.querySelector('.damage-center-header h4');
+        if (header) {
+          header.textContent = `מוקד נזק מס' ${newIndex + 1}`;
+        }
+      });
+    }
+    
+    // Add part row
+    window.addPartRow = function(centerIndex) {
+      const partsList = document.querySelector(`[data-center-index="${centerIndex}"] .parts-list`);
+      if (partsList) {
+        const partIndex = partsList.children.length;
+        const newPartHTML = createEditablePartRow({}, centerIndex, partIndex);
+        partsList.insertAdjacentHTML('beforeend', newPartHTML);
+        addDamageCenterEventListeners();
+      }
+    };
+    
+    // Add work row
+    window.addWorkRow = function(centerIndex) {
+      const worksList = document.querySelector(`[data-center-index="${centerIndex}"] .works-list`);
+      if (worksList) {
+        const workIndex = worksList.children.length;
+        const newWorkHTML = createEditableWorkRow({}, centerIndex, workIndex);
+        worksList.insertAdjacentHTML('beforeend', newWorkHTML);
+        addDamageCenterEventListeners();
+      }
+    };
+    
+    // Remove part row
+    window.removePartRow = function(centerIndex, partIndex) {
+      const row = document.querySelector(`[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+      if (row) {
+        row.remove();
+        updateCostDisplay(document.querySelector(`[data-center-index="${centerIndex}"]`));
+      }
+    };
+    
+    // Remove work row
+    window.removeWorkRow = function(centerIndex, workIndex) {
+      const row = document.querySelector(`[data-center="${centerIndex}"][data-work="${workIndex}"]`);
+      if (row) {
+        row.remove();
+        updateCostDisplay(document.querySelector(`[data-center-index="${centerIndex}"]`));
+      }
+    };
+    
+    // Update cost display
+    function updateCostDisplay(card) {
+      if (!card) return;
+      
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17) * 100;
+      
+      // Calculate parts cost
+      let partsCost = 0;
+      card.querySelectorAll('.part-price').forEach(input => {
+        partsCost += parseFloat(input.value) || 0;
+      });
+      
+      // Calculate works cost
+      let worksCost = 0;
+      card.querySelectorAll('.work-cost').forEach(input => {
+        worksCost += parseFloat(input.value) || 0;
+      });
+      
+      const totalBeforeVat = partsCost + worksCost;
+      const totalWithVAT = totalBeforeVat * (1 + vatRate / 100);
+      
+      // Update displays
+      const partsDisplay = card.querySelector('.parts-costs-display');
+      if (partsDisplay) partsDisplay.textContent = `₪${partsCost.toLocaleString()}`;
+      
+      const worksDisplay = card.querySelector('.work-costs-display');
+      if (worksDisplay) worksDisplay.textContent = `₪${worksCost.toLocaleString()}`;
+      
+      const beforeVatDisplay = card.querySelector('.total-before-vat');
+      if (beforeVatDisplay) beforeVatDisplay.textContent = `₪${totalBeforeVat.toLocaleString()}`;
+      
+      const withVatDisplay = card.querySelector('.total-with-vat-display');
+      if (withVatDisplay) withVatDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      
+      // Update damage centers subtotal
+      updateDamageCentersSubtotal();
+    }
+    
+    // Create damage centers subtotal
+    function createDamageCentersSubtotal() {
+      const existingSubtotal = document.getElementById('damageCentersSubtotal');
+      if (existingSubtotal) {
+        existingSubtotal.remove();
+      }
+      
+      const damageCentersContent = document.getElementById('damageCentersContent');
+      if (!damageCentersContent) return;
+      
+      const subtotalHTML = `
+        <div id="damageCentersSubtotal" style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 8px; border: 2px solid #bee5eb;">
+          <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">סה"כ עלויות מוקדי נזק:</h4>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center;">
+            <div>
+              <div style="font-size: 14px; color: #666;">סה"כ חלקים</div>
+              <div id="totalPartsCost" style="font-size: 20px; font-weight: bold; color: #28a745;">₪0</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; color: #666;">סה"כ עבודות</div>
+              <div id="totalWorksCost" style="font-size: 20px; font-weight: bold; color: #17a2b8;">₪0</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; color: #666;">לפני מע"מ</div>
+              <div id="totalBeforeVAT" style="font-size: 20px; font-weight: bold; color: #6c757d;">₪0</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; color: #666;">כולל מע"מ</div>
+              <div id="totalWithVAT" style="font-size: 24px; font-weight: bold; color: #dc3545;">₪0</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      damageCentersContent.insertAdjacentHTML('beforeend', subtotalHTML);
+      updateDamageCentersSubtotal();
+    }
+    
+    // Update damage centers subtotal
+    function updateDamageCentersSubtotal() {
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17) * 100;
+      
+      let totalParts = 0;
+      let totalWorks = 0;
+      
+      document.querySelectorAll('.damage-center-card').forEach(card => {
+        card.querySelectorAll('.part-price').forEach(input => {
+          totalParts += parseFloat(input.value) || 0;
+        });
+        
+        card.querySelectorAll('.work-cost').forEach(input => {
+          totalWorks += parseFloat(input.value) || 0;
+        });
+      });
+      
+      const totalBeforeVAT = totalParts + totalWorks;
+      const totalWithVAT = totalBeforeVAT * (1 + vatRate / 100);
+      
+      // Update displays
+      const totalPartsDisplay = document.getElementById('totalPartsCost');
+      if (totalPartsDisplay) totalPartsDisplay.textContent = `₪${totalParts.toLocaleString()}`;
+      
+      const totalWorksDisplay = document.getElementById('totalWorksCost');
+      if (totalWorksDisplay) totalWorksDisplay.textContent = `₪${totalWorks.toLocaleString()}`;
+      
+      const totalBeforeDisplay = document.getElementById('totalBeforeVAT');
+      if (totalBeforeDisplay) totalBeforeDisplay.textContent = `₪${totalBeforeVAT.toLocaleString()}`;
+      
+      const totalWithDisplay = document.getElementById('totalWithVAT');
+      if (totalWithDisplay) totalWithDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      
+      // Update claims data fields
+      const totalClaimField = document.getElementById('totalClaim');
+      if (totalClaimField) {
+        totalClaimField.value = `₪${totalBeforeVAT.toLocaleString()}`;
+      }
+      
+      // Update damage percentage calculation
+      calculateDamagePercentage();
+    }
+    
+    // Show part suggestions
+    window.showPartSuggestions = function(input, centerIndex, partIndex) {
+      const value = input.value.trim();
+      const suggestionsDiv = input.nextElementSibling;
+      
+      if (value.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+      }
+      
+      // This would integrate with parts search module
+      // For now, just hide suggestions
+      suggestionsDiv.style.display = 'none';
+    };
+    
+    // Handle work type change
+    window.handleWorkTypeChange = function(select, centerIndex, workIndex) {
+      // Could implement auto-pricing based on work type
+      EstimateBuilderState.hasChanges = true;
+    };
+    
+    // Save damage center changes
+    window.saveDamageCenterChanges = function() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize centers if not exists
+        if (!helper.centers) helper.centers = [];
+        
+        // Initialize estimate structure
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
+        
+        // Clear all structures
+        helper.centers = [];
+        helper.estimate.damage_centers = [];
+        
+        // Collect data from all damage center cards
+        document.querySelectorAll('.damage-center-card').forEach((card, index) => {
+          const centerNumber = index + 1;
+          const centerLocation = card.querySelector('.damage-center-location').value;
+          const centerDescription = card.querySelector('.damage-center-description').value;
+          
+          // Collect parts
+          const parts = [];
+          card.querySelectorAll('.part-row').forEach(row => {
+            const name = row.querySelector('.part-name').value;
+            const desc = row.querySelector('.part-desc').value;
+            const price = parseFloat(row.querySelector('.part-price').value) || 0;
+            const source = row.querySelector('.part-source').value;
+            
+            if (name || price) {
+              parts.push({ name, desc, price, source });
+            }
+          });
+          
+          // Collect works
+          const works = [];
+          card.querySelectorAll('.work-row').forEach(row => {
+            const name = row.querySelector('.work-name').value;
+            const type = row.querySelector('.work-type').value;
+            const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+            
+            if (name || cost) {
+              works.push({ name, type, cost });
+            }
+          });
+          
+          // Create center object
+          const centerData = {
+            "Damage center Number": centerNumber,
+            "Location": centerLocation,
+            "Description": centerDescription,
+            "Parts": { parts_required: parts },
+            "Works": { works: works },
+            "Repairs": { repairs: [] }
+          };
+          
+          helper.centers.push(centerData);
+          
+          // Also save to estimate structure
+          helper.estimate.damage_centers.push({
+            center_number: centerNumber,
+            center_name: centerLocation,
+            center_location: centerLocation,
+            damage_description: centerDescription,
+            parts: parts,
+            works: works,
+            costs_breakdown: {
+              parts_cost: parts.reduce((sum, p) => sum + p.price, 0),
+              work_cost: works.reduce((sum, w) => sum + w.cost, 0)
+            }
+          });
+        });
+        
+        // Save to session storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update window.helper if exists
+        if (window.helper) {
+          window.helper = helper;
+        }
+        
+        console.log('✅ Damage centers saved successfully');
+        return true;
+        
+      } catch (error) {
+        console.error('❌ Error saving damage centers:', error);
+        return false;
+      }
+    };
+    
+    // Save damage center changes with feedback
+    function saveDamageCenterChangesWithFeedback() {
+      const button = event.target;
+      const originalText = button.textContent;
+      
+      button.disabled = true;
+      button.textContent = 'שומר...';
+      
+      if (saveDamageCenterChanges()) {
+        button.style.background = '#28a745';
+        button.textContent = '✓ נשמר!';
+        showMessage('נתוני מוקדי הנזק נשמרו בהצלחה', 'success');
+        
+        setTimeout(() => {
+          button.disabled = false;
+          button.style.background = '';
+          button.textContent = originalText;
+        }, 2000);
+      } else {
+        button.style.background = '#dc3545';
+        button.textContent = '✗ שגיאה';
+        showMessage('שגיאה בשמירת נתוני מוקדי הנזק', 'error');
+        
+        setTimeout(() => {
+          button.disabled = false;
+          button.style.background = '';
+          button.textContent = originalText;
+        }, 2000);
+      }
+    }
+    
+    // Calculate damage percentage
+    function calculateDamagePercentage() {
+      const totalDamage = parseFloat(document.getElementById('totalBeforeVAT')?.textContent.replace(/[₪,]/g, '')) || 0;
+      const grossValue = parseFloat(document.getElementById('grossMarketValueField')?.value.replace(/[₪,]/g, '')) || 0;
+      
+      if (grossValue > 0) {
+        const percentage = (totalDamage / grossValue) * 100;
+        const percentageField = document.getElementById('grossDamagePercentage');
+        if (percentageField) {
+          percentageField.value = percentage.toFixed(2) + '%';
+        }
+        
+        // Update damage cost field
+        const damageCostField = document.getElementById('totalDamageCost');
+        if (damageCostField) {
+          damageCostField.value = `₪${totalDamage.toLocaleString()}`;
+        }
+        
+        // Update gross value display
+        const grossValueDisplay = document.getElementById('grossValueDisplay');
+        if (grossValueDisplay) {
+          grossValueDisplay.value = `₪${grossValue.toLocaleString()}`;
+        }
+        
+        // Update summary damage percentage
+        const summaryPercentage = document.getElementById('damagePercentage');
+        if (summaryPercentage) {
+          summaryPercentage.textContent = percentage.toFixed(2) + '%';
+        }
+      }
     }
 
     function addDepField() {
@@ -1261,10 +1658,229 @@
       }
     }
 
-    // Placeholder loader functions
+    // Load damage centers from helper
     function loadDamageCenters(helper) {
       console.log('🏗️ Load damage centers');
-      // Implementation here
+      loadDamageCentersSummary(helper);
+    }
+    
+    // LOAD DAMAGE CENTERS SUMMARY - EDITABLE CARDS
+    function loadDamageCentersSummary(helper) {
+      try {
+        const damageCentersContent = document.getElementById('damageCentersContent');
+        
+        // Load from damage centers helper (primary source) with fallbacks
+        const damageCenters = helper.centers || 
+                             helper.damage_centers || 
+                             helper.expertise?.damage_blocks || [];
+        
+        if (damageCenters && damageCenters.length > 0) {
+          let summaryHTML = '<div style="display: grid; gap: 15px;" id="editableDamageCenters">';
+          
+          damageCenters.forEach((center, index) => {
+            // Adapt centers data structure to damage block structure for compatibility
+            const adaptedCenter = adaptCenterToBlock(center, index);
+            summaryHTML += createEditableDamageCenterCard(adaptedCenter, index);
+          });
+          
+          summaryHTML += '</div>';
+          damageCentersContent.innerHTML = summaryHTML;
+          
+          // Add event listeners after HTML is created
+          setTimeout(addDamageCenterEventListeners, 100);
+          
+          // Create damage centers subtotal
+          setTimeout(createDamageCentersSubtotal, 150);
+          
+        } else {
+          damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
+        }
+      } catch (error) {
+        console.error('Error loading damage centers summary:', error);
+        document.getElementById('damageCentersContent').innerHTML = '<div style="color: #dc3545; text-align: center;">שגיאה בטעינת נתוני מוקדי נזק</div>';
+      }
+    }
+    
+    // Adapt centers data structure to damage block structure for compatibility
+    function adaptCenterToBlock(center, index) {
+      const adaptedBlock = {
+        damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
+        damage_center_number: (() => {
+          const num = center["Damage center Number"] || center.damage_center_number || (index + 1);
+          if (typeof num === 'string' && num.includes('מוקד')) {
+            const match = num.match(/\d+$/);
+            return match ? match[0] : String(index + 1);
+          }
+          return num;
+        })(),
+        description: center.Description || center.description || '',
+        works: center.Works?.works || center.works || [],
+        parts: center.Parts?.parts_required || center.Parts?.parts || center.parts_required || center.parts || center.Parts || [],
+        repairs: center.Repairs?.repairs || center.repairs || [],
+        works_meta: center.Works?.works_meta || center.works_meta || { total_cost: 0 },
+        parts_meta: center.Parts?.parts_meta || center.parts_meta || { total_cost: 0 },
+        repairs_meta: center.Repairs?.repairs_meta || center.repairs_meta || { total_cost: 0 },
+        total_cost: center.Summary?.["Total with VAT"] || center.total_cost || 0
+      };
+      
+      // Additional normalization for different data structures
+      if (Array.isArray(center.Works) && adaptedBlock.works.length === 0) {
+        adaptedBlock.works = center.Works;
+      }
+      if (Array.isArray(center.Parts) && adaptedBlock.parts.length === 0) {
+        adaptedBlock.parts = center.Parts;
+      }
+      if (Array.isArray(center.Repairs) && adaptedBlock.repairs.length === 0) {
+        adaptedBlock.repairs = center.Repairs;
+      }
+      
+      console.log(`✅ Adapted block ${index}:`, adaptedBlock);
+      console.log(`📋 Parts found: ${adaptedBlock.parts.length}, Works found: ${adaptedBlock.works.length}`);
+      
+      return adaptedBlock;
+    }
+    
+    // CREATE EDITABLE DAMAGE CENTER CARD
+    function createEditableDamageCenterCard(block, index) {
+      const centerNum = block.damage_center_number || (index + 1);
+      const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
+      
+      // Get VAT rate
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17) * 100;
+      
+      // Calculate costs from parts, works, repairs
+      const partsCost = block.parts?.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0) || 0;
+      const worksCost = block.works?.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0) || 0;
+      const repairsCost = block.repairs?.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0) || 0;
+      
+      const totalBeforeVat = partsCost + worksCost + repairsCost;
+      const totalWithVAT = totalBeforeVat * (1 + vatRate / 100);
+      
+      // Get existing parts, works, repairs from block
+      const parts = block.parts || [];
+      const works = block.works || [];
+      const repairs = block.repairs || [];
+      
+      return `
+        <div class="damage-center-card" data-center-index="${index}">
+          <div class="damage-center-header">
+            <h4>מוקד נזק מס' ${centerNum}</h4>
+            <button onclick="removeDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
+          </div>
+          
+          <!-- Damage Center Location Field -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">שם מוקד הנזק:</label>
+            <input type="text" class="damage-center-location" style="width: 100%; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px;" placeholder="הזן שם/איזור מוקד הנזק" value="${centerLocation}" />
+          </div>
+          
+          <!-- Damage Description Field -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">תיאור הנזק:</label>
+            <textarea class="damage-center-description" style="width: 100%; min-height: 60px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px; resize: vertical;" placeholder="הזן תיאור מפורט של הנזק במוקד זה...">${block.description || ''}</textarea>
+          </div>
+
+          <!-- Parts Section -->
+          <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">חלקים נדרשים:</h4>
+            <div class="parts-list" data-center="${index}">
+              ${parts.map((part, partIndex) => createEditablePartRow(part, index, partIndex)).join('')}
+            </div>
+            <button onclick="addPartRow(${index})" class="btn" style="background: #28a745; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף חלק</button>
+          </div>
+
+          <!-- Works Section -->
+          <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">עבודות נדרשות:</h4>
+            <div class="works-list" data-center="${index}">
+              ${works.map((work, workIndex) => createEditableWorkRow(work, index, workIndex)).join('')}
+            </div>
+            <button onclick="addWorkRow(${index})" class="btn" style="background: #17a2b8; color: white; padding: 6px 12px; margin-top: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">הוסף עבודה</button>
+          </div>
+
+          <!-- Cost Summary -->
+          <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 14px;">
+              <div><strong>חלקים:</strong> <span class="parts-costs-display">₪${partsCost.toLocaleString()}</span></div>
+              <div><strong>עבודות:</strong> <span class="work-costs-display">₪${worksCost.toLocaleString()}</span></div>
+              <div><strong>לפני מע"מ:</strong> <span class="total-before-vat">₪${totalBeforeVat.toLocaleString()}</span></div>
+              <div><strong>כולל מע"מ:</strong> <span class="total-with-vat-display">₪${Math.round(totalWithVAT).toLocaleString()}</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // CREATE EDITABLE PART ROW
+    function createEditablePartRow(part, centerIndex, partIndex) {
+      const partName = part?.name || '';
+      const partDesc = part?.desc || part?.description || '';
+      const partPrice = part?.price || 0;
+      const partSource = part?.source || 'תחליפי';
+      
+      return `
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div style="position: relative;">
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
+            <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
+                   onkeyup="showPartSuggestions(this, ${centerIndex}, ${partIndex})" />
+            <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
+            <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">מחיר:</label>
+            <input type="number" value="${partPrice}" placeholder="מחיר" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateCostDisplay(this.closest('.damage-center-card'))" />
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">מקור:</label>
+            <select class="part-source" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              <option value="מקורי" ${partSource === 'מקורי' ? 'selected' : ''}>מקורי</option>
+              <option value="תחליפי" ${partSource === 'תחליפי' ? 'selected' : ''}>תחליפי</option>
+              <option value="משומש" ${partSource === 'משומש' ? 'selected' : ''}>משומש</option>
+            </select>
+          </div>
+          <div style="align-self: end;">
+            <button onclick="removePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // CREATE EDITABLE WORK ROW
+    function createEditableWorkRow(work, centerIndex, workIndex) {
+      const workName = work?.name || work?.work_name || '';
+      const workType = work?.type || work?.work_type || 'פחחות';
+      const workCost = work?.cost || work?.work_cost || 0;
+      
+      return `
+        <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור העבודה:</label>
+            <input type="text" value="${workName}" placeholder="תיאור העבודה" class="work-name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סוג עבודה:</label>
+            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="handleWorkTypeChange(this, ${centerIndex}, ${workIndex})">
+              <option value="פחחות" ${workType === 'פחחות' ? 'selected' : ''}>פחחות</option>
+              <option value="צבע" ${workType === 'צבע' ? 'selected' : ''}>צבע</option>
+              <option value="מכונאות" ${workType === 'מכונאות' ? 'selected' : ''}>מכונאות</option>
+              <option value="חשמל" ${workType === 'חשמל' ? 'selected' : ''}>חשמל</option>
+              <option value="אחר" ${workType === 'אחר' ? 'selected' : ''}>אחר</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות:</label>
+            <input type="number" value="${workCost}" placeholder="עלות" class="work-cost" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateCostDisplay(this.closest('.damage-center-card'))" />
+          </div>
+          <div style="align-self: end;">
+            <button onclick="removeWorkRow(${centerIndex}, ${workIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
+          </div>
+        </div>
+      `;
     }
 
     function loadAdjustments(helper) {
