@@ -1205,11 +1205,17 @@
         element.addEventListener('input', handleDamageCenterChange);
       });
       
-      // Add specific listeners for cost inputs
+      // Add specific listeners for cost inputs with proper updates
       document.querySelectorAll('.part-price, .work-cost, .repair-cost').forEach(input => {
-        input.removeEventListener('input', function(e) { updateCostDisplay(e.target.closest('.editable-damage-card')); });
-        input.addEventListener('input', function(e) { updateCostDisplay(e.target.closest('.editable-damage-card')); });
+        input.removeEventListener('input', handleCostInputChange);
+        input.addEventListener('input', handleCostInputChange);
       });
+    }
+    
+    function handleCostInputChange(e) {
+      const card = e.target.closest('.editable-damage-card');
+      updateCostDisplay(card);
+      updateDamageCentersSubtotal();
     }
     
     // Handle damage center changes
@@ -1275,24 +1281,28 @@
       if (!damageCentersContent) return;
       
       const subtotalHTML = `
-        <div id="damageCentersSubtotal" style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 8px; border: 2px solid #bee5eb;">
-          <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">סה"כ עלויות מוקדי נזק:</h4>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center;">
-            <div>
-              <div style="font-size: 14px; color: #666;">סה"כ חלקים</div>
-              <div id="totalPartsCost" style="font-size: 20px; font-weight: bold; color: #28a745;">₪0</div>
+        <div id="damageCentersSubtotal" style="background: #f8f9fa; border: 2px solid #28a745; border-radius: 6px; padding: 12px; margin-top: 15px;">
+          <h4 style="margin: 0 0 10px 0; color: #28a745; text-align: center; font-size: 14px; font-weight: bold;">🧮 סיכום כללי - מרכזי נזק</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px;">
+            <div style="background: #17a2b8; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalWorksCost">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">סה"כ עבודות</div>
             </div>
-            <div>
-              <div style="font-size: 14px; color: #666;">סה"כ עבודות</div>
-              <div id="totalWorksCost" style="font-size: 20px; font-weight: bold; color: #17a2b8;">₪0</div>
+            <div style="background: #28a745; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalPartsCost">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">סה"כ חלפים</div>
             </div>
-            <div>
-              <div style="font-size: 14px; color: #666;">לפני מע"מ</div>
-              <div id="totalBeforeVAT" style="font-size: 20px; font-weight: bold; color: #6c757d;">₪0</div>
+            <div style="background: #ffc107; color: #212529; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalRepairsCost">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">סה"כ תיקונים</div>
             </div>
-            <div>
-              <div style="font-size: 14px; color: #666;">כולל מע"מ</div>
-              <div id="totalWithVAT" style="font-size: 24px; font-weight: bold; color: #dc3545;">₪0</div>
+            <div style="background: #6c757d; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalBeforeVAT">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">לפני מע"מ</div>
+            </div>
+            <div style="background: #dc3545; color: white; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 16px; font-weight: bold;" id="totalWithVAT">₪0</div>
+              <div style="font-size: 10px; opacity: 0.9;">כולל מע"מ</div>
             </div>
           </div>
         </div>
@@ -1302,25 +1312,35 @@
       updateDamageCentersSubtotal();
     }
     
-    // Update damage centers subtotal
+    // UPDATE DAMAGE CENTERS SUBTOTAL - COMPLETE VERSION
     function updateDamageCentersSubtotal() {
-      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() : 0.17) * 100;
-      
-      let totalParts = 0;
       let totalWorks = 0;
+      let totalParts = 0;
+      let totalRepairs = 0;
       
-      document.querySelectorAll('.damage-center-card').forEach(card => {
-        card.querySelectorAll('.part-price').forEach(input => {
-          totalParts += parseFloat(input.value) || 0;
+      // Calculate totals from all damage center cards
+      document.querySelectorAll('.editable-damage-card').forEach(card => {
+        // Sum parts costs
+        card.querySelectorAll('.part-row').forEach(row => {
+          const price = parseFloat(row.querySelector('.part-price').value) || 0;
+          totalParts += price;
         });
         
-        card.querySelectorAll('.work-cost').forEach(input => {
-          totalWorks += parseFloat(input.value) || 0;
+        // Sum work costs
+        card.querySelectorAll('.work-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+          totalWorks += cost;
+        });
+        
+        // Sum repair costs
+        card.querySelectorAll('.repair-row').forEach(row => {
+          const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
+          totalRepairs += cost;
         });
       });
       
-      const totalBeforeVAT = totalParts + totalWorks;
-      const totalWithVAT = totalBeforeVAT * (1 + vatRate / 100);
+      const totalWithoutVat = totalWorks + totalParts + totalRepairs;
+      const totalWithVat = totalWithoutVat * 1.17;
       
       // Update displays
       const totalPartsDisplay = document.getElementById('totalPartsCost');
@@ -1329,11 +1349,14 @@
       const totalWorksDisplay = document.getElementById('totalWorksCost');
       if (totalWorksDisplay) totalWorksDisplay.textContent = `₪${totalWorks.toLocaleString()}`;
       
+      const totalRepairsDisplay = document.getElementById('totalRepairsCost');
+      if (totalRepairsDisplay) totalRepairsDisplay.textContent = `₪${totalRepairs.toLocaleString()}`;
+      
       const totalBeforeDisplay = document.getElementById('totalBeforeVAT');
-      if (totalBeforeDisplay) totalBeforeDisplay.textContent = `₪${totalBeforeVAT.toLocaleString()}`;
+      if (totalBeforeDisplay) totalBeforeDisplay.textContent = `₪${totalWithoutVat.toLocaleString()}`;
       
       const totalWithDisplay = document.getElementById('totalWithVAT');
-      if (totalWithDisplay) totalWithDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      if (totalWithDisplay) totalWithDisplay.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
       
       // Update claims data fields
       const totalClaimField = document.getElementById('totalClaim');
@@ -2064,6 +2087,9 @@
           damageCentersContent.innerHTML = summaryHTML;
           
           setTimeout(addDamageCenterEventListeners, 100);
+          
+          // Add subtotal section after damage centers
+          createDamageCentersSubtotal();
         } else {
           damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
         }
