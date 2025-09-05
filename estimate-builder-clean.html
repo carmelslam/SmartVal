@@ -1195,7 +1195,13 @@
       const newCardHTML = createEditableDamageCenterCard(newBlock, newIndex);
       document.getElementById('editableDamageCenters').insertAdjacentHTML('beforeend', newCardHTML);
       
-      setTimeout(addDamageCenterEventListeners, 100);
+      setTimeout(() => {
+        addDamageCenterEventListeners();
+        // Create subtotal if it doesn't exist
+        if (!document.getElementById('damageCentersSubtotal')) {
+          createDamageCentersSubtotal();
+        }
+      }, 100);
     }
 
     function addDamageCenterEventListeners() {
@@ -2090,6 +2096,14 @@
           
           // Add subtotal section after damage centers
           createDamageCentersSubtotal();
+          
+          // Update all cost displays after loading
+          setTimeout(() => {
+            document.querySelectorAll('.editable-damage-card').forEach(card => {
+              updateCostDisplay(card);
+            });
+            updateDamageCentersSubtotal();
+          }, 150);
         } else {
           damageCentersContent.innerHTML = '<div style="color: #666; text-align: center;">לא נמצאו נתוני מוקדי נזק - לחץ "הוסף מוקד נזק חדש" כדי להתחיל</div>';
         }
@@ -2136,10 +2150,25 @@
     function createEditableDamageCenterCard(block, index) {
       const centerNum = block.damage_center_number || (index + 1);
       const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
-      const workCosts = block.work_cost || 0;
-      const partsCosts = block.parts_cost || 0;
-      const repairsCosts = workCosts + partsCosts;
-      const totalWithVAT = repairsCosts * 1.17;
+      
+      // Calculate initial costs from actual data
+      let workCosts = 0;
+      let partsCosts = 0; 
+      let repairsCosts = 0;
+      
+      // Calculate from existing data if available
+      if (block.works && Array.isArray(block.works)) {
+        workCosts = block.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
+      }
+      if (block.parts && Array.isArray(block.parts)) {
+        partsCosts = block.parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+      }
+      if (block.repairs && Array.isArray(block.repairs)) {
+        repairsCosts = block.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
+      }
+      
+      const totalCost = workCosts + partsCosts + repairsCosts;
+      const totalWithVAT = totalCost * 1.17;
       
       const parts = block.parts || [];
       const works = block.works || [];
