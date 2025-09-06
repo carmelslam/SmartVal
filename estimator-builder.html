@@ -2091,62 +2091,74 @@
       }
     }
 
-    function updateHelperFromAdjustments() {
+    function updateHelperFromAdjustments(helper) {
       console.log('📊 Update helper from adjustments');
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
         // Ensure valuation structure exists
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
         
-        // Update basic price
+        // 1. Update basic price
         const basicPriceField = document.getElementById('basicPrice');
         if (basicPriceField && basicPriceField.value) {
-          if (!helper.valuation) helper.valuation = {};
           helper.valuation.base_price = parseFloat((basicPriceField.value || '').replace(/[₪,]/g, '')) || 0;
         }
         
-        // Update features adjustments
+        // 2. Update features adjustments - CORRECT FIELD MAPPING
+        if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = {};
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         if (featuresRows.length > 0) {
-          if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = {};
           const firstRow = featuresRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.features.value = inputs[0].value || '';
-            helper.valuation.adjustments.features.type = inputs[1].value || 'plus';
-            helper.valuation.adjustments.features.percentage = inputs[2].value || '';
-            helper.valuation.adjustments.features.amount = inputs[3].value || '';
+            // Store the description in the correct field
+            helper.valuation.adjustments.features.description = inputs[0].value || '';
+            helper.valuation.adjustments.features.value = inputs[0].value || ''; // Also store in value for backward compatibility
+            
+            // Store percentage as number
+            const percentage = parseFloat(inputs[2].value) || 0;
+            helper.valuation.adjustments.features.percentage = percentage;
+            
+            // Store amount without formatting
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.features.amount = type === 'minus' ? -amount : amount;
+            
+            // Also store the display value
+            helper.valuation.adjustments.features.value = amount.toString();
           }
         }
         
-        // Update registration adjustments
+        // 3. Update registration adjustments - CORRECT FIELD MAPPING
+        if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
-          if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
           const firstRow = registrationRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
+            // Store description/value correctly
             helper.valuation.adjustments.registration.value = inputs[0].value || '';
-            helper.valuation.adjustments.registration.type = inputs[1].value || 'plus';
-            helper.valuation.adjustments.registration.percent = inputs[2].value || '';
-            helper.valuation.adjustments.registration.amount = inputs[3].value || '';
+            helper.valuation.adjustments.registration.description = inputs[0].value || '';
+            
+            // Store percentage as number
+            const percentage = parseFloat(inputs[2].value) || 0;
+            helper.valuation.adjustments.registration.percent = percentage;
+            
+            // Store amount without formatting  
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.registration.amount = type === 'minus' ? -amount : amount;
           }
         }
         
-        // Save back to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Updated helper from adjustments:', helper.valuation);
         
-        // Update window.helper if it exists
-        if (window.helper) {
-          window.helper = helper;
-        }
-        
-        console.log('✅ Updated helper from adjustments');
+        // Return the updated helper
+        return helper;
         
       } catch (error) {
         console.error('❌ Error updating helper from adjustments:', error);
+        return helper;
       }
     }
 
@@ -2615,6 +2627,13 @@
     // Load gross adjustments - EXACT COPY from final-report-builder loadGrossAdjustments function
     function loadGrossAdjustmentsFromHelper(helper) {
       try {
+        // FIRST LOAD THE BASIC PRICE!
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && helper.valuation?.base_price) {
+          basicPriceField.value = `₪${helper.valuation.base_price.toLocaleString()}`;
+          console.log('✅ Loaded basic price:', helper.valuation.base_price);
+        }
+        
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
 
@@ -2637,12 +2656,12 @@
               const inputs = row.querySelectorAll('input, select');
               
               // Use EXACT paths from your mapping
-              const amount = parseFloat(helper.valuation.adjustments.features.value?.toString().replace(/[₪,\s]/g, '')) || 0;
+              const amount = parseFloat(helper.valuation.adjustments.features.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
               const percent = parseFloat(helper.valuation.adjustments.features.percentage) || 0;
               
               if (inputs.length >= 4) {
                 // Use description from the exact path 
-                const desc = helper.valuation?.adjustments?.features?.description || '';
+                const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';
                 inputs[0].value = desc;
                 
                 // Determine type based on negative values in helper data
@@ -3691,7 +3710,9 @@
         
         // Update calculations
         updateGrossMarketValueCalculation();
-        updateHelperFromAdjustments();
+        
+        // Update helper with form values - THIS IS THE KEY!
+        helper = updateHelperFromAdjustments(helper);
         
         // 1. WRITE TO DATA SOURCE: Update helper.valuation.adjustments with current form values
         writeToDataSource(helper);
@@ -3739,20 +3760,57 @@
     // Make sure function is globally accessible
     window.saveGrossValueWithFeedback = saveGrossValueWithFeedback;
     
+    // Auto-save function for real-time updates
+    function autoSaveToHelper() {
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Update helper with current form values
+        helper = updateHelperFromAdjustments(helper);
+        
+        // Save to all storage locations
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update window.helper
+        if (typeof window.updateHelper === 'function') {
+          window.updateHelper(helper);
+        } else {
+          window.helper = helper;
+        }
+        
+        console.log('✅ Auto-saved to helper');
+        
+      } catch (error) {
+        console.error('❌ Error in auto-save:', error);
+      }
+    }
+    
     // Add real-time calculation listeners
     function addCalculationListeners() {
       // Listen to basic price changes
       const basicPriceField = document.getElementById('basicPrice');
       if (basicPriceField) {
-        basicPriceField.addEventListener('input', updateGrossMarketValueCalculation);
+        basicPriceField.addEventListener('input', function() {
+          updateGrossMarketValueCalculation();
+          // AUTO-SAVE ON EVERY CHANGE
+          autoSaveToHelper();
+        });
       }
       
       // Listen to all adjustment input changes
       function addListenersToAdjustmentRows() {
         const allInputs = document.querySelectorAll('#featuresAdjustmentsList input, #registrationAdjustmentsList input, #featuresAdjustmentsList select, #registrationAdjustmentsList select');
         allInputs.forEach(input => {
-          input.addEventListener('input', updateGrossMarketValueCalculation);
-          input.addEventListener('change', updateGrossMarketValueCalculation);
+          input.addEventListener('input', function() {
+            updateGrossMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            autoSaveToHelper();
+          });
+          input.addEventListener('change', function() {
+            updateGrossMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            autoSaveToHelper();
+          });
         });
       }
       
