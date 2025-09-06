@@ -155,6 +155,33 @@
       font-size: 16px;
       display: block;
     }
+
+    .btn.add {
+      background: #3ea74b;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    .btn.add:hover {
+      background: #359a3e;
+    }
+
+    .btn.remove {
+      background: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn.remove:hover {
+      background: #c82333;
+    }
     
     .collapsible-btn {
       width: 100%;
@@ -619,22 +646,55 @@
           <div></div>
         </div>
         
-        <h4>תוספות מאפיינים</h4>
-        <div id="featuresAdjustmentsList"></div>
-        <button type="button" class="btn btn-secondary" onclick="addFeatureAdjustment()">+ הוסף מאפיין</button>
-        
-        <h4>עליה לכביש</h4>
-        <div id="registrationAdjustmentsList"></div>
-        <button type="button" class="btn btn-secondary" onclick="addRegistrationAdjustment()">+ הוסף עליה לכביש</button>
-        
-        <div class="summary-grid" style="margin-top: 20px; background: #f0f9ff; padding: 15px; border-radius: 8px;">
-          <div>
-            <label>ערך גולמי מצטבר:</label>
-            <input type="text" id="grossMarketValueField" readonly style="background: white; font-weight: bold;">
+        <!-- Features Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">תוספות מאפיינים (תכונות הרכב):</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            תוספות הקשורות לתכונות פיזיות של הרכב עצמו
           </div>
-          <div>
-            <label>עדכון ידני של ערך גולמי:</label>
-            <input type="text" id="manualGrossValue" placeholder="הכנס ערך ידני" onchange="updateGrossPercentageFromGrossValue()">
+          <div id="featuresAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="featuresAdjustmentsList"></div>
+            <div id="grossFeaturesCumulative" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-weight: bold; text-align: center;">
+              ערך לאחר תוספות מאפיינים: <span style="color: #28a745;">₪0</span>
+            </div>
+            <button class="btn add" type="button" onclick="addFeatureAdjustment()">הוסף תוספת מאפיין</button>
+          </div>
+        </div>
+        
+        <!-- Registration Adjustments -->
+        <div style="margin-top: 20px;">
+          <h4 style="color: #1e3a8a; margin-bottom: 10px;">עליה לכביש (תאריך רישום):</h4>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            התאמות בגין תאריך רישום הרכב (מאפיין קבוע של הרכב)
+          </div>
+          <div id="registrationAdjustments">
+            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><label>תיאור:</label></div>
+              <div><label>סוג:</label></div>
+              <div><label>אחוז:</label></div>
+              <div><label>ערך:</label></div>
+              <div><label>פעולות:</label></div>
+            </div>
+            <div id="registrationAdjustmentsList"></div>
+            <div id="grossRegistrationCumulative" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-weight: bold; text-align: center;">
+              ערך לאחר עליה לכביש: <span style="color: #28a745;">₪0</span>
+            </div>
+            <button class="btn add" type="button" onclick="addRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
+          </div>
+        </div>
+        
+        <!-- Gross Market Value Result -->
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; border: 2px solid #4a90e2;">
+          <div class="form-grid">
+            <div><label><strong>ערך הרכב לנזק גולמי כולל מע"מ:</strong></label><input type="text" id="grossMarketValueResult" style="background: #f8f9fa; font-weight: bold;" readonly /></div>
+            <div></div>
           </div>
         </div>
         <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
@@ -1225,20 +1285,53 @@
       document.getElementById('pageTitle').textContent = `רכב מס. ${plate}`;
     }
 
-    // Placeholder functions for features - implement as needed
+    // Add feature adjustment row
     function addFeatureAdjustment() {
-      console.log('➕ Add feature adjustment');
-      // Implementation here
+      const container = document.getElementById('featuresAdjustmentsList');
+      const rowId = 'featureAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateGrossMarketValueCalculation();
     }
 
+    // Add registration adjustment row
     function addRegistrationAdjustment() {
-      console.log('➕ Add registration adjustment');
-      // Implementation here
+      const container = document.getElementById('registrationAdjustmentsList');
+      const rowId = 'regAdj_' + Date.now();
+      
+      const newRow = `
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');">
+            <option value="plus">תוספת (+)</option>
+            <option value="minus">הפחתה (-)</option>
+          </select></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
+          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+      updateGrossMarketValueCalculation();
     }
 
     function addFullMarketAdjustment() {
       console.log('➕ Add full market adjustment');
-      // Implementation here
+      // Implementation for full market adjustment - kept as placeholder for now
     }
 
     
@@ -2774,6 +2867,236 @@
           </div>
         </div>
       `;
+    }
+
+    // Calculate and update GROSS PRICE (car properties only: base + features + registration)
+    function updateGrossMarketValueCalculation() {
+      try {
+        // Get base price
+        let basicPrice = 0;
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField?.value) {
+          basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        if (basicPrice === 0) {
+          basicPrice = helper.calculations?.base_market_value || helper.levisummary?.base_price || helper.valuation?.base_price || 0;
+        }
+        
+        let currentValue = basicPrice;
+        
+        // Process features adjustments
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const type = row.querySelector('select')?.value;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1];
+          const valueInput = inputs[2];
+          
+          if (percentInput && percentInput.value) {
+            const percent = parseFloat(percentInput.value) || 0;
+            if (percent > 0) {
+              const adjustment = basicPrice * (percent / 100);
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
+              currentValue += signedAdjustment;
+            }
+          } else if (valueInput && valueInput.value) {
+            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            const signedValue = (type === 'minus') ? -value : value;
+            currentValue += signedValue;
+          }
+        });
+        
+        // Update features cumulative
+        const grossFeaturesCumulativeEl = document.getElementById('grossFeaturesCumulative');
+        if (grossFeaturesCumulativeEl) {
+          const span = grossFeaturesCumulativeEl.querySelector('span');
+          if (span) {
+            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
+        }
+        
+        // Process registration adjustments
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const type = row.querySelector('select')?.value;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1];
+          const valueInput = inputs[2];
+          
+          if (percentInput && percentInput.value) {
+            const percent = parseFloat(percentInput.value) || 0;
+            if (percent > 0) {
+              const adjustment = basicPrice * (percent / 100);
+              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
+              currentValue += signedAdjustment;
+            }
+          } else if (valueInput && valueInput.value) {
+            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            const signedValue = (type === 'minus') ? -value : value;
+            currentValue += signedValue;
+          }
+        });
+        
+        // Update registration cumulative
+        const grossRegistrationCumulativeEl = document.getElementById('grossRegistrationCumulative');
+        if (grossRegistrationCumulativeEl) {
+          const span = grossRegistrationCumulativeEl.querySelector('span');
+          if (span) {
+            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
+        }
+        
+        // Update final gross market value
+        const grossMarketValueResult = document.getElementById('grossMarketValueResult');
+        if (grossMarketValueResult) {
+          grossMarketValueResult.value = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Also update any other fields that depend on gross value
+        const grossValueDisplay = document.getElementById('grossValueDisplay');
+        if (grossValueDisplay) {
+          grossValueDisplay.value = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Update gross percentage if function exists
+        if (typeof updateGrossPercentageField === 'function') {
+          updateGrossPercentageField();
+        }
+        
+      } catch (error) {
+        console.error('Error in updateGrossMarketValueCalculation:', error);
+      }
+    }
+
+    // Remove adjustment row
+    function removeAdjustmentRow(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+        updateGrossMarketValueCalculation();
+        updateHelperFromAdjustments();
+      }
+    }
+
+    // Calculate adjustment value from percentage
+    function calculateAdjustmentValueSimple(percentInput) {
+      const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
+      if (!row) return;
+      
+      const inputs = row.querySelectorAll('input[type="text"]');
+      const valueInput = inputs[2];
+      if (!valueInput) return;
+      
+      const percent = parseFloat(percentInput.value) || 0;
+      const basicPrice = parseFloat(document.getElementById('basicPrice')?.value?.replace(/[₪,]/g, '')) || 0;
+      
+      if (percent > 0 && basicPrice > 0) {
+        const calculatedValue = basicPrice * (percent / 100);
+        valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      }
+    }
+
+    // Sync adjustment to estimate helper (mirror data)
+    function syncAdjustmentToEstimateHelper(element, category) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize estimate structure if needed
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.gross_value_adjustments) {
+          helper.estimate.gross_value_adjustments = {
+            features: [],
+            registration: []
+          };
+        }
+        
+        // Clear and rebuild the adjustments
+        helper.estimate.gross_value_adjustments[category] = [];
+        
+        // Collect all adjustments of this category
+        const selector = category === 'features' ? '#featuresAdjustmentsList > div' : '#registrationAdjustmentsList > div';
+        const rows = document.querySelectorAll(selector);
+        
+        rows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              description: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+              timestamp: new Date().toISOString()
+            };
+            
+            if (adjustmentData.value !== 0 || adjustmentData.percentage !== 0) {
+              helper.estimate.gross_value_adjustments[category].push(adjustmentData);
+            }
+          }
+        });
+        
+        // Update gross market value in estimate
+        const grossValueResult = document.getElementById('grossMarketValueResult');
+        if (grossValueResult) {
+          helper.estimate.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+      } catch (error) {
+        console.error('Error syncing adjustment to estimate helper:', error);
+      }
+    }
+
+    // Update helper from adjustments
+    function updateHelperFromAdjustments() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Sync all features adjustments
+        syncAdjustmentToEstimateHelper(null, 'features');
+        syncAdjustmentToEstimateHelper(null, 'registration');
+        
+      } catch (error) {
+        console.error('Error updating helper from adjustments:', error);
+      }
+    }
+
+    // Save gross value with feedback
+    function saveGrossValueWithFeedback(event) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Update calculations
+        updateGrossMarketValueCalculation();
+        updateHelperFromAdjustments();
+        
+        // Save gross value
+        const grossValue = document.getElementById('grossMarketValueResult')?.value;
+        if (grossValue) {
+          if (!helper.calculations) helper.calculations = {};
+          helper.calculations.gross_market_value = parseFloat(grossValue.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Show feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'נשמר ✓';
+        button.style.background = '#28a745';
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#007bff';
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error saving gross value:', error);
+      }
     }
   </script>
 </body>
