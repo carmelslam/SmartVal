@@ -3721,10 +3721,8 @@
           window.helper = helper;
         }
         
-        // Rebuild damage assessment to sync damage_centers_summary with current centers data
-        if (typeof window.buildComprehensiveDamageAssessment === 'function') {
-          window.buildComprehensiveDamageAssessment();
-        }
+        // Force sync all damage center locations and rebuild assessment
+        window.rebuildAssessments();
         
         console.log('✅ Saved to all locations:', helper.estimate?.gross_values);
         console.log('✅ Final helper after save:', helper);
@@ -3751,8 +3749,22 @@
     
     // Function to rebuild assessments - call this whenever damage centers change
     window.rebuildAssessments = function() {
-      if (typeof window.buildComprehensiveDamageAssessment === 'function') {
-        window.buildComprehensiveDamageAssessment();
+      // FORCE SYNC ALL DAMAGE CENTER LOCATIONS
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Make sure helper.centers is the source of truth
+      if (helper.centers && Array.isArray(helper.centers)) {
+        // Copy centers to damage_centers location
+        helper.damage_centers = [...helper.centers];
+        
+        // Update window.helper
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Now rebuild assessment from the synced data
+        if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+          window.buildComprehensiveDamageAssessment();
+        }
       }
     };
     
@@ -3843,6 +3855,27 @@
         observer.observe(registrationContainer, { childList: true });
       }
     }
+    
+    // Add auto-save listeners to damage center fields
+    function addDamageCenterListeners() {
+      // Listen to all damage center input changes
+      const damageCenterInputs = document.querySelectorAll('input[data-field], textarea[data-field], select[data-field]');
+      damageCenterInputs.forEach(input => {
+        input.addEventListener('input', function() {
+          // Trigger assessment rebuild when damage center data changes
+          setTimeout(() => {
+            window.rebuildAssessments();
+          }, 100);
+        });
+        
+        input.addEventListener('change', function() {
+          // Trigger assessment rebuild when damage center data changes
+          setTimeout(() => {
+            window.rebuildAssessments();
+          }, 100);
+        });
+      });
+    }
 
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -3869,6 +3902,9 @@
         
         // Add calculation listeners
         addCalculationListeners();
+        
+        // Add damage center auto-save listeners
+        addDamageCenterListeners();
         
       } catch (error) {
         console.error('❌ Error loading data on page load:', error);
