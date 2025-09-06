@@ -2350,12 +2350,12 @@
       try {
         console.log('🏗️ Loading gross values from helper');
         
-        // Auto-populate basic price from helper data (same logic as final-report-builder)
+        // Auto-populate basic price using EXACT logic from final-report-builder
         const basicPriceField = document.getElementById('basicPrice');
         if (basicPriceField) {
           let basicPrice = 0;
           
-          // Try multiple sources for BASE PRICE (same priority as final-report-builder)
+          // EXACT MAPPING from final-report-builder loadFirstBulkData function
           if (helper.levi_report?.base_price) {
             basicPrice = parseFloat(helper.levi_report.base_price);
             console.log('📄 Found BASE PRICE in helper.levi_report.base_price:', basicPrice);
@@ -2368,52 +2368,74 @@
           } else if (helper.car_details?.base_price) {
             basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
             console.log('📄 Found BASE PRICE in helper.car_details.base_price:', basicPrice);
+          } else if (helper.valuation?.base_price) {
+            basicPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+            console.log('📄 Found BASE PRICE in helper.valuation.base_price:', basicPrice);
           }
           
           if (basicPrice > 0) {
             basicPriceField.value = `₪${basicPrice.toLocaleString()}`;
             console.log('✅ Auto-filled basic price field:', basicPrice);
+            
+            // Trigger helper update and calculation like in final-report-builder
+            updateHelperFromField({ target: basicPriceField });
+            setTimeout(() => {
+              if (typeof updateGrossMarketValueCalculation === 'function') {
+                updateGrossMarketValueCalculation();
+              }
+            }, 100);
+          } else {
+            console.warn('⚠️ No BASE PRICE found in helper for auto-population');
           }
         }
         
-        // Load existing gross adjustments from helper.estimate if available
-        if (helper.estimate?.gross_values) {
-          const grossValues = helper.estimate.gross_values;
+        // Load existing gross adjustments from helper.estimate.gross_sections if available
+        if (helper.estimate?.gross_sections) {
+          const grossValueSection = helper.estimate.gross_sections.find(
+            section => section.section_type === 'gross_vehicle_value'
+          );
           
-          // Load features adjustments
-          if (grossValues.features && grossValues.features.length > 0) {
-            console.log('📝 Loading features adjustments from helper.estimate');
-            grossValues.features.forEach(adjustment => {
-              addFeatureAdjustment();
-              const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
-              const lastRow = rows[rows.length - 1];
-              if (lastRow) {
-                const inputs = lastRow.querySelectorAll('input, select');
-                if (inputs[0]) inputs[0].value = adjustment.description || '';
-                if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
-                if (inputs[2]) inputs[2].value = adjustment.percentage || '';
-                if (inputs[3]) inputs[3].value = adjustment.value || '';
-              }
-            });
-          }
-          
-          // Load registration adjustments
-          if (grossValues.registration && grossValues.registration.length > 0) {
-            console.log('📅 Loading registration adjustments from helper.estimate');
-            grossValues.registration.forEach(adjustment => {
-              addRegistrationAdjustment();
-              const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
-              const lastRow = rows[rows.length - 1];
-              if (lastRow) {
-                const inputs = lastRow.querySelectorAll('input, select');
-                if (inputs[0]) inputs[0].value = adjustment.description || '';
-                if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
-                if (inputs[2]) inputs[2].value = adjustment.percentage || '';
-                if (inputs[3]) inputs[3].value = adjustment.value || '';
-              }
-            });
+          if (grossValueSection?.data) {
+            const data = grossValueSection.data;
+            
+            // Load features adjustments
+            if (data.features_adjustments && data.features_adjustments.length > 0) {
+              console.log('📝 Loading features adjustments from helper.estimate.gross_sections');
+              data.features_adjustments.forEach(adjustment => {
+                addFeatureAdjustment();
+                const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs[0]) inputs[0].value = adjustment.description || '';
+                  if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
+                  if (inputs[2]) inputs[2].value = adjustment.percentage || '';
+                  if (inputs[3]) inputs[3].value = adjustment.value || '';
+                }
+              });
+            }
+            
+            // Load registration adjustments
+            if (data.registration_adjustments && data.registration_adjustments.length > 0) {
+              console.log('📅 Loading registration adjustments from helper.estimate.gross_sections');
+              data.registration_adjustments.forEach(adjustment => {
+                addRegistrationAdjustment();
+                const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs[0]) inputs[0].value = adjustment.description || '';
+                  if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
+                  if (inputs[2]) inputs[2].value = adjustment.percentage || '';
+                  if (inputs[3]) inputs[3].value = adjustment.value || '';
+                }
+              });
+            }
           }
         }
+        
+        // Also load gross percentage section fields using same helper mapping as final-report-builder
+        loadGrossPercentageFields(helper);
         
         // Trigger calculation after loading
         setTimeout(() => {
@@ -2424,6 +2446,62 @@
         
       } catch (error) {
         console.error('❌ Error loading gross values:', error);
+      }
+    }
+    
+    // Load gross percentage fields using exact mapping from final-report-builder
+    function loadGrossPercentageFields(helper) {
+      try {
+        console.log('📊 Loading gross percentage fields from helper');
+        
+        // Map totalDamageCost field (estimator-builder field ID) - using EXACT logic from final-report-builder
+        const totalDamageCostField = document.getElementById('totalDamageCost');
+        if (totalDamageCostField) {
+          let totalClaim = 0;
+          
+          // EXACT mapping from final-report-builder
+          if (helper.calculations?.grand_total) {
+            totalClaim = parseFloat(helper.calculations.grand_total);
+          } else if (helper.claims_data?.total_with_vat) {
+            totalClaim = parseFloat(helper.claims_data.total_with_vat);
+          } else if (helper.expertise?.calculations?.grand_total) {
+            totalClaim = parseFloat(helper.expertise.calculations.grand_total);
+          }
+          
+          if (totalClaim > 0) {
+            totalDamageCostField.value = `₪${totalClaim.toLocaleString()}`;
+            console.log('✅ Auto-filled totalDamageCost:', totalClaim);
+          }
+        }
+        
+        // Map grossValueDisplay field (estimator-builder field ID) - using EXACT logic from final-report-builder  
+        const grossValueDisplayField = document.getElementById('grossValueDisplay');
+        if (grossValueDisplayField) {
+          let leviPrice = 0;
+          
+          // EXACT mapping from final-report-builder (same as basicPrice)
+          if (helper.levi_report?.base_price) {
+            leviPrice = parseFloat(helper.levi_report.base_price);
+          } else if (helper.expertise?.levi_report?.base_price) {
+            leviPrice = parseFloat(helper.expertise.levi_report.base_price);
+          } else if (helper.levisummary?.base_price) {
+            leviPrice = parseFloat(helper.levisummary.base_price);
+          } else if (helper.car_details?.base_price) {
+            leviPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
+          } else if (helper.valuation?.base_price) {
+            leviPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+          }
+          
+          if (leviPrice > 0) {
+            grossValueDisplayField.value = `₪${leviPrice.toLocaleString()}`;
+            console.log('✅ Auto-filled grossValueDisplay:', leviPrice);
+          }
+        }
+        
+        console.log('✅ Gross percentage fields loaded from helper');
+        
+      } catch (error) {
+        console.error('❌ Error loading gross percentage fields:', error);
       }
     }
 
@@ -3230,22 +3308,30 @@
       }
     }
 
-    // Save gross values to helper.estimate.gross_values for historical/reference purposes
+    // Save gross sections to helper.estimate as array (including both gross value and gross percentage sections)
     function saveGrossValuesToEstimateHelper(helper) {
       try {
         // Initialize estimate structure if it doesn't exist
         if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.gross_values) helper.estimate.gross_values = {};
+        if (!helper.estimate.gross_sections) helper.estimate.gross_sections = [];
+        
+        // Create gross value section data
+        const grossValueSection = {
+          section_type: 'gross_vehicle_value',
+          section_title: 'ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד',
+          data: {}
+        };
         
         // Save basic price
         const basicPriceField = document.getElementById('basicPrice');
         if (basicPriceField && basicPriceField.value) {
-          helper.estimate.gross_values.basic_price = basicPriceField.value;
+          grossValueSection.data.basic_price = basicPriceField.value;
+          grossValueSection.data.basic_price_raw = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
         }
         
         // Save features adjustments
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        helper.estimate.gross_values.features = [];
+        grossValueSection.data.features_adjustments = [];
         featuresRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -3253,17 +3339,18 @@
               description: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: inputs[2].value || '',
-              value: inputs[3].value || ''
+              value: inputs[3].value || '',
+              value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
             if (adjustment.description.trim()) {
-              helper.estimate.gross_values.features.push(adjustment);
+              grossValueSection.data.features_adjustments.push(adjustment);
             }
           }
         });
         
         // Save registration adjustments
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        helper.estimate.gross_values.registration = [];
+        grossValueSection.data.registration_adjustments = [];
         registrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -3271,10 +3358,11 @@
               description: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: inputs[2].value || '',
-              value: inputs[3].value || ''
+              value: inputs[3].value || '',
+              value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
             if (adjustment.description.trim()) {
-              helper.estimate.gross_values.registration.push(adjustment);
+              grossValueSection.data.registration_adjustments.push(adjustment);
             }
           }
         });
@@ -3284,19 +3372,59 @@
         const registrationCumulative = document.querySelector('#grossRegistrationCumulative span')?.textContent;
         const grossResult = document.getElementById('grossMarketValueResult')?.value;
         
-        helper.estimate.gross_values.cumulatives = {
+        grossValueSection.data.cumulatives = {
           features_total: featuresCumulative || '₪0',
+          features_total_raw: parseFloat((featuresCumulative || '₪0').replace(/[₪,]/g, '')) || 0,
           registration_total: registrationCumulative || '₪0',
-          gross_market_value: grossResult || '₪0'
+          registration_total_raw: parseFloat((registrationCumulative || '₪0').replace(/[₪,]/g, '')) || 0,
+          gross_market_value: grossResult || '₪0',
+          gross_market_value_raw: parseFloat((grossResult || '₪0').replace(/[₪,]/g, '')) || 0
         };
         
-        // Add timestamp
-        helper.estimate.gross_values.last_updated = new Date().toISOString();
+        // Add gross percentage section data if available
+        const grossPercentageSection = {
+          section_type: 'gross_damage_percentage',
+          section_title: 'אחוז הנזק הגולמי - בסיס הרכב בלבד',
+          data: {}
+        };
         
-        console.log('✅ Saved gross values to helper.estimate.gross_values');
+        // Collect gross percentage fields (using correct estimator-builder field IDs)
+        const totalDamageCostField = document.getElementById('totalDamageCost');
+        const grossValueDisplayField = document.getElementById('grossValueDisplay');
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        
+        if (totalDamageCostField) {
+          grossPercentageSection.data.total_damage_cost = totalDamageCostField.value;
+          grossPercentageSection.data.total_damage_cost_raw = parseFloat(totalDamageCostField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        if (grossValueDisplayField) {
+          grossPercentageSection.data.gross_value_display = grossValueDisplayField.value;
+          grossPercentageSection.data.gross_value_display_raw = parseFloat(grossValueDisplayField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        if (grossDamagePercentageField) {
+          grossPercentageSection.data.gross_damage_percentage = grossDamagePercentageField.value;
+          grossPercentageSection.data.gross_damage_percentage_raw = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+        }
+        
+        // Add timestamps
+        const timestamp = new Date().toISOString();
+        grossValueSection.last_updated = timestamp;
+        grossPercentageSection.last_updated = timestamp;
+        
+        // Remove existing sections of these types and add new ones
+        helper.estimate.gross_sections = helper.estimate.gross_sections.filter(
+          section => !['gross_vehicle_value', 'gross_damage_percentage'].includes(section.section_type)
+        );
+        
+        helper.estimate.gross_sections.push(grossValueSection);
+        helper.estimate.gross_sections.push(grossPercentageSection);
+        
+        console.log('✅ Saved gross sections to helper.estimate.gross_sections');
         
       } catch (error) {
-        console.error('❌ Error saving gross values to estimate helper:', error);
+        console.error('❌ Error saving gross sections to estimate helper:', error);
       }
     }
 
