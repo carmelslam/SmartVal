@@ -2013,6 +2013,18 @@
           percentageField.value = percentage.toFixed(2) + '%';
         }
         
+        // Also write to claims_data.gross_percent (same as final-report-builder)
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.claims_data = helper.claims_data || {};
+          helper.claims_data.gross_percent = `${percentage.toFixed(2)}%`;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          console.log('✅ Updated claims_data.gross_percent:', helper.claims_data.gross_percent);
+        } catch (error) {
+          console.error('❌ Error updating claims_data.gross_percent:', error);
+        }
+        
         // Update damage cost field
         const damageCostField = document.getElementById('totalDamageCost');
         if (damageCostField) {
