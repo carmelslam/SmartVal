@@ -2522,6 +2522,8 @@
         const leviData = helper.valuation?.adjustments || {};
         const featuresData = leviData.features || {};
         const registrationData = leviData.registration || {};
+        
+        console.log('EXACT DATA:', { leviData, featuresData, registrationData });
 
         // ===== Features Adjustments =====
 
@@ -2574,7 +2576,8 @@
         });
 
         // ===== Registration Adjustment =====
-        if (registrationData.amount || registrationData.percent || registrationData.date) {
+        console.log('Registration check:', registrationData);
+        if (registrationData.amount || registrationData.percent || registrationData.date || registrationData.description) {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
@@ -2584,8 +2587,9 @@
               const percent = parseFloat(registrationData.percent) || 0;
               
               if (inputs.length >= 4) {
-                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                const desc = registrationData.description || registrationData.date || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
                 inputs[0].value = desc;
+                console.log('Set registration description:', desc);
                 
                 // Determine type based on negative values in helper data
                 const isNegative = (amount < 0 || percent < 0);
@@ -2596,10 +2600,18 @@
                 // If amount exists in helper, use it; otherwise calculate from percentage
                 if (amount) {
                   inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  console.log('Set registration amount:', `₪${Math.abs(amount).toLocaleString()}`);
                 } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
                   // Trigger calculation from percentage × base price
                   setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
                 }
+                
+                console.log('Final registration inputs:', {
+                  description: inputs[0].value,
+                  type: inputs[1].value, 
+                  percent: inputs[2].value,
+                  amount: inputs[3].value
+                });
               }
             }
           }
