@@ -2756,92 +2756,145 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        const leviData = helper.valuation?.adjustments || {};
-        const featuresData = leviData.features || {};
-        const registrationData = leviData.registration || {};
-        
-        console.log('EXACT DATA:', { leviData, featuresData, registrationData });
+        // PRIORITY 1: Load saved dynamic adjustments from helper.estimate.gross_value_adjustments
+        let loadedFromEstimate = false;
+        if (helper.estimate?.gross_value_adjustments) {
+          const savedFeatures = helper.estimate.gross_value_adjustments.features || [];
+          const savedRegistration = helper.estimate.gross_value_adjustments.registration || [];
+          
+          // Load saved features adjustments (multiple rows)
+          if (savedFeatures.length > 0) {
+            console.log('📝 Loading features adjustments from helper.estimate.gross_value_adjustments:', savedFeatures);
+            savedFeatures.forEach(adjustment => {
+              if (typeof addFeatureAdjustment === 'function') {
+                addFeatureAdjustment();
+                const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs.length >= 4) {
+                    inputs[0].value = adjustment.description || '';
+                    inputs[1].value = adjustment.type || 'plus';
+                    inputs[2].value = adjustment.percentage || '';
+                    inputs[3].value = adjustment.value ? `₪${Math.abs(parseFloat(adjustment.value)).toLocaleString()}` : '';
+                  }
+                }
+              }
+            });
+            loadedFromEstimate = true;
+          }
+          
+          // Load saved registration adjustments (multiple rows)
+          if (savedRegistration.length > 0) {
+            console.log('📅 Loading registration adjustments from helper.estimate.gross_value_adjustments:', savedRegistration);
+            savedRegistration.forEach(adjustment => {
+              if (typeof addRegistrationAdjustment === 'function') {
+                addRegistrationAdjustment();
+                const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs.length >= 4) {
+                    inputs[0].value = adjustment.description || '';
+                    inputs[1].value = adjustment.type || 'plus';
+                    inputs[2].value = adjustment.percentage || '';
+                    inputs[3].value = adjustment.value ? `₪${Math.abs(parseFloat(adjustment.value)).toLocaleString()}` : '';
+                  }
+                }
+              }
+            });
+            loadedFromEstimate = true;
+          }
+        }
 
-        // ===== Features Adjustments =====
-        // Check if features exist using EXACT path from your screenshot
-        if (helper.valuation?.adjustments?.features?.value || helper.valuation?.adjustments?.features?.percentage) {
-          if (typeof addFeatureAdjustment === 'function') {
-            addFeatureAdjustment();
-            const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (row) {
-              const inputs = row.querySelectorAll('input, select');
-              
-              // Use EXACT paths from your mapping
-              const amount = parseFloat(helper.valuation.adjustments.features.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
-              const percent = parseFloat(helper.valuation.adjustments.features.percentage) || 0;
-              
-              if (inputs.length >= 4) {
-                // Use description from the exact path 
-                const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';
-                inputs[0].value = desc;
+        // FALLBACK: Only load from original helper data if nothing was loaded from estimate
+        if (!loadedFromEstimate) {
+          const leviData = helper.valuation?.adjustments || {};
+          const featuresData = leviData.features || {};
+          const registrationData = leviData.registration || {};
+          
+          console.log('EXACT DATA:', { leviData, featuresData, registrationData });
+
+          // ===== Features Adjustments =====
+          if (helper.valuation?.adjustments?.features?.value || helper.valuation?.adjustments?.features?.percentage) {
+            if (typeof addFeatureAdjustment === 'function') {
+              addFeatureAdjustment();
+              const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
+              if (row) {
+                const inputs = row.querySelectorAll('input, select');
                 
-                // Determine type based on negative values in helper data
-                const isNegative = (amount < 0 || percent < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-              
-                inputs[2].value = percent ? Math.abs(percent) : '';
+                // Use EXACT paths from your mapping
+                const amount = parseFloat(helper.valuation.adjustments.features.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
+                const percent = parseFloat(helper.valuation.adjustments.features.percentage) || 0;
                 
-                // If amount exists in helper, use it; otherwise calculate from percentage
-                if (amount) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
-                  // Trigger calculation from percentage × base price
-                  setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
+                if (inputs.length >= 4) {
+                  // Use description from the exact path 
+                  const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';
+                  inputs[0].value = desc;
+                  
+                  // Determine type based on negative values in helper data
+                  const isNegative = (amount < 0 || percent < 0);
+                  inputs[1].value = isNegative ? 'minus' : 'plus';
+                
+                  inputs[2].value = percent ? Math.abs(percent) : '';
+                  
+                  // If amount exists in helper, use it; otherwise calculate from percentage
+                  if (amount) {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
+                    // Trigger calculation from percentage × base price
+                    setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
+                  }
                 }
               }
             }
           }
-        }
 
-        // ===== Registration Adjustment =====
-        console.log('Registration check:', registrationData);
-        if (registrationData.amount || registrationData.percent || registrationData.date || registrationData.description || registrationData.value) {
-          if (typeof addRegistrationAdjustment === 'function') {
-            addRegistrationAdjustment();
-            const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
-            if (row) {
-              const inputs = row.querySelectorAll('input, select');
-              
-              // Parse amount using EXACT path: helper.valuation.adjustments.registration.amount
-              let amount = 0;
-              if (helper.valuation?.adjustments?.registration?.amount) {
-                amount = parseFloat(helper.valuation.adjustments.registration.amount.toString().replace(/[₪,\s]/g, '')) || 0;
-              }
-              
-              let percent = parseFloat(helper.valuation?.adjustments?.registration?.percent) || 0;
-              
-              if (inputs.length >= 4) {
-                // Use the EXACT path from your mapping: helper.valuation.adjustments.registration.value
-                const desc = helper.valuation?.adjustments?.registration?.value || helper.valuation?.adjustments?.registration?.description || helper.valuation?.adjustments?.registration?.date || helper.vehicle?.registration_date || 'עליה לכביש';
-                inputs[0].value = desc;
-                console.log('Set registration description:', desc);
+          // ===== Registration Adjustment =====
+          console.log('Registration check:', registrationData);
+          if (registrationData.amount || registrationData.percent || registrationData.date || registrationData.description || registrationData.value) {
+            if (typeof addRegistrationAdjustment === 'function') {
+              addRegistrationAdjustment();
+              const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
+              if (row) {
+                const inputs = row.querySelectorAll('input, select');
                 
-                // Determine type based on negative values in helper data
-                const isNegative = (amount < 0 || percent < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-              
-                inputs[2].value = percent ? Math.abs(percent) : '';
-                
-                // If amount exists in helper, use it; otherwise calculate from percentage
-                if (amount) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                  console.log('Set registration amount:', `₪${Math.abs(amount).toLocaleString()}`);
-                } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
-                  // Trigger calculation from percentage × base price
-                  setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
+                // Parse amount using EXACT path: helper.valuation.adjustments.registration.amount
+                let amount = 0;
+                if (helper.valuation?.adjustments?.registration?.amount) {
+                  amount = parseFloat(helper.valuation.adjustments.registration.amount.toString().replace(/[₪,\s]/g, '')) || 0;
                 }
                 
-                console.log('Final registration inputs:', {
-                  description: inputs[0].value,
-                  type: inputs[1].value, 
-                  percent: inputs[2].value,
-                  amount: inputs[3].value
-                });
+                let percent = parseFloat(helper.valuation?.adjustments?.registration?.percent) || 0;
+                
+                if (inputs.length >= 4) {
+                  // Use the EXACT path from your mapping: helper.valuation.adjustments.registration.value
+                  const desc = helper.valuation?.adjustments?.registration?.value || helper.valuation?.adjustments?.registration?.description || helper.valuation?.adjustments?.registration?.date || helper.vehicle?.registration_date || 'עליה לכביש';
+                  inputs[0].value = desc;
+                  console.log('Set registration description:', desc);
+                  
+                  // Determine type based on negative values in helper data
+                  const isNegative = (amount < 0 || percent < 0);
+                  inputs[1].value = isNegative ? 'minus' : 'plus';
+                
+                  inputs[2].value = percent ? Math.abs(percent) : '';
+                  
+                  // If amount exists in helper, use it; otherwise calculate from percentage
+                  if (amount) {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                    console.log('Set registration amount:', `₪${Math.abs(amount).toLocaleString()}`);
+                  } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
+                    // Trigger calculation from percentage × base price
+                    setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
+                  }
+                  
+                  console.log('Final registration inputs:', {
+                    description: inputs[0].value,
+                    type: inputs[1].value, 
+                    percent: inputs[2].value,
+                    amount: inputs[3].value
+                  });
+                }
               }
             }
           }
