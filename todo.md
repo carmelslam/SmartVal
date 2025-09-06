@@ -5731,3 +5731,38 @@ Handlebars.registerHelper('money', function(value) {
             1. Example : the estimate receives data of damage centers from helper.centers, if the user changes data lets say for the parts required  using the estimate UI , the those changes will be registered both on the helper.centers relevant fields (the data source ) and on the estimate section (reference) which will mean in the end tae the full damage centers will also be in the estimate as reference even if no changes were made- THIS IS JUST ONE EXAMPLE AND ITS THE RUKE FOR ALL THE FIELD SIN THE UI. 
     4. You will need to study ho the helper. Final report behaves, though its not the same since the final report is the final case status and it doesn’t  require reference in the section, what is important to pay attention is how the final report UI is distributing data and receiving data 
     5. DO NOT TAMPER OR TOUCH ANYTHING ELSE IN THE SYSTEM NOT OTHER ODALS , NOT OTHER HALPER SECTIONS, NOT FLOATING SCREENS OR ANYTHING ELSE THAT IS NOT THE ESTIMATE BUILDER AND ITS JAVASCRIPT .
+
+## Fix Cumulative Calculations and gross_values Array - Implementation Report
+
+### Problem Description
+1. The cumulative "after" values (אחרי) were not displaying in:
+   - grossFeaturesCumulative (ערך לאחר תוספות מאפיינים)
+   - grossRegistrationCumulative (ערך לאחר עליה לכביש)
+   - grossMarketValueResult (ערך הרכב לנזק גולמי כולל מע"מ)
+2. The helper.estimate.gross_values array was empty and not being saved properly
+
+### Changes Made
+
+1. **Fixed Cumulative Calculations** ✓
+   - Added missing cumulative display updates to `updateGrossMarketValueCalculation()` function
+   - Now updates `grossFeaturesCumulative` span with the value after features adjustments
+   - Now updates `grossRegistrationCumulative` span with the value after registration adjustments
+   - Both cumulative displays now show proper formatting and color coding (green for positive values)
+
+2. **Fixed gross_values Array Saving** ✓
+   - Modified `saveGrossSectionsToEstimateHelper()` to properly clear and rebuild the array
+   - Changed condition from checking only `description.trim()` to also include values with non-zero amounts
+   - Ensured the gross_values array is properly pushed with both sections (gross_vehicle_value and gross_damage_percentage)
+
+3. **Calculation Flow** ✓
+   - Calculations trigger automatically on input changes via event listeners
+   - Cumulative values update in real-time as adjustments are made
+   - Values persist to helper.estimate.gross_values array when saved
+
+### Summary
+The cumulative "after" values are now properly calculated and displayed:
+- ערך לאחר תוספות מאפיינים (After features) shows: Basic Price + Features Adjustments
+- ערך לאחר עליה לכביש (After registration) shows: Basic Price + Features + Registration Adjustments
+- ערך הרכב לנזק גולמי כולל מע"מ shows the final gross market value
+
+The helper.estimate.gross_values array is now properly populated with all adjustment data and cumulative values.

@@ -2057,6 +2057,14 @@
           }
         });
         
+        // Update features cumulative display
+        const featuresCumulative = document.querySelector('#grossFeaturesCumulative span');
+        if (featuresCumulative) {
+          const afterFeatures = basicPrice + featuresTotal;
+          featuresCumulative.textContent = `₪${afterFeatures.toLocaleString()}`;
+          featuresCumulative.style.color = afterFeatures > 0 ? '#28a745' : '#dc3545';
+        }
+        
         // Calculate registration adjustments total
         let registrationTotal = 0;
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
@@ -2068,6 +2076,14 @@
             registrationTotal += (type === 'minus' ? -amount : amount);
           }
         });
+        
+        // Update registration cumulative display
+        const registrationCumulative = document.querySelector('#grossRegistrationCumulative span');
+        if (registrationCumulative) {
+          const afterRegistration = basicPrice + featuresTotal + registrationTotal;
+          registrationCumulative.textContent = `₪${afterRegistration.toLocaleString()}`;
+          registrationCumulative.style.color = afterRegistration > 0 ? '#28a745' : '#dc3545';
+        }
         
         // Calculate gross market value
         const grossMarketValue = basicPrice + featuresTotal + registrationTotal;
@@ -2085,6 +2101,7 @@
         }
         
         console.log('✅ Updated gross market value to:', grossMarketValue);
+        console.log('📊 Cumulative values - After features:', basicPrice + featuresTotal, 'After registration:', grossMarketValue);
         
       } catch (error) {
         console.error('❌ Error updating gross market value:', error);
@@ -3482,6 +3499,9 @@
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.gross_values) helper.estimate.gross_values = [];
         
+        // Clear existing gross_values array to avoid duplicates
+        helper.estimate.gross_values = [];
+        
         // Create gross value section data
         const grossValueSection = {
           section_type: 'gross_vehicle_value',
@@ -3509,7 +3529,7 @@
               value: inputs[3].value || '',
               value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
-            if (adjustment.description.trim()) {
+            if (adjustment.description.trim() || adjustment.value_raw !== 0) {
               grossValueSection.data.features_adjustments.push(adjustment);
             }
           }
@@ -3528,7 +3548,7 @@
               value: inputs[3].value || '',
               value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
-            if (adjustment.description.trim()) {
+            if (adjustment.description.trim() || adjustment.value_raw !== 0) {
               grossValueSection.data.registration_adjustments.push(adjustment);
             }
           }
