@@ -3267,7 +3267,10 @@
           summaryHTML += '</div>';
           damageCentersContent.innerHTML = summaryHTML;
           
-          setTimeout(addDamageCenterEventListeners, 100);
+          setTimeout(() => {
+            addDamageCenterEventListeners();
+            addDamageCenterListeners();
+          }, 100);
           
           // Add subtotal section after damage centers
           createDamageCentersSubtotal();
@@ -4014,16 +4017,22 @@
       const damageCenterInputs = document.querySelectorAll('input[data-field], textarea[data-field], select[data-field]');
       damageCenterInputs.forEach(input => {
         input.addEventListener('input', function() {
-          // Trigger assessment rebuild when damage center data changes
+          console.log('🔄 Damage center input changed:', this.getAttribute('data-field'), this.value);
+          // Save damage center changes first, then rebuild assessment
           setTimeout(() => {
+            saveDamageCenterChanges();
             window.rebuildAssessments();
+            console.log('✅ Damage centers synced to assessment');
           }, 100);
         });
         
         input.addEventListener('change', function() {
-          // Trigger assessment rebuild when damage center data changes
+          console.log('🔄 Damage center changed:', this.getAttribute('data-field'), this.value);
+          // Save damage center changes first, then rebuild assessment  
           setTimeout(() => {
+            saveDamageCenterChanges();
             window.rebuildAssessments();
+            console.log('✅ Damage centers synced to assessment');
           }, 100);
         });
       });
