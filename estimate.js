@@ -27,7 +27,7 @@ const EstimateEngine = {
 
     if (this.isPostSession) {
       // For post-session mode, redirect to estimate-builder.html
-      window.location.href = 'estimate-builder.html?mode=post-session';
+      window.location.href = 'estimator-builder.html?mode=post-session';
       return;
     }
 
