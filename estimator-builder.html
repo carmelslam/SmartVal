@@ -2355,8 +2355,11 @@
         if (basicPriceField) {
           let basicPrice = 0;
           
-          // EXACT MAPPING from final-report-builder loadFirstBulkData function
-          if (helper.levi_report?.base_price) {
+          // PRIORITY MAPPING for basicPrice field - valuation.base_price FIRST
+          if (helper.valuation?.base_price) {
+            basicPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+            console.log('📄 Found BASE PRICE in helper.valuation.base_price:', basicPrice);
+          } else if (helper.levi_report?.base_price) {
             basicPrice = parseFloat(helper.levi_report.base_price);
             console.log('📄 Found BASE PRICE in helper.levi_report.base_price:', basicPrice);
           } else if (helper.expertise?.levi_report?.base_price) {
@@ -2368,9 +2371,6 @@
           } else if (helper.car_details?.base_price) {
             basicPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
             console.log('📄 Found BASE PRICE in helper.car_details.base_price:', basicPrice);
-          } else if (helper.valuation?.base_price) {
-            basicPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
-            console.log('📄 Found BASE PRICE in helper.valuation.base_price:', basicPrice);
           }
           
           if (basicPrice > 0) {
@@ -2479,8 +2479,10 @@
         if (grossValueDisplayField) {
           let leviPrice = 0;
           
-          // EXACT mapping from final-report-builder (same as basicPrice)
-          if (helper.levi_report?.base_price) {
+          // SAME PRIORITY as basicPrice field - valuation.base_price FIRST
+          if (helper.valuation?.base_price) {
+            leviPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
+          } else if (helper.levi_report?.base_price) {
             leviPrice = parseFloat(helper.levi_report.base_price);
           } else if (helper.expertise?.levi_report?.base_price) {
             leviPrice = parseFloat(helper.expertise.levi_report.base_price);
@@ -2488,8 +2490,6 @@
             leviPrice = parseFloat(helper.levisummary.base_price);
           } else if (helper.car_details?.base_price) {
             leviPrice = parseFloat(helper.car_details.base_price.toString().replace(/[₪,]/g, ''));
-          } else if (helper.valuation?.base_price) {
-            leviPrice = parseFloat(helper.valuation.base_price.toString().replace(/[₪,]/g, ''));
           }
           
           if (leviPrice > 0) {
