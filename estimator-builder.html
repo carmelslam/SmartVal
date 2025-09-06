@@ -2526,35 +2526,21 @@
         console.log('EXACT DATA:', { leviData, featuresData, registrationData });
 
         // ===== Features Adjustments =====
-
-        let featureItems = [];
-        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
-          featureItems = featuresData.feature_list;
-        } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
-          featureItems = [{
-            description: featuresData.description || featuresData.reason || '',
-            amount: featuresData.amount,
-            percent: featuresData.percent
-          }];
-        }
-
-        // Always show at least one row if any data exists
-        if (featureItems.length === 0) {
-          featureItems = [{}];
-        }
-
-        featureItems.forEach(item => {
+        // Check if features exist using EXACT path from your screenshot
+        if (helper.valuation?.adjustments?.features?.value || helper.valuation?.adjustments?.features?.percentage) {
           if (typeof addFeatureAdjustment === 'function') {
             addFeatureAdjustment();
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent) || 0;
+              
+              // Use EXACT paths from your mapping
+              const amount = parseFloat(helper.valuation.adjustments.features.value?.toString().replace(/[₪,\s]/g, '')) || 0;
+              const percent = parseFloat(helper.valuation.adjustments.features.percentage) || 0;
               
               if (inputs.length >= 4) {
-                // Use the real property value for the description if available
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
+                // Use description from the exact path 
+                const desc = helper.valuation?.adjustments?.features?.description || '';
                 inputs[0].value = desc;
                 
                 // Determine type based on negative values in helper data
@@ -2573,21 +2559,28 @@
               }
             }
           }
-        });
+        }
 
         // ===== Registration Adjustment =====
         console.log('Registration check:', registrationData);
-        if (registrationData.amount || registrationData.percent || registrationData.date || registrationData.description) {
+        if (registrationData.amount || registrationData.percent || registrationData.date || registrationData.description || registrationData.value) {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(registrationData.amount) || 0;
-              const percent = parseFloat(registrationData.percent) || 0;
+              
+              // Parse amount using EXACT path: helper.valuation.adjustments.registration.amount
+              let amount = 0;
+              if (helper.valuation?.adjustments?.registration?.amount) {
+                amount = parseFloat(helper.valuation.adjustments.registration.amount.toString().replace(/[₪,\s]/g, '')) || 0;
+              }
+              
+              let percent = parseFloat(helper.valuation?.adjustments?.registration?.percent) || 0;
               
               if (inputs.length >= 4) {
-                const desc = registrationData.description || registrationData.date || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                // Use the EXACT path from your mapping: helper.valuation.adjustments.registration.value
+                const desc = helper.valuation?.adjustments?.registration?.value || helper.valuation?.adjustments?.registration?.description || helper.valuation?.adjustments?.registration?.date || helper.vehicle?.registration_date || 'עליה לכביש';
                 inputs[0].value = desc;
                 console.log('Set registration description:', desc);
                 
