@@ -3393,15 +3393,20 @@
     }
 
     // Sync adjustment to estimate helper (mirror data)
-    function syncAdjustmentToEstimateHelper(element, category) {
+    function syncAdjustmentToEstimateHelper(element, category, helperParam) {
       try {
-        // Get helper safely
-        let helperStr = sessionStorage.getItem('helper');
-        if (!helperStr || helperStr === 'undefined') {
-          console.log('No helper found, skipping sync');
-          return;
+        // Use passed helper or get from storage
+        let helper;
+        if (helperParam) {
+          helper = helperParam;
+        } else {
+          let helperStr = sessionStorage.getItem('helper');
+          if (!helperStr || helperStr === 'undefined') {
+            console.log('No helper found, skipping sync');
+            return null;
+          }
+          helper = JSON.parse(helperStr);
         }
-        const helper = JSON.parse(helperStr);
         
         // Initialize estimate structure if needed
         if (!helper.estimate) helper.estimate = {};
@@ -3442,11 +3447,18 @@
           helper.estimate.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
         }
         
-        // Save to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+        // Only save to sessionStorage if helper wasn't passed as parameter
+        if (!helperParam) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        
+        console.log(`✅ Synced ${category} adjustments to helper.estimate.gross_value_adjustments.${category}:`, helper.estimate.gross_value_adjustments[category]);
+        
+        return helper;
         
       } catch (error) {
         console.error('Error syncing adjustment to estimate helper:', error);
+        return helperParam || null;
       }
     }
 
@@ -3638,7 +3650,11 @@
           helper.calculations.gross_market_value = parseFloat(grossValue.replace(/[₪,]/g, '')) || 0;
         }
         
-        // 3. DUAL STORAGE: Save gross sections array to helper.estimate
+        // 3. SAVE TO gross_value_adjustments.features and .registration
+        helper = syncAdjustmentToEstimateHelper(null, 'features', helper) || helper;
+        helper = syncAdjustmentToEstimateHelper(null, 'registration', helper) || helper;
+        
+        // 4. DUAL STORAGE: Save gross sections array to helper.estimate
         saveGrossSectionsToEstimateHelper(helper);
         
         // 4. SAVE TO ALL STORAGE LOCATIONS
@@ -3693,6 +3709,10 @@
         
         // Update helper with current form values
         helper = updateHelperFromAdjustments(helper);
+        
+        // Also sync to gross_value_adjustments
+        helper = syncAdjustmentToEstimateHelper(null, 'features', helper) || helper;
+        helper = syncAdjustmentToEstimateHelper(null, 'registration', helper) || helper;
         
         // Save to all storage locations
         sessionStorage.setItem('helper', JSON.stringify(helper));
