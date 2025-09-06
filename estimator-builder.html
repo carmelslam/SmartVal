@@ -3420,12 +3420,52 @@
       }
     }
 
-    // Save gross sections to helper.estimate as array (including both gross value and gross percentage sections)
-    function saveGrossValuesToEstimateHelper(helper) {
+    // Write back to data source - helper.valuation.adjustments
+    function writeToDataSource(helper) {
+      try {
+        // Ensure structure exists
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = {};
+        if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
+        
+        // Write features adjustments back to source
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        if (featuresRows.length > 0) {
+          const firstFeatureRow = featuresRows[0];
+          const inputs = firstFeatureRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.features.description = inputs[0].value || '';
+            helper.valuation.adjustments.features.percentage = inputs[2].value || '';
+            helper.valuation.adjustments.features.value = inputs[3].value || '';
+          }
+        }
+        
+        // Write registration adjustments back to source
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        if (registrationRows.length > 0) {
+          const firstRegRow = registrationRows[0];
+          const inputs = firstRegRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.registration.value = inputs[0].value || '';
+            helper.valuation.adjustments.registration.percent = inputs[2].value || '';
+            helper.valuation.adjustments.registration.amount = inputs[3].value || '';
+          }
+        }
+        
+        console.log('✅ Written back to data source');
+        
+      } catch (error) {
+        console.error('❌ Error writing to data source:', error);
+      }
+    }
+
+    // Save gross sections as array to helper.estimate (including both gross value and gross percentage sections)
+    function saveGrossSectionsToEstimateHelper(helper) {
       try {
         // Initialize estimate structure if it doesn't exist
         if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.gross_sections) helper.estimate.gross_sections = [];
+        if (!helper.estimate.gross_values) helper.estimate.gross_values = [];
         
         // Create gross value section data
         const grossValueSection = {
@@ -3526,14 +3566,14 @@
         grossPercentageSection.last_updated = timestamp;
         
         // Remove existing sections of these types and add new ones
-        helper.estimate.gross_sections = helper.estimate.gross_sections.filter(
+        helper.estimate.gross_values = helper.estimate.gross_values.filter(
           section => !['gross_vehicle_value', 'gross_damage_percentage'].includes(section.section_type)
         );
         
-        helper.estimate.gross_sections.push(grossValueSection);
-        helper.estimate.gross_sections.push(grossPercentageSection);
+        helper.estimate.gross_values.push(grossValueSection);
+        helper.estimate.gross_values.push(grossPercentageSection);
         
-        console.log('✅ Saved gross sections to helper.estimate.gross_sections');
+        console.log('✅ Saved gross sections to helper.estimate.gross_values array');
         
       } catch (error) {
         console.error('❌ Error saving gross sections to estimate helper:', error);
@@ -3549,15 +3589,18 @@
         updateGrossMarketValueCalculation();
         updateHelperFromAdjustments();
         
-        // Save gross value to main calculations
+        // 1. WRITE TO DATA SOURCE: Update helper.valuation.adjustments with current form values
+        writeToDataSource(helper);
+        
+        // 2. Save gross value to main calculations
         const grossValue = document.getElementById('grossMarketValueResult')?.value;
         if (grossValue) {
           if (!helper.calculations) helper.calculations = {};
           helper.calculations.gross_market_value = parseFloat(grossValue.replace(/[₪,]/g, '')) || 0;
         }
         
-        // DUAL STORAGE: Save gross values to helper.estimate.gross_values for historical/reference purposes
-        saveGrossValuesToEstimateHelper(helper);
+        // 3. DUAL STORAGE: Save gross sections array to helper.estimate
+        saveGrossSectionsToEstimateHelper(helper);
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
