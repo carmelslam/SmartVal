@@ -2510,11 +2510,9 @@
       }
     }
 
-    // Load gross adjustments from helper - EXACT COPY from final-report-builder
+    // Load gross adjustments - EXACT COPY from final-report-builder loadGrossAdjustments function
     function loadGrossAdjustmentsFromHelper(helper) {
       try {
-        console.log('🏗️ Loading gross adjustments from helper.valuation.adjustments');
-        
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
 
@@ -2539,7 +2537,7 @@
         }
 
         // Always show at least one row if any data exists
-        if (featureItems.length === 0 && (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason)) {
+        if (featureItems.length === 0) {
           featureItems = [{}];
         }
 
@@ -2552,13 +2550,6 @@
               const amount = parseFloat(item.amount) || 0;
               const percent = parseFloat(item.percent) || 0;
               
-              console.log('🔍 Loading feature adjustment:', {
-                item: item,
-                amount: amount,
-                percent: percent,
-                isNegative: (amount < 0 || percent < 0)
-              });
-              
               if (inputs.length >= 4) {
                 // Use the real property value for the description if available
                 const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
@@ -2567,7 +2558,6 @@
                 // Determine type based on negative values in helper data
                 const isNegative = (amount < 0 || percent < 0);
                 inputs[1].value = isNegative ? 'minus' : 'plus';
-                console.log(`📝 Set type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
               
                 inputs[2].value = percent ? Math.abs(percent) : '';
                 
@@ -2593,13 +2583,6 @@
               const amount = parseFloat(registrationData.amount) || 0;
               const percent = parseFloat(registrationData.percent) || 0;
               
-              console.log('🔍 Loading registration adjustment:', {
-                registrationData: registrationData,
-                amount: amount,
-                percent: percent,
-                isNegative: (amount < 0 || percent < 0)
-              });
-              
               if (inputs.length >= 4) {
                 const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
                 inputs[0].value = desc;
@@ -2607,7 +2590,6 @@
                 // Determine type based on negative values in helper data
                 const isNegative = (amount < 0 || percent < 0);
                 inputs[1].value = isNegative ? 'minus' : 'plus';
-                console.log(`📝 Set registration type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
               
                 inputs[2].value = percent ? Math.abs(percent) : '';
                 
@@ -2623,7 +2605,7 @@
           }
         }
 
-        console.log('✅ Gross adjustments loaded from helper');
+        updateGrossMarketValueCalculation();
 
       } catch (error) {
         console.error('❌ Error loading gross adjustments from helper:', error);
