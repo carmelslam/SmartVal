@@ -3460,6 +3460,17 @@
           helper.estimate.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
         }
         
+        // Add total damage cost and gross damage percentage to estimate
+        const totalDamageCostField = document.getElementById('totalDamageCost');
+        if (totalDamageCostField) {
+          helper.estimate.total_damage_cost = parseFloat(totalDamageCostField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        if (grossDamagePercentageField) {
+          helper.estimate.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+        }
+        
         // Only save to sessionStorage if helper wasn't passed as parameter
         if (!helperParam) {
           sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -3667,7 +3678,20 @@
         helper = syncAdjustmentToEstimateHelper(null, 'features', helper) || helper;
         helper = syncAdjustmentToEstimateHelper(null, 'registration', helper) || helper;
         
-        // 4. DUAL STORAGE: Save gross sections array to helper.estimate
+        // 4. Save total damage cost and gross damage percentage to estimate
+        if (!helper.estimate) helper.estimate = {};
+        
+        const totalDamageCostField = document.getElementById('totalDamageCost');
+        if (totalDamageCostField) {
+          helper.estimate.total_damage_cost = parseFloat(totalDamageCostField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        if (grossDamagePercentageField) {
+          helper.estimate.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+        }
+        
+        // 5. DUAL STORAGE: Save gross sections array to helper.estimate
         saveGrossSectionsToEstimateHelper(helper);
         
         // 4. SAVE TO ALL STORAGE LOCATIONS
