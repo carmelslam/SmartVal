@@ -2618,14 +2618,13 @@
       try {
         console.log('📊 Loading gross percentage fields from helper');
         
-        // Map totalDamageCost field - from claims_data.total_claim
+        // Map totalDamageCost field - from damage_assessment.totals["Total with VAT"]
         const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField && helper.claims_data?.total_claim) {
-          // Remove formatting (₪ symbol and commas) before parsing
-          const totalClaim = parseFloat(helper.claims_data.total_claim.toString().replace(/[₪,]/g, '')) || 0;
-          if (totalClaim > 0) {
-            totalDamageCostField.value = `₪${totalClaim.toLocaleString()}`;
-            console.log('✅ Loaded totalDamageCost from claims_data.total_claim:', totalClaim);
+        if (totalDamageCostField && helper.damage_assessment?.totals?.["Total with VAT"]) {
+          const totalWithVAT = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
+          if (totalWithVAT > 0) {
+            totalDamageCostField.value = `₪${totalWithVAT.toLocaleString()}`;
+            console.log('✅ Loaded totalDamageCost from damage_assessment.totals["Total with VAT"]:', totalWithVAT);
           }
         }
         
@@ -2670,14 +2669,13 @@
           console.log('✅ Loaded basic price:', helper.valuation.base_price);
         }
         
-        // ALSO LOAD TOTAL DAMAGE COST
+        // LOAD TOTAL DAMAGE COST FROM damage_assessment.totals["Total with VAT"]
         const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField && helper.claims_data?.total_claim) {
-          // Remove formatting (₪ symbol and commas) before parsing
-          const totalClaim = parseFloat(helper.claims_data.total_claim.toString().replace(/[₪,]/g, '')) || 0;
-          if (totalClaim > 0) {
-            totalDamageCostField.value = `₪${totalClaim.toLocaleString()}`;
-            console.log('✅ Loaded totalDamageCost from claims_data.total_claim:', totalClaim);
+        if (totalDamageCostField && helper.damage_assessment?.totals?.["Total with VAT"]) {
+          const totalWithVAT = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
+          if (totalWithVAT > 0) {
+            totalDamageCostField.value = `₪${totalWithVAT.toLocaleString()}`;
+            console.log('✅ Loaded totalDamageCost from damage_assessment.totals["Total with VAT"]:', totalWithVAT);
           }
         }
         
@@ -3817,6 +3815,28 @@
           updateGrossMarketValueCalculation();
           // AUTO-SAVE ON EVERY CHANGE
           autoSaveToHelper();
+        });
+      }
+      
+      // Listen to total damage cost changes - write to claims_data.total_claim
+      const totalDamageCostField = document.getElementById('totalDamageCost');
+      if (totalDamageCostField) {
+        totalDamageCostField.addEventListener('input', function() {
+          // Update claims_data.total_claim when field changes
+          try {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            helper.claims_data = helper.claims_data || {};
+            helper.claims_data.total_claim = this.value;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            
+            // Also trigger percentage calculation
+            if (typeof calculateDamagePercentage === 'function') {
+              calculateDamagePercentage();
+            }
+          } catch (error) {
+            console.error('Error updating claims_data.total_claim:', error);
+          }
         });
       }
       
