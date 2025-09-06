@@ -689,7 +689,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('grossCalc')">ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד (הצג/הסתר)</button>
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
-          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
+          <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" /></div>
           <div></div>
         </div>
         
@@ -1375,13 +1375,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');">
+          <div><input type="text" placeholder="תיאור המאפיין" /></div>
+          <div><select>
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" /></div>
+          <div><input type="text" placeholder="₪" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1397,13 +1397,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');">
+          <div><input type="text" placeholder="תיאור עליה לכביש" /></div>
+          <div><select>
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToEstimateHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" /></div>
+          <div><input type="text" placeholder="₪" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -3345,107 +3345,7 @@
       `;
     }
 
-    // Calculate and update GROSS PRICE (car properties only: base + features + registration)
-    function updateGrossMarketValueCalculation() {
-      try {
-        // Get base price
-        let basicPrice = 0;
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        const basicPriceField = document.getElementById('basicPrice');
-        if (basicPriceField?.value) {
-          basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        }
-        
-        if (basicPrice === 0) {
-          basicPrice = helper.calculations?.base_market_value || helper.levisummary?.base_price || helper.valuation?.base_price || 0;
-        }
-        
-        let currentValue = basicPrice;
-        
-        // Process features adjustments
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        featuresRows.forEach(row => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const percentInput = inputs[1];
-          const valueInput = inputs[2];
-          
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent > 0) {
-              const adjustment = basicPrice * (percent / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-            }
-          } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
-          }
-        });
-        
-        // Update features cumulative
-        const grossFeaturesCumulativeEl = document.getElementById('grossFeaturesCumulative');
-        if (grossFeaturesCumulativeEl) {
-          const span = grossFeaturesCumulativeEl.querySelector('span');
-          if (span) {
-            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-          }
-        }
-        
-        // Process registration adjustments
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        registrationRows.forEach(row => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const percentInput = inputs[1];
-          const valueInput = inputs[2];
-          
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent > 0) {
-              const adjustment = basicPrice * (percent / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-            }
-          } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
-          }
-        });
-        
-        // Update registration cumulative
-        const grossRegistrationCumulativeEl = document.getElementById('grossRegistrationCumulative');
-        if (grossRegistrationCumulativeEl) {
-          const span = grossRegistrationCumulativeEl.querySelector('span');
-          if (span) {
-            span.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-          }
-        }
-        
-        // Update final gross market value
-        const grossMarketValueResult = document.getElementById('grossMarketValueResult');
-        if (grossMarketValueResult) {
-          grossMarketValueResult.value = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        // Also update any other fields that depend on gross value
-        const grossValueDisplay = document.getElementById('grossValueDisplay');
-        if (grossValueDisplay) {
-          grossValueDisplay.value = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        // Update gross percentage if function exists
-        if (typeof updateGrossPercentageField === 'function') {
-          updateGrossPercentageField();
-        }
-        
-      } catch (error) {
-        console.error('Error in updateGrossMarketValueCalculation:', error);
-      }
-    }
+    // REMOVED DUPLICATE - Using the one at line 2041 instead
 
     // Remove adjustment row
     function removeAdjustmentRow(rowId) {
@@ -3478,7 +3378,13 @@
     // Sync adjustment to estimate helper (mirror data)
     function syncAdjustmentToEstimateHelper(element, category) {
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        // Get helper safely
+        let helperStr = sessionStorage.getItem('helper');
+        if (!helperStr || helperStr === 'undefined') {
+          console.log('No helper found, skipping sync');
+          return;
+        }
+        const helper = JSON.parse(helperStr);
         
         // Initialize estimate structure if needed
         if (!helper.estimate) helper.estimate = {};
@@ -3527,19 +3433,7 @@
       }
     }
 
-    // Update helper from adjustments
-    function updateHelperFromAdjustments() {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Sync all features adjustments
-        syncAdjustmentToEstimateHelper(null, 'features');
-        syncAdjustmentToEstimateHelper(null, 'registration');
-        
-      } catch (error) {
-        console.error('Error updating helper from adjustments:', error);
-      }
-    }
+    // REMOVED DUPLICATE - Using the one at line 2094 that accepts helper parameter
 
     // Write back to data source - helper.valuation.adjustments
     function writeToDataSource(helper) {
@@ -3763,7 +3657,19 @@
     // Auto-save function for real-time updates
     function autoSaveToHelper() {
       try {
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        // Get helper from sessionStorage or window.helper
+        let helperStr = sessionStorage.getItem('helper');
+        if (!helperStr || helperStr === 'undefined') {
+          // Try to get from window.helper
+          if (window.helper && typeof window.helper === 'object') {
+            helperStr = JSON.stringify(window.helper);
+          } else {
+            console.log('No helper found, skipping auto-save');
+            return;
+          }
+        }
+        
+        let helper = JSON.parse(helperStr);
         
         // Update helper with current form values
         helper = updateHelperFromAdjustments(helper);
@@ -3771,12 +3677,8 @@
         // Save to all storage locations
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Update window.helper
-        if (typeof window.updateHelper === 'function') {
-          window.updateHelper(helper);
-        } else {
-          window.helper = helper;
-        }
+        // Update window.helper directly
+        window.helper = helper;
         
         console.log('✅ Auto-saved to helper');
         
