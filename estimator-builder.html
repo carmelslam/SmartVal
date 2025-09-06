@@ -2618,13 +2618,27 @@
       try {
         console.log('📊 Loading gross percentage fields from helper');
         
-        // Map totalDamageCost field - from damage_assessment.totals["Total with VAT"]
+        // Map totalDamageCost field - PRIORITY: claims_data.total_claim, FALLBACK: damage_assessment.totals["Total with VAT"]
         const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField && helper.damage_assessment?.totals?.["Total with VAT"]) {
-          const totalWithVAT = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
-          if (totalWithVAT > 0) {
-            totalDamageCostField.value = `₪${totalWithVAT.toLocaleString()}`;
-            console.log('✅ Loaded totalDamageCost from damage_assessment.totals["Total with VAT"]:', totalWithVAT);
+        if (totalDamageCostField) {
+          let totalValue = 0;
+          let source = '';
+          
+          // First try claims_data.total_claim (user edited value)
+          if (helper.claims_data?.total_claim) {
+            const claimValue = helper.claims_data.total_claim.toString().replace(/[₪,]/g, '');
+            totalValue = parseFloat(claimValue) || 0;
+            source = 'claims_data.total_claim';
+          }
+          // Fallback to damage_assessment.totals["Total with VAT"]
+          else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+            totalValue = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
+            source = 'damage_assessment.totals["Total with VAT"]';
+          }
+          
+          if (totalValue > 0) {
+            totalDamageCostField.value = `₪${totalValue.toLocaleString()}`;
+            console.log(`✅ Loaded totalDamageCost from ${source}:`, totalValue);
           }
         }
         
@@ -2669,13 +2683,27 @@
           console.log('✅ Loaded basic price:', helper.valuation.base_price);
         }
         
-        // LOAD TOTAL DAMAGE COST FROM damage_assessment.totals["Total with VAT"]
+        // LOAD TOTAL DAMAGE COST - PRIORITY: claims_data.total_claim, FALLBACK: damage_assessment.totals["Total with VAT"]
         const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField && helper.damage_assessment?.totals?.["Total with VAT"]) {
-          const totalWithVAT = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
-          if (totalWithVAT > 0) {
-            totalDamageCostField.value = `₪${totalWithVAT.toLocaleString()}`;
-            console.log('✅ Loaded totalDamageCost from damage_assessment.totals["Total with VAT"]:', totalWithVAT);
+        if (totalDamageCostField) {
+          let totalValue = 0;
+          let source = '';
+          
+          // First try claims_data.total_claim (user edited value)
+          if (helper.claims_data?.total_claim) {
+            const claimValue = helper.claims_data.total_claim.toString().replace(/[₪,]/g, '');
+            totalValue = parseFloat(claimValue) || 0;
+            source = 'claims_data.total_claim';
+          }
+          // Fallback to damage_assessment.totals["Total with VAT"]
+          else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+            totalValue = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
+            source = 'damage_assessment.totals["Total with VAT"]';
+          }
+          
+          if (totalValue > 0) {
+            totalDamageCostField.value = `₪${totalValue.toLocaleString()}`;
+            console.log(`✅ Loaded totalDamageCost from ${source}:`, totalValue);
           }
         }
         
