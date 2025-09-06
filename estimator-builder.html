@@ -745,7 +745,7 @@
           </div>
         </div>
         <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
-          <button type="button" class="btn save-btn" onclick="saveGrossValueWithFeedback(event)" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
+          <button type="button" onclick="saveGrossValueWithFeedback(event)" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
         </div>
         <div style="text-align: center; margin-top: 10px;">
           <button type="button" class="btn section-collapse-button" onclick="toggleSection('grossCalc')" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">כווץ סעיף</button>
@@ -2040,12 +2040,114 @@
 
     function updateGrossMarketValueCalculation() {
       console.log('📊 Update gross market value');
-      // Implementation here
+      try {
+        // Get basic price
+        const basicPriceField = document.getElementById('basicPrice');
+        const basicPrice = parseFloat((basicPriceField?.value || '').replace(/[₪,]/g, '')) || 0;
+        
+        // Calculate features adjustments total
+        let featuresTotal = 0;
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value;
+            featuresTotal += (type === 'minus' ? -amount : amount);
+          }
+        });
+        
+        // Calculate registration adjustments total
+        let registrationTotal = 0;
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value;
+            registrationTotal += (type === 'minus' ? -amount : amount);
+          }
+        });
+        
+        // Calculate gross market value
+        const grossMarketValue = basicPrice + featuresTotal + registrationTotal;
+        
+        // Update the result field
+        const resultField = document.getElementById('grossMarketValueResult');
+        if (resultField) {
+          resultField.value = `₪${grossMarketValue.toLocaleString()}`;
+        }
+        
+        // Update any other gross value displays
+        const grossValueDisplay = document.getElementById('grossValueDisplay');
+        if (grossValueDisplay) {
+          grossValueDisplay.value = `₪${grossMarketValue.toLocaleString()}`;
+        }
+        
+        console.log('✅ Updated gross market value to:', grossMarketValue);
+        
+      } catch (error) {
+        console.error('❌ Error updating gross market value:', error);
+      }
     }
 
     function updateHelperFromAdjustments() {
       console.log('📊 Update helper from adjustments');
-      // Implementation here
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure valuation structure exists
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        // Update basic price
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && basicPriceField.value) {
+          if (!helper.valuation) helper.valuation = {};
+          helper.valuation.base_price = parseFloat((basicPriceField.value || '').replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // Update features adjustments
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        if (featuresRows.length > 0) {
+          if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = {};
+          const firstRow = featuresRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.features.value = inputs[0].value || '';
+            helper.valuation.adjustments.features.type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.features.percentage = inputs[2].value || '';
+            helper.valuation.adjustments.features.amount = inputs[3].value || '';
+          }
+        }
+        
+        // Update registration adjustments
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        if (registrationRows.length > 0) {
+          if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
+          const firstRow = registrationRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.registration.value = inputs[0].value || '';
+            helper.valuation.adjustments.registration.type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.registration.percent = inputs[2].value || '';
+            helper.valuation.adjustments.registration.amount = inputs[3].value || '';
+          }
+        }
+        
+        // Save back to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update window.helper if it exists
+        if (window.helper) {
+          window.helper = helper;
+        }
+        
+        console.log('✅ Updated helper from adjustments');
+        
+      } catch (error) {
+        console.error('❌ Error updating helper from adjustments:', error);
+      }
     }
 
 
@@ -3582,8 +3684,10 @@
 
     // Save gross value with feedback
     function saveGrossValueWithFeedback(event) {
+      console.log('🔘 Save gross value button clicked!');
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('📝 Current helper before save:', helper);
         
         // Update calculations
         updateGrossMarketValueCalculation();
@@ -3602,7 +3706,18 @@
         // 3. DUAL STORAGE: Save gross sections array to helper.estimate
         saveGrossSectionsToEstimateHelper(helper);
         
+        // 4. SAVE TO ALL STORAGE LOCATIONS
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update window.helper (single source of truth)
+        if (typeof window.updateHelper === 'function') {
+          window.updateHelper(helper);
+        } else {
+          window.helper = helper;
+        }
+        
+        console.log('✅ Saved to all locations:', helper.estimate?.gross_values);
+        console.log('✅ Final helper after save:', helper);
         
         // Show feedback
         const button = event.target;
@@ -3616,9 +3731,76 @@
         }, 2000);
         
       } catch (error) {
-        console.error('Error saving gross value:', error);
+        console.error('❌ Error saving gross value:', error);
+        alert('❌ Error saving: ' + error.message);
       }
     }
+    
+    // Make sure function is globally accessible
+    window.saveGrossValueWithFeedback = saveGrossValueWithFeedback;
+    
+    // Add real-time calculation listeners
+    function addCalculationListeners() {
+      // Listen to basic price changes
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField) {
+        basicPriceField.addEventListener('input', updateGrossMarketValueCalculation);
+      }
+      
+      // Listen to all adjustment input changes
+      function addListenersToAdjustmentRows() {
+        const allInputs = document.querySelectorAll('#featuresAdjustmentsList input, #registrationAdjustmentsList input, #featuresAdjustmentsList select, #registrationAdjustmentsList select');
+        allInputs.forEach(input => {
+          input.addEventListener('input', updateGrossMarketValueCalculation);
+          input.addEventListener('change', updateGrossMarketValueCalculation);
+        });
+      }
+      
+      addListenersToAdjustmentRows();
+      
+      // Re-add listeners when new rows are added
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList') {
+            addListenersToAdjustmentRows();
+          }
+        });
+      });
+      
+      const featuresContainer = document.getElementById('featuresAdjustmentsList');
+      const registrationContainer = document.getElementById('registrationAdjustmentsList');
+      
+      if (featuresContainer) {
+        observer.observe(featuresContainer, { childList: true });
+      }
+      if (registrationContainer) {
+        observer.observe(registrationContainer, { childList: true });
+      }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Page loaded - loading data from storage');
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper && Object.keys(helper).length > 0) {
+          console.log('📝 Found helper data:', helper);
+          loadGrossAdjustmentsFromHelper(helper);
+          // Trigger calculation after loading
+          setTimeout(() => {
+            updateGrossMarketValueCalculation();
+          }, 100);
+        } else {
+          console.log('ℹ️ No helper data found in storage');
+        }
+        
+        // Add calculation listeners
+        addCalculationListeners();
+        
+      } catch (error) {
+        console.error('❌ Error loading data on page load:', error);
+      }
+    });
   </script>
 </body>
 </html>
