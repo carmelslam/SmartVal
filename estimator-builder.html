@@ -2578,7 +2578,18 @@
           if (typeof updateGrossMarketValueCalculation === 'function') {
             updateGrossMarketValueCalculation();
           }
-        }, 100);
+          
+          // ALSO SYNC TO gross_value_adjustments after auto-populating
+          let helperStr = sessionStorage.getItem('helper');
+          if (helperStr && helperStr !== 'undefined') {
+            let helper = JSON.parse(helperStr);
+            helper = syncAdjustmentToEstimateHelper(null, 'features', helper) || helper;
+            helper = syncAdjustmentToEstimateHelper(null, 'registration', helper) || helper;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            console.log('✅ Synced auto-populated data to gross_value_adjustments');
+          }
+        }, 200);
         
       } catch (error) {
         console.error('❌ Error loading gross values:', error);
@@ -3789,6 +3800,13 @@
           // Trigger calculation after loading
           setTimeout(() => {
             updateGrossMarketValueCalculation();
+            
+            // Sync auto-populated data to gross_value_adjustments
+            helper = syncAdjustmentToEstimateHelper(null, 'features', helper) || helper;
+            helper = syncAdjustmentToEstimateHelper(null, 'registration', helper) || helper;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            console.log('✅ Page load: Synced to gross_value_adjustments');
           }, 100);
         } else {
           console.log('ℹ️ No helper data found in storage');
