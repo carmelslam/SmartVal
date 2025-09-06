@@ -2601,13 +2601,15 @@
       try {
         console.log('📊 Loading gross percentage fields from helper');
         
-        // Map totalDamageCost field (estimator-builder field ID) - using EXACT logic from final-report-builder
+        // Map totalDamageCost field (estimator-builder field ID) - UPDATED to read from claims_data.total_claim FIRST
         const totalDamageCostField = document.getElementById('totalDamageCost');
         if (totalDamageCostField) {
           let totalClaim = 0;
           
-          // EXACT mapping from final-report-builder
-          if (helper.calculations?.grand_total) {
+          // UPDATED mapping - claims_data.total_claim as first priority
+          if (helper.claims_data?.total_claim) {
+            totalClaim = parseFloat(helper.claims_data.total_claim);
+          } else if (helper.calculations?.grand_total) {
             totalClaim = parseFloat(helper.calculations.grand_total);
           } else if (helper.claims_data?.total_with_vat) {
             totalClaim = parseFloat(helper.claims_data.total_with_vat);
@@ -2617,7 +2619,7 @@
           
           if (totalClaim > 0) {
             totalDamageCostField.value = `₪${totalClaim.toLocaleString()}`;
-            console.log('✅ Auto-filled totalDamageCost:', totalClaim);
+            console.log('✅ Auto-filled totalDamageCost from claims_data.total_claim:', totalClaim);
           }
         }
         
