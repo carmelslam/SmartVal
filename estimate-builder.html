@@ -558,6 +558,21 @@
     .floating-toggles-top .toggle-square.active {
       background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
     }
+
+    /* Anti-mesh classes applied by JavaScript */
+    .no-mesh-before::before {
+      display: none !important;
+      content: none !important;
+      background: none !important;
+      background-image: none !important;
+    }
+
+    .no-mesh-after::after {
+      display: none !important;
+      content: none !important;
+      background: none !important;
+      background-image: none !important;
+    }
   </style>
 </head>
 <body>
@@ -1066,6 +1081,39 @@
       if (typeof window.toggleFloatingScreenOriginal === 'function') {
         window.toggleFloatingScreenOriginal(screenType);
       }
+    };
+
+    // ANTI-MESH WARFARE: Continuously remove mesh patterns
+    function destroyMeshPattern() {
+      const toggleSquares = document.querySelectorAll('.toggle-square');
+      toggleSquares.forEach(square => {
+        // Force remove any mesh background
+        square.style.setProperty('background-image', 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 'important');
+        square.style.setProperty('background', 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 'important');
+        
+        // Remove any pseudo-element mesh
+        const beforeEl = window.getComputedStyle(square, '::before');
+        const afterEl = window.getComputedStyle(square, '::after');
+        
+        if (beforeEl.getPropertyValue('background-image') !== 'none') {
+          square.classList.add('no-mesh-before');
+        }
+        if (afterEl.getPropertyValue('background-image') !== 'none') {
+          square.classList.add('no-mesh-after');
+        }
+      });
+    }
+
+    // Run anti-mesh on load and periodically
+    document.addEventListener('DOMContentLoaded', destroyMeshPattern);
+    window.addEventListener('load', destroyMeshPattern);
+    setInterval(destroyMeshPattern, 1000); // Check every second
+
+    // Also run when floating screens are toggled
+    const originalToggle = window.toggleFloatingScreen;
+    window.toggleFloatingScreen = function(screenType) {
+      if (originalToggle) originalToggle(screenType);
+      setTimeout(destroyMeshPattern, 100);
     };
 
     // Load data from helper
