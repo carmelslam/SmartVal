@@ -755,24 +755,14 @@ window.buildComprehensiveDamageAssessment = function() {
     let totalWithoutVAT = 0, totalWithVAT = 0;
     
     // ✅ REBUILD: Create fresh damage_centers_summary with sequential numbering
-    console.log(`📝 Rebuilding summary for ${allCenters.length} centers...`);
-    console.log('🔍 DEBUG: Centers data:', allCenters);
-    
     allCenters.forEach((center, index) => {
       const centerNumber = index + 1; // Sequential numbering (1, 2, 3, 4...)
       const centerKey = `Damage center ${centerNumber}`;
-      
-      console.log(`🔍 DEBUG: Processing center ${centerNumber}:`, center);
-      console.log('🔍 Works data:', center.Works);
-      console.log('🔍 Parts data:', center.Parts);
-      console.log('🔍 Repairs data:', center.Repairs);
       
       // Extract totals from center data
       const works = parseFloat(center.Works?.works_meta?.total_cost || 0);
       const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);
       const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
-      
-      console.log(`🔍 Extracted values: Works=${works}, Parts=${parts}, Repairs=${repairs}`);
       const subtotal = works + parts + repairs;
       const vatRate = (window.helper?.calculations?.vat_rate || 18) / 100; // Use system VAT rate
       const vat = subtotal * vatRate;
