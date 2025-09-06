@@ -1998,7 +1998,50 @@
     };
 
     window.saveGrossPercentageWithFeedback = function(event) {
-      saveWithFeedback(event, 'Gross Percentage');
+      console.log('🔘 Save gross percentage button clicked!');
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Save the percentage fields to helper
+        const totalDamageCostField = document.getElementById('totalDamageCost');
+        const grossValueDisplayField = document.getElementById('grossValueDisplay');
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        
+        helper.claims_data = helper.claims_data || {};
+        
+        if (totalDamageCostField && totalDamageCostField.value) {
+          helper.claims_data.total_claim = totalDamageCostField.value;
+        }
+        
+        if (grossValueDisplayField && grossValueDisplayField.value) {
+          helper.claims_data.gross_value = grossValueDisplayField.value;
+        }
+        
+        if (grossDamagePercentageField && grossDamagePercentageField.value) {
+          helper.claims_data.gross_percent = grossDamagePercentageField.value;
+        }
+        
+        // Save to storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        // Show feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'נשמר ✓';
+        button.style.background = '#28a745';
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#007bff';
+        }, 2000);
+        
+        console.log('✅ Saved gross percentage data');
+        
+      } catch (error) {
+        console.error('❌ Error saving gross percentage:', error);
+        alert('❌ Error saving: ' + error.message);
+      }
     };
     
     // Calculate damage percentage
