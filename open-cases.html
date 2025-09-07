@@ -437,33 +437,40 @@
           if (typeof window.processIncomingData === 'function') {
             console.log('🔄 CRITICAL FIX: Processing Hebrew text from message field');
             
-            // FIRST: Process the Hebrew text from message/raw_response field
-            if (carData.message || carData.raw_response) {
+            // Process EITHER Hebrew text OR English mapped fields, NOT BOTH
+            // Check if we have Hebrew text in the message/raw_response field
+            const hasHebrewText = carData.message || carData.raw_response;
+            const hasEnglishData = Object.keys(carData).some(key => 
+              !['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'].includes(key)
+            );
+            
+            console.log('🔍 Data format detection:', { hasHebrewText, hasEnglishData });
+            
+            if (hasHebrewText && !hasEnglishData) {
+              // Process Hebrew text only
               const hebrewText = carData.message || carData.raw_response;
-              console.log('📝 Processing Hebrew text:', hebrewText);
-              console.log('📊 Helper before Hebrew processing:', window.helper?.vehicle);
-              
-              const hebrewResult = window.processIncomingData({ Body: hebrewText }, 'OPEN_CASE_UI_HEBREW');
-              console.log('📊 Hebrew processing result:', hebrewResult);
-              console.log('📊 Helper after Hebrew processing:', window.helper?.vehicle);
-            }
-            
-            // THEN: Process the English mapped fields
-            // FILTER OUT system metadata fields before processing
-            const systemFields = ['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'];
-            const cleanCarData = {};
-            for (const [key, value] of Object.entries(carData)) {
-              if (!systemFields.includes(key)) {
-                cleanCarData[key] = value;
+              console.log('📝 Processing Hebrew text ONLY:', hebrewText);
+              const result = window.processIncomingData({ Body: hebrewText }, 'OPEN_CASE_UI_HEBREW');
+              console.log('📊 Hebrew processing result:', result);
+            } 
+            else if (hasEnglishData) {
+              // Process English mapped fields only
+              // FILTER OUT system metadata fields before processing
+              const systemFields = ['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'];
+              const cleanCarData = {};
+              for (const [key, value] of Object.entries(carData)) {
+                if (!systemFields.includes(key)) {
+                  cleanCarData[key] = value;
+                }
               }
+              
+              console.log('🔄 Processing English mapped data ONLY');
+              console.log('📊 OPEN_CASE_UI English data (cleaned):', cleanCarData);
+              
+              const result = window.processIncomingData(cleanCarData, 'OPEN_CASE_UI_ENGLISH');
+              console.log('📊 English processing result:', result);
             }
             
-            console.log('🔄 Processing English mapped data');
-            console.log('📊 OPEN_CASE_UI English data (cleaned):', cleanCarData);
-            
-            const result = window.processIncomingData(cleanCarData, 'OPEN_CASE_UI_ENGLISH');
-            
-            console.log('📊 English processing result:', result);
             console.log('📊 Helper final state:', window.helper?.vehicle);
           }
           
