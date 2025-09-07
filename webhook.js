@@ -140,14 +140,36 @@ export async function sendToWebhook(id, payload) {
         // Method 2: Direct array format (each item is a data field)
         else if (firstItem && !firstItem.value && typeof firstItem === 'object') {
           console.log('📦 Found Make.com direct array format');
-          // Combine all array items into single object
+          // 🔧 FIX: Enhanced processing to prevent value concatenation
           actualData = {};
+          const seenFields = new Map(); // Track seen fields to prevent duplicates
+          
           data.forEach((item, index) => {
             if (item && typeof item === 'object') {
-              Object.assign(actualData, item);
+              Object.entries(item).forEach(([key, value]) => {
+                // Skip null, undefined, or empty values
+                if (value === null || value === undefined || value === '') {
+                  return;
+                }
+                
+                // If field not seen before, add it
+                if (!seenFields.has(key)) {
+                  actualData[key] = value;
+                  seenFields.set(key, value);
+                  console.log(`✅ Added field ${key}: ${value}`);
+                } else {
+                  // Check if it's a duplicate value
+                  const existingValue = seenFields.get(key);
+                  if (String(existingValue).trim() === String(value).trim()) {
+                    console.log(`⏭️ Skipping duplicate value for ${key}: ${value}`);
+                  } else {
+                    console.warn(`⚠️ Conflicting values for ${key}: "${existingValue}" vs "${value}" - keeping first value`);
+                  }
+                }
+              });
             }
           });
-          console.log('✅ Combined Make.com array items:', actualData);
+          console.log('✅ Processed array data without duplicates:', actualData);
         }
         
         // Method 3: Body field array format (common for Hebrew text)
