@@ -386,15 +386,49 @@
         
         // Check if response contains the data wrapped in system fields
         if (webhookResponse && webhookResponse.message && typeof webhookResponse.message === 'string') {
-          console.log('📥 Response contains message field with JSON string');
+          console.log('📥 Response contains message field with string');
+          console.log('📥 Message content:', webhookResponse.message);
+          
           try {
-            // Parse the JSON string from the message field
-            carData = JSON.parse(webhookResponse.message);
+            // Try to fix common JSON issues before parsing
+            let fixedJson = webhookResponse.message;
+            
+            // Fix missing comma after "2020" in line: "שנת ייצור": "2020"
+            // This is a common issue when JSON is hand-crafted
+            fixedJson = fixedJson.replace(/"(\d{4})"\s*\n\s*"/g, '"$1",\n"');
+            
+            // Parse the fixed JSON string
+            carData = JSON.parse(fixedJson);
             console.log('✅ Successfully parsed JSON from message field:', carData);
           } catch (e) {
             console.error('❌ Failed to parse message field as JSON:', e);
-            // If it's not JSON, treat it as Hebrew text
-            carData = { Body: webhookResponse.message };
+            console.error('📥 Raw message that failed:', webhookResponse.message);
+            
+            // Try to extract Hebrew fields directly using regex patterns
+            const hebrewData = {};
+            const patterns = {
+              'פרטי רכב': /["']פרטי רכב["']\s*:\s*["']([^"']+)["']/,
+              'מספר רכב': /["']מספר רכב["']\s*:\s*["']([^"']+)["']/,
+              'שם היצרן': /["']שם היצרן["']\s*:\s*["']([^"']+)["']/,
+              'דגם': /["']דגם["']\s*:\s*["']([^"']+)["']/,
+              'רמת גימור': /["']רמת גימור["']\s*:\s*["']([^"']+)["']/,
+              'שנת ייצור': /["']שנת ייצור["']\s*:\s*["']([^"']+)["']/
+            };
+            
+            for (const [field, pattern] of Object.entries(patterns)) {
+              const match = webhookResponse.message.match(pattern);
+              if (match) {
+                hebrewData[field] = match[1];
+              }
+            }
+            
+            if (Object.keys(hebrewData).length > 0) {
+              console.log('✅ Extracted data using patterns:', hebrewData);
+              carData = hebrewData;
+            } else {
+              // If extraction fails, treat it as Hebrew text
+              carData = { Body: webhookResponse.message };
+            }
           }
         }
         // Handle array format responses
