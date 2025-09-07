@@ -387,19 +387,47 @@
         // Check if response contains the data wrapped in system fields
         if (webhookResponse && webhookResponse.message && typeof webhookResponse.message === 'string') {
           console.log('📥 Response contains message field with string');
-          console.log('📥 Message content:', webhookResponse.message);
+          console.log('📥 Raw message length:', webhookResponse.message.length);
           
           try {
             // Try to fix common JSON issues before parsing
             let fixedJson = webhookResponse.message;
             
+            // Log the problematic line
+            const lines = fixedJson.split('\n');
+            lines.forEach((line, index) => {
+              if (line.includes('"2020"') || line.includes('"עליה לכביש"')) {
+                console.log(`Line ${index + 1}: ${line}`);
+              }
+            });
+            
             // Fix missing comma after year values like "2020"
-            // Look for pattern: "2020"\n"עליה לכביש" and add comma
-            fixedJson = fixedJson.replace(/"(\d{4})"\s*\n(\s*")/g, '"$1",\n$2');
+            // The issue is: "שנת ייצור": "2020"\n"עליה לכביש": "2020-1"
+            // Need to add comma after "2020" when followed by another field
+            fixedJson = fixedJson.replace(/"(\d{4})"\s*\n\s*"/g, '"$1",\n  "');
+            
+            // Also fix missing commas after other field values
+            // Pattern: "value" followed by newline and another field starting with "
+            fixedJson = fixedJson.replace(/"([^"]+)"\s*\n\s*"([^"]+)"\s*:/g, '"$1",\n  "$2":');
+            
+            console.log('📝 Fixed JSON:', fixedJson);
             
             // Parse the fixed JSON string
-            carData = JSON.parse(fixedJson);
-            console.log('✅ Successfully parsed JSON from message field:', carData);
+            try {
+              carData = JSON.parse(fixedJson);
+              console.log('✅ Successfully parsed JSON from message field:', carData);
+            } catch (parseError) {
+              // If still can't parse, try wrapping in {} if it's missing
+              console.log('🔧 Attempting to fix JSON structure...');
+              if (!fixedJson.trim().startsWith('{')) {
+                fixedJson = '{' + fixedJson;
+              }
+              if (!fixedJson.trim().endsWith('}')) {
+                fixedJson = fixedJson + '}';
+              }
+              carData = JSON.parse(fixedJson);
+              console.log('✅ Successfully parsed after structure fix:', carData);
+            }
           } catch (e) {
             console.error('❌ Failed to parse message field as JSON:', e);
             console.error('📥 Raw message that failed:', webhookResponse.message);

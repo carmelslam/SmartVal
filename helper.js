@@ -3585,7 +3585,8 @@ function processDirectData(data, result) {
     'webhook_id': null,
     'timestamp': null,
     'processed': null,
-    'webhook_type': null
+    'webhook_type': null,
+    'internal_model_number': null
   };
   
   // 🔧 ENHANCED DEBUG: Log all incoming JSON data with data quality metrics
