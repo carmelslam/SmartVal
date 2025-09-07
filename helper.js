@@ -3622,7 +3622,7 @@ function processDirectData(data, result) {
   console.log('📊 DATA QUALITY METRICS:', dataQuality);
   console.log('📋 Available field mappings:', Object.keys(fieldMappings));
   
-  Object.entries(data).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(data)) {
     const keyLower = key.toLowerCase();
     console.log(`🔍 Processing key: "${key}" → "${keyLower}"`);
     
@@ -3635,7 +3635,7 @@ function processDirectData(data, result) {
         // Skip processing if mapping is explicitly set to null (system metadata)
         if (finalTargets === null) {
           console.log(`⏭️ Skipping system metadata field: "${key}"`);
-          return;
+          continue;
         }
         
         // 🔧 DATA SANITIZATION: Clean concatenated values and preserve proper formatting
@@ -3658,7 +3658,7 @@ function processDirectData(data, result) {
     } else {
       console.log(`⏭️ Skipping empty value for key: "${key}"`);
     }
-  });
+  }
   
   if (updated) {
     result.updatedSections.push('vehicle', 'stakeholders', 'valuation');
@@ -4827,7 +4827,14 @@ function sanitizeFieldValue(key, value) {
     // Pattern like: "COROLLA SDN HSD דגם COROLLA SDN HSD"
     /^([A-Z\s]+)\s+דגם\s+\1/,
     // Hebrew concatenation patterns
-    /^(.+)\s+(יצרן|דגם|גימור|סוג דגם)\s+\1/
+    /^(.+)\s+(יצרן|דגם|גימור|סוג דגם)\s+\1/,
+    // Specific patterns from the screenshot
+    // Pattern: "קאדילאק ארה"ב XT4 סוג הדגם מספר דגם 64 סוג הדגם..."
+    /^([^\s]+\s+[^\s]+\s+[A-Z0-9]+)\s+סוג הדגם.*/,
+    // Pattern: "P.LUXURY נמספר שילדה נמספר שילדה P.LUXURY"
+    /^([A-Z.]+)\s+.*נמספר שילדה.*\1/,
+    // Pattern with repeated vehicle info
+    /^(.+?)\s+(?:סוג הדגם|מספר דגם|נמספר שילדה).*\1/
   ];
   
   // Check for concatenation patterns and extract first clean value
@@ -4864,9 +4871,13 @@ function extractPlateFromResponse(response) {
   if (!response) return null;
   
   // Check direct fields first
-  const directFields = ['plate', 'plate_number', 'license_plate', 'מספר_רכב', 'מס_רכב'];
+  const directFields = ['plate', 'plate_number', 'license_plate', 'מספר_רכב', 'מס_רכב', 'מספר רכב'];
   for (const field of directFields) {
-    if (response[field]) return response[field];
+    if (response[field]) {
+      // Clean the plate number in case it has concatenated values
+      const plate = String(response[field]).split(' ')[0];
+      return plate;
+    }
   }
   
   // Check nested data structures
