@@ -375,6 +375,8 @@
         
         const webhookResponse = await sendToWebhook('OPEN_CASE_UI', payload);
         console.log('📥 Webhook response:', webhookResponse);
+        console.log('📥 Webhook response type:', typeof webhookResponse);
+        console.log('📥 Webhook response keys:', Object.keys(webhookResponse || {}));
         
         // Store the raw webhook response for display
         sessionStorage.setItem('lastWebhookResponse', JSON.stringify(webhookResponse));
@@ -382,8 +384,21 @@
         // Handle Make.com response format - FIXED to match working demo pattern
         let carData = null;
         
-        // Use the working demo pattern for extracting nested JSON
-        if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
+        // Check if response contains the data wrapped in system fields
+        if (webhookResponse && webhookResponse.message && typeof webhookResponse.message === 'string') {
+          console.log('📥 Response contains message field with JSON string');
+          try {
+            // Parse the JSON string from the message field
+            carData = JSON.parse(webhookResponse.message);
+            console.log('✅ Successfully parsed JSON from message field:', carData);
+          } catch (e) {
+            console.error('❌ Failed to parse message field as JSON:', e);
+            // If it's not JSON, treat it as Hebrew text
+            carData = { Body: webhookResponse.message };
+          }
+        }
+        // Handle array format responses
+        else if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
           console.log('📥 Make.com returned array format - using demo extraction pattern');
           const parsed = webhookResponse;
           
@@ -394,8 +409,17 @@
             carData = deep;
             console.log('✅ Successfully extracted nested JSON using demo pattern:', carData);
           }
-        } else if (webhookResponse && typeof webhookResponse === 'object') {
-          carData = webhookResponse;
+        } 
+        // Direct object response
+        else if (webhookResponse && typeof webhookResponse === 'object') {
+          // Check if it has Hebrew field names directly
+          if (webhookResponse['פרטי רכב'] || webhookResponse['מספר רכב']) {
+            carData = webhookResponse;
+            console.log('✅ Direct Hebrew JSON response detected');
+          } else {
+            // It might be wrapped in some other structure
+            carData = webhookResponse;
+          }
         }
         
         // Parse the car data from Make.com response
@@ -437,38 +461,54 @@
           if (typeof window.processIncomingData === 'function') {
             console.log('🔄 CRITICAL FIX: Processing Hebrew text from message field');
             
-            // Process EITHER Hebrew text OR English mapped fields, NOT BOTH
-            // Check if we have Hebrew text in the message/raw_response field
+            // Check what format the data is in
             const hasHebrewText = carData.message || carData.raw_response;
             const hasEnglishData = Object.keys(carData).some(key => 
-              !['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'].includes(key)
+              !['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'].includes(key) &&
+              carData[key] && carData[key] !== ''
             );
             
-            console.log('🔍 Data format detection:', { hasHebrewText, hasEnglishData });
+            console.log('🔍 Data format detection:', { 
+              hasHebrewText: !!hasHebrewText, 
+              hasEnglishData,
+              keys: Object.keys(carData)
+            });
             
+            // Process based on data format
             if (hasHebrewText && !hasEnglishData) {
-              // Process Hebrew text only
+              // Only Hebrew text - process it
               const hebrewText = carData.message || carData.raw_response;
-              console.log('📝 Processing Hebrew text ONLY:', hebrewText);
+              console.log('📝 Processing Hebrew text:', hebrewText);
               const result = window.processIncomingData({ Body: hebrewText }, 'OPEN_CASE_UI_HEBREW');
               console.log('📊 Hebrew processing result:', result);
             } 
             else if (hasEnglishData) {
-              // Process English mapped fields only
+              // We have structured English data
               // FILTER OUT system metadata fields before processing
               const systemFields = ['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'];
               const cleanCarData = {};
+              let hasValidData = false;
+              
               for (const [key, value] of Object.entries(carData)) {
-                if (!systemFields.includes(key)) {
+                if (!systemFields.includes(key) && value && value !== '') {
                   cleanCarData[key] = value;
+                  hasValidData = true;
                 }
               }
               
-              console.log('🔄 Processing English mapped data ONLY');
-              console.log('📊 OPEN_CASE_UI English data (cleaned):', cleanCarData);
-              
-              const result = window.processIncomingData(cleanCarData, 'OPEN_CASE_UI_ENGLISH');
-              console.log('📊 English processing result:', result);
+              if (hasValidData) {
+                console.log('🔄 Processing English mapped data');
+                console.log('📊 OPEN_CASE_UI English data (cleaned):', cleanCarData);
+                
+                const result = window.processIncomingData(cleanCarData, 'OPEN_CASE_UI_ENGLISH');
+                console.log('📊 English processing result:', result);
+              } else if (hasHebrewText) {
+                // No valid English data but we have Hebrew text - process it
+                console.log('📝 No English data found, processing Hebrew text as fallback');
+                const hebrewText = carData.message || carData.raw_response;
+                const result = window.processIncomingData({ Body: hebrewText }, 'OPEN_CASE_UI_HEBREW');
+                console.log('📊 Hebrew processing result:', result);
+              }
             }
             
             console.log('📊 Helper final state:', window.helper?.vehicle);
