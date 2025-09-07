@@ -3640,10 +3640,9 @@ function processDirectData(data, result) {
         
         // 🔧 DATA SANITIZATION: Clean concatenated values and preserve proper formatting
         let processedValue = sanitizeFieldValue(key, value);
-        if (typeof value === 'string' && /^[\d,]+$/.test(value)) {
-          // Keep original string format for prices like "85,000"
-          processedValue = value;
-          console.log(`💰 Preserving price format: ${value}`);
+        if (typeof processedValue === 'string' && /^[\d,]+$/.test(processedValue) && !value.includes(' ')) {
+          // Keep original string format for prices like "85,000" (but not if it contains spaces/concatenation)
+          console.log(`💰 Preserving price format: ${processedValue}`);
         }
         
         finalTargets.forEach(target => {
@@ -4820,6 +4819,12 @@ function sanitizeFieldValue(key, value) {
   
   // Check if the value contains multiple concatenated values (common patterns from bad webhook responses)
   const concatenationPatterns = [
+    // Double plate number pattern: "71818601 71818601"
+    /^(\d{7,8})\s+\1$/,
+    // Pattern like: "קאדילאק ארה"ב קאדילאק ארה"ב XT4..."
+    /^([^X]+)\s+\1\s+(X[A-Z0-9]+.*)/,
+    // Pattern like: "P.LUXURY גימור P.LUXURY שנת P.LUXURY..."
+    /^([A-Z.]+)\s+\S+\s+\1\s+\S+\s+\1/,
     // Pattern like: "XТ4 סוג הדגם מספר דגם 64 סוג הדגם מספר"
     /^([A-Z0-9]+)\s+.*(סוג דגם|מספר דגם|יצרן|דגם).*\1/,
     // Pattern like: "P.LUXURY גימור P.LUXURY שנת יצור P.LUXURY"  
@@ -4830,7 +4835,7 @@ function sanitizeFieldValue(key, value) {
     /^(.+)\s+(יצרן|דגם|גימור|סוג דגם)\s+\1/,
     // Specific patterns from the screenshot
     // Pattern: "קאדילאק ארה"ב XT4 סוג הדגם מספר דגם 64 סוג הדגם..."
-    /^([^\s]+\s+[^\s]+\s+[A-Z0-9]+)\s+סוג הדגם.*/,
+    /^([^\s]+\s+[^\s]+)\s+[A-Z0-9]+\s+סוג הדגם.*/,
     // Pattern: "P.LUXURY נמספר שילדה נמספר שילדה P.LUXURY"
     /^([A-Z.]+)\s+.*נמספר שילדה.*\1/,
     // Pattern with repeated vehicle info
@@ -4841,9 +4846,16 @@ function sanitizeFieldValue(key, value) {
   for (const pattern of concatenationPatterns) {
     const match = value.match(pattern);
     if (match) {
-      const cleanValue = match[1].trim();
-      console.log(`🧹 SANITIZED "${key}": "${value}" → "${cleanValue}"`);
-      return cleanValue;
+      // Special handling for manufacturer pattern that captured model
+      if (match[2] && value.includes('קאדילאק')) {
+        const cleanValue = match[1].trim();
+        console.log(`🧹 SANITIZED "${key}": "${value}" → "${cleanValue}"`);
+        return cleanValue;
+      } else {
+        const cleanValue = match[1].trim();
+        console.log(`🧹 SANITIZED "${key}": "${value}" → "${cleanValue}"`);
+        return cleanValue;
+      }
     }
   }
   
