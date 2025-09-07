@@ -2866,6 +2866,16 @@ window.processIncomingData = async function(data, webhookId = 'unknown') {
     return { success: false, error: 'No data provided' };
   }
   
+  // 🔧 WEBHOOK VALIDATION: Check for anomalous response structure
+  const validationResult = validateWebhookStructure(data, webhookId);
+  if (!validationResult.isValid) {
+    console.warn('⚠️ ANOMALOUS WEBHOOK DETECTED:', validationResult.issues);
+    if (validationResult.shouldSkip) {
+      console.log('⏭️ Skipping processing of invalid webhook structure');
+      return { success: false, error: 'Invalid webhook structure', validationIssues: validationResult.issues };
+    }
+  }
+  
   // 🔧 PHASE 2 FIX: Enhanced debugging and validation
   console.log('🧠 Helper before processing:', {
     plate: window.helper?.vehicle?.plate,
@@ -3350,6 +3360,7 @@ function processHebrewText(bodyText, result) {
 
 // Process direct object data
 function processDirectData(data, result) {
+  const startTime = performance.now();
   console.log('🔍 Processing direct object data...');
   let updated = false;
   
@@ -3566,15 +3577,50 @@ function processDirectData(data, result) {
     'owners_percent': ['valuation.adjustments.ownership_history.percent'],
     'owners_amount': ['valuation.adjustments.ownership_history.amount'],
     'features_percent': ['valuation.adjustments.features.percent'],
-    'features_amount': ['valuation.adjustments.features.amount']
+    'features_amount': ['valuation.adjustments.features.amount'],
+    
+    // System metadata fields - skip processing to prevent console warnings
+    'success': null,
+    'message': null,
+    'raw_response': null,
+    'webhook_id': null,
+    'timestamp': null,
+    'processed': null,
+    'webhook_type': null
   };
   
-  // 🔧 ENHANCED DEBUG: Log all incoming JSON data
+  // 🔧 ENHANCED DEBUG: Log all incoming JSON data with data quality metrics
   console.log('📋 JSON Data received for processing:');
+  const dataQuality = {
+    totalFields: Object.keys(data).length,
+    emptyFields: 0,
+    concatenatedFields: 0,
+    systemFields: 0,
+    mappedFields: 0
+  };
+  
   Object.entries(data).forEach(([key, value]) => {
     console.log(`  📝 ${key}: ${value} (type: ${typeof value})`);
+    
+    // Track data quality metrics
+    if (!value || value === '') {
+      dataQuality.emptyFields++;
+    }
+    
+    if (typeof value === 'string' && /^(.+)\s+.*(יצרן|דגם|גימור).*\1/.test(value)) {
+      dataQuality.concatenatedFields++;
+    }
+    
+    if (['success', 'message', 'raw_response', 'webhook_id', 'timestamp'].includes(key)) {
+      dataQuality.systemFields++;
+    }
+    
+    if (fieldMappings[key] || fieldMappings[key.toLowerCase()]) {
+      dataQuality.mappedFields++;
+    }
   });
   
+  console.log('📊 DATA QUALITY METRICS:', dataQuality);
   console.log('📋 Available field mappings:', Object.keys(fieldMappings));
   
   Object.entries(data).forEach(([key, value]) => {
@@ -3587,8 +3633,14 @@ function processDirectData(data, result) {
       const finalTargets = targets || targetsLower;
       
       if (finalTargets) {
-        // 🔧 PRICE FORMATTING FIX: Handle number strings with commas
-        let processedValue = value;
+        // Skip processing if mapping is explicitly set to null (system metadata)
+        if (finalTargets === null) {
+          console.log(`⏭️ Skipping system metadata field: "${key}"`);
+          return;
+        }
+        
+        // 🔧 DATA SANITIZATION: Clean concatenated values and preserve proper formatting
+        let processedValue = sanitizeFieldValue(key, value);
         if (typeof value === 'string' && /^[\d,]+$/.test(value)) {
           // Keep original string format for prices like "85,000"
           processedValue = value;
@@ -3612,6 +3664,15 @@ function processDirectData(data, result) {
   if (updated) {
     result.updatedSections.push('vehicle', 'stakeholders', 'valuation');
   }
+  
+  // 🔧 ENHANCED SUMMARY LOGGING
+  const processingSpeed = (performance.now() - startTime).toFixed(2);
+  console.log('📊 PROCESSING SUMMARY:');
+  console.log(`  ✅ Fields processed: ${dataQuality.mappedFields}/${dataQuality.totalFields}`);
+  console.log(`  🧹 Fields sanitized: ${dataQuality.concatenatedFields}`);
+  console.log(`  ⏭️ System fields skipped: ${dataQuality.systemFields}`);
+  console.log(`  ⚡ Processing time: ${processingSpeed}ms`);
+  console.log(`  🎯 Helper updated: ${updated}`);
   
   return updated;
 }
@@ -4690,6 +4751,142 @@ window.initializeFinancialsSection = function() {
  * Raw webhook response capture for debugging data loss
  * READ-ONLY debugging zone to track all incoming webhook data
  */
+// Helper function to validate webhook structure and detect anomalies
+function validateWebhookStructure(data, webhookId) {
+  const result = {
+    isValid: true,
+    issues: [],
+    shouldSkip: false
+  };
+  
+  // Check for obvious data structure issues
+  if (!data || typeof data !== 'object') {
+    result.isValid = false;
+    result.issues.push('Invalid data type - expected object');
+    result.shouldSkip = true;
+    return result;
+  }
+  
+  // Check for excessive nested structure (sign of malformed webhook)
+  const maxDepth = getObjectDepth(data);
+  if (maxDepth > 5) {
+    result.isValid = false;
+    result.issues.push(`Excessive nesting depth: ${maxDepth} levels`);
+  }
+  
+  // Check for duplicate data patterns (concatenated values)
+  const stringValues = Object.values(data).filter(v => typeof v === 'string');
+  const hasConcatenatedValues = stringValues.some(value => {
+    return /^(.+)\s+.*(יצרן|דגם|גימור|סוג דגם).*\1/.test(value) ||
+           /^([A-Z]+)\s+.*\1.*\1/.test(value);
+  });
+  
+  if (hasConcatenatedValues) {
+    result.isValid = false;
+    result.issues.push('Detected concatenated/duplicated values in data');
+    console.log('🔍 Concatenated values found, will use sanitization');
+  }
+  
+  // Check for system metadata pollution
+  const systemFields = ['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'];
+  const hasSystemFields = systemFields.some(field => data.hasOwnProperty(field));
+  
+  if (hasSystemFields) {
+    result.isValid = false;
+    result.issues.push('System metadata fields detected in webhook data');
+    console.log('⚠️ System metadata pollution detected');
+  }
+  
+  // Log validation results for debugging
+  if (!result.isValid) {
+    console.log(`🔍 VALIDATION ISSUES for webhook ${webhookId}:`, result.issues);
+  }
+  
+  return result;
+}
+
+// Helper function to calculate object nesting depth
+function getObjectDepth(obj, depth = 0) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return depth;
+  }
+  
+  const depths = Object.values(obj).map(value => getObjectDepth(value, depth + 1));
+  return Math.max(depth, ...depths);
+}
+
+// Helper function to sanitize field values - clean concatenated multi-values
+function sanitizeFieldValue(key, value) {
+  if (!value || typeof value !== 'string') return value;
+  
+  // Check if the value contains multiple concatenated values (common patterns from bad webhook responses)
+  const concatenationPatterns = [
+    // Pattern like: "XТ4 סוג הדגם מספר דגם 64 סוג הדגם מספר"
+    /^([A-Z0-9]+)\s+.*(סוג דגם|מספר דגם|יצרן|דגם).*\1/,
+    // Pattern like: "P.LUXURY גימור P.LUXURY שנת יצור P.LUXURY"  
+    /^([A-Z.]+)\s+.*\1.*\1/,
+    // Pattern like: "COROLLA SDN HSD דגם COROLLA SDN HSD"
+    /^([A-Z\s]+)\s+דגם\s+\1/,
+    // Hebrew concatenation patterns
+    /^(.+)\s+(יצרן|דגם|גימור|סוג דגם)\s+\1/
+  ];
+  
+  // Check for concatenation patterns and extract first clean value
+  for (const pattern of concatenationPatterns) {
+    const match = value.match(pattern);
+    if (match) {
+      const cleanValue = match[1].trim();
+      console.log(`🧹 SANITIZED "${key}": "${value}" → "${cleanValue}"`);
+      return cleanValue;
+    }
+  }
+  
+  // Handle repeated words pattern (like "FZ9R4 דגם מנוע FZ9R4")
+  const repeatedPattern = /^([^\s]+)(?:\s+[^\s]+)*\s+\1$/;
+  const repeatedMatch = value.match(repeatedPattern);
+  if (repeatedMatch) {
+    const cleanValue = repeatedMatch[1].trim();
+    console.log(`🧹 SANITIZED repeated pattern "${key}": "${value}" → "${cleanValue}"`);
+    return cleanValue;
+  }
+  
+  // Clean up excessive whitespace and special characters
+  const normalizedValue = value.trim().replace(/\s+/g, ' ');
+  if (normalizedValue !== value) {
+    console.log(`🧹 NORMALIZED "${key}": "${value}" → "${normalizedValue}"`);
+    return normalizedValue;
+  }
+  
+  return value;
+}
+
+// Helper function to extract plate number from webhook response
+function extractPlateFromResponse(response) {
+  if (!response) return null;
+  
+  // Check direct fields first
+  const directFields = ['plate', 'plate_number', 'license_plate', 'מספר_רכב', 'מס_רכב'];
+  for (const field of directFields) {
+    if (response[field]) return response[field];
+  }
+  
+  // Check nested data structures
+  if (response.data) {
+    for (const field of directFields) {
+      if (response.data[field]) return response.data[field];
+    }
+  }
+  
+  // Check array format
+  if (Array.isArray(response) && response[0]) {
+    for (const field of directFields) {
+      if (response[0][field]) return response[0][field];
+    }
+  }
+  
+  return null;
+}
+
 window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata = {}) {
   console.log(`🔍 RAW WEBHOOK CAPTURE: ${webhookType}`);
   console.log(`🔍 RAW DATA BEING CAPTURED:`, rawResponse);
@@ -4734,6 +4931,23 @@ window.captureRawWebhookResponse = function(webhookType, rawResponse, metadata =
       }
     }
   };
+  
+  // 🔧 DEDUPLICATION: Check for duplicate webhook responses by plate
+  const plateNumber = extractPlateFromResponse(rawResponse);
+  if (plateNumber) {
+    // Check if we already have a recent response for this plate (within 5 minutes)
+    const recentDuplicate = window.helper.debug.raw_webhook_responses.find(existing => {
+      const existingPlate = extractPlateFromResponse(existing.raw_response);
+      const timeDiff = new Date(timestamp) - new Date(existing.timestamp);
+      return existingPlate === plateNumber && timeDiff < 300000; // 5 minutes
+    });
+    
+    if (recentDuplicate) {
+      console.log(`🔍 DUPLICATE DETECTED: Skipping duplicate webhook for plate ${plateNumber}`);
+      console.log(`📊 Original captured at: ${recentDuplicate.timestamp}`);
+      return; // Skip storing duplicate
+    }
+  }
   
   // Add to capture array (limit to last 100 entries to prevent memory issues)
   window.helper.debug.raw_webhook_responses.push(captureEntry);
