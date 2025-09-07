@@ -449,10 +449,19 @@
             }
             
             // THEN: Process the English mapped fields
-            console.log('🔄 Processing English mapped data');
-            console.log('📊 OPEN_CASE_UI English data:', carData);
+            // FILTER OUT system metadata fields before processing
+            const systemFields = ['success', 'message', 'raw_response', 'webhook_id', 'timestamp', 'processed'];
+            const cleanCarData = {};
+            for (const [key, value] of Object.entries(carData)) {
+              if (!systemFields.includes(key)) {
+                cleanCarData[key] = value;
+              }
+            }
             
-            const result = window.processIncomingData(carData, 'OPEN_CASE_UI_ENGLISH');
+            console.log('🔄 Processing English mapped data');
+            console.log('📊 OPEN_CASE_UI English data (cleaned):', cleanCarData);
+            
+            const result = window.processIncomingData(cleanCarData, 'OPEN_CASE_UI_ENGLISH');
             
             console.log('📊 English processing result:', result);
             console.log('📊 Helper final state:', window.helper?.vehicle);
