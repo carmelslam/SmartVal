@@ -406,14 +406,32 @@
             // "שנת ייצור": "2020"\n"עליה לכביש": "2020-1",
             // Missing comma after "2020"
             
-            // Fix any JSON field that ends without a comma before the next field
-            // Pattern: "fieldname": "value"\n  "nextfield": 
-            // This regex looks for: colon, whitespace, quoted value, newline(s), whitespace, quote
-            fixedJson = fixedJson.replace(/(:\s*"[^"]+")(\s*\n\s*")/g, '$1,$2');
+            // Fix the specific issue: missing comma after "שנת ייצור": "2020"
+            // From the error log, we can see the exact pattern that needs fixing
+            console.log('🔍 Checking for specific year pattern...');
             
-            console.log('🔧 Applied JSON comma fix');
+            // Multiple strategies to fix missing commas:
             
-            console.log('📝 Fixed JSON:', fixedJson);
+            // 1. Fix the specific "שנת ייצור": "2020" pattern
+            fixedJson = fixedJson.replace(/"שנת ייצור":\s*"(\d{4})"\s*\n/g, '"שנת ייצור": "$1",\n');
+            
+            // 2. General pattern: any field ending with quoted value followed by newline and another field
+            fixedJson = fixedJson.replace(/(:\s*"[^"]+")(\s*\n\s*"[^"]+"\s*:)/g, '$1,$2');
+            
+            // 3. Even more general: any line ending with quote followed by newline and quote-colon
+            fixedJson = fixedJson.replace(/("\s*)\n(\s*"[^"]+"\s*:)/g, '$1,\n$2');
+            
+            // Verify the fixes were applied
+            const hasYearComma = fixedJson.includes('"שנת ייצור": "2020",');
+            const stillHasIssue = fixedJson.includes('"2020"\n"עליה לכביש"');
+            
+            console.log('🔧 JSON Fix Results:', {
+              hasYearComma,
+              stillHasIssue,
+              fixedLength: fixedJson.length
+            });
+            
+            console.log('📝 Fixed JSON preview:', fixedJson.substring(0, 500));
             
             // Parse the fixed JSON string
             try {
