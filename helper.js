@@ -755,7 +755,6 @@ window.buildComprehensiveDamageAssessment = function() {
     let totalWithoutVAT = 0, totalWithVAT = 0;
     
     // ✅ REBUILD: Create fresh damage_centers_summary with sequential numbering
-    console.log(`📝 Rebuilding summary for ${allCenters.length} centers...`);
     allCenters.forEach((center, index) => {
       const centerNumber = index + 1; // Sequential numbering (1, 2, 3, 4...)
       const centerKey = `Damage center ${centerNumber}`;
