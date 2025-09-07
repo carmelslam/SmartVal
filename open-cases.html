@@ -385,14 +385,19 @@
         let carData = null;
         
         // Check if response contains the data wrapped in system fields
-        if (webhookResponse && webhookResponse.message && typeof webhookResponse.message === 'string') {
-          console.log('📥 Response contains message field with string');
-          console.log('📥 Raw message length:', webhookResponse.message.length);
-          console.log('📥 Raw message preview:', webhookResponse.message.substring(0, 200));
+        if (webhookResponse && webhookResponse.message) {
+          console.log('📥 Response contains message field');
+          console.log('📥 Message type:', typeof webhookResponse.message);
           
-          try {
-            // Try to fix common JSON issues before parsing
-            let fixedJson = webhookResponse.message;
+          // Handle different message formats
+          if (typeof webhookResponse.message === 'string') {
+            console.log('📥 Message is string - needs JSON parsing');
+            console.log('📥 Raw message length:', webhookResponse.message.length);
+            console.log('📥 Raw message preview:', webhookResponse.message.substring(0, 200));
+            
+            try {
+              // Try to fix common JSON issues before parsing
+              let fixedJson = webhookResponse.message;
             
             // Log the problematic line
             const lines = fixedJson.split('\n');
@@ -492,6 +497,13 @@
               // If extraction fails, treat it as Hebrew text
               carData = { Body: webhookResponse.message };
             }
+          } else if (typeof webhookResponse.message === 'object' && webhookResponse.message !== null) {
+            console.log('📥 Message is already an object - no parsing needed');
+            console.log('📥 Message object keys:', Object.keys(webhookResponse.message));
+            
+            // Direct object - use it directly
+            carData = webhookResponse.message;
+            console.log('✅ Using message object directly:', carData);
           }
         }
         // Handle array format responses
