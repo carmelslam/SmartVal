@@ -388,6 +388,7 @@
         if (webhookResponse && webhookResponse.message && typeof webhookResponse.message === 'string') {
           console.log('📥 Response contains message field with string');
           console.log('📥 Raw message length:', webhookResponse.message.length);
+          console.log('📥 Raw message preview:', webhookResponse.message.substring(0, 200));
           
           try {
             // Try to fix common JSON issues before parsing
@@ -401,14 +402,16 @@
               }
             });
             
-            // Fix missing comma after year values like "2020"
-            // The issue is: "שנת ייצור": "2020"\n"עליה לכביש": "2020-1"
-            // Need to add comma after "2020" when followed by another field
-            fixedJson = fixedJson.replace(/"(\d{4})"\s*\n\s*"/g, '"$1",\n  "');
+            // The exact issue from the error log:
+            // "שנת ייצור": "2020"\n"עליה לכביש": "2020-1",
+            // Missing comma after "2020"
             
-            // Also fix missing commas after other field values
-            // Pattern: "value" followed by newline and another field starting with "
-            fixedJson = fixedJson.replace(/"([^"]+)"\s*\n\s*"([^"]+)"\s*:/g, '"$1",\n  "$2":');
+            // Fix any JSON field that ends without a comma before the next field
+            // Pattern: "fieldname": "value"\n  "nextfield": 
+            // This regex looks for: colon, whitespace, quoted value, newline(s), whitespace, quote
+            fixedJson = fixedJson.replace(/(:\s*"[^"]+")(\s*\n\s*")/g, '$1,$2');
+            
+            console.log('🔧 Applied JSON comma fix');
             
             console.log('📝 Fixed JSON:', fixedJson);
             
