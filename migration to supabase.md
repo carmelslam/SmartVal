@@ -322,3 +322,247 @@ Continuity: users can fetch, resume, update, finalize — no split-brain.
 Flexibility: OneDrive remains for user comfort, but Supabase governs the system.
 Security: private storage, signed links, RLS.
 Scalability: Edge Functions handle rendering, ingestion, syncing without heavy Make automations.
+
+Here’s a structured documentation-ready **summary of Supabase integration** based on everything we discussed:
+
+---
+
+# Supabase Integration Architecture — Documentation
+
+## Core Principle
+
+The **helper JSON = the case.**
+
+* All case data (from inception through finalization) lives inside one canonical object called `helper`.
+* Documents, reports, and images are stored in Supabase Storage (and optionally mirrored to OneDrive), but the **case meta is never fragmented**.
+* Users can always fetch the helper, resume work, update, finalize, and the helper remains complete.
+
+---
+
+## System Roles
+
+### Supabase (system of record)
+
+* **Auth**: user/role management with Row Level Security (RLS).
+* **Postgres DB**: structured tables for cases, helper, reports, documents, images, events.
+* **Storage**: private buckets for reports, originals, processed images, docs, and temp.
+* **Edge Functions**: mini APIs for ingest, helper load/save, report rendering, URL signing, finalization, OneDrive sync.
+* **Realtime**: broadcast updates (optional) for live collaboration.
+
+### Make.com (integration edge)
+
+* **Inbound**: fetch external data (Levi Yitzhak, government APIs, inbox files) → POST into Supabase via Edge Functions.
+* **Outbound**: send emails, SMS, WhatsApp messages with signed URLs; copy Supabase artifacts into user OneDrive folders.
+* **Bridging**: monitor OneDrive for user-added documents and register them in Supabase.
+
+### OneDrive (user-facing file cabinet)
+
+* Case folders exist for user convenience and daily work.
+* Contains mirrored reports, images, and ad-hoc documents (car license, driver license, invoices, etc.).
+* Files are registered in Supabase for indexing and linking, but OneDrive never holds the case logic.
+
+### VPS (rendering service)
+
+* Runs **Gotenberg** (HTML → PDF).
+* Called by Supabase Edge Functions for report generation.
+
+---
+
+## Database Schema (key tables)
+
+```sql
+cases (
+  id uuid pk,
+  plate text,
+  owner_name text,
+  status text,
+  updated_at timestamptz
+)
+
+helper_state (
+  case_id uuid pk fk→cases,
+  helper jsonb not null,   -- entire case
+  version int,
+  updated_by uuid,
+  updated_at timestamptz
+)
+
+helper_versions (
+  id bigint pk,
+  case_id uuid fk→cases,
+  version int,
+  helper jsonb,
+  saved_by uuid,
+  saved_at timestamptz
+)
+
+reports (
+  id uuid pk,
+  case_id uuid fk→cases,
+  plate text,
+  report_type text,
+  version int,
+  storage_key text,
+  created_at timestamptz
+)
+
+docs (
+  id uuid pk,
+  case_id uuid fk→cases,
+  category text,
+  filename text,
+  mime text,
+  size bigint,
+  storage_key text,        -- optional copy in Supabase
+  onedrive_file_id text,
+  onedrive_web_url text,
+  checksum text,
+  created_by text,
+  created_at timestamptz
+)
+
+images (
+  id uuid pk,
+  case_id uuid fk→cases,
+  original_key text,
+  processed_key text,
+  meta jsonb,
+  created_at timestamptz
+)
+
+events (
+  id bigint pk,
+  actor text,
+  type text,
+  ref jsonb,
+  created_at timestamptz
+)
+```
+
+---
+
+## Storage Buckets (all private)
+
+* `reports/` — final PDFs
+* `originals/` — raw uploaded images
+* `processed/` — watermarked/optimized images
+* `docs/` — general user documents (car license, invoices, etc.)
+* `temp/` — short-lived files
+
+---
+
+## Edge Functions (catalog)
+
+1. **`GET/PUT /case/{id}/helper`**
+
+   * Fetch or replace the full helper JSON.
+   * Uses optimistic concurrency via `version`.
+   * Each save also writes an immutable record to `helper_versions`.
+
+2. **`POST /ingest-external`**
+
+   * Called by Make.com to push external data (scraped vehicle details, form uploads, etc.).
+   * Function merges only the allowed subtree into `helper`.
+
+3. **`POST /render-report`**
+
+   * Accepts report HTML and metadata.
+   * Calls Gotenberg → saves PDF into `reports/`.
+   * Inserts `reports` row → returns signed URL.
+
+4. **`POST /get-report`**
+
+   * Fetches latest report for a plate/type.
+   * Returns signed URL.
+
+5. **`POST /sign-url`**
+
+   * Generic short-lived signed URL for any storage key.
+
+6. **`POST /update-helper`**
+
+   * Scoped patch for helper (used internally and by Make).
+
+7. **`POST /sync-onedrive`** (optional)
+
+   * Triggered when new reports/docs are created.
+   * Mirrors them into OneDrive case folders.
+
+---
+
+## App Behavior
+
+* **Helper lifecycle:**
+
+  * Load helper (by plate → case\_id).
+  * Work in UI with full JSON in memory.
+  * Save = PUT helper + version check → increments version, writes helper\_versions.
+  * Resume anytime → fetch latest helper.
+  * Conflicts → handled via version mismatch (409).
+
+* **Reports:**
+
+  * Built from helper → HTML → Gotenberg → PDF in `reports/`.
+  * Previewed in iframe using signed URL.
+  * Shared as PDF via signed URL (short-lived).
+
+* **Documents:**
+
+  * UI supports general uploads (plate, category dropdown, free text).
+  * Stored in `docs/` bucket + `docs` table.
+  * Registered docs can be previewed via signed URLs.
+  * Make mirrors selected docs into OneDrive case folders.
+
+* **Images:**
+
+  * Upload to `originals/`.
+  * Process into `processed/` (resize, watermark, recognition).
+  * Store metadata in `images.meta`.
+  * Preview via signed URLs or UI gallery.
+
+---
+
+## OneDrive Integration Pattern
+
+* **Supabase → OneDrive (mirror)**:
+
+  * When reports or processed images are created, Supabase events trigger Make to upload them into the correct OneDrive case folder.
+
+* **OneDrive → Supabase (intake)**:
+
+  * Make watches OneDrive case folders for new docs.
+  * For each file: map to plate/case, compute checksum, classify category.
+  * Register in `docs` table (with OneDrive file ID + URL).
+  * Optional: copy binary into `docs/` bucket for backup.
+
+---
+
+## Security
+
+* **RLS**: enabled on all tables.
+* **Buckets**: private; clients only access via signed URLs or streaming Edge Functions.
+* **Service role keys**: used only by Edge Functions (never exposed to client).
+* **Audit**: all important operations log to `events` with actor, type, refs.
+
+---
+
+## Migration Plan
+
+1. **Inventory** existing Make scenarios → mark steps as External (keep in Make), Authoritative (migrate to Supabase), Rendering (move behind `render-report`).
+2. **Establish Supabase core**: tables, buckets, Edge Functions (`helper`, `reports`, `docs`).
+3. **Dual-write**: Make continues but also POSTs results to Supabase. Drive remains mirror/archive.
+4. **Switch app reads** to Supabase only.
+5. **Trim Make**: remove redundant internal logic, keep only ingestion + outbound.
+6. **Harden**: add cleanup functions, indexes, monitoring.
+
+---
+
+## Key Benefits
+
+* **Single truth**: helper JSON in Supabase, always complete.
+* **Continuity**: users can fetch, resume, update, finalize — no split-brain.
+* **Flexibility**: OneDrive remains for user comfort, but Supabase governs the system.
+* **Security**: private storage, signed links, RLS.
+* **Scalability**: Edge Functions handle rendering, ingestion, syncing without heavy Make automations.
+
+
