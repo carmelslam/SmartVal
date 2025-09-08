@@ -2693,6 +2693,12 @@
               console.log(`📝 ${key} - Using string adjData as value:`, value);
             }
           }
+
+          // Handle malformed data like {percentage: "עליה לכביש"} or {percentage: "מספר בעלים"}
+          if (!value && !percent && !amount && adjData.percentage && typeof adjData.percentage === 'string') {
+            console.log(`📝 ${key} - Found text in percentage field, using as value:`, adjData.percentage);
+            value = adjData.percentage;
+          }
         }
         
         console.log(`   🎯 FINAL EXTRACTION - Key: ${key}, Value: "${value}", Percent: ${percent}, Amount: ${amount}`);
@@ -2713,6 +2719,7 @@
             case 'registration_date':
             case 'registrationdate':
             case 'registration date':
+            case 'road_registration':
               containerId = 'fullRegistrationAdjustmentsList';
               addFunction = addFullRegistrationAdjustment;
               break;
@@ -2733,6 +2740,8 @@
             case 'numberofowners':
             case 'number of owners':
             case 'מספר בעלים':
+            case 'previous_owners':
+            case 'ownership_history':
               containerId = 'ownersAdjustmentsList';
               addFunction = addOwnersAdjustment;
               break;
