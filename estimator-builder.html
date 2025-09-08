@@ -2294,6 +2294,27 @@
       saveWithFeedback(event, 'Contact Data');
     };
 
+    window.saveFullMarketValueWithFeedback = function(event) {
+      console.log('🔘 Save full market value button clicked!');
+      try {
+        // Get helper with proper structure check
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper) helper = {};
+        
+        // Update helper from all market value adjustments
+        updateHelperFromAdjustments(helper);
+        
+        // Save back to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Call the standard save with feedback
+        saveWithFeedback(event, 'Full Market Value');
+      } catch (error) {
+        console.error('❌ Error in saveFullMarketValueWithFeedback:', error);
+        showSaveResult('שגיאה בשמירת נתוני ערך שוק מלא', false);
+      }
+    };
+
     window.saveGrossValueWithFeedback = function(event) {
       saveWithFeedback(event, 'Gross Value');
     };
@@ -4348,7 +4369,12 @@
       if (row) {
         row.remove();
         updateGrossMarketValueCalculation();
-        updateHelperFromAdjustments();
+        
+        // Get helper with proper structure check
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper) helper = {};
+        
+        updateHelperFromAdjustments(helper);
       }
     }
 
