@@ -3010,39 +3010,55 @@
               
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // תיאור - use the VALUE field not description as per user request
-                let descriptionValue = '';
+                // EXACT COPY FROM FINAL REPORT BUILDER:
                 
-                // Always prefer adjData.value over adjData.description for תיאור field
-                if (adjData.value) {
-                  descriptionValue = adjData.value;
-                  console.log(`📝 ${containerId} תיאור: using value field "${adjData.value}"`);
-                } else if (value) {
-                  descriptionValue = value;
-                  console.log(`📝 ${containerId} תיאור: using extracted value "${value}"`);
-                } else {
-                  console.log(`📝 ${containerId} תיאור: no value available, leaving empty`);
+                // Extract percentage - handle "9%" string format and negative values
+                let finalPercent = 0;
+                if (adjData.percent) {
+                  const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
+                  finalPercent = parseFloat(percentStr) || 0;
+                } else if (adjData.percentage) {
+                  const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
+                  finalPercent = parseFloat(percentStr) || 0;
                 }
                 
-                inputs[0].value = descriptionValue;
-                
-                // סוג - auto-detect from sign of percent or amount
-                const isNegative = (percent < 0 || amount < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-                
-                // אחוז - show all values including zero
-                inputs[2].value = (percent !== undefined && !isNaN(percent)) ? percent : '';
-                
-                // ערך - handle zero amount case  
-                inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
-                
-                console.log(`📝 Populated ${containerId} fields: description="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
-                
-                // If only percentage is provided, calculate the amount
-                if (percent && !amount && basePrice > 0) {
-                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                // Extract amount - handle "ש 29,588" format
+                let finalAmount = 0;
+                if (adjData.amount) {
+                  const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
+                  finalAmount = parseFloat(amountStr) || 0;
                 }
+                
+                // Use VALUE field for description as per user requirements
+                const description = adjData.value || adjData.description || key;
+                
+                // Determine if this is a reduction (negative percent or amount)
+                const isReduction = finalPercent < 0 || finalAmount < 0;
+                
+                // Set description from .value field
+                inputs[0].value = description;
+                
+                // Set type based on sign
+                inputs[1].value = isReduction ? 'minus' : 'plus';
+                
+                // Set percentage with proper sign
+                if (finalPercent !== 0) {
+                  inputs[2].value = finalPercent.toString(); // Keep original sign
+                }
+                
+                // Set amount with proper sign and currency
+                if (finalAmount !== 0) {
+                  inputs[3].value = finalAmount < 0 ? `-₪${Math.abs(finalAmount).toLocaleString()}` : `₪${finalAmount.toLocaleString()}`;
+                } else if (finalPercent !== 0 && basePrice > 0) {
+                  // Calculate amount from percentage
+                  const calculatedAmount = (basePrice * Math.abs(finalPercent)) / 100;
+                  const sign = finalPercent < 0 ? '-' : '';
+                  inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
+                }
+                
+                console.log(`📝 Final Report Logic - ${containerId}: desc="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
+                console.log(`📝 Data used: adjData.value="${adjData.value}", adjData.percent="${adjData.percent}", adjData.amount="${adjData.amount}"`);
+                
               }
             }
           }
