@@ -2860,6 +2860,8 @@
         
         console.log(`   🎯 FINAL EXTRACTION - Key: ${key}, Value: "${value}", Percent: ${percent}, Amount: ${amount}`);
         console.log(`   ✅ Condition check (value || percent || amount):`, !!(value || percent || amount));
+        console.log(`   🔍 adjData exists:`, !!adjData);
+        console.log(`   🔍 Individual checks: value="${value}", percent=${percent}, amount=${amount}`);
         
         if (adjData && (value || percent || amount)) {
           let containerId = null;
@@ -2898,7 +2900,9 @@
           }
 
           // Special handling for owners entries - prevent duplicates
-          const isOwners = key.toLowerCase().includes('owners') || key.toLowerCase().includes('owner');
+          // Be more specific - only keys that map to ownersAdjustmentsList
+          const ownersKeys = ['owners', 'num_owners', 'number_of_owners', 'numberofowners', 'number of owners', 'מספר בעלים', 'previous_owners', 'ownership_history'];
+          const isOwners = ownersKeys.includes(key.toLowerCase());
           if (isOwners) {
             console.log(`🎯 Processing owners entry: ${key}`);
             
@@ -2949,6 +2953,7 @@
             case 'ownership_history':
               containerId = 'ownersAdjustmentsList';
               addFunction = addOwnersAdjustment;
+              console.log(`🎯 MATCHED OWNERS CASE: ${key} → ${containerId}`);
               break;
             default:
               // Any other adjustments go to additional adjustments
