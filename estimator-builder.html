@@ -1180,11 +1180,19 @@
           // Add listener to keep them in sync
           basicPriceField.addEventListener('input', function() {
             fullBasicPriceField.value = this.value;
+            // Calculate amounts first, then update calculations
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
             updateFullMarketValueCalculation();
           });
           
           basicPriceField.addEventListener('change', function() {
             fullBasicPriceField.value = this.value;
+            // Calculate amounts first, then update calculations
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
             updateFullMarketValueCalculation();
           });
         }
@@ -3098,16 +3106,35 @@
                   inputs[2].value = percent.toString();
                 }
                 
-                // Field 4: ערך (Value) - from adjData.amount or calculated
-                if (amount !== 0) {
-                  inputs[3].value = amount < 0 ? 
-                    `-₪${Math.abs(amount).toLocaleString()}` : 
-                    `₪${amount.toLocaleString()}`;
-                } else if (percent !== 0 && basePrice > 0) {
-                  // Calculate amount from percentage
-                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                  const sign = percent < 0 ? '-' : '';
-                  inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
+                // Field 4: ערך (Value) - CALCULATE LOCALLY using Final Report logic
+                if (percent !== 0 && basePrice > 0) {
+                  let calculatedAmount = 0;
+                  
+                  // Different calculation methods by adjustment type (EXACT Final Report logic)
+                  if (containerId === 'fullFeaturesAdjustmentsList') {
+                    // Features: Use BASE price for calculation
+                    calculatedAmount = (basePrice * Math.abs(percent)) / 100;
+                  } else if (containerId === 'fullRegistrationAdjustmentsList') {
+                    // Registration: Fixed amount (not percentage), skip calculation here
+                    calculatedAmount = 0; // Will be handled separately
+                  } else {
+                    // KM, Ownership, Owners: Will be calculated by the cumulative function
+                    // Mark for later calculation with proper cumulative values
+                    calculatedAmount = 0; // Placeholder, will be updated by calculateMarketValueAmounts()
+                  }
+                  
+                  // Apply correct sign and format
+                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                  
+                  console.log(`🧮 CALCULATED ${containerId}: ${percent}% of base ${basePrice} = ₪${Math.round(calculatedAmount)}`);
+                } else if (adjData.amount && adjData.amount !== '₪ 0') {
+                  // Fallback: Use helper amount only if no percentage available
+                  const amount = parseFloat(String(adjData.amount).replace(/[₪,\s]/g, '')) || 0;
+                  if (amount !== 0) {
+                    inputs[3].value = amount < 0 ? 
+                      `-₪${Math.abs(amount).toLocaleString()}` : 
+                      `₪${amount.toLocaleString()}`;
+                  }
                 }
                 
                 console.log(`📝 Final Report Logic - ${containerId}: desc="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
@@ -3121,7 +3148,15 @@
         }
       });
       
-      // Trigger calculation after populating all adjustments
+      // Calculate ערך amounts with cumulative logic first
+      if (typeof calculateMarketValueAmounts === 'function') {
+        setTimeout(() => {
+          calculateMarketValueAmounts();
+          console.log('✅ Market value amounts calculated with cumulative logic');
+        }, 50);
+      }
+      
+      // Then trigger main calculation
       if (typeof updateFullMarketValueCalculation === 'function') {
         setTimeout(() => {
           updateFullMarketValueCalculation();
@@ -3137,6 +3172,151 @@
       window.registrationProcessed = false;
       window.ownersProcessed = false;
       console.log('🔄 Reset all processing flags');
+    }
+
+    // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
+    
+    // COPIED FROM FINAL REPORT: Calculate ערך fields with cumulative logic
+    window.calculateMarketValueAmounts = function() {
+      console.log('🧮 Starting market value amount calculations...');
+      
+      // Get base price
+      let basicPrice = 0;
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField?.value) {
+        basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      if (basicPrice === 0) {
+        console.log('⚠️ No base price available for calculations');
+        return;
+      }
+      
+      console.log('🏠 Base price for calculations:', basicPrice);
+      let currentValue = basicPrice;
+      
+      // 1. Features: Calculate from base price
+      const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+      featuresRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value; // סוג field
+          const percentInput = inputs[2]; // אחוז field
+          const valueInput = inputs[3]; // ערך field
+          
+          const percent = parseFloat(percentInput.value) || 0;
+          if (percent !== 0) {
+            const adjustment = basicPrice * (Math.abs(percent) / 100);
+            const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
+            currentValue += signedAdjustment;
+            
+            // Update ערך field with calculated amount
+            valueInput.value = `₪${Math.round(adjustment).toLocaleString()}`;
+            console.log(`🏗️ Features: ${percent}% of ₪${basicPrice} = ₪${Math.round(adjustment)}, cumulative: ₪${Math.round(currentValue)}`);
+          }
+        }
+      });
+      
+      // 2. Registration: Add fixed amounts to cumulative  
+      const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+      registrationRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value;
+          const valueInput = inputs[3];
+          
+          if (valueInput.value) {
+            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            const signedValue = (type === 'minus') ? -value : value;
+            currentValue += signedValue;
+            console.log(`🏛️ Registration: ₪${value}, cumulative: ₪${Math.round(currentValue)}`);
+          }
+        }
+      });
+      
+      // 3. Mileage: Calculate from previous cumulative
+      const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
+      mileageRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value;
+          const percentInput = inputs[2];
+          const valueInput = inputs[3];
+          
+          const percent = parseFloat(percentInput.value) || 0;
+          if (percent !== 0) {
+            const previousCumulative = currentValue;
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
+            
+            if (type === 'minus') {
+              currentValue = previousCumulative - specificResult;
+            } else {
+              currentValue = previousCumulative + specificResult;
+            }
+            
+            // Update ערך field with calculated amount
+            valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
+            console.log(`🏃 Mileage: ${percent}% of ₪${Math.round(previousCumulative)} = ₪${Math.round(specificResult)}, cumulative: ₪${Math.round(currentValue)}`);
+          }
+        }
+      });
+      
+      // 4. Ownership: Calculate from previous cumulative
+      const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
+      ownershipRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value;
+          const percentInput = inputs[2];
+          const valueInput = inputs[3];
+          
+          const percent = parseFloat(percentInput.value) || 0;
+          if (percent !== 0) {
+            const previousCumulative = currentValue;
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
+            
+            if (type === 'minus') {
+              currentValue = previousCumulative - specificResult;
+            } else {
+              currentValue = previousCumulative + specificResult;
+            }
+            
+            // Update ערך field with calculated amount
+            valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
+            console.log(`🏢 Ownership: ${percent}% of ₪${Math.round(previousCumulative)} = ₪${Math.round(specificResult)}, cumulative: ₪${Math.round(currentValue)}`);
+          }
+        }
+      });
+      
+      // 5. Owners: Calculate from previous cumulative
+      const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
+      ownersRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value;
+          const percentInput = inputs[2];
+          const valueInput = inputs[3];
+          
+          const percent = parseFloat(percentInput.value) || 0;
+          if (percent !== 0) {
+            const previousCumulative = currentValue;
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
+            
+            if (type === 'minus') {
+              currentValue = previousCumulative - specificResult;
+            } else {
+              currentValue = previousCumulative + specificResult;
+            }
+            
+            // Update ערך field with calculated amount
+            valueInput.value = `₪${Math.round(specificResult).toLocaleString()}`;
+            console.log(`👥 Owners: ${percent}% of ₪${Math.round(previousCumulative)} = ₪${Math.round(specificResult)}, cumulative: ₪${Math.round(currentValue)}`);
+          }
+        }
+      });
+      
+      console.log(`✅ Final cumulative value: ₪${Math.round(currentValue)}`);
+      return currentValue;
     }
 
     // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
@@ -5152,6 +5332,7 @@
       
       // Listen to all adjustment input changes
       function addListenersToAdjustmentRows() {
+        // Gross market value adjustments
         const allInputs = document.querySelectorAll('#featuresAdjustmentsList input, #registrationAdjustmentsList input, #featuresAdjustmentsList select, #registrationAdjustmentsList select');
         allInputs.forEach(input => {
           input.addEventListener('input', function() {
@@ -5161,6 +5342,31 @@
           });
           input.addEventListener('change', function() {
             updateGrossMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            autoSaveToHelper();
+          });
+        });
+        
+        // Full market value adjustments
+        const fullMarketInputs = document.querySelectorAll('#fullFeaturesAdjustmentsList input, #fullRegistrationAdjustmentsList input, #mileageAdjustmentsList input, #ownershipAdjustmentsList input, #ownersAdjustmentsList input, #fullFeaturesAdjustmentsList select, #fullRegistrationAdjustmentsList select, #mileageAdjustmentsList select, #ownershipAdjustmentsList select, #ownersAdjustmentsList select');
+        fullMarketInputs.forEach(input => {
+          input.addEventListener('input', function() {
+            // Calculate amounts first with cumulative logic
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
+            // Then update calculations
+            updateFullMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            autoSaveToHelper();
+          });
+          input.addEventListener('change', function() {
+            // Calculate amounts first with cumulative logic
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
+            // Then update calculations
+            updateFullMarketValueCalculation();
             // AUTO-SAVE ON EVERY CHANGE
             autoSaveToHelper();
           });
@@ -5181,11 +5387,36 @@
       const featuresContainer = document.getElementById('featuresAdjustmentsList');
       const registrationContainer = document.getElementById('registrationAdjustmentsList');
       
+      // Full market value containers
+      const fullFeaturesContainer = document.getElementById('fullFeaturesAdjustmentsList');
+      const fullRegistrationContainer = document.getElementById('fullRegistrationAdjustmentsList');
+      const mileageContainer = document.getElementById('mileageAdjustmentsList');
+      const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
+      const ownersContainer = document.getElementById('ownersAdjustmentsList');
+      
+      // Observe gross market value containers
       if (featuresContainer) {
         observer.observe(featuresContainer, { childList: true });
       }
       if (registrationContainer) {
         observer.observe(registrationContainer, { childList: true });
+      }
+      
+      // Observe full market value containers
+      if (fullFeaturesContainer) {
+        observer.observe(fullFeaturesContainer, { childList: true });
+      }
+      if (fullRegistrationContainer) {
+        observer.observe(fullRegistrationContainer, { childList: true });
+      }
+      if (mileageContainer) {
+        observer.observe(mileageContainer, { childList: true });
+      }
+      if (ownershipContainer) {
+        observer.observe(ownershipContainer, { childList: true });
+      }
+      if (ownersContainer) {
+        observer.observe(ownersContainer, { childList: true });
       }
     }
     
