@@ -2947,6 +2947,15 @@
               return; // Skip this entry to prevent duplicates
             }
             
+            // PRIORITY LOGIC: Skip previous_owners if ownership_history exists with better data
+            if (key === 'previous_owners' && adjustments.ownership_history) {
+              const ownershipHistoryData = adjustments.ownership_history;
+              if (ownershipHistoryData.percent || ownershipHistoryData.amount || ownershipHistoryData.value) {
+                console.log(`🚫 Skipping previous_owners because ownership_history has better data`);
+                return; // Skip previous_owners in favor of ownership_history
+              }
+            }
+            
             // Mark that we've processed an owners entry
             window.ownersProcessed = true;
             console.log(`✅ Marked owners as processed for: ${key}`);
@@ -3030,7 +3039,8 @@
                 }
                 
                 // Use VALUE field for description as per user requirements
-                const description = adjData.value || adjData.description || key;
+                // NEVER use the key name as fallback - that's what's showing "previous_owners"
+                const description = adjData.value || adjData.description || '';
                 
                 // Determine if this is a reduction (negative percent or amount)
                 const isReduction = finalPercent < 0 || finalAmount < 0;
