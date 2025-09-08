@@ -2577,6 +2577,7 @@
       
       console.log('🏪 Auto-populating market adjustments from helper.valuation.adjustments');
       console.log('🔍 Available adjustments:', adjustments);
+      console.log('🔍 Available adjustment keys:', Object.keys(adjustments));
       
       // Get base price for calculations
       let basePrice = 0;
@@ -2615,6 +2616,7 @@
       Object.keys(adjustments).forEach(key => {
         const adjData = adjustments[key];
         console.log(`📝 Processing ${key} adjustment:`, adjData);
+        console.log(`   Key lowercase: ${key.toLowerCase()}, Has value: ${!!adjData?.value}, Has percent: ${!!adjData?.percent}, Has amount: ${!!adjData?.amount}`);
         
         if (adjData && (adjData.value || adjData.percent || adjData.amount)) {
           let containerId = null;
@@ -2629,6 +2631,8 @@
               break;
             case 'registration':
             case 'registration_date':
+            case 'registrationdate':
+            case 'registration date':
               containerId = 'fullRegistrationAdjustmentsList';
               addFunction = addFullRegistrationAdjustment;
               break;
@@ -2646,6 +2650,9 @@
             case 'owners':
             case 'num_owners':
             case 'number_of_owners':
+            case 'numberofowners':
+            case 'number of owners':
+            case 'מספר בעלים':
               containerId = 'ownersAdjustmentsList';
               addFunction = addOwnersAdjustment;
               break;
@@ -2678,8 +2685,8 @@
                 const isNegative = (percent < 0 || amount < 0);
                 inputs[1].value = isNegative ? 'minus' : 'plus';
                 
-                // אחוז
-                inputs[2].value = percent ? Math.abs(percent) : '';
+                // אחוז - keep the sign for display
+                inputs[2].value = percent ? percent : '';
                 
                 // ערך
                 inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
@@ -2750,14 +2757,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (basePrice * percent) / 100;
+              value = (basePrice * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2778,14 +2785,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (basePrice * percent) / 100;
+              value = (basePrice * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2806,14 +2813,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (currentValue * percent) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2835,14 +2842,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (currentValue * percent) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2864,14 +2871,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (currentValue * percent) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2893,14 +2900,14 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (basePrice * percent) / 100;
+              value = (basePrice * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
             if (type === 'plus') {
-              currentValue += value;
+              currentValue += Math.abs(value);
             } else {
-              currentValue -= value;
+              currentValue -= Math.abs(value);
             }
           }
         });
@@ -2969,8 +2976,8 @@
         }
       }
       
-      if (referenceValue > 0 && percent > 0) {
-        const calculatedValue = (referenceValue * percent) / 100;
+      if (referenceValue > 0 && percent !== 0) {
+        const calculatedValue = (referenceValue * Math.abs(percent)) / 100;
         inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
       } else {
         inputs[3].value = '';
@@ -4288,23 +4295,6 @@
       }
     }
 
-    // Calculate adjustment value from percentage
-    window.calculateAdjustmentValueSimple = function(percentInput) {
-      const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
-      if (!row) return;
-      
-      const inputs = row.querySelectorAll('input[type="text"]');
-      const valueInput = inputs[2];
-      if (!valueInput) return;
-      
-      const percent = parseFloat(percentInput.value) || 0;
-      const basicPrice = parseFloat(document.getElementById('basicPrice')?.value?.replace(/[₪,]/g, '')) || 0;
-      
-      if (percent > 0 && basicPrice > 0) {
-        const calculatedValue = basicPrice * (percent / 100);
-        valueInput.value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-      }
-    }
 
     // Sync adjustment to estimate helper (mirror data)
     function syncAdjustmentToEstimateHelper(element, category, helperParam) {
