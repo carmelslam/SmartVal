@@ -1165,6 +1165,46 @@
       }
     };
 
+    // Initialize Full Market Value section
+    function initializeFullMarketValueSection() {
+      try {
+        console.log('🔧 Initializing Full Market Value section');
+        
+        // Copy base price to full basic price field
+        const basicPriceField = document.getElementById('basicPrice');
+        const fullBasicPriceField = document.getElementById('fullBasicPrice');
+        
+        if (basicPriceField && fullBasicPriceField) {
+          fullBasicPriceField.value = basicPriceField.value;
+          
+          // Add listener to keep them in sync
+          basicPriceField.addEventListener('input', function() {
+            fullBasicPriceField.value = this.value;
+            updateFullMarketValueCalculation();
+          });
+          
+          basicPriceField.addEventListener('change', function() {
+            fullBasicPriceField.value = this.value;
+            updateFullMarketValueCalculation();
+          });
+        }
+        
+        // Auto-populate market adjustments if data exists
+        setTimeout(() => {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) {
+            console.log('📋 Auto-populating market adjustments on init');
+            autoPopulateMarketAdjustments();
+          } else {
+            console.log('ℹ️ No valuation adjustments to auto-populate');
+          }
+        }, 500);
+        
+      } catch (error) {
+        console.error('❌ Error initializing Full Market Value section:', error);
+      }
+    }
+
     // Single DOMContentLoaded handler
     document.addEventListener('DOMContentLoaded', function() {
       initializeEstimateBuilder();
@@ -1180,6 +1220,9 @@
       // Load data from helper
       loadDataFromHelper();
       loadDamageCentersSummary(window.helper || {});
+      
+      // Initialize Full Market Value section
+      initializeFullMarketValueSection();
       
       // Add event listeners
       addEventListeners();
@@ -2663,6 +2706,332 @@
       }
       
       console.log('✅ Market adjustments auto-population completed from helper.valuation.adjustments');
+    }
+
+    // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
+    
+    // Update full market value calculation with cumulative logic
+    window.updateFullMarketValueCalculation = function() {
+      try {
+        console.log('🧮 Starting full market value calculation...');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get base price
+        let basePrice = 0;
+        const basicPriceField = document.getElementById('basicPrice');
+        const fullBasicPriceField = document.getElementById('fullBasicPrice');
+        
+        if (basicPriceField && basicPriceField.value) {
+          basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // Update full basic price field
+        if (fullBasicPriceField) {
+          fullBasicPriceField.value = basePrice > 0 ? `₪${basePrice.toLocaleString()}` : '';
+        }
+        
+        console.log('📊 Base price:', basePrice);
+        
+        if (basePrice === 0) {
+          console.warn('⚠️ No base price found for calculations');
+          return;
+        }
+        
+        let currentValue = basePrice;
+        
+        // 1. Features Adjustments (calculate from base price)
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+        featuresRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (basePrice * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update features cumulative
+        const featuresCumulative = document.querySelector('#featuresCumulative span');
+        if (featuresCumulative) {
+          featuresCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // 2. Registration Adjustments (calculate from base price)
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+        registrationRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (basePrice * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update registration cumulative
+        const registrationCumulative = document.querySelector('#registrationCumulative span');
+        if (registrationCumulative) {
+          registrationCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // 3. Mileage Adjustments (calculate from cumulative)
+        const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
+        mileageRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (currentValue * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update mileage cumulative
+        const mileageCumulative = document.querySelector('#mileageCumulative span');
+        if (mileageCumulative) {
+          mileageCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          mileageCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
+        }
+        
+        // 4. Ownership Type Adjustments (calculate from cumulative)
+        const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
+        ownershipRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (currentValue * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update ownership cumulative
+        const ownershipCumulative = document.querySelector('#ownershipCumulative span');
+        if (ownershipCumulative) {
+          ownershipCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          ownershipCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
+        }
+        
+        // 5. Number of Owners Adjustments (calculate from cumulative)
+        const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
+        ownersRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (currentValue * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update owners cumulative
+        const ownersCumulative = document.querySelector('#ownersCumulative span');
+        if (ownersCumulative) {
+          ownersCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          ownersCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
+        }
+        
+        // 6. Additional Market Adjustments (calculate from base price)
+        const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
+        additionalRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1].value;
+            const percent = parseFloat(inputs[2].value) || 0;
+            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+            
+            if (percent && !value) {
+              value = (basePrice * percent) / 100;
+              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+            }
+            
+            if (type === 'plus') {
+              currentValue += value;
+            } else {
+              currentValue -= value;
+            }
+          }
+        });
+        
+        // Update final result
+        const fullMarketValueResult = document.getElementById('fullMarketValueResult');
+        if (fullMarketValueResult) {
+          fullMarketValueResult.value = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Legacy field update for compatibility
+        const fullMarketValueField = document.getElementById('fullMarketValueField');
+        if (fullMarketValueField) {
+          fullMarketValueField.value = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        console.log('✅ Full market value calculation completed:', currentValue);
+        
+      } catch (error) {
+        console.error('❌ Error in updateFullMarketValueCalculation:', error);
+      }
+    }
+    
+    // Calculate adjustment value from percentage
+    window.calculateAdjustmentValueSimple = function(percentInput) {
+      const row = percentInput.closest('div');
+      if (!row) return;
+      
+      const inputs = row.querySelectorAll('input, select');
+      if (inputs.length < 4) return;
+      
+      const percent = parseFloat(percentInput.value) || 0;
+      
+      // Determine which section this adjustment belongs to
+      const isCumulative = row.closest('#mileageAdjustmentsList') || 
+                          row.closest('#ownershipAdjustmentsList') || 
+                          row.closest('#ownersAdjustmentsList');
+      
+      let referenceValue = 0;
+      
+      if (isCumulative) {
+        // For cumulative sections, get the previous cumulative value
+        const section = row.closest('div[id$="Adjustments"]');
+        if (section) {
+          const prevSection = section.previousElementSibling;
+          if (prevSection) {
+            const cumulativeSpan = prevSection.querySelector('div[id$="Cumulative"] span');
+            if (cumulativeSpan) {
+              referenceValue = parseFloat(cumulativeSpan.textContent.replace(/[₪,]/g, '')) || 0;
+            }
+          }
+        }
+        
+        // If no previous cumulative, use registration cumulative as fallback
+        if (referenceValue === 0) {
+          const registrationCumulative = document.querySelector('#registrationCumulative span');
+          if (registrationCumulative) {
+            referenceValue = parseFloat(registrationCumulative.textContent.replace(/[₪,]/g, '')) || 0;
+          }
+        }
+      } else {
+        // For non-cumulative sections, use base price
+        const basicPrice = document.getElementById('basicPrice');
+        if (basicPrice && basicPrice.value) {
+          referenceValue = parseFloat(basicPrice.value.replace(/[₪,]/g, '')) || 0;
+        }
+      }
+      
+      if (referenceValue > 0 && percent > 0) {
+        const calculatedValue = (referenceValue * percent) / 100;
+        inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      } else {
+        inputs[3].value = '';
+      }
+    }
+    
+    // Remove adjustment row
+    window.removeAdjustmentRow = function(rowId) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.remove();
+        // Trigger recalculation
+        updateFullMarketValueCalculation();
+      }
+    }
+    
+    // Sync adjustment to helper
+    window.syncAdjustmentToHelper = function(element, category) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        const row = element.closest('div.adjustment-row');
+        if (!row) return;
+        
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length < 4) return;
+        
+        // Ensure valuation.adjustments exists
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        // Also ensure estimate.adjustments exists for mirroring
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        const adjustmentData = {
+          value: inputs[0].value || '', // תיאור
+          type: inputs[1].value || 'plus', // סוג
+          percent: parseFloat(inputs[2].value) || 0, // אחוז
+          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0, // ערך
+          source: row.getAttribute('data-source') || 'manual',
+          timestamp: new Date().toISOString()
+        };
+        
+        // Apply sign based on type
+        if (adjustmentData.type === 'minus') {
+          adjustmentData.percent = -Math.abs(adjustmentData.percent);
+          adjustmentData.amount = -Math.abs(adjustmentData.amount);
+        }
+        
+        // Save to both locations
+        helper.valuation.adjustments[category] = adjustmentData;
+        helper.estimate.adjustments[category] = adjustmentData;
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ Synced ${category} adjustment to helper:`, adjustmentData);
+        
+      } catch (error) {
+        console.error('❌ Error syncing adjustment to helper:', error);
+      }
     }
 
     function loadLegalTextFromVault() {
@@ -4461,424 +4830,6 @@
         console.error('❌ Error loading data on page load:', error);
       }
     });
-    
-    // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
-    
-    // Update full market value calculation with cumulative logic
-    window.updateFullMarketValueCalculation = function() {
-      try {
-        console.log('🧮 Starting full market value calculation...');
-        
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Get base price
-        let basePrice = 0;
-        const basicPriceField = document.getElementById('basicPrice');
-        const fullBasicPriceField = document.getElementById('fullBasicPrice');
-        
-        if (basicPriceField && basicPriceField.value) {
-          basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        }
-        
-        // Update full basic price field
-        if (fullBasicPriceField) {
-          fullBasicPriceField.value = basePrice > 0 ? `₪${basePrice.toLocaleString()}` : '';
-        }
-        
-        console.log('📊 Base price:', basePrice);
-        
-        if (basePrice === 0) {
-          console.warn('⚠️ No base price found for calculations');
-          return;
-        }
-        
-        let currentValue = basePrice;
-        
-        // 1. Features Adjustments (calculate from base price)
-        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
-        featuresRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (basePrice * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update features cumulative
-        const featuresCumulative = document.querySelector('#featuresCumulative span');
-        if (featuresCumulative) {
-          featuresCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        // 2. Registration Adjustments (calculate from base price)
-        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
-        registrationRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (basePrice * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update registration cumulative
-        const registrationCumulative = document.querySelector('#registrationCumulative span');
-        if (registrationCumulative) {
-          registrationCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        // 3. Mileage Adjustments (calculate from cumulative)
-        const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
-        mileageRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (currentValue * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update mileage cumulative
-        const mileageCumulative = document.querySelector('#mileageCumulative span');
-        if (mileageCumulative) {
-          mileageCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-          mileageCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
-        }
-        
-        // 4. Ownership Type Adjustments (calculate from cumulative)
-        const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
-        ownershipRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (currentValue * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update ownership cumulative
-        const ownershipCumulative = document.querySelector('#ownershipCumulative span');
-        if (ownershipCumulative) {
-          ownershipCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-          ownershipCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
-        }
-        
-        // 5. Number of Owners Adjustments (calculate from cumulative)
-        const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
-        ownersRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (currentValue * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update owners cumulative
-        const ownersCumulative = document.querySelector('#ownersCumulative span');
-        if (ownersCumulative) {
-          ownersCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
-          ownersCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
-        }
-        
-        // 6. Additional Market Adjustments (calculate from base price)
-        const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
-        additionalRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            if (percent && !value) {
-              value = (basePrice * percent) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-            }
-            
-            if (type === 'plus') {
-              currentValue += value;
-            } else {
-              currentValue -= value;
-            }
-          }
-        });
-        
-        // Update final result
-        const fullMarketValueResult = document.getElementById('fullMarketValueResult');
-        if (fullMarketValueResult) {
-          fullMarketValueResult.value = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        // Legacy field update for compatibility
-        const fullMarketValueField = document.getElementById('fullMarketValueField');
-        if (fullMarketValueField) {
-          fullMarketValueField.value = `₪${Math.round(currentValue).toLocaleString()}`;
-        }
-        
-        console.log('✅ Full market value calculation completed:', currentValue);
-        
-      } catch (error) {
-        console.error('❌ Error in updateFullMarketValueCalculation:', error);
-      }
-    }
-    
-    // Calculate adjustment value from percentage
-    window.calculateAdjustmentValueSimple = function(percentInput) {
-      const row = percentInput.closest('div');
-      if (!row) return;
-      
-      const inputs = row.querySelectorAll('input, select');
-      if (inputs.length < 4) return;
-      
-      const percent = parseFloat(percentInput.value) || 0;
-      
-      // Determine which section this adjustment belongs to
-      const isCumulative = row.closest('#mileageAdjustmentsList') || 
-                          row.closest('#ownershipAdjustmentsList') || 
-                          row.closest('#ownersAdjustmentsList');
-      
-      let referenceValue = 0;
-      
-      if (isCumulative) {
-        // For cumulative sections, get the previous cumulative value
-        const section = row.closest('div[id$="Adjustments"]');
-        if (section) {
-          const prevSection = section.previousElementSibling;
-          if (prevSection) {
-            const cumulativeSpan = prevSection.querySelector('div[id$="Cumulative"] span');
-            if (cumulativeSpan) {
-              referenceValue = parseFloat(cumulativeSpan.textContent.replace(/[₪,]/g, '')) || 0;
-            }
-          }
-        }
-        
-        // If no previous cumulative, use registration cumulative as fallback
-        if (referenceValue === 0) {
-          const registrationCumulative = document.querySelector('#registrationCumulative span');
-          if (registrationCumulative) {
-            referenceValue = parseFloat(registrationCumulative.textContent.replace(/[₪,]/g, '')) || 0;
-          }
-        }
-      } else {
-        // For non-cumulative sections, use base price
-        const basicPrice = document.getElementById('basicPrice');
-        if (basicPrice && basicPrice.value) {
-          referenceValue = parseFloat(basicPrice.value.replace(/[₪,]/g, '')) || 0;
-        }
-      }
-      
-      if (referenceValue > 0 && percent > 0) {
-        const calculatedValue = (referenceValue * percent) / 100;
-        inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-      } else {
-        inputs[3].value = '';
-      }
-    }
-    
-    // Remove adjustment row
-    window.removeAdjustmentRow = function(rowId) {
-      const row = document.getElementById(rowId);
-      if (row) {
-        row.remove();
-        // Trigger recalculation
-        updateFullMarketValueCalculation();
-      }
-    }
-    
-    // Sync adjustment to helper
-    window.syncAdjustmentToHelper = function(element, category) {
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        const row = element.closest('div.adjustment-row');
-        if (!row) return;
-        
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length < 4) return;
-        
-        // Ensure valuation.adjustments exists
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        
-        // Also ensure estimate.adjustments exists for mirroring
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        const adjustmentData = {
-          value: inputs[0].value || '', // תיאור
-          type: inputs[1].value || 'plus', // סוג
-          percent: parseFloat(inputs[2].value) || 0, // אחוז
-          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0, // ערך
-          source: row.getAttribute('data-source') || 'manual',
-          timestamp: new Date().toISOString()
-        };
-        
-        // Apply sign based on type
-        if (adjustmentData.type === 'minus') {
-          adjustmentData.percent = -Math.abs(adjustmentData.percent);
-          adjustmentData.amount = -Math.abs(adjustmentData.amount);
-        }
-        
-        // Save to both locations
-        helper.valuation.adjustments[category] = adjustmentData;
-        helper.estimate.adjustments[category] = adjustmentData;
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        console.log(`✅ Synced ${category} adjustment to helper:`, adjustmentData);
-        
-      } catch (error) {
-        console.error('❌ Error syncing adjustment to helper:', error);
-      }
-    }
-    
-    // Update saveFullMarketValueWithFeedback
-    window.saveFullMarketValueWithFeedback = function(event) {
-      if (event) event.preventDefault();
-      
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        // Ensure structure exists
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        // Collect all adjustments by category
-        const categories = [
-          { id: 'fullFeaturesAdjustmentsList', key: 'features' },
-          { id: 'fullRegistrationAdjustmentsList', key: 'registration' },
-          { id: 'mileageAdjustmentsList', key: 'mileage' },
-          { id: 'ownershipAdjustmentsList', key: 'ownership' },
-          { id: 'ownersAdjustmentsList', key: 'owners' },
-          { id: 'allAdjustmentsList', key: 'additional' }
-        ];
-        
-        categories.forEach(cat => {
-          const rows = document.querySelectorAll(`#${cat.id} > div`);
-          if (rows.length > 0) {
-            // For simplicity, save the last row's data (you might want to save all rows)
-            const lastRow = rows[rows.length - 1];
-            const inputs = lastRow.querySelectorAll('input, select');
-            
-            if (inputs.length >= 4) {
-              const adjustmentData = {
-                value: inputs[0].value || '',
-                type: inputs[1].value || 'plus',
-                percent: parseFloat(inputs[2].value) || 0,
-                amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-                source: lastRow.getAttribute('data-source') || 'manual',
-                timestamp: new Date().toISOString()
-              };
-              
-              // Apply sign
-              if (adjustmentData.type === 'minus') {
-                adjustmentData.percent = -Math.abs(adjustmentData.percent);
-                adjustmentData.amount = -Math.abs(adjustmentData.amount);
-              }
-              
-              // Save to both locations
-              helper.valuation.adjustments[cat.key] = adjustmentData;
-              helper.estimate.adjustments[cat.key] = adjustmentData;
-            }
-          }
-        });
-        
-        // Save full market value
-        const fullMarketValue = document.getElementById('fullMarketValueResult')?.value || '';
-        if (!helper.estimate.market_values) helper.estimate.market_values = {};
-        helper.estimate.market_values.full = fullMarketValue;
-        
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        // Show success message
-        const btn = event?.target;
-        if (btn) {
-          const originalText = btn.textContent;
-          btn.textContent = 'נשמר בהצלחה ✓';
-          btn.style.background = '#28a745';
-          
-          setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '#007bff';
-          }, 2000);
-        }
-        
-        console.log('✅ Full market value data saved successfully');
-        
-      } catch (error) {
-        console.error('❌ Error saving full market value data:', error);
-        
-        const btn = event?.target;
-        if (btn) {
-          const originalText = btn.textContent;
-          btn.textContent = 'שגיאה בשמירה ✗';
-          btn.style.background = '#dc3545';
-          
-          setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '#007bff';
-          }, 2000);
-        }
-      }
-    };
   </script>
 </body>
 </html>
