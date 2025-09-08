@@ -2614,6 +2614,13 @@
         console.log(`🗑️ Removing ${allRows.length} registration rows from UI`);
         allRows.forEach(row => row.remove());
       }
+
+      const ownersContainer = document.getElementById('ownersAdjustmentsList');
+      if (ownersContainer) {
+        const allRows = ownersContainer.querySelectorAll('div');
+        console.log(`🗑️ Removing ${allRows.length} owners rows from UI`);
+        allRows.forEach(row => row.remove());
+      }
       
       // 2. Clear from storage
       cleanOwnershipDuplicatesFromStorage();
@@ -2713,7 +2720,8 @@
       // Reset processing flags
       window.ownershipProcessed = false;
       window.registrationProcessed = false;
-      console.log('🔄 Reset ownership and registration processing flags');
+      window.ownersProcessed = false;
+      console.log('🔄 Reset ownership, registration, and owners processing flags');
       
       // Clean ownership duplicates from storage before proceeding
       cleanOwnershipDuplicatesFromStorage();
@@ -2753,8 +2761,8 @@
       containers.forEach(containerId => {
         const container = document.getElementById(containerId);
         if (container) {
-          // For ownership and registration containers, use more aggressive clearing
-          if (containerId === 'ownershipAdjustmentsList' || containerId === 'fullRegistrationAdjustmentsList') {
+          // For ownership, registration, and owners containers, use more aggressive clearing
+          if (containerId === 'ownershipAdjustmentsList' || containerId === 'fullRegistrationAdjustmentsList' || containerId === 'ownersAdjustmentsList') {
             console.log(`🎯 Applying aggressive clearing for ${containerId} container`);
             
             // Clear ALL rows in these containers to prevent duplicates
@@ -2888,6 +2896,22 @@
             window.registrationProcessed = true;
             console.log(`✅ Marked registration as processed for: ${key}`);
           }
+
+          // Special handling for owners entries - prevent duplicates
+          const isOwners = key.toLowerCase().includes('owners') || key.toLowerCase().includes('owner');
+          if (isOwners) {
+            console.log(`🎯 Processing owners entry: ${key}`);
+            
+            // Check if we already processed an owners entry
+            if (window.ownersProcessed) {
+              console.log(`🚫 Skipping duplicate owners entry: ${key} (already processed owners)`);
+              return; // Skip this entry to prevent duplicates
+            }
+            
+            // Mark that we've processed an owners entry
+            window.ownersProcessed = true;
+            console.log(`✅ Marked owners as processed for: ${key}`);
+          }
           
           // Map adjustment types to containers and functions
           switch(key.toLowerCase()) {
@@ -2946,8 +2970,21 @@
               
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // תיאור - use our extracted value
-                inputs[0].value = value || '';
+                // תיאור - use the VALUE field not description as per user request
+                let descriptionValue = '';
+                
+                // Always prefer adjData.value over adjData.description for תיאור field
+                if (adjData.value) {
+                  descriptionValue = adjData.value;
+                  console.log(`📝 ${containerId} תיאור: using value field "${adjData.value}"`);
+                } else if (value) {
+                  descriptionValue = value;
+                  console.log(`📝 ${containerId} תיאור: using extracted value "${value}"`);
+                } else {
+                  console.log(`📝 ${containerId} תיאור: no value available, leaving empty`);
+                }
+                
+                inputs[0].value = descriptionValue;
                 
                 // סוג - auto-detect from sign of percent or amount
                 const isNegative = (percent < 0 || amount < 0);
@@ -2988,6 +3025,7 @@
       window.autoPopulatingInProgress = false;
       window.ownershipProcessed = false;
       window.registrationProcessed = false;
+      window.ownersProcessed = false;
       console.log('🔄 Reset all processing flags');
     }
 
