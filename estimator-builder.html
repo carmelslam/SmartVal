@@ -2596,6 +2596,72 @@
       // Implementation here
     }
 
+    // Immediate cleanup function to clear ownership duplicates from UI and storage
+    window.clearOwnershipDuplicatesNow = function() {
+      console.log('🚨 EMERGENCY CLEANUP: Clearing ownership duplicates from UI and storage');
+      
+      // 1. Clear from UI
+      const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
+      if (ownershipContainer) {
+        const allRows = ownershipContainer.querySelectorAll('div');
+        console.log(`🗑️ Removing ${allRows.length} ownership rows from UI`);
+        allRows.forEach(row => row.remove());
+      }
+      
+      // 2. Clear from storage
+      cleanOwnershipDuplicatesFromStorage();
+      
+      // 3. Force refresh
+      console.log('🔄 Forcing page refresh to apply cleanup');
+      location.reload();
+    }
+
+    // Function to clean duplicate ownership entries from sessionStorage
+    window.cleanOwnershipDuplicatesFromStorage = function() {
+      console.log('🧹 Cleaning ownership duplicates from sessionStorage');
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.valuation?.adjustments) {
+          const adjustments = helper.valuation.adjustments;
+          
+          // Count ownership-related entries
+          const ownershipKeys = Object.keys(adjustments).filter(key => 
+            key.toLowerCase().includes('ownership') || key.toLowerCase().includes('owners')
+          );
+          
+          console.log('🔍 Found ownership keys in storage:', ownershipKeys);
+          
+          // If we have both ownership_type and ownership, keep only the one with more complete data
+          if (adjustments.ownership_type && adjustments.ownership) {
+            console.log('⚠️ Found duplicate ownership entries in storage');
+            
+            // Compare which has more complete data
+            const ownershipTypeData = adjustments.ownership_type;
+            const ownershipData = adjustments.ownership;
+            
+            const typeHasData = ownershipTypeData.percent || ownershipTypeData.amount || ownershipTypeData.value;
+            const ownershipHasData = ownershipData.percent || ownershipData.amount || ownershipData.value;
+            
+            if (typeHasData && ownershipHasData) {
+              // Keep ownership_type and remove ownership
+              delete adjustments.ownership;
+              console.log('🗑️ Removed duplicate ownership entry, kept ownership_type');
+            } else if (ownershipHasData && !typeHasData) {
+              // Keep ownership and remove ownership_type  
+              delete adjustments.ownership_type;
+              console.log('🗑️ Removed duplicate ownership_type entry, kept ownership');
+            }
+            
+            // Save cleaned data back
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            console.log('💾 Cleaned ownership data saved to sessionStorage');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error cleaning ownership duplicates:', error);
+      }
+    }
+
     window.autoPopulateMarketAdjustments = function(force = false) {
       // Prevent multiple calls unless forced
       if (window.autoPopulatingInProgress && !force) {
@@ -2604,6 +2670,13 @@
       }
       
       window.autoPopulatingInProgress = true;
+      
+      // Reset ownership processing flag
+      window.ownershipProcessed = false;
+      console.log('🔄 Reset ownership processing flag');
+      
+      // Clean ownership duplicates from storage before proceeding
+      cleanOwnershipDuplicatesFromStorage();
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const adjustments = helper.valuation?.adjustments || {};
@@ -2640,13 +2713,26 @@
       containers.forEach(containerId => {
         const container = document.getElementById(containerId);
         if (container) {
-          // Only remove rows that are marked as auto-populated (data-source="auto")
-          const autoRows = container.querySelectorAll('div[data-source="auto"]');
-          console.log(`🧹 Clearing ${autoRows.length} auto-populated rows from ${containerId}`);
-          autoRows.forEach(row => {
-            console.log(`🗑️ Removing auto row:`, row);
-            row.remove();
-          });
+          // For ownership container, use more aggressive clearing
+          if (containerId === 'ownershipAdjustmentsList') {
+            console.log(`🎯 Applying aggressive clearing for ownership container`);
+            
+            // Clear ALL rows in ownership container to prevent duplicates
+            const allRows = container.querySelectorAll('div');
+            console.log(`🧹 Clearing ALL ${allRows.length} rows from ${containerId} (ownership)`);
+            allRows.forEach(row => {
+              console.log(`🗑️ Removing ownership row:`, row);
+              row.remove();
+            });
+          } else {
+            // For other containers, only remove auto-populated rows
+            const autoRows = container.querySelectorAll('div[data-source="auto"]');
+            console.log(`🧹 Clearing ${autoRows.length} auto-populated rows from ${containerId}`);
+            autoRows.forEach(row => {
+              console.log(`🗑️ Removing auto row:`, row);
+              row.remove();
+            });
+          }
         } else {
           console.log(`⚠️ Container not found: ${containerId}`);
         }
@@ -2726,6 +2812,22 @@
         if (adjData && (value || percent || amount)) {
           let containerId = null;
           let addFunction = null;
+          
+          // Special handling for ownership entries - prevent duplicates
+          const isOwnership = key.toLowerCase().includes('ownership');
+          if (isOwnership) {
+            console.log(`🎯 Processing ownership entry: ${key}`);
+            
+            // Check if we already processed an ownership entry
+            if (window.ownershipProcessed) {
+              console.log(`🚫 Skipping duplicate ownership entry: ${key} (already processed ownership)`);
+              return; // Skip this entry to prevent duplicates
+            }
+            
+            // Mark that we've processed an ownership entry
+            window.ownershipProcessed = true;
+            console.log(`✅ Marked ownership as processed for: ${key}`);
+          }
           
           // Map adjustment types to containers and functions
           switch(key.toLowerCase()) {
@@ -2820,8 +2922,10 @@
       
       console.log('✅ Market adjustments auto-population completed from helper.valuation.adjustments');
       
-      // Reset the flag
+      // Reset all flags
       window.autoPopulatingInProgress = false;
+      window.ownershipProcessed = false;
+      console.log('🔄 Reset all processing flags');
     }
 
     // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
