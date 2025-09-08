@@ -2424,7 +2424,7 @@
         
         // Calculate features adjustments total
         let featuresTotal = 0;
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         featuresRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -2444,7 +2444,7 @@
         
         // Calculate registration adjustments total
         let registrationTotal = 0;
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         registrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -2505,7 +2505,7 @@
         
         // 2. Update features adjustments - CORRECT FIELD MAPPING
         if (!helper.valuation.adjustments.features) helper.valuation.adjustments.features = {};
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         if (featuresRows.length > 0) {
           const firstRow = featuresRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
@@ -2530,7 +2530,7 @@
         
         // 3. Update registration adjustments - CORRECT FIELD MAPPING
         if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
           const firstRow = registrationRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
@@ -2551,6 +2551,10 @@
         }
         
         console.log('✅ Updated helper from adjustments:', helper.valuation);
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('💾 Helper data saved to sessionStorage');
         
         // Return the updated helper
         return helper;
@@ -2592,7 +2596,15 @@
       // Implementation here
     }
 
-    window.autoPopulateMarketAdjustments = function() {
+    window.autoPopulateMarketAdjustments = function(force = false) {
+      // Prevent multiple calls unless forced
+      if (window.autoPopulatingInProgress && !force) {
+        console.log('🚫 Auto-population already in progress, skipping...');
+        return;
+      }
+      
+      window.autoPopulatingInProgress = true;
+      
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const adjustments = helper.valuation?.adjustments || {};
       
@@ -2621,7 +2633,8 @@
         'fullRegistrationAdjustmentsList', 
         'mileageAdjustmentsList',
         'ownershipAdjustmentsList',
-        'ownersAdjustmentsList'
+        'ownersAdjustmentsList',
+        'allAdjustmentsList'
       ];
       
       containers.forEach(containerId => {
@@ -2629,7 +2642,13 @@
         if (container) {
           // Only remove rows that are marked as auto-populated (data-source="auto")
           const autoRows = container.querySelectorAll('div[data-source="auto"]');
-          autoRows.forEach(row => row.remove());
+          console.log(`🧹 Clearing ${autoRows.length} auto-populated rows from ${containerId}`);
+          autoRows.forEach(row => {
+            console.log(`🗑️ Removing auto row:`, row);
+            row.remove();
+          });
+        } else {
+          console.log(`⚠️ Container not found: ${containerId}`);
         }
       });
       
@@ -2800,6 +2819,9 @@
       }
       
       console.log('✅ Market adjustments auto-population completed from helper.valuation.adjustments');
+      
+      // Reset the flag
+      window.autoPopulatingInProgress = false;
     }
 
     // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
@@ -3446,8 +3468,8 @@
             const data = grossValueSection.data;
             
             // Only load from estimate if no adjustments were loaded from helper
-            const existingFeatures = document.querySelectorAll('#featuresAdjustmentsList > div');
-            const existingRegistration = document.querySelectorAll('#registrationAdjustmentsList > div');
+            const existingFeatures = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+            const existingRegistration = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
             
             if (existingFeatures.length === 0 && data.features_adjustments && data.features_adjustments.length > 0) {
               console.log('📝 Loading features adjustments from helper.estimate.gross_sections (fallback)');
@@ -4481,7 +4503,7 @@
         if (!helper.valuation.adjustments.registration) helper.valuation.adjustments.registration = {};
         
         // Write features adjustments back to source
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         if (featuresRows.length > 0) {
           const firstFeatureRow = featuresRows[0];
           const inputs = firstFeatureRow.querySelectorAll('input, select');
@@ -4493,7 +4515,7 @@
         }
         
         // Write registration adjustments back to source
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
           const firstRegRow = registrationRows[0];
           const inputs = firstRegRow.querySelectorAll('input, select');
@@ -4536,7 +4558,7 @@
         }
         
         // Save features adjustments
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         grossValueSection.data.features_adjustments = [];
         featuresRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
@@ -4555,7 +4577,7 @@
         });
         
         // Save registration adjustments
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         grossValueSection.data.registration_adjustments = [];
         registrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
