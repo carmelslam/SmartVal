@@ -2797,12 +2797,16 @@
             console.log(`📝 ${key} - Found direct value:`, value);
           }
           if (adjData.percent !== undefined) {
-            percent = parseFloat(adjData.percent) || 0;
-            console.log(`📝 ${key} - Found direct percent:`, percent);
+            // Handle percentage parsing - could be string with % symbol
+            const percentStr = String(adjData.percent).replace('%', '').trim();
+            percent = parseFloat(percentStr) || 0;
+            console.log(`📝 ${key} - Found direct percent: "${adjData.percent}" → ${percent}`);
           }
           if (adjData.amount !== undefined) {
-            amount = parseFloat(adjData.amount) || 0;
-            console.log(`📝 ${key} - Found direct amount:`, amount);
+            // Handle amount parsing - could be string with currency symbols
+            const amountStr = String(adjData.amount).replace(/[₪,\s]/g, '').trim();
+            amount = parseFloat(amountStr) || 0;
+            console.log(`📝 ${key} - Found direct amount: "${adjData.amount}" → ${amount}`);
           }
           
           // Handle nested structure for registration
@@ -2949,11 +2953,13 @@
                 const isNegative = (percent < 0 || amount < 0);
                 inputs[1].value = isNegative ? 'minus' : 'plus';
                 
-                // אחוז - keep the sign for display
-                inputs[2].value = percent ? percent : '';
+                // אחוז - show all values including zero
+                inputs[2].value = (percent !== undefined && !isNaN(percent)) ? percent : '';
                 
-                // ערך
+                // ערך - handle zero amount case  
                 inputs[3].value = amount ? `₪${Math.abs(amount).toLocaleString()}` : '';
+                
+                console.log(`📝 Populated ${containerId} fields: description="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
                 
                 // If only percentage is provided, calculate the amount
                 if (percent && !amount && basePrice > 0) {
