@@ -2607,6 +2607,13 @@
         console.log(`🗑️ Removing ${allRows.length} ownership rows from UI`);
         allRows.forEach(row => row.remove());
       }
+
+      const registrationContainer = document.getElementById('fullRegistrationAdjustmentsList');
+      if (registrationContainer) {
+        const allRows = registrationContainer.querySelectorAll('div');
+        console.log(`🗑️ Removing ${allRows.length} registration rows from UI`);
+        allRows.forEach(row => row.remove());
+      }
       
       // 2. Clear from storage
       cleanOwnershipDuplicatesFromStorage();
@@ -2629,7 +2636,39 @@
             key.toLowerCase().includes('ownership') || key.toLowerCase().includes('owners')
           );
           
+          // Count registration-related entries
+          const registrationKeys = Object.keys(adjustments).filter(key => 
+            key.toLowerCase().includes('registration')
+          );
+          
           console.log('🔍 Found ownership keys in storage:', ownershipKeys);
+          console.log('🔍 Found registration keys in storage:', registrationKeys);
+          
+          // Clean registration duplicates
+          if (adjustments.registration && adjustments.road_registration) {
+            console.log('⚠️ Found duplicate registration entries in storage');
+            
+            // Compare which has more complete data
+            const registrationData = adjustments.registration;
+            const roadRegistrationData = adjustments.road_registration;
+            
+            const regHasData = registrationData.percent || registrationData.amount || registrationData.value;
+            const roadHasData = roadRegistrationData.percent || roadRegistrationData.amount || roadRegistrationData.value;
+            
+            if (regHasData && !roadHasData) {
+              // Keep registration and remove road_registration
+              delete adjustments.road_registration;
+              console.log('🗑️ Removed road_registration entry, kept registration');
+            } else if (roadHasData && !regHasData) {
+              // Keep road_registration and remove registration  
+              delete adjustments.registration;
+              console.log('🗑️ Removed registration entry, kept road_registration');
+            } else if (regHasData && roadHasData) {
+              // Keep the one with better data (registration usually better)
+              delete adjustments.road_registration;
+              console.log('🗑️ Removed road_registration entry, kept registration (both had data)');
+            }
+          }
           
           // If we have both ownership_type and ownership, keep only the one with more complete data
           if (adjustments.ownership_type && adjustments.ownership) {
@@ -2671,9 +2710,10 @@
       
       window.autoPopulatingInProgress = true;
       
-      // Reset ownership processing flag
+      // Reset processing flags
       window.ownershipProcessed = false;
-      console.log('🔄 Reset ownership processing flag');
+      window.registrationProcessed = false;
+      console.log('🔄 Reset ownership and registration processing flags');
       
       // Clean ownership duplicates from storage before proceeding
       cleanOwnershipDuplicatesFromStorage();
@@ -2713,15 +2753,15 @@
       containers.forEach(containerId => {
         const container = document.getElementById(containerId);
         if (container) {
-          // For ownership container, use more aggressive clearing
-          if (containerId === 'ownershipAdjustmentsList') {
-            console.log(`🎯 Applying aggressive clearing for ownership container`);
+          // For ownership and registration containers, use more aggressive clearing
+          if (containerId === 'ownershipAdjustmentsList' || containerId === 'fullRegistrationAdjustmentsList') {
+            console.log(`🎯 Applying aggressive clearing for ${containerId} container`);
             
-            // Clear ALL rows in ownership container to prevent duplicates
+            // Clear ALL rows in these containers to prevent duplicates
             const allRows = container.querySelectorAll('div');
-            console.log(`🧹 Clearing ALL ${allRows.length} rows from ${containerId} (ownership)`);
+            console.log(`🧹 Clearing ALL ${allRows.length} rows from ${containerId}`);
             allRows.forEach(row => {
-              console.log(`🗑️ Removing ownership row:`, row);
+              console.log(`🗑️ Removing row from ${containerId}:`, row);
               row.remove();
             });
           } else {
@@ -2828,6 +2868,22 @@
             window.ownershipProcessed = true;
             console.log(`✅ Marked ownership as processed for: ${key}`);
           }
+
+          // Special handling for registration entries - prevent duplicates
+          const isRegistration = key.toLowerCase().includes('registration');
+          if (isRegistration) {
+            console.log(`🎯 Processing registration entry: ${key}`);
+            
+            // Check if we already processed a registration entry
+            if (window.registrationProcessed) {
+              console.log(`🚫 Skipping duplicate registration entry: ${key} (already processed registration)`);
+              return; // Skip this entry to prevent duplicates
+            }
+            
+            // Mark that we've processed a registration entry
+            window.registrationProcessed = true;
+            console.log(`✅ Marked registration as processed for: ${key}`);
+          }
           
           // Map adjustment types to containers and functions
           switch(key.toLowerCase()) {
@@ -2925,6 +2981,7 @@
       // Reset all flags
       window.autoPopulatingInProgress = false;
       window.ownershipProcessed = false;
+      window.registrationProcessed = false;
       console.log('🔄 Reset all processing flags');
     }
 
