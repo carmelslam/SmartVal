@@ -3019,13 +3019,12 @@
               
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // EXACT PATH MAPPING AS REQUESTED:
+                // FIELD POPULATION LOGIC:
                 
-                // Get helper data for exact path mapping
-                const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                
-                // For ownership_history specifically - use EXACT paths
+                // For ownership_history specifically - use EXACT paths as requested
                 if (key === 'ownership_history') {
+                  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                  
                   // תיאור field - valuation.adjustments.ownership_history.value
                   inputs[0].value = helper.valuation?.adjustments?.ownership_history?.value || '';
                   
@@ -3052,6 +3051,47 @@
                     const percentStr = String(helper.valuation.adjustments.ownership_history.percent).replace(/[%\s]/g, '');
                     const percentValue = parseFloat(percentStr);
                     inputs[1].value = percentValue < 0 ? 'minus' : 'plus';
+                  }
+                } else {
+                  // FOR ALL OTHER FIELDS - use adjData (the loop variable)
+                  
+                  // Extract percentage
+                  let finalPercent = 0;
+                  if (adjData.percent) {
+                    const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
+                    finalPercent = parseFloat(percentStr) || 0;
+                  } else if (adjData.percentage) {
+                    const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
+                    finalPercent = parseFloat(percentStr) || 0;
+                  }
+                  
+                  // Extract amount
+                  let finalAmount = 0;
+                  if (adjData.amount) {
+                    const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
+                    finalAmount = parseFloat(amountStr) || 0;
+                  }
+                  
+                  // Use VALUE field for description
+                  const description = adjData.value || adjData.description || '';
+                  
+                  // Determine if this is a reduction
+                  const isReduction = finalPercent < 0 || finalAmount < 0;
+                  
+                  // Set fields
+                  inputs[0].value = description;
+                  inputs[1].value = isReduction ? 'minus' : 'plus';
+                  
+                  if (finalPercent !== 0) {
+                    inputs[2].value = finalPercent.toString();
+                  }
+                  
+                  if (finalAmount !== 0) {
+                    inputs[3].value = finalAmount < 0 ? `-₪${Math.abs(finalAmount).toLocaleString()}` : `₪${finalAmount.toLocaleString()}`;
+                  } else if (finalPercent !== 0 && basePrice > 0) {
+                    const calculatedAmount = (basePrice * Math.abs(finalPercent)) / 100;
+                    const sign = finalPercent < 0 ? '-' : '';
+                    inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
                   }
                 }
                 
