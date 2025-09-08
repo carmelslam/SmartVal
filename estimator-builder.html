@@ -2616,6 +2616,8 @@
       Object.keys(adjustments).forEach(key => {
         const adjData = adjustments[key];
         console.log(`📝 Processing ${key} adjustment:`, adjData);
+        console.log(`📝 adjData type:`, typeof adjData);
+        console.log(`📝 adjData properties:`, adjData ? Object.keys(adjData) : 'no properties');
         
         // Handle nested structure (like registration and owners that have date/description properties)
         let value = '';
@@ -2624,26 +2626,56 @@
         
         if (adjData) {
           // Direct values
-          if (adjData.value) value = adjData.value;
-          if (adjData.percent !== undefined) percent = parseFloat(adjData.percent) || 0;
-          if (adjData.amount !== undefined) amount = parseFloat(adjData.amount) || 0;
+          if (adjData.value) {
+            value = adjData.value;
+            console.log(`📝 ${key} - Found direct value:`, value);
+          }
+          if (adjData.percent !== undefined) {
+            percent = parseFloat(adjData.percent) || 0;
+            console.log(`📝 ${key} - Found direct percent:`, percent);
+          }
+          if (adjData.amount !== undefined) {
+            amount = parseFloat(adjData.amount) || 0;
+            console.log(`📝 ${key} - Found direct amount:`, amount);
+          }
           
           // Handle nested structure for registration
           if (key === 'registration' && !value) {
-            if (adjData.date) value = adjData.date;
-            else if (adjData.description) value = adjData.description;
-            else if (typeof adjData === 'string') value = adjData;
+            console.log(`📝 ${key} - Checking nested structure for registration...`);
+            if (adjData.date) {
+              value = adjData.date;
+              console.log(`📝 ${key} - Using date as value:`, value);
+            }
+            else if (adjData.description) {
+              value = adjData.description;
+              console.log(`📝 ${key} - Using description as value:`, value);
+            }
+            else if (typeof adjData === 'string') {
+              value = adjData;
+              console.log(`📝 ${key} - Using string adjData as value:`, value);
+            }
           }
           
           // Handle nested structure for owners  
           if (key === 'owners' && !value) {
-            if (adjData.description) value = adjData.description;
-            else if (adjData.number) value = `${adjData.number} בעלים`;
-            else if (typeof adjData === 'string') value = adjData;
+            console.log(`📝 ${key} - Checking nested structure for owners...`);
+            if (adjData.description) {
+              value = adjData.description;
+              console.log(`📝 ${key} - Using description as value:`, value);
+            }
+            else if (adjData.number) {
+              value = `${adjData.number} בעלים`;
+              console.log(`📝 ${key} - Using number as value:`, value);
+            }
+            else if (typeof adjData === 'string') {
+              value = adjData;
+              console.log(`📝 ${key} - Using string adjData as value:`, value);
+            }
           }
         }
         
-        console.log(`   Key: ${key}, Value: ${value}, Percent: ${percent}, Amount: ${amount}`);
+        console.log(`   🎯 FINAL EXTRACTION - Key: ${key}, Value: "${value}", Percent: ${percent}, Amount: ${amount}`);
+        console.log(`   ✅ Condition check (value || percent || amount):`, !!(value || percent || amount));
         
         if (adjData && (value || percent || amount)) {
           let containerId = null;
