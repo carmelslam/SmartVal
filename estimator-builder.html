@@ -2786,8 +2786,41 @@
         }
       });
       
-      // Process each adjustment type
-      Object.keys(adjustments).forEach(key => {
+      // Process each adjustment type in PRIORITY ORDER to avoid duplicate prevention issues
+      const allKeys = Object.keys(adjustments);
+      console.log('🔄 All available keys (alphabetical):', allKeys);
+      
+      // Define priority order - good data sources first
+      const priorityKeys = [
+        'features',
+        'registration', 
+        'ownership_history', // Process this BEFORE previous_owners
+        'ownership_type',
+        'mileage',
+        'km',
+        // Lower priority / malformed data
+        'previous_owners',
+        'road_registration'
+      ];
+      
+      // Process priority keys first, then any remaining keys
+      const prioritizedKeys = [];
+      priorityKeys.forEach(priorityKey => {
+        if (allKeys.includes(priorityKey)) {
+          prioritizedKeys.push(priorityKey);
+        }
+      });
+      
+      // Add any keys not in priority list
+      allKeys.forEach(key => {
+        if (!prioritizedKeys.includes(key)) {
+          prioritizedKeys.push(key);
+        }
+      });
+      
+      console.log('🎯 Processing keys in priority order:', prioritizedKeys);
+      
+      prioritizedKeys.forEach(key => {
         const adjData = adjustments[key];
         console.log(`📝 Processing ${key} adjustment:`, adjData);
         console.log(`📝 adjData type:`, typeof adjData);
@@ -2962,11 +2995,13 @@
           }
           
           // Map adjustment types to containers and functions
+          console.log(`🎯 Mapping key "${key}" to container...`);
           switch(key.toLowerCase()) {
             case 'features':
             case 'feature':
               containerId = 'fullFeaturesAdjustmentsList';
               addFunction = addFullFeaturesAdjustment;
+              console.log(`✅ MATCHED FEATURES CASE: ${key} → ${containerId}`);
               break;
             case 'registration':
             case 'registration_date':
@@ -2975,17 +3010,20 @@
             case 'road_registration':
               containerId = 'fullRegistrationAdjustmentsList';
               addFunction = addFullRegistrationAdjustment;
+              console.log(`✅ MATCHED REGISTRATION CASE: ${key} → ${containerId}`);
               break;
             case 'mileage':
             case 'km':
             case 'kilometers':
               containerId = 'mileageAdjustmentsList';
               addFunction = addMileageAdjustment;
+              console.log(`✅ MATCHED MILEAGE CASE: ${key} → ${containerId}`);
               break;
             case 'ownership':
             case 'ownership_type':
               containerId = 'ownershipAdjustmentsList';
               addFunction = addOwnershipAdjustment;
+              console.log(`✅ MATCHED OWNERSHIP CASE: ${key} → ${containerId}`);
               break;
             case 'owners':
             case 'num_owners':
@@ -2997,12 +3035,14 @@
             case 'ownership_history':
               containerId = 'ownersAdjustmentsList';
               addFunction = addOwnersAdjustment;
-              console.log(`🎯 MATCHED OWNERS CASE: ${key} → ${containerId}`);
+              console.log(`✅ MATCHED OWNERS CASE: ${key} → ${containerId}`);
               break;
             default:
               // Any other adjustments go to additional adjustments
               containerId = 'allAdjustmentsList';
               addFunction = addFullMarketAdjustment;
+              console.log(`⚠️ MATCHED DEFAULT CASE: ${key} → ${containerId} (התאמות שוק נוספות)`);
+              break;
           }
           
           if (containerId && addFunction) {
