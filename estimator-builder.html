@@ -3021,78 +3021,52 @@
               if (inputs.length >= 4) {
                 // FIELD POPULATION LOGIC:
                 
-                // For מספר בעלים section - use EXACT paths as requested
-                if (key === 'ownership_history' || key === 'previous_owners' || key === 'owners') {
-                  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                  
-                  // תיאור field - valuation.adjustments.ownership_history.value
-                  inputs[0].value = helper.valuation?.adjustments?.ownership_history?.value || '';
-                  
-                  // אחוז field - valuation.adjustments.ownership_history.percent
-                  if (helper.valuation?.adjustments?.ownership_history?.percent) {
-                    const percentStr = String(helper.valuation.adjustments.ownership_history.percent).replace(/[%\s]/g, '');
-                    const percentValue = parseFloat(percentStr);
-                    if (!isNaN(percentValue)) {
-                      inputs[2].value = percentValue.toString();
-                    }
-                  }
-                  
-                  // ערך field - valuation.adjustments.ownership_history.amount
-                  if (helper.valuation?.adjustments?.ownership_history?.amount) {
-                    const amountStr = String(helper.valuation.adjustments.ownership_history.amount).replace(/[₪,\sש]/g, '');
-                    const amountValue = parseFloat(amountStr);
-                    if (!isNaN(amountValue)) {
-                      inputs[3].value = amountValue < 0 ? `-₪${Math.abs(amountValue).toLocaleString()}` : `₪${amountValue.toLocaleString()}`;
-                    }
-                  }
-                  
-                  // סוג field - based on percent sign
-                  if (helper.valuation?.adjustments?.ownership_history?.percent) {
-                    const percentStr = String(helper.valuation.adjustments.ownership_history.percent).replace(/[%\s]/g, '');
-                    const percentValue = parseFloat(percentStr);
-                    inputs[1].value = percentValue < 0 ? 'minus' : 'plus';
-                  }
-                } else {
-                  // FOR ALL OTHER FIELDS - use adjData (the loop variable)
-                  
-                  // Extract percentage
-                  let finalPercent = 0;
-                  if (adjData.percent) {
-                    const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
-                    finalPercent = parseFloat(percentStr) || 0;
-                  } else if (adjData.percentage) {
-                    const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
-                    finalPercent = parseFloat(percentStr) || 0;
-                  }
-                  
-                  // Extract amount
-                  let finalAmount = 0;
-                  if (adjData.amount) {
-                    const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
-                    finalAmount = parseFloat(amountStr) || 0;
-                  }
-                  
-                  // Use VALUE field for description
-                  const description = adjData.value || adjData.description || '';
-                  
-                  // Determine if this is a reduction
-                  const isReduction = finalPercent < 0 || finalAmount < 0;
-                  
-                  // Set fields
-                  inputs[0].value = description;
-                  inputs[1].value = isReduction ? 'minus' : 'plus';
-                  
-                  if (finalPercent !== 0) {
-                    inputs[2].value = finalPercent.toString();
-                  }
-                  
-                  if (finalAmount !== 0) {
-                    inputs[3].value = finalAmount < 0 ? `-₪${Math.abs(finalAmount).toLocaleString()}` : `₪${finalAmount.toLocaleString()}`;
-                  } else if (finalPercent !== 0 && basePrice > 0) {
-                    const calculatedAmount = (basePrice * Math.abs(finalPercent)) / 100;
-                    const sign = finalPercent < 0 ? '-' : '';
-                    inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
-                  }
+                // EXACT COPY FROM FINAL REPORT FOR ALL FIELDS:
+                
+                // Extract percentage
+                let percent = 0;
+                if (adjData.percent) {
+                  const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
+                  percent = parseFloat(percentStr) || 0;
+                } else if (adjData.percentage) {
+                  const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
+                  percent = parseFloat(percentStr) || 0;
+                }
+                
+                // Extract amount
+                let amount = 0;
+                if (adjData.amount) {
+                  const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
+                  amount = parseFloat(amountStr) || 0;
+                }
+                
+                // CRITICAL: Description comes from .value field
+                const description = adjData.value || adjData.description || '';
+                
+                // Determine if reduction
+                const isReduction = percent < 0 || amount < 0;
+                
+                // Field 1: תיאור (Description) - from adjData.value
+                inputs[0].value = description;
+                
+                // Field 2: סוג (Type) - plus/minus based on sign
+                inputs[1].value = isReduction ? 'minus' : 'plus';
+                
+                // Field 3: אחוז (Percentage) - from adjData.percent/percentage
+                if (percent !== 0) {
+                  inputs[2].value = percent.toString();
+                }
+                
+                // Field 4: ערך (Value) - from adjData.amount or calculated
+                if (amount !== 0) {
+                  inputs[3].value = amount < 0 ? 
+                    `-₪${Math.abs(amount).toLocaleString()}` : 
+                    `₪${amount.toLocaleString()}`;
+                } else if (percent !== 0 && basePrice > 0) {
+                  // Calculate amount from percentage
+                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
+                  const sign = percent < 0 ? '-' : '';
+                  inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
                 }
                 
                 console.log(`📝 Final Report Logic - ${containerId}: desc="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
