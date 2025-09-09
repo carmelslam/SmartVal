@@ -4213,6 +4213,7 @@
       if (helper.estimate?.adjustments) {
         Object.keys(helper.estimate.adjustments).forEach(category => {
           if (Array.isArray(helper.estimate.adjustments[category])) {
+            const originalLength = helper.estimate.adjustments[category].length;
             // Filter out only items that contain test data, keep legitimate data
             helper.estimate.adjustments[category] = helper.estimate.adjustments[category].filter(item => {
               const isTestData = item.description?.includes('test') || item.value?.includes('test');
@@ -4221,6 +4222,7 @@
               }
               return !isTestData; // Keep non-test items
             });
+            console.log(`🧹 ${category}: ${originalLength} → ${helper.estimate.adjustments[category].length} items after cleanup`);
           }
         });
       }
@@ -4243,6 +4245,7 @@
     function loadAdjustments(helper) {
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
+        console.log('🔍 loadAdjustments called with helper:', helper);
         
         // CLEAN UP TEST DATA FIRST
         helper = cleanupTestDataAndRestoreValuationFlow(helper);
