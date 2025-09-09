@@ -2528,8 +2528,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             // Store the description in the correct field
-            helper.valuation.adjustments.features.description = inputs[0].value || '';
-            helper.valuation.adjustments.features.value = inputs[0].value || ''; // Also store in value for backward compatibility
+            helper.valuation.adjustments.features.value = inputs[0].value || ''; // UI input goes in value field
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
@@ -2553,8 +2552,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             // Store description/value correctly
-            helper.valuation.adjustments.registration.value = inputs[0].value || '';
-            helper.valuation.adjustments.registration.description = inputs[0].value || '';
+            helper.valuation.adjustments.registration.value = inputs[0].value || ''; // UI input goes in value field
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
@@ -2574,8 +2572,7 @@
           const firstRow = ownershipRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.ownership_type.description = inputs[0].value || '';
-            helper.valuation.adjustments.ownership_type.value = inputs[0].value || '';
+            helper.valuation.adjustments.ownership_type.value = inputs[0].value || ''; // UI input goes in value field
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
@@ -2595,8 +2592,7 @@
           const firstRow = ownersRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.ownership_history.description = inputs[0].value || '';
-            helper.valuation.adjustments.ownership_history.value = inputs[0].value || '';
+            helper.valuation.adjustments.ownership_history.value = inputs[0].value || ''; // UI input goes in value field
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
@@ -3849,7 +3845,7 @@
         const inputs = remainingRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
           const item = {
-            description: inputs[0].value || '',
+            value: inputs[0].value || '', // UI input goes in value field
             type: inputs[1].value || 'plus',
             percentage: inputs[2].value || '',
             amount_display: inputs[3].value || ''
@@ -4229,6 +4225,31 @@
         });
       }
       
+      // Clean up legacy field names that should not exist
+      console.log('🧹 Cleaning up legacy field names');
+      
+      // Remove from valuation.adjustments
+      if (helper.valuation?.adjustments) {
+        const legacyFields = ['owners', 'ownership', 'previous_owners'];
+        legacyFields.forEach(field => {
+          if (helper.valuation.adjustments[field]) {
+            console.log(`🗑️ Deleting legacy field: valuation.adjustments.${field}`);
+            delete helper.valuation.adjustments[field];
+          }
+        });
+      }
+      
+      // Remove from estimate.adjustments  
+      if (helper.estimate?.adjustments) {
+        const legacyFields = ['owners', 'ownership', 'previous_owners'];
+        legacyFields.forEach(field => {
+          if (helper.estimate.adjustments[field]) {
+            console.log(`🗑️ Deleting legacy field: estimate.adjustments.${field}`);
+            delete helper.estimate.adjustments[field];
+          }
+        });
+      }
+      
       return helper;
     }
     
@@ -4279,7 +4300,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4297,7 +4318,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4315,7 +4336,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4333,7 +4354,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4351,7 +4372,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -5551,9 +5572,8 @@
           const firstFeatureRow = featuresRows[0];
           const inputs = firstFeatureRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.features.description = inputs[0].value || '';
+            helper.valuation.adjustments.features.value = inputs[0].value || ''; // UI input goes in value field
             helper.valuation.adjustments.features.percentage = inputs[2].value || '';
-            helper.valuation.adjustments.features.value = inputs[3].value || '';
           }
         }
         
@@ -5576,9 +5596,8 @@
           const firstOwnershipRow = ownershipRows[0];
           const inputs = firstOwnershipRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.ownership_type.description = inputs[0].value || '';
+            helper.valuation.adjustments.ownership_type.value = inputs[0].value || ''; // UI input goes in value field
             helper.valuation.adjustments.ownership_type.percentage = inputs[2].value || '';
-            helper.valuation.adjustments.ownership_type.value = inputs[3].value || '';
           }
         }
 
@@ -5589,9 +5608,8 @@
           const firstOwnersRow = ownersRows[0];
           const inputs = firstOwnersRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.valuation.adjustments.ownership_history.description = inputs[0].value || '';
-            helper.valuation.adjustments.ownership_history.percentage = inputs[2].value || '';  
-            helper.valuation.adjustments.ownership_history.value = inputs[3].value || '';
+            helper.valuation.adjustments.ownership_history.value = inputs[0].value || ''; // UI input goes in value field
+            helper.valuation.adjustments.ownership_history.percentage = inputs[2].value || '';
           }
         }
         
@@ -5633,10 +5651,10 @@
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustment = {
-              description: inputs[0].value || '',
+              value: inputs[0].value || '', // UI input goes in value field
               type: inputs[1].value || 'plus',
               percentage: inputs[2].value || '',
-              value: inputs[3].value || '',
+              amount_display: inputs[3].value || '',
               value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
             if (adjustment.description.trim() || adjustment.value_raw !== 0) {
@@ -5652,10 +5670,10 @@
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustment = {
-              description: inputs[0].value || '',
+              value: inputs[0].value || '', // UI input goes in value field
               type: inputs[1].value || 'plus',
               percentage: inputs[2].value || '',
-              value: inputs[3].value || '',
+              amount_display: inputs[3].value || '',
               value_raw: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0
             };
             if (adjustment.description.trim() || adjustment.value_raw !== 0) {
@@ -5906,8 +5924,7 @@
             const inputs = row.querySelectorAll('input, select');
             if (inputs.length >= 4) {
               const adjustmentData = {
-                value: inputs[0].value || '', // תיאור goes in value field
-                description: inputs[0].value || '', // Also store as description for backward compatibility
+                value: inputs[0].value || '' // תיאור goes in value field (don't overwrite description from Levi data)
                 type: inputs[1].value || 'plus',
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
@@ -6000,8 +6017,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '', // תיאור content goes in value field
+              value: inputs[0].value || '' // תיאור content goes in value field (don't overwrite description from Levi data)
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
@@ -6024,8 +6040,7 @@
             const inputs = row.querySelectorAll('input, select');
             if (inputs.length >= 4) {
               const adjustmentData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '', // תיאור content goes in value field
+                value: inputs[0].value || '' // תיאור content goes in value field (don't overwrite description from Levi data)
                 type: inputs[1].value || 'plus',
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
@@ -6050,8 +6065,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '', // תיאור content goes in value field
+              value: inputs[0].value || '' // תיאור content goes in value field (don't overwrite description from Levi data)
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0, // Also store as 'percent' for backward compatibility
@@ -6075,8 +6089,7 @@
             const inputs = row.querySelectorAll('input, select');
             if (inputs.length >= 4) {
               const adjustmentData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '', // תיאור content goes in value field
+                value: inputs[0].value || '' // תיאור content goes in value field (don't overwrite description from Levi data)
                 type: inputs[1].value || 'plus',
                 percentage: parseFloat(inputs[2].value) || 0,
                 percent: parseFloat(inputs[2].value) || 0, // Also store as 'percent' for backward compatibility
@@ -6102,8 +6115,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '',
+              value: inputs[0].value || '', // UI input goes in value field  
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0,
@@ -6150,8 +6162,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '',
+              value: inputs[0].value || '', // UI input goes in value field  
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0,
@@ -6198,8 +6209,7 @@
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '',
+              value: inputs[0].value || '', // UI input goes in value field  
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0,
