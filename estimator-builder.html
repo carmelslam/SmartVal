@@ -2617,11 +2617,8 @@
         updateGrossValueToValuationAndEstimate(helper);
 
         // 7. Write FULL MARKET VALUE features/registration back to valuation source AND estimate.adjustments
+        // NOTE: Full market sync is now handled in specific event listeners to avoid conflicts
         updateFullMarketValueToValuationAndEstimate(helper);
-
-        // 8. Write FULL MARKET VALUE features/registration to estimate.gross_value_adjustments (third destination)
-        helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
-        helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
         
         // Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -5855,8 +5852,29 @@
             }
             // Then update calculations
             updateFullMarketValueCalculation();
-            // AUTO-SAVE ON EVERY CHANGE (includes all 3 destination write-back)
-            autoSaveToHelper();
+            // AUTO-SAVE ON EVERY CHANGE 
+            let helper = autoSaveToHelper();
+            
+            // ADDITIONAL SYNC specifically for full market features/registration to estimate.gross_value_adjustments
+            if (helper) {
+              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
+              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
+              console.log('🔍 Full market input change detected:', { isFeatures: !!isFeatures, isRegistration: !!isRegistration });
+              
+              if (isFeatures) {
+                console.log('📝 Syncing full market FEATURES to estimate.gross_value_adjustments');
+                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              }
+              if (isRegistration) {
+                console.log('📅 Syncing full market REGISTRATION to estimate.gross_value_adjustments');
+                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              }
+              
+              if (isFeatures || isRegistration) {
+                sessionStorage.setItem('helper', JSON.stringify(helper));
+                console.log('✅ FULL MARKET VALUE synced to estimate.gross_value_adjustments');
+              }
+            }
           });
           input.addEventListener('change', function() {
             // Calculate amounts first with cumulative logic
@@ -5865,8 +5883,29 @@
             }
             // Then update calculations
             updateFullMarketValueCalculation();
-            // AUTO-SAVE ON EVERY CHANGE (includes all 3 destination write-back)
-            autoSaveToHelper();
+            // AUTO-SAVE ON EVERY CHANGE 
+            let helper = autoSaveToHelper();
+            
+            // ADDITIONAL SYNC specifically for full market features/registration to estimate.gross_value_adjustments
+            if (helper) {
+              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
+              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
+              console.log('🔍 Full market input change detected:', { isFeatures: !!isFeatures, isRegistration: !!isRegistration });
+              
+              if (isFeatures) {
+                console.log('📝 Syncing full market FEATURES to estimate.gross_value_adjustments');
+                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              }
+              if (isRegistration) {
+                console.log('📅 Syncing full market REGISTRATION to estimate.gross_value_adjustments');
+                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              }
+              
+              if (isFeatures || isRegistration) {
+                sessionStorage.setItem('helper', JSON.stringify(helper));
+                console.log('✅ FULL MARKET VALUE synced to estimate.gross_value_adjustments');
+              }
+            }
           });
         });
         
