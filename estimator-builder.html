@@ -3813,20 +3813,23 @@
     window.removeAdjustmentRow = function(rowId) {
       const row = document.getElementById(rowId);
       if (row) {
+        console.log('🗑️ Removing adjustment row:', rowId);
         row.remove();
-        // Trigger recalculation
+        
+        // Trigger recalculations
         updateFullMarketValueCalculation();
         
-        // Get helper and update both sections
+        // Get helper and rebuild estimate.adjustments from remaining UI rows
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper) helper = {};
         
-        // Update both gross and full market value helpers
-        updateHelperFromAdjustments(helper);
+        // CRITICAL: Rebuild estimate.adjustments from remaining UI
         updateFullMarketValueToValuationAndEstimate(helper);
+        updateGrossValueToValuationAndEstimate(helper);
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Updated helper after row deletion');
       }
     }
     
@@ -5280,21 +5283,23 @@
     window.removeAdjustmentRow = function(rowId) {
       const row = document.getElementById(rowId);
       if (row) {
+        console.log('🗑️ Removing adjustment row (gross section):', rowId);
         row.remove();
+        
+        // Trigger recalculations
         updateGrossMarketValueCalculation();
         
-        // Get helper with proper structure check
+        // Get helper and rebuild estimate.adjustments from remaining UI rows
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper) helper = {};
         
-        // Update both gross and full market value helpers
-        updateHelperFromAdjustments(helper);
-        
-        // Also update estimate.gross_value_adjustments for gross section deletions
+        // CRITICAL: Rebuild estimate.adjustments from remaining UI
         updateGrossValueToValuationAndEstimate(helper);
+        updateFullMarketValueToValuationAndEstimate(helper);
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Updated helper after gross row deletion');
       }
     }
 
