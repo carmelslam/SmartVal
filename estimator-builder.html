@@ -3882,6 +3882,7 @@
     // Sync adjustment to helper
     window.syncAdjustmentToHelper = function(element, category) {
       try {
+        console.log(`🔄 syncAdjustmentToHelper called for category: ${category}`);
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         const row = element.closest('div.adjustment-row');
@@ -3915,12 +3916,18 @@
         
         // Save to valuation (single object) - all categories including 'additional'
         helper.valuation.adjustments[category] = adjustmentData;
+        if (category === 'additional') {
+          console.log('🎯 ADDITIONAL: Updated valuation.adjustments.additional:', adjustmentData);
+        }
         
         // Save to estimate (array) - all categories
         if (!helper.estimate.adjustments[category]) {
           helper.estimate.adjustments[category] = [];
         }
         helper.estimate.adjustments[category].push(adjustmentData);
+        if (category === 'additional') {
+          console.log('🎯 ADDITIONAL: Updated estimate.adjustments.additional:', helper.estimate.adjustments[category]);
+        }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
