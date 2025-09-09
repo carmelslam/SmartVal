@@ -2557,8 +2557,50 @@
             helper.valuation.adjustments.registration.amount = type === 'minus' ? -amount : amount;
           }
         }
+
+        // 4. Update ownership adjustments - CORRECT FIELD MAPPING
+        if (!helper.valuation.adjustments.ownership) helper.valuation.adjustments.ownership = {};
+        const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
+        if (ownershipRows.length > 0) {
+          const firstRow = ownershipRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.ownership.description = inputs[0].value || '';
+            helper.valuation.adjustments.ownership.value = inputs[0].value || '';
+            
+            // Store percentage as number
+            const percentage = parseFloat(inputs[2].value) || 0;
+            helper.valuation.adjustments.ownership.percentage = percentage;
+            
+            // Store amount without formatting
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.ownership.amount = type === 'minus' ? -amount : amount;
+          }
+        }
+
+        // 5. Update owners adjustments - CORRECT FIELD MAPPING
+        if (!helper.valuation.adjustments.owners) helper.valuation.adjustments.owners = {};
+        const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
+        if (ownersRows.length > 0) {
+          const firstRow = ownersRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.owners.description = inputs[0].value || '';
+            helper.valuation.adjustments.owners.value = inputs[0].value || '';
+            
+            // Store percentage as number
+            const percentage = parseFloat(inputs[2].value) || 0;
+            helper.valuation.adjustments.owners.percentage = percentage;
+            
+            // Store amount without formatting
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value || 'plus';
+            helper.valuation.adjustments.owners.amount = type === 'minus' ? -amount : amount;
+          }
+        }
         
-        console.log('✅ Updated helper from adjustments:', helper.valuation);
+        console.log('✅ Updated helper from adjustments including ownership and owners:', helper.valuation);
         
         // Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -5020,8 +5062,34 @@
             helper.valuation.adjustments.registration.amount = inputs[3].value || '';
           }
         }
+
+        // Write ownership adjustments back to source
+        if (!helper.valuation.adjustments.ownership) helper.valuation.adjustments.ownership = {};
+        const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
+        if (ownershipRows.length > 0) {
+          const firstOwnershipRow = ownershipRows[0];
+          const inputs = firstOwnershipRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.ownership.description = inputs[0].value || '';
+            helper.valuation.adjustments.ownership.percentage = inputs[2].value || '';
+            helper.valuation.adjustments.ownership.value = inputs[3].value || '';
+          }
+        }
+
+        // Write owners adjustments back to source  
+        if (!helper.valuation.adjustments.owners) helper.valuation.adjustments.owners = {};
+        const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
+        if (ownersRows.length > 0) {
+          const firstOwnersRow = ownersRows[0];
+          const inputs = firstOwnersRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.owners.description = inputs[0].value || '';
+            helper.valuation.adjustments.owners.percentage = inputs[2].value || '';  
+            helper.valuation.adjustments.owners.value = inputs[3].value || '';
+          }
+        }
         
-        console.log('✅ Written back to data source');
+        console.log('✅ Written back to data source including ownership and owners');
         
       } catch (error) {
         console.error('❌ Error writing to data source:', error);
