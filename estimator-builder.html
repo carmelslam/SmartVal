@@ -3828,6 +3828,9 @@
         else if (container.id === 'allAdjustmentsList') category = 'additional';
         
         console.log(`🎯 Deleting ${category} row at index ${rowIndex}`);
+        console.log('📋 Container ID:', container.id);
+        console.log('🔢 Row Index:', rowIndex);
+        console.log('🏷️ Row ID:', rowId);
         
         // Remove the row from UI
         row.remove();
@@ -3839,9 +3842,11 @@
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
         if (category && helper.estimate.adjustments[category]) {
+          console.log(`📊 Before deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
           // Remove the specific array item
           helper.estimate.adjustments[category].splice(rowIndex, 1);
           console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
+          console.log(`📊 After deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
           
           // If it was the first row and there are remaining rows, update valuation
           if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0 && category !== 'additional') {
@@ -4174,25 +4179,22 @@
 
     // Clear test data and restore proper data flow
     function cleanupTestDataAndRestoreValuationFlow(helper) {
-      console.log('🧹 Cleaning up test data and restoring valuation flow');
+      console.log('🧹 Cleaning up test data surgically');
       
-      // Check if estimate.adjustments contains test data
+      // Check if estimate.adjustments contains test data and remove ONLY test items
       if (helper.estimate?.adjustments) {
-        let hasTestData = false;
         Object.keys(helper.estimate.adjustments).forEach(category => {
           if (Array.isArray(helper.estimate.adjustments[category])) {
-            helper.estimate.adjustments[category].forEach(item => {
-              if (item.description?.includes('test') || item.value?.includes('test')) {
-                hasTestData = true;
+            // Filter out only items that contain test data, keep legitimate data
+            helper.estimate.adjustments[category] = helper.estimate.adjustments[category].filter(item => {
+              const isTestData = item.description?.includes('test') || item.value?.includes('test');
+              if (isTestData) {
+                console.log(`🗑️ Removing test item from ${category}:`, item);
               }
+              return !isTestData; // Keep non-test items
             });
           }
         });
-        
-        if (hasTestData) {
-          console.log('🗑️ Found test data - clearing estimate.adjustments');
-          delete helper.estimate.adjustments;
-        }
       }
       
       return helper;
