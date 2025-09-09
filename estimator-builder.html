@@ -3852,8 +3852,7 @@
         const inputs = remainingRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
           const item = {
-            description: inputs[0].value || '', // Save תיאור as description, not value
-            value: inputs[0].value || '', // Also keep value for backward compatibility
+            value: inputs[0].value || '',
             type: inputs[1].value || 'plus',
             percentage: parseFloat(inputs[2].value) || 0,
             percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
@@ -3992,8 +3991,7 @@
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
-              description: inputs[0].value || '', // Save תיאור as description, not value
-              value: inputs[0].value || '', // Also keep value for backward compatibility
+              value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
@@ -4466,98 +4464,36 @@
         
         const adjustments = helper.estimate.adjustments;
         
-        // 1. Load Features Adjustments to GROSS section - START WITH VALUATION DATA
-        if (helper.valuation?.adjustments?.features) {
-          // First load the initial valuation data
-          console.log('📝 Loading GROSS features from valuation:', helper.valuation.adjustments.features);
-          addFeatureAdjustment();
-          const firstRow = document.querySelector('#featuresAdjustmentsList > div:first-child');
-          if (firstRow) {
-            const inputs = firstRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              // Map directly from valuation.adjustments.features
-              inputs[0].value = helper.valuation.adjustments.features.value || '';
-              inputs[1].value = helper.valuation.adjustments.features.type || 'plus';
-              inputs[2].value = helper.valuation.adjustments.features.percent || helper.valuation.adjustments.features.percentage || '';
-              inputs[3].value = helper.valuation.adjustments.features.amount_display || (helper.valuation.adjustments.features.amount ? `₪${Math.abs(helper.valuation.adjustments.features.amount).toLocaleString()}` : '');
-              
-              // Trigger calculation after loading percentage
-              const percent = inputs[2].value;
-              if (percent && typeof calculateAdjustmentValueSimple === 'function') {
-                console.log('🧮 Triggering calculation for features percentage:', percent);
-                setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
-              }
-            }
-          }
-        }
-        
-        // Then load additional estimate.adjustments features (skipping first item if it matches valuation)
+        // 1. Load Features Adjustments - EXACT COPY from full market section
         if (adjustments.features && adjustments.features.length > 0) {
-          console.log('📝 Loading additional GROSS features adjustments:', adjustments.features);
-          adjustments.features.forEach((item, index) => {
-            // Skip first item if it matches valuation (to avoid duplication)
-            if (index === 0 && helper.valuation?.adjustments?.features) {
-              return;
-            }
-            
-            addFeatureAdjustment(); // Uses featuresAdjustmentsList container
+          console.log('📝 Loading GROSS features adjustments:', adjustments.features);
+          adjustments.features.forEach(item => {
+            addFeatureAdjustment();
             const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // For additional items, use proper description mapping
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                inputs[2].value = item.percent || item.percentage || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
           });
         }
         
-        // 2. Load Registration Adjustments to GROSS section - START WITH VALUATION DATA
-        if (helper.valuation?.adjustments?.registration) {
-          // First load the initial valuation data
-          console.log('📝 Loading GROSS registration from valuation:', helper.valuation.adjustments.registration);
-          addRegistrationAdjustment();
-          const firstRow = document.querySelector('#registrationAdjustmentsList > div:first-child');
-          if (firstRow) {
-            const inputs = firstRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              // Map directly from valuation.adjustments.registration
-              inputs[0].value = helper.valuation.adjustments.registration.value || '';
-              inputs[1].value = helper.valuation.adjustments.registration.type || 'plus';
-              inputs[2].value = helper.valuation.adjustments.registration.percent || helper.valuation.adjustments.registration.percentage || '';
-              inputs[3].value = helper.valuation.adjustments.registration.amount_display || (helper.valuation.adjustments.registration.amount ? `₪${Math.abs(helper.valuation.adjustments.registration.amount).toLocaleString()}` : '');
-              
-              // Trigger calculation after loading percentage
-              const percent = inputs[2].value;
-              if (percent && typeof calculateAdjustmentValueSimple === 'function') {
-                console.log('🧮 Triggering calculation for registration percentage:', percent);
-                setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
-              }
-            }
-          }
-        }
-        
-        // Then load additional estimate.adjustments registration (skipping first item if it matches valuation)
+        // 2. Load Registration Adjustments - EXACT COPY from full market section
         if (adjustments.registration && adjustments.registration.length > 0) {
-          console.log('📝 Loading additional GROSS registration adjustments:', adjustments.registration);
-          adjustments.registration.forEach((item, index) => {
-            // Skip first item if it matches valuation (to avoid duplication)
-            if (index === 0 && helper.valuation?.adjustments?.registration) {
-              return;
-            }
-            
-            addRegistrationAdjustment(); // Uses registrationAdjustmentsList container
+          console.log('📝 Loading GROSS registration adjustments:', adjustments.registration);
+          adjustments.registration.forEach(item => {
+            addRegistrationAdjustment();
             const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // For additional items, use proper description mapping
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                inputs[2].value = item.percent || item.percentage || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
