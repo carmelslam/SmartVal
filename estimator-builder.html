@@ -1202,7 +1202,7 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           if (helper.valuation?.adjustments && (helper.valuation.adjustments.features || helper.valuation.adjustments.registration)) {
             console.log('📋 Auto-populating gross value adjustments on init');
-            autoPopulateGrossValueAdjustments();
+            // autoPopulateGrossValueAdjustments(); // Disabled - using loadAdjustments() instead
           } else {
             console.log('ℹ️ No features/registration adjustments to auto-populate for gross value');
           }
@@ -1213,7 +1213,7 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           if (helper.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) {
             console.log('📋 Auto-populating market adjustments on init');
-            autoPopulateMarketAdjustments();
+            // autoPopulateMarketAdjustments(); // Disabled - using loadAdjustments() instead
           } else {
             console.log('ℹ️ No valuation adjustments to auto-populate');
           }
@@ -4136,6 +4136,14 @@
     function loadAdjustments(helper) {
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
+        
+        // CLEAR EXISTING UI ROWS FIRST to prevent duplication
+        document.getElementById('fullFeaturesAdjustmentsList').innerHTML = '';
+        document.getElementById('fullRegistrationAdjustmentsList').innerHTML = '';
+        document.getElementById('mileageAdjustmentsList').innerHTML = '';
+        document.getElementById('ownershipAdjustmentsList').innerHTML = '';
+        document.getElementById('ownersAdjustmentsList').innerHTML = '';
+        document.getElementById('allAdjustmentsList').innerHTML = '';
         
         if (!helper.estimate?.adjustments) {
           console.log('⚠️ No estimate.adjustments found - trying valuation.adjustments fallback');
