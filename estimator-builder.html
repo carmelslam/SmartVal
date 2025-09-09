@@ -3834,6 +3834,10 @@
       
       // Update helper data - REBUILD FROM CURRENT UI STATE
       let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Ensure all structures exist
+      if (!helper.valuation) helper.valuation = {};
+      if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
       if (!helper.estimate) helper.estimate = {};
       if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
       
@@ -3845,19 +3849,28 @@
         const inputs = remainingRow.querySelectorAll('input, select');
         if (inputs.length >= 4) {
           const item = {
-            value: inputs[0].value || '', // UI input goes in value field
+            value: inputs[0].value || '',
             type: inputs[1].value || 'plus',
-            percentage: inputs[2].value || '',
-            amount_display: inputs[3].value || ''
+            percentage: parseFloat(inputs[2].value) || 0,
+            percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
+            amount_display: inputs[3].value || '',
+            amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+            source: 'manual',
+            timestamp: new Date().toISOString()
           };
           
-          // Calculate amount if percentage is provided
-          if (item.percentage) {
-            const helper_current = JSON.parse(sessionStorage.getItem('helper') || '{}');
-            const baseValue = parseFloat(helper_current.estimate?.market_value_base) || 0;
-            const percentageValue = parseFloat(item.percentage);
-            if (!isNaN(percentageValue) && baseValue > 0) {
-              const amount = Math.round((baseValue * percentageValue) / 100);
+          // Apply sign based on type
+          if (item.type === 'minus') {
+            item.percentage = -Math.abs(item.percentage);
+            item.percent = -Math.abs(item.percent);
+            item.amount = -Math.abs(item.amount);
+          }
+          
+          // Calculate amount from percentage if needed
+          if (item.percentage && !item.amount) {
+            const baseValue = parseFloat(helper.estimate?.market_value_base) || 0;
+            if (baseValue > 0) {
+              const amount = Math.round((baseValue * Math.abs(item.percentage)) / 100);
               item.amount = item.type === 'minus' ? -amount : amount;
             }
           }
@@ -3879,6 +3892,7 @@
       }
       
       console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items remaining`);
+      console.log(`📊 Updated valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
       
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
