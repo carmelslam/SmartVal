@@ -1185,14 +1185,6 @@
               calculateMarketValueAmounts();
             }
             updateFullMarketValueCalculation();
-            // SYNC full market features/registration to estimate.gross_value_adjustments when basic price changes
-            let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-            if (helper) {
-              helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
-              helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
-              sessionStorage.setItem('helper', JSON.stringify(helper));
-              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments on basic price input');
-            }
           });
           
           basicPriceField.addEventListener('change', function() {
@@ -1202,14 +1194,6 @@
               calculateMarketValueAmounts();
             }
             updateFullMarketValueCalculation();
-            // SYNC full market features/registration to estimate.gross_value_adjustments when basic price changes
-            let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-            if (helper) {
-              helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
-              helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
-              sessionStorage.setItem('helper', JSON.stringify(helper));
-              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments on basic price change');
-            }
           });
         }
         
@@ -2631,6 +2615,13 @@
         
         // 6. Write GROSS VALUE adjustments back to valuation source AND estimate.adjustments
         updateGrossValueToValuationAndEstimate(helper);
+
+        // 7. Write FULL MARKET VALUE features/registration back to valuation source AND estimate.adjustments
+        updateFullMarketValueToValuationAndEstimate(helper);
+
+        // 8. Write FULL MARKET VALUE features/registration to estimate.gross_value_adjustments (third destination)
+        helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+        helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
         
         // Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -5689,6 +5680,77 @@
       }
     }
 
+    // Update FULL MARKET VALUE features/registration to BOTH valuation source AND estimate.adjustments  
+    function updateFullMarketValueToValuationAndEstimate(helper) {
+      try {
+        // Initialize structures
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        // 1. FEATURES - Write to both valuation source and estimate
+        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+        if (featuresRows.length > 0) {
+          const firstRow = featuresRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              description: inputs[0].value || '',
+              value: inputs[0].value || '', // תיאור content goes in value field
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+            }
+            
+            // Write to VALUATION source (primary)
+            helper.valuation.adjustments.features = adjustmentData;
+            // Write to ESTIMATE adjustments (secondary)
+            helper.estimate.adjustments.features = adjustmentData;
+          }
+        }
+        
+        // 2. REGISTRATION - Write to both valuation source and estimate
+        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+        if (registrationRows.length > 0) {
+          const firstRow = registrationRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              description: inputs[0].value || '',
+              value: inputs[0].value || '', // תיאור content goes in value field
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              percent: parseFloat(inputs[2].value) || 0, // Also store as 'percent' for backward compatibility
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+            }
+            
+            // Write to VALUATION source (primary)
+            helper.valuation.adjustments.registration = adjustmentData;
+            // Write to ESTIMATE adjustments (secondary)  
+            helper.estimate.adjustments.registration = adjustmentData;
+          }
+        }
+        
+        console.log('✅ Updated FULL MARKET VALUE features/registration to BOTH valuation.adjustments AND estimate.adjustments');
+        
+      } catch (error) {
+        console.error('❌ Error updating full market value to valuation and estimate adjustments:', error);
+      }
+    }
+
     // Add real-time calculation listeners
     function addCalculationListeners() {
       // Listen to basic price changes
@@ -5793,21 +5855,8 @@
             }
             // Then update calculations
             updateFullMarketValueCalculation();
-            // AUTO-SAVE ON EVERY CHANGE
-            let helper = autoSaveToHelper();
-            // SYNC TO estimate.gross_value_adjustments (third destination) - SAME AS GROSS VALUE SECTION
-            if (helper) {
-              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
-              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
-              if (isFeatures) {
-                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
-              }
-              if (isRegistration) {
-                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
-              }
-              sessionStorage.setItem('helper', JSON.stringify(helper));
-              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments');
-            }
+            // AUTO-SAVE ON EVERY CHANGE (includes all 3 destination write-back)
+            autoSaveToHelper();
           });
           input.addEventListener('change', function() {
             // Calculate amounts first with cumulative logic
@@ -5816,21 +5865,8 @@
             }
             // Then update calculations
             updateFullMarketValueCalculation();
-            // AUTO-SAVE ON EVERY CHANGE
-            let helper = autoSaveToHelper();
-            // SYNC TO estimate.gross_value_adjustments (third destination) - SAME AS GROSS VALUE SECTION
-            if (helper) {
-              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
-              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
-              if (isFeatures) {
-                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
-              }
-              if (isRegistration) {
-                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
-              }
-              sessionStorage.setItem('helper', JSON.stringify(helper));
-              console.log('✅ Synced full market features/registration change to estimate.gross_value_adjustments');
-            }
+            // AUTO-SAVE ON EVERY CHANGE (includes all 3 destination write-back)
+            autoSaveToHelper();
           });
         });
         
