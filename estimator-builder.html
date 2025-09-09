@@ -4172,9 +4172,38 @@
       `;
     }
 
+    // Clear test data and restore proper data flow
+    function cleanupTestDataAndRestoreValuationFlow(helper) {
+      console.log('🧹 Cleaning up test data and restoring valuation flow');
+      
+      // Check if estimate.adjustments contains test data
+      if (helper.estimate?.adjustments) {
+        let hasTestData = false;
+        Object.keys(helper.estimate.adjustments).forEach(category => {
+          if (Array.isArray(helper.estimate.adjustments[category])) {
+            helper.estimate.adjustments[category].forEach(item => {
+              if (item.description?.includes('test') || item.value?.includes('test')) {
+                hasTestData = true;
+              }
+            });
+          }
+        });
+        
+        if (hasTestData) {
+          console.log('🗑️ Found test data - clearing estimate.adjustments');
+          delete helper.estimate.adjustments;
+        }
+      }
+      
+      return helper;
+    }
+    
     function loadAdjustments(helper) {
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
+        
+        // CLEAN UP TEST DATA FIRST
+        helper = cleanupTestDataAndRestoreValuationFlow(helper);
         
         // CLEAR EXISTING UI ROWS FIRST to prevent duplication
         document.getElementById('fullFeaturesAdjustmentsList').innerHTML = '';
@@ -5315,61 +5344,6 @@
 
     // REMOVED DUPLICATE - Using the one at line 2041 instead
 
-    // Remove adjustment row
-    window.removeAdjustmentRow = function(rowId) {
-      const row = document.getElementById(rowId);
-      if (row) {
-        console.log('🗑️ Removing adjustment row (gross section):', rowId);
-        
-        // Determine which category and index this row belongs to (gross section)
-        const container = row.parentElement;
-        const rowIndex = Array.from(container.children).indexOf(row);
-        
-        let category = '';
-        if (container.id === 'featuresAdjustmentsList') category = 'features';
-        else if (container.id === 'registrationAdjustmentsList') category = 'registration';
-        
-        console.log(`🎯 Deleting gross ${category} row at index ${rowIndex}`);
-        
-        // Remove the row from UI
-        row.remove();
-        
-        // Get helper and update arrays by removing specific index
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper) helper = {};
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        if (category && helper.estimate.adjustments[category]) {
-          // Remove the specific array item
-          helper.estimate.adjustments[category].splice(rowIndex, 1);
-          console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
-          
-          // If it was the first row and there are remaining rows, update valuation
-          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0) {
-            // Move the new first item to valuation.adjustments
-            if (!helper.valuation) helper.valuation = {};
-            if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-            helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
-            console.log(`📝 Updated valuation.adjustments.${category} with new first item`);
-          }
-          // If it was the first row and no remaining rows, clear valuation
-          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0) {
-            if (helper.valuation?.adjustments?.[category]) {
-              delete helper.valuation.adjustments[category];
-              console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
-            }
-          }
-        }
-        
-        // Trigger recalculations
-        updateGrossMarketValueCalculation();
-        
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Updated helper after precise gross row deletion');
-      }
-    }
 
 
     // Sync adjustment to estimate helper (mirror data)
