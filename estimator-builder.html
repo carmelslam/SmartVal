@@ -3850,16 +3850,16 @@
           console.log(`📊 After deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
           console.log('📊 Array contents after deletion:', helper.estimate.adjustments[category]);
           
-          // If it was the first row and there are remaining rows, update valuation
-          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0 && category !== 'additional') {
+          // If it was the first row and there are remaining rows, update valuation (ALL categories including additional)
+          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0) {
             // Move the new first item to valuation.adjustments
             if (!helper.valuation) helper.valuation = {};
             if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
             helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
             console.log(`📝 Updated valuation.adjustments.${category} with new first item`);
           }
-          // If it was the first row and no remaining rows, clear valuation
-          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0 && category !== 'additional') {
+          // If it was the first row and no remaining rows, clear valuation (ALL categories including additional)
+          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0) {
             if (helper.valuation?.adjustments?.[category]) {
               delete helper.valuation.adjustments[category];
               console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
@@ -4191,7 +4191,7 @@
     function cleanupTestDataAndRestoreValuationFlow(helper) {
       console.log('🧹 Cleaning up test data surgically');
       
-      // Check if estimate.adjustments contains test data and remove ONLY test items
+      // Clean estimate.adjustments arrays
       if (helper.estimate?.adjustments) {
         Object.keys(helper.estimate.adjustments).forEach(category => {
           if (Array.isArray(helper.estimate.adjustments[category])) {
@@ -4199,10 +4199,22 @@
             helper.estimate.adjustments[category] = helper.estimate.adjustments[category].filter(item => {
               const isTestData = item.description?.includes('test') || item.value?.includes('test');
               if (isTestData) {
-                console.log(`🗑️ Removing test item from ${category}:`, item);
+                console.log(`🗑️ Removing test item from estimate.${category}:`, item);
               }
               return !isTestData; // Keep non-test items
             });
+          }
+        });
+      }
+      
+      // Clean valuation.adjustments objects
+      if (helper.valuation?.adjustments) {
+        Object.keys(helper.valuation.adjustments).forEach(category => {
+          const item = helper.valuation.adjustments[category];
+          const isTestData = item?.description?.includes('test') || item?.value?.includes('test');
+          if (isTestData) {
+            console.log(`🗑️ Removing test item from valuation.${category}:`, item);
+            delete helper.valuation.adjustments[category];
           }
         });
       }
