@@ -3814,22 +3814,58 @@
       const row = document.getElementById(rowId);
       if (row) {
         console.log('🗑️ Removing adjustment row:', rowId);
+        
+        // Determine which category and index this row belongs to
+        const container = row.parentElement;
+        const rowIndex = Array.from(container.children).indexOf(row);
+        
+        let category = '';
+        if (container.id === 'fullFeaturesAdjustmentsList') category = 'features';
+        else if (container.id === 'fullRegistrationAdjustmentsList') category = 'registration';
+        else if (container.id === 'mileageAdjustmentsList') category = 'mileage';
+        else if (container.id === 'ownershipAdjustmentsList') category = 'ownership_type';
+        else if (container.id === 'ownersAdjustmentsList') category = 'ownership_history';
+        else if (container.id === 'allAdjustmentsList') category = 'additional';
+        
+        console.log(`🎯 Deleting ${category} row at index ${rowIndex}`);
+        
+        // Remove the row from UI
         row.remove();
+        
+        // Get helper and update arrays by removing specific index
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper) helper = {};
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        if (category && helper.estimate.adjustments[category]) {
+          // Remove the specific array item
+          helper.estimate.adjustments[category].splice(rowIndex, 1);
+          console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
+          
+          // If it was the first row and there are remaining rows, update valuation
+          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0 && category !== 'additional') {
+            // Move the new first item to valuation.adjustments
+            if (!helper.valuation) helper.valuation = {};
+            if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+            helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+            console.log(`📝 Updated valuation.adjustments.${category} with new first item`);
+          }
+          // If it was the first row and no remaining rows, clear valuation
+          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0 && category !== 'additional') {
+            if (helper.valuation?.adjustments?.[category]) {
+              delete helper.valuation.adjustments[category];
+              console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
+            }
+          }
+        }
         
         // Trigger recalculations
         updateFullMarketValueCalculation();
         
-        // Get helper and rebuild estimate.adjustments from remaining UI rows
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper) helper = {};
-        
-        // CRITICAL: Rebuild estimate.adjustments from remaining UI
-        updateFullMarketValueToValuationAndEstimate(helper);
-        updateGrossValueToValuationAndEstimate(helper);
-        
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Updated helper after row deletion');
+        console.log('✅ Updated helper after precise row deletion');
       }
     }
     
@@ -5284,22 +5320,54 @@
       const row = document.getElementById(rowId);
       if (row) {
         console.log('🗑️ Removing adjustment row (gross section):', rowId);
+        
+        // Determine which category and index this row belongs to (gross section)
+        const container = row.parentElement;
+        const rowIndex = Array.from(container.children).indexOf(row);
+        
+        let category = '';
+        if (container.id === 'featuresAdjustmentsList') category = 'features';
+        else if (container.id === 'registrationAdjustmentsList') category = 'registration';
+        
+        console.log(`🎯 Deleting gross ${category} row at index ${rowIndex}`);
+        
+        // Remove the row from UI
         row.remove();
+        
+        // Get helper and update arrays by removing specific index
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!helper) helper = {};
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        if (category && helper.estimate.adjustments[category]) {
+          // Remove the specific array item
+          helper.estimate.adjustments[category].splice(rowIndex, 1);
+          console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
+          
+          // If it was the first row and there are remaining rows, update valuation
+          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0) {
+            // Move the new first item to valuation.adjustments
+            if (!helper.valuation) helper.valuation = {};
+            if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+            helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+            console.log(`📝 Updated valuation.adjustments.${category} with new first item`);
+          }
+          // If it was the first row and no remaining rows, clear valuation
+          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0) {
+            if (helper.valuation?.adjustments?.[category]) {
+              delete helper.valuation.adjustments[category];
+              console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
+            }
+          }
+        }
         
         // Trigger recalculations
         updateGrossMarketValueCalculation();
         
-        // Get helper and rebuild estimate.adjustments from remaining UI rows
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper) helper = {};
-        
-        // CRITICAL: Rebuild estimate.adjustments from remaining UI
-        updateGrossValueToValuationAndEstimate(helper);
-        updateFullMarketValueToValuationAndEstimate(helper);
-        
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Updated helper after gross row deletion');
+        console.log('✅ Updated helper after precise gross row deletion');
       }
     }
 
