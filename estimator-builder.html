@@ -3913,28 +3913,16 @@
           adjustmentData.amount = -Math.abs(adjustmentData.amount);
         }
         
-        // For valuation: save as single object (except additional which doesn't go to valuation)
+        // Save to valuation (single object) - except 'additional' category
         if (category !== 'additional') {
           helper.valuation.adjustments[category] = adjustmentData;
         }
         
-        // For estimate: save as array to match expected format
+        // Save to estimate (array) - all categories
         if (!helper.estimate.adjustments[category]) {
           helper.estimate.adjustments[category] = [];
         }
-        
-        // Find the row index to update the correct array item
-        const container = element.closest('div').parentElement;
-        const row = element.closest('div.adjustment-row');
-        const rowIndex = Array.from(container.children).indexOf(row);
-        
-        // Ensure array has enough items
-        while (helper.estimate.adjustments[category].length <= rowIndex) {
-          helper.estimate.adjustments[category].push({});
-        }
-        
-        // Update the specific array index
-        helper.estimate.adjustments[category][rowIndex] = adjustmentData;
+        helper.estimate.adjustments[category].push(adjustmentData);
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
