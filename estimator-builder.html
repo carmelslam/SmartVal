@@ -6238,10 +6238,14 @@
           });
         }
         
-        // 6. ADDITIONAL ADJUSTMENTS (התאמות שוק נוספות) - Write to estimate only
+        // 6. ADDITIONAL ADJUSTMENTS (התאמות שוק נוספות) - Write to BOTH estimate AND valuation
         const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
         if (additionalRows.length > 0) {
           helper.estimate.adjustments.additional = [];
+          
+          // Also update valuation for first row only (to match other categories)
+          let firstAdditionalData = null;
+          
           additionalRows.forEach(row => {
             const inputs = row.querySelectorAll('input, select');
             if (inputs.length >= 4) {
@@ -6260,8 +6264,24 @@
               }
               
               helper.estimate.adjustments.additional.push(adjustmentData);
+              
+              // Keep first row for valuation
+              if (!firstAdditionalData) {
+                firstAdditionalData = adjustmentData;
+              }
             }
           });
+          
+          // Update valuation with first additional adjustment
+          if (firstAdditionalData) {
+            helper.valuation.adjustments.additional = firstAdditionalData;
+          }
+        } else {
+          // Clear both if no rows
+          helper.estimate.adjustments.additional = [];
+          if (helper.valuation.adjustments.additional) {
+            delete helper.valuation.adjustments.additional;
+          }
         }
         
         console.log('✅ Updated ALL FULL MARKET VALUE adjustments to valuation.adjustments AND estimate.adjustments');
