@@ -2602,6 +2602,9 @@
         
         console.log('✅ Updated helper from adjustments including ownership_type and ownership_history:', helper.valuation);
         
+        // 6. Write GROSS VALUE adjustments to estimate.adjustments (secondary destination)
+        updateGrossValueToEstimateAdjustments(helper);
+        
         // Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('💾 Helper data saved to sessionStorage');
@@ -3363,6 +3366,60 @@
       
       console.log(`✅ Final cumulative value: ₪${Math.round(currentValue)}`);
       return currentValue;
+    }
+
+    // GROSS VALUE AMOUNTS CALCULATION (Features & Registration only)
+    window.calculateGrossValueAmounts = function() {
+      console.log('🧮 Starting gross value amount calculations...');
+      
+      // Get base price
+      let basicPrice = 0;
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField?.value) {
+        basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      if (basicPrice === 0) {
+        console.log('⚠️ No base price available for gross value calculations');
+        return;
+      }
+      
+      console.log('🏠 Base price for gross value calculations:', basicPrice);
+      
+      // 1. Features: Calculate from base price (same logic as full market value)
+      const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+      featuresRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const type = inputs[1].value; // סוג field
+          const percentInput = inputs[2]; // אחוז field
+          const valueInput = inputs[3]; // ערך field
+          
+          const percent = parseFloat(percentInput.value) || 0;
+          if (percent !== 0) {
+            const adjustment = basicPrice * (Math.abs(percent) / 100);
+            
+            // Update ערך field with calculated amount - show negative if type is minus
+            const displayValue = (type === 'minus') ? `-₪${Math.round(adjustment).toLocaleString()}` : `₪${Math.round(adjustment).toLocaleString()}`;
+            valueInput.value = displayValue;
+            console.log(`🏗️ Gross Features: ${percent}% of ₪${basicPrice} = ${displayValue}`);
+          }
+        }
+      });
+      
+      // 2. Registration: Fixed amounts (no percentage calculation needed - display as is)
+      const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+      registrationRows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const valueInput = inputs[3];
+          if (valueInput.value) {
+            console.log(`🏛️ Gross Registration: ${valueInput.value} (fixed amount)`);
+          }
+        }
+      });
+      
+      console.log('✅ Gross value amounts calculated');
     }
 
     // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
@@ -5363,12 +5420,74 @@
       }
     }
     
+    // Update gross value adjustments to estimate.adjustments (secondary destination)
+    function updateGrossValueToEstimateAdjustments(helper) {
+      try {
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        // Copy features from gross value section to estimate.adjustments.features
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        if (featuresRows.length > 0) {
+          const firstRow = featuresRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.estimate.adjustments.features = {
+              description: inputs[0].value || '',
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              helper.estimate.adjustments.features.amount = -Math.abs(helper.estimate.adjustments.features.amount);
+            }
+          }
+        }
+        
+        // Copy registration from gross value section to estimate.adjustments.registration
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        if (registrationRows.length > 0) {
+          const firstRow = registrationRows[0];
+          const inputs = firstRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.estimate.adjustments.registration = {
+              description: inputs[0].value || '',
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              helper.estimate.adjustments.registration.amount = -Math.abs(helper.estimate.adjustments.registration.amount);
+            }
+          }
+        }
+        
+        console.log('✅ Updated gross value adjustments to helper.estimate.adjustments');
+        
+      } catch (error) {
+        console.error('❌ Error updating gross value to estimate adjustments:', error);
+      }
+    }
+
     // Add real-time calculation listeners
     function addCalculationListeners() {
       // Listen to basic price changes
       const basicPriceField = document.getElementById('basicPrice');
       if (basicPriceField) {
         basicPriceField.addEventListener('input', function() {
+          // Calculate gross value amounts first with local logic
+          if (typeof calculateGrossValueAmounts === 'function') {
+            calculateGrossValueAmounts();
+          }
+          // Then update calculations
           updateGrossMarketValueCalculation();
           // AUTO-SAVE ON EVERY CHANGE
           autoSaveToHelper();
@@ -5408,11 +5527,21 @@
         const allInputs = document.querySelectorAll('#featuresAdjustmentsList input, #registrationAdjustmentsList input, #featuresAdjustmentsList select, #registrationAdjustmentsList select');
         allInputs.forEach(input => {
           input.addEventListener('input', function() {
+            // Calculate amounts first with local logic
+            if (typeof calculateGrossValueAmounts === 'function') {
+              calculateGrossValueAmounts();
+            }
+            // Then update calculations
             updateGrossMarketValueCalculation();
             // AUTO-SAVE ON EVERY CHANGE
             autoSaveToHelper();
           });
           input.addEventListener('change', function() {
+            // Calculate amounts first with local logic
+            if (typeof calculateGrossValueAmounts === 'function') {
+              calculateGrossValueAmounts();
+            }
+            // Then update calculations
             updateGrossMarketValueCalculation();
             // AUTO-SAVE ON EVERY CHANGE
             autoSaveToHelper();
