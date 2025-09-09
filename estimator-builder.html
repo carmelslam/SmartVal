@@ -1185,6 +1185,14 @@
               calculateMarketValueAmounts();
             }
             updateFullMarketValueCalculation();
+            // SYNC full market features/registration to estimate.gross_value_adjustments when basic price changes
+            let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (helper) {
+              helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments on basic price input');
+            }
           });
           
           basicPriceField.addEventListener('change', function() {
@@ -1194,6 +1202,14 @@
               calculateMarketValueAmounts();
             }
             updateFullMarketValueCalculation();
+            // SYNC full market features/registration to estimate.gross_value_adjustments when basic price changes
+            let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (helper) {
+              helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments on basic price change');
+            }
           });
         }
         
@@ -5206,6 +5222,71 @@
       }
     }
 
+    // Sync FULL MARKET VALUE features/registration to estimate.gross_value_adjustments
+    function syncFullMarketValueToEstimateHelper(element, category, helperParam) {
+      try {
+        // Use passed helper or get from storage
+        let helper;
+        if (helperParam) {
+          helper = helperParam;
+        } else {
+          let helperStr = sessionStorage.getItem('helper');
+          if (!helperStr || helperStr === 'undefined') {
+            console.log('No helper found, skipping full market sync');
+            return null;
+          }
+          helper = JSON.parse(helperStr);
+        }
+        
+        // Initialize estimate structure if needed
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.gross_value_adjustments) {
+          helper.estimate.gross_value_adjustments = {
+            features: [],
+            registration: []
+          };
+        }
+        
+        // Clear and rebuild the adjustments from FULL MARKET VALUE containers
+        helper.estimate.gross_value_adjustments[category] = [];
+        
+        // Collect all adjustments from FULL MARKET VALUE containers
+        const selector = category === 'features' ? '#fullFeaturesAdjustmentsList > div' : '#fullRegistrationAdjustmentsList > div';
+        const rows = document.querySelectorAll(selector);
+        
+        rows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              description: category, // Category name like "features", "registration"
+              value: inputs[0].value || '', // תיאור content goes in value field
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0, // Monetary amount goes in amount field
+              timestamp: new Date().toISOString()
+            };
+            
+            if (adjustmentData.value.trim() !== '' || adjustmentData.amount !== 0 || adjustmentData.percentage !== 0) {
+              helper.estimate.gross_value_adjustments[category].push(adjustmentData);
+            }
+          }
+        });
+        
+        console.log(`✅ Synced full market ${category} to estimate.gross_value_adjustments:`, helper.estimate.gross_value_adjustments[category]);
+        
+        // Only save to sessionStorage if helper wasn't passed as parameter
+        if (!helperParam) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+        
+        return helper;
+        
+      } catch (error) {
+        console.error('Error syncing full market adjustment to estimate helper:', error);
+        return helperParam || null;
+      }
+    }
+
     // REMOVED DUPLICATE - Using the one at line 2094 that accepts helper parameter
 
     // Write back to data source - helper.valuation.adjustments
@@ -5700,9 +5781,62 @@
           });
         });
         
-        // Full market value adjustments
-        const fullMarketInputs = document.querySelectorAll('#fullFeaturesAdjustmentsList input, #fullRegistrationAdjustmentsList input, #mileageAdjustmentsList input, #ownershipAdjustmentsList input, #ownersAdjustmentsList input, #fullFeaturesAdjustmentsList select, #fullRegistrationAdjustmentsList select, #mileageAdjustmentsList select, #ownershipAdjustmentsList select, #ownersAdjustmentsList select');
-        fullMarketInputs.forEach(input => {
+        // Full market value adjustments - SEPARATE handling for features/registration vs others
+        
+        // Features and Registration in full market value (write to 3 destinations including gross_value_adjustments)
+        const fullMarketFeaturesRegistrationInputs = document.querySelectorAll('#fullFeaturesAdjustmentsList input, #fullRegistrationAdjustmentsList input, #fullFeaturesAdjustmentsList select, #fullRegistrationAdjustmentsList select');
+        fullMarketFeaturesRegistrationInputs.forEach(input => {
+          input.addEventListener('input', function() {
+            // Calculate amounts first with cumulative logic
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
+            // Then update calculations
+            updateFullMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            let helper = autoSaveToHelper();
+            // SYNC TO estimate.gross_value_adjustments (third destination) - SAME AS GROSS VALUE SECTION
+            if (helper) {
+              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
+              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
+              if (isFeatures) {
+                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              }
+              if (isRegistration) {
+                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              }
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              console.log('✅ Synced full market features/registration to estimate.gross_value_adjustments');
+            }
+          });
+          input.addEventListener('change', function() {
+            // Calculate amounts first with cumulative logic
+            if (typeof calculateMarketValueAmounts === 'function') {
+              calculateMarketValueAmounts();
+            }
+            // Then update calculations
+            updateFullMarketValueCalculation();
+            // AUTO-SAVE ON EVERY CHANGE
+            let helper = autoSaveToHelper();
+            // SYNC TO estimate.gross_value_adjustments (third destination) - SAME AS GROSS VALUE SECTION
+            if (helper) {
+              const isFeatures = input.closest('#fullFeaturesAdjustmentsList');
+              const isRegistration = input.closest('#fullRegistrationAdjustmentsList');
+              if (isFeatures) {
+                helper = syncFullMarketValueToEstimateHelper(null, 'features', helper) || helper;
+              }
+              if (isRegistration) {
+                helper = syncFullMarketValueToEstimateHelper(null, 'registration', helper) || helper;
+              }
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              console.log('✅ Synced full market features/registration change to estimate.gross_value_adjustments');
+            }
+          });
+        });
+        
+        // Other full market value adjustments (KM, Ownership, Owners) - original logic
+        const fullMarketOtherInputs = document.querySelectorAll('#mileageAdjustmentsList input, #ownershipAdjustmentsList input, #ownersAdjustmentsList input, #mileageAdjustmentsList select, #ownershipAdjustmentsList select, #ownersAdjustmentsList select');
+        fullMarketOtherInputs.forEach(input => {
           input.addEventListener('input', function() {
             // Calculate amounts first with cumulative logic
             if (typeof calculateMarketValueAmounts === 'function') {
