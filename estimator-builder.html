@@ -3885,16 +3885,10 @@
       updateFullMarketValueCalculation();
     }
     
-    // Sync adjustment to helper - SIMPLE VERSION
+    // Sync adjustment to helper - REBUILD ENTIRE CATEGORY FROM ALL UI ROWS
     window.syncAdjustmentToHelper = function(element, category) {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
-        const row = element.closest('div.adjustment-row');
-        if (!row) return;
-        
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length < 4) return;
         
         // Ensure structures exist
         if (!helper.valuation) helper.valuation = {};
@@ -3902,29 +3896,78 @@
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        const adjustmentData = {
-          value: inputs[0].value || '',
-          type: inputs[1].value || 'plus',
-          percent: parseFloat(inputs[2].value) || 0,
-          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
-          source: 'manual',
-          timestamp: new Date().toISOString()
-        };
+        // Map category to container ID
+        let containerId = '';
+        if (category === 'features') containerId = 'fullFeaturesAdjustmentsList';
+        else if (category === 'registration') containerId = 'fullRegistrationAdjustmentsList';
+        else if (category === 'mileage') containerId = 'mileageAdjustmentsList';
+        else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
+        else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
+        else if (category === 'additional') containerId = 'allAdjustmentsList';
         
-        // Apply sign
-        if (adjustmentData.type === 'minus') {
-          adjustmentData.percent = -Math.abs(adjustmentData.percent);
-          adjustmentData.amount = -Math.abs(adjustmentData.amount);
+        if (!containerId) {
+          console.error('❌ Unknown category:', category);
+          return;
         }
         
-        // Save to valuation (object)
-        helper.valuation.adjustments[category] = adjustmentData;
-        
-        // Save to estimate (array) - don't push duplicates, just set first entry
-        if (!helper.estimate.adjustments[category]) {
-          helper.estimate.adjustments[category] = [];
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.error('❌ Container not found:', containerId);
+          return;
         }
-        helper.estimate.adjustments[category][0] = adjustmentData;
+        
+        console.log(`🔄 Rebuilding ${category} from all UI rows in ${containerId}`);
+        
+        // Rebuild entire category array from ALL visible UI rows
+        const allRows = Array.from(container.children);
+        helper.estimate.adjustments[category] = [];
+        
+        allRows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: 'manual',
+              timestamp: new Date().toISOString()
+            };
+            
+            // Apply sign based on type
+            if (adjustmentData.type === 'minus') {
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+            }
+            
+            // Calculate amount from percentage if needed
+            if (adjustmentData.percentage && !adjustmentData.amount) {
+              const baseValue = parseFloat(helper.estimate?.market_value_base) || 0;
+              if (baseValue > 0) {
+                const amount = Math.round((baseValue * Math.abs(adjustmentData.percentage)) / 100);
+                adjustmentData.amount = adjustmentData.type === 'minus' ? -amount : amount;
+              }
+            }
+            
+            helper.estimate.adjustments[category].push(adjustmentData);
+            console.log(`📝 Added row ${index} to ${category}:`, adjustmentData.value);
+          }
+        });
+        
+        console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items total`);
+        
+        // Update valuation.adjustments with first item (for backward compatibility)
+        if (helper.estimate.adjustments[category].length > 0) {
+          helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+        } else {
+          // Clear valuation if no items remain
+          if (helper.valuation.adjustments[category]) {
+            delete helper.valuation.adjustments[category];
+          }
+        }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
@@ -4392,7 +4435,7 @@
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percent || '';
+                inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
