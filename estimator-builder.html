@@ -3843,10 +3843,12 @@
         
         if (category && helper.estimate.adjustments[category]) {
           console.log(`📊 Before deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
+          console.log('📊 Array contents before deletion:', helper.estimate.adjustments[category]);
           // Remove the specific array item
           helper.estimate.adjustments[category].splice(rowIndex, 1);
           console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
           console.log(`📊 After deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
+          console.log('📊 Array contents after deletion:', helper.estimate.adjustments[category]);
           
           // If it was the first row and there are remaining rows, update valuation
           if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0 && category !== 'additional') {
@@ -3863,6 +3865,9 @@
               console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
             }
           }
+        } else {
+          console.log(`⚠️ Category ${category} not found in helper.estimate.adjustments or array is empty`);
+          console.log('📊 Available categories:', Object.keys(helper.estimate.adjustments || {}));
         }
         
         // Trigger recalculations
@@ -3908,9 +3913,28 @@
           adjustmentData.amount = -Math.abs(adjustmentData.amount);
         }
         
-        // Save to both locations
-        helper.valuation.adjustments[category] = adjustmentData;
-        helper.estimate.adjustments[category] = adjustmentData;
+        // For valuation: save as single object (except additional which doesn't go to valuation)
+        if (category !== 'additional') {
+          helper.valuation.adjustments[category] = adjustmentData;
+        }
+        
+        // For estimate: save as array to match expected format
+        if (!helper.estimate.adjustments[category]) {
+          helper.estimate.adjustments[category] = [];
+        }
+        
+        // Find the row index to update the correct array item
+        const container = element.closest('div').parentElement;
+        const row = element.closest('div.adjustment-row');
+        const rowIndex = Array.from(container.children).indexOf(row);
+        
+        // Ensure array has enough items
+        while (helper.estimate.adjustments[category].length <= rowIndex) {
+          helper.estimate.adjustments[category].push({});
+        }
+        
+        // Update the specific array index
+        helper.estimate.adjustments[category][rowIndex] = adjustmentData;
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
