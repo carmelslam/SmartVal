@@ -3924,9 +3924,21 @@
         if (!helper.estimate.adjustments[category]) {
           helper.estimate.adjustments[category] = [];
         }
-        helper.estimate.adjustments[category].push(adjustmentData);
+        
+        // Find the row index to update correct array item instead of always pushing
+        const container = element.closest('div').parentElement;
+        const row = element.closest('div.adjustment-row');
+        const rowIndex = Array.from(container.children).indexOf(row);
+        
+        // Ensure array has enough items
+        while (helper.estimate.adjustments[category].length <= rowIndex) {
+          helper.estimate.adjustments[category].push({});
+        }
+        
+        // Update the specific array index instead of pushing
+        helper.estimate.adjustments[category][rowIndex] = adjustmentData;
         if (category === 'additional') {
-          console.log('🎯 ADDITIONAL: Updated estimate.adjustments.additional:', helper.estimate.adjustments[category]);
+          console.log('🎯 ADDITIONAL: Updated estimate.adjustments.additional at index', rowIndex, ':', helper.estimate.adjustments[category]);
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
