@@ -1679,13 +1679,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" title="">
+          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1700,13 +1700,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" title="">
+          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -4134,8 +4134,155 @@
     }
 
     function loadAdjustments(helper) {
-      console.log('📊 Load adjustments');
-      // Implementation here
+      try {
+        console.log('📊 Loading adjustments from helper.estimate.adjustments');
+        
+        if (!helper.estimate?.adjustments) {
+          console.log('⚠️ No estimate.adjustments found - trying valuation.adjustments fallback');
+          // If no estimate.adjustments, try to use valuation.adjustments as fallback
+          if (helper.valuation?.adjustments) {
+            // Convert single objects to arrays for consistency
+            helper.estimate = helper.estimate || {};
+            helper.estimate.adjustments = {};
+            
+            Object.keys(helper.valuation.adjustments).forEach(key => {
+              if (helper.valuation.adjustments[key]) {
+                helper.estimate.adjustments[key] = [helper.valuation.adjustments[key]];
+              }
+            });
+            
+            // Save back to sessionStorage
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          } else {
+            return;
+          }
+        }
+        
+        const adjustments = helper.estimate.adjustments;
+        
+        // 1. Load Features Adjustments
+        if (adjustments.features && adjustments.features.length > 0) {
+          console.log('📝 Loading features adjustments:', adjustments.features);
+          adjustments.features.forEach(item => {
+            addFullFeaturesAdjustment();
+            const lastRow = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 2. Load Registration Adjustments
+        if (adjustments.registration && adjustments.registration.length > 0) {
+          console.log('📝 Loading registration adjustments:', adjustments.registration);
+          adjustments.registration.forEach(item => {
+            addFullRegistrationAdjustment();
+            const lastRow = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 3. Load Mileage Adjustments
+        if (adjustments.mileage && adjustments.mileage.length > 0) {
+          console.log('📝 Loading mileage adjustments:', adjustments.mileage);
+          adjustments.mileage.forEach(item => {
+            addMileageAdjustment();
+            const lastRow = document.querySelector('#mileageAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 4. Load Ownership Type Adjustments
+        if (adjustments.ownership_type && adjustments.ownership_type.length > 0) {
+          console.log('📝 Loading ownership_type adjustments:', adjustments.ownership_type);
+          adjustments.ownership_type.forEach(item => {
+            addOwnershipAdjustment();
+            const lastRow = document.querySelector('#ownershipAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 5. Load Ownership History Adjustments
+        if (adjustments.ownership_history && adjustments.ownership_history.length > 0) {
+          console.log('📝 Loading ownership_history adjustments:', adjustments.ownership_history);
+          adjustments.ownership_history.forEach(item => {
+            addOwnersAdjustment();
+            const lastRow = document.querySelector('#ownersAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 6. Load Additional Adjustments
+        if (adjustments.additional && adjustments.additional.length > 0) {
+          console.log('📝 Loading additional adjustments:', adjustments.additional);
+          adjustments.additional.forEach(item => {
+            addFullMarketAdjustment();
+            const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.description || item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        console.log('✅ Finished loading all adjustments');
+        
+        // Trigger calculations after loading
+        setTimeout(() => {
+          if (typeof calculateMarketValueAmounts === 'function') {
+            calculateMarketValueAmounts();
+          }
+          if (typeof updateFullMarketValueCalculation === 'function') {
+            updateFullMarketValueCalculation();
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Error loading adjustments:', error);
+      }
     }
 
     // Load gross values from helper (basic price + features + registration adjustments)
