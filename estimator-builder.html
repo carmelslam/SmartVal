@@ -1335,8 +1335,11 @@
         // Load damage centers
         loadDamageCenters(helper);
         
-        // Load adjustments
+        // Load adjustments for full market section
         loadAdjustments(helper);
+        
+        // Load gross adjustments for gross section
+        loadGrossAdjustments(helper);
         
         // Load gross values (basic price + adjustments)
         loadGrossValues(helper);
@@ -1574,13 +1577,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" /></div>
-          <div><select>
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" /></div>
-          <div><input type="text" placeholder="₪" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -1596,13 +1599,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" /></div>
-          <div><select>
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" /></div>
-          <div><input type="text" placeholder="₪" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -2439,9 +2442,9 @@
         const basicPriceField = document.getElementById('basicPrice');
         const basicPrice = parseFloat((basicPriceField?.value || '').replace(/[₪,]/g, '')) || 0;
         
-        // Calculate features adjustments total
+        // Calculate features adjustments total from GROSS section
         let featuresTotal = 0;
-        const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         featuresRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -2459,9 +2462,9 @@
           featuresCumulative.style.color = afterFeatures > 0 ? '#28a745' : '#dc3545';
         }
         
-        // Calculate registration adjustments total
+        // Calculate registration adjustments total from GROSS section
         let registrationTotal = 0;
-        const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         registrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
@@ -3820,8 +3823,8 @@
       const rowIndex = Array.from(container.children).indexOf(row);
       
       let category = '';
-      if (container.id === 'fullFeaturesAdjustmentsList') category = 'features';
-      else if (container.id === 'fullRegistrationAdjustmentsList') category = 'registration';
+      if (container.id === 'fullFeaturesAdjustmentsList' || container.id === 'featuresAdjustmentsList') category = 'features';
+      else if (container.id === 'fullRegistrationAdjustmentsList' || container.id === 'registrationAdjustmentsList') category = 'registration';
       else if (container.id === 'mileageAdjustmentsList') category = 'mileage';
       else if (container.id === 'ownershipAdjustmentsList') category = 'ownership_type';
       else if (container.id === 'ownersAdjustmentsList') category = 'ownership_history';
@@ -3910,10 +3913,32 @@
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        // Map category to container ID
+        // Map category to container ID - Check both full market and gross containers
         let containerId = '';
-        if (category === 'features') containerId = 'fullFeaturesAdjustmentsList';
-        else if (category === 'registration') containerId = 'fullRegistrationAdjustmentsList';
+        if (category === 'features') {
+          // Check if element is from gross section or full market section
+          const row = element.closest('div');
+          const grossContainer = document.getElementById('featuresAdjustmentsList');
+          const fullContainer = document.getElementById('fullFeaturesAdjustmentsList');
+          
+          if (grossContainer && grossContainer.contains(row)) {
+            containerId = 'featuresAdjustmentsList'; // Gross section
+          } else {
+            containerId = 'fullFeaturesAdjustmentsList'; // Full market section
+          }
+        }
+        else if (category === 'registration') {
+          // Check if element is from gross section or full market section  
+          const row = element.closest('div');
+          const grossContainer = document.getElementById('registrationAdjustmentsList');
+          const fullContainer = document.getElementById('fullRegistrationAdjustmentsList');
+          
+          if (grossContainer && grossContainer.contains(row)) {
+            containerId = 'registrationAdjustmentsList'; // Gross section
+          } else {
+            containerId = 'fullRegistrationAdjustmentsList'; // Full market section
+          }
+        }
         else if (category === 'mileage') containerId = 'mileageAdjustmentsList';
         else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
         else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
@@ -4308,6 +4333,84 @@
       }
       
       return helper;
+    }
+    
+    // Load gross adjustments (features and registration only) for gross section
+    function loadGrossAdjustments(helper) {
+      try {
+        console.log('📊 Loading GROSS adjustments from helper.estimate.adjustments');
+        
+        // CLEAN UP TEST DATA FIRST 
+        helper = cleanupTestDataAndRestoreValuationFlow(helper);
+        
+        // CLEAR EXISTING GROSS UI ROWS FIRST to prevent duplication
+        document.getElementById('featuresAdjustmentsList').innerHTML = '';
+        document.getElementById('registrationAdjustmentsList').innerHTML = '';
+        
+        if (!helper.estimate?.adjustments) {
+          console.log('⚠️ No estimate.adjustments found - trying valuation.adjustments fallback');
+          // If no estimate.adjustments, try to use valuation.adjustments as fallback
+          if (helper.valuation?.adjustments) {
+            // Convert single objects to arrays for consistency
+            helper.estimate = helper.estimate || {};
+            helper.estimate.adjustments = {};
+            
+            Object.keys(helper.valuation.adjustments).forEach(key => {
+              if (helper.valuation.adjustments[key] && (key === 'features' || key === 'registration')) {
+                helper.estimate.adjustments[key] = [helper.valuation.adjustments[key]];
+              }
+            });
+            
+            // Save back to sessionStorage
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+          } else {
+            return;
+          }
+        }
+        
+        const adjustments = helper.estimate.adjustments;
+        
+        // 1. Load Features Adjustments to GROSS section
+        if (adjustments.features && adjustments.features.length > 0) {
+          console.log('📝 Loading GROSS features adjustments:', adjustments.features);
+          adjustments.features.forEach(item => {
+            addFeatureAdjustment(); // Uses featuresAdjustmentsList container
+            const lastRow = document.querySelector('#featuresAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        // 2. Load Registration Adjustments to GROSS section
+        if (adjustments.registration && adjustments.registration.length > 0) {
+          console.log('📝 Loading GROSS registration adjustments:', adjustments.registration);
+          adjustments.registration.forEach(item => {
+            addRegistrationAdjustment(); // Uses registrationAdjustmentsList container
+            const lastRow = document.querySelector('#registrationAdjustmentsList > div:last-child');
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            }
+          });
+        }
+        
+        console.log('✅ Gross adjustments loaded successfully');
+        
+      } catch (error) {
+        console.error('❌ Error loading gross adjustments:', error);
+      }
     }
     
     function loadAdjustments(helper) {
