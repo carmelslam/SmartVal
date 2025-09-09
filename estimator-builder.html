@@ -3897,6 +3897,32 @@
       console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items remaining`);
       console.log(`📊 Updated valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
       
+      // For features and registration, also update gross_value_adjustments and sync UI sections
+      if (category === 'features' || category === 'registration') {
+        // Ensure gross_value_adjustments exists
+        if (!helper.estimate.gross_value_adjustments) helper.estimate.gross_value_adjustments = {};
+        
+        // Update gross_value_adjustments with same data
+        helper.estimate.gross_value_adjustments[category] = helper.estimate.adjustments[category];
+        
+        // Determine which section was deleted from and sync the other section
+        const isFromGrossSection = container.id.includes('registration') ? 
+          container.id === 'registrationAdjustmentsList' : 
+          container.id === 'featuresAdjustmentsList';
+        
+        if (isFromGrossSection) {
+          // Deleted from gross section -> sync to full market section
+          const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+          syncUISection(targetContainerId, helper.estimate.adjustments[category]);
+        } else {
+          // Deleted from full market section -> sync to gross section
+          const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
+          syncUISection(targetContainerId, helper.estimate.adjustments[category]);
+        }
+        
+        console.log(`🔄 Synced deletion between gross and full market sections for ${category}`);
+      }
+      
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
       updateFullMarketValueCalculation();
@@ -4008,10 +4034,78 @@
           }
         }
         
+        // For features and registration, also write to gross_value_adjustments and sync between sections
+        if (category === 'features' || category === 'registration') {
+          // Ensure gross_value_adjustments exists
+          if (!helper.estimate.gross_value_adjustments) helper.estimate.gross_value_adjustments = {};
+          
+          // Write to gross_value_adjustments as well
+          helper.estimate.gross_value_adjustments[category] = helper.estimate.adjustments[category];
+          
+          // Bi-directional sync: update the other section's UI with the same data
+          const isFromGrossSection = containerId.includes('registration') ? 
+            containerId === 'registrationAdjustmentsList' : 
+            containerId === 'featuresAdjustmentsList';
+          
+          if (isFromGrossSection) {
+            // Update was from gross section -> sync to full market section
+            const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+            syncUISection(targetContainerId, helper.estimate.adjustments[category]);
+          } else {
+            // Update was from full market section -> sync to gross section
+            const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
+            syncUISection(targetContainerId, helper.estimate.adjustments[category]);
+          }
+        }
+        
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
       } catch (error) {
         console.error('❌ Error syncing adjustment:', error);
+      }
+    }
+
+    // Helper function to sync UI section with data array
+    function syncUISection(containerId, dataArray) {
+      try {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.log(`⚠️ Container ${containerId} not found for sync`);
+          return;
+        }
+        
+        // Clear existing rows
+        container.innerHTML = '';
+        
+        // Add rows based on data
+        dataArray.forEach(item => {
+          if (containerId === 'featuresAdjustmentsList') {
+            addFeatureAdjustment();
+          } else if (containerId === 'fullFeaturesAdjustmentsList') {
+            addFullFeaturesAdjustment();
+          } else if (containerId === 'registrationAdjustmentsList') {
+            addRegistrationAdjustment();
+          } else if (containerId === 'fullRegistrationAdjustmentsList') {
+            addFullRegistrationAdjustment();
+          }
+          
+          // Populate the last added row
+          const lastRow = container.children[container.children.length - 1];
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = item.description || item.value || '';
+              inputs[1].value = item.type || 'plus';
+              inputs[2].value = item.percentage || item.percent || '';
+              inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+            }
+          }
+        });
+        
+        console.log(`🔄 Synced ${containerId} with ${dataArray.length} items`);
+        
+      } catch (error) {
+        console.error(`❌ Error syncing UI section ${containerId}:`, error);
       }
     }
 
@@ -4379,7 +4473,8 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.value || '';
+                // Fix תיאור mapping - use item.description instead of item.value
+                inputs[0].value = item.description || item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4397,7 +4492,8 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.value || '';
+                // Fix תיאור mapping - use item.description instead of item.value
+                inputs[0].value = item.description || item.value || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
