@@ -5766,3 +5766,21 @@ The cumulative "after" values are now properly calculated and displayed:
 - ערך הרכב לנזק גולמי כולל מע"מ shows the final gross market value
 
 The helper.estimate.gross_values array is now properly populated with all adjustment data and cumulative values.
+
+**adjustment flow**
+ . We keep the valuation section as is , if the UI updates an EXISTING value from the valuation section , then this will write back on the valuation specific field and update the section -THIS WE LREADY HAVE IN BOTH ESTIMATOR BUILDER AND FINAL REPORT BUILDER .
+The problem starts when we add a new row for the category , since I don’t want to corrupt the original data we will do like  this in both estimate and final report helper sections
+Each section :helper.estimate and helper.final_report will have adjustments 
+Full value adjustments and gross value adjustments 
+Those adjustments will have an array structure that can register multiple object per one category 
+The flow will be as follows :
+Source :valuation.adjustments -> writes automatically on the UI builders fields 
+UI builders fields : when auto-populated writes automatically on the sections in the helper.estimate and helper.final_report (according to what work flow the user is on)
+UI builders fields if updated writes on : 
+1. valuation.adjustments
+2. Full value adjustments 
+3.  gross value adjustments 
+UI adds a field it writes on both helper.estimate and helper.final_report adjustments 
+1. Full value adjustments 
+2.  gross value adjustments 
+Reports generation : estimate report builder and final report template builder read adjustments from : helper.estimate and helper.final_report adjustments 
