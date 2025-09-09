@@ -5924,6 +5924,62 @@ helper.estimate.adjustments[category][0] = adjustmentData;
 - Look for any remaining old save functions that might be running
 - Check for async timing issues between save and load operations
 
+## GROSS MARKET VALUE SECTION IMPLEMENTATION TASK (SEPTEMBER 9, 2025)
+
+### Task Requirements
+Implement the exact same functionality for the Gross Market Value section (ערך הרכב הגולמי בלבד - מאפיינים ועליה לכביש) that exists in the Full Market Value section.
+
+### Problem Statement
+The Gross section shows only features and registration categories (subset of full market value for reporting requirements). Currently:
+- תיאור fields show "features"/"registration" instead of actual user input
+- ערך field doesn't calculate automatically and gives errors on refresh  
+- אחוז field doesn't read from valuation.adjustments correctly
+- Added fields persist but change תיאור to display wrong values
+- Section shows test values instead of valuation data
+
+### Solution Requirements
+**Copy exact configurations from Full Market Value section for:**
+
+1. **Data Loading (loadGrossAdjustments function)**:
+   - Use identical pattern as `loadAdjustments()` for full market section
+   - Load from `helper.estimate.adjustments.features` and `helper.estimate.adjustments.registration` 
+   - Map fields exactly: `item.value` → תיאור, `item.percent` → אחוז, `item.amount_display` → ערך
+   - Do NOT create separate valuation loading logic - use same estimate.adjustments pattern
+
+2. **Data Saving (syncAdjustmentToHelper function)**:
+   - Maintain existing full market logic (don't break it)
+   - Ensure gross section features/registration write to 4 destinations:
+     - `helper.estimate.adjustments[category]`
+     - `helper.valuation.adjustments[category]`  
+     - `helper.estimate.gross_value_adjustments[category]`
+     - Bi-directional UI sync between gross and full sections
+
+3. **Field Calculations**:
+   - Use existing `calculateAdjustmentValueSimple()` function
+   - Ensure percentage calculations work on page refresh
+   - Same base price reference as full market section
+
+4. **UI Behavior**:
+   - Same add/delete functionality as full market
+   - Same real-time sync and persistence
+   - Same data validation and error handling
+
+### Configuration Copy Instructions
+1. **DO NOT touch full market value section** - it works correctly
+2. **Copy exact same data mapping** from full market `loadAdjustments()` to gross `loadGrossAdjustments()`
+3. **Use same field priority**: `item.percent` first, then `item.percentage` as fallback
+4. **Use same container pattern**: featuresAdjustmentsList, registrationAdjustmentsList
+5. **Use same function calls**: addFeatureAdjustment(), addRegistrationAdjustment()
+
+### Critical Success Criteria
+- Gross section תיאור shows actual user input (not "features"/"registration")
+- Gross section אחוז loads from valuation.adjustments correctly  
+- Gross section ערך calculates automatically on page load
+- Added fields maintain correct תיאור values after save/refresh
+- Gross and full market sections stay synchronized for features/registration
+
+**Status**: Task identified after extensive debugging session. Full market section working correctly - need to replicate exact same pattern for gross section without breaking existing functionality.
+
 ## KEY LESSONS FOR FINAL REPORT BUILDER
 
 1. **Data Architecture**: Dual storage (objects for compatibility, arrays for functionality) works but requires careful sync
