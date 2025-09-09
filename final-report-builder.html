@@ -5314,40 +5314,19 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        // Initialize additional_adjustments structure if it doesn't exist
-        if (!helper.additional_adjustments) {
-          helper.additional_adjustments = {
-            features: [],
-            registration: [],
-            mileage: [],
-            ownership_type: [],
-            ownership_history: [],
-            additional: []
-          };
+        // Auto-sync valuation to estimate if estimate is empty (user skipped estimator)
+        if (!helper.estimate?.adjustments || Object.keys(helper.estimate.adjustments).length === 0) {
+          syncValuationToEstimateAdjustments(helper);
         }
         
-        const leviData = helper.valuation?.adjustments || {};
-        const additionalData = helper.additional_adjustments || {};
-        const featuresData = leviData.features || {};
-        const registrationData = leviData.registration || {};
+        const adjustmentsData = helper.estimate?.adjustments || {};
+        const featuresData = Array.isArray(adjustmentsData.features) ? adjustmentsData.features : [adjustmentsData.features].filter(Boolean);
+        const registrationData = Array.isArray(adjustmentsData.registration) ? adjustmentsData.registration : [adjustmentsData.registration].filter(Boolean);
 
         // ===== Features Adjustments =====
 
-        let featureItems = [];
-        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
-          featureItems = featuresData.feature_list;
-        } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
-          featureItems = [{
-            description: featuresData.description || featuresData.reason || '',
-            amount: featuresData.amount,
-            percent: featuresData.percent
-          }];
-        }
-
-        // Always show at least one row if any data exists
-        if (featureItems.length === 0) {
-          featureItems = [{}];
-        }
+        // featuresData is now an array from estimate.adjustments
+        let featureItems = featuresData.length > 0 ? featuresData : [{}];
 
         featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
@@ -5389,56 +5368,27 @@
           }
         });
         
-        // ===== Additional Features Adjustments =====
-        // Load manual additions from helper.additional_adjustments.features
-        if (additionalData.features && additionalData.features.length > 0) {
-          console.log('🔧 Loading additional feature adjustments:', additionalData.features);
-          additionalData.features.forEach(item => {
-            if (typeof addFeatureAdjustment === 'function') {
-              addFeatureAdjustment();
-              const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
-              if (row) {
-                // Mark as additional
-                row.setAttribute('data-source', 'additional');
-                row.setAttribute('data-additional', 'true');
-                
-                const inputs = row.querySelectorAll('input, select');
-                const amount = parseFloat(item.amount) || 0;
-                const percent = parseFloat(item.percentage || item.percent) || 0;
-                
-                if (inputs.length >= 4) {
-                  inputs[0].value = item.description || item.value || '';
-                  inputs[1].value = item.type || (amount < 0 || percent < 0 ? 'minus' : 'plus');
-                  inputs[2].value = percent ? Math.abs(percent) : '';
-                  
-                  if (amount) {
-                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                  }
-                }
-              }
-            }
-          });
-        }
 
-        // ===== Registration Adjustment =====
-        if (registrationData.amount || registrationData.percent || registrationData.date) {
+        // ===== Registration Adjustments =====
+        registrationData.forEach(item => {
+          if (item && (item.amount || item.percent || item.percentage || item.description)) {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(registrationData.amount) || 0;
-              const percent = parseFloat(registrationData.percent) || 0;
+              const amount = parseFloat(item.amount) || 0;
+              const percent = parseFloat(item.percent || item.percentage) || 0;
               
               console.log('🔍 Loading registration adjustment:', {
-                registrationData: registrationData,
+                item: item,
                 amount: amount,
                 percent: percent,
                 isNegative: (amount < 0 || percent < 0)
               });
               
               if (inputs.length >= 4) {
-                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
+                const desc = item.description || item.value || item.date || item.reason || 'עליה לכביש';
                 inputs[0].value = desc;
                 
                 // Determine type based on negative values in helper data
@@ -5458,42 +5408,52 @@
               }
             }
           }
-        }
+        });
         
-        // ===== Additional Registration Adjustments =====
-        // Load manual additions from helper.additional_adjustments.registration
-        if (additionalData.registration && additionalData.registration.length > 0) {
-          console.log('🔧 Loading additional registration adjustments:', additionalData.registration);
-          additionalData.registration.forEach(item => {
-            if (typeof addRegistrationAdjustment === 'function') {
-              addRegistrationAdjustment();
-              const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
-              if (row) {
-                // Mark as additional
-                row.setAttribute('data-source', 'additional');
-                row.setAttribute('data-additional', 'true');
-                
-                const inputs = row.querySelectorAll('input, select');
-                const amount = parseFloat(item.amount) || 0;
-                const percent = parseFloat(item.percentage || item.percent) || 0;
-                
-                if (inputs.length >= 4) {
-                  inputs[0].value = item.description || item.value || '';
-                  inputs[1].value = item.type || (amount < 0 || percent < 0 ? 'minus' : 'plus');
-                  inputs[2].value = percent ? Math.abs(percent) : '';
-                  
-                  if (amount) {
-                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                  }
-                }
-              }
-            }
-          });
-        }
 
         updateGrossMarketValueCalculation();
       } catch (error) {
         console.error('Error loading gross adjustments:', error);
+      }
+    }
+    
+    // Auto-sync valuation.adjustments to estimate.adjustments when user skips estimator
+    function syncValuationToEstimateAdjustments(helper) {
+      try {
+        console.log('🔄 Auto-syncing valuation.adjustments to estimate.adjustments');
+        
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+        
+        const valuationAdj = helper.valuation?.adjustments || {};
+        
+        // Convert single objects to arrays for unified handling
+        if (valuationAdj.features) {
+          helper.estimate.adjustments.features = [valuationAdj.features];
+        }
+        
+        if (valuationAdj.registration) {
+          helper.estimate.adjustments.registration = [valuationAdj.registration];
+        }
+        
+        if (valuationAdj.mileage) {
+          helper.estimate.adjustments.mileage = [valuationAdj.mileage];
+        }
+        
+        if (valuationAdj.ownership_type) {
+          helper.estimate.adjustments.ownership_type = [valuationAdj.ownership_type];
+        }
+        
+        if (valuationAdj.ownership_history) {
+          helper.estimate.adjustments.ownership_history = [valuationAdj.ownership_history];
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Valuation adjustments synced to estimate.adjustments');
+        
+      } catch (error) {
+        console.error('❌ Error syncing valuation to estimate adjustments:', error);
       }
     }
     
@@ -5503,11 +5463,8 @@
     function addFeatureAdjustment() {
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
-      const existingRows = container.querySelectorAll('div[id^="featureAdj_"]').length;
-      const isAdditional = existingRows > 0; // First row goes to valuation, additional rows go to additional_adjustments
-      
       const newRow = `
-        <div id="${rowId}" data-additional="${isAdditional}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
@@ -5527,11 +5484,8 @@
     function addRegistrationAdjustment() {
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
-      const existingRows = container.querySelectorAll('div[id^="regAdj_"]').length;
-      const isAdditional = existingRows > 0; // First row goes to valuation, additional rows go to additional_adjustments
-      
       const newRow = `
-        <div id="${rowId}" data-additional="${isAdditional}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><select onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
@@ -5952,29 +5906,15 @@
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper) helper = {};
         
-        // Initialize structures
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.additional_adjustments) {
-          helper.additional_adjustments = {
-            features: [],
-            registration: [],
-            mileage: [],
-            ownership_type: [],
-            ownership_history: [],
-            additional: []
-          };
-        }
+        // Initialize estimate.adjustments
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        // Process Features Adjustments
+        // Process Features Adjustments - store ALL rows in estimate.adjustments arrays
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        if (featuresRows.length > 0) {
-          // Clear additional features
-          helper.additional_adjustments.features = [];
-          
-          // First row goes to valuation (core)
-          const firstRow = featuresRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
+        helper.estimate.adjustments.features = [];
+        featuresRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
               description: inputs[0].value || '',
@@ -5989,43 +5929,15 @@
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
-            helper.valuation.adjustments.features = adjustmentData;
+            helper.estimate.adjustments.features.push(adjustmentData);
           }
-          
-          // Additional rows go to additional_adjustments
-          for (let i = 1; i < featuresRows.length; i++) {
-            const row = featuresRows[i];
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const additionalData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '',
-                type: inputs[1].value || 'plus',
-                percentage: parseFloat(inputs[2].value) || 0,
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: 'manual',
-                timestamp: new Date().toISOString()
-              };
-              
-              if (inputs[1].value === 'minus') {
-                additionalData.amount = -Math.abs(additionalData.amount);
-              }
-              
-              helper.additional_adjustments.features.push(additionalData);
-            }
-          }
-        }
+        });
         
-        // Process Registration Adjustments
+        // Process Registration Adjustments - store ALL rows in estimate.adjustments arrays
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        if (registrationRows.length > 0) {
-          // Clear additional registration
-          helper.additional_adjustments.registration = [];
-          
-          // First row goes to valuation (core)
-          const firstRow = registrationRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
+        helper.estimate.adjustments.registration = [];
+        registrationRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
               description: inputs[0].value || '',
@@ -6041,38 +5953,13 @@
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
-            helper.valuation.adjustments.registration = adjustmentData;
+            helper.estimate.adjustments.registration.push(adjustmentData);
           }
-          
-          // Additional rows go to additional_adjustments
-          for (let i = 1; i < registrationRows.length; i++) {
-            const row = registrationRows[i];
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const additionalData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '',
-                type: inputs[1].value || 'plus',
-                percentage: parseFloat(inputs[2].value) || 0,
-                percent: parseFloat(inputs[2].value) || 0,
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: 'manual',
-                timestamp: new Date().toISOString()
-              };
-              
-              if (inputs[1].value === 'minus') {
-                additionalData.amount = -Math.abs(additionalData.amount);
-              }
-              
-              helper.additional_adjustments.registration.push(additionalData);
-            }
-          }
-        }
+        });
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('💾 Helper updated with additional adjustments');
+        console.log('💾 Helper updated with estimate.adjustments');
         
       } catch (error) {
         console.error('❌ Error in updateHelperFromAdjustments:', error);

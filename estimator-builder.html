@@ -1615,11 +1615,8 @@
     window.addFullFeaturesAdjustment = function() {
       const container = document.getElementById('fullFeaturesAdjustmentsList');
       const rowId = 'fullFeaturesAdj_' + Date.now();
-      const existingRows = container.querySelectorAll('.adjustment-row').length;
-      const isAdditional = existingRows > 0; // First row goes to valuation, additional rows go to additional_adjustments
-      
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-additional="${isAdditional}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור תוספת מאפיין" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" title="">
             <option value="plus">תוספת (+)</option>
@@ -1638,11 +1635,8 @@
     window.addFullRegistrationAdjustment = function() {
       const container = document.getElementById('fullRegistrationAdjustmentsList');
       const rowId = 'fullRegistrationAdj_' + Date.now();
-      const existingRows = container.querySelectorAll('.adjustment-row').length;
-      const isAdditional = existingRows > 0; // First row goes to valuation, additional rows go to additional_adjustments
-      
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-additional="${isAdditional}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
@@ -5644,17 +5638,6 @@
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        // Initialize additional_adjustments structure for manual UI additions
-        if (!helper.additional_adjustments) {
-          helper.additional_adjustments = {
-            features: [],
-            registration: [],
-            mileage: [],
-            ownership_type: [],
-            ownership_history: [],
-            additional: []
-          };
-        }
         
         // 1. FEATURES - Write to both valuation source and estimate
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
@@ -5772,24 +5755,10 @@
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        // Initialize additional_adjustments structure for manual UI additions
-        if (!helper.additional_adjustments) {
-          helper.additional_adjustments = {
-            features: [],
-            registration: [],
-            mileage: [],
-            ownership_type: [],
-            ownership_history: [],
-            additional: []
-          };
-        }
         
         // 1. FEATURES - Write to both valuation source and estimate
         const featuresRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         if (featuresRows.length > 0) {
-          // Clear additional_adjustments.features first
-          helper.additional_adjustments.features = [];
-          
           // For VALUATION: Only store first row (no arrays in valuation)
           const firstRow = featuresRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
@@ -5812,30 +5781,6 @@
             helper.valuation.adjustments.features = adjustmentData;
           }
           
-          // For ADDITIONAL ADJUSTMENTS: Store rows 2+ in additional_adjustments.features
-          for (let i = 1; i < featuresRows.length; i++) {
-            const row = featuresRows[i];
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const additionalData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '', // תיאור content goes in value field
-                type: inputs[1].value || 'plus',
-                percentage: parseFloat(inputs[2].value) || 0,
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: 'manual',
-                timestamp: new Date().toISOString()
-              };
-              
-              // Apply sign based on type
-              if (inputs[1].value === 'minus') {
-                additionalData.amount = -Math.abs(additionalData.amount);
-              }
-              
-              helper.additional_adjustments.features.push(additionalData);
-            }
-          }
           
           // For ESTIMATE: Store ALL rows (arrays in estimate)
           helper.estimate.adjustments.features = [];
@@ -5864,9 +5809,6 @@
         // 2. REGISTRATION - Write to both valuation source and estimate
         const registrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
-          // Clear additional_adjustments.registration first
-          helper.additional_adjustments.registration = [];
-          
           // For VALUATION: Only store first row (no arrays in valuation)
           const firstRow = registrationRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
@@ -5890,31 +5832,6 @@
             helper.valuation.adjustments.registration = adjustmentData;
           }
           
-          // For ADDITIONAL ADJUSTMENTS: Store rows 2+ in additional_adjustments.registration
-          for (let i = 1; i < registrationRows.length; i++) {
-            const row = registrationRows[i];
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const additionalData = {
-                description: inputs[0].value || '',
-                value: inputs[0].value || '', // תיאור content goes in value field
-                type: inputs[1].value || 'plus',
-                percentage: parseFloat(inputs[2].value) || 0,
-                percent: parseFloat(inputs[2].value) || 0, // Also store as 'percent' for backward compatibility
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: 'manual',
-                timestamp: new Date().toISOString()
-              };
-              
-              // Apply sign based on type
-              if (inputs[1].value === 'minus') {
-                additionalData.amount = -Math.abs(additionalData.amount);
-              }
-              
-              helper.additional_adjustments.registration.push(additionalData);
-            }
-          }
           
           // For ESTIMATE: Store ALL rows (arrays in estimate)
           helper.estimate.adjustments.registration = [];
