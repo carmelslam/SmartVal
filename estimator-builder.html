@@ -3809,80 +3809,89 @@
       }
     }
     
-    // Remove adjustment row
+    // Remove adjustment row - SIMPLIFIED VERSION
     window.removeAdjustmentRow = function(rowId) {
+      console.log('🗑️ SIMPLE DELETE: Removing row:', rowId);
+      
       const row = document.getElementById(rowId);
-      if (row) {
-        console.log('🗑️ Removing adjustment row:', rowId);
-        
-        // Determine which category and index this row belongs to
-        const container = row.parentElement;
-        const rowIndex = Array.from(container.children).indexOf(row);
-        
-        let category = '';
-        if (container.id === 'fullFeaturesAdjustmentsList') category = 'features';
-        else if (container.id === 'fullRegistrationAdjustmentsList') category = 'registration';
-        else if (container.id === 'mileageAdjustmentsList') category = 'mileage';
-        else if (container.id === 'ownershipAdjustmentsList') category = 'ownership_type';
-        else if (container.id === 'ownersAdjustmentsList') category = 'ownership_history';
-        else if (container.id === 'allAdjustmentsList') category = 'additional';
-        
-        console.log(`🎯 Deleting ${category} row at index ${rowIndex}`);
-        console.log('📋 Container ID:', container.id);
-        console.log('🔢 Row Index:', rowIndex);
-        console.log('🏷️ Row ID:', rowId);
-        
-        // Remove the row from UI
-        row.remove();
-        
-        // Get helper and update arrays by removing specific index
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper) helper = {};
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        if (category && helper.estimate.adjustments[category]) {
-          console.log(`📊 Before deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
-          console.log('📊 Array contents before deletion:', helper.estimate.adjustments[category]);
-          // Remove the specific array item
-          helper.estimate.adjustments[category].splice(rowIndex, 1);
-          console.log(`✂️ Removed index ${rowIndex} from estimate.adjustments.${category}`);
-          console.log(`📊 After deletion - ${category} has ${helper.estimate.adjustments[category].length} items`);
-          console.log('📊 Array contents after deletion:', helper.estimate.adjustments[category]);
+      if (!row) {
+        console.log('❌ Row not found:', rowId);
+        return;
+      }
+      
+      // Determine category from container
+      const container = row.parentElement;
+      const rowIndex = Array.from(container.children).indexOf(row);
+      
+      let category = '';
+      if (container.id === 'fullFeaturesAdjustmentsList') category = 'features';
+      else if (container.id === 'fullRegistrationAdjustmentsList') category = 'registration';
+      else if (container.id === 'mileageAdjustmentsList') category = 'mileage';
+      else if (container.id === 'ownershipAdjustmentsList') category = 'ownership_type';
+      else if (container.id === 'ownersAdjustmentsList') category = 'ownership_history';
+      else if (container.id === 'allAdjustmentsList') category = 'additional';
+      
+      console.log(`🎯 Category: ${category}, Row Index: ${rowIndex}`);
+      
+      // Remove from UI first
+      row.remove();
+      
+      // Update helper data - REBUILD FROM CURRENT UI STATE
+      let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.estimate) helper.estimate = {};
+      if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
+      
+      // Rebuild this category's array from remaining UI rows
+      const remainingRows = Array.from(container.children);
+      helper.estimate.adjustments[category] = [];
+      
+      remainingRows.forEach((remainingRow, index) => {
+        const inputs = remainingRow.querySelectorAll('input, select');
+        if (inputs.length >= 4) {
+          const item = {
+            description: inputs[0].value || '',
+            type: inputs[1].value || 'plus',
+            percentage: inputs[2].value || '',
+            amount_display: inputs[3].value || ''
+          };
           
-          // If it was the first row and there are remaining rows, update valuation (ALL categories including additional)
-          if (rowIndex === 0 && helper.estimate.adjustments[category].length > 0) {
-            // Move the new first item to valuation.adjustments
-            if (!helper.valuation) helper.valuation = {};
-            if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-            helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
-            console.log(`📝 Updated valuation.adjustments.${category} with new first item`);
-          }
-          // If it was the first row and no remaining rows, clear valuation (ALL categories including additional)
-          else if (rowIndex === 0 && helper.estimate.adjustments[category].length === 0) {
-            if (helper.valuation?.adjustments?.[category]) {
-              delete helper.valuation.adjustments[category];
-              console.log(`🗑️ Cleared valuation.adjustments.${category} (no remaining items)`);
+          // Calculate amount if percentage is provided
+          if (item.percentage) {
+            const helper_current = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const baseValue = parseFloat(helper_current.estimate?.market_value_base) || 0;
+            const percentageValue = parseFloat(item.percentage);
+            if (!isNaN(percentageValue) && baseValue > 0) {
+              const amount = Math.round((baseValue * percentageValue) / 100);
+              item.amount = item.type === 'minus' ? -amount : amount;
             }
           }
-        } else {
-          console.log(`⚠️ Category ${category} not found in helper.estimate.adjustments or array is empty`);
-          console.log('📊 Available categories:', Object.keys(helper.estimate.adjustments || {}));
+          
+          helper.estimate.adjustments[category].push(item);
         }
-        
-        // Trigger recalculations
-        updateFullMarketValueCalculation();
-        
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Updated helper after precise row deletion');
+      });
+      
+      // Update valuation.adjustments with first item (if any) 
+      if (helper.estimate.adjustments[category].length > 0) {
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+      } else {
+        // Clear valuation if no items remain
+        if (helper.valuation?.adjustments?.[category]) {
+          delete helper.valuation.adjustments[category];
+        }
       }
+      
+      console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items remaining`);
+      
+      // Save and recalculate
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      updateFullMarketValueCalculation();
     }
     
-    // Sync adjustment to helper
+    // Sync adjustment to helper - SIMPLE VERSION
     window.syncAdjustmentToHelper = function(element, category) {
       try {
-        console.log(`🔄 syncAdjustmentToHelper called for category: ${category}`);
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         const row = element.closest('div.adjustment-row');
@@ -3891,61 +3900,40 @@
         const inputs = row.querySelectorAll('input, select');
         if (inputs.length < 4) return;
         
-        // Ensure valuation.adjustments exists
+        // Ensure structures exist
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        
-        // Also ensure estimate.adjustments exists for mirroring
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
         const adjustmentData = {
-          description: inputs[0].value || '', // תיאור
-          value: inputs[0].value || '', // תיאור (duplicate for compatibility)
-          type: inputs[1].value || 'plus', // סוג
-          percent: parseFloat(inputs[2].value) || 0, // אחוז
-          percentage: parseFloat(inputs[2].value) || 0, // אחוז (duplicate for compatibility)
-          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0, // ערך
-          amount_display: inputs[3].value || '', // Original display value
-          source: row.getAttribute('data-source') || 'manual',
+          value: inputs[0].value || '',
+          type: inputs[1].value || 'plus',
+          percent: parseFloat(inputs[2].value) || 0,
+          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          source: 'manual',
           timestamp: new Date().toISOString()
         };
         
-        // Apply sign based on type
+        // Apply sign
         if (adjustmentData.type === 'minus') {
           adjustmentData.percent = -Math.abs(adjustmentData.percent);
           adjustmentData.amount = -Math.abs(adjustmentData.amount);
         }
         
-        // Save to valuation (single object) - all categories including 'additional'
+        // Save to valuation (object)
         helper.valuation.adjustments[category] = adjustmentData;
-        if (category === 'additional') {
-          console.log('🎯 ADDITIONAL: Updated valuation.adjustments.additional:', adjustmentData);
-        }
         
-        // Save to estimate (array) - all categories  
+        // Save to estimate (array) - don't push duplicates, just set first entry
         if (!helper.estimate.adjustments[category]) {
           helper.estimate.adjustments[category] = [];
         }
-        helper.estimate.adjustments[category].push(adjustmentData);
-        if (category === 'additional') {
-          console.log('🎯 ADDITIONAL: Updated estimate.adjustments.additional:', helper.estimate.adjustments[category]);
-        }
+        helper.estimate.adjustments[category][0] = adjustmentData;
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Verify the data was actually saved
-        if (category === 'additional') {
-          const savedHelper = JSON.parse(sessionStorage.getItem('helper'));
-          console.log('🔍 VERIFICATION - Saved to sessionStorage:');
-          console.log('  valuation.adjustments.additional:', savedHelper.valuation?.adjustments?.additional);
-          console.log('  estimate.adjustments.additional:', savedHelper.estimate?.adjustments?.additional);
-        }
-        
-        console.log(`✅ Synced ${category} adjustment to helper:`, adjustmentData);
-        
       } catch (error) {
-        console.error('❌ Error syncing adjustment to helper:', error);
+        console.error('❌ Error syncing adjustment:', error);
       }
     }
 
@@ -4216,7 +4204,8 @@
             const originalLength = helper.estimate.adjustments[category].length;
             // Filter out only items that contain test data, keep legitimate data
             helper.estimate.adjustments[category] = helper.estimate.adjustments[category].filter(item => {
-              const isTestData = item.description?.includes('test') || item.value?.includes('test');
+              const isTestData = (item.description && item.description.toLowerCase().includes('test')) || 
+                                 (item.value && item.value.toLowerCase().includes('test'));
               if (isTestData) {
                 console.log(`🗑️ Removing test item from estimate.${category}:`, item);
               }
@@ -4231,7 +4220,8 @@
       if (helper.valuation?.adjustments) {
         Object.keys(helper.valuation.adjustments).forEach(category => {
           const item = helper.valuation.adjustments[category];
-          const isTestData = item?.description?.includes('test') || item?.value?.includes('test');
+          const isTestData = (item?.description && item.description.toLowerCase().includes('test')) || 
+                             (item?.value && item.value.toLowerCase().includes('test'));
           if (isTestData) {
             console.log(`🗑️ Removing test item from valuation.${category}:`, item);
             delete helper.valuation.adjustments[category];
@@ -4245,9 +4235,8 @@
     function loadAdjustments(helper) {
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
-        console.log('🔍 loadAdjustments called with helper:', helper);
         
-        // CLEAN UP TEST DATA FIRST
+        // CLEAN UP TEST DATA FIRST 
         helper = cleanupTestDataAndRestoreValuationFlow(helper);
         
         // CLEAR EXISTING UI ROWS FIRST to prevent duplication
@@ -4290,7 +4279,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.description || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4308,7 +4297,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.description || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4326,7 +4315,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.description || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4344,7 +4333,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.description || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4362,7 +4351,7 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.description || '';
                 inputs[1].value = item.type || 'plus';
                 inputs[2].value = item.percentage || item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
@@ -4372,10 +4361,6 @@
         }
         
         // 6. Load Additional Adjustments
-        console.log('🔍 DEBUG: Checking for additional adjustments...');
-        console.log('  adjustments.additional exists?', !!adjustments.additional);
-        console.log('  adjustments.additional:', adjustments.additional);
-        
         if (adjustments.additional && adjustments.additional.length > 0) {
           console.log('📝 Loading additional adjustments:', adjustments.additional);
           adjustments.additional.forEach(item => {
@@ -4384,15 +4369,13 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = item.description || item.value || '';
+                inputs[0].value = item.value || '';
                 inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                inputs[2].value = item.percent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
           });
-        } else {
-          console.log('⚠️ No additional adjustments found to load');
         }
         
         console.log('✅ Finished loading all adjustments');
