@@ -1197,6 +1197,17 @@
           });
         }
         
+        // Auto-populate gross value adjustments first
+        setTimeout(() => {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.valuation?.adjustments && (helper.valuation.adjustments.features || helper.valuation.adjustments.registration)) {
+            console.log('📋 Auto-populating gross value adjustments on init');
+            autoPopulateGrossValueAdjustments();
+          } else {
+            console.log('ℹ️ No features/registration adjustments to auto-populate for gross value');
+          }
+        }, 200);
+
         // Auto-populate market adjustments if data exists
         setTimeout(() => {
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -2602,8 +2613,8 @@
         
         console.log('✅ Updated helper from adjustments including ownership_type and ownership_history:', helper.valuation);
         
-        // 6. Write GROSS VALUE adjustments to estimate.adjustments (secondary destination)
-        updateGrossValueToEstimateAdjustments(helper);
+        // 6. Write GROSS VALUE adjustments back to valuation source AND estimate.adjustments
+        updateGrossValueToValuationAndEstimate(helper);
         
         // Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -3420,6 +3431,111 @@
       });
       
       console.log('✅ Gross value amounts calculated');
+    }
+
+    // Auto-populate gross value adjustments from valuation.adjustments
+    window.autoPopulateGrossValueAdjustments = function() {
+      try {
+        console.log('🏪 Auto-populating gross value adjustments from helper.valuation.adjustments');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const adjustments = helper.valuation?.adjustments || {};
+        
+        console.log('🔍 Available adjustments for gross value:', adjustments);
+        
+        // Clear existing adjustments
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+        if (featuresContainer) featuresContainer.innerHTML = '';
+        if (registrationContainer) registrationContainer.innerHTML = '';
+        
+        // Get base price for calculations
+        let basePrice = 0;
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && basicPriceField.value) {
+          basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // 1. Auto-populate FEATURES from valuation.adjustments.features
+        if (adjustments.features) {
+          console.log('📝 Loading features from valuation.adjustments.features:', adjustments.features);
+          
+          // Add features row
+          if (typeof addFeatureAdjustment === 'function') {
+            addFeatureAdjustment();
+            const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+            const lastRow = featuresRows[featuresRows.length - 1];
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.features.description || adjustments.features.value || '';
+                inputs[1].value = adjustments.features.amount >= 0 ? 'plus' : 'minus';
+                inputs[2].value = adjustments.features.percentage || '';
+                
+                // Calculate ערך locally if percentage exists
+                if (adjustments.features.percentage && basePrice > 0) {
+                  const percent = Math.abs(adjustments.features.percentage);
+                  const calculatedAmount = (basePrice * percent) / 100;
+                  const displayValue = adjustments.features.amount < 0 ? 
+                    `-₪${Math.round(calculatedAmount).toLocaleString()}` : 
+                    `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                  inputs[3].value = displayValue;
+                } else if (adjustments.features.amount) {
+                  // Use amount from helper
+                  const amount = Math.abs(adjustments.features.amount);
+                  const displayValue = adjustments.features.amount < 0 ? 
+                    `-₪${amount.toLocaleString()}` : 
+                    `₪${amount.toLocaleString()}`;
+                  inputs[3].value = displayValue;
+                }
+              }
+            }
+          }
+        }
+        
+        // 2. Auto-populate REGISTRATION from valuation.adjustments.registration
+        if (adjustments.registration) {
+          console.log('📅 Loading registration from valuation.adjustments.registration:', adjustments.registration);
+          
+          // Add registration row
+          if (typeof addRegistrationAdjustment === 'function') {
+            addRegistrationAdjustment();
+            const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+            const lastRow = registrationRows[registrationRows.length - 1];
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.registration.description || adjustments.registration.value || '';
+                inputs[1].value = adjustments.registration.amount >= 0 ? 'plus' : 'minus';
+                inputs[2].value = adjustments.registration.percent || adjustments.registration.percentage || '';
+                
+                // Registration uses fixed amounts (not calculated)
+                if (adjustments.registration.amount) {
+                  const amount = Math.abs(adjustments.registration.amount);
+                  const displayValue = adjustments.registration.amount < 0 ? 
+                    `-₪${amount.toLocaleString()}` : 
+                    `₪${amount.toLocaleString()}`;
+                  inputs[3].value = displayValue;
+                }
+              }
+            }
+          }
+        }
+        
+        // Trigger calculations after populating
+        setTimeout(() => {
+          if (typeof calculateGrossValueAmounts === 'function') {
+            calculateGrossValueAmounts();
+          }
+          if (typeof updateGrossMarketValueCalculation === 'function') {
+            updateGrossMarketValueCalculation();
+          }
+          console.log('✅ Gross value auto-population completed');
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Error in autoPopulateGrossValueAdjustments:', error);
+      }
     }
 
     // ============ FULL MARKET VALUE CALCULATION FUNCTIONS ============
@@ -5420,19 +5536,22 @@
       }
     }
     
-    // Update gross value adjustments to estimate.adjustments (secondary destination)
-    function updateGrossValueToEstimateAdjustments(helper) {
+    // Update gross value adjustments to BOTH valuation source AND estimate.adjustments  
+    function updateGrossValueToValuationAndEstimate(helper) {
       try {
+        // Initialize structures
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         
-        // Copy features from gross value section to estimate.adjustments.features
+        // 1. FEATURES - Write to both valuation source and estimate
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         if (featuresRows.length > 0) {
           const firstRow = featuresRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.estimate.adjustments.features = {
+            const adjustmentData = {
               description: inputs[0].value || '',
               value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
@@ -5443,37 +5562,48 @@
             
             // Apply sign based on type
             if (inputs[1].value === 'minus') {
-              helper.estimate.adjustments.features.amount = -Math.abs(helper.estimate.adjustments.features.amount);
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
+            
+            // Write to VALUATION source (primary)
+            helper.valuation.adjustments.features = adjustmentData;
+            // Write to ESTIMATE adjustments (secondary)
+            helper.estimate.adjustments.features = adjustmentData;
           }
         }
         
-        // Copy registration from gross value section to estimate.adjustments.registration
+        // 2. REGISTRATION - Write to both valuation source and estimate
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
           const firstRow = registrationRows[0];
           const inputs = firstRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            helper.estimate.adjustments.registration = {
+            const adjustmentData = {
               description: inputs[0].value || '',
               value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
+              percent: parseFloat(inputs[2].value) || 0, // Also store as 'percent' for backward compatibility
               amount_display: inputs[3].value || '',
               amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
             };
             
             // Apply sign based on type
             if (inputs[1].value === 'minus') {
-              helper.estimate.adjustments.registration.amount = -Math.abs(helper.estimate.adjustments.registration.amount);
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
+            
+            // Write to VALUATION source (primary)
+            helper.valuation.adjustments.registration = adjustmentData;
+            // Write to ESTIMATE adjustments (secondary)  
+            helper.estimate.adjustments.registration = adjustmentData;
           }
         }
         
-        console.log('✅ Updated gross value adjustments to helper.estimate.adjustments');
+        console.log('✅ Updated gross value adjustments to BOTH valuation.adjustments AND estimate.adjustments');
         
       } catch (error) {
-        console.error('❌ Error updating gross value to estimate adjustments:', error);
+        console.error('❌ Error updating gross value to valuation and estimate adjustments:', error);
       }
     }
 
