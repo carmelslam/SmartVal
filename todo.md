@@ -5784,3 +5784,155 @@ UI adds a field it writes on both helper.estimate and helper.final_report adjust
 1. Full value adjustments 
 2.  gross value adjustments 
 Reports generation : estimate report builder and final report template builder read adjustments from : helper.estimate and helper.final_report adjustments 
+
+============================================================================================
+**ADJUSTMENT FLOW** - COMPREHENSIVE SUMMARY AND LESSONS LEARNED
+============================================================================================
+
+## AGREED LOGIC AND FLOW
+
+The adjustment system follows a dual-storage pattern designed to maintain backward compatibility 
+while supporting multiple UI entries:
+
+1. **valuation.adjustments** (Objects) - Contains single adjustment per category, sourced from Levi webhook data
+   - Used for original system compatibility and as fallback data source
+   - Hebrew category names stored in 'description' field (e.g., "אסטרונומיית חגורת בטחון או לאייזר")
+   - User input text stored in 'value' field (what appears in UI input)
+   
+2. **estimate.adjustments** (Arrays) - Contains all adjustment entries per category, built from UI state
+   - Used as primary data source for calculations and persistence
+   - Supports multiple entries per category (user can add many fields)
+   - Each array item has same structure as valuation object but stored as arrays
+   
+3. **Real-time sync** - Every UI change immediately rebuilds entire category array from all visible UI rows
+4. **Page load** - loadAdjustments() reads from estimate arrays, falls back to valuation objects if needed
+
+## TASKS COMPLETED TODAY
+
+### 1. Fixed Data Mapping Issues
+**Problem**: UI input field (תיאור) was incorrectly mapped to item.description instead of item.value
+**Solution**: Changed loadAdjustments() to use `inputs[0].value = item.value || '';`
+**Insight**: In our system: description = Hebrew category name, value = UI input text
+
+### 2. Added Legacy Field Cleanup  
+**Problem**: Old inconsistent field names (owners, ownership, previous_owners) causing data conflicts
+**Solution**: Enhanced cleanupTestDataAndRestoreValuationFlow() to delete legacy fields from both data structures
+**Field Mapping**: owners→ownership_history, ownership→ownership_type, previous_owners→ownership_history
+
+### 3. Fixed JavaScript Syntax Errors
+**Problem**: Missing commas in object definitions causing `Uncaught SyntaxError: Unexpected identifier 'type'`
+**Solution**: Added missing commas after `value: inputs[0].value || '' // comment` lines
+**Lesson**: Object syntax errors prevent entire script execution, causing functions to appear undefined
+
+### 4. Eliminated Data Structure Duplication
+**Problem**: Both description and value fields contained same data due to incorrect assignments
+**Solution**: Removed all instances where `description: inputs[0].value` was set - only value field gets UI input
+**Principle**: Preserve description field for Hebrew category names from Levi data, don't overwrite
+
+### 5. Rewrote Core Sync Function - syncAdjustmentToHelper()
+**Original Problem**: Function only updated helper.estimate.adjustments[category][0] (first item only)
+**Root Cause**: Designed for single-item valuation data, not multi-item UI arrays
+**Solution**: Complete rewrite to scan ALL UI rows and rebuild entire category array:
+
+```javascript
+// Old approach (BROKEN)
+helper.estimate.adjustments[category][0] = adjustmentData;
+
+// New approach (FIXED) 
+const allRows = Array.from(container.children);
+helper.estimate.adjustments[category] = [];
+allRows.forEach(row => {
+    // Build complete array from ALL visible UI rows
+    helper.estimate.adjustments[category].push(adjustmentData);
+});
+```
+
+**Container Mapping Added**:
+- features → fullFeaturesAdjustmentsList
+- registration → fullRegistrationAdjustmentsList  
+- mileage → mileageAdjustmentsList
+- ownership_type → ownershipAdjustmentsList
+- ownership_history → ownersAdjustmentsList
+- additional → allAdjustmentsList
+
+### 5.1. MAJOR BREAKTHROUGH: Fixed Additional Adjustments Save Issue
+**Critical Problem**: After hours of debugging, discovered that additional adjustments (התאמות שוק נוספות) were NOT being saved to helper.estimate.adjustments.additional or helper.valuation.adjustments.additional AT ALL.
+
+**Symptom**: Users could add additional adjustment fields to UI, but when saved and checked, no `additional` category existed in helper data.
+
+**Root Cause**: The syncAdjustmentToHelper() function was only designed for single-item updates:
+```javascript
+// BROKEN - Only saved first item, overwrote others
+helper.estimate.adjustments[category][0] = adjustmentData;
+```
+
+**The Breakthrough Fix**:
+1. **Container Mapping**: Mapped 'additional' category to 'allAdjustmentsList' container
+2. **Full Array Rebuild**: Scanned ALL UI rows in container, not just first
+3. **Complete Data Structure**: Built both estimate.adjustments.additional (array) and valuation.adjustments.additional (first item)
+
+**Before Fix**: Only first additional field saved, others lost/overwritten
+**After Fix**: ALL additional adjustment fields save to both estimate and valuation structures
+
+**This same pattern fixed all 6 categories**, but additional adjustments was the most critical since they had no fallback data from Levi webhook.
+
+### 6. Fixed Deletion Logic - removeAdjustmentRow()
+**Problem**: Deletion didn't update helper data, so deleted items returned on page refresh
+**Solution**: Used same "rebuild from UI state" approach as sync function
+**Key Insight**: Both functions now use identical data structure building logic for consistency
+
+### 7. Identified and Disabled Conflicting Save Functions
+**Major Discovery**: Three different save systems were running simultaneously and conflicting:
+
+1. `syncAdjustmentToHelper()` - Real-time sync (handles all rows) ✅
+2. `updateFullMarketValueToValuationAndEstimate()` - Bulk save (handles all rows) ✅  
+3. `updateHelperFromAdjustments()` - OLD bulk save (only first row) ❌ **CONFLICT**
+
+**Problem**: The old function was overwriting multi-row data with single-row data during every save
+**Solution**: Disabled all calls to updateHelperFromAdjustments() in save operations
+**Lesson**: Multiple save systems can create race conditions and data corruption
+
+## CURRENT PERSISTENCE AND DELETION PROBLEMS (UNRESOLVED)
+
+**Symptoms**:
+1. **Core categories**: Added UI fields clear on page refresh while helper data persists
+2. **Additional adjustments**: Cannot be deleted, persist in helper even after UI deletion
+
+**What We've Tried**:
+1. ✅ Fixed real-time sync to handle all rows
+2. ✅ Fixed deletion to rebuild arrays from UI state  
+3. ✅ Disabled conflicting save functions
+4. ✅ Ensured data structure consistency between save and load
+
+**What Still Doesn't Work**:
+- Real-time sync and bulk save functions appear correct
+- Data structures are consistent
+- All 6 categories are properly mapped
+- Yet persistence and deletion still fail
+
+**Potential Remaining Issues**:
+1. **Timing conflicts**: Real-time sync vs bulk save racing
+2. **Event listener issues**: Multiple handlers on same elements
+3. **SessionStorage corruption**: Data being overwritten after our fixes
+4. **loadAdjustments() bugs**: Not properly reading the saved array data
+5. **Container scanning issues**: UI row detection failing in some cases
+
+**Next Investigation Areas**:
+- Check if loadAdjustments is actually being called on page load
+- Verify sessionStorage contains correct array data after save
+- Test if container.children is returning correct row count
+- Look for any remaining old save functions that might be running
+- Check for async timing issues between save and load operations
+
+## KEY LESSONS FOR FINAL REPORT BUILDER
+
+1. **Data Architecture**: Dual storage (objects for compatibility, arrays for functionality) works but requires careful sync
+2. **Real-time vs Bulk**: Always scan entire UI state rather than tracking individual changes
+3. **Naming Consistency**: Field names must be identical between save/load/sync functions
+4. **Conflict Detection**: Multiple save systems will corrupt data - identify and disable old ones
+5. **Container Mapping**: UI container IDs must be consistently mapped to data categories
+6. **Data Structure**: Save and load functions must build/read identical object structures
+7. **Testing Approach**: Test the full cycle: add UI → save → refresh → verify persistence
+8. **Debugging Strategy**: Use extensive console logging to track data flow through all functions
+
+============================================================================================
