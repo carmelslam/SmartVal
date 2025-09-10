@@ -3548,6 +3548,11 @@
         
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // DEBUG: Check if additional adjustments exist at start of calculation
+        if (helper.estimate?.adjustments?.additional) {
+          console.log('🔍 CALC DEBUG: Found additional adjustments at start of calculation:', helper.estimate.adjustments.additional.length);
+        }
+        
         // Get base price
         let basePrice = 0;
         const basicPriceField = document.getElementById('basicPrice');
@@ -3810,7 +3815,7 @@
     
     // Remove adjustment row - SIMPLIFIED VERSION
     window.removeAdjustmentRow = function(rowId) {
-      console.log('🗑️ SIMPLE DELETE: Removing row:', rowId);
+      console.log('🗑️ DELETE STARTED: Removing row:', rowId);
       
       const row = document.getElementById(rowId);
       if (!row) {
@@ -3831,6 +3836,16 @@
       else if (container.id === 'allAdjustmentsList') category = 'additional';
       
       console.log(`🎯 Category: ${category}, Row Index: ${rowIndex}`);
+      
+      // ADDITIONAL DEBUG: Log before state for additional adjustments
+      if (category === 'additional') {
+        console.log('🔍 BEFORE DELETE - Additional adjustments state:');
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
+        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
+        console.log('🔍 UI rows count:', container.children.length);
+        console.log('🔍 Row being deleted:', row.outerHTML);
+      }
       
       // Remove from UI first
       row.remove();
@@ -3931,8 +3946,17 @@
         console.log(`🔄 Synced deletion between gross and full market sections for ${category}`);
       }
       
+      // ADDITIONAL DEBUG: Log after state for additional adjustments
+      if (category === 'additional') {
+        console.log('🔍 AFTER DELETE - Additional adjustments state:');
+        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
+        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
+        console.log('🔍 UI rows count:', container.children.length);
+      }
+      
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('🔍 Helper saved to sessionStorage');
       updateFullMarketValueCalculation();
     }
     
@@ -4648,6 +4672,7 @@
         // 6. Load Additional Adjustments
         if (adjustments.additional && adjustments.additional.length > 0) {
           console.log('📝 Loading additional adjustments:', adjustments.additional);
+          console.log('🔍 LOAD DEBUG: About to load', adjustments.additional.length, 'additional adjustments');
           adjustments.additional.forEach(item => {
             addFullMarketAdjustment();
             const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
@@ -6111,6 +6136,7 @@
     // Auto-save function for real-time updates
     function autoSaveToHelper() {
       try {
+        console.log('🔍 AUTO-SAVE DEBUG: Starting auto-save');
         // Get helper from sessionStorage or window.helper
         let helperStr = sessionStorage.getItem('helper');
         if (!helperStr || helperStr === 'undefined') {
