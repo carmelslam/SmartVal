@@ -4088,20 +4088,64 @@
         
         const currentRows = Array.from(container.children);
         
-        // If we have the same number of rows, just update values instead of rebuilding
-        if (currentRows.length === dataArray.length) {
-          dataArray.forEach((item, index) => {
-            const row = currentRows[index];
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              inputs[0].value = item.value || '';
-              inputs[1].value = item.type || 'plus';
-              inputs[2].value = item.percentage || item.percent || '';
-              inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+        // If we have the same number of rows, try to match by content instead of index
+        if (currentRows.length === dataArray.length && currentRows.length > 0) {
+          let allMatched = true;
+          
+          // Try to match each data item with existing rows by content similarity
+          const usedRows = new Set();
+          const matches = [];
+          
+          dataArray.forEach((item, dataIndex) => {
+            let bestMatch = null;
+            let bestMatchIndex = -1;
+            
+            // Find the best matching row for this data item
+            currentRows.forEach((row, rowIndex) => {
+              if (usedRows.has(rowIndex)) return; // Skip already used rows
+              
+              const inputs = row.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                const rowValue = inputs[0].value || '';
+                const rowType = inputs[1].value || 'plus';
+                const rowPercent = inputs[2].value || '';
+                
+                // Calculate similarity score
+                let score = 0;
+                if (rowValue === (item.value || '')) score += 3;
+                if (rowType === (item.type || 'plus')) score += 2;
+                if (rowPercent === String(item.percentage || item.percent || '')) score += 1;
+                
+                if (score > (bestMatch?.score || 0)) {
+                  bestMatch = { row, score };
+                  bestMatchIndex = rowIndex;
+                }
+              }
+            });
+            
+            if (bestMatch && bestMatch.score > 0) {
+              matches.push({ dataIndex, row: bestMatch.row, rowIndex: bestMatchIndex });
+              usedRows.add(bestMatchIndex);
+            } else {
+              allMatched = false;
             }
           });
-          console.log(`🔄 Updated ${containerId} values without rebuilding rows`);
-          return;
+          
+          // If all items matched, update the matched rows
+          if (allMatched && matches.length === dataArray.length) {
+            matches.forEach(({ dataIndex, row }) => {
+              const item = dataArray[dataIndex];
+              const inputs = row.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.value || '';
+                inputs[1].value = item.type || 'plus';
+                inputs[2].value = item.percentage || item.percent || '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+              }
+            });
+            console.log(`🔄 Updated ${containerId} values by content matching without rebuilding rows`);
+            return;
+          }
         }
         
         // Only rebuild if row count doesn't match
