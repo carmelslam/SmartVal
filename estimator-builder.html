@@ -2218,6 +2218,9 @@
         window.helper.estimate.metadata.damage_centers_count = document.querySelectorAll('.editable-damage-card').length;
         window.helper.estimate.metadata.last_updated = new Date().toISOString();
         
+        // 🆕 ESTIMATE WORKFLOW: Save totals from summary container
+        saveDamageCentersTotals();
+        
         // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
@@ -6302,6 +6305,91 @@
       if (repairsElement) repairsElement.textContent = `₪${totalRepairs.toLocaleString()}`;
       if (withoutVatElement) withoutVatElement.textContent = `₪${totalBeforeVAT.toLocaleString()}`;
       if (withVatElement) withVatElement.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      
+      // 🆕 Auto-save totals to helper.estimate whenever UI is updated
+      saveDamageCentersTotals();
+    }
+    
+    // 🆕 SAVE DAMAGE CENTERS TOTALS TO helper.estimate.damage_centers.totals
+    function saveDamageCentersTotals() {
+      try {
+        console.log('🧮 Saving damage centers totals to helper.estimate.damage_centers.totals');
+        
+        // Calculate current totals
+        let totalParts = 0;
+        let totalWorks = 0;
+        let totalRepairs = 0;
+        
+        document.querySelectorAll('.editable-damage-card').forEach(card => {
+          // Parts
+          card.querySelectorAll('.part-row .part-price').forEach(input => {
+            totalParts += parseFloat(input.value) || 0;
+          });
+          
+          // Works
+          card.querySelectorAll('.work-row .work-cost').forEach(input => {
+            totalWorks += parseFloat(input.value) || 0;
+          });
+          
+          // Repairs
+          card.querySelectorAll('.repair-row .repair-cost').forEach(input => {
+            totalRepairs += parseFloat(input.value) || 0;
+          });
+        });
+        
+        // Calculate final totals
+        const totalBeforeVAT = totalParts + totalWorks + totalRepairs;
+        const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17);
+        const totalWithVAT = totalBeforeVAT * (1 + vatRate);
+        
+        // Create totals object
+        const totals = {
+          parts: {
+            value: totalParts,
+            formatted: `₪${totalParts.toLocaleString()}`,
+            color: '#28a745' // Green color from the UI
+          },
+          works: {
+            value: totalWorks,
+            formatted: `₪${totalWorks.toLocaleString()}`,
+            color: '#17a2b8' // Blue color from the UI
+          },
+          repairs: {
+            value: totalRepairs,
+            formatted: `₪${totalRepairs.toLocaleString()}`,
+            color: '#ffc107' // Yellow color from the UI
+          },
+          total_before_vat: {
+            value: totalBeforeVAT,
+            formatted: `₪${totalBeforeVAT.toLocaleString()}`,
+            color: '#6c757d' // Gray color from the UI
+          },
+          total_with_vat: {
+            value: Math.round(totalWithVAT),
+            formatted: `₪${Math.round(totalWithVAT).toLocaleString()}`,
+            color: '#dc3545' // Red color from the UI
+          },
+          vat_rate: vatRate,
+          vat_amount: Math.round(totalWithVAT - totalBeforeVAT),
+          last_updated: new Date().toISOString(),
+          centers_count: document.querySelectorAll('.editable-damage-card').length
+        };
+        
+        // Ensure helper.estimate.damage_centers exists
+        if (!window.helper.estimate) window.helper.estimate = {};
+        if (!window.helper.estimate.damage_centers) window.helper.estimate.damage_centers = [];
+        
+        // Save totals to helper.estimate.damage_centers.totals
+        window.helper.estimate.damage_centers.totals = totals;
+        
+        // Also save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        
+        console.log('✅ Damage centers totals saved:', totals);
+        
+      } catch (error) {
+        console.error('❌ Error saving damage centers totals:', error);
+      }
     }
 
     function createEditableDamageCenterCard(block, index) {
