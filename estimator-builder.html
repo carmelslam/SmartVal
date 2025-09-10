@@ -1390,7 +1390,18 @@
       Object.entries(fields).forEach(([fieldId, value]) => {
         const field = document.getElementById(fieldId);
         if (field && value) {
-          field.value = value;
+          // Format currency fields with ₪ symbol and thousands separator
+          if (fieldId === 'carBasePrice' || fieldId === 'carMarketValue') {
+            // Extract numeric value and format it
+            const numericValue = parseFloat(value.toString().replace(/[₪,]/g, ''));
+            if (!isNaN(numericValue) && numericValue > 0) {
+              field.value = `₪${numericValue.toLocaleString()}`;
+            } else {
+              field.value = value;
+            }
+          } else {
+            field.value = value;
+          }
         }
       });
     }
