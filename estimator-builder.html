@@ -6379,8 +6379,17 @@
         if (!window.helper.estimate) window.helper.estimate = {};
         if (!window.helper.estimate.damage_centers) window.helper.estimate.damage_centers = [];
         
-        // Save totals to helper.estimate.damage_centers.totals
-        window.helper.estimate.damage_centers.totals = totals;
+        // Save totals as part of the damage_centers array structure
+        if (Array.isArray(window.helper.estimate.damage_centers)) {
+          // Add totals as a property on the damage_centers array itself
+          window.helper.estimate.damage_centers.totals = totals;
+        } else {
+          // If damage_centers is not an array, make it an object with centers and totals
+          window.helper.estimate.damage_centers = {
+            centers: window.helper.estimate.damage_centers || [],
+            totals: totals
+          };
+        }
         
         // Also save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
