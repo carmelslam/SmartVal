@@ -6379,25 +6379,69 @@
         if (!window.helper.estimate) window.helper.estimate = {};
         if (!window.helper.estimate.damage_centers) window.helper.estimate.damage_centers = [];
         
-        // Save totals as part of the damage_centers array structure
+        // CRITICAL FIX: Save totals properly in helper.estimate structure
+        // Method 1: Add totals as a direct property on the damage_centers array
         if (Array.isArray(window.helper.estimate.damage_centers)) {
-          // Add totals as a property on the damage_centers array itself
           window.helper.estimate.damage_centers.totals = totals;
-        } else {
-          // If damage_centers is not an array, make it an object with centers and totals
-          window.helper.estimate.damage_centers = {
-            centers: window.helper.estimate.damage_centers || [],
-            totals: totals
-          };
         }
+        
+        // Method 2: Also save in a guaranteed location for backup access
+        if (!window.helper.estimate.totals) window.helper.estimate.totals = {};
+        window.helper.estimate.totals.damage_centers = totals;
+        
+        // Method 3: Set total_damage_cost from damage centers total_with_vat
+        window.helper.estimate.total_damage_cost = totals.total_with_vat.value;
         
         // Also save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
         console.log('✅ Damage centers totals saved:', totals);
         
+        // Update totalDamageCost field to display damage centers total
+        updateTotalDamageCostField();
+        
       } catch (error) {
         console.error('❌ Error saving damage centers totals:', error);
+      }
+    }
+    
+    // Calculate damage centers total (fallback function)
+    function calculateDamageCentersTotal() {
+      let totalParts = 0;
+      let totalWorks = 0;
+      let totalRepairs = 0;
+      
+      document.querySelectorAll('.editable-damage-card').forEach(card => {
+        card.querySelectorAll('.part-row .part-price').forEach(input => {
+          totalParts += parseFloat(input.value) || 0;
+        });
+        card.querySelectorAll('.work-row .work-cost').forEach(input => {
+          totalWorks += parseFloat(input.value) || 0;
+        });
+        card.querySelectorAll('.repair-row .repair-cost').forEach(input => {
+          totalRepairs += parseFloat(input.value) || 0;
+        });
+      });
+      
+      const totalBeforeVAT = totalParts + totalWorks + totalRepairs;
+      const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17);
+      const totalWithVAT = totalBeforeVAT * (1 + vatRate);
+      
+      return Math.round(totalWithVAT);
+    }
+    
+    // Update totalDamageCost field to show damage centers total
+    function updateTotalDamageCostField() {
+      const totalDamageCostField = document.getElementById('totalDamageCost');
+      if (totalDamageCostField) {
+        const damageCentersTotal = window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value || calculateDamageCentersTotal();
+        totalDamageCostField.value = `₪${damageCentersTotal.toLocaleString()}`;
+        
+        // Make field readonly to show it's calculated from damage centers
+        totalDamageCostField.readOnly = true;
+        totalDamageCostField.style.background = '#f4f6fa';
+        totalDamageCostField.style.fontWeight = 'bold';
+        totalDamageCostField.style.color = '#1e3a8a';
       }
     }
 
@@ -6545,10 +6589,13 @@
           helper.estimate.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
         }
         
-        // Add total damage cost and gross damage percentage to estimate
-        const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField) {
-          helper.estimate.total_damage_cost = parseFloat(totalDamageCostField.value.replace(/[₪,]/g, '')) || 0;
+        // Get total damage cost from damage centers totals, not manual field
+        if (window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
+          helper.estimate.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+        } else {
+          // Fallback: calculate from damage centers if totals not available
+          const damageCentersTotal = calculateDamageCentersTotal();
+          helper.estimate.total_damage_cost = damageCentersTotal;
         }
         
         const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
@@ -6862,9 +6909,13 @@
         // 4. Save total damage cost and gross damage percentage to estimate
         if (!helper.estimate) helper.estimate = {};
         
-        const totalDamageCostField = document.getElementById('totalDamageCost');
-        if (totalDamageCostField) {
-          helper.estimate.total_damage_cost = parseFloat(totalDamageCostField.value.replace(/[₪,]/g, '')) || 0;
+        // Get total damage cost from damage centers totals, not manual field
+        if (window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
+          helper.estimate.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+        } else {
+          // Fallback: calculate from damage centers if totals not available
+          const damageCentersTotal = calculateDamageCentersTotal();
+          helper.estimate.total_damage_cost = damageCentersTotal;
         }
         
         const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
