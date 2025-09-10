@@ -2855,12 +2855,45 @@
           // Add each saved item
           depreciationData.bulk_items.forEach((item, index) => {
             console.log(`🔄 Loading item ${index + 1}:`, item);
+            
+            // Extract simple values from complex data structures
+            let cleanPercent = '';
+            let cleanValue = '';
+            
+            // Handle percent field - extract number from strings like "4" or complex objects
+            if (item.percent) {
+              if (typeof item.percent === 'string') {
+                cleanPercent = item.percent;
+              } else if (typeof item.percent === 'object' && item.percent.value) {
+                cleanPercent = String(item.percent.value).replace(/[^0-9.-]/g, '');
+              } else {
+                cleanPercent = String(item.percent);
+              }
+            }
+            
+            // Handle value field - extract number from strings like "1,366 (נסיון)" or complex objects
+            if (item.value) {
+              if (typeof item.value === 'string') {
+                // Remove currency symbols, parentheses, and text like "(נסיון)"
+                cleanValue = item.value.replace(/[₪,\s()א-ת]/g, '');
+              } else if (typeof item.value === 'object' && item.value.value) {
+                cleanValue = String(item.value.value).replace(/[₪,\s()א-ת]/g, '');
+              } else {
+                cleanValue = String(item.value).replace(/[₪,\s()א-ת]/g, '');
+              }
+            }
+            
+            console.log(`✅ Cleaned values for item ${index + 1}:`, {
+              original: { percent: item.percent, value: item.value },
+              cleaned: { percent: cleanPercent, value: cleanValue }
+            });
+            
             addDepField({
               center_number: item.center_number,
               damaged_part: item.damaged_part,
               repair_type: item.repair_type,
-              percent: item.percent,
-              value: item.value
+              percent: cleanPercent,
+              value: cleanValue
             });
           });
           
