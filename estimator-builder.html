@@ -1383,7 +1383,7 @@
         'carYear': helper.car_details?.year || '',
         'carModelCode': helper.car_details?.model_code || helper.vehicle?.model_code || '',
         'carBasePrice': helper.valuation?.base_price || helper.car_details?.base_price || '',
-        'carMarketValue': helper.vehicle?.market_value || helper.calculations?.full_market_value || '',
+        'carMarketValue': helper.estimate?.calculations?.full_market_value || helper.vehicle?.market_value || helper.calculations?.full_market_value || '',
         'carReportDate': helper.estimate?.estimate_report_date || helper.car_details?.report_date || ''
       };
 
@@ -1471,6 +1471,10 @@
           case 'carMarketValue':
             if (!helper.car_details) helper.car_details = {};
             helper.car_details.market_value = value;
+            // Also save to consolidated calculations structure
+            if (!helper.estimate) helper.estimate = {};
+            if (!helper.estimate.calculations) helper.estimate.calculations = {};
+            helper.estimate.calculations.full_market_value = parseFloat(value.replace(/[₪,]/g, '')) || 0;
             break;
           case 'carReportDate':
             if (!helper.car_details) helper.car_details = {};
@@ -4437,6 +4441,11 @@
           fullMarketValueResult.value = `₪${Math.round(currentValue).toLocaleString()}`;
         }
         
+        // Consolidate calculations after updating full market value
+        setTimeout(() => {
+          consolidateEstimateCalculations();
+        }, 100);
+        
         // Legacy field update for compatibility
         const fullMarketValueField = document.getElementById('fullMarketValueField');
         if (fullMarketValueField) {
@@ -5631,16 +5640,24 @@
     // Load gross percentage fields using exact mapping from final-report-builder
     function loadGrossPercentageFields(helper) {
       try {
-        console.log('📊 Loading gross percentage fields from helper');
+        console.log('📊 Loading gross percentage fields from CONSOLIDATED estimate.calculations');
         
-        // Map totalDamageCost field - PRIORITY: damage centers total, FALLBACK: claims_data.total_claim
+        // PRIORITY: Load from consolidated estimate.calculations structure
+        const calculations = helper.estimate?.calculations || {};
+        
+        // Map totalDamageCost field - PRIORITY: consolidated calculations, FALLBACKS: old scattered fields
         const totalDamageCostField = document.getElementById('totalDamageCost');
         if (totalDamageCostField) {
           let totalValue = 0;
           let source = '';
           
-          // First try damage centers total (current calculations)
-          if (helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
+          // First try consolidated calculations (NEW PRIORITY)
+          if (calculations.total_damage_cost) {
+            totalValue = calculations.total_damage_cost;
+            source = 'estimate.calculations.total_damage_cost';
+          }
+          // Fallback to damage centers total (current calculations)
+          else if (helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
             totalValue = helper.estimate.totals.damage_centers.total_with_vat.value;
             source = 'estimate.totals.damage_centers.total_with_vat';
           }
@@ -5659,6 +5676,36 @@
           if (totalValue > 0) {
             totalDamageCostField.value = `₪${totalValue.toLocaleString()}`;
             console.log(`✅ Loaded totalDamageCost from ${source}:`, totalValue);
+          }
+        }
+        
+        // Load grossMarketValueResult from consolidated calculations
+        const grossMarketValueResult = document.getElementById('grossMarketValueResult');
+        if (grossMarketValueResult) {
+          const grossValue = calculations.gross_market_value || helper.estimate?.gross_market_value || 0;
+          if (grossValue > 0) {
+            grossMarketValueResult.value = `₪${grossValue.toLocaleString()}`;
+            console.log('✅ Loaded grossMarketValueResult from estimate.calculations.gross_market_value:', grossValue);
+          }
+        }
+        
+        // Load fullMarketValueResult from consolidated calculations (NEW)
+        const fullMarketValueResult = document.getElementById('fullMarketValueResult');
+        if (fullMarketValueResult) {
+          const fullValue = calculations.full_market_value || helper.calculations?.full_market_value || 0;
+          if (fullValue > 0) {
+            fullMarketValueResult.value = `₪${fullValue.toLocaleString()}`;
+            console.log('✅ Loaded fullMarketValueResult from estimate.calculations.full_market_value:', fullValue);
+          }
+        }
+        
+        // Load grossDamagePercentage from consolidated calculations
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        if (grossDamagePercentageField) {
+          const grossPercent = calculations.gross_damage_percentage || helper.estimate?.gross_damage_percentage || 0;
+          if (grossPercent > 0) {
+            grossDamagePercentageField.value = `${grossPercent.toFixed(2)}%`;
+            console.log('✅ Loaded grossDamagePercentage from estimate.calculations.gross_damage_percentage:', grossPercent);
           }
         }
         
@@ -6492,7 +6539,13 @@
         if (!window.helper.estimate.totals) window.helper.estimate.totals = {};
         window.helper.estimate.totals.damage_centers = totals;
         
-        // Method 3: Set total_damage_cost from damage centers total_with_vat
+        // Method 3: Consolidate all calculations into estimate.calculations
+        if (!window.helper.estimate.calculations) window.helper.estimate.calculations = {};
+        
+        // Move scattered fields to consolidated calculations structure
+        window.helper.estimate.calculations.total_damage_cost = totals.total_with_vat.value;
+        
+        // Legacy compatibility: Keep old field for backward compatibility
         window.helper.estimate.total_damage_cost = totals.total_with_vat.value;
         
         // Method 4: Update claims_data.total_claim ONLY if it doesn't exist or is empty (preserve user changes)
@@ -6563,6 +6616,9 @@
         // Update totalDamageCost field to display damage centers total
         updateTotalDamageCostField();
         
+        // Consolidate all calculations into estimate.calculations
+        consolidateEstimateCalculations();
+        
       } catch (error) {
         console.error('❌ Error saving damage centers totals:', error);
       }
@@ -6611,6 +6667,66 @@
         totalDamageCostField.style.background = '';
         totalDamageCostField.style.fontWeight = '';
         totalDamageCostField.style.color = '';
+      }
+    }
+    
+    // 🆕 CONSOLIDATE ALL CALCULATIONS INTO ESTIMATE.CALCULATIONS
+    function consolidateEstimateCalculations() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure calculations structure exists
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.calculations) helper.estimate.calculations = {};
+        
+        // Get all calculation values from UI fields
+        const calculations = {};
+        
+        // 1. Total damage cost (from damage centers)
+        const damageCentersTotal = window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value || calculateDamageCentersTotal();
+        calculations.total_damage_cost = damageCentersTotal;
+        
+        // 2. Gross market value
+        const grossValueResult = document.getElementById('grossMarketValueResult');
+        if (grossValueResult && grossValueResult.value) {
+          calculations.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // 3. Full market value (NEW)
+        const fullMarketValueResult = document.getElementById('fullMarketValueResult');
+        if (fullMarketValueResult && fullMarketValueResult.value) {
+          calculations.full_market_value = parseFloat(fullMarketValueResult.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // 4. Gross damage percentage
+        const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
+        if (grossDamagePercentageField && grossDamagePercentageField.value) {
+          calculations.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+        }
+        
+        // Save to consolidated structure
+        helper.estimate.calculations = {
+          ...helper.estimate.calculations,
+          ...calculations,
+          last_updated: new Date().toISOString()
+        };
+        
+        // Legacy compatibility - keep old scattered fields
+        if (calculations.total_damage_cost) helper.estimate.total_damage_cost = calculations.total_damage_cost;
+        if (calculations.gross_market_value) helper.estimate.gross_market_value = calculations.gross_market_value;
+        if (calculations.gross_damage_percentage) helper.estimate.gross_damage_percentage = calculations.gross_damage_percentage;
+        
+        // Save to storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log('✅ Consolidated all calculations into estimate.calculations:', helper.estimate.calculations);
+        
+        return helper.estimate.calculations;
+        
+      } catch (error) {
+        console.error('❌ Error consolidating calculations:', error);
+        return null;
       }
     }
 
@@ -6752,24 +6868,41 @@
           }
         });
         
-        // Update gross market value in estimate
+        // Consolidate all calculations into estimate.calculations structure
+        if (!helper.estimate.calculations) helper.estimate.calculations = {};
+        
+        // Get gross market value
         const grossValueResult = document.getElementById('grossMarketValueResult');
         if (grossValueResult) {
-          helper.estimate.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
+          helper.estimate.calculations.gross_market_value = parseFloat(grossValueResult.value.replace(/[₪,]/g, '')) || 0;
+          // Legacy compatibility
+          helper.estimate.gross_market_value = helper.estimate.calculations.gross_market_value;
         }
         
-        // Get total damage cost from damage centers totals, not manual field
+        // Get full market value (new field)
+        const fullMarketValueResult = document.getElementById('fullMarketValueResult');
+        if (fullMarketValueResult) {
+          helper.estimate.calculations.full_market_value = parseFloat(fullMarketValueResult.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // Get total damage cost from damage centers totals
         if (window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
-          helper.estimate.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+          helper.estimate.calculations.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+          // Legacy compatibility
+          helper.estimate.total_damage_cost = helper.estimate.calculations.total_damage_cost;
         } else {
           // Fallback: calculate from damage centers if totals not available
           const damageCentersTotal = calculateDamageCentersTotal();
+          helper.estimate.calculations.total_damage_cost = damageCentersTotal;
           helper.estimate.total_damage_cost = damageCentersTotal;
         }
         
+        // Get gross damage percentage
         const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
         if (grossDamagePercentageField) {
-          helper.estimate.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+          helper.estimate.calculations.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+          // Legacy compatibility
+          helper.estimate.gross_damage_percentage = helper.estimate.calculations.gross_damage_percentage;
         }
         
         // Only save to sessionStorage if helper wasn't passed as parameter
@@ -7078,18 +7211,27 @@
         // 4. Save total damage cost and gross damage percentage to estimate
         if (!helper.estimate) helper.estimate = {};
         
-        // Get total damage cost from damage centers totals, not manual field
+        // Consolidate calculations into estimate.calculations structure  
+        if (!helper.estimate.calculations) helper.estimate.calculations = {};
+        
+        // Get total damage cost from damage centers totals
         if (window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
-          helper.estimate.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+          helper.estimate.calculations.total_damage_cost = window.helper.estimate.totals.damage_centers.total_with_vat.value;
+          // Legacy compatibility
+          helper.estimate.total_damage_cost = helper.estimate.calculations.total_damage_cost;
         } else {
           // Fallback: calculate from damage centers if totals not available
           const damageCentersTotal = calculateDamageCentersTotal();
+          helper.estimate.calculations.total_damage_cost = damageCentersTotal;
           helper.estimate.total_damage_cost = damageCentersTotal;
         }
         
+        // Get gross damage percentage
         const grossDamagePercentageField = document.getElementById('grossDamagePercentage');
         if (grossDamagePercentageField) {
-          helper.estimate.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+          helper.estimate.calculations.gross_damage_percentage = parseFloat(grossDamagePercentageField.value.replace(/[%,]/g, '')) || 0;
+          // Legacy compatibility
+          helper.estimate.gross_damage_percentage = helper.estimate.calculations.gross_damage_percentage;
         }
         
         // 5. DUAL STORAGE: Save gross sections array to helper.estimate
