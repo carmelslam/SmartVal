@@ -2557,13 +2557,13 @@
           const damageLocation = centerName || ''; // This is the location/part that was damaged
           const workEssence = centerRepairNature || '';
           
-          // Use addDepField function with proper data structure
+          // Use addDepField function with complete mapping from screenshot
           addDepField({
-            center_number: centerNum,
-            damaged_part: damageLocation,
-            repair_type: workEssence,
-            percent: '',
-            value: ''
+            center_number: centerNum,                    // estimate.damage_centers[item].center_number
+            damaged_part: damageLocation,                // estimate.damage_centers[item].Location  
+            repair_type: workEssence,                    // estimate.damage_centers[item].RepairNature
+            percent: '',                                 // manual field filled by user
+            value: ''                                    // local calculation: percentage X full market value
           });
         });
         
@@ -2967,9 +2967,64 @@
       // Implementation here
     }
 
+    function calculateGlobalDepreciationValue() {
+      const globalDep1 = document.getElementById('globalDep1');
+      if (!globalDep1) return;
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Try multiple sources for market value
+      let marketValue = 0;
+      
+      // First try the summary market value field (most reliable)
+      const sumMarketValueField = document.getElementById('sumMarketValue');
+      if (sumMarketValueField && sumMarketValueField.value) {
+        const sumMarketStr = sumMarketValueField.value.replace(/[₪,]/g, '') || '0';
+        marketValue = parseFloat(sumMarketStr) || 0;
+      }
+      
+      // Fallback to carMarketValue for estimator
+      if (!marketValue) {
+        const carMarketValueField = document.getElementById('carMarketValue');
+        if (carMarketValueField && carMarketValueField.value) {
+          const carMarketStr = carMarketValueField.value.replace(/[₪,]/g, '') || '0';
+          marketValue = parseFloat(carMarketStr) || 0;
+        }
+      }
+      
+      // Fallback to helper data
+      if (!marketValue) {
+        marketValue = helper.calculations?.market_value || 
+                     helper.estimate?.market_value || 
+                     helper.calculations?.vehicle_value_gross || 0;
+      }
+      
+      // Clean the percentage value properly to handle decimals like 2.5%
+      const cleanedValue = globalDep1.value.replace('%', '').replace(/[^0-9.-]/g, '');
+      const depPercent = parseFloat(cleanedValue) || 0;
+      
+      const globalAmount = Math.round(marketValue * (depPercent / 100));
+      
+      // Update helper.estimate data for estimator builder
+      if (!helper.estimate) helper.estimate = {};
+      if (!helper.estimate.depreciation) helper.estimate.depreciation = {};
+      helper.estimate.depreciation.global_percent = depPercent;
+      helper.estimate.depreciation.global_amount = globalAmount;
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Update display - target the correct field: globalDepValue
+      const globalDepValueField = document.getElementById('globalDepValue');
+      if (globalDepValueField) {
+        globalDepValueField.value = `₪${globalAmount.toLocaleString()}`;
+      }
+      
+      console.log(`✅ Global depreciation calculated: ${depPercent}% of ₪${marketValue.toLocaleString()} = ₪${globalAmount.toLocaleString()}`);
+    }
+
     function updateGlobalDepreciationCalculation() {
       console.log('📊 Update global depreciation');
-      // Implementation here
+      calculateGlobalDepreciationValue();
     }
 
     function triggerFloatingScreenRefresh() {
