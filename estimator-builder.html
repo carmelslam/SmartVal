@@ -1355,6 +1355,12 @@
         
         // Update page title
         updatePageTitle(helper);
+        
+        // CRITICAL: Fix delete button references AFTER all loading operations complete
+        // This must be the LAST operation to prevent corruption by cross-section sync
+        setTimeout(() => {
+          updateDeleteButtonReferences();
+        }, 300); // Longer delay to ensure all async operations finish
 
       } catch (error) {
         console.error('❌ Error loading helper data:', error);
@@ -4185,11 +4191,6 @@
               }
             });
             console.log(`🔄 Updated ${containerId} values by content matching without rebuilding rows`);
-            
-            // CRITICAL: Fix delete button references after content matching updates
-            setTimeout(() => {
-              updateDeleteButtonReferences();
-            }, 10);
             return;
           }
         }
@@ -4223,11 +4224,6 @@
         });
         
         console.log(`🔄 Rebuilt ${containerId} with ${dataArray.length} items`);
-        
-        // CRITICAL: Fix delete button references after rebuilding rows
-        setTimeout(() => {
-          updateDeleteButtonReferences();
-        }, 10);
         
       } catch (error) {
         console.error(`❌ Error syncing UI section ${containerId}:`, error);
@@ -4642,9 +4638,6 @@
           updateGrossMarketValueCalculation();
         }
         
-        // CRITICAL: Fix delete button references after loading
-        updateDeleteButtonReferences();
-        
         console.log('✅ Gross adjustments loaded successfully');
         
       } catch (error) {
@@ -4808,9 +4801,6 @@
           if (typeof updateFullMarketValueCalculation === 'function') {
             updateFullMarketValueCalculation();
           }
-          
-          // CRITICAL: Fix delete button references after loading
-          updateDeleteButtonReferences();
         }, 100);
         
       } catch (error) {
@@ -4955,9 +4945,6 @@
             window.helper = helper;
             console.log('✅ Synced auto-populated data to gross_value_adjustments');
           }
-          
-          // CRITICAL: Fix delete button references after loading
-          updateDeleteButtonReferences();
         }, 200);
         
       } catch (error) {
