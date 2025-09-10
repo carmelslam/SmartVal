@@ -1356,11 +1356,8 @@
         // Update page title
         updatePageTitle(helper);
         
-        // CRITICAL: Fix delete button references AFTER all loading operations complete
-        // This must be the LAST operation to prevent corruption by cross-section sync
-        setTimeout(() => {
-          updateDeleteButtonReferences();
-        }, 300); // Longer delay to ensure all async operations finish
+        // Initialize global delete button handler - NEW APPROACH
+        initializeDeleteButtonHandler();
 
       } catch (error) {
         console.error('❌ Error loading helper data:', error);
@@ -1590,7 +1587,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1612,7 +1609,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1633,7 +1630,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" /></div>
           <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1653,7 +1650,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1674,7 +1671,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" /></div>
           <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1695,7 +1692,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
           <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1716,7 +1713,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
           <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -1737,7 +1734,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'additional');" /></div>
           <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'additional');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          <div><button class="btn remove" data-action="delete-row">מחק</button></div>
         </div>
       `;
       
@@ -3827,44 +3824,30 @@
       }
     }
     
-    // Fix delete button references after data loading
-    function updateDeleteButtonReferences() {
-      try {
-        console.log('🔧 Updating delete button references after data loading');
+    // Global event listener for delete buttons - NEW APPROACH
+    function initializeDeleteButtonHandler() {
+      // Remove any existing listener to prevent duplicates
+      document.removeEventListener('click', handleDeleteButtonClick);
+      
+      // Add global click listener for delete buttons
+      document.addEventListener('click', handleDeleteButtonClick);
+      console.log('✅ Global delete button handler initialized');
+    }
+    
+    function handleDeleteButtonClick(event) {
+      // Check if clicked element is a delete button
+      if (event.target.matches('button.remove[data-action="delete-row"]')) {
+        event.preventDefault();
         
-        // Find all adjustment containers
-        const containers = [
-          'featuresAdjustmentsList',
-          'registrationAdjustmentsList', 
-          'fullFeaturesAdjustmentsList',
-          'fullRegistrationAdjustmentsList',
-          'mileageAdjustmentsList',
-          'ownershipAdjustmentsList',
-          'ownersAdjustmentsList',
-          'allAdjustmentsList'
-        ];
+        // Find the parent row (the div with an ID)
+        let parentRow = event.target.closest('div[id]');
         
-        containers.forEach(containerId => {
-          const container = document.getElementById(containerId);
-          if (container) {
-            const rows = Array.from(container.children);
-            rows.forEach(row => {
-              const deleteButton = row.querySelector('button.remove');
-              if (deleteButton && row.id) {
-                // Update onclick handler to reference current row ID
-                deleteButton.onclick = function() {
-                  removeAdjustmentRow(row.id);
-                };
-                console.log(`🔧 Updated delete button for row: ${row.id}`);
-              }
-            });
-          }
-        });
-        
-        console.log('✅ Delete button references updated successfully');
-        
-      } catch (error) {
-        console.error('❌ Error updating delete button references:', error);
+        if (parentRow && parentRow.id) {
+          console.log('🗑️ Delete button clicked for row:', parentRow.id);
+          removeAdjustmentRow(parentRow.id);
+        } else {
+          console.error('❌ Could not find parent row for delete button');
+        }
       }
     }
     
