@@ -2685,7 +2685,8 @@
               console.log(`🔍 Processing damage center ${index + 1}:`, center);
               
               // Get the actual location and center number properly
-              const location = center.Location || center.damage_center_name || center.location || '';
+              // FIXED: Read from estimate.damage_centers structure (stage-optimized data)
+              const location = center.location || center.damage_center_name || center.Location || '';
               
               // Extract center number - try multiple field variations
               let centerNum = center["Damage center Number"] || 
@@ -2697,12 +2698,23 @@
               const numberMatch = String(centerNum).match(/\d+/g);
               centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
               
-              // Get repair nature with fallback options
-              const repairNature = center.RepairNature || 
-                                  center.repair_nature || 
-                                  center.repairType || 
-                                  center.Description || 
-                                  '';
+              // FIXED: Get repair nature from estimate.damage_centers structure
+              let repairNature = '';
+              
+              // Extract from works data (estimate structure)
+              if (center.works && Array.isArray(center.works) && center.works.length > 0) {
+                repairNature = center.works.map(work => work.category || work.name || '').filter(cat => cat).join(', ');
+              }
+              
+              // Fallback options
+              if (!repairNature) {
+                repairNature = center.RepairNature || 
+                              center.repair_nature || 
+                              center.repairType || 
+                              center.description ||
+                              center.Description || 
+                              '';
+              }
               
               const centerData = {
                 name: location,  // estimate.damage_centers[item].Location
