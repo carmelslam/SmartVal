@@ -2189,38 +2189,30 @@
         window.helper.expertise.damage_blocks = collectedDamageBlocks;
         window.helper.estimate.damage_centers = collectedEstimateCenters;
         
-        // 🆕 SAFE: Populate helper.damage_centers from centers (preserves final report access)
-        // Only populate if empty or if it's clearly from estimator (preserve final report data)
-        if (!window.helper.damage_centers || 
-            window.helper.damage_centers.length === 0 || 
-            window.helper.damage_centers.every(center => center.source === 'estimator')) {
-          
-          // Map to the complex structure that final report expects
-          window.helper.damage_centers = collectedCenters.map((center, index) => ({
-            "Id": center.Id || `dc_${Date.now()}_${index + 1}`,
-            "Damage center Number": center["Damage center Number"] || (index + 1).toString(),
-            "Location": center.Location || '',
-            "Description": center.Description || '',
-            "Parts": center.Parts || {
-              "parts_required": [],
-              "parts_meta": { "total_items": 0, "total_cost": 0 }
-            },
-            "Works": center.Works || {
-              "works": [],
-              "works_meta": { "total_items": 0, "total_cost": 0 }
-            },
-            "Repairs": center.Repairs || {
-              "repairs": [],
-              "repairs_meta": { "total_items": 0, "total_cost": 0 }
-            },
-            "Summary": center.Summary || { "Total with VAT": 0 },
-            source: 'estimator',
-            last_updated: new Date().toISOString()
-          }));
-          console.log('✅ Populated helper.damage_centers from estimator data');
-        } else {
-          console.log('⚠️ Preserving existing helper.damage_centers (likely from final report)');
-        }
+        // 🆕 ALWAYS update helper.damage_centers from estimator (helper.centers is king)
+        // Map to the complex structure that final report expects
+        window.helper.damage_centers = collectedCenters.map((center, index) => ({
+          "Id": center.Id || `dc_${Date.now()}_${index + 1}`,
+          "Damage center Number": center["Damage center Number"] || (index + 1).toString(),
+          "Location": center.Location || '',
+          "Description": center.Description || '',
+          "Parts": center.Parts || {
+            "parts_required": [],
+            "parts_meta": { "total_items": 0, "total_cost": 0 }
+          },
+          "Works": center.Works || {
+            "works": [],
+            "works_meta": { "total_items": 0, "total_cost": 0 }
+          },
+          "Repairs": center.Repairs || {
+            "repairs": [],
+            "repairs_meta": { "total_items": 0, "total_cost": 0 }
+          },
+          "Summary": center.Summary || { "Total with VAT": 0 },
+          source: 'estimator',
+          last_updated: new Date().toISOString()
+        }));
+        console.log('✅ Updated helper.damage_centers from estimator data (helper.centers is king)');
         
         // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
         const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
@@ -7083,17 +7075,11 @@
       // FORCE SYNC ALL DAMAGE CENTER LOCATIONS
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Make sure helper.centers is the source of truth (SAFE: preserves final report data)
+      // Make sure helper.centers is the source of truth (helper.centers is king)
       if (helper.centers && Array.isArray(helper.centers)) {
-        // Only copy centers to damage_centers if damage_centers is empty or from estimator
-        if (!helper.damage_centers || 
-            helper.damage_centers.length === 0 ||
-            helper.damage_centers.every(center => center.source === 'estimator')) {
-          helper.damage_centers = [...helper.centers];
-          console.log('✅ Synced helper.damage_centers from helper.centers (estimator source)');
-        } else {
-          console.log('⚠️ Preserving existing helper.damage_centers (final report source)');
-        }
+        // Always sync damage_centers from centers (centers is universal source)
+        helper.damage_centers = [...helper.centers];
+        console.log('✅ Synced helper.damage_centers from helper.centers (centers is king)');
         
         // Update window.helper
         window.helper = helper;
