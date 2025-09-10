@@ -2195,14 +2195,25 @@
             window.helper.damage_centers.length === 0 || 
             window.helper.damage_centers.every(center => center.source === 'estimator')) {
           
-          window.helper.damage_centers = collectedEstimateCenters.map(center => ({
-            center_number: center.center_number,
-            location: center.location,
-            description: center.description,
-            parts: center.parts || [],
-            works: center.works || [],
-            repairs: center.repairs || [],
-            costs: center.costs,
+          // Map to the complex structure that final report expects
+          window.helper.damage_centers = collectedCenters.map((center, index) => ({
+            "Id": center.Id || `dc_${Date.now()}_${index + 1}`,
+            "Damage center Number": center["Damage center Number"] || (index + 1).toString(),
+            "Location": center.Location || '',
+            "Description": center.Description || '',
+            "Parts": center.Parts || {
+              "parts_required": [],
+              "parts_meta": { "total_items": 0, "total_cost": 0 }
+            },
+            "Works": center.Works || {
+              "works": [],
+              "works_meta": { "total_items": 0, "total_cost": 0 }
+            },
+            "Repairs": center.Repairs || {
+              "repairs": [],
+              "repairs_meta": { "total_items": 0, "total_cost": 0 }
+            },
+            "Summary": center.Summary || { "Total with VAT": 0 },
             source: 'estimator',
             last_updated: new Date().toISOString()
           }));
