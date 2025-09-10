@@ -2512,21 +2512,37 @@
           if (helper.estimate && helper.estimate.damage_centers && helper.estimate.damage_centers.length > 0) {
             console.log('✅ Found damage centers:', helper.estimate.damage_centers);
             helper.estimate.damage_centers.forEach((center, index) => {
-              // Get the actual location and center number properly
-              const location = center.Location || center.damage_center_name || '';
+              console.log(`🔍 Processing damage center ${index + 1}:`, center);
               
-              // Extract just the number from "Damage center Number" field
-              let centerNum = center["Damage center Number"] || String(index + 1);
+              // Get the actual location and center number properly
+              const location = center.Location || center.damage_center_name || center.location || '';
+              
+              // Extract center number - try multiple field variations
+              let centerNum = center["Damage center Number"] || 
+                             center.center_number || 
+                             center.number || 
+                             String(index + 1);
+              
               // Extract all numbers and take the last one
               const numberMatch = String(centerNum).match(/\d+/g);
               centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
               
-              damageCenterNames.push({
-                name: location,  // The actual location/part name
-                number: centerNum,  // Just the number (1, 2, 3, etc.)
+              // Get repair nature with fallback options
+              const repairNature = center.RepairNature || 
+                                  center.repair_nature || 
+                                  center.repairType || 
+                                  center.Description || 
+                                  '';
+              
+              const centerData = {
+                name: location,  // estimate.damage_centers[item].Location
+                number: centerNum,  // estimate.damage_centers[item].center_number
                 description: center.Description || '',
-                RepairNature: center.RepairNature || ''
-              });
+                RepairNature: repairNature  // estimate.damage_centers[item].RepairNature
+              };
+              
+              console.log(`✅ Mapped center ${index + 1}:`, centerData);
+              damageCenterNames.push(centerData);
             });
           } else {
             console.log('❌ No damage centers found in helper.estimate.damage_centers');
@@ -2546,29 +2562,38 @@
         console.log('🗑️ Cleared existing depreciation rows');
         
         // Add a row for each damage center
-        damageCenterNames.forEach(centerData => {
+        damageCenterNames.forEach((centerData, index) => {
+          console.log(`🏗️ Creating row ${index + 1} with data:`, centerData);
+          
           // Handle both old string format and new object format
           const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
           const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
           const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
           const centerRepairNature = (typeof centerData === 'object') ? centerData.RepairNature : '';
           
-          // ✅ CORRECT: Field mapping for depreciation from damage centers
-          // "מס' מוקד" should show the center number
-          // "החלק הניזוק" should show LOCATION/PART (use centerName which contains the damage location)  
-          // "מהות התיקון" should show REPAIR NATURE (use centerRepairNature which contains repair nature details)
-          const centerNum = centerNumber || (damageCenterNames.indexOf(centerData) + 1); // Fallback to index + 1
-          const damageLocation = centerName || ''; // This is the location/part that was damaged
+          // ✅ MAPPING according to screenshot:
+          // Field 1 (מס' מוקד): estimate.damage_centers[item].center_number
+          // Field 2 (החלק הניזוק): estimate.damage_centers[item].Location  
+          // Field 3 (מהות התיקון): estimate.damage_centers[item].RepairNature
+          // Field 4 (% ירידת ערך): manual field filled by user
+          // Field 5 (ערך ב-₪): local calculation: percentage X full market value
+          
+          const centerNum = centerNumber || (index + 1); // Fallback to index + 1
+          const damageLocation = centerName || ''; 
           const workEssence = centerRepairNature || '';
           
-          // Use addDepField function with complete mapping from screenshot
-          addDepField({
+          const rowData = {
             center_number: centerNum,                    // estimate.damage_centers[item].center_number
             damaged_part: damageLocation,                // estimate.damage_centers[item].Location  
             repair_type: workEssence,                    // estimate.damage_centers[item].RepairNature
             percent: '',                                 // manual field filled by user
             value: ''                                    // local calculation: percentage X full market value
-          });
+          };
+          
+          console.log(`📋 Final row data for addDepField:`, rowData);
+          
+          // Use addDepField function with complete mapping from screenshot
+          addDepField(rowData);
         });
         
         console.log(`✅ Added ${damageCenterNames.length} depreciation rows from damage centers`);
