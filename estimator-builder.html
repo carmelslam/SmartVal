@@ -1262,21 +1262,6 @@
       }, 1000);
       
       console.log('✅ Estimate Builder initialized successfully');
-      
-      // DEBUG: Intercept sessionStorage writes to track what's overwriting our deletion
-      const originalSetItem = sessionStorage.setItem;
-      sessionStorage.setItem = function(key, value) {
-        if (key === 'helper') {
-          const helper = JSON.parse(value);
-          if (helper.estimate?.adjustments?.additional && helper.estimate.adjustments.additional.length > 0) {
-            console.log('🔍 STORAGE INTERCEPT: Helper being saved WITH additional adjustments:', helper.estimate.adjustments.additional.length);
-            console.trace('🔍 Call stack:');
-          } else {
-            console.log('🔍 STORAGE INTERCEPT: Helper being saved WITHOUT additional adjustments');
-          }
-        }
-        return originalSetItem.call(this, key, value);
-      };
     }
 
     // Toggle section visibility
@@ -3563,11 +3548,6 @@
         
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // DEBUG: Check if additional adjustments exist at start of calculation
-        if (helper.estimate?.adjustments?.additional) {
-          console.log('🔍 CALC DEBUG: Found additional adjustments at start of calculation:', helper.estimate.adjustments.additional.length);
-        }
-        
         // Get base price
         let basePrice = 0;
         const basicPriceField = document.getElementById('basicPrice');
@@ -3830,7 +3810,7 @@
     
     // Remove adjustment row - SIMPLIFIED VERSION
     window.removeAdjustmentRow = function(rowId) {
-      console.log('🗑️ DELETE STARTED: Removing row:', rowId);
+      console.log('🗑️ Removing row:', rowId);
       
       const row = document.getElementById(rowId);
       if (!row) {
@@ -3851,16 +3831,6 @@
       else if (container.id === 'allAdjustmentsList') category = 'additional';
       
       console.log(`🎯 Category: ${category}, Row Index: ${rowIndex}`);
-      
-      // ADDITIONAL DEBUG: Log before state for additional adjustments
-      if (category === 'additional') {
-        console.log('🔍 BEFORE DELETE - Additional adjustments state:');
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
-        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
-        console.log('🔍 UI rows count:', container.children.length);
-        console.log('🔍 Row being deleted:', row.outerHTML);
-      }
       
       // Remove from UI first
       row.remove();
@@ -3925,15 +3895,6 @@
       }
       
       console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items remaining`);
-      console.log(`📊 Updated valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
-      
-      // DEBUG: Special logging for additional adjustments
-      if (category === 'additional') {
-        console.log('🔍 ADDITIONAL ADJUSTMENTS DEBUG:');
-        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
-        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
-        console.log('🔍 Remaining UI rows in allAdjustmentsList:', document.getElementById('allAdjustmentsList').children.length);
-      }
       
       // For features and registration, also update gross_value_adjustments and sync UI sections
       if (category === 'features' || category === 'registration') {
@@ -3961,35 +3922,9 @@
         console.log(`🔄 Synced deletion between gross and full market sections for ${category}`);
       }
       
-      // ADDITIONAL DEBUG: Log after state for additional adjustments
-      if (category === 'additional') {
-        console.log('🔍 AFTER DELETE - Additional adjustments state:');
-        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
-        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
-        console.log('🔍 UI rows count:', container.children.length);
-      }
-      
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
-      console.log('🔍 Helper saved to sessionStorage');
-      
-      // CRITICAL DEBUG: Check helper immediately after saving
-      if (category === 'additional') {
-        const savedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log('🔍 IMMEDIATE CHECK after save - estimate.adjustments.additional:', savedHelper.estimate?.adjustments?.additional);
-        console.log('🔍 IMMEDIATE CHECK after save - valuation.adjustments.additional:', savedHelper.valuation?.adjustments?.additional);
-      }
-      
       updateFullMarketValueCalculation();
-      
-      // FINAL DEBUG: Check helper after calculation
-      if (category === 'additional') {
-        setTimeout(() => {
-          const finalHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          console.log('🔍 FINAL CHECK after calculation - estimate.adjustments.additional:', finalHelper.estimate?.adjustments?.additional);
-          console.log('🔍 FINAL CHECK after calculation - valuation.adjustments.additional:', finalHelper.valuation?.adjustments?.additional);
-        }, 100);
-      }
     }
     
     // Sync adjustment to helper - REBUILD ENTIRE CATEGORY FROM ALL UI ROWS
@@ -4129,7 +4064,7 @@
       }
     }
 
-    // Helper function to sync UI section with data array
+    // Helper function to sync UI section with data array (preserve existing rows when possible)
     function syncUISection(containerId, dataArray) {
       try {
         const container = document.getElementById(containerId);
@@ -4138,7 +4073,25 @@
           return;
         }
         
-        // Clear existing rows
+        const currentRows = Array.from(container.children);
+        
+        // If we have the same number of rows, just update values instead of rebuilding
+        if (currentRows.length === dataArray.length) {
+          dataArray.forEach((item, index) => {
+            const row = currentRows[index];
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = item.value || '';
+              inputs[1].value = item.type || 'plus';
+              inputs[2].value = item.percentage || item.percent || '';
+              inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+            }
+          });
+          console.log(`🔄 Updated ${containerId} values without rebuilding rows`);
+          return;
+        }
+        
+        // Only rebuild if row count doesn't match
         container.innerHTML = '';
         
         // Add rows based on data
@@ -4166,7 +4119,7 @@
           }
         });
         
-        console.log(`🔄 Synced ${containerId} with ${dataArray.length} items`);
+        console.log(`🔄 Rebuilt ${containerId} with ${dataArray.length} items`);
         
       } catch (error) {
         console.error(`❌ Error syncing UI section ${containerId}:`, error);
@@ -4704,7 +4657,6 @@
         // 6. Load Additional Adjustments
         if (adjustments.additional && adjustments.additional.length > 0) {
           console.log('📝 Loading additional adjustments:', adjustments.additional);
-          console.log('🔍 LOAD DEBUG: About to load', adjustments.additional.length, 'additional adjustments');
           adjustments.additional.forEach(item => {
             addFullMarketAdjustment();
             const lastRow = document.querySelector('#allAdjustmentsList > div:last-child');
@@ -6168,7 +6120,6 @@
     // Auto-save function for real-time updates
     function autoSaveToHelper() {
       try {
-        console.log('🔍 AUTO-SAVE DEBUG: Starting auto-save');
         // Get helper from sessionStorage or window.helper
         let helperStr = sessionStorage.getItem('helper');
         if (!helperStr || helperStr === 'undefined') {
