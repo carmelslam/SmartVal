@@ -2189,6 +2189,28 @@
         window.helper.expertise.damage_blocks = collectedDamageBlocks;
         window.helper.estimate.damage_centers = collectedEstimateCenters;
         
+        // 🆕 SAFE: Populate helper.damage_centers from centers (preserves final report access)
+        // Only populate if empty or if it's clearly from estimator (preserve final report data)
+        if (!window.helper.damage_centers || 
+            window.helper.damage_centers.length === 0 || 
+            window.helper.damage_centers.every(center => center.source === 'estimator')) {
+          
+          window.helper.damage_centers = collectedEstimateCenters.map(center => ({
+            center_number: center.center_number,
+            location: center.location,
+            description: center.description,
+            parts: center.parts || [],
+            works: center.works || [],
+            repairs: center.repairs || [],
+            costs: center.costs,
+            source: 'estimator',
+            last_updated: new Date().toISOString()
+          }));
+          console.log('✅ Populated helper.damage_centers from estimator data');
+        } else {
+          console.log('⚠️ Preserving existing helper.damage_centers (likely from final report)');
+        }
+        
         // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
         const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
         const totalEstimateWithVAT = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_with_vat, 0);
@@ -4861,7 +4883,7 @@
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
-        // Load from damage centers helper (primary source) with fallbacks
+        // Load from damage centers helper (primary source) with fallbacks - preserves final report data
         const damageCenters = helper.centers || 
                              helper.damage_centers || 
                              helper.expertise?.damage_blocks || [];
@@ -7050,10 +7072,17 @@
       // FORCE SYNC ALL DAMAGE CENTER LOCATIONS
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Make sure helper.centers is the source of truth
+      // Make sure helper.centers is the source of truth (SAFE: preserves final report data)
       if (helper.centers && Array.isArray(helper.centers)) {
-        // Copy centers to damage_centers location
-        helper.damage_centers = [...helper.centers];
+        // Only copy centers to damage_centers if damage_centers is empty or from estimator
+        if (!helper.damage_centers || 
+            helper.damage_centers.length === 0 ||
+            helper.damage_centers.every(center => center.source === 'estimator')) {
+          helper.damage_centers = [...helper.centers];
+          console.log('✅ Synced helper.damage_centers from helper.centers (estimator source)');
+        } else {
+          console.log('⚠️ Preserving existing helper.damage_centers (final report source)');
+        }
         
         // Update window.helper
         window.helper = helper;
