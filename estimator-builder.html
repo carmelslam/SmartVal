@@ -2320,10 +2320,17 @@
         // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
-        // Always update depreciation section to reflect current damage centers (stage-integrity)
+        // Only update depreciation section if no user data exists (preserve user input)
         if (typeof updateDepreciationFromDamageCenters === 'function') {
-          console.log('🔄 Force updating depreciation from current damage centers for stage integrity');
-          updateDepreciationFromDamageCenters(); // No params = read from helper.estimate.damage_centers
+          const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const hasUserDepreciationData = helperData.estimate?.depreciation?.bulk_items && helperData.estimate.depreciation.bulk_items.length > 0;
+          
+          if (!hasUserDepreciationData) {
+            console.log('🔄 Force updating depreciation from current damage centers for stage integrity');
+            updateDepreciationFromDamageCenters(); // No params = read from helper.estimate.damage_centers
+          } else {
+            console.log('✅ Preserving user depreciation data, skipping damage center auto-update');
+          }
         }
         
         // Trigger floating screen refresh
@@ -2905,11 +2912,18 @@
           }, 200);
         } 
         
-        // ALWAYS sync with current damage centers for stage integrity (regardless of saved data)
-        console.log('🔄 Ensuring depreciation table reflects current estimate.damage_centers');
-        setTimeout(() => {
-          updateDepreciationFromDamageCenters(); // This will read from helper.estimate.damage_centers
-        }, 100);
+        // Only sync with damage centers if no user depreciation data exists
+        const storedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const hasUserDepreciationData = storedHelper.estimate?.depreciation?.bulk_items && storedHelper.estimate.depreciation.bulk_items.length > 0;
+        
+        if (!hasUserDepreciationData) {
+          console.log('🔄 No user depreciation data found, syncing with damage centers');
+          setTimeout(() => {
+            updateDepreciationFromDamageCenters(); // This will read from helper.estimate.damage_centers
+          }, 100);
+        } else {
+          console.log('✅ User depreciation data exists, skipping auto-sync with damage centers');
+        }
         
       } catch (error) {
         console.error('Error loading depreciation data to UI:', error);
@@ -3135,6 +3149,7 @@
 
     // Lightweight auto-save for depreciation field changes
     function autoSaveDepreciationData() {
+      console.log('🚨 AUTO-SAVE FUNCTION CALLED!');
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
