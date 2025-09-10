@@ -2200,14 +2200,20 @@
         // Initialize damage assessment if needed
         if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
         
-        // Save damage assessment summary and totals
+        // Save damage assessment summary with enhanced product data
         window.helper.damage_assessment.summary = {
           total_centers: document.querySelectorAll('.editable-damage-card').length,
           total_parts: document.querySelectorAll('.part-row').length,
           total_works: document.querySelectorAll('.work-row').length,
           total_repairs: document.querySelectorAll('.repair-row').length,
           damage_center_names: damageCenterNames,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
+          // Enhanced product data for final report compatibility
+          parts_cost: collectedEstimateCenters.reduce((sum, c) => sum + (c.costs?.parts_cost || 0), 0),
+          works_cost: collectedEstimateCenters.reduce((sum, c) => sum + (c.costs?.work_cost || 0), 0), 
+          repairs_cost: collectedEstimateCenters.reduce((sum, c) => sum + (c.costs?.repairs_cost || 0), 0),
+          total_cost: collectedEstimateCenters.reduce((sum, c) => sum + (c.costs?.total_cost || 0), 0),
+          total_with_vat: collectedEstimateCenters.reduce((sum, c) => sum + (c.costs?.total_with_vat || 0), 0)
         };
         
         // Save updated centers count
@@ -6411,6 +6417,17 @@
         } else {
           console.log('⚠️ Preserving existing claims_data.total_claim:', window.helper.claims_data.total_claim);
         }
+        
+        // Method 5: CRITICAL FIX - Populate damage_assessment.totals (maintains data flow to final report)
+        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
+        window.helper.damage_assessment.totals = {
+          "Total works": totals.works.value,
+          "Total parts": totals.parts.value,
+          "Total repairs": totals.repairs.value,
+          "Total without VAT": totals.total_before_vat.value,
+          "Total with VAT": totals.total_with_vat.value
+        };
+        console.log('✅ Updated damage_assessment.totals for final-report compatibility');
         
         // Also save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
