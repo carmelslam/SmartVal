@@ -3839,14 +3839,23 @@
       if (event.target.matches('button.remove[data-action="delete-row"]')) {
         event.preventDefault();
         
-        // Find the parent row (the div with an ID)
+        // Find the parent row (the div with an ID) - look for the adjustment row specifically
         let parentRow = event.target.closest('div[id]');
         
-        if (parentRow && parentRow.id) {
+        // Make sure we found a proper row with an ID that looks like an adjustment row
+        if (parentRow && parentRow.id && (
+          parentRow.id.includes('Adj_') || 
+          parentRow.id.includes('featureAdj_') || 
+          parentRow.id.includes('regAdj_') || 
+          parentRow.id.includes('mileageAdj_') ||
+          parentRow.id.includes('ownershipAdj_') ||
+          parentRow.id.includes('ownersAdj_') ||
+          parentRow.id.includes('fullAdj_')
+        )) {
           console.log('🗑️ Delete button clicked for row:', parentRow.id);
           removeAdjustmentRow(parentRow.id);
         } else {
-          console.error('❌ Could not find parent row for delete button');
+          console.error('❌ Could not find valid adjustment row for delete button:', parentRow?.id);
         }
       }
     }
