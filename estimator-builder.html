@@ -2461,48 +2461,87 @@
       
       // Add auto-calculation functionality to the percentage field
       setTimeout(() => {
-        const row = document.getElementById(rowId);
-        if (!row) return;
-        
-        // Add tooltip update listeners to all input fields
-        const inputs = row.querySelectorAll('input');
-        inputs.forEach(input => {
-          input.addEventListener('input', function() {
-            this.title = this.value;
-          });
-        });
-        
-        const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
-        const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
-        
-        if (percentInput && valueInput) {
-          console.log(`🔢 Setting up calculation for row ${rowId}`);
-          
-          percentInput.addEventListener('input', function() {
-            console.log(`💰 Percentage changed in row ${rowId}: ${this.value}`);
-            
-            // Clean the value to extract the numeric part for calculation only
-            const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
-            let percent = parseFloat(cleanValue) || 0;
-            
-            // Calculate value from market price automatically
-            const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
-            const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
-            const marketValue = parseFloat(marketValueStr) || 0;
-            
-            const calculatedValue = (marketValue * percent) / 100;
-            const formattedValue = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
-            valueInput.value = formattedValue;
-            
-            console.log(`✅ Calculated: ${percent}% of ₪${marketValue.toLocaleString()} = ${formattedValue}`);
-            
-            // Save data after calculation
-            saveDepreciationData();
-          });
-        } else {
-          console.log(`❌ Could not find inputs for row ${rowId}`);
-        }
+        attachCalculationListeners(rowId);
       }, 100);
+    }
+
+    // Attach calculation listeners to a specific row
+    function attachCalculationListeners(rowId) {
+      const row = document.getElementById(rowId);
+      if (!row) {
+        console.log(`❌ Row ${rowId} not found for attaching listeners`);
+        return;
+      }
+      
+      console.log(`🔢 Attaching calculation listeners to row ${rowId}`);
+      
+      // Add tooltip update listeners to all input fields
+      const inputs = row.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.addEventListener('input', function() {
+          this.title = this.value;
+        });
+      });
+      
+      const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
+      const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+      
+      if (percentInput && valueInput) {
+        console.log(`✅ Found inputs for row ${rowId}, setting up calculation`);
+        
+        // Remove existing listeners first to avoid duplicates
+        percentInput.removeEventListener('input', percentInput._calcListener);
+        
+        // Create the calculation function
+        const calcFunction = function() {
+          console.log(`💰 Percentage changed in row ${rowId}: ${this.value}`);
+          
+          // Clean the value to extract the numeric part for calculation only
+          const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
+          let percent = parseFloat(cleanValue) || 0;
+          
+          // Calculate value from market price automatically
+          const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+          const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+          const marketValue = parseFloat(marketValueStr) || 0;
+          
+          const calculatedValue = (marketValue * percent) / 100;
+          const formattedValue = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+          valueInput.value = formattedValue;
+          
+          console.log(`✅ Calculated: ${percent}% of ₪${marketValue.toLocaleString()} = ${formattedValue}`);
+          
+          // Save data after calculation
+          saveDepreciationData();
+        };
+        
+        // Store reference to remove later and add listener
+        percentInput._calcListener = calcFunction;
+        percentInput.addEventListener('input', calcFunction);
+        
+        console.log(`🎯 Calculation listener attached to row ${rowId}`);
+      } else {
+        console.log(`❌ Could not find percentage or value inputs for row ${rowId}`);
+      }
+    }
+
+    // Attach listeners to all existing depreciation rows
+    function attachAllCalculationListeners() {
+      console.log('🔄 Attaching calculation listeners to all rows...');
+      const allRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+      console.log(`📊 Found ${allRows.length} depreciation rows`);
+      
+      allRows.forEach((row, index) => {
+        const rowId = row.id;
+        if (rowId) {
+          console.log(`🎯 Processing row ${index + 1}: ${rowId}`);
+          attachCalculationListeners(rowId);
+        } else {
+          console.log(`❌ Row ${index + 1} has no ID`);
+        }
+      });
+      
+      console.log('✅ Finished attaching listeners to all rows');
     }
 
     function removeDepField(rowId) {
@@ -2613,6 +2652,11 @@
         
         console.log(`✅ Added ${damageCenterNames.length} depreciation rows from damage centers`);
         
+        // Attach calculation listeners to all newly created rows
+        setTimeout(() => {
+          attachAllCalculationListeners();
+        }, 200);
+        
       } catch (error) {
         console.error('Error updating depreciation from damage centers:', error);
       }
@@ -2677,6 +2721,11 @@
           });
           
           console.log('✅ Loaded all depreciation bulk items to UI');
+          
+          // Attach calculation listeners to all loaded rows
+          setTimeout(() => {
+            attachAllCalculationListeners();
+          }, 200);
         } else {
           console.log('📋 No bulk items found, will populate from damage centers');
           // If no saved data, populate from damage centers
