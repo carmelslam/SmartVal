@@ -2320,9 +2320,10 @@
         // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
-        // Update depreciation section with damage center names
+        // Always update depreciation section to reflect current damage centers (stage-integrity)
         if (typeof updateDepreciationFromDamageCenters === 'function') {
-          updateDepreciationFromDamageCenters(damageCenterNames);
+          console.log('🔄 Force updating depreciation from current damage centers for stage integrity');
+          updateDepreciationFromDamageCenters(); // No params = read from helper.estimate.damage_centers
         }
         
         // Trigger floating screen refresh
@@ -2869,11 +2870,13 @@
           setTimeout(() => {
             attachAllCalculationListeners();
           }, 200);
-        } else {
-          console.log('📋 No bulk items found, will populate from damage centers');
-          // If no saved data, populate from damage centers
-          updateDepreciationFromDamageCenters();
-        }
+        } 
+        
+        // ALWAYS sync with current damage centers for stage integrity (regardless of saved data)
+        console.log('🔄 Ensuring depreciation table reflects current estimate.damage_centers');
+        setTimeout(() => {
+          updateDepreciationFromDamageCenters(); // This will read from helper.estimate.damage_centers
+        }, 100);
         
       } catch (error) {
         console.error('Error loading depreciation data to UI:', error);
