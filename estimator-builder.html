@@ -3897,6 +3897,14 @@
       console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items remaining`);
       console.log(`📊 Updated valuation.adjustments.${category}:`, helper.valuation.adjustments[category]);
       
+      // DEBUG: Special logging for additional adjustments
+      if (category === 'additional') {
+        console.log('🔍 ADDITIONAL ADJUSTMENTS DEBUG:');
+        console.log('🔍 estimate.adjustments.additional:', helper.estimate?.adjustments?.additional);
+        console.log('🔍 valuation.adjustments.additional:', helper.valuation?.adjustments?.additional);
+        console.log('🔍 Remaining UI rows in allAdjustmentsList:', document.getElementById('allAdjustmentsList').children.length);
+      }
+      
       // For features and registration, also update gross_value_adjustments and sync UI sections
       if (category === 'features' || category === 'registration') {
         // Ensure gross_value_adjustments exists
@@ -3923,46 +3931,13 @@
         console.log(`🔄 Synced deletion between gross and full market sections for ${category}`);
       }
       
-      // CRITICAL: Save and sync ALL adjustment-related storage before any calculations  
+      // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      // For features/registration, also rebuild gross_value_adjustments from current UI state
-      if (category === 'features' || category === 'registration') {
-        helper = syncAdjustmentToEstimateHelper(null, category, helper) || helper;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-      }
-      
-      // Also trigger gross calculation if it's a gross section
-      if (container.id === 'featuresAdjustmentsList' || container.id === 'registrationAdjustmentsList') {
-        updateGrossMarketValueCalculation();
-      } else {
-        updateFullMarketValueCalculation();
-      }
+      updateFullMarketValueCalculation();
     }
-    
-    // Debounce mechanism to prevent race conditions
-    const syncDebounceTimers = {};
     
     // Sync adjustment to helper - REBUILD ENTIRE CATEGORY FROM ALL UI ROWS
     window.syncAdjustmentToHelper = function(element, category) {
-      try {
-        // Clear any existing debounce timer for this category
-        if (syncDebounceTimers[category]) {
-          clearTimeout(syncDebounceTimers[category]);
-        }
-        
-        // Debounce the sync to prevent race conditions (50ms delay)
-        syncDebounceTimers[category] = setTimeout(() => {
-          performSyncAdjustmentToHelper(element, category);
-        }, 50);
-        
-      } catch (error) {
-        console.error('❌ Error setting up sync debounce:', error);
-      }
-    }
-    
-    // Actual sync function (debounced)
-    function performSyncAdjustmentToHelper(element, category) {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
@@ -4467,10 +4442,8 @@
       try {
         console.log('📊 Loading GROSS adjustments from helper.estimate.adjustments');
         
-        // CLEAN UP TEST DATA FIRST (but save result back)
+        // CLEAN UP TEST DATA FIRST 
         helper = cleanupTestDataAndRestoreValuationFlow(helper);
-        // CRITICAL FIX: Save cleaned helper back to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
         
         // CLEAR EXISTING GROSS UI ROWS FIRST to prevent duplication
         document.getElementById('featuresAdjustmentsList').innerHTML = '';
@@ -4547,10 +4520,8 @@
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
         
-        // CLEAN UP TEST DATA FIRST (but save result back)
+        // CLEAN UP TEST DATA FIRST 
         helper = cleanupTestDataAndRestoreValuationFlow(helper);
-        // CRITICAL FIX: Save cleaned helper back to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
         
         // CLEAR EXISTING UI ROWS FIRST to prevent duplication
         document.getElementById('fullFeaturesAdjustmentsList').innerHTML = '';
