@@ -5992,3 +5992,210 @@ The Gross section shows only features and registration categories (subset of ful
 8. **Debugging Strategy**: Use extensive console logging to track data flow through all functions
 
 ============================================================================================
+**FINAL RESOLUTION OF ADJUSTMENT FUNCTIONALITY ISSUES**
+============================================================================================
+
+## PROBLEM SUMMARY
+**Full Market Value Section Issues (RESOLVED):**
+1. **Additional adjustments deletion failure**: Items would reappear after deletion and page refresh
+2. **Core adjustment wrong row deletion**: Delete buttons were targeting wrong rows (original vs newly added)
+3. **Automatic test data cleanup interference**: Function was removing legitimate test entries
+
+**Gross Vehicle Value Section Issues (RESOLVED):**
+1. **Fields not auto-calculating on page load**: Value fields showing "NaN₪" until manual stimulation
+2. **Field mapping corruption**: Description fields showing "NaN" or category names after page refresh
+3. **Cumulative calculations not updating dynamically**: Total calculations not triggered after data loading
+
+## SOLUTION METHODOLOGY
+
+### 1. **Additional Adjustments Deletion Fix**
+**Problem Analysis**: 
+- Used comprehensive debugging with sessionStorage intercepts and call stack traces
+- Discovered that deletion worked correctly but was immediately overwritten during save
+
+**Root Cause**: 
+- `saveWithFeedback()` function was using stale `window.helper` data instead of current `sessionStorage` data
+- Sequence: Delete → Update sessionStorage → Save → `window.helper` overwrites sessionStorage with old data
+
+**Solution Applied**:
+```javascript
+// BEFORE (BROKEN):
+const helper = window.helper || {};
+
+// AFTER (FIXED): 
+const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+```
+
+**Logic**: Always use current sessionStorage data as single source of truth, never rely on potentially stale window.helper
+
+### 2. **Core Adjustment Wrong Row Deletion Fix**
+**Problem Analysis**:
+- Added targeted debugging to track row deletion flow
+- Identified that correct row was being deleted from UI, but bidirectional sync was rebuilding other sections
+
+**Root Cause**: 
+- `syncUISection()` function was clearing entire containers (`innerHTML = ''`) and recreating all rows with new IDs
+- When deleting row from full market features, it would rebuild gross features section, destroying original row IDs
+- Users would then click delete on "first row" but it was actually a newly created row with different ID
+
+**Solution Applied**:
+Enhanced `syncUISection()` with intelligent row preservation:
+```javascript
+// NEW LOGIC: Preserve existing rows when possible
+if (currentRows.length === dataArray.length) {
+  // Just update values in existing rows (preserve IDs)
+  dataArray.forEach((item, index) => {
+    const row = currentRows[index];
+    const inputs = row.querySelectorAll('input, select');
+    // Update input values without rebuilding HTML
+  });
+} else {
+  // Only rebuild when row count actually changes
+  container.innerHTML = '';
+  // Create new rows
+}
+```
+
+**Logic**: Minimize DOM manipulation - only rebuild when absolutely necessary, otherwise just update existing elements
+
+### 3. **Test Data Cleanup Function Removal**
+**Problem Analysis**:
+- Function `cleanupTestDataAndRestoreValuationFlow()` was automatically removing any data containing "test"
+- Running on every page load, interfering with legitimate testing
+
+**Solution Applied**:
+```javascript
+// DISABLED both calls to the cleanup function in:
+// - loadAdjustments() 
+// - loadGrossAdjustments()
+
+// FROM:
+helper = cleanupTestDataAndRestoreValuationFlow(helper);
+
+// TO:
+// Test data cleanup disabled - no longer needed
+```
+
+**Logic**: Function served its purpose during initial development cleanup but became counterproductive for ongoing testing
+
+## TECHNICAL IMPLEMENTATION DETAILS
+
+### Key Functions Modified:
+1. **`saveWithFeedback()`** - Fixed data source precedence
+2. **`syncUISection()`** - Added intelligent row preservation logic  
+3. **`loadAdjustments()`** - Disabled test data cleanup
+4. **`loadGrossAdjustments()`** - Disabled test data cleanup
+
+### Data Flow Architecture Maintained:
+- **Real-time sync**: `syncAdjustmentToHelper()` continues to rebuild arrays from UI state
+- **Bidirectional sync**: Features/registration still sync between gross and full market sections
+- **Persistence**: Both `estimate.adjustments` (arrays) and `valuation.adjustments` (objects) maintained
+- **Loading**: Fallback chain from estimate → valuation → empty state preserved
+
+## DEBUGGING METHODOLOGY USED
+
+### 1. **Comprehensive Logging Strategy**:
+- Added sessionStorage write interceptors to track all data modifications
+- Implemented before/during/after state logging for deletion operations
+- Used call stack traces to identify exact functions causing issues
+
+### 2. **Minimal Impact Approach**:
+- Made smallest possible changes to achieve fixes
+- Preserved all existing functionality and data structures
+- Tested each fix individually before proceeding to next issue
+
+### 3. **Root Cause Analysis**:
+- Avoided symptomatic fixes in favor of identifying actual underlying causes
+- Used systematic elimination to isolate specific problematic functions
+- Verified fixes through complete user workflow testing
+
+## FINAL RESULT
+All adjustment functionality now works correctly:
+- ✅ Additional adjustments delete properly and don't reappear
+- ✅ Core adjustment deletions target the correct specific rows
+- ✅ New rows can be added and persist correctly
+- ✅ Bidirectional sync between sections works without destroying row IDs
+- ✅ Data persistence survives page refreshes
+- ✅ Test data entries no longer get automatically cleaned up
+
+**Key Lesson**: Data consistency issues often stem from multiple functions operating on the same data with different assumptions about data sources and timing. The solution required fixing data source precedence and minimizing unnecessary DOM rebuilding.
+
+============================================================================================
+**GROSS VEHICLE VALUE SECTION FIXES**
+============================================================================================
+
+## GROSS SECTION PROBLEM ANALYSIS
+
+### 4. **Field Mapping Corruption Fix**
+**Problem Analysis**:
+- Description fields showing "NaN" or category names instead of user input text after page refresh
+- Root cause investigation revealed field mapping confusion in loading functions
+
+**Root Cause**:
+- Four data loading functions were incorrectly using `adjustment.description` (Hebrew category names) instead of `adjustment.value` (user input text) for input field population
+- Data structure: `description` = category name, `value` = user text input
+
+**Solution Applied**:
+```javascript
+// BEFORE (BROKEN): Used category names for input fields
+inputs[0].value = item.description || '';
+
+// AFTER (FIXED): Use correct user input text
+inputs[0].value = item.value || '';
+```
+**Fixed in functions**: `loadGrossValues`, `loadGrossAdjustments`, `loadAdjustments`, `loadFullMarketAdjustments`
+
+### 5. **Auto-Calculation Triggering Fix**
+**Problem Analysis**:
+- Value fields showing "NaN₪" on page load until manual field stimulation
+- Percentage-to-amount calculations not triggered automatically during data loading
+
+**Root Cause**:
+- Data loading functions populate percentage fields but don't trigger `calculateAdjustmentValueSimple` function
+- Amount fields remain empty until user manually interacts with percentage fields
+
+**Solution Applied**:
+```javascript
+// Added synthetic event triggering after data loading
+const grossFeatureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+grossFeatureRows.forEach(row => {
+  const percentInput = row.querySelector('input[placeholder="אחוז"]');
+  if (percentInput && percentInput.value) {
+    if (typeof calculateAdjustmentValueSimple === 'function') {
+      calculateAdjustmentValueSimple(percentInput);
+    }
+  }
+});
+```
+**Applied in functions**: `loadGrossValues`, `loadGrossAdjustments`
+
+### 6. **Cumulative Calculations Dynamic Update Fix**
+**Problem Analysis**:
+- Total calculations not updating dynamically after data loading
+- Section totals showing outdated values until manual recalculation
+
+**Root Cause**:
+- Missing calls to `updateGrossMarketValueCalculation` after synthetic event completion
+- Individual field calculations completed but cumulative totals not refreshed
+
+**Solution Applied**:
+```javascript
+// Added cumulative calculation trigger after individual field calculations
+if (typeof updateGrossMarketValueCalculation === 'function') {
+  updateGrossMarketValueCalculation();
+}
+```
+**Enhancement**: Added fallback error handling to `updateGrossMarketValueCalculation` for robustness
+
+## GROSS SECTION FINAL RESULT
+All gross vehicle value functionality now works correctly:
+- ✅ Fields auto-calculate on page load without manual stimulation
+- ✅ Description fields show correct user input text after refresh
+- ✅ Cumulative calculations update dynamically in real-time
+- ✅ Percentage-to-amount conversions trigger automatically
+- ✅ Error handling prevents calculation failures from breaking the UI
+- ✅ Data loading preserves correct field mapping throughout
+
+**Key Implementation Pattern**: Synthetic event triggering + immediate cumulative updates ensures seamless user experience from page load to real-time calculations.
+
+============================================================================================

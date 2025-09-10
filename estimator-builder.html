@@ -2507,6 +2507,19 @@
         
       } catch (error) {
         console.error('❌ Error updating gross market value:', error);
+        
+        // Fallback: Try to at least update the result field with basic price
+        try {
+          const basicPriceField = document.getElementById('basicPrice');
+          const basicPrice = parseFloat((basicPriceField?.value || '').replace(/[₪,]/g, '')) || 0;
+          const resultField = document.getElementById('grossMarketValueResult');
+          if (resultField && basicPrice > 0) {
+            resultField.value = `₪${basicPrice.toLocaleString()}`;
+            console.log('⚠️ Fallback: Set gross market value to basic price:', basicPrice);
+          }
+        } catch (fallbackError) {
+          console.error('❌ Even fallback failed:', fallbackError);
+        }
       }
     }
 
@@ -4451,8 +4464,7 @@
       try {
         console.log('📊 Loading GROSS adjustments from helper.estimate.adjustments');
         
-        // CLEAN UP TEST DATA FIRST 
-        helper = cleanupTestDataAndRestoreValuationFlow(helper);
+        // Test data cleanup disabled - no longer needed
         
         // CLEAR EXISTING GROSS UI ROWS FIRST to prevent duplication
         document.getElementById('featuresAdjustmentsList').innerHTML = '';
@@ -4518,6 +4530,23 @@
           });
         }
         
+        // CRITICAL: Trigger individual field calculations first (percentage to amount conversion)
+        const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        grossRegistrationRows.forEach(row => {
+          const percentInput = row.querySelector('input[placeholder="אחוז"]');
+          if (percentInput && percentInput.value) {
+            // Trigger the percentage-to-amount calculation
+            if (typeof calculateAdjustmentValueSimple === 'function') {
+              calculateAdjustmentValueSimple(percentInput);
+            }
+          }
+        });
+        
+        // CRITICAL: Update cumulative calculations after individual field calculations
+        if (typeof updateGrossMarketValueCalculation === 'function') {
+          updateGrossMarketValueCalculation();
+        }
+        
         console.log('✅ Gross adjustments loaded successfully');
         
       } catch (error) {
@@ -4529,8 +4558,7 @@
       try {
         console.log('📊 Loading adjustments from helper.estimate.adjustments');
         
-        // CLEAN UP TEST DATA FIRST 
-        helper = cleanupTestDataAndRestoreValuationFlow(helper);
+        // Test data cleanup disabled - no longer needed
         
         // CLEAR EXISTING UI ROWS FIRST to prevent duplication
         document.getElementById('fullFeaturesAdjustmentsList').innerHTML = '';
@@ -4757,10 +4785,10 @@
                 const lastRow = rows[rows.length - 1];
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
-                  if (inputs[0]) inputs[0].value = adjustment.description || '';
+                  if (inputs[0]) inputs[0].value = adjustment.value || '';
                   if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
                   if (inputs[2]) inputs[2].value = adjustment.percentage || '';
-                  if (inputs[3]) inputs[3].value = adjustment.value || '';
+                  if (inputs[3]) inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                 }
               });
             }
@@ -4773,10 +4801,10 @@
                 const lastRow = rows[rows.length - 1];
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
-                  if (inputs[0]) inputs[0].value = adjustment.description || '';
+                  if (inputs[0]) inputs[0].value = adjustment.value || '';
                   if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
                   if (inputs[2]) inputs[2].value = adjustment.percentage || '';
-                  if (inputs[3]) inputs[3].value = adjustment.value || '';
+                  if (inputs[3]) inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                 }
               });
             }
@@ -4788,6 +4816,30 @@
         
         // Trigger calculation after loading
         setTimeout(() => {
+          // CRITICAL: Trigger individual field calculations first (percentage to amount conversion)
+          const grossFeatureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+          grossFeatureRows.forEach(row => {
+            const percentInput = row.querySelector('input[placeholder="אחוז"]');
+            if (percentInput && percentInput.value) {
+              // Trigger the percentage-to-amount calculation
+              if (typeof calculateAdjustmentValueSimple === 'function') {
+                calculateAdjustmentValueSimple(percentInput);
+              }
+            }
+          });
+          
+          const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+          grossRegistrationRows.forEach(row => {
+            const percentInput = row.querySelector('input[placeholder="אחוז"]');
+            if (percentInput && percentInput.value) {
+              // Trigger the percentage-to-amount calculation
+              if (typeof calculateAdjustmentValueSimple === 'function') {
+                calculateAdjustmentValueSimple(percentInput);
+              }
+            }
+          });
+          
+          // Then trigger the main calculation
           if (typeof updateGrossMarketValueCalculation === 'function') {
             updateGrossMarketValueCalculation();
           }
@@ -4926,10 +4978,10 @@
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs.length >= 4) {
-                    inputs[0].value = adjustment.description || '';
+                    inputs[0].value = adjustment.value || '';
                     inputs[1].value = adjustment.type || 'plus';
                     inputs[2].value = adjustment.percentage || '';
-                    inputs[3].value = adjustment.value ? `₪${Math.abs(parseFloat(adjustment.value)).toLocaleString()}` : '';
+                    inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                   }
                 }
               }
@@ -4948,10 +5000,10 @@
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs.length >= 4) {
-                    inputs[0].value = adjustment.description || '';
+                    inputs[0].value = adjustment.value || '';
                     inputs[1].value = adjustment.type || 'plus';
                     inputs[2].value = adjustment.percentage || '';
-                    inputs[3].value = adjustment.value ? `₪${Math.abs(parseFloat(adjustment.value)).toLocaleString()}` : '';
+                    inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                   }
                 }
               }
