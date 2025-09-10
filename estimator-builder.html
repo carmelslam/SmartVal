@@ -2460,34 +2460,49 @@
       container.insertAdjacentHTML('beforeend', newRow);
       
       // Add auto-calculation functionality to the percentage field
-      const row = document.getElementById(rowId);
-      
-      // Add tooltip update listeners to all input fields
-      const inputs = row.querySelectorAll('input');
-      inputs.forEach(input => {
-        input.addEventListener('input', function() {
-          this.title = this.value;
+      setTimeout(() => {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        
+        // Add tooltip update listeners to all input fields
+        const inputs = row.querySelectorAll('input');
+        inputs.forEach(input => {
+          input.addEventListener('input', function() {
+            this.title = this.value;
+          });
         });
-      });
-      const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
-      const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
-      
-      percentInput.addEventListener('input', function() {
-        // Clean the value to extract the numeric part for calculation only
-        const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
-        let percent = parseFloat(cleanValue) || 0;
         
-        // Calculate value from market price automatically
-        const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
-        const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
-        const marketValue = parseFloat(marketValueStr) || 0;
+        const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
+        const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
         
-        const calculatedValue = (marketValue * percent) / 100;
-        valueInput.value = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
-        
-        // Save data after calculation
-        saveDepreciationData();
-      });
+        if (percentInput && valueInput) {
+          console.log(`🔢 Setting up calculation for row ${rowId}`);
+          
+          percentInput.addEventListener('input', function() {
+            console.log(`💰 Percentage changed in row ${rowId}: ${this.value}`);
+            
+            // Clean the value to extract the numeric part for calculation only
+            const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
+            let percent = parseFloat(cleanValue) || 0;
+            
+            // Calculate value from market price automatically
+            const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
+            const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
+            const marketValue = parseFloat(marketValueStr) || 0;
+            
+            const calculatedValue = (marketValue * percent) / 100;
+            const formattedValue = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
+            valueInput.value = formattedValue;
+            
+            console.log(`✅ Calculated: ${percent}% of ₪${marketValue.toLocaleString()} = ${formattedValue}`);
+            
+            // Save data after calculation
+            saveDepreciationData();
+          });
+        } else {
+          console.log(`❌ Could not find inputs for row ${rowId}`);
+        }
+      }, 100);
     }
 
     function removeDepField(rowId) {
@@ -2603,11 +2618,81 @@
       }
     }
 
-    // Auto-populate depreciation from damage centers on page load
+    // Load depreciation data from storage to UI
+    function loadDepreciationDataToUI() {
+      try {
+        console.log('🔄 Loading depreciation data to UI...');
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (!helper.estimate?.depreciation) {
+          console.log('❌ No depreciation data found in helper.estimate');
+          return;
+        }
+        
+        const depreciationData = helper.estimate.depreciation;
+        console.log('📊 Found depreciation data:', depreciationData);
+        
+        // Load global depreciation fields
+        if (depreciationData.globalDep1) {
+          const globalDep1Field = document.getElementById('globalDep1');
+          if (globalDep1Field) {
+            globalDep1Field.value = depreciationData.globalDep1;
+          }
+        }
+        
+        if (depreciationData.globalDepValue) {
+          const globalDepValueField = document.getElementById('globalDepValue');
+          if (globalDepValueField) {
+            globalDepValueField.value = depreciationData.globalDepValue;
+          }
+        }
+        
+        if (depreciationData.garageDays) {
+          const garageDaysField = document.getElementById('garageDays');
+          if (garageDaysField) {
+            garageDaysField.value = depreciationData.garageDays;
+          }
+        }
+        
+        // Load bulk items
+        if (depreciationData.bulk_items && depreciationData.bulk_items.length > 0) {
+          console.log(`📋 Loading ${depreciationData.bulk_items.length} bulk items`);
+          
+          // Clear existing rows first
+          const depreciationTable = document.getElementById('depreciationBulkTable');
+          if (depreciationTable) {
+            depreciationTable.innerHTML = '';
+          }
+          
+          // Add each saved item
+          depreciationData.bulk_items.forEach((item, index) => {
+            console.log(`🔄 Loading item ${index + 1}:`, item);
+            addDepField({
+              center_number: item.center_number,
+              damaged_part: item.damaged_part,
+              repair_type: item.repair_type,
+              percent: item.percent,
+              value: item.value
+            });
+          });
+          
+          console.log('✅ Loaded all depreciation bulk items to UI');
+        } else {
+          console.log('📋 No bulk items found, will populate from damage centers');
+          // If no saved data, populate from damage centers
+          updateDepreciationFromDamageCenters();
+        }
+        
+      } catch (error) {
+        console.error('Error loading depreciation data to UI:', error);
+      }
+    }
+
+    // Auto-populate depreciation on page load
     document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => {
-        console.log('🚀 Auto-populating depreciation from damage centers...');
-        updateDepreciationFromDamageCenters();
+        console.log('🚀 Starting depreciation data loading...');
+        loadDepreciationDataToUI();
       }, 1000);
     });
 
