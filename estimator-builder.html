@@ -1262,6 +1262,21 @@
       }, 1000);
       
       console.log('✅ Estimate Builder initialized successfully');
+      
+      // DEBUG: Intercept sessionStorage writes to track what's overwriting our deletion
+      const originalSetItem = sessionStorage.setItem;
+      sessionStorage.setItem = function(key, value) {
+        if (key === 'helper') {
+          const helper = JSON.parse(value);
+          if (helper.estimate?.adjustments?.additional && helper.estimate.adjustments.additional.length > 0) {
+            console.log('🔍 STORAGE INTERCEPT: Helper being saved WITH additional adjustments:', helper.estimate.adjustments.additional.length);
+            console.trace('🔍 Call stack:');
+          } else {
+            console.log('🔍 STORAGE INTERCEPT: Helper being saved WITHOUT additional adjustments');
+          }
+        }
+        return originalSetItem.call(this, key, value);
+      };
     }
 
     // Toggle section visibility
@@ -3957,7 +3972,24 @@
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('🔍 Helper saved to sessionStorage');
+      
+      // CRITICAL DEBUG: Check helper immediately after saving
+      if (category === 'additional') {
+        const savedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔍 IMMEDIATE CHECK after save - estimate.adjustments.additional:', savedHelper.estimate?.adjustments?.additional);
+        console.log('🔍 IMMEDIATE CHECK after save - valuation.adjustments.additional:', savedHelper.valuation?.adjustments?.additional);
+      }
+      
       updateFullMarketValueCalculation();
+      
+      // FINAL DEBUG: Check helper after calculation
+      if (category === 'additional') {
+        setTimeout(() => {
+          const finalHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log('🔍 FINAL CHECK after calculation - estimate.adjustments.additional:', finalHelper.estimate?.adjustments?.additional);
+          console.log('🔍 FINAL CHECK after calculation - valuation.adjustments.additional:', finalHelper.valuation?.adjustments?.additional);
+        }, 100);
+      }
     }
     
     // Sync adjustment to helper - REBUILD ENTIRE CATEGORY FROM ALL UI ROWS
