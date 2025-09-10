@@ -960,6 +960,7 @@
       </div>
       <div id="depreciationBulkTable"></div>
       <button class="btn add" type="button" onclick="addDepField()">הוסף שדה</button>
+      <button class="btn" type="button" onclick="updateDepreciationFromDamageCenters()" style="background: #28a745; color: white; margin-left: 10px;">טען ממוקדי נזק</button>
       <div style="margin-top:14px;">
         <label>ירידת ערך גלובלי:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
@@ -2447,11 +2448,11 @@
       const rowId = 'depRow_' + Date.now();
       const newRow = `
         <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="מס' מוקד" /></div>
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="החלק הניזוק" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="מהות התיקון" /></div>
-          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="ירידת ערך (מספר)" style="direction: ltr; text-align: right;" /></div>
-          <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="ערך ב-₪" /></div>
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || 'מס\' מוקד'}" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.center_number || ''}" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
+          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" style="direction: ltr; text-align: right;" /></div>
+          <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -2500,13 +2501,16 @@
 
     function updateDepreciationFromDamageCenters(damageCenterNames) {
       try {
+        console.log('🔥 updateDepreciationFromDamageCenters called with:', damageCenterNames);
         
         // If no data provided, get current data from helper.estimate.damage_centers
         if (!damageCenterNames || damageCenterNames.length === 0) {
           const helper = window.helper || {};
+          console.log('🔍 Looking for damage centers in helper:', helper);
           damageCenterNames = [];
           
           if (helper.estimate && helper.estimate.damage_centers && helper.estimate.damage_centers.length > 0) {
+            console.log('✅ Found damage centers:', helper.estimate.damage_centers);
             helper.estimate.damage_centers.forEach((center, index) => {
               // Get the actual location and center number properly
               const location = center.Location || center.damage_center_name || '';
@@ -2524,22 +2528,22 @@
                 RepairNature: center.RepairNature || ''
               });
             });
+          } else {
+            console.log('❌ No damage centers found in helper.estimate.damage_centers');
           }
         }
         
+        console.log('📋 Final damageCenterNames array:', damageCenterNames);
         
         const depreciationTable = document.getElementById('depreciationBulkTable');
         if (!depreciationTable) {
+          console.log('❌ depreciationBulkTable not found!');
           return;
         }
         
-        // DON'T clear existing depreciation rows - preserve manual data!
-        // Only add new rows if the table is empty
-        const existingRows = depreciationTable.querySelectorAll('.dep-row');
-        if (existingRows.length > 0) {
-          console.log('⚠️ Depreciation table already has data - preserving existing manual entries');
-          return;
-        }
+        // Clear existing rows and populate fresh from damage centers
+        depreciationTable.innerHTML = '';
+        console.log('🗑️ Cleared existing depreciation rows');
         
         // Add a row for each damage center
         damageCenterNames.forEach(centerData => {
@@ -2573,6 +2577,14 @@
         console.error('Error updating depreciation from damage centers:', error);
       }
     }
+
+    // Auto-populate depreciation from damage centers on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(() => {
+        console.log('🚀 Auto-populating depreciation from damage centers...');
+        updateDepreciationFromDamageCenters();
+      }, 1000);
+    });
 
     function updateGrossMarketValueCalculation() {
       console.log('📊 Update gross market value');
