@@ -2367,8 +2367,14 @@
         
         helper.claims_data = helper.claims_data || {};
         
+        // Update total_claim from field value (preserve multifunctional nature)
         if (totalDamageCostField && totalDamageCostField.value) {
           helper.claims_data.total_claim = totalDamageCostField.value;
+        }
+        // If field is empty but damage centers has total, use that as initial value
+        else if (!helper.claims_data.total_claim) {
+          const damageCentersTotal = window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value || calculateDamageCentersTotal();
+          helper.claims_data.total_claim = `₪${damageCentersTotal.toLocaleString()}`;
         }
         
         if (grossValueDisplayField && grossValueDisplayField.value) {
@@ -5535,19 +5541,24 @@
       try {
         console.log('📊 Loading gross percentage fields from helper');
         
-        // Map totalDamageCost field - PRIORITY: claims_data.total_claim, FALLBACK: damage_assessment.totals["Total with VAT"]
+        // Map totalDamageCost field - PRIORITY: damage centers total, FALLBACK: claims_data.total_claim
         const totalDamageCostField = document.getElementById('totalDamageCost');
         if (totalDamageCostField) {
           let totalValue = 0;
           let source = '';
           
-          // First try claims_data.total_claim (user edited value)
-          if (helper.claims_data?.total_claim) {
+          // First try damage centers total (current calculations)
+          if (helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
+            totalValue = helper.estimate.totals.damage_centers.total_with_vat.value;
+            source = 'estimate.totals.damage_centers.total_with_vat';
+          }
+          // Fallback to claims_data.total_claim 
+          else if (helper.claims_data?.total_claim) {
             const claimValue = helper.claims_data.total_claim.toString().replace(/[₪,]/g, '');
             totalValue = parseFloat(claimValue) || 0;
             source = 'claims_data.total_claim';
           }
-          // Fallback to damage_assessment.totals["Total with VAT"]
+          // Last fallback to damage_assessment.totals["Total with VAT"]
           else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
             totalValue = parseFloat(helper.damage_assessment.totals["Total with VAT"]) || 0;
             source = 'damage_assessment.totals["Total with VAT"]';
@@ -6392,6 +6403,15 @@
         // Method 3: Set total_damage_cost from damage centers total_with_vat
         window.helper.estimate.total_damage_cost = totals.total_with_vat.value;
         
+        // Method 4: Update claims_data.total_claim ONLY if it doesn't exist or is empty (preserve user changes)
+        if (!window.helper.claims_data) window.helper.claims_data = {};
+        if (!window.helper.claims_data.total_claim || window.helper.claims_data.total_claim === '' || window.helper.claims_data.total_claim === '₪0') {
+          window.helper.claims_data.total_claim = totals.total_with_vat.formatted;
+          console.log('✅ Initialized claims_data.total_claim from damage centers:', totals.total_with_vat.formatted);
+        } else {
+          console.log('⚠️ Preserving existing claims_data.total_claim:', window.helper.claims_data.total_claim);
+        }
+        
         // Also save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
@@ -6430,18 +6450,24 @@
       return Math.round(totalWithVAT);
     }
     
-    // Update totalDamageCost field to show damage centers total
+    // Update totalDamageCost field to show damage centers total (if not manually set)
     function updateTotalDamageCostField() {
       const totalDamageCostField = document.getElementById('totalDamageCost');
       if (totalDamageCostField) {
-        const damageCentersTotal = window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value || calculateDamageCentersTotal();
-        totalDamageCostField.value = `₪${damageCentersTotal.toLocaleString()}`;
+        // Only update if field is empty or has the default "₪0" value
+        if (!totalDamageCostField.value || totalDamageCostField.value === '₪0' || totalDamageCostField.value === '') {
+          const damageCentersTotal = window.helper.estimate?.totals?.damage_centers?.total_with_vat?.value || calculateDamageCentersTotal();
+          totalDamageCostField.value = `₪${damageCentersTotal.toLocaleString()}`;
+          console.log('✅ Updated totalDamageCost field from damage centers:', damageCentersTotal);
+        } else {
+          console.log('⚠️ Preserving existing totalDamageCost value:', totalDamageCostField.value);
+        }
         
-        // Make field readonly to show it's calculated from damage centers
-        totalDamageCostField.readOnly = true;
-        totalDamageCostField.style.background = '#f4f6fa';
-        totalDamageCostField.style.fontWeight = 'bold';
-        totalDamageCostField.style.color = '#1e3a8a';
+        // Keep field editable (multifunctional - can be updated in final report)
+        totalDamageCostField.readOnly = false;
+        totalDamageCostField.style.background = '';
+        totalDamageCostField.style.fontWeight = '';
+        totalDamageCostField.style.color = '';
       }
     }
 
