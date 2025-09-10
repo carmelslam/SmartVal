@@ -2447,11 +2447,11 @@
       const rowId = 'depRow_' + Date.now();
       const newRow = `
         <div id="${rowId}" class="dep-row" style="display:grid; grid-template-columns:70px 2fr 2fr 80px 90px 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="${data.center_number || ''}" /></div>
-          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
-          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" /></div>
-          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}" style="direction: ltr; text-align: right;" /></div>
-          <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="₪${data.value || ''}" /></div>
+          <div><input type="text" placeholder="מס' מוקד" value="${data.center_number || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" style="text-align: center;" title="מס' מוקד" /></div>
+          <div><input type="text" placeholder="החלק הניזוק" value="${data.damaged_part || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.center_number || ''}" /></div>
+          <div><input type="text" placeholder="מהות התיקון" value="${data.repair_type || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.damaged_part || ''}" /></div>
+          <div><input type="text" placeholder="ירידת ערך (מספר)" value="${data.percent || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.repair_type || ''}" style="direction: ltr; text-align: right;" /></div>
+          <div><input type="text" placeholder="ערך ב-₪" value="${data.value || ''}" onchange="saveDepreciationData();" oninput="saveDepreciationData();" title="${data.percent || ''}" /></div>
           <div><button class="btn remove" onclick="removeDepField('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -2495,6 +2495,82 @@
         row.remove();
         // Save after removal
         saveDepreciationData();
+      }
+    }
+
+    function updateDepreciationFromDamageCenters(damageCenterNames) {
+      try {
+        
+        // If no data provided, get current data from helper.estimate.damage_centers
+        if (!damageCenterNames || damageCenterNames.length === 0) {
+          const helper = window.helper || {};
+          damageCenterNames = [];
+          
+          if (helper.estimate && helper.estimate.damage_centers && helper.estimate.damage_centers.length > 0) {
+            helper.estimate.damage_centers.forEach((center, index) => {
+              // Get the actual location and center number properly
+              const location = center.Location || center.damage_center_name || '';
+              
+              // Extract just the number from "Damage center Number" field
+              let centerNum = center["Damage center Number"] || String(index + 1);
+              // Extract all numbers and take the last one
+              const numberMatch = String(centerNum).match(/\d+/g);
+              centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
+              
+              damageCenterNames.push({
+                name: location,  // The actual location/part name
+                number: centerNum,  // Just the number (1, 2, 3, etc.)
+                description: center.Description || '',
+                RepairNature: center.RepairNature || ''
+              });
+            });
+          }
+        }
+        
+        
+        const depreciationTable = document.getElementById('depreciationBulkTable');
+        if (!depreciationTable) {
+          return;
+        }
+        
+        // DON'T clear existing depreciation rows - preserve manual data!
+        // Only add new rows if the table is empty
+        const existingRows = depreciationTable.querySelectorAll('.dep-row');
+        if (existingRows.length > 0) {
+          console.log('⚠️ Depreciation table already has data - preserving existing manual entries');
+          return;
+        }
+        
+        // Add a row for each damage center
+        damageCenterNames.forEach(centerData => {
+          // Handle both old string format and new object format
+          const centerName = (typeof centerData === 'string') ? centerData : centerData.name;
+          const centerNumber = (typeof centerData === 'object') ? centerData.number : null;
+          const centerDescription = (typeof centerData === 'object') ? centerData.description : '';
+          const centerRepairNature = (typeof centerData === 'object') ? centerData.RepairNature : '';
+          
+          // ✅ CORRECT: Field mapping for depreciation from damage centers
+          // "מס' מוקד" should show the center number
+          // "החלק הניזוק" should show LOCATION/PART (use centerName which contains the damage location)  
+          // "מהות התיקון" should show REPAIR NATURE (use centerRepairNature which contains repair nature details)
+          const centerNum = centerNumber || (damageCenterNames.indexOf(centerData) + 1); // Fallback to index + 1
+          const damageLocation = centerName || ''; // This is the location/part that was damaged
+          const workEssence = centerRepairNature || '';
+          
+          // Use addDepField function with proper data structure
+          addDepField({
+            center_number: centerNum,
+            damaged_part: damageLocation,
+            repair_type: workEssence,
+            percent: '',
+            value: ''
+          });
+        });
+        
+        console.log(`✅ Added ${damageCenterNames.length} depreciation rows from damage centers`);
+        
+      } catch (error) {
+        console.error('Error updating depreciation from damage centers:', error);
       }
     }
 
