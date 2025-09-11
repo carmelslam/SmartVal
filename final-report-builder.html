@@ -5,6 +5,64 @@
   <title>אשף חוות הדעת - ירון כיוף</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  
+  <!-- CRITICAL: Function must be defined before HTML elements reference it -->
+  <script>
+    // Update helper structure from contact field changes
+    window.updateHelperFromContactField = function(element) {
+      try {
+        const helper = window.helper || {};
+        const fieldId = element.id;
+        const value = element.value;
+        
+        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
+        
+        // Set nested value helper function
+        const setNestedValue = (obj, path, val) => {
+          const keys = path.split('.');
+          let current = obj;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object') {
+              current[key] = {};
+            }
+            current = current[key];
+          }
+          current[keys[keys.length - 1]] = val;
+        };
+        
+        // Field mappings
+        const fieldMappings = {
+          'ownerName': 'stakeholders.owner.name',
+          'ownerAddress': 'stakeholders.owner.address', 
+          'ownerPhone': 'stakeholders.owner.phone',
+          'insuranceCompany': 'stakeholders.insurance.company',
+          'insuranceEmail': 'stakeholders.insurance.email',
+          'insuranceAgent': 'stakeholders.insurance.agent.name',
+          'agentPhone': 'stakeholders.insurance.agent.phone',
+          'agentEmail': 'stakeholders.insurance.agent.email',
+          'garageName': 'stakeholders.garage.name',
+          'garagePhone': 'stakeholders.garage.phone',
+          'garageEmail': 'stakeholders.garage.email',
+          'carReportDate': 'case_info.issue_date'
+        };
+        
+        // Update helper structure
+        if (fieldMappings[fieldId]) {
+          setNestedValue(helper, fieldMappings[fieldId], value);
+          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
+        }
+        
+        // Save to storage and window
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+      } catch (error) {
+        console.error('❌ Error updating helper from contact field:', error);
+      }
+    };
+  </script>
+  
   <style>
     body {
       font-family: sans-serif;
@@ -1753,60 +1811,7 @@
   <script>
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
-    
-    // Update helper structure from contact field changes
-    window.updateHelperFromContactField = function(element) {
-      try {
-        const helper = window.helper || {};
-        const fieldId = element.id;
-        const value = element.value;
-        
-        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
-        
-        // Set nested value helper function
-        const setNestedValue = (obj, path, val) => {
-          const keys = path.split('.');
-          let current = obj;
-          for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i];
-            if (!(key in current) || typeof current[key] !== 'object') {
-              current[key] = {};
-            }
-            current = current[key];
-          }
-          current[keys[keys.length - 1]] = val;
-        };
-        
-        // Field mappings
-        const fieldMappings = {
-          'ownerName': 'stakeholders.owner.name',
-          'ownerAddress': 'stakeholders.owner.address', 
-          'ownerPhone': 'stakeholders.owner.phone',
-          'insuranceCompany': 'stakeholders.insurance.company',
-          'insuranceEmail': 'stakeholders.insurance.email',
-          'insuranceAgent': 'stakeholders.insurance.agent.name',
-          'agentPhone': 'stakeholders.insurance.agent.phone',
-          'agentEmail': 'stakeholders.insurance.agent.email',
-          'garageName': 'stakeholders.garage.name',
-          'garagePhone': 'stakeholders.garage.phone',
-          'garageEmail': 'stakeholders.garage.email',
-          'carReportDate': 'case_info.issue_date'
-        };
-        
-        // Update helper structure
-        if (fieldMappings[fieldId]) {
-          setNestedValue(helper, fieldMappings[fieldId], value);
-          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
-        }
-        
-        // Save to storage and window
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        window.helper = helper;
-        
-      } catch (error) {
-        console.error('❌ Error updating helper from contact field:', error);
-      }
-    };
+    // updateHelperFromContactField moved to <head> section
     
     window.toggleFloatingScreen = function(screenType) {
       
@@ -5933,21 +5938,7 @@
     }
     
     // Calculate adjustment value for simple percentage input
-    function calculateAdjustmentValueSimple(percentInput) {
-      const row = percentInput.closest('div');
-      if (!row) return;
-      
-      const inputs = row.querySelectorAll('input, select');
-      if (inputs.length < 4) return;
-      
-      const percent = parseFloat(percentInput.value) || 0;
-      const basicPrice = parseFloat(document.getElementById('basicPrice')?.value?.replace(/[₪,]/g, '')) || 0;
-      
-      if (basicPrice > 0) {
-        const calculatedValue = (basicPrice * percent) / 100;
-        inputs[3].value = calculatedValue ? `₪${Math.abs(calculatedValue).toLocaleString()}` : '';
-      }
-    }
+    // calculateAdjustmentValueSimple function defined later in the file
     
     // ============================================================================
     // END OF AUTO-POPULATION FUNCTIONS
