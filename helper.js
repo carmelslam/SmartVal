@@ -2234,6 +2234,15 @@ function fixLeviSummaryValuesDirectly(helper) {
   
   // Convert raw data to string for text parsing
   const text = JSON.stringify(rawData);
+  console.log('🔍 Raw text for pattern matching:', text.substring(0, 500) + '...');
+  
+  // Look for Hebrew adjustment fields
+  console.log('🔍 Looking for Hebrew patterns in raw data:');
+  console.log('- ערך ש״ח מאפיינים:', text.includes('ערך ש״ח מאפיינים'));
+  console.log('- ערך ש״ח עליה לכביש:', text.includes('ערך ש״ח עליה לכביש'));
+  console.log('- ערך ש״ח בעלות:', text.includes('ערך ש״ח בעלות'));
+  console.log('- ערך ש״ח מס ק״מ:', text.includes('ערך ש״ח מס ק״מ'));
+  console.log('- ערך ש״ח מספר בעלים:', text.includes('ערך ש״ח מספר בעלים'));
   
   // Hebrew field mappings for extraction
   const fieldMappings = {
