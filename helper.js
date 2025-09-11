@@ -2268,49 +2268,42 @@ function fixLeviSummaryValuesDirectly(helper) {
     }
   };
   
-  // Fix each adjustment that has "₪0" values
+  // ✅ CORRECT FIX: Copy values from helper.valuation.adjustments to helper.levisummary.adjustments
+  console.log('🔧 Copying correct values from helper.valuation.adjustments to helper.levisummary.adjustments');
+  
   let fixed = false;
-  Object.keys(helper.levisummary.adjustments).forEach(adjustmentType => {
-    const adjustment = helper.levisummary.adjustments[adjustmentType];
-    const patterns = fieldMappings[adjustmentType];
+  if (helper.valuation && helper.valuation.adjustments) {
+    console.log('✅ Found helper.valuation.adjustments:', helper.valuation.adjustments);
     
-    console.log(`🔍 Checking ${adjustmentType}: amount="${adjustment.amount}", cumulative="${adjustment.cumulative}"`);
-    
-    if (!patterns) {
-      console.log(`⚠️ No patterns found for ${adjustmentType}`);
-      return;
-    }
-    
-    if (adjustment.amount === '₪0') {
-      console.log(`🔧 Trying to fix ${adjustmentType} amount using pattern:`, patterns.amount);
-      const amountMatch = text.match(patterns.amount);
-      console.log(`🔍 Amount match result:`, amountMatch);
-      if (amountMatch && amountMatch[1]) {
-        adjustment.amount = amountMatch[1].trim();
-        console.log(`✅ Fixed ${adjustmentType} amount: ${adjustment.amount}`);
-        fixed = true;
+    Object.keys(helper.levisummary.adjustments).forEach(adjustmentType => {
+      const leviAdjustment = helper.levisummary.adjustments[adjustmentType];
+      const valuationAdjustment = helper.valuation.adjustments[adjustmentType];
+      
+      console.log(`🔍 Checking ${adjustmentType}:`);
+      console.log(`  - levisummary.amount: "${leviAdjustment.amount}"`);
+      console.log(`  - valuation.amount: "${valuationAdjustment?.amount}"`);
+      
+      if (valuationAdjustment) {
+        // Copy amount if levisummary has "₪0" and valuation has a real value
+        if (leviAdjustment.amount === '₪0' && valuationAdjustment.amount && valuationAdjustment.amount !== '₪0') {
+          leviAdjustment.amount = valuationAdjustment.amount;
+          console.log(`✅ Fixed ${adjustmentType} amount: ${leviAdjustment.amount}`);
+          fixed = true;
+        }
+        
+        // Copy cumulative if levisummary has "₪0" and valuation has a real value
+        if (leviAdjustment.cumulative === '₪0' && valuationAdjustment.cumulative && valuationAdjustment.cumulative !== '₪0') {
+          leviAdjustment.cumulative = valuationAdjustment.cumulative;
+          console.log(`✅ Fixed ${adjustmentType} cumulative: ${leviAdjustment.cumulative}`);
+          fixed = true;
+        }
       } else {
-        console.log(`❌ Could not fix ${adjustmentType} amount - no match found`);
+        console.log(`⚠️ No valuation data found for ${adjustmentType}`);
       }
-    } else {
-      console.log(`ℹ️ ${adjustmentType} amount already has value: ${adjustment.amount}`);
-    }
-    
-    if (adjustment.cumulative === '₪0') {
-      console.log(`🔧 Trying to fix ${adjustmentType} cumulative using pattern:`, patterns.cumulative);
-      const cumulativeMatch = text.match(patterns.cumulative);
-      console.log(`🔍 Cumulative match result:`, cumulativeMatch);
-      if (cumulativeMatch && cumulativeMatch[1]) {
-        adjustment.cumulative = cumulativeMatch[1].trim();
-        console.log(`✅ Fixed ${adjustmentType} cumulative: ${adjustment.cumulative}`);
-        fixed = true;
-      } else {
-        console.log(`❌ Could not fix ${adjustmentType} cumulative - no match found`);
-      }
-    } else {
-      console.log(`ℹ️ ${adjustmentType} cumulative already has value: ${adjustment.cumulative}`);
-    }
-  });
+    });
+  } else {
+    console.log('❌ No helper.valuation.adjustments found');
+  }
   
   if (fixed) {
     console.log('✅ leviSummary values have been corrected from raw webhook data');
