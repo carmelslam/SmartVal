@@ -1206,7 +1206,7 @@
         
         <div class="form-group">
           <label class="form-label">מהות התיקון</label>
-          <textarea class="form-textarea" id="repairNature" placeholder="תאר את מהות התיקון הנדרש..." rows="4" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 16px; resize: vertical;"></textarea>
+          <textarea class="form-textarea" id="repairNature" placeholder="תאר את מהות התיקון הנדרש..." rows="4" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 16px; resize: vertical;" onchange="updateRepairNature()" oninput="updateRepairNature()"></textarea>
         </div>
       </div>
       
@@ -2372,15 +2372,24 @@
       }
       
       const descriptionTextarea = document.getElementById('damageDescription');
+      const repairNatureTextarea = document.getElementById('repairNature');
       
       // ✅ DAMAGE CENTERS FIX: Check both lowercase and uppercase property names
       const description = currentCenterData.description || currentCenterData.Description;
+      const repairNature = currentCenterData.repairNature || currentCenterData.RepairNature;
       
       if (description && descriptionTextarea) {
         descriptionTextarea.value = description;
         console.log('✅ DESCRIPTION RESTORED:', description, 'from center:', currentCenterData.Id || currentCenterData.id);
       } else {
         console.log('❌ DESCRIPTION NOT RESTORED - description:', description, 'textarea:', !!descriptionTextarea, 'center:', currentCenterData?.Id || currentCenterData?.id);
+      }
+      
+      if (repairNature && repairNatureTextarea) {
+        repairNatureTextarea.value = repairNature;
+        console.log('✅ REPAIR NATURE RESTORED:', repairNature, 'from center:', currentCenterData.Id || currentCenterData.id);
+      } else {
+        console.log('❌ REPAIR NATURE NOT RESTORED - repairNature:', repairNature, 'textarea:', !!repairNatureTextarea, 'center:', currentCenterData?.Id || currentCenterData?.id);
       }
     }
     
@@ -3562,6 +3571,25 @@
       // Update wizard subtotal and recalculate main totals
       updateWorkSubtotal(total);
       calculateTotals();
+    };
+    
+    // Update repair nature in real-time
+    window.updateRepairNature = function() {
+      const repairNatureElement = document.getElementById('repairNature');
+      if (!repairNatureElement) return;
+      
+      const repairNatureValue = repairNatureElement.value.trim();
+      
+      // Save to current_damage_center
+      if (helper.current_damage_center) {
+        helper.current_damage_center.RepairNature = repairNatureValue;
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log('💾 Repair nature saved to current_damage_center:', repairNatureValue);
+      }
     };
     
     function loadPartsModule() {
