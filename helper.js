@@ -2272,6 +2272,36 @@ function fixLeviSummaryValuesDirectly(helper) {
   return helper;
 }
 
+// 🔧 DEBUG: Always check what we have
+console.log('🔍 DEBUG: existingHelper exists?', !!existingHelper);
+if (existingHelper) {
+  console.log('🔍 DEBUG: existingHelper.levisummary exists?', !!existingHelper.levisummary);
+  if (existingHelper.levisummary) {
+    console.log('🔍 DEBUG: existingHelper.levisummary.adjustments exists?', !!existingHelper.levisummary.adjustments);
+    if (existingHelper.levisummary.adjustments) {
+      console.log('🔍 DEBUG: Current levisummary.adjustments:', existingHelper.levisummary.adjustments);
+    }
+  }
+  
+  // Check for raw webhook data
+  console.log('🔍 DEBUG: ALL helper keys:', Object.keys(existingHelper));
+  const rawWebhookKeys = Object.keys(existingHelper).filter(key => 
+    key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
+  );
+  console.log('🔍 DEBUG: Raw webhook keys found:', rawWebhookKeys);
+  
+  // Also check for alternative patterns
+  const alternativeKeys = Object.keys(existingHelper).filter(key => 
+    key.includes('SUBMIT_LEVI_REPORT') || key.includes('raw_webhook')
+  );
+  console.log('🔍 DEBUG: Alternative webhook keys found:', alternativeKeys);
+  
+  if (rawWebhookKeys.length > 0) {
+    const latestKey = rawWebhookKeys.sort().pop();
+    console.log('🔍 DEBUG: Latest webhook data:', existingHelper[latestKey]);
+  }
+}
+
 if (existingHelper && existingHelper.levisummary && existingHelper.levisummary.adjustments) {
   console.log('🔧 Checking for leviSummary values that need fixing...');
   const fixedHelper = fixLeviSummaryValuesDirectly(existingHelper);
@@ -2285,6 +2315,8 @@ if (existingHelper && existingHelper.levisummary && existingHelper.levisummary.a
       console.warn('⚠️ Could not save fixed leviSummary to storage:', e);
     }
   }
+} else {
+  console.log('❌ Cannot fix leviSummary - missing required data structures');
 }
 
 // Create comprehensive helper system with ALL required fields
