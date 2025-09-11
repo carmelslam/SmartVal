@@ -2321,6 +2321,22 @@ function fixLeviSummaryValuesDirectly(helper) {
     console.log('❌ No helper.valuation.adjustments found');
   }
   
+  // ✅ SYNC: Update expertise.levi_report from corrected levisummary
+  if (fixed && helper.expertise) {
+    if (!helper.expertise.levi_report) {
+      helper.expertise.levi_report = {};
+    }
+    
+    // Copy the entire corrected levisummary to expertise.levi_report
+    helper.expertise.levi_report = {
+      ...helper.levisummary,
+      processed_at: new Date().toISOString(),
+      source: 'corrected_levisummary'
+    };
+    
+    console.log('✅ Synced corrected levisummary to expertise.levi_report');
+  }
+  
   if (fixed) {
     console.log('✅ leviSummary values have been corrected from raw webhook data');
   } else {
