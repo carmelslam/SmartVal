@@ -3178,8 +3178,18 @@
         document.getElementById('marketPriceCalculated').textContent = `₪${Number(marketPrice).toLocaleString()}`;
         
         // 5. ערך השוק של הרכב (לפי דו״ח לוי יצחק) -> valuation.final_price
-        const finalMarketValue = valuation.final_price || 0;
-        document.getElementById('finalMarketValue').textContent = `₪${Number(finalMarketValue).toLocaleString()}`;
+        let finalMarketValue = 0;
+        if (valuation.final_price) {
+          // Handle formatted strings like "₪ 78,877" or plain numbers
+          if (typeof valuation.final_price === 'string') {
+            // Remove currency symbols, spaces, and Hebrew characters, keep only numbers and commas
+            const cleanValue = valuation.final_price.replace(/[₪\s]/g, '').replace(/[א-ת]/g, '');
+            finalMarketValue = parseFloat(cleanValue.replace(/,/g, '')) || 0;
+          } else {
+            finalMarketValue = Number(valuation.final_price) || 0;
+          }
+        }
+        document.getElementById('finalMarketValue').textContent = `₪${finalMarketValue.toLocaleString()}`;
         
         // Load saved insurance authorization if exists
         const claimsData = helper.estimate?.claims_data || {};
