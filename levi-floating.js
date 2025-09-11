@@ -782,7 +782,7 @@
         // Remove invalid fields (percentage should not exist, only percent)
         if (adj.percentage) {
           // Special handling for mileage - move percentage data to value if it contains actual value
-          if (section === 'mileage' && adj.percentage && (adj.percentage.includes('ק"מ') || adj.percentage.includes('km'))) {
+          if (section === 'mileage' && adj.percentage && typeof adj.percentage === 'string' && (adj.percentage.includes('ק"מ') || adj.percentage.includes('km'))) {
             adj.value = adj.percentage;
           }
           delete adj.percentage;
