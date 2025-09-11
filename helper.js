@@ -2265,24 +2265,41 @@ function fixLeviSummaryValuesDirectly(helper) {
     const adjustment = helper.levisummary.adjustments[adjustmentType];
     const patterns = fieldMappings[adjustmentType];
     
-    if (!patterns) return;
+    console.log(`🔍 Checking ${adjustmentType}: amount="${adjustment.amount}", cumulative="${adjustment.cumulative}"`);
+    
+    if (!patterns) {
+      console.log(`⚠️ No patterns found for ${adjustmentType}`);
+      return;
+    }
     
     if (adjustment.amount === '₪0') {
+      console.log(`🔧 Trying to fix ${adjustmentType} amount using pattern:`, patterns.amount);
       const amountMatch = text.match(patterns.amount);
+      console.log(`🔍 Amount match result:`, amountMatch);
       if (amountMatch && amountMatch[1]) {
         adjustment.amount = amountMatch[1].trim();
         console.log(`✅ Fixed ${adjustmentType} amount: ${adjustment.amount}`);
         fixed = true;
+      } else {
+        console.log(`❌ Could not fix ${adjustmentType} amount - no match found`);
       }
+    } else {
+      console.log(`ℹ️ ${adjustmentType} amount already has value: ${adjustment.amount}`);
     }
     
     if (adjustment.cumulative === '₪0') {
+      console.log(`🔧 Trying to fix ${adjustmentType} cumulative using pattern:`, patterns.cumulative);
       const cumulativeMatch = text.match(patterns.cumulative);
+      console.log(`🔍 Cumulative match result:`, cumulativeMatch);
       if (cumulativeMatch && cumulativeMatch[1]) {
         adjustment.cumulative = cumulativeMatch[1].trim();
         console.log(`✅ Fixed ${adjustmentType} cumulative: ${adjustment.cumulative}`);
         fixed = true;
+      } else {
+        console.log(`❌ Could not fix ${adjustmentType} cumulative - no match found`);
       }
+    } else {
+      console.log(`ℹ️ ${adjustmentType} cumulative already has value: ${adjustment.cumulative}`);
     }
   });
   
