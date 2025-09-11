@@ -536,8 +536,11 @@ export class DataFlowStandardizer {
     const leviReport = oldHelper.expertise?.levi_report || {};
     const valuation = standardized.valuation;
     
+    // 🚨 CRITICAL FIX: Correct levisummary values from raw webhook data if they're "₪0"
+    const correctedLeviSummary = this.correctLeviSummaryValues(leviSummary, oldHelper);
+    
     // Merge both sources
-    const leviData = { ...leviReport, ...leviSummary };
+    const leviData = { ...leviReport, ...correctedLeviSummary };
     
     valuation.source = leviData.source || 'levi_yitzhak';
     valuation.report_date = leviData.report_date || '';
@@ -554,8 +557,8 @@ export class DataFlowStandardizer {
       const adjustment = adjustments[key] || {};
       valuation.adjustments[key] = {
         percent: parseFloat(adjustment.percent) || 0,
-        amount: parseFloat(adjustment.value) || 0,
-        reason: adjustment.reason || adjustment.type || ''
+        amount: parseFloat(adjustment.value || adjustment.amount) || 0,
+        reason: adjustment.reason || adjustment.type || adjustment.description || ''
       };
     });
     
@@ -566,6 +569,111 @@ export class DataFlowStandardizer {
     valuation.depreciation.work_days_impact = parseFloat(depreciation.work_days) || 0;
     
     this.log(`Valuation data migrated: ${valuation.base_price} -> ${valuation.final_price}`);
+  }
+
+  // 🚨 NEW: Fix levisummary values that are incorrectly set to "₪0"
+  correctLeviSummaryValues(leviSummary, helper) {
+    this.log('Correcting leviSummary values from raw webhook data');
+    
+    // Look for raw webhook data that contains the actual values
+    const rawWebhookKeys = Object.keys(helper).filter(key => 
+      key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
+    );
+    
+    if (rawWebhookKeys.length === 0) {
+      this.log('No raw webhook data found, returning original leviSummary');
+      return leviSummary;
+    }
+    
+    // Get the most recent webhook data
+    const latestWebhookKey = rawWebhookKeys.sort().pop();
+    const rawWebhookData = helper[latestWebhookKey];
+    
+    if (!rawWebhookData || !rawWebhookData.data) {
+      this.log('Raw webhook data has no data field, returning original leviSummary');
+      return leviSummary;
+    }
+    
+    const rawData = rawWebhookData.data;
+    this.log('Found raw webhook data:', rawData);
+    
+    // Create corrected copy
+    const corrected = JSON.parse(JSON.stringify(leviSummary));
+    
+    // Check if adjustments have "₪0" values and try to extract correct values from raw data
+    if (corrected.adjustments) {
+      Object.keys(corrected.adjustments).forEach(adjustmentType => {
+        const adjustment = corrected.adjustments[adjustmentType];
+        
+        // If amount or cumulative is "₪0", try to extract from raw data
+        if (adjustment.amount === '₪0' || adjustment.cumulative === '₪0') {
+          const correctedValues = this.extractAdjustmentValues(adjustmentType, rawData);
+          
+          if (correctedValues.amount && correctedValues.amount !== '₪0') {
+            adjustment.amount = correctedValues.amount;
+            this.log(`Corrected ${adjustmentType} amount: ${correctedValues.amount}`);
+          }
+          
+          if (correctedValues.cumulative && correctedValues.cumulative !== '₪0') {
+            adjustment.cumulative = correctedValues.cumulative;
+            this.log(`Corrected ${adjustmentType} cumulative: ${correctedValues.cumulative}`);
+          }
+        }
+      });
+    }
+    
+    return corrected;
+  }
+  
+  // Extract adjustment values from raw Hebrew webhook text
+  extractAdjustmentValues(adjustmentType, rawData) {
+    const result = { amount: null, cumulative: null };
+    
+    // Convert raw data to string for text parsing
+    const text = JSON.stringify(rawData);
+    
+    // Define Hebrew field mappings
+    const fieldMappings = {
+      features: {
+        amount: /ערך ש״ח מאפיינים[:\s]*([₪\s\d,.-]+)/i,
+        cumulative: /שווי מצטבר מאפיינים[:\s]*([₪\s\d,.-]+)/i
+      },
+      registration: {
+        amount: /ערך ש״ח עליה לכביש[:\s]*([₪\s\d,.-]+)/i,
+        cumulative: /שווי מצטבר עליה לכביש[:\s]*([₪\s\d,.-]+)/i
+      },
+      ownership_type: {
+        amount: /ערך ש״ח בעלות[:\s]*([₪\s\d,.-]+)/i,
+        cumulative: /שווי מצטבר בעלות[:\s]*([₪\s\d,.-]+)/i
+      },
+      mileage: {
+        amount: /ערך ש״ח מס ק״מ[:\s]*([₪\s\d,.-]+)/i,
+        cumulative: /שווי מצטבר מס ק״מ[:\s]*([₪\s\d,.-]+)/i
+      },
+      ownership_history: {
+        amount: /ערך ש״ח מספר בעלים[:\s]*([₪\s\d,.-]+)/i,
+        cumulative: /שווי מצטבר מספר בעלים[:\s]*([₪\s\d,.-]+)/i
+      }
+    };
+    
+    const patterns = fieldMappings[adjustmentType];
+    if (!patterns) {
+      return result;
+    }
+    
+    // Extract amount
+    const amountMatch = text.match(patterns.amount);
+    if (amountMatch && amountMatch[1]) {
+      result.amount = amountMatch[1].trim();
+    }
+    
+    // Extract cumulative
+    const cumulativeMatch = text.match(patterns.cumulative);
+    if (cumulativeMatch && cumulativeMatch[1]) {
+      result.cumulative = cumulativeMatch[1].trim();
+    }
+    
+    return result;
   }
 
   migrateFinancialData(oldHelper, standardized) {
@@ -822,6 +930,71 @@ export function convertToLegacyFormat(standardizedData) {
   };
   
   return legacy;
+}
+
+// Function to fix levisummary values that are incorrectly "₪0"
+export function fixLeviSummaryValues(helper) {
+  console.log('🔧 Fixing leviSummary values from raw webhook data');
+  
+  if (!helper.levisummary || !helper.levisummary.adjustments) {
+    console.log('No levisummary.adjustments found, nothing to fix');
+    return helper;
+  }
+  
+  // Look for raw webhook data
+  const rawWebhookKeys = Object.keys(helper).filter(key => 
+    key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
+  );
+  
+  if (rawWebhookKeys.length === 0) {
+    console.log('No raw webhook data found for fixing values');
+    return helper;
+  }
+  
+  // Get the most recent webhook data
+  const latestWebhookKey = rawWebhookKeys.sort().pop();
+  const rawWebhookData = helper[latestWebhookKey];
+  
+  if (!rawWebhookData || !rawWebhookData.data) {
+    console.log('Raw webhook data has no data field');
+    return helper;
+  }
+  
+  const rawData = rawWebhookData.data;
+  console.log('Found raw webhook data for value correction:', rawData);
+  
+  // Create standardizer instance to use extraction methods
+  const standardizer = new DataFlowStandardizer();
+  
+  // Fix each adjustment that has "₪0" values
+  let fixed = false;
+  Object.keys(helper.levisummary.adjustments).forEach(adjustmentType => {
+    const adjustment = helper.levisummary.adjustments[adjustmentType];
+    
+    if (adjustment.amount === '₪0' || adjustment.cumulative === '₪0') {
+      const correctedValues = standardizer.extractAdjustmentValues(adjustmentType, rawData);
+      
+      if (correctedValues.amount && correctedValues.amount !== '₪0') {
+        adjustment.amount = correctedValues.amount;
+        console.log(`✅ Fixed ${adjustmentType} amount: ${correctedValues.amount}`);
+        fixed = true;
+      }
+      
+      if (correctedValues.cumulative && correctedValues.cumulative !== '₪0') {
+        adjustment.cumulative = correctedValues.cumulative;
+        console.log(`✅ Fixed ${adjustmentType} cumulative: ${correctedValues.cumulative}`);
+        fixed = true;
+      }
+    }
+  });
+  
+  if (fixed) {
+    console.log('✅ leviSummary values have been corrected from raw webhook data');
+  } else {
+    console.log('No leviSummary values needed correction');
+  }
+  
+  return helper;
 }
 
 // Function to update existing helper with standardized data
