@@ -1150,6 +1150,33 @@
 
   <!-- Load external scripts -->
   <script src="legal-text-engine.js"></script>
+  
+  <!-- MathEngine Module Import -->
+  <script type="module">
+    // Import and make MathEngine globally available
+    import { MathEngine } from './math.js';
+    
+    // Make MathEngine available globally for other scripts
+    window.MathEngine = MathEngine;
+    
+    // Log that MathEngine is now available
+    console.log('✅ MathEngine loaded and available globally');
+    
+    // Initialize MathEngine immediately
+    try {
+      if (MathEngine && typeof MathEngine.initializeVatRate === 'function') {
+        MathEngine.initializeVatRate();
+      }
+    } catch (error) {
+      console.warn('⚠️ MathEngine VAT initialization warning:', error);
+    }
+    
+    // Dispatch event to notify other scripts MathEngine is ready
+    window.dispatchEvent(new CustomEvent('mathEngineReady', { 
+      detail: { MathEngine: MathEngine } 
+    }));
+  </script>
+  
   <script type="module" src="auth.js"></script>
   <script src="helper.js" type="module"></script>
   <script src="internal-browser.js"></script>
@@ -1243,12 +1270,37 @@
     function initializeEstimateBuilder() {
       console.log('🚀 Initializing Estimate Builder (Clean Version)');
       
-      // Set initialization flag
-      isInitializing = true;
+      // Wait for MathEngine to be ready
+      const waitForMathEngine = () => {
+        return new Promise((resolve) => {
+          const checkMathEngine = () => {
+            if (typeof window.MathEngine !== 'undefined') {
+              console.log('✅ MathEngine ready for estimator');
+              resolve();
+            } else {
+              console.log('⏳ Waiting for MathEngine...');
+              setTimeout(checkMathEngine, 50);
+            }
+          };
+          checkMathEngine();
+        });
+      };
       
-      // Load data from helper
-      loadDataFromHelper();
-      loadDamageCentersSummary(window.helper || {});
+      // Initialize with dependency check
+      waitForMathEngine().then(() => {
+        // Set initialization flag
+        isInitializing = true;
+        
+        try {
+          // Load data from helper
+          loadDataFromHelper();
+          loadDamageCentersSummary(window.helper || {});
+        } catch (error) {
+          console.error('❌ Error during estimator initialization:', error);
+        }
+      }).catch(error => {
+        console.error('❌ Failed to initialize estimator:', error);
+      });
       
       // Initialize Full Market Value section
       initializeFullMarketValueSection();

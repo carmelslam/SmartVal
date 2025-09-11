@@ -1753,6 +1753,61 @@
   <script>
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
+    
+    // Update helper structure from contact field changes
+    window.updateHelperFromContactField = function(element) {
+      try {
+        const helper = window.helper || {};
+        const fieldId = element.id;
+        const value = element.value;
+        
+        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
+        
+        // Set nested value helper function
+        const setNestedValue = (obj, path, val) => {
+          const keys = path.split('.');
+          let current = obj;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object') {
+              current[key] = {};
+            }
+            current = current[key];
+          }
+          current[keys[keys.length - 1]] = val;
+        };
+        
+        // Field mappings
+        const fieldMappings = {
+          'ownerName': 'stakeholders.owner.name',
+          'ownerAddress': 'stakeholders.owner.address', 
+          'ownerPhone': 'stakeholders.owner.phone',
+          'insuranceCompany': 'stakeholders.insurance.company',
+          'insuranceEmail': 'stakeholders.insurance.email',
+          'insuranceAgent': 'stakeholders.insurance.agent.name',
+          'agentPhone': 'stakeholders.insurance.agent.phone',
+          'agentEmail': 'stakeholders.insurance.agent.email',
+          'garageName': 'stakeholders.garage.name',
+          'garagePhone': 'stakeholders.garage.phone',
+          'garageEmail': 'stakeholders.garage.email',
+          'carReportDate': 'case_info.issue_date'
+        };
+        
+        // Update helper structure
+        if (fieldMappings[fieldId]) {
+          setNestedValue(helper, fieldMappings[fieldId], value);
+          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
+        }
+        
+        // Save to storage and window
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+      } catch (error) {
+        console.error('❌ Error updating helper from contact field:', error);
+      }
+    };
+    
     window.toggleFloatingScreen = function(screenType) {
       
       const screens = {
@@ -8154,16 +8209,44 @@
       // First initialize the FinalReportCalculations object
       console.log('🚀 Initializing FinalReportCalculations object first');
       
-      // Then load data from helper after FinalReportCalculations is available
-      setTimeout(() => {
-        loadDataFromHelper();
-        loadAttachmentsData();
-        loadClaimsDataToUI(); // Load claims data to UI fields
-        loadLegalText().catch(console.error);
-        updateGlobalDepreciationCalculation();
-        
-        // Load additional notes field separately with extra delay
+      // Wait for both MathEngine and FinalReportCalculations to be ready
+      const waitForDependencies = () => {
+        return new Promise((resolve) => {
+          const checkDependencies = () => {
+            const mathEngineReady = typeof window.MathEngine !== 'undefined';
+            const calculationsReady = typeof window.FinalReportCalculations !== 'undefined';
+            
+            if (mathEngineReady && calculationsReady) {
+              console.log('✅ All dependencies ready');
+              resolve();
+            } else {
+              console.log('⏳ Waiting for dependencies...');
+              setTimeout(checkDependencies, 50);
+            }
+          };
+          checkDependencies();
+        });
+      };
+      
+      // Then load data from helper after dependencies are ready
+      waitForDependencies().then(() => {
         setTimeout(() => {
+          try {
+            loadDataFromHelper();
+            loadAttachmentsData();
+            loadClaimsDataToUI(); // Load claims data to UI fields
+            loadLegalText().catch(console.error);
+            updateGlobalDepreciationCalculation();
+          } catch (error) {
+            console.error('❌ Error during final report initialization:', error);
+          }
+        }, 100);
+      }).catch(error => {
+        console.error('❌ Failed to wait for dependencies:', error);
+      });
+      
+      // Load additional notes field separately with extra delay
+      setTimeout(() => {
           loadAdditionalNotesField();
           // Also reload summary fields to ensure they're populated
           const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -9412,6 +9495,14 @@
     window.getFinalReportCalculations = () => window.FinalReportCalculations;
     // Maintain backward compatibility
     window.getFinalReportCalculations = () => window.FinalReportCalculations;
+    
+    // Dispatch event to notify that FinalReportCalculations is ready
+    setTimeout(() => {
+      console.log('✅ FinalReportCalculations initialized and ready');
+      window.dispatchEvent(new CustomEvent('finalReportCalculationsReady', {
+        detail: { FinalReportCalculations: window.FinalReportCalculations }
+      }));
+    }, 10);
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {
@@ -11721,103 +11812,7 @@
     
     
     // Update helper structure from contact field changes using field mapping dictionary
-    function updateHelperFromContactField(element) {
-      try {
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
-        const fieldId = element.id;
-        const value = element.value;
-        
-        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
-        
-        // Set nested value helper function
-        const setNestedValue = (obj, path, val) => {
-          const keys = path.split('.');
-          let current = obj;
-          for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i];
-            if (!(key in current) || typeof current[key] !== 'object') {
-              current[key] = {};
-            }
-            current = current[key];
-          }
-          current[keys[keys.length - 1]] = val;
-        };
-        
-        // Map field IDs to helper structure paths using field mapping dictionary
-        const fieldMappings = {
-          'ownerName': 'stakeholders.owner.name',
-          'ownerAddress': 'stakeholders.owner.address', 
-          'ownerPhone': 'stakeholders.owner.phone',
-          'insuranceCompany': 'stakeholders.insurance.company',
-          'insuranceEmail': 'stakeholders.insurance.email',
-          'insuranceAgent': 'stakeholders.insurance.agent.name',
-          'agentPhone': 'stakeholders.insurance.agent.phone',
-          'agentEmail': 'stakeholders.insurance.agent.email',
-          'garageName': 'stakeholders.garage.name',
-          'garagePhone': 'stakeholders.garage.phone',
-          'garageEmail': 'stakeholders.garage.email',
-          'carReportDate': 'case_info.issue_date'
-        };
-        
-        // Update standardized helper structure
-        if (fieldMappings[fieldId]) {
-          setNestedValue(helper, fieldMappings[fieldId], value);
-          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
-        }
-        
-        // Also maintain legacy structure for backward compatibility
-        helper.client = helper.client || {};
-        helper.car_details = helper.car_details || {};
-        
-        const legacyMappings = {
-          'ownerName': () => {
-            helper.client.name = value;
-            helper.car_details.owner = value;
-          },
-          'ownerAddress': () => {
-            helper.client.address = value;
-            helper.car_details.ownerAddress = value;
-          },
-          'ownerPhone': () => {
-            helper.client.phone = value;
-            helper.car_details.ownerPhone = value;
-          },
-          'insuranceCompany': () => {
-            helper.client.insurance_company = value;
-            helper.car_details.insuranceCompany = value;
-          },
-          'insuranceEmail': () => {
-            helper.client.insurance_email = value;
-          },
-          'insuranceAgent': () => {
-            helper.client.insurance_agent = value;
-            helper.car_details.agentName = value;
-          },
-          'agentPhone': () => {
-            helper.client.insurance_agent_phone = value;
-            helper.car_details.insurance_agent_phone = value;
-          },
-          'agentEmail': () => {
-            helper.client.insurance_agent_email = value;
-            helper.car_details.insurance_agent_email = value;
-          }
-        };
-        
-        if (legacyMappings[fieldId]) {
-          legacyMappings[fieldId]();
-        }
-        
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        localStorage.setItem('helper', JSON.stringify(helper));
-        
-        console.log(`💾 Helper updated for field: ${fieldId}`);
-        
-      } catch (error) {
-        console.error('❌ Error updating helper from contact field:', error);
-      }
-    }
+    // updateHelperFromContactField moved to earlier script block for immediate availability
     
     // Update helper structure from vehicle field changes using field mapping dictionary
     function updateHelperFromVehicleField(element) {
@@ -15376,10 +15371,28 @@
     // Log that MathEngine is now available
     console.log('✅ MathEngine loaded and available globally');
     
+    // Initialize MathEngine immediately
+    try {
+      if (MathEngine && typeof MathEngine.initializeVatRate === 'function') {
+        MathEngine.initializeVatRate();
+      }
+    } catch (error) {
+      console.warn('⚠️ MathEngine VAT initialization warning:', error);
+    }
+    
     // Dispatch event to notify other scripts MathEngine is ready
     window.dispatchEvent(new CustomEvent('mathEngineReady', { 
       detail: { MathEngine: MathEngine } 
     }));
+    
+    // Initialize FinalReportCalculations after MathEngine is ready
+    setTimeout(() => {
+      if (window.FinalReportCalculations && typeof window.FinalReportCalculations === 'object') {
+        console.log('✅ FinalReportCalculations confirmed available');
+      } else {
+        console.warn('⚠️ FinalReportCalculations not yet available, will initialize when ready');
+      }
+    }, 100);
   </script>
   
   <script>
