@@ -2187,19 +2187,31 @@ function fixLeviSummaryValuesDirectly(helper) {
     return helper;
   }
   
-  // Look for raw webhook data
-  const rawWebhookKeys = Object.keys(helper).filter(key => 
-    key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
-  );
+  // Look for raw webhook data - check both formats
+  let rawWebhookData = null;
   
-  if (rawWebhookKeys.length === 0) {
+  // Format 1: Direct raw_webhook_data object
+  if (helper.raw_webhook_data) {
+    console.log('Found direct raw_webhook_data object');
+    rawWebhookData = helper.raw_webhook_data;
+  } 
+  // Format 2: Timestamped webhook data keys
+  else {
+    const rawWebhookKeys = Object.keys(helper).filter(key => 
+      key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
+    );
+    
+    if (rawWebhookKeys.length > 0) {
+      const latestWebhookKey = rawWebhookKeys.sort().pop();
+      rawWebhookData = helper[latestWebhookKey];
+      console.log('Found timestamped raw webhook data');
+    }
+  }
+  
+  if (!rawWebhookData) {
     console.log('No raw webhook data found for fixing values');
     return helper;
   }
-  
-  // Get the most recent webhook data
-  const latestWebhookKey = rawWebhookKeys.sort().pop();
-  const rawWebhookData = helper[latestWebhookKey];
   
   if (!rawWebhookData || !rawWebhookData.data) {
     console.log('Raw webhook data has no data field');
@@ -2299,6 +2311,11 @@ if (existingHelper) {
   if (rawWebhookKeys.length > 0) {
     const latestKey = rawWebhookKeys.sort().pop();
     console.log('🔍 DEBUG: Latest webhook data:', existingHelper[latestKey]);
+  }
+  
+  // Also check direct raw_webhook_data
+  if (existingHelper.raw_webhook_data) {
+    console.log('🔍 DEBUG: Direct raw_webhook_data:', existingHelper.raw_webhook_data);
   }
 }
 
