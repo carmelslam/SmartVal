@@ -2190,10 +2190,21 @@ function fixLeviSummaryValuesDirectly(helper) {
   // Look for raw webhook data - check both formats
   let rawWebhookData = null;
   
-  // Format 1: Direct raw_webhook_data object
+  // Format 1: Direct raw_webhook_data object with nested SUBMIT_LEVI_REPORT data
   if (helper.raw_webhook_data) {
     console.log('Found direct raw_webhook_data object');
-    rawWebhookData = helper.raw_webhook_data;
+    // Look for SUBMIT_LEVI_REPORT keys within the raw_webhook_data object
+    const leviKeys = Object.keys(helper.raw_webhook_data).filter(key => 
+      key.includes('SUBMIT_LEVI_REPORT')
+    );
+    
+    if (leviKeys.length > 0) {
+      const latestLeviKey = leviKeys.sort().pop();
+      rawWebhookData = helper.raw_webhook_data[latestLeviKey];
+      console.log(`Using nested LEVI data from key: ${latestLeviKey}`);
+    } else {
+      rawWebhookData = helper.raw_webhook_data;
+    }
   } 
   // Format 2: Timestamped webhook data keys
   else {
