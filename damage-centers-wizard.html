@@ -2005,7 +2005,18 @@
           // Get the helper data
           let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
-          if (helper.current_damage_center && helper.current_damage_center.Id) {
+          // Check if damage center was already saved (current_damage_center is empty)
+          if (!helper.current_damage_center || Object.keys(helper.current_damage_center).length === 0) {
+            console.log('✅ Damage center already saved - no action needed');
+            saveBtn.textContent = '✅ כבר נשמר';
+            setTimeout(() => {
+              saveBtn.textContent = originalText;
+              saveBtn.disabled = false;
+            }, 2000);
+            return;
+          }
+          
+          if (helper.current_damage_center && (helper.current_damage_center.Id || Object.keys(helper.current_damage_center).length > 0)) {
             // Update the Summary with current totals
             const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
             const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
