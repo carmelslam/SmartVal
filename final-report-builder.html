@@ -3406,6 +3406,12 @@
             <textarea class="damage-center-description" style="width: 100%; min-height: 60px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px; resize: vertical;" placeholder="הזן תיאור מפורט של הנזק במוקד זה...">${block.description || ''}</textarea>
           </div>
 
+          <!-- RepairNature Field -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #1e3a8a;">מהות התיקון:</label>
+            <input class="damage-center-repair-nature" style="width: 100%; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 14px;" placeholder="הזן את מהות התיקון..." value="${block.RepairNature || block.repair_nature || ''}" />
+          </div>
+
           <!-- Parts Section (Full Width Row) -->
           <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
             <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">חלקים נדרשים:</h4>
@@ -8535,6 +8541,7 @@
           const centerNumber = numberMatch ? numberMatch[0] : String(index + 1);
           const centerLocation = card.querySelector('.damage-center-location').value;
           const centerDescription = card.querySelector('.damage-center-description').value;
+          const centerRepairNature = card.querySelector('.damage-center-repair-nature')?.value || '';
           
           // Collect parts
           const parts = [];
@@ -8592,6 +8599,7 @@
             "Damage center Number": centerNumber || (index + 1),
             Location: centerLocation,
             Description: centerDescription,
+            RepairNature: centerRepairNature,
             Parts: {
               parts_required: parts,
               parts_meta: {
@@ -8627,6 +8635,7 @@
             damage_center_number: index + 1,
             center_header: centerNumber,
             description: centerDescription,
+            repair_nature: centerRepairNature,
             parts,
             works,
             repairs,
@@ -8641,7 +8650,7 @@
               name: centerLocation.trim(),
               number: centerNumber || (index + 1),
               description: centerDescription || '',
-              RepairNature: '' // This will be populated from helper.centers when available
+              RepairNature: centerRepairNature
             });
           }
           
@@ -8793,7 +8802,7 @@
     // ADD EVENT LISTENERS
     function addDamageCenterEventListeners() {
       // Remove existing listeners by cloning elements (prevents duplicates)
-      document.querySelectorAll('.damage-center-number, .damage-center-location, .damage-center-name, .damage-center-area-name, .damage-center-description, .part-name, .part-desc, .part-price, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
+      document.querySelectorAll('.damage-center-number, .damage-center-location, .damage-center-name, .damage-center-area-name, .damage-center-description, .damage-center-repair-nature, .part-name, .part-desc, .part-price, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost').forEach(input => {
         // Check if already has listeners
         if (!input.hasAttribute('data-listeners-added')) {
           input.addEventListener('change', () => {
