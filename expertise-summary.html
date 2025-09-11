@@ -149,6 +149,9 @@
       <option>1097</option>
     </select>
 
+    <label for="expertiseDate">תאריך האקספרטיזה:</label>
+    <input type="date" id="expertiseDate" style="text-align: center;" onchange="saveExpertiseDate()">
+
     <label for="summaryNotes">הערות נוספות:</label>
     <textarea id="summaryNotes" placeholder="תיאור, המלצות, הערות כלליות"></textarea>
 
@@ -199,6 +202,12 @@
           licenseSelect.value = savedSummary.license;
         }
         
+        // Set expertise date
+        if (savedSummary.expertise_date) {
+          const dateInput = document.getElementById('expertiseDate');
+          dateInput.value = savedSummary.expertise_date;
+        }
+        
         // Set notes
         if (savedSummary.notes) {
           const notesTextarea = document.getElementById('summaryNotes');
@@ -219,6 +228,29 @@
       setTimeout(populateFormFromHelper, 100);
     }
 
+    // Save expertise date when changed
+    window.saveExpertiseDate = function() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const dateValue = document.getElementById('expertiseDate').value;
+      
+      // Initialize expertise section if needed
+      if (!helper.expertise) {
+        helper.expertise = {};
+      }
+      if (!helper.expertise.summary) {
+        helper.expertise.summary = {};
+      }
+      
+      // Save the date
+      helper.expertise.summary.expertise_date = dateValue;
+      
+      // Update helper in window and sessionStorage
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      console.log('Expertise date saved:', dateValue);
+    };
+
     // New button functions matching estimate-builder.html pattern
     window.saveExpertise = function() {
       // Get current helper object
@@ -229,6 +261,7 @@
         directive: document.getElementById('directive').value,
         technician: document.getElementById('technician').value,
         license: document.getElementById('license').value,
+        expertise_date: document.getElementById('expertiseDate').value,
         notes: document.getElementById('summaryNotes').value,
         status: document.getElementById('directive').value || 'בתהליך',
         completed_at: new Date().toISOString(),
