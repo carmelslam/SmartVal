@@ -2935,6 +2935,7 @@
       setTimeout(() => {
         console.log('🚀 Starting depreciation data loading...');
         loadDepreciationDataToUI();
+        updateClaimsDataDisplay();
       }, 1000);
     });
 
@@ -3148,6 +3149,57 @@
 
 
     // Lightweight auto-save for depreciation field changes
+    // Update Claims Data section with calculated values
+    function updateClaimsDataDisplay() {
+      try {
+        console.log('💰 Updating Claims Data display...');
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get values from estimate.calculations
+        const calculations = helper.estimate?.calculations || {};
+        const valuation = helper.valuation || {};
+        
+        // Map fields according to screenshot requirements:
+        
+        // 1. סה״כ תביעה (כלכום מוקדי נזק) -> estimate.calculations.total_damage_cost
+        const totalClaim = calculations.total_damage_cost || 0;
+        document.getElementById('totalClaim').textContent = `₪${Number(totalClaim).toLocaleString()}`;
+        
+        // 2. חישוב הערך לנזק גולמי -> estimate.calculations.gross_market_value
+        const grossDamageValue = calculations.gross_market_value || 0;
+        document.getElementById('grossDamageValue').textContent = `₪${Number(grossDamageValue).toLocaleString()}`;
+        
+        // 3. חישוב האחוז הגולמי -> estimate.calculations.gross_damage_percentage
+        const grossPercentage = calculations.gross_damage_percentage || 0;
+        document.getElementById('grossPercentage').textContent = `${Number(grossPercentage).toFixed(2)}%`;
+        
+        // 4. מחיר שוק (בסיס + התאמות) -> estimate.calculations.full_market_value
+        const marketPrice = calculations.full_market_value || 0;
+        document.getElementById('marketPriceCalculated').textContent = `₪${Number(marketPrice).toLocaleString()}`;
+        
+        // 5. ערך השוק של הרכב (לפי דו״ח לוי יצחק) -> valuation.final_price
+        const finalMarketValue = valuation.final_price || 0;
+        document.getElementById('finalMarketValue').textContent = `₪${Number(finalMarketValue).toLocaleString()}`;
+        
+        // Load saved insurance authorization if exists
+        const claimsData = helper.estimate?.claims_data || {};
+        if (claimsData.authorized_claim) {
+          document.getElementById('insuranceAuthorization').value = claimsData.authorized_claim;
+        }
+        
+        console.log('✅ Claims Data display updated:', {
+          totalClaim,
+          grossDamageValue,
+          grossPercentage: grossPercentage + '%',
+          marketPrice,
+          finalMarketValue
+        });
+        
+      } catch (error) {
+        console.error('❌ Error updating Claims Data display:', error);
+      }
+    }
+
     function autoSaveDepreciationData() {
       console.log('🚨 AUTO-SAVE FUNCTION CALLED!');
       try {
@@ -6845,6 +6897,9 @@
         window.helper = helper;
         
         console.log('✅ Consolidated all calculations into estimate.calculations:', helper.estimate.calculations);
+        
+        // Update Claims Data display with new calculations
+        updateClaimsDataDisplay();
         
         return helper.estimate.calculations;
         
