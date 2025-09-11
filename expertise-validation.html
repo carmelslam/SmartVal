@@ -1602,7 +1602,19 @@
             const parts = center?.Parts?.parts_meta?.total_cost || 0;
             const repairs = center?.Repairs?.repairs_meta?.total_cost || 0;
             const totalWithVat = center?.Summary?.['Total with VAT'] || 0;
-            const totalWithoutVat = center?.Summary?.['Total without VAT'] || 0;
+            // Calculate without VAT from available Summary data
+            let totalWithoutVat = center?.Summary?.['Subtotal'] || 0;
+            
+            // If Subtotal not available, calculate: Total with VAT - VAT amount
+            if (!totalWithoutVat && center?.Summary?.['Total with VAT'] && center?.Summary?.['VAT amount']) {
+              totalWithoutVat = center.Summary['Total with VAT'] - center.Summary['VAT amount'];
+            }
+            
+            // If still not available, calculate from VAT rate: Total with VAT / (1 + VAT%)
+            if (!totalWithoutVat && center?.Summary?.['Total with VAT'] && helper?.calculations?.vat_rate) {
+              const vatRate = helper.calculations.vat_rate / 100;
+              totalWithoutVat = center.Summary['Total with VAT'] / (1 + vatRate);
+            }
             
             return `
               <div style="background: white; padding: 15px; margin: 4px 0; border-radius: 6px; border-left: 4px solid #3b82f6;">
