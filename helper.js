@@ -2179,27 +2179,112 @@ function initializeHelper() {
 const existingHelper = initializeHelper();
 
 // 🚨 CRITICAL FIX: Fix leviSummary values that show "₪0" from webhook
-if (existingHelper && existingHelper.levisummary && existingHelper.levisummary.adjustments) {
-  console.log('🔧 Checking for leviSummary values that need fixing...');
+function fixLeviSummaryValuesDirectly(helper) {
+  console.log('🔧 Fixing leviSummary values from raw webhook data');
   
-  // Import the fix function from data-flow-standardizer
-  import('./data-flow-standardizer.js').then(module => {
-    const { fixLeviSummaryValues } = module;
-    if (fixLeviSummaryValues) {
-      const fixedHelper = fixLeviSummaryValues(existingHelper);
-      window.helper = fixedHelper;
-      
-      // Save the fixed data back to storage
-      try {
-        sessionStorage.setItem('helper', JSON.stringify(fixedHelper));
-        console.log('✅ Fixed and saved leviSummary values');
-      } catch (e) {
-        console.warn('⚠️ Could not save fixed leviSummary to storage:', e);
+  if (!helper.levisummary || !helper.levisummary.adjustments) {
+    console.log('No levisummary.adjustments found, nothing to fix');
+    return helper;
+  }
+  
+  // Look for raw webhook data
+  const rawWebhookKeys = Object.keys(helper).filter(key => 
+    key.startsWith('raw_webhook_data.SUBMIT_LEVI_REPORT_')
+  );
+  
+  if (rawWebhookKeys.length === 0) {
+    console.log('No raw webhook data found for fixing values');
+    return helper;
+  }
+  
+  // Get the most recent webhook data
+  const latestWebhookKey = rawWebhookKeys.sort().pop();
+  const rawWebhookData = helper[latestWebhookKey];
+  
+  if (!rawWebhookData || !rawWebhookData.data) {
+    console.log('Raw webhook data has no data field');
+    return helper;
+  }
+  
+  const rawData = rawWebhookData.data;
+  console.log('Found raw webhook data for value correction:', rawData);
+  
+  // Convert raw data to string for text parsing
+  const text = JSON.stringify(rawData);
+  
+  // Hebrew field mappings for extraction
+  const fieldMappings = {
+    features: {
+      amount: /ערך ש״ח מאפיינים[:\s]*([₪\s\d,.-]+)/i,
+      cumulative: /שווי מצטבר מאפיינים[:\s]*([₪\s\d,.-]+)/i
+    },
+    registration: {
+      amount: /ערך ש״ח עליה לכביש[:\s]*([₪\s\d,.-]+)/i,
+      cumulative: /שווי מצטבר עליה לכביש[:\s]*([₪\s\d,.-]+)/i
+    },
+    ownership_type: {
+      amount: /ערך ש״ח בעלות[:\s]*([₪\s\d,.-]+)/i,
+      cumulative: /שווי מצטבר בעלות[:\s]*([₪\s\d,.-]+)/i
+    },
+    mileage: {
+      amount: /ערך ש״ח מס ק״מ[:\s]*([₪\s\d,.-]+)/i,
+      cumulative: /שווי מצטבר מס ק״מ[:\s]*([₪\s\d,.-]+)/i
+    },
+    ownership_history: {
+      amount: /ערך ש״ח מספר בעלים[:\s]*([₪\s\d,.-]+)/i,
+      cumulative: /שווי מצטבר מספר בעלים[:\s]*([₪\s\d,.-]+)/i
+    }
+  };
+  
+  // Fix each adjustment that has "₪0" values
+  let fixed = false;
+  Object.keys(helper.levisummary.adjustments).forEach(adjustmentType => {
+    const adjustment = helper.levisummary.adjustments[adjustmentType];
+    const patterns = fieldMappings[adjustmentType];
+    
+    if (!patterns) return;
+    
+    if (adjustment.amount === '₪0') {
+      const amountMatch = text.match(patterns.amount);
+      if (amountMatch && amountMatch[1]) {
+        adjustment.amount = amountMatch[1].trim();
+        console.log(`✅ Fixed ${adjustmentType} amount: ${adjustment.amount}`);
+        fixed = true;
       }
     }
-  }).catch(e => {
-    console.warn('⚠️ Could not load leviSummary fix function:', e);
+    
+    if (adjustment.cumulative === '₪0') {
+      const cumulativeMatch = text.match(patterns.cumulative);
+      if (cumulativeMatch && cumulativeMatch[1]) {
+        adjustment.cumulative = cumulativeMatch[1].trim();
+        console.log(`✅ Fixed ${adjustmentType} cumulative: ${adjustment.cumulative}`);
+        fixed = true;
+      }
+    }
   });
+  
+  if (fixed) {
+    console.log('✅ leviSummary values have been corrected from raw webhook data');
+  } else {
+    console.log('No leviSummary values needed correction');
+  }
+  
+  return helper;
+}
+
+if (existingHelper && existingHelper.levisummary && existingHelper.levisummary.adjustments) {
+  console.log('🔧 Checking for leviSummary values that need fixing...');
+  const fixedHelper = fixLeviSummaryValuesDirectly(existingHelper);
+  
+  if (fixedHelper !== existingHelper) {
+    // Save the fixed data back to storage
+    try {
+      sessionStorage.setItem('helper', JSON.stringify(fixedHelper));
+      console.log('✅ Fixed and saved leviSummary values');
+    } catch (e) {
+      console.warn('⚠️ Could not save fixed leviSummary to storage:', e);
+    }
+  }
 }
 
 // Create comprehensive helper system with ALL required fields
