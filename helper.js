@@ -2321,20 +2321,22 @@ function fixLeviSummaryValuesDirectly(helper) {
     console.log('❌ No helper.valuation.adjustments found');
   }
   
-  // ✅ SYNC: Update expertise.levi_report from corrected levisummary
-  if (fixed && helper.expertise) {
+  // ✅ ALWAYS SYNC: Update expertise.levi_report from levisummary (whether fixed or not)
+  if (helper.expertise && helper.levisummary) {
     if (!helper.expertise.levi_report) {
       helper.expertise.levi_report = {};
     }
     
-    // Copy the entire corrected levisummary to expertise.levi_report
+    // Always copy the levisummary to expertise.levi_report to ensure sync
     helper.expertise.levi_report = {
       ...helper.levisummary,
       processed_at: new Date().toISOString(),
-      source: 'corrected_levisummary'
+      source: fixed ? 'corrected_levisummary' : 'synced_levisummary'
     };
     
-    console.log('✅ Synced corrected levisummary to expertise.levi_report');
+    console.log('✅ Synced levisummary to expertise.levi_report');
+  } else {
+    console.log('❌ Missing helper.expertise or helper.levisummary for sync');
   }
   
   if (fixed) {
