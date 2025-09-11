@@ -3075,15 +3075,18 @@
           const existingCenters = getDamageCentersFromHelper();
           const nextNumber = existingCenters.length + 1;
           
-          // ✅ FIXED: Initialize current_damage_center with proper structure per documentation
-          const centerId = `dc_${Date.now()}_${nextNumber}`;
+          // ✅ FIXED: Initialize or update current_damage_center while preserving existing data
+          const centerId = helper.current_damage_center?.Id || `dc_${Date.now()}_${nextNumber}`;
+          const existingDescription = helper.current_damage_center?.Description || "";
+          const existingRepairNature = helper.current_damage_center?.RepairNature || "";
           
           helper.current_damage_center = {
             "Id": centerId,
             "Damage center Number": nextNumber.toString(),
             "Location": location,
-            "Description": "", // Will be filled in step 2
-            "Works": {
+            "Description": existingDescription, // Preserve existing description
+            "RepairNature": existingRepairNature, // Preserve existing repair nature
+            "Works": helper.current_damage_center?.Works || {
               "takana389": "",
               "works": [],
               "works_meta": {
@@ -3093,7 +3096,7 @@
                 "timestamp": new Date().toISOString()
               }
             },
-            "Parts": {
+            "Parts": helper.current_damage_center?.Parts || {
               "parts_meta": {
                 "total_items": 0,
                 "total_cost": 0,
@@ -3110,7 +3113,7 @@
               },
               "takana389": ""
             },
-            "Repairs": {
+            "Repairs": helper.current_damage_center?.Repairs || {
               "repairs": [],
               "repairs_meta": {
                 "total_items": 0,
@@ -3118,7 +3121,7 @@
                 "timestamp": new Date().toISOString()
               }
             },
-            "Summary": {
+            "Summary": helper.current_damage_center?.Summary || {
               "Total works": 0,
               "Total parts": 0,
               "Total repairs": 0,
@@ -3149,7 +3152,7 @@
           const description = damageDescriptionInput?.value?.trim() || 'תיאור לא צוין';
           
           const repairNatureInput = document.getElementById('repairNature');
-          const repairNature = repairNatureInput?.value?.trim() || 'מהות תיקון לא צוינה';
+          const repairNature = repairNatureInput?.value?.trim() || '';
           
           console.log('🔍 === STEP 2 DESCRIPTION & REPAIR NATURE SAVE ===');
           console.log('🔍 Description value:', description);
