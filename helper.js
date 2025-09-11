@@ -2297,10 +2297,26 @@ function fixLeviSummaryValuesDirectly(helper) {
           console.log(`✅ Fixed ${adjustmentType} cumulative: ${leviAdjustment.cumulative}`);
           fixed = true;
         }
+        
+        // ✅ FIX: Copy description from valuation.value for mileage
+        if (adjustmentType === 'mileage' && (!leviAdjustment.description || leviAdjustment.description === '') && valuationAdjustment.value) {
+          leviAdjustment.description = valuationAdjustment.value;
+          console.log(`✅ Fixed ${adjustmentType} description: ${leviAdjustment.description}`);
+          fixed = true;
+        }
       } else {
         console.log(`⚠️ No valuation data found for ${adjustmentType}`);
       }
     });
+    
+    // ✅ FIX: Copy mileage value to helper.levisummary.km
+    if (helper.valuation.adjustments.mileage && helper.valuation.adjustments.mileage.value) {
+      if (!helper.levisummary.km || helper.levisummary.km === '') {
+        helper.levisummary.km = helper.valuation.adjustments.mileage.value;
+        console.log(`✅ Fixed levisummary.km: ${helper.levisummary.km}`);
+        fixed = true;
+      }
+    }
   } else {
     console.log('❌ No helper.valuation.adjustments found');
   }
