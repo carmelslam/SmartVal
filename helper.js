@@ -2178,6 +2178,30 @@ function initializeHelper() {
 // Load existing data or create default structure
 const existingHelper = initializeHelper();
 
+// 🚨 CRITICAL FIX: Fix leviSummary values that show "₪0" from webhook
+if (existingHelper && existingHelper.levisummary && existingHelper.levisummary.adjustments) {
+  console.log('🔧 Checking for leviSummary values that need fixing...');
+  
+  // Import the fix function from data-flow-standardizer
+  import('./data-flow-standardizer.js').then(module => {
+    const { fixLeviSummaryValues } = module;
+    if (fixLeviSummaryValues) {
+      const fixedHelper = fixLeviSummaryValues(existingHelper);
+      window.helper = fixedHelper;
+      
+      // Save the fixed data back to storage
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(fixedHelper));
+        console.log('✅ Fixed and saved leviSummary values');
+      } catch (e) {
+        console.warn('⚠️ Could not save fixed leviSummary to storage:', e);
+      }
+    }
+  }).catch(e => {
+    console.warn('⚠️ Could not load leviSummary fix function:', e);
+  });
+}
+
 // Create comprehensive helper system with ALL required fields
 window.helper = existingHelper || {
   meta: {
