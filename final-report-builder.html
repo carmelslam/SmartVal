@@ -5,113 +5,6 @@
   <title>אשף חוות הדעת - ירון כיוף</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
-  
-  <!-- CRITICAL: Function must be defined before HTML elements reference it -->
-  <script>
-    // Update helper structure from contact field changes
-    window.updateHelperFromContactField = function(element) {
-      try {
-        const helper = window.helper || {};
-        const fieldId = element.id;
-        const value = element.value;
-        
-        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
-        
-        // Set nested value helper function
-        const setNestedValue = (obj, path, val) => {
-          const keys = path.split('.');
-          let current = obj;
-          for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i];
-            if (!(key in current) || typeof current[key] !== 'object') {
-              current[key] = {};
-            }
-            current = current[key];
-          }
-          current[keys[keys.length - 1]] = val;
-        };
-        
-        // Field mappings
-        const fieldMappings = {
-          'ownerName': 'stakeholders.owner.name',
-          'ownerAddress': 'stakeholders.owner.address', 
-          'ownerPhone': 'stakeholders.owner.phone',
-          'insuranceCompany': 'stakeholders.insurance.company',
-          'insuranceEmail': 'stakeholders.insurance.email',
-          'insuranceAgent': 'stakeholders.insurance.agent.name',
-          'agentPhone': 'stakeholders.insurance.agent.phone',
-          'agentEmail': 'stakeholders.insurance.agent.email',
-          'garageName': 'stakeholders.garage.name',
-          'garagePhone': 'stakeholders.garage.phone',
-          'garageEmail': 'stakeholders.garage.email',
-          'carReportDate': 'case_info.issue_date'
-        };
-        
-        // Update helper structure
-        if (fieldMappings[fieldId]) {
-          setNestedValue(helper, fieldMappings[fieldId], value);
-          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
-        }
-        
-        // Save to storage and window
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        window.helper = helper;
-        
-      } catch (error) {
-        console.error('❌ Error updating helper from contact field:', error);
-      }
-    };
-
-    // Toggle section visibility
-    window.toggleSection = function(sectionId) {
-      const section = document.getElementById(sectionId);
-      if (section) {
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-      }
-    };
-
-    // Trigger floating screen refresh
-    window.triggerFloatingScreenRefresh = function() {
-      try {
-        if (typeof window.refreshFloatingScreens === 'function') {
-          window.refreshFloatingScreens();
-        }
-      } catch (error) {
-        console.error('❌ Error triggering floating screen refresh:', error);
-      }
-    };
-
-    // Toggle floating screen
-    window.toggleFloatingScreen = function(screenType) {
-      const screens = {
-        leviReport: () => {
-          if (window.toggleLeviReport) {
-            window.toggleLeviReport();
-          }
-        },
-        carDetails: () => {
-          if (window.toggleCarDetailsFloating) {
-            window.toggleCarDetailsFloating();
-          }
-        },
-        invoiceDetails: () => {
-          if (window.toggleInvoiceDetails) {
-            window.toggleInvoiceDetails();
-          }
-        },
-        partsSearchResults: () => {
-          if (window.togglePartsSearchResults) {
-            window.togglePartsSearchResults();
-          }
-        }
-      };
-      
-      if (screens[screenType]) {
-        screens[screenType]();
-      }
-    };
-  </script>
-  
   <style>
     body {
       font-family: sans-serif;
@@ -1860,8 +1753,6 @@
   <script>
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
-    // updateHelperFromContactField moved to <head> section
-    
     window.toggleFloatingScreen = function(screenType) {
       
       const screens = {
@@ -5423,19 +5314,27 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        // Auto-sync valuation to estimate if estimate is empty (user skipped estimator)
-        if (!helper.estimate?.adjustments || Object.keys(helper.estimate.adjustments).length === 0) {
-          syncValuationToEstimateAdjustments(helper);
-        }
-        
-        const adjustmentsData = helper.estimate?.adjustments || {};
-        const featuresData = Array.isArray(adjustmentsData.features) ? adjustmentsData.features : [adjustmentsData.features].filter(Boolean);
-        const registrationData = Array.isArray(adjustmentsData.registration) ? adjustmentsData.registration : [adjustmentsData.registration].filter(Boolean);
+        const leviData = helper.valuation?.adjustments || {};
+        const featuresData = leviData.features || {};
+        const registrationData = leviData.registration || {};
 
         // ===== Features Adjustments =====
 
-        // featuresData is now an array from estimate.adjustments
-        let featureItems = featuresData.length > 0 ? featuresData : [{}];
+        let featureItems = [];
+        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
+          featureItems = featuresData.feature_list;
+        } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
+          featureItems = [{
+            description: featuresData.description || featuresData.reason || '',
+            amount: featuresData.amount,
+            percent: featuresData.percent
+          }];
+        }
+
+        // Always show at least one row if any data exists
+        if (featureItems.length === 0) {
+          featureItems = [{}];
+        }
 
         featureItems.forEach(item => {
           if (typeof addFeatureAdjustment === 'function') {
@@ -5476,28 +5375,26 @@
             }
           }
         });
-        
 
-        // ===== Registration Adjustments =====
-        registrationData.forEach(item => {
-          if (item && (item.amount || item.percent || item.percentage || item.description)) {
+        // ===== Registration Adjustment =====
+        if (registrationData.amount || registrationData.percent || registrationData.date) {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent || item.percentage) || 0;
+              const amount = parseFloat(registrationData.amount) || 0;
+              const percent = parseFloat(registrationData.percent) || 0;
               
               console.log('🔍 Loading registration adjustment:', {
-                item: item,
+                registrationData: registrationData,
                 amount: amount,
                 percent: percent,
                 isNegative: (amount < 0 || percent < 0)
               });
               
               if (inputs.length >= 4) {
-                const desc = item.description || item.value || item.date || item.reason || 'עליה לכביש';
+                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
                 inputs[0].value = desc;
                 
                 // Determine type based on negative values in helper data
@@ -5518,52 +5415,10 @@
             }
           }
         }
-        });
-        
 
         updateGrossMarketValueCalculation();
       } catch (error) {
         console.error('Error loading gross adjustments:', error);
-      }
-    }
-    
-    // Auto-sync valuation.adjustments to estimate.adjustments when user skips estimator
-    function syncValuationToEstimateAdjustments(helper) {
-      try {
-        console.log('🔄 Auto-syncing valuation.adjustments to estimate.adjustments');
-        
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        const valuationAdj = helper.valuation?.adjustments || {};
-        
-        // Convert single objects to arrays for unified handling
-        if (valuationAdj.features) {
-          helper.estimate.adjustments.features = [valuationAdj.features];
-        }
-        
-        if (valuationAdj.registration) {
-          helper.estimate.adjustments.registration = [valuationAdj.registration];
-        }
-        
-        if (valuationAdj.mileage) {
-          helper.estimate.adjustments.mileage = [valuationAdj.mileage];
-        }
-        
-        if (valuationAdj.ownership_type) {
-          helper.estimate.adjustments.ownership_type = [valuationAdj.ownership_type];
-        }
-        
-        if (valuationAdj.ownership_history) {
-          helper.estimate.adjustments.ownership_history = [valuationAdj.ownership_history];
-        }
-        
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Valuation adjustments synced to estimate.adjustments');
-        
-      } catch (error) {
-        console.error('❌ Error syncing valuation to estimate adjustments:', error);
       }
     }
     
@@ -5573,6 +5428,7 @@
     function addFeatureAdjustment() {
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
+      
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
@@ -5594,6 +5450,7 @@
     function addRegistrationAdjustment() {
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
+      
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
@@ -5988,7 +5845,21 @@
     }
     
     // Calculate adjustment value for simple percentage input
-    // calculateAdjustmentValueSimple function defined later in the file
+    function calculateAdjustmentValueSimple(percentInput) {
+      const row = percentInput.closest('div');
+      if (!row) return;
+      
+      const inputs = row.querySelectorAll('input, select');
+      if (inputs.length < 4) return;
+      
+      const percent = parseFloat(percentInput.value) || 0;
+      const basicPrice = parseFloat(document.getElementById('basicPrice')?.value?.replace(/[₪,]/g, '')) || 0;
+      
+      if (basicPrice > 0) {
+        const calculatedValue = (basicPrice * percent) / 100;
+        inputs[3].value = calculatedValue ? `₪${Math.abs(calculatedValue).toLocaleString()}` : '';
+      }
+    }
     
     // ============================================================================
     // END OF AUTO-POPULATION FUNCTIONS
@@ -5999,63 +5870,7 @@
       try {
         console.log('🔄 updateHelperFromAdjustments called');
         
-        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        if (!helper) helper = {};
-        
-        // Initialize estimate.adjustments
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
-        
-        // Process Features Adjustments - store ALL rows in estimate.adjustments arrays
-        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        helper.estimate.adjustments.features = [];
-        featuresRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '',
-              type: inputs[1].value || 'plus',
-              percentage: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-            };
-            
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-            }
-            
-            helper.estimate.adjustments.features.push(adjustmentData);
-          }
-        });
-        
-        // Process Registration Adjustments - store ALL rows in estimate.adjustments arrays
-        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        helper.estimate.adjustments.registration = [];
-        registrationRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const adjustmentData = {
-              description: inputs[0].value || '',
-              value: inputs[0].value || '',
-              type: inputs[1].value || 'plus',
-              percentage: parseFloat(inputs[2].value) || 0,
-              percent: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-            };
-            
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-            }
-            
-            helper.estimate.adjustments.registration.push(adjustmentData);
-          }
-        });
-        
-        // Save updated helper
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('💾 Helper updated with estimate.adjustments');
+        // Implementation removed for now - will be restored from backup if needed
         
       } catch (error) {
         console.error('❌ Error in updateHelperFromAdjustments:', error);
@@ -6770,6 +6585,11 @@
         if (typeof updateHelper === 'function') {
           updateHelper('calculations', helper.calculations);
         }
+        // Calculate and restore adjustments_value
+        if (typeof window.calculateValuationAdjustments === 'function') {
+          window.calculateValuationAdjustments();
+        }
+        
         if (typeof saveHelperToStorage === 'function') {
           saveHelperToStorage();
         }
@@ -8250,44 +8070,16 @@
       // First initialize the FinalReportCalculations object
       console.log('🚀 Initializing FinalReportCalculations object first');
       
-      // Wait for both MathEngine and FinalReportCalculations to be ready
-      const waitForDependencies = () => {
-        return new Promise((resolve) => {
-          const checkDependencies = () => {
-            const mathEngineReady = typeof window.MathEngine !== 'undefined';
-            const calculationsReady = typeof window.FinalReportCalculations !== 'undefined';
-            
-            if (mathEngineReady && calculationsReady) {
-              console.log('✅ All dependencies ready');
-              resolve();
-            } else {
-              console.log('⏳ Waiting for dependencies...');
-              setTimeout(checkDependencies, 50);
-            }
-          };
-          checkDependencies();
-        });
-      };
-      
-      // Then load data from helper after dependencies are ready
-      waitForDependencies().then(() => {
-        setTimeout(() => {
-          try {
-            loadDataFromHelper();
-            loadAttachmentsData();
-            loadClaimsDataToUI(); // Load claims data to UI fields
-            loadLegalText().catch(console.error);
-            updateGlobalDepreciationCalculation();
-          } catch (error) {
-            console.error('❌ Error during final report initialization:', error);
-          }
-        }, 100);
-      }).catch(error => {
-        console.error('❌ Failed to wait for dependencies:', error);
-      });
-      
-      // Load additional notes field separately with extra delay
+      // Then load data from helper after FinalReportCalculations is available
       setTimeout(() => {
+        loadDataFromHelper();
+        loadAttachmentsData();
+        loadClaimsDataToUI(); // Load claims data to UI fields
+        loadLegalText().catch(console.error);
+        updateGlobalDepreciationCalculation();
+        
+        // Load additional notes field separately with extra delay
+        setTimeout(() => {
           loadAdditionalNotesField();
           // Also reload summary fields to ensure they're populated
           const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -8495,6 +8287,7 @@
         attachmentsArea.addEventListener('input', function() {
           // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
         const helper = window.helper || {};
+          if (!helper.final_report) helper.final_report = {};
           helper.final_report.attachments = this.value;
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
@@ -9536,14 +9329,6 @@
     window.getFinalReportCalculations = () => window.FinalReportCalculations;
     // Maintain backward compatibility
     window.getFinalReportCalculations = () => window.FinalReportCalculations;
-    
-    // Dispatch event to notify that FinalReportCalculations is ready
-    setTimeout(() => {
-      console.log('✅ FinalReportCalculations initialized and ready');
-      window.dispatchEvent(new CustomEvent('finalReportCalculationsReady', {
-        detail: { FinalReportCalculations: window.FinalReportCalculations }
-      }));
-    }, 10);
 
     // MESSAGE LISTENER FOR PARTS SEARCH RESULTS
     window.addEventListener('message', function(event) {
@@ -11853,7 +11638,103 @@
     
     
     // Update helper structure from contact field changes using field mapping dictionary
-    // updateHelperFromContactField moved to earlier script block for immediate availability
+    function updateHelperFromContactField(element) {
+      try {
+        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
+        const helper = window.helper || {};
+        const fieldId = element.id;
+        const value = element.value;
+        
+        console.log(`📝 Contact field change: ${fieldId} = "${value}"`);
+        
+        // Set nested value helper function
+        const setNestedValue = (obj, path, val) => {
+          const keys = path.split('.');
+          let current = obj;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object') {
+              current[key] = {};
+            }
+            current = current[key];
+          }
+          current[keys[keys.length - 1]] = val;
+        };
+        
+        // Map field IDs to helper structure paths using field mapping dictionary
+        const fieldMappings = {
+          'ownerName': 'stakeholders.owner.name',
+          'ownerAddress': 'stakeholders.owner.address', 
+          'ownerPhone': 'stakeholders.owner.phone',
+          'insuranceCompany': 'stakeholders.insurance.company',
+          'insuranceEmail': 'stakeholders.insurance.email',
+          'insuranceAgent': 'stakeholders.insurance.agent.name',
+          'agentPhone': 'stakeholders.insurance.agent.phone',
+          'agentEmail': 'stakeholders.insurance.agent.email',
+          'garageName': 'stakeholders.garage.name',
+          'garagePhone': 'stakeholders.garage.phone',
+          'garageEmail': 'stakeholders.garage.email',
+          'carReportDate': 'case_info.issue_date'
+        };
+        
+        // Update standardized helper structure
+        if (fieldMappings[fieldId]) {
+          setNestedValue(helper, fieldMappings[fieldId], value);
+          console.log(`✅ Updated ${fieldMappings[fieldId]} = "${value}"`);
+        }
+        
+        // Also maintain legacy structure for backward compatibility
+        helper.client = helper.client || {};
+        helper.car_details = helper.car_details || {};
+        
+        const legacyMappings = {
+          'ownerName': () => {
+            helper.client.name = value;
+            helper.car_details.owner = value;
+          },
+          'ownerAddress': () => {
+            helper.client.address = value;
+            helper.car_details.ownerAddress = value;
+          },
+          'ownerPhone': () => {
+            helper.client.phone = value;
+            helper.car_details.ownerPhone = value;
+          },
+          'insuranceCompany': () => {
+            helper.client.insurance_company = value;
+            helper.car_details.insuranceCompany = value;
+          },
+          'insuranceEmail': () => {
+            helper.client.insurance_email = value;
+          },
+          'insuranceAgent': () => {
+            helper.client.insurance_agent = value;
+            helper.car_details.agentName = value;
+          },
+          'agentPhone': () => {
+            helper.client.insurance_agent_phone = value;
+            helper.car_details.insurance_agent_phone = value;
+          },
+          'agentEmail': () => {
+            helper.client.insurance_agent_email = value;
+            helper.car_details.insurance_agent_email = value;
+          }
+        };
+        
+        if (legacyMappings[fieldId]) {
+          legacyMappings[fieldId]();
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        localStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`💾 Helper updated for field: ${fieldId}`);
+        
+      } catch (error) {
+        console.error('❌ Error updating helper from contact field:', error);
+      }
+    }
     
     // Update helper structure from vehicle field changes using field mapping dictionary
     function updateHelperFromVehicleField(element) {
@@ -13360,19 +13241,19 @@
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('💾 Updated helper.final_report.differential.has_differentials =', checkbox?.checked);
       
-      if (checkbox && checkbox.checked) {
-        table.style.display = 'block';
-        summary.style.display = 'block';
-        saveSection.style.display = 'block';
+      if (checkbox?.checked) {
+        if (table) table.style.display = 'block';
+        if (summary) summary.style.display = 'block';
+        if (saveSection) saveSection.style.display = 'block';
         // Add first row automatically
         const container = document.getElementById('differentialsRows');
         if (container && container.children.length === 0) {
           addDifferentialRow();
         }
       } else {
-        table.style.display = 'none';
-        summary.style.display = 'none';
-        saveSection.style.display = 'none';
+        if (table) table.style.display = 'none';
+        if (summary) summary.style.display = 'none';
+        if (saveSection) saveSection.style.display = 'none';
         // Clear all differential rows when hiding
         const container = document.getElementById('differentialsRows');
         if (container) {
@@ -15412,28 +15293,10 @@
     // Log that MathEngine is now available
     console.log('✅ MathEngine loaded and available globally');
     
-    // Initialize MathEngine immediately
-    try {
-      if (MathEngine && typeof MathEngine.initializeVatRate === 'function') {
-        MathEngine.initializeVatRate();
-      }
-    } catch (error) {
-      console.warn('⚠️ MathEngine VAT initialization warning:', error);
-    }
-    
     // Dispatch event to notify other scripts MathEngine is ready
     window.dispatchEvent(new CustomEvent('mathEngineReady', { 
       detail: { MathEngine: MathEngine } 
     }));
-    
-    // Initialize FinalReportCalculations after MathEngine is ready
-    setTimeout(() => {
-      if (window.FinalReportCalculations && typeof window.FinalReportCalculations === 'object') {
-        console.log('✅ FinalReportCalculations confirmed available');
-      } else {
-        console.warn('⚠️ FinalReportCalculations not yet available, will initialize when ready');
-      }
-    }, 100);
   </script>
   
   <script>
