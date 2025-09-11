@@ -2036,12 +2036,34 @@
               "Total with VAT": totalWithVat
             };
             
-            // Move to centers array
+            // Handle edit mode vs create mode
             if (!helper.centers) {
               helper.centers = [];
             }
             
-            helper.centers.push(helper.current_damage_center);
+            // Check if this is edit mode - update existing center instead of creating new
+            if (damageCenterData.mode === 'edit_existing' && damageCenterData.original_id) {
+              // Find and update existing center
+              const existingIndex = helper.centers.findIndex(center => 
+                center.Id === damageCenterData.original_id || 
+                center.id === damageCenterData.original_id ||
+                center["Damage center Number"] === damageCenterData.number
+              );
+              
+              if (existingIndex !== -1) {
+                // Update existing center
+                helper.centers[existingIndex] = helper.current_damage_center;
+                console.log('✅ Updated existing damage center at index:', existingIndex, 'ID:', damageCenterData.original_id);
+              } else {
+                // Fallback: add as new if not found
+                helper.centers.push(helper.current_damage_center);
+                console.log('⚠️ Could not find existing center to update, added as new');
+              }
+            } else {
+              // Create new center
+              helper.centers.push(helper.current_damage_center);
+              console.log('✅ Added new damage center');
+            }
             
             console.log('✅ Damage center moved to centers array:', {
               id: helper.current_damage_center.Id,
@@ -6354,6 +6376,7 @@
         moduleData = {
           location: centerToEdit.Location || centerToEdit.location,
           description: centerToEdit.Description || centerToEdit.description,
+          repairNature: centerToEdit.RepairNature || centerToEdit.repairNature,
           works: centerToEdit.Works?.works || [],
           parts: centerToEdit.Parts?.parts_required || [],
           repairs: centerToEdit.Repairs?.repairs || []
