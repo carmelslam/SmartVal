@@ -1093,12 +1093,7 @@
       <h3>רשימת נספחים</h3>
       <button type="button" onclick="loadAttachmentsFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
       <button type="button" onclick="resetAttachments()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס רשימה</button>
-      <textarea id="attachments-content" style="width: 100%; min-height: 120px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="רשימת הנספחים תטען כאן..." onchange="updateHelperFromField(event);"><strong>לוטה</strong>
-• תצלומי הרכב הניזוק
-• חשבוניות תיקון  
-• ערך רכב ממוחשב
-• צילום רישיון הרכב
-• חשכ"ט</textarea>
+      <textarea id="attachments-content" style="width: 100%; min-height: 120px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="רשימת הנספחים תטען כאן..." onchange="updateHelperFromField(event);"></textarea>
       💡 ניתן לערוך ולהתאים את רשימת הנספחים בהתאם לצרכים הספציפיים של הדוח.
     </div>
 
@@ -5446,27 +5441,40 @@
     // LOAD ESTIMATE ATTACHMENTS BASED ON TYPE
     function loadEstimateAttachments(selectedType) {
       try {
-        // Standard attachments for both estimate types
-        const standardAttachments = `• תצלומי הרכב הניזוק
-• חשבוניות תיקון
-• ערך רכב ממוחשב
-• צילום רישיון הרכב
-• חשכ"ט`;
+        // Attachments vault based on estimate type
+        const attachmentsVault = {
+          'אובדן_להלכה': `**לוטה**
+תצלומי הרכב הניזוק
+ערך רכב ממוחשב
+צילום רישיון הרכב`,
+          'טוטלוס': `**לוטה**
+תצלומי הרכב הניזוק
+ערך רכב ממוחשב
+צילום רישיון הרכב`
+        };
+        
+        // Get attachments for selected type from vault
+        const attachmentsText = attachmentsVault[selectedType] || `**לוטה**
+תצלומי הרכב הניזוק
+חשבוניות תיקון
+ערך רכב ממוחשב
+צילום רישיון הרכב
+חשכ"ט`;
         
         const attachmentsElement = document.getElementById('attachments-content');
         if (attachmentsElement) {
-          attachmentsElement.value = standardAttachments;
-          console.log('✅ Estimate attachments loaded for type:', selectedType);
+          attachmentsElement.value = attachmentsText;
+          console.log('✅ Estimate attachments loaded from vault for type:', selectedType);
           
           // SAVE ATTACHMENTS to NEW STRUCTURE: helper.estimate.summary.attachments
           if (typeof updateHelper === 'function') {
-            updateHelper('estimate.summary.attachments', [standardAttachments], 'estimate_attachments_content');
+            updateHelper('estimate.summary.attachments', [attachmentsText], 'estimate_attachments_vault_load');
           }
           
           // Also save directly to sessionStorage with new structure
-          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          let currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           const updatedHelper = initializeEstimateSummaryStructure(currentHelper);
-          updatedHelper.estimate.summary.attachments = [standardAttachments];
+          updatedHelper.estimate.summary.attachments = [attachmentsText];
           sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
           
           console.log('💾 Attachments saved to NEW STRUCTURE:', {
