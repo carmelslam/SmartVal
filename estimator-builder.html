@@ -3173,7 +3173,7 @@
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
-            helper.valuation.adjustments.ownership_type.percentage = percentage;
+            helper.valuation.adjustments.ownership_type.percent = percentage;
             
             // Store amount without formatting
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
@@ -6239,6 +6239,67 @@
             }
           }
         }
+        
+        // 3. Auto-populate ownership type from valuation.adjustments.ownership_type
+        if (helper.valuation?.adjustments?.ownership_type) {
+          console.log('🏢 Loading ownership type from valuation.adjustments.ownership_type:', helper.valuation.adjustments.ownership_type);
+          
+          // Clear existing ownership rows first
+          const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
+          if (ownershipContainer) {
+            ownershipContainer.innerHTML = '';
+            
+            // Add ownership row
+            if (typeof addOwnershipAdjustment === 'function') {
+              addOwnershipAdjustment();
+              const row = document.querySelector('#ownershipAdjustmentsList > div:last-child');
+              if (row) {
+                const inputs = row.querySelectorAll('input, select');
+                
+                // Parse amount and percent
+                let amount = 0;
+                if (helper.valuation?.adjustments?.ownership_type?.amount) {
+                  amount = parseFloat(helper.valuation.adjustments.ownership_type.amount.toString().replace(/[₪,\s]/g, '')) || 0;
+                }
+                
+                // Use percent field (with fallback to percentage)
+                let percent = parseFloat(helper.valuation?.adjustments?.ownership_type?.percent) || 
+                             parseFloat(helper.valuation?.adjustments?.ownership_type?.percentage) || 0;
+                
+                if (inputs.length >= 4) {
+                  // Use the value field for description
+                  const desc = helper.valuation?.adjustments?.ownership_type?.value || 
+                              helper.valuation?.adjustments?.ownership_type?.description || 'סוג בעלות';
+                  inputs[0].value = desc;
+                  console.log('Set ownership description:', desc);
+                  
+                  // Determine type based on negative values
+                  const isNegative = (amount < 0 || percent < 0);
+                  inputs[1].value = isNegative ? 'minus' : 'plus';
+                  
+                  // Set percent with absolute value
+                  inputs[2].value = percent ? Math.abs(percent) : '';
+                  
+                  // Set amount
+                  if (amount) {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                    console.log('Set ownership amount:', inputs[3].value);
+                  } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
+                    // Trigger calculation from percentage
+                    setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
+                  }
+                  
+                  console.log('Final ownership inputs:', {
+                    description: inputs[0].value,
+                    type: inputs[1].value,
+                    percent: inputs[2].value,
+                    amount: inputs[3].value
+                  });
+                }
+              }
+            }
+          }
+        }
 
         updateGrossMarketValueCalculation();
 
@@ -7370,7 +7431,7 @@
           const inputs = firstOwnershipRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             helper.valuation.adjustments.ownership_type.value = inputs[0].value || ''; // UI input goes in value field
-            helper.valuation.adjustments.ownership_type.percentage = inputs[2].value || '';
+            helper.valuation.adjustments.ownership_type.percent = inputs[2].value || '';
           }
         }
 
