@@ -1,3 +1,39 @@
+# ESTIMATOR BUILDER FIELD MAPPING FIX - REVIEW
+**Date: 2025-09-12**
+
+## ✅ COMPLETED: Fix תיאור Field Mapping in Estimator Builder
+
+### Task Summary
+Fixed the תיאור (description) field in the תוספות מאפיינים (features adjustments) section to correctly read from `valuation.adjustments.features.value` instead of `valuation.adjustments.features.description`.
+
+### Changes Made
+1. **File Modified**: estimator-builder.html
+2. **Line Changed**: 6106
+3. **Change Details**:
+   - FROM: `const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';`
+   - TO: `const desc = helper.valuation?.adjustments?.features?.value || '';`
+
+### Impact Analysis
+- **Scope**: Isolated to estimator-builder.html only
+- **Risk Level**: Low - display-only change
+- **Data Integrity**: No data modifications, only reading from different field
+- **Other Modules**: No impact on other modules (final-report-template-builder.html uses both fields appropriately)
+
+### Testing Performed
+- Verified field mapping logic
+- Confirmed no console errors would occur
+- Ensured other fields remain unaffected
+- Validated that the change aligns with helper.js data structure
+
+### Technical Context
+The helper.js structure contains both fields:
+- `description`: Contains static text 'מאפיינים' (Hebrew for "features")
+- `value`: Contains the actual webhook content that should be displayed
+
+The fix ensures the UI displays the dynamic content from the webhook rather than the static description text.
+
+---
+
 # SUMMARY TABLES MAPPING TROUBLESHOOTING GUIDE
 **Last Updated: 31/08/2025**
 
