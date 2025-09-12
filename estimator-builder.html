@@ -1319,6 +1319,11 @@
           setTimeout(() => {
             updateReportType();
             loadLegalText().catch(console.error);
+            
+            // Validate new structure after everything loads
+            setTimeout(() => {
+              validateNewSummaryStructure();
+            }, 1000);
           }, 500);
           
         } catch (error) {
@@ -1406,13 +1411,16 @@
     // Load data from helper
     function loadDataFromHelper() {
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         if (!helper || Object.keys(helper).length === 0) {
           console.log('⚠️ No helper data found');
           return;
         }
 
         console.log('📊 Loading data from helper');
+        
+        // MIGRATE TO NEW STRUCTURE FIRST
+        helper = migrateToNewSummaryStructure(helper);
 
         // Load vehicle data
         loadVehicleData(helper);
@@ -1443,6 +1451,9 @@
         
         // Load summary data with dynamic fields
         loadSummaryData(helper);
+        
+        // Load VAT rate settings from new structure
+        loadVatRateSettings(helper);
         
         // Update page title
         updatePageTitle(helper);
@@ -1581,13 +1592,22 @@
             helper.stakeholders.owner.phone = value;
             break;
           case 'additional-notes':
-            helper.notes = value;
+            // Save to NEW STRUCTURE: helper.estimate.summary.comments
+            helper = initializeEstimateSummaryStructure(helper);
+            helper.estimate.summary.comments = value;
+            console.log('💾 Comments saved to NEW STRUCTURE');
             break;
           case 'legal-text-content':
-            helper.legal_text = value;
+            // Save to NEW STRUCTURE: helper.estimate.summary.legal_text
+            helper = initializeEstimateSummaryStructure(helper);
+            helper.estimate.summary.legal_text = value;
+            console.log('💾 Legal text content saved to NEW STRUCTURE');
             break;
           case 'attachments-list':
-            helper.attachments = value;
+            // Save to NEW STRUCTURE: helper.estimate.summary.attachments
+            helper = initializeEstimateSummaryStructure(helper);
+            helper.estimate.summary.attachments = [value];
+            console.log('💾 Attachments list saved to NEW STRUCTURE');
             break;
         }
         
@@ -5386,13 +5406,24 @@
           legalTextElement.value = legalText;
           console.log('✅ SUCCESS: Estimate legal text loaded from vault for:', uiType);
           
-          // Update helper with the loaded legal text
+          // SAVE ACTUAL CONTENT to NEW STRUCTURE: helper.estimate.summary.legal_text
           if (typeof updateHelper === 'function') {
-            updateHelper('estimate_legal_text', legalText, 'estimate_builder_auto_load');
-            console.log('✅ Helper updated with legal text');
+            updateHelper('estimate.summary.legal_text', legalText, 'estimate_legal_text_content');
+            console.log('✅ Helper updated with legal text in NEW STRUCTURE');
           } else {
             console.warn('⚠️ updateHelper function not available');
           }
+          
+          // Also save directly to sessionStorage with new structure
+          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const updatedHelper = initializeEstimateSummaryStructure(currentHelper);
+          updatedHelper.estimate.summary.legal_text = legalText;
+          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+          
+          console.log('💾 Legal text ACTUAL CONTENT saved to NEW STRUCTURE:', {
+            path: 'helper.estimate.summary.legal_text',
+            contentLength: legalText.length
+          });
         } else {
           console.error('❌ Engine returned empty or invalid legal text');
           alert('שגיאה: לא נמצא טקסט משפטי לסוג האומדן הנבחר');
@@ -5428,10 +5459,20 @@
           attachmentsElement.value = standardAttachments;
           console.log('✅ Estimate attachments loaded for type:', selectedType);
           
-          // Update helper with the loaded attachments
+          // SAVE ATTACHMENTS to NEW STRUCTURE: helper.estimate.summary.attachments
           if (typeof updateHelper === 'function') {
-            updateHelper('estimate_attachments', standardAttachments, 'estimate_builder_auto_load');
+            updateHelper('estimate.summary.attachments', [standardAttachments], 'estimate_attachments_content');
           }
+          
+          // Also save directly to sessionStorage with new structure
+          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const updatedHelper = initializeEstimateSummaryStructure(currentHelper);
+          updatedHelper.estimate.summary.attachments = [standardAttachments];
+          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+          
+          console.log('💾 Attachments saved to NEW STRUCTURE:', {
+            path: 'helper.estimate.summary.attachments'
+          });
         } else {
           console.error('❌ Attachments element not found: attachments-list');
         }
@@ -5442,8 +5483,84 @@
     }
 
     function updateVatRateEstimate() {
-      console.log('💰 Update VAT rate');
-      // Implementation here
+      try {
+        console.log('💰 Update VAT rate');
+        
+        const manualVatField = document.getElementById('manual-vat-rate');
+        const currentVatField = document.getElementById('current-vat-rate');
+        
+        if (!manualVatField || !currentVatField) {
+          console.error('❌ VAT rate fields not found');
+          return;
+        }
+        
+        const newRate = parseFloat(manualVatField.value) || 18;
+        
+        // Get current helper
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        helper = initializeEstimateSummaryStructure(helper);
+        
+        // Store original rate if not already stored
+        if (helper.estimate.summary.vat_rate.original === 18 && newRate !== 18) {
+          // This is the first modification, store the original
+          helper.estimate.summary.vat_rate.original = 18;
+        }
+        
+        // Update VAT rate tracking in NEW STRUCTURE
+        helper.estimate.summary.vat_rate.modified = newRate !== 18 ? newRate : null;
+        helper.estimate.summary.vat_rate.current = newRate;
+        
+        // Update display
+        currentVatField.value = `${newRate}%`;
+        
+        // Save to helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Update helper through function if available
+        if (typeof updateHelper === 'function') {
+          updateHelper('estimate.summary.vat_rate', helper.estimate.summary.vat_rate, 'vat_rate_update');
+        }
+        
+        console.log('✅ VAT rate updated in NEW STRUCTURE:', {
+          path: 'helper.estimate.summary.vat_rate',
+          original: helper.estimate.summary.vat_rate.original,
+          modified: helper.estimate.summary.vat_rate.modified,
+          current: helper.estimate.summary.vat_rate.current
+        });
+        
+        // Trigger recalculation of any dependent fields if needed
+        if (typeof calculateSummaryTotals === 'function') {
+          calculateSummaryTotals();
+        }
+        
+        // Clear manual input
+        manualVatField.value = '';
+        
+        alert(`אחוז המע"מ עודכן ל-${newRate}%`);
+        
+      } catch (error) {
+        console.error('❌ Error updating VAT rate:', error);
+      }
+    }
+    
+    // LOAD VAT RATE FROM NEW STRUCTURE
+    function loadVatRateSettings(helper) {
+      try {
+        const currentVatField = document.getElementById('current-vat-rate');
+        if (!currentVatField) return;
+        
+        const vatRate = helper.estimate?.summary?.vat_rate?.current || 18;
+        currentVatField.value = `${vatRate}%`;
+        
+        console.log('✅ VAT rate loaded from NEW STRUCTURE:', {
+          current: vatRate,
+          original: helper.estimate?.summary?.vat_rate?.original,
+          modified: helper.estimate?.summary?.vat_rate?.modified
+        });
+        
+      } catch (error) {
+        console.error('❌ Error loading VAT rate settings:', error);
+      }
     }
     
     // CALCULATE SUMMARY TOTALS WITH DYNAMIC VAT
@@ -5492,30 +5609,33 @@
           finalTotal
         });
         
-        // FIXED PERSISTENCE: Save the corrected final total to helper
+        // SAVE TO NEW STRUCTURE: helper.estimate.summary
         if (typeof updateHelper === 'function') {
-          // Save to multiple locations to ensure persistence
-          updateHelper('estimate_summary.final_total', finalTotal, 'estimate_summary_calculation');
-          updateHelper('estimate_summary.sum_claim', sumClaim, 'estimate_summary_calculation');
-          updateHelper('estimate_summary.depreciation_compensation', depCompensation, 'estimate_summary_calculation');
-          updateHelper('estimate_summary.salvage_value', salvageValue, 'estimate_summary_calculation');
-          
-          // Also update the sessionStorage directly as backup
-          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          if (!currentHelper.estimate_summary) currentHelper.estimate_summary = {};
-          currentHelper.estimate_summary.final_total = finalTotal;
-          currentHelper.estimate_summary.sum_claim = sumClaim;
-          currentHelper.estimate_summary.depreciation_compensation = depCompensation;
-          currentHelper.estimate_summary.salvage_value = salvageValue;
-          sessionStorage.setItem('helper', JSON.stringify(currentHelper));
-          
-          console.log('💾 Summary data saved to helper:', {
-            final_total: finalTotal,
-            sum_claim: sumClaim,
-            depreciation_compensation: depCompensation,
-            salvage_value: salvageValue
-          });
+          // Update using new structure paths
+          updateHelper('estimate.summary.final_total', finalTotal, 'estimate_summary_calculation');
+          updateHelper('estimate.summary.sum_claim', sumClaim, 'estimate_summary_calculation');
+          updateHelper('estimate.summary.depreciation_compensation', depCompensation, 'estimate_summary_calculation');
+          updateHelper('estimate.summary.salvage_value', salvageValue, 'estimate_summary_calculation');
         }
+        
+        // Also update sessionStorage directly with new structure
+        const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        currentHelper = initializeEstimateSummaryStructure(currentHelper);
+        
+        currentHelper.estimate.summary.final_total = finalTotal;
+        currentHelper.estimate.summary.sum_claim = sumClaim;
+        currentHelper.estimate.summary.depreciation_compensation = depCompensation;
+        currentHelper.estimate.summary.salvage_value = salvageValue;
+        
+        sessionStorage.setItem('helper', JSON.stringify(currentHelper));
+        
+        console.log('💾 Summary data saved to NEW STRUCTURE:', {
+          path: 'helper.estimate.summary',
+          final_total: finalTotal,
+          sum_claim: sumClaim,
+          depreciation_compensation: depCompensation,
+          salvage_value: salvageValue
+        });
         
       } catch (error) {
         console.error('❌ Error calculating summary totals:', error);
@@ -5532,7 +5652,8 @@
           vehicle_market_value: helper.vehicle?.market_value
         });
         
-        const summary = helper.estimate_summary || {};
+        // Use NEW STRUCTURE: helper.estimate.summary
+        const summary = helper.estimate?.summary || {};
         
         // Update summary fields
         const reportTypeField = document.getElementById('reportType');
@@ -5552,13 +5673,31 @@
           sumClaimField.value = `₪${helper.estimate.calculations.total_damage_cost.toLocaleString()}`;
         }
         
-        // Map פיצוי בגין ירידת ערך to estimate.depreciation.globalDepValue
-        if (depCompensationField && helper.estimate?.depreciation?.globalDepValue) {
-          depCompensationField.value = `₪${helper.estimate.depreciation.globalDepValue.toLocaleString()}`;
+        // Map פיצוי בגין ירידת ערך to estimate.depreciation.globalDepValue OR from new structure
+        if (depCompensationField) {
+          const depValue = helper.estimate?.depreciation?.globalDepValue || summary.depreciation_compensation;
+          if (depValue) {
+            depCompensationField.value = `₪${depValue.toLocaleString()}`;
+          }
         }
         
         if (salvageValueField && summary.salvage_value) {
           salvageValueField.value = `₪${summary.salvage_value.toLocaleString()}`;
+        }
+        
+        // Load legal text from new structure
+        const legalTextField = document.getElementById('legal-text-content');
+        if (legalTextField && summary.legal_text) {
+          legalTextField.value = summary.legal_text;
+          console.log('✅ Loaded legal text from NEW STRUCTURE');
+        }
+        
+        // Load attachments from new structure
+        const attachmentsField = document.getElementById('attachments-list');
+        if (attachmentsField && summary.attachments && summary.attachments.length > 0) {
+          attachmentsField.value = Array.isArray(summary.attachments) ? 
+            summary.attachments.join('\n') : summary.attachments[0];
+          console.log('✅ Loaded attachments from NEW STRUCTURE');
         }
         
         // Load final total from correct path
@@ -5582,6 +5721,147 @@
       }
     }
 
+    // INITIALIZE NEW HELPER.ESTIMATE.SUMMARY STRUCTURE
+    function initializeEstimateSummaryStructure(helper) {
+      try {
+        console.log('🏗️ Initializing new helper.estimate.summary structure...');
+        
+        // Ensure helper.estimate exists
+        if (!helper.estimate) {
+          helper.estimate = {};
+        }
+        
+        // Create new summary structure if it doesn't exist
+        if (!helper.estimate.summary) {
+          helper.estimate.summary = {
+            attachments: [],
+            legal_text: "",
+            comments: "",
+            vat_rate: {
+              original: 18, // Default VAT rate
+              modified: null,
+              current: 18
+            },
+            // Calculation fields
+            final_total: 0,
+            sum_claim: 0,
+            depreciation_compensation: 0,
+            salvage_value: 0
+          };
+          console.log('✅ Created new helper.estimate.summary structure');
+        }
+        
+        return helper;
+        
+      } catch (error) {
+        console.error('❌ Error initializing estimate summary structure:', error);
+        return helper;
+      }
+    }
+    
+    // MIGRATE EXISTING DATA TO NEW STRUCTURE
+    function migrateToNewSummaryStructure(helper) {
+      try {
+        console.log('🔄 Migrating existing data to new summary structure...');
+        
+        // Initialize structure first
+        helper = initializeEstimateSummaryStructure(helper);
+        
+        // Migrate legal text from old location
+        if (helper.estimate_legal_text && !helper.estimate.summary.legal_text) {
+          helper.estimate.summary.legal_text = helper.estimate_legal_text;
+          console.log('✅ Migrated legal text to new structure');
+        }
+        
+        // Migrate attachments from old location
+        if (helper.estimate_attachments && helper.estimate.summary.attachments.length === 0) {
+          helper.estimate.summary.attachments = Array.isArray(helper.estimate_attachments) ? 
+            helper.estimate_attachments : [helper.estimate_attachments];
+          console.log('✅ Migrated attachments to new structure');
+        }
+        
+        // Migrate existing summary data if it exists in old location
+        if (helper.estimate_summary) {
+          const oldSummary = helper.estimate_summary;
+          if (oldSummary.final_total) helper.estimate.summary.final_total = oldSummary.final_total;
+          if (oldSummary.sum_claim) helper.estimate.summary.sum_claim = oldSummary.sum_claim;
+          if (oldSummary.depreciation_compensation) helper.estimate.summary.depreciation_compensation = oldSummary.depreciation_compensation;
+          if (oldSummary.salvage_value) helper.estimate.summary.salvage_value = oldSummary.salvage_value;
+          console.log('✅ Migrated calculation data to new structure');
+        }
+        
+        // Save updated helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // CLEANUP: Remove old independent fields after successful migration
+        if (helper.estimate_legal_text) {
+          console.log('🧹 Cleaning up old estimate_legal_text field');
+          delete helper.estimate_legal_text;
+        }
+        
+        if (helper.estimate_attachments) {
+          console.log('🧹 Cleaning up old estimate_attachments field');
+          delete helper.estimate_attachments;
+        }
+        
+        if (helper.estimate_summary) {
+          console.log('🧹 Cleaning up old estimate_summary field');
+          delete helper.estimate_summary;
+        }
+        
+        console.log('✅ Migration to new summary structure completed');
+        return helper;
+        
+      } catch (error) {
+        console.error('❌ Error migrating to new summary structure:', error);
+        return helper;
+      }
+    }
+    
+    // VALIDATION FUNCTION FOR NEW STRUCTURE
+    function validateNewSummaryStructure() {
+      try {
+        console.log('🧪 TESTING: Validating new helper.estimate.summary structure...');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Test 1: Structure exists
+        const structureExists = !!(helper.estimate?.summary);
+        console.log('✓ Test 1 - Structure exists:', structureExists);
+        
+        // Test 2: Required fields present
+        const requiredFields = ['attachments', 'legal_text', 'comments', 'vat_rate'];
+        const fieldsPresent = requiredFields.every(field => 
+          helper.estimate?.summary?.hasOwnProperty(field)
+        );
+        console.log('✓ Test 2 - Required fields present:', fieldsPresent);
+        
+        // Test 3: VAT rate structure
+        const vatStructure = helper.estimate?.summary?.vat_rate;
+        const vatValid = vatStructure?.hasOwnProperty('original') && 
+                        vatStructure?.hasOwnProperty('modified') && 
+                        vatStructure?.hasOwnProperty('current');
+        console.log('✓ Test 3 - VAT rate structure valid:', vatValid);
+        
+        // Test 4: Data types
+        const typesValid = Array.isArray(helper.estimate?.summary?.attachments) &&
+                          typeof helper.estimate?.summary?.legal_text === 'string' &&
+                          typeof helper.estimate?.summary?.comments === 'string';
+        console.log('✓ Test 4 - Data types valid:', typesValid);
+        
+        const allTestsPass = structureExists && fieldsPresent && vatValid && typesValid;
+        
+        console.log('🧪 VALIDATION RESULT:', allTestsPass ? '✅ PASS' : '❌ FAIL');
+        console.log('📊 Helper.estimate.summary structure:', helper.estimate?.summary);
+        
+        return allTestsPass;
+        
+      } catch (error) {
+        console.error('❌ Error during validation:', error);
+        return false;
+      }
+    }
+    
     function showEstimatePreviewPip() {
       console.log('🖼️ Show PIP preview');
       const pip = document.getElementById('pip-container');
@@ -6691,10 +6971,12 @@
     }
 
     function loadAdditionalNotes(helper) {
-      const notes = helper.estimate?.notes || '';
+      // Load from NEW STRUCTURE: helper.estimate.summary.comments
+      const notes = helper.estimate?.summary?.comments || helper.estimate?.notes || '';
       const notesField = document.getElementById('additional-notes');
       if (notesField && notes) {
         notesField.value = notes;
+        console.log('✅ Loaded comments from NEW STRUCTURE');
       }
     }
 
