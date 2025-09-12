@@ -1624,6 +1624,17 @@
         });
       });
 
+      // Add summary calculation listeners for dependent fields
+      ['sumClaim', 'depCompensation', 'salvageValue'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', calculateSummaryTotals);
+          field.addEventListener('blur', calculateSummaryTotals);
+        }
+      });
+      
+      console.log('✅ Summary calculation listeners added');
+      
       // Add more event listeners as needed
     }
 
@@ -5458,39 +5469,52 @@
         
         console.log('🔢 Values:', { sumClaim, depCompensation, salvageValue });
         
-        // Calculate subtotal (sum claim + depreciation compensation)
-        const subtotal = sumClaim + depCompensation;
+        // CORRECTED CALCULATION: Only sum claim + depreciation, NO VAT for estimates
+        // Estimates don't include VAT in the final total - that's for final reports only
+        let subtotal = sumClaim + depCompensation;
         
-        // Calculate VAT (18% on subtotal)
-        const vatRate = 0.18;
-        const vat = Math.round(subtotal * vatRate);
-        
-        // Calculate total with VAT
-        let total = subtotal + vat;
-        
-        // Subtract salvage value if provided
+        // Subtract salvage value if provided (deducted from subtotal)
         if (salvageValue > 0) {
-          total = total - salvageValue;
+          subtotal = subtotal - salvageValue;
+          console.log('🔧 Salvage value deducted:', salvageValue);
         }
         
-        // Update the total field
-        sumTotalClaimInput.value = total > 0 ? `₪${total.toLocaleString()}` : '₪0';
+        // Final total = subtotal (no VAT for estimates)
+        const finalTotal = subtotal;
         
-        console.log('✅ Summary calculation completed:', {
-          subtotal,
-          vat,
+        // Update the total field
+        sumTotalClaimInput.value = finalTotal > 0 ? `₪${finalTotal.toLocaleString()}` : '₪0';
+        
+        console.log('✅ CORRECTED Summary calculation:', {
+          sumClaim,
+          depCompensation,
           salvageValue,
-          total
+          finalTotal
         });
         
-        // Update helper with calculated values using correct mapping paths
+        // FIXED PERSISTENCE: Save the corrected final total to helper
         if (typeof updateHelper === 'function') {
-          // Update the specific paths as shown in screenshot
-          updateHelper('estimate.calculations.total_damage_cost', sumClaim, 'estimate_summary_total_damage');
-          updateHelper('estimate.depreciation.globalDepValue', depCompensation, 'estimate_summary_depreciation');
-          updateHelper('estimate_summary.salvage_value', salvageValue, 'estimate_summary_salvage');
-          updateHelper('estimate_summary.final_total', total, 'estimate_summary_final');
-          updateHelper('estimate_summary.vat_amount', vat, 'estimate_summary_vat');
+          // Save to multiple locations to ensure persistence
+          updateHelper('estimate_summary.final_total', finalTotal, 'estimate_summary_calculation');
+          updateHelper('estimate_summary.sum_claim', sumClaim, 'estimate_summary_calculation');
+          updateHelper('estimate_summary.depreciation_compensation', depCompensation, 'estimate_summary_calculation');
+          updateHelper('estimate_summary.salvage_value', salvageValue, 'estimate_summary_calculation');
+          
+          // Also update the sessionStorage directly as backup
+          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (!currentHelper.estimate_summary) currentHelper.estimate_summary = {};
+          currentHelper.estimate_summary.final_total = finalTotal;
+          currentHelper.estimate_summary.sum_claim = sumClaim;
+          currentHelper.estimate_summary.depreciation_compensation = depCompensation;
+          currentHelper.estimate_summary.salvage_value = salvageValue;
+          sessionStorage.setItem('helper', JSON.stringify(currentHelper));
+          
+          console.log('💾 Summary data saved to helper:', {
+            final_total: finalTotal,
+            sum_claim: sumClaim,
+            depreciation_compensation: depCompensation,
+            salvage_value: salvageValue
+          });
         }
         
       } catch (error) {
@@ -5537,12 +5561,19 @@
           salvageValueField.value = `₪${summary.salvage_value.toLocaleString()}`;
         }
         
-        if (sumTotalClaimField && summary.total_claim) {
-          sumTotalClaimField.value = `₪${summary.total_claim.toLocaleString()}`;
+        // Load final total from correct path
+        if (sumTotalClaimField && summary.final_total) {
+          sumTotalClaimField.value = `₪${summary.final_total.toLocaleString()}`;
+          console.log('✅ Loaded final total from helper:', summary.final_total);
         }
         
         // Update report type based on current selection
         updateReportType();
+        
+        // Trigger calculation after loading data to ensure final total is computed
+        setTimeout(() => {
+          calculateSummaryTotals();
+        }, 100);
         
         console.log('✅ Summary data loaded successfully');
         
