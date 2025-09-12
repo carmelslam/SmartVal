@@ -4,14 +4,18 @@
 ## ✅ COMPLETED: Fix תיאור Field Mapping in Estimator Builder
 
 ### Task Summary
-Fixed the תיאור (description) field in the תוספות מאפיינים (features adjustments) section to correctly read from `valuation.adjustments.features.value` instead of `valuation.adjustments.features.description`.
+Fixed the תיאור (description) field in the תוספות מאפיינים (features adjustments) section to correctly read the actual feature values from `vehicle.features` or `vehicle.features_text` instead of the static Hebrew text "מאפיינים" from `valuation.adjustments.features.description`.
 
 ### Changes Made
 1. **File Modified**: estimator-builder.html
-2. **Line Changed**: 6106
+2. **Lines Changed**: 6106 and 4414
 3. **Change Details**:
-   - FROM: `const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';`
-   - TO: `const desc = helper.valuation?.adjustments?.features?.value || '';`
+   - **Line 6106**:
+     - FROM: `const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';`
+     - TO: `const desc = helper.vehicle?.features || helper.vehicle?.features_text || helper.valuation?.adjustments?.features?.value || '';`
+   - **Line 4414**:
+     - FROM: `inputs[0].value = adjustments.features.value || adjustments.features.description || '';`
+     - TO: `inputs[0].value = helper.vehicle?.features || helper.vehicle?.features_text || adjustments.features.value || '';`
 
 ### Impact Analysis
 - **Scope**: Isolated to estimator-builder.html only
@@ -26,11 +30,13 @@ Fixed the תיאור (description) field in the תוספות מאפיינים (f
 - Validated that the change aligns with helper.js data structure
 
 ### Technical Context
-The helper.js structure contains both fields:
-- `description`: Contains static text 'מאפיינים' (Hebrew for "features")
-- `value`: Contains the actual webhook content that should be displayed
+The issue was that the system was reading from the wrong data location. The helper.js structure stores feature data in multiple places:
+- `valuation.adjustments.features.description`: Contains static text 'מאפיינים' (Hebrew for "features")
+- `valuation.adjustments.features.value`: May contain adjustment values but not the feature list
+- `vehicle.features`: Contains the actual feature list from the webhook (e.g., "adventure, חירורן, פנורמי, נפתח גג")
+- `vehicle.features_text`: Alternative location for feature text
 
-The fix ensures the UI displays the dynamic content from the webhook rather than the static description text.
+The fix ensures the UI displays the actual feature list from `vehicle.features` or `vehicle.features_text` rather than the static Hebrew text.
 
 ---
 
