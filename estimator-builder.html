@@ -2773,37 +2773,10 @@
             helper.estimate.damage_centers.forEach((center, index) => {
               console.log(`🔍 Processing damage center ${index + 1}:`, center);
               
-              // Get the actual location and center number properly
-              // FIXED: Read from estimate.damage_centers structure (stage-optimized data)
-              const location = center.location || center.damage_center_name || center.Location || '';
-              
-              // Extract center number - try multiple field variations
-              let centerNum = center["Damage center Number"] || 
-                             center.center_number || 
-                             center.number || 
-                             String(index + 1);
-              
-              // Extract all numbers and take the last one
-              const numberMatch = String(centerNum).match(/\d+/g);
-              centerNum = numberMatch ? numberMatch[numberMatch.length - 1] : String(index + 1);
-              
-              // FIXED: Get repair nature from estimate.damage_centers structure
-              let repairNature = '';
-              
-              // Extract from works data (estimate structure)
-              if (center.works && Array.isArray(center.works) && center.works.length > 0) {
-                repairNature = center.works.map(work => work.category || work.name || '').filter(cat => cat).join(', ');
-              }
-              
-              // Fallback options
-              if (!repairNature) {
-                repairNature = center.RepairNature || 
-                              center.repair_nature || 
-                              center.repairType || 
-                              center.description ||
-                              center.Description || 
-                              '';
-              }
+              // FIXED: Read from exact estimate.damage_centers fields as specified
+              const centerNum = center.center_number || String(index + 1);
+              const location = center.location || '';
+              const repairNature = center.repair_nature || '';
               
               const centerData = {
                 name: location,  // estimate.damage_centers[item].Location
@@ -3305,25 +3278,47 @@
         const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
         const bulk_items = [];
         
-        depRows.forEach((row) => {
+        depRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
           if (inputs.length >= 5) {
+            // Extract data from inputs
+            const centerNumber = inputs[0].value;
+            const location = inputs[1].value;
+            const repairNature = inputs[2].value;
+            const percent = inputs[3].value;
+            const value = inputs[4].value;
+            
+            // Write damage center fields back to damage_centers if they exist
+            if (!helper.estimate) helper.estimate = {};
+            if (!helper.estimate.damage_centers) helper.estimate.damage_centers = [];
+            
+            // Find corresponding damage center and update it
+            if (helper.estimate.damage_centers[index]) {
+              helper.estimate.damage_centers[index].center_number = centerNumber;
+              helper.estimate.damage_centers[index].location = location;
+              helper.estimate.damage_centers[index].repair_nature = repairNature;
+            }
+            
+            // Collect bulk_items data for depreciation sections (percent and value only)
             bulk_items.push({
-              center_number: inputs[0].value,
-              damaged_part: inputs[1].value,
-              repair_type: inputs[2].value,
-              percent: inputs[3].value,
-              value: inputs[4].value
+              center_number: centerNumber,
+              damaged_part: location,
+              repair_type: repairNature,
+              percent: percent,
+              value: value
             });
           }
         });
         
-        // Quick save to helper
+        // Ensure helper structure exists
         if (!helper.estimate) helper.estimate = {};
         if (!helper.estimate.depreciation) helper.estimate.depreciation = {};
+        if (!helper.depreciation) helper.depreciation = {};
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.depreciation) helper.final_report.depreciation = {};
         
-        // Save all depreciation data with both form field names and processed values
-        helper.estimate.depreciation = {
+        // Save depreciation data to all required sections
+        const depreciationData = {
           // Form field names (for direct loading)
           globalDep1: globalPercent,
           globalDepValue: globalValue,
@@ -3341,6 +3336,11 @@
           last_updated: new Date().toISOString(),
           source: 'estimator_builder_auto_save'
         };
+        
+        // Write to all depreciation sections
+        helper.depreciation.bulk_items = bulk_items;
+        helper.estimate.depreciation = depreciationData;
+        helper.final_report.depreciation.bulk_items = bulk_items;
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('🔄 Auto-saved depreciation data:', { 
