@@ -2681,8 +2681,8 @@
         });
       });
       
-      const percentInput = row.querySelector('input[placeholder="ירידת ערך (מספר)"]');
-      const valueInput = row.querySelector('input[placeholder="ערך ב-₪"]');
+      const percentInput = row.querySelector('input[placeholder="% ירידת ערך"]');
+      const valueInput = row.querySelector('input[placeholder="ערך ירידת ערך"]');
       
       if (percentInput && valueInput) {
         console.log(`✅ Found inputs for row ${rowId}, setting up calculation`);
@@ -2698,17 +2698,11 @@
           const cleanValue = this.value.replace('%', '').replace(/[^0-9.-]/g, '');
           let percent = parseFloat(cleanValue) || 0;
           
-          // Calculate value from market price automatically
-          const marketValueField = document.getElementById('carMarketValue') || document.getElementById('sumMarketValue');
-          console.log('🔍 Market value field found:', marketValueField);
-          console.log('🔍 Market value field ID:', marketValueField?.id);
-          console.log('🔍 Market value field value:', marketValueField?.value);
+          // Calculate value from expertise.calculations.market_value
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const marketValue = helper.expertise?.calculations?.market_value || 0;
           
-          const marketValueStr = marketValueField?.value.replace(/[₪,]/g, '') || '0';
-          const marketValue = parseFloat(marketValueStr) || 0;
-          
-          console.log('🔍 Cleaned market value string:', marketValueStr);
-          console.log('🔍 Parsed market value:', marketValue);
+          console.log('🔍 Market value from expertise.calculations.market_value:', marketValue);
           
           const calculatedValue = (marketValue * percent) / 100;
           const formattedValue = calculatedValue ? `₪${Math.round(calculatedValue).toLocaleString()}` : '';
