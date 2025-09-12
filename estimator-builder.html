@@ -1671,23 +1671,34 @@
       console.log('💾 Saving estimate...');
       
       try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Collect all form data
-        const estimateData = {
-          type: document.querySelector('input[name="estimate-type"]:checked')?.value,
-          vehicle: collectVehicleData(),
-          contact: collectContactData(),
-          damageCenters: EstimateBuilderState.damageCenters,
-          adjustments: EstimateBuilderState.adjustments,
-          depreciation: EstimateBuilderState.depreciation,
-          notes: document.getElementById('additional-notes')?.value || '',
-          legalText: document.getElementById('legal-text-content')?.value || '',
-          attachments: document.getElementById('attachments-list')?.value || ''
-        };
+        // CRITICAL: Don't overwrite helper.estimate - preserve existing detailed data!
+        // Just update specific fields that need to be saved
+        if (!helper.estimate) helper.estimate = {};
         
-        // Save to helper.estimate
-        helper.estimate = estimateData;
+        // Update only basic form fields, preserve all existing detailed data
+        const estimateType = document.querySelector('input[name="estimate-type"]:checked')?.value;
+        if (estimateType) helper.estimate.type = estimateType;
+        
+        // Update notes and texts (safe to overwrite these)
+        const notes = document.getElementById('additional-notes')?.value || '';
+        if (notes) helper.estimate.notes = notes;
+        
+        const legalText = document.getElementById('legal-text-content')?.value || '';
+        if (legalText && helper.estimate.summary) helper.estimate.summary.legal_text = legalText;
+        
+        // Fix: Use correct element ID for attachments
+        const attachments = document.getElementById('attachments-content')?.value || '';
+        if (attachments && helper.estimate.summary) helper.estimate.summary.attachments = [attachments];
+        
+        // Preserve all existing detailed data (adjustments, calculations, damage_centers, etc.)
+        console.log('✅ Preserving existing estimate data:', {
+          adjustments: !!helper.estimate.adjustments,
+          calculations: !!helper.estimate.calculations,
+          damage_centers: !!helper.estimate.damage_centers,
+          summary: !!helper.estimate.summary
+        });
         helper.estimate.savedAt = new Date().toISOString();
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -6616,6 +6627,116 @@
       }
     }
     
+    // Load full market value adjustments from helper
+    function loadFullMarketValueAdjustmentsFromHelper(helper) {
+      try {
+        console.log('📊 Loading full market value adjustments from helper');
+        
+        // Clear existing full market value adjustments first
+        document.getElementById('fullFeaturesAdjustmentsList').innerHTML = '';
+        document.getElementById('fullRegistrationAdjustmentsList').innerHTML = '';
+        document.getElementById('mileageAdjustmentsList').innerHTML = '';
+        document.getElementById('ownershipAdjustmentsList').innerHTML = '';
+        document.getElementById('ownersAdjustmentsList').innerHTML = '';
+        document.getElementById('allAdjustmentsList').innerHTML = '';
+        
+        // PRIORITY 1: Load from helper.estimate.adjustments (most current data)
+        if (helper.estimate?.adjustments) {
+          const adjustments = helper.estimate.adjustments;
+          console.log('📝 Found estimate.adjustments:', adjustments);
+          
+          // Features
+          if (adjustments.features && adjustments.features.length > 0) {
+            adjustments.features.forEach(item => {
+              addFullFeaturesAdjustment();
+              const lastRow = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
+              if (lastRow) {
+                const inputs = lastRow.querySelectorAll('input, select');
+                if (inputs.length >= 4) {
+                  inputs[0].value = item.value || '';
+                  const itemPercent = item.percent || item.percentage;
+                  const itemAmount = item.amount;
+                  inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                  inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                }
+              }
+            });
+          }
+          
+          // Registration  
+          if (adjustments.registration && adjustments.registration.length > 0) {
+            adjustments.registration.forEach(item => {
+              addFullRegistrationAdjustment();
+              const lastRow = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
+              if (lastRow) {
+                const inputs = lastRow.querySelectorAll('input, select');
+                if (inputs.length >= 4) {
+                  inputs[0].value = item.value || '';
+                  const itemPercent = item.percent || item.percentage;
+                  const itemAmount = item.amount;
+                  inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                  inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                }
+              }
+            });
+          }
+        }
+        
+        // FALLBACK: Load from valuation.adjustments if no estimate.adjustments
+        else if (helper.valuation?.adjustments) {
+          console.log('📝 Fallback to valuation.adjustments');
+          const adjustments = helper.valuation.adjustments;
+          
+          // Features (single object, not array)
+          if (adjustments.features && (adjustments.features.value || adjustments.features.amount || adjustments.features.percentage)) {
+            addFullFeaturesAdjustment();
+            const row = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(adjustments.features.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
+              const percent = parseFloat(adjustments.features.percent || adjustments.features.percentage) || 0;
+              
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.features.value || '';
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                if (amount) {
+                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                }
+              }
+            }
+          }
+          
+          // Registration (single object, not array)
+          if (adjustments.registration && (adjustments.registration.value || adjustments.registration.amount || adjustments.registration.percent)) {
+            addFullRegistrationAdjustment();
+            const row = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
+            if (row) {
+              const inputs = row.querySelectorAll('input, select');
+              const amount = parseFloat(adjustments.registration.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
+              const percent = parseFloat(adjustments.registration.percent) || 0;
+              
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustments.registration.value || adjustments.registration.description || 'עליה לכביש';
+                inputs[1].value = (amount < 0 || percent < 0) ? 'minus' : 'plus';
+                inputs[2].value = percent ? Math.abs(percent) : '';
+                if (amount) {
+                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                }
+              }
+            }
+          }
+        }
+        
+        console.log('✅ Full market value adjustments loaded');
+        
+      } catch (error) {
+        console.error('❌ Error loading full market value adjustments:', error);
+      }
+    }
+    
     // Load gross percentage fields using exact mapping from final-report-builder
     function loadGrossPercentageFields(helper) {
       try {
@@ -9110,6 +9231,12 @@
         if (helper && Object.keys(helper).length > 0) {
           console.log('📝 Found helper data:', helper);
           loadGrossAdjustmentsFromHelper(helper);
+          
+          // Load full market value adjustments separately
+          setTimeout(() => {
+            console.log('🔄 Page load: Loading full market value adjustments...');
+            loadFullMarketValueAdjustmentsFromHelper(helper);
+          }, 25);
           
           // Also load depreciation data early
           setTimeout(() => {
