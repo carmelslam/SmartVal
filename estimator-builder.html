@@ -2812,8 +2812,16 @@
         
         // If no data provided, get current data from helper.estimate.damage_centers
         if (!damageCenterNames || damageCenterNames.length === 0) {
-          const helper = window.helper || {};
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
           console.log('🔍 Looking for damage centers in helper:', helper);
+          
+          // Debug: Check all possible locations for damage center data
+          console.log('🔍 Debug damage center locations:', {
+            'helper.estimate.damage_centers': helper.estimate?.damage_centers,
+            'helper.damage_centers': helper.damage_centers,
+            'helper.centers': helper.centers,
+            'helper.expertise.damage_blocks': helper.expertise?.damage_blocks
+          });
           damageCenterNames = [];
           
           if (helper.estimate && helper.estimate.damage_centers && helper.estimate.damage_centers.length > 0) {
@@ -6663,7 +6671,7 @@
         // Load fullMarketValueResult from consolidated calculations (NEW)
         const fullMarketValueResult = document.getElementById('fullMarketValueResult');
         if (fullMarketValueResult) {
-          const fullValue = calculations.full_market_value || helper.calculations?.full_market_value || 0;
+          const fullValue = calculations.full_market_value || helper.estimate?.calculations?.full_market_value || helper.calculations?.full_market_value || 0;
           if (fullValue > 0) {
             fullMarketValueResult.value = `₪${fullValue.toLocaleString()}`;
             console.log('✅ Loaded fullMarketValueResult from estimate.calculations.full_market_value:', fullValue);
@@ -9102,6 +9110,23 @@
         if (helper && Object.keys(helper).length > 0) {
           console.log('📝 Found helper data:', helper);
           loadGrossAdjustmentsFromHelper(helper);
+          
+          // Also load depreciation data early
+          setTimeout(() => {
+            console.log('🔄 Page load: Loading depreciation data...');
+            if (typeof loadDepreciationDataToUI === 'function') {
+              loadDepreciationDataToUI();
+            }
+          }, 50);
+          
+          // Also trigger full market value calculation to ensure all fields are loaded
+          setTimeout(() => {
+            if (typeof updateFullMarketValueCalculation === 'function') {
+              updateFullMarketValueCalculation();
+              console.log('✅ Page load: Full market value calculation triggered');
+            }
+          }, 150);
+          
           // Trigger calculation after loading
           setTimeout(() => {
             updateGrossMarketValueCalculation();
