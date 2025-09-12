@@ -1079,30 +1079,27 @@
       </div>
     </div>
 
-    <!-- Legal Text Section -->
+    <!-- LEGAL TEXT SECTION - EDITABLE (MOVED BEFORE NAVIGATION) -->
     <div class="form-section" id="legal-text">
       <h3>טקסט משפטי לאומדן</h3>
-      <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-        הטקסט המשפטי נטען אוטומטית בהתאם לסוג האומדן שנבחר למעלה
-      </p>
-      <textarea id="legal-text-content" rows="6" placeholder="הטקסט המשפטי יוטען כאן..." onchange="updateHelperFromField(event);"></textarea>
-      <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
-        <button type="button" class="btn save-btn" onclick="saveWithFeedback(event, 'legal-text')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
-        <button type="button" class="btn btn-secondary" onclick="resetLegalText()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">איפוס טקסט</button>
-      </div>
+        <button type="button" onclick="loadLegalTextFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
+        <button type="button" onclick="resetLegalText()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס טקסט</button>
+      <textarea id="legal-text-content" style="width: 100%; min-height: 200px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="הטקסט המשפטי יטען כאן עם הנתונים המעודכנים..." onchange="updateHelperFromField(event);">הטקסט המשפטי יטען כאן עם הנתונים המעודכנים...</textarea>
+        💡 הטקסט ניתן לעריכה לצורך התאמה לדוח הספציפי. השינויים לא ישפיעו על הכספת המקורית.
     </div>
 
     <!-- Attachments Section -->
     <div class="form-section" id="attachments-section">
       <h3>רשימת נספחים</h3>
-      <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-        רשימת הנספחים נטענת אוטומטית בהתאם לסוג האומדן שנבחר למעלה
-      </p>
-      <textarea id="attachments-list" rows="4" placeholder="רשימת הנספחים תוטען כאן..." onchange="updateHelperFromField(event);"></textarea>
-      <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
-        <button type="button" class="btn save-btn" onclick="saveWithFeedback(event, 'attachments')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
-        <button type="button" class="btn btn-secondary" onclick="resetAttachments()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">איפוס נספחים</button>
-      </div>
+      <button type="button" onclick="loadAttachmentsFromVault()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">טען מהכספת</button>
+      <button type="button" onclick="resetAttachments()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">איפוס רשימה</button>
+      <textarea id="attachments-content" style="width: 100%; min-height: 120px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8f9fa; line-height: 1.6; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="רשימת הנספחים תטען כאן..." onchange="updateHelperFromField(event);"><strong>לוטה</strong>
+• תצלומי הרכב הניזוק
+• חשבוניות תיקון  
+• ערך רכב ממוחשב
+• צילום רישיון הרכב
+• חשכ"ט</textarea>
+      💡 ניתן לערוך ולהתאים את רשימת הנספחים בהתאם לצרכים הספציפיים של הדוח.
     </div>
 
     <!-- VAT Settings Section -->
@@ -1603,6 +1600,7 @@
             helper.estimate.summary.legal_text = value;
             console.log('💾 Legal text content saved to NEW STRUCTURE');
             break;
+          case 'attachments-content':
           case 'attachments-list':
             // Save to NEW STRUCTURE: helper.estimate.summary.attachments
             helper = initializeEstimateSummaryStructure(helper);
@@ -5288,11 +5286,12 @@
 
     function loadAttachmentsFromVault() {
       console.log('📎 Load attachments manually triggered');
-      loadLegalText().catch(console.error);
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      loadEstimateAttachments(selectedType);
     }
 
     function resetAttachments() {
-      document.getElementById('attachments-list').value = '';
+      document.getElementById('attachments-content').value = '';
     }
     
     // UPDATE REPORT TYPE
@@ -5454,7 +5453,7 @@
 • צילום רישיון הרכב
 • חשכ"ט`;
         
-        const attachmentsElement = document.getElementById('attachments-list');
+        const attachmentsElement = document.getElementById('attachments-content');
         if (attachmentsElement) {
           attachmentsElement.value = standardAttachments;
           console.log('✅ Estimate attachments loaded for type:', selectedType);
@@ -5474,7 +5473,7 @@
             path: 'helper.estimate.summary.attachments'
           });
         } else {
-          console.error('❌ Attachments element not found: attachments-list');
+          console.error('❌ Attachments element not found: attachments-content');
         }
         
       } catch (error) {
@@ -5693,7 +5692,7 @@
         }
         
         // Load attachments from new structure
-        const attachmentsField = document.getElementById('attachments-list');
+        const attachmentsField = document.getElementById('attachments-content');
         if (attachmentsField && summary.attachments && summary.attachments.length > 0) {
           attachmentsField.value = Array.isArray(summary.attachments) ? 
             summary.attachments.join('\n') : summary.attachments[0];
