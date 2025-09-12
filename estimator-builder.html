@@ -3339,10 +3339,29 @@
           source: 'estimator_builder_auto_save'
         };
         
-        // Write to all depreciation sections
-        helper.depreciation.bulk_items = bulk_items;
+        // Write to all depreciation sections with complete data
+        // 1. helper.depreciation
+        helper.depreciation = {
+          ...helper.depreciation,
+          globalDep1: globalPercent,
+          global_percentage: parseFloat(String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '')) || 0,
+          global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
+          garageDays: garageDays,
+          bulk_items: bulk_items
+        };
+        
+        // 2. helper.estimate.depreciation
         helper.estimate.depreciation = depreciationData;
-        helper.final_report.depreciation.bulk_items = bulk_items;
+        
+        // 3. helper.final_report.depreciation
+        helper.final_report.depreciation = {
+          ...helper.final_report.depreciation,
+          globalDep1: globalPercent,
+          global_percentage: parseFloat(String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '')) || 0,
+          global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
+          garageDays: garageDays,
+          bulk_items: bulk_items
+        };
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('🔄 Auto-saved depreciation data:', { 
