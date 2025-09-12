@@ -5685,7 +5685,16 @@
                 const itemAmount = item.amount;
                 inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
                 inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                
+                // Special handling for registration: use amount directly when percent is 0
+                if (itemPercent === 0 && itemAmount) {
+                  // When percent is 0, use the amount directly from helper
+                  inputs[3].value = `₪${Math.abs(itemAmount).toLocaleString()}`;
+                  console.log('Registration has 0% - using amount directly:', inputs[3].value);
+                } else {
+                  // Normal case: use display value or calculated amount
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                }
               }
             }
           });
