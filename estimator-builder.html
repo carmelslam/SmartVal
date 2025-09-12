@@ -2860,12 +2860,16 @@
         console.log('🔄 Loading depreciation data to UI...');
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        if (!helper.estimate?.depreciation) {
-          console.log('❌ No depreciation data found in helper.estimate');
-          return;
-        }
+        // Try to load depreciation data from multiple sources with fallback
+        let depreciationData = helper.estimate?.depreciation || 
+                              helper.final_report?.depreciation || 
+                              helper.depreciation || {};
         
-        const depreciationData = helper.estimate.depreciation;
+        console.log('📊 Loading depreciation data from sources:', {
+          estimate: !!helper.estimate?.depreciation,
+          final_report: !!helper.final_report?.depreciation, 
+          depreciation: !!helper.depreciation
+        });
         console.log('📊 Found depreciation data:', depreciationData);
         
         // Load global depreciation fields
@@ -3364,10 +3368,11 @@
         };
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('🔄 Auto-saved depreciation data:', { 
-          global: { percent: globalPercent, value: globalValue, days: garageDays },
-          bulk_items: bulk_items.length 
-        });
+        
+        console.log('🔄 Auto-saved depreciation data to all destinations:');
+        console.log('- helper.depreciation:', helper.depreciation);
+        console.log('- helper.estimate.depreciation:', helper.estimate.depreciation);
+        console.log('- helper.final_report.depreciation:', helper.final_report.depreciation);
       } catch (error) {
         console.error('❌ Auto-save error:', error);
       }
