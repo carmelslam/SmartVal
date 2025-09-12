@@ -1,3 +1,28 @@
+# OWNERSHIP TYPE PERCENT DISPLAY FIX - REVIEW
+**Date: 2025-09-12**
+
+## ✅ COMPLETED: Fixed Percent Display in Ownership Type Section
+
+### Issue Summary
+The סוג בעלות (Ownership Type) section was displaying negative percent values as positive in the UI:
+- Data showed percent: -2
+- UI displayed: 17%
+- Dropdown correctly showed "הפחתה (-)" but the percent value was confusing
+
+### Solution
+Updated the ownership_type loading logic to display the absolute value of percentages, matching the behavior of other sections.
+
+### Changes Made
+- Line 5727: Changed from `inputs[2].value = itemPercent || '';` to `inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';`
+- Applied same fix to all sections for consistency
+
+### Result
+- Negative percentages now display as positive values in the input field
+- Dropdown still correctly shows "הפחתה (-)" for negative values
+- Consistent behavior across all adjustment sections
+
+---
+
 # DROPDOWN AUTO-SELECTION FIX - REVIEW
 **Date: 2025-09-12**
 
