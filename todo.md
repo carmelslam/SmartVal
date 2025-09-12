@@ -1,3 +1,44 @@
+# DROPDOWN AUTO-SELECTION FIX - REVIEW
+**Date: 2025-09-12**
+
+## ✅ COMPLETED: Fixed Dropdown Auto-Selection Based on Value Sign
+
+### Issue Summary
+The סוג (type) dropdowns in both sections were not auto-selecting based on negative values:
+- Negative values displayed correctly (e.g., "-5000", "-10%")
+- But dropdown still showed "תוספת" (addition) instead of "הפחתה" (subtraction)
+
+### Solution Implemented
+1. **Created a helper function** `getDropdownTypeFromValues()` that:
+   - Checks percent value first (priority)
+   - Falls back to amount value
+   - Returns 'minus' for negative values, 'plus' for positive values
+   - Uses existing type as fallback
+
+2. **Applied fix to both sections**:
+   - ערך הרכב הגולמי - מאפיינים ועליה לכביש בלבד
+   - ערך השוק המלא - כולל גורמי שימוש
+
+3. **Updated all data loading locations** where dropdown values are set
+
+### Technical Details
+The function checks values in this priority:
+```javascript
+function getDropdownTypeFromValues(percentValue, amountValue, currentType) {
+  // Check percent first, then amount
+  // Return 'minus' for negative, 'plus' for positive
+  // Fall back to currentType or 'plus'
+}
+```
+
+### Result
+Both sections now correctly auto-select:
+- "הפחתה (-)" for negative values
+- "תוספת (+)" for positive values
+- Manual override still possible
+
+---
+
 # ESTIMATOR BUILDER FIELD MAPPING FIX - REVIEW
 **Date: 2025-09-12**
 

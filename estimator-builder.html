@@ -1700,6 +1700,26 @@
       document.getElementById('pageTitle').textContent = `רכב מס. ${plate}`;
     }
 
+    // Helper function to determine dropdown type based on values
+    function getDropdownTypeFromValues(percentValue, amountValue, currentType) {
+      // Priority: Check percent first, then amount
+      let numericValue = null;
+      
+      if (percentValue !== null && percentValue !== undefined && percentValue !== '' && !isNaN(percentValue)) {
+        numericValue = parseFloat(percentValue);
+      } else if (amountValue !== null && amountValue !== undefined && amountValue !== '' && !isNaN(amountValue)) {
+        numericValue = parseFloat(amountValue);
+      }
+      
+      // If we have a numeric value, determine type based on sign
+      if (numericValue !== null && numericValue !== 0) {
+        return numericValue < 0 ? 'minus' : 'plus';
+      }
+      
+      // Fall back to current type or default to 'plus'
+      return currentType || 'plus';
+    }
+
     // Add feature adjustment row
     function addFeatureAdjustment() {
       const container = document.getElementById('featuresAdjustmentsList');
@@ -4412,8 +4432,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = adjustments.features.value || '';
-                inputs[1].value = adjustments.features.amount >= 0 ? 'plus' : 'minus';
-                inputs[2].value = adjustments.features.percent || adjustments.features.percentage || '';
+                const featurePercent = adjustments.features.percent || adjustments.features.percentage;
+                const featureAmount = adjustments.features.amount;
+                inputs[1].value = getDropdownTypeFromValues(featurePercent, featureAmount, 'plus');
+                inputs[2].value = featurePercent || '';
                 
                 // Calculate ערך locally if percentage exists
                 const percentValue = adjustments.features.percent || adjustments.features.percentage;
@@ -4450,8 +4472,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = adjustments.registration.value || adjustments.registration.description || '';
-                inputs[1].value = adjustments.registration.amount >= 0 ? 'plus' : 'minus';
-                inputs[2].value = adjustments.registration.percent || adjustments.registration.percentage || '';
+                const regPercent = adjustments.registration.percent || adjustments.registration.percentage;
+                const regAmount = adjustments.registration.amount;
+                inputs[1].value = getDropdownTypeFromValues(regPercent, regAmount, 'plus');
+                inputs[2].value = regPercent || '';
                 
                 // Registration uses fixed amounts (not calculated)
                 if (adjustments.registration.amount) {
@@ -5114,8 +5138,10 @@
               const inputs = row.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             });
@@ -5145,8 +5171,10 @@
             const inputs = lastRow.querySelectorAll('input, select');
             if (inputs.length >= 4) {
               inputs[0].value = item.value || '';
-              inputs[1].value = item.type || 'plus';
-              inputs[2].value = item.percentage || item.percent || '';
+              const itemPercent = item.percentage || item.percent;
+              const itemAmount = item.amount;
+              inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+              inputs[2].value = itemPercent || '';
               inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
             }
           }
@@ -5531,8 +5559,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percent || item.percentage || '';
+                const itemPercent = item.percent || item.percentage;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5549,8 +5579,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percent || item.percentage || '';
+                const itemPercent = item.percent || item.percentage;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5629,8 +5661,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5647,8 +5681,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5665,8 +5701,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5683,8 +5721,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5701,8 +5741,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5719,8 +5761,10 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = item.value || '';
-                inputs[1].value = item.type || 'plus';
-                inputs[2].value = item.percentage || item.percent || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent || '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
@@ -5813,7 +5857,11 @@
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs[0]) inputs[0].value = adjustment.value || '';
-                  if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
+                  if (inputs[1]) {
+                    const adjPercent = adjustment.percentage || adjustment.percent;
+                    const adjAmount = adjustment.amount;
+                    inputs[1].value = getDropdownTypeFromValues(adjPercent, adjAmount, adjustment.type || 'plus');
+                  }
                   if (inputs[2]) inputs[2].value = adjustment.percentage || '';
                   if (inputs[3]) inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                 }
@@ -5829,7 +5877,11 @@
                 if (lastRow) {
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs[0]) inputs[0].value = adjustment.value || '';
-                  if (inputs[1]) inputs[1].value = adjustment.type || 'plus';
+                  if (inputs[1]) {
+                    const adjPercent = adjustment.percentage || adjustment.percent;
+                    const adjAmount = adjustment.amount;
+                    inputs[1].value = getDropdownTypeFromValues(adjPercent, adjAmount, adjustment.type || 'plus');
+                  }
                   if (inputs[2]) inputs[2].value = adjustment.percentage || '';
                   if (inputs[3]) inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                 }
@@ -6049,7 +6101,9 @@
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs.length >= 4) {
                     inputs[0].value = adjustment.value || '';
-                    inputs[1].value = adjustment.type || 'plus';
+                    const adjPercent = adjustment.percentage || adjustment.percent;
+                    const adjAmount = adjustment.amount;
+                    inputs[1].value = getDropdownTypeFromValues(adjPercent, adjAmount, adjustment.type || 'plus');
                     inputs[2].value = adjustment.percentage || '';
                     inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                   }
@@ -6071,7 +6125,9 @@
                   const inputs = lastRow.querySelectorAll('input, select');
                   if (inputs.length >= 4) {
                     inputs[0].value = adjustment.value || '';
-                    inputs[1].value = adjustment.type || 'plus';
+                    const adjPercent = adjustment.percentage || adjustment.percent;
+                    const adjAmount = adjustment.amount;
+                    inputs[1].value = getDropdownTypeFromValues(adjPercent, adjAmount, adjustment.type || 'plus');
                     inputs[2].value = adjustment.percentage || '';
                     inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
                   }
