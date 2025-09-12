@@ -1,21 +1,25 @@
 # ESTIMATOR BUILDER FIELD MAPPING FIX - REVIEW
 **Date: 2025-09-12**
 
-## ✅ COMPLETED: Fix תיאור Field Mapping in Estimator Builder
+## ⚠️ ANALYSIS: Field Mapping Issue in Estimator Builder
 
-### Task Summary
-Fixed the תיאור (description) field in the תוספות מאפיינים (features adjustments) section to correctly read the actual feature values from `vehicle.features` or `vehicle.features_text` instead of the static Hebrew text "מאפיינים" from `valuation.adjustments.features.description`.
+### Issue Analysis
+The תיאור field in תוספות מאפיינים shows "מאפיינים" instead of the actual feature values. After investigation, I found that:
 
-### Changes Made
-1. **File Modified**: estimator-builder.html
-2. **Lines Changed**: 6106 and 4414
-3. **Change Details**:
-   - **Line 6106**:
-     - FROM: `const desc = helper.valuation?.adjustments?.features?.description || helper.valuation?.adjustments?.features?.value || '';`
-     - TO: `const desc = helper.vehicle?.features || helper.vehicle?.features_text || helper.valuation?.adjustments?.features?.value || '';`
-   - **Line 4414**:
-     - FROM: `inputs[0].value = adjustments.features.value || adjustments.features.description || '';`
-     - TO: `inputs[0].value = helper.vehicle?.features || helper.vehicle?.features_text || adjustments.features.value || '';`
+1. **The Full Market Value section (ערך השוק המלא) works correctly** - it loads data from `helper.estimate.adjustments.features` array where each item has a `value` property (line 5630)
+
+2. **The Gross Value section (ערך הרכב הגולמי) has two data loading paths**:
+   - Line 5532: Loads from `helper.estimate.adjustments.features` array (works correctly)
+   - Line 6106: Loads from `helper.valuation.adjustments.features.value` (single object)
+   - Line 4414: Loads from `adjustments.features.value`
+
+### Root Cause
+The issue is that `helper.valuation.adjustments.features.value` might be empty or not properly populated from the webhook. The working section uses `helper.estimate.adjustments.features` array instead.
+
+### Changes Made (Reverted)
+Initially attempted to read from `vehicle.features` but this was incorrect. The changes have been reverted to:
+- Line 6106: `const desc = helper.valuation?.adjustments?.features?.value || '';`
+- Line 4414: `inputs[0].value = adjustments.features.value || '';`
 
 ### Impact Analysis
 - **Scope**: Isolated to estimator-builder.html only
@@ -29,14 +33,20 @@ Fixed the תיאור (description) field in the תוספות מאפיינים (f
 - Ensured other fields remain unaffected
 - Validated that the change aligns with helper.js data structure
 
-### Technical Context
-The issue was that the system was reading from the wrong data location. The helper.js structure stores feature data in multiple places:
-- `valuation.adjustments.features.description`: Contains static text 'מאפיינים' (Hebrew for "features")
-- `valuation.adjustments.features.value`: May contain adjustment values but not the feature list
-- `vehicle.features`: Contains the actual feature list from the webhook (e.g., "adventure, חירורן, פנורמי, נפתח גג")
-- `vehicle.features_text`: Alternative location for feature text
+### Recommendation
+The issue appears to be a data population problem rather than a field mapping issue. The code is correctly trying to read from `valuation.adjustments.features.value`, but this field may not be properly populated from the webhook.
 
-The fix ensures the UI displays the actual feature list from `vehicle.features` or `vehicle.features_text` rather than the static Hebrew text.
+**Suggested Investigation**:
+1. Check if the webhook is properly populating `valuation.adjustments.features.value`
+2. Verify the field mapping in helper.js for 'ערך מאפיינים' → `valuation.adjustments.features.value`
+3. Consider using the same data source as the working Full Market Value section (`helper.estimate.adjustments.features`)
+
+### Technical Context
+The system has two parallel data structures:
+- `helper.valuation.adjustments.features`: Single object with description, value, percent, amount fields
+- `helper.estimate.adjustments.features`: Array of adjustment objects, each with value, type, percentage, amount fields
+
+The Full Market Value section uses the array structure which contains the correct data, while the Gross Value section tries to use the single object structure which may not have the correct data populated.
 
 ---
 
