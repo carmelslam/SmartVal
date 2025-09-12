@@ -5483,15 +5483,14 @@
           total
         });
         
-        // Update helper with calculated values
+        // Update helper with calculated values using correct mapping paths
         if (typeof updateHelper === 'function') {
-          updateHelper('estimate_summary', {
-            sum_claim: sumClaim,
-            depreciation_compensation: depCompensation,
-            salvage_value: salvageValue,
-            total_claim: total,
-            vat_amount: vat
-          }, 'estimate_summary_calculation');
+          // Update the specific paths as shown in screenshot
+          updateHelper('estimate.calculations.total_damage_cost', sumClaim, 'estimate_summary_total_damage');
+          updateHelper('estimate.depreciation.globalDepValue', depCompensation, 'estimate_summary_depreciation');
+          updateHelper('estimate_summary.salvage_value', salvageValue, 'estimate_summary_salvage');
+          updateHelper('estimate_summary.final_total', total, 'estimate_summary_final');
+          updateHelper('estimate_summary.vat_amount', vat, 'estimate_summary_vat');
         }
         
       } catch (error) {
@@ -5503,6 +5502,11 @@
     function loadSummaryData(helper) {
       try {
         console.log('📊 Loading summary data from helper...');
+        console.log('🔍 Helper data structure:', {
+          estimate_calculations: helper.estimate?.calculations,
+          estimate_depreciation: helper.estimate?.depreciation,
+          vehicle_market_value: helper.vehicle?.market_value
+        });
         
         const summary = helper.estimate_summary || {};
         
@@ -5514,16 +5518,19 @@
         const salvageValueField = document.getElementById('salvageValue');
         const sumTotalClaimField = document.getElementById('sumTotalClaim');
         
-        if (sumMarketValueField && helper.vehicle?.market_value) {
-          sumMarketValueField.value = `₪${helper.vehicle.market_value}`;
+        // Map ערך השוק של הרכב to estimate.calculations.full_market_value
+        if (sumMarketValueField && helper.estimate?.calculations?.full_market_value) {
+          sumMarketValueField.value = `₪${helper.estimate.calculations.full_market_value.toLocaleString()}`;
         }
         
-        if (sumClaimField && summary.sum_claim) {
-          sumClaimField.value = `₪${summary.sum_claim.toLocaleString()}`;
+        // Map סה״כ תביעה to estimate.calculations.total_damage_cost  
+        if (sumClaimField && helper.estimate?.calculations?.total_damage_cost) {
+          sumClaimField.value = `₪${helper.estimate.calculations.total_damage_cost.toLocaleString()}`;
         }
         
-        if (depCompensationField && summary.depreciation_compensation) {
-          depCompensationField.value = `₪${summary.depreciation_compensation.toLocaleString()}`;
+        // Map פיצוי בגין ירידת ערך to estimate.depreciation.globalDepValue
+        if (depCompensationField && helper.estimate?.depreciation?.globalDepValue) {
+          depCompensationField.value = `₪${helper.estimate.depreciation.globalDepValue.toLocaleString()}`;
         }
         
         if (salvageValueField && summary.salvage_value) {
