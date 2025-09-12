@@ -1067,9 +1067,9 @@
     <!-- Legal Text Section -->
     <div class="form-section" id="legal-text">
       <h3>טקסט משפטי לאומדן</h3>
-      <select id="legal-text-selector" onchange="loadLegalTextFromVault();">
-        <option value="">בחר טקסט משפטי...</option>
-      </select>
+      <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+        הטקסט המשפטי נטען אוטומטית בהתאם לסוג האומדן שנבחר למעלה
+      </p>
       <textarea id="legal-text-content" rows="6" placeholder="הטקסט המשפטי יוטען כאן..." onchange="updateHelperFromField(event);"></textarea>
       <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
         <button type="button" class="btn save-btn" onclick="saveWithFeedback(event, 'legal-text')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
@@ -1080,9 +1080,9 @@
     <!-- Attachments Section -->
     <div class="form-section" id="attachments-section">
       <h3>רשימת נספחים</h3>
-      <select id="attachments-selector" onchange="loadAttachmentsFromVault();">
-        <option value="">בחר רשימת נספחים...</option>
-      </select>
+      <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+        רשימת הנספחים נטענת אוטומטית בהתאם לסוג האומדן שנבחר למעלה
+      </p>
       <textarea id="attachments-list" rows="4" placeholder="רשימת הנספחים תוטען כאן..." onchange="updateHelperFromField(event);"></textarea>
       <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
         <button type="button" class="btn save-btn" onclick="saveWithFeedback(event, 'attachments')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
@@ -1299,6 +1299,13 @@
           // Load data from helper
           loadDataFromHelper();
           loadDamageCentersSummary(window.helper || {});
+          
+          // Load initial legal text and attachments based on default selection
+          setTimeout(() => {
+            updateReportType();
+            loadLegalText().catch(console.error);
+          }, 500);
+          
         } catch (error) {
           console.error('❌ Error during estimator initialization:', error);
         }
@@ -1592,7 +1599,11 @@
     function addEventListeners() {
       // Estimate type change
       document.querySelectorAll('input[name="estimate-type"]').forEach(radio => {
-        radio.addEventListener('change', updateEstimateType);
+        radio.addEventListener('change', function() {
+          updateEstimateType();
+          updateReportType();
+          loadLegalText();
+        });
       });
 
       // Add more event listeners as needed
@@ -5218,8 +5229,8 @@
     }
 
     function loadLegalTextFromVault() {
-      console.log('📄 Load legal text');
-      // Implementation here
+      console.log('📄 Load legal text manually triggered');
+      loadLegalText().catch(console.error);
     }
 
     function resetLegalText() {
@@ -5227,12 +5238,111 @@
     }
 
     function loadAttachmentsFromVault() {
-      console.log('📎 Load attachments');
-      // Implementation here
+      console.log('📎 Load attachments manually triggered');
+      loadLegalText().catch(console.error);
     }
 
     function resetAttachments() {
       document.getElementById('attachments-list').value = '';
+    }
+    
+    // UPDATE REPORT TYPE
+    function updateReportType() {
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      const reportTypeText = selectedType === 'אובדן_להלכה' ? 'אומדן ראשוני - אובדן להלכה' : 'אומדן ראשוני - טוטלוס';
+      const reportTypeElement = document.getElementById('reportType');
+      if (reportTypeElement) {
+        reportTypeElement.value = reportTypeText;
+      }
+    }
+    
+    // LOAD LEGAL TEXT USING CENTRALIZED ENGINE
+    async function loadLegalText() {
+      const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      console.log('🔄 Loading estimate legal text for type:', selectedType);
+      
+      // Map estimate types to UI dropdown format for the engine
+      const estimateTypeMapping = {
+        'אובדן_להלכה': 'אומדן ראשוני - אובדן להלכה',
+        'טוטלוס': 'אומדן ראשוני - טוטלוס'
+      };
+      
+      const uiType = estimateTypeMapping[selectedType] || estimateTypeMapping['אובדן_להלכה'];
+      
+      // Build placeholder values from helper data
+      const placeholderValues = {
+        ...(helper.vehicle || {}),
+        ...(helper.depreciation || {}),
+        ...(helper.estimate || {}),
+        ...(helper.general || {}),
+        // Add specific estimate placeholders
+        דגם: helper.vehicle?.vehicle_model || '',
+        שווי_רכב: helper.vehicle?.market_value || '',
+        שווי_פיצוי: helper.estimate?.compensation_value || '',
+        ירידת_ערך: helper.depreciation?.percentage || '',
+        אחוז_נזק: helper.estimate?.damage_percentage || '',
+        ימי_מוסך: helper.estimate?.garage_days || '',
+        מוקדי_נזק: helper.estimate?.damage_centers_count || '',
+        שווי_שרידים: helper.estimate?.salvage_value || ''
+      };
+      
+      try {
+        // Use the centralized legal text engine for estimates
+        const legalText = await window.LegalTextEngine.getProcessedText(
+          uiType, 
+          placeholderValues, 
+          'estimate'
+        );
+        
+        const legalTextElement = document.getElementById('legal-text-content');
+        if (legalTextElement) {
+          legalTextElement.value = legalText;
+          console.log('✅ Estimate legal text loaded successfully from vault for:', uiType);
+          
+          // Update helper with the loaded legal text
+          if (typeof updateHelper === 'function') {
+            updateHelper('estimate_legal_text', legalText, 'estimate_builder_auto_load');
+          }
+        } else {
+          console.error('❌ Legal text element not found: legal-text-content');
+        }
+        
+        // Also load standard attachments for estimates
+        loadEstimateAttachments(selectedType);
+        
+      } catch (error) {
+        console.error('❌ Error loading estimate legal text:', error);
+      }
+    }
+    
+    // LOAD ESTIMATE ATTACHMENTS BASED ON TYPE
+    function loadEstimateAttachments(selectedType) {
+      try {
+        // Standard attachments for both estimate types
+        const standardAttachments = `• תצלומי הרכב הניזוק
+• חשבוניות תיקון
+• ערך רכב ממוחשב
+• צילום רישיון הרכב
+• חשכ"ט`;
+        
+        const attachmentsElement = document.getElementById('attachments-list');
+        if (attachmentsElement) {
+          attachmentsElement.value = standardAttachments;
+          console.log('✅ Estimate attachments loaded for type:', selectedType);
+          
+          // Update helper with the loaded attachments
+          if (typeof updateHelper === 'function') {
+            updateHelper('estimate_attachments', standardAttachments, 'estimate_builder_auto_load');
+          }
+        } else {
+          console.error('❌ Attachments element not found: attachments-list');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error loading estimate attachments:', error);
+      }
     }
 
     function updateVatRateEstimate() {
