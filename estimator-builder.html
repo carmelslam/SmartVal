@@ -1024,33 +1024,50 @@
       </div>
     </div>
 
-    <!-- Summary Section -->
+    <!-- SUMMARY SECTION WITH DYNAMIC FIELDS FROM LEGACY -->
     <div class="form-section" style="background: linear-gradient(135deg, #ff8c00 0%, #ff7300 100%); color: white; border-radius: 12px; padding: 20px;">
-      <h3 style="color: white; text-align: center; font-size: 24px; margin-bottom: 20px;">סיכום אומדן</h3>
-      <div class="summary-grid">
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">שווי רכב:</label>
-          <div id="sumMarketValue" style="font-size: 28px; font-weight: bold;">₪0</div>
+      <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 26px;">סיכום האומדן</h3>
+      
+      <!-- First row with white background -->
+      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">סוג דו"ח:</label>
+            <input type="text" id="reportType" style="background: #f0f0f0; color: #333;" readonly />
+          </div>
+          <div>
+            <label style="color: #333;">ערך השוק של הרכב:</label>
+            <input type="text" id="sumMarketValue" style="background: white; color: #333;" onchange="updateHelperFromField(event); calculateSummaryTotals();" />
+          </div>
         </div>
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">סה״כ תביעה:</label>
-          <div id="sumClaim" style="font-size: 28px; font-weight: bold;">₪0</div>
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">סה״כ תביעה:</label>
+            <input type="text" id="sumClaim" style="background: white; color: #333;" onchange="updateHelperFromField(event); calculateSummaryTotals();" />
+          </div>
+          <div>
+            <label style="color: #333;">פיצוי בגין ירידת ערך:</label>
+            <input type="text" id="depCompensation" style="background: white; color: #333;" onchange="updateHelperFromField(event); calculateSummaryTotals();" />
+          </div>
         </div>
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">מע״מ:</label>
-          <div id="sumVAT" style="font-size: 28px; font-weight: bold;">₪0</div>
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">שווי השרידים (אופציונלי) - מופחת מהסכום:</label>
+            <input type="text" id="salvageValue" style="background: #fff5f5; color: #333; border: 1px solid #f87171;" placeholder="₪0" onchange="updateHelperFromField(event); calculateSummaryTotals();" />
+          </div>
+          <div style="display: flex; align-items: center; font-size: 13px; color: #666; padding: 8px;">
+            ➖ שדה אופציונלי - מופחת מהסכום הסופי אם מולא
+          </div>
         </div>
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">סה״כ כולל מע״מ:</label>
-          <div id="sumTotalClaim" style="font-size: 28px; font-weight: bold;">₪0</div>
-        </div>
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">ירידת ערך:</label>
-          <div id="depCompensation" style="font-size: 28px; font-weight: bold;">₪0</div>
-        </div>
-        <div style="text-align: center;">
-          <label style="color: #ffe4b5; font-size: 14px;">אחוז הנזק:</label>
-          <div id="damagePercentage" style="font-size: 28px; font-weight: bold;">0%</div>
+      </div>
+      
+      <!-- TOTAL CALCULATION SECTION -->
+      <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <div class="form-grid">
+          <div>
+            <label style="color: #333;">סה״כ נכלל באומדן</label>
+            <input type="text" id="sumTotalClaim" style="background: #e8f5e8; color: #333; font-weight: bold;" readonly />
+          </div>
         </div>
       </div>
     </div>
@@ -1425,6 +1442,9 @@
         
         // Load additional notes
         loadAdditionalNotes(helper);
+        
+        // Load summary data with dynamic fields
+        loadSummaryData(helper);
         
         // Update page title
         updatePageTitle(helper);
@@ -5258,12 +5278,32 @@
     
     // LOAD LEGAL TEXT USING CENTRALIZED ENGINE
     async function loadLegalText() {
+      console.log('🚀 === STARTING loadLegalText() DEBUG ===');
+      
+      // Step 1: Check if LegalTextEngine exists
+      console.log('🔍 Step 1 - LegalTextEngine availability:', {
+        exists: !!window.LegalTextEngine,
+        type: typeof window.LegalTextEngine,
+        methods: window.LegalTextEngine ? Object.getOwnPropertyNames(window.LegalTextEngine.constructor.prototype) : 'N/A'
+      });
+      
+      if (!window.LegalTextEngine) {
+        console.error('❌ CRITICAL: window.LegalTextEngine is not available');
+        alert('שגיאה: מנוע הטקסט המשפטי לא זמין. אנא רענן את הדף.');
+        return;
+      }
+      
+      // Step 2: Get selected type and helper data
       const selectedType = document.querySelector('input[name="estimate-type"]:checked')?.value || 'אובדן_להלכה';
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      console.log('🔄 Loading estimate legal text for type:', selectedType);
+      console.log('🔍 Step 2 - Input data:', {
+        selectedType,
+        helperKeys: Object.keys(helper),
+        radioButtons: document.querySelectorAll('input[name="estimate-type"]').length
+      });
       
-      // Map estimate types to UI dropdown format for the engine
+      // Step 3: Type mapping
       const estimateTypeMapping = {
         'אובדן_להלכה': 'אומדן ראשוני - אובדן להלכה',
         'טוטלוס': 'אומדן ראשוני - טוטלוס'
@@ -5271,7 +5311,13 @@
       
       const uiType = estimateTypeMapping[selectedType] || estimateTypeMapping['אובדן_להלכה'];
       
-      // Build placeholder values from helper data
+      console.log('🔍 Step 3 - Type mapping:', {
+        selectedType,
+        mappedUiType: uiType,
+        availableMappings: Object.keys(estimateTypeMapping)
+      });
+      
+      // Step 4: Build placeholder values
       const placeholderValues = {
         ...(helper.vehicle || {}),
         ...(helper.depreciation || {}),
@@ -5288,7 +5334,32 @@
         שווי_שרידים: helper.estimate?.salvage_value || ''
       };
       
+      console.log('🔍 Step 4 - Placeholder values sample:', {
+        totalKeys: Object.keys(placeholderValues).length,
+        sampleValues: {
+          דגם: placeholderValues.דגם,
+          שווי_רכב: placeholderValues.שווי_רכב,
+          ירידת_ערך: placeholderValues.ירידת_ערך
+        }
+      });
+      
+      // Step 5: Check DOM element
+      const legalTextElement = document.getElementById('legal-text-content');
+      console.log('🔍 Step 5 - DOM element check:', {
+        elementExists: !!legalTextElement,
+        elementType: legalTextElement?.tagName,
+        elementValue: legalTextElement?.value?.substring(0, 50) || 'empty'
+      });
+      
+      if (!legalTextElement) {
+        console.error('❌ CRITICAL: legal-text-content element not found in DOM');
+        alert('שגיאה: אלמנט הטקסט המשפטי לא נמצא בדף');
+        return;
+      }
+      
       try {
+        console.log('🔍 Step 6 - Calling LegalTextEngine.getProcessedText...');
+        
         // Use the centralized legal text engine for estimates
         const legalText = await window.LegalTextEngine.getProcessedText(
           uiType, 
@@ -5296,25 +5367,41 @@
           'estimate'
         );
         
-        const legalTextElement = document.getElementById('legal-text-content');
-        if (legalTextElement) {
+        console.log('🔍 Step 7 - Engine response:', {
+          textReceived: !!legalText,
+          textLength: legalText?.length || 0,
+          textPreview: legalText?.substring(0, 100) || 'empty'
+        });
+        
+        if (legalText && legalText.trim()) {
           legalTextElement.value = legalText;
-          console.log('✅ Estimate legal text loaded successfully from vault for:', uiType);
+          console.log('✅ SUCCESS: Estimate legal text loaded from vault for:', uiType);
           
           // Update helper with the loaded legal text
           if (typeof updateHelper === 'function') {
             updateHelper('estimate_legal_text', legalText, 'estimate_builder_auto_load');
+            console.log('✅ Helper updated with legal text');
+          } else {
+            console.warn('⚠️ updateHelper function not available');
           }
         } else {
-          console.error('❌ Legal text element not found: legal-text-content');
+          console.error('❌ Engine returned empty or invalid legal text');
+          alert('שגיאה: לא נמצא טקסט משפטי לסוג האומדן הנבחר');
         }
         
         // Also load standard attachments for estimates
         loadEstimateAttachments(selectedType);
         
       } catch (error) {
-        console.error('❌ Error loading estimate legal text:', error);
+        console.error('❌ CRITICAL ERROR in loadLegalText:', {
+          error: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        alert(`שגיאה בטעינת טקסט משפטי: ${error.message}`);
       }
+      
+      console.log('🏁 === END loadLegalText() DEBUG ===');
     }
     
     // LOAD ESTIMATE ATTACHMENTS BASED ON TYPE
@@ -5348,6 +5435,115 @@
     function updateVatRateEstimate() {
       console.log('💰 Update VAT rate');
       // Implementation here
+    }
+    
+    // CALCULATE SUMMARY TOTALS WITH DYNAMIC VAT
+    function calculateSummaryTotals() {
+      try {
+        console.log('🧮 Calculating summary totals...');
+        
+        // Get input values
+        const sumClaimInput = document.getElementById('sumClaim');
+        const depCompensationInput = document.getElementById('depCompensation');
+        const salvageValueInput = document.getElementById('salvageValue');
+        const sumTotalClaimInput = document.getElementById('sumTotalClaim');
+        
+        if (!sumClaimInput || !depCompensationInput || !sumTotalClaimInput) {
+          console.error('❌ Missing required summary input elements');
+          return;
+        }
+        
+        // Parse values (remove ₪ and commas)
+        const sumClaim = parseFloat(sumClaimInput.value.replace(/[₪,]/g, '') || '0') || 0;
+        const depCompensation = parseFloat(depCompensationInput.value.replace(/[₪,]/g, '') || '0') || 0;
+        const salvageValue = parseFloat(salvageValueInput.value.replace(/[₪,]/g, '') || '0') || 0;
+        
+        console.log('🔢 Values:', { sumClaim, depCompensation, salvageValue });
+        
+        // Calculate subtotal (sum claim + depreciation compensation)
+        const subtotal = sumClaim + depCompensation;
+        
+        // Calculate VAT (18% on subtotal)
+        const vatRate = 0.18;
+        const vat = Math.round(subtotal * vatRate);
+        
+        // Calculate total with VAT
+        let total = subtotal + vat;
+        
+        // Subtract salvage value if provided
+        if (salvageValue > 0) {
+          total = total - salvageValue;
+        }
+        
+        // Update the total field
+        sumTotalClaimInput.value = total > 0 ? `₪${total.toLocaleString()}` : '₪0';
+        
+        console.log('✅ Summary calculation completed:', {
+          subtotal,
+          vat,
+          salvageValue,
+          total
+        });
+        
+        // Update helper with calculated values
+        if (typeof updateHelper === 'function') {
+          updateHelper('estimate_summary', {
+            sum_claim: sumClaim,
+            depreciation_compensation: depCompensation,
+            salvage_value: salvageValue,
+            total_claim: total,
+            vat_amount: vat
+          }, 'estimate_summary_calculation');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error calculating summary totals:', error);
+      }
+    }
+    
+    // LOAD SUMMARY DATA FROM HELPER
+    function loadSummaryData(helper) {
+      try {
+        console.log('📊 Loading summary data from helper...');
+        
+        const summary = helper.estimate_summary || {};
+        
+        // Update summary fields
+        const reportTypeField = document.getElementById('reportType');
+        const sumMarketValueField = document.getElementById('sumMarketValue');
+        const sumClaimField = document.getElementById('sumClaim');
+        const depCompensationField = document.getElementById('depCompensation');
+        const salvageValueField = document.getElementById('salvageValue');
+        const sumTotalClaimField = document.getElementById('sumTotalClaim');
+        
+        if (sumMarketValueField && helper.vehicle?.market_value) {
+          sumMarketValueField.value = `₪${helper.vehicle.market_value}`;
+        }
+        
+        if (sumClaimField && summary.sum_claim) {
+          sumClaimField.value = `₪${summary.sum_claim.toLocaleString()}`;
+        }
+        
+        if (depCompensationField && summary.depreciation_compensation) {
+          depCompensationField.value = `₪${summary.depreciation_compensation.toLocaleString()}`;
+        }
+        
+        if (salvageValueField && summary.salvage_value) {
+          salvageValueField.value = `₪${summary.salvage_value.toLocaleString()}`;
+        }
+        
+        if (sumTotalClaimField && summary.total_claim) {
+          sumTotalClaimField.value = `₪${summary.total_claim.toLocaleString()}`;
+        }
+        
+        // Update report type based on current selection
+        updateReportType();
+        
+        console.log('✅ Summary data loaded successfully');
+        
+      } catch (error) {
+        console.error('❌ Error loading summary data:', error);
+      }
     }
 
     function showEstimatePreviewPip() {

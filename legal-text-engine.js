@@ -22,23 +22,51 @@ class LegalTextEngine {
    */
   async loadFromVault() {
     try {
-      console.log('📁 Loading legal texts from vault:', this.vaultPath);
+      console.log('🔍 === VAULT LOADING DEBUG ===');
+      console.log('📁 Loading legal texts from vault path:', this.vaultPath);
+      console.log('📁 Full vault URL:', new URL(this.vaultPath, window.location.href).href);
       
       const response = await fetch(this.vaultPath);
+      console.log('🔍 Vault fetch response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'content-length': response.headers.get('content-length')
+        }
+      });
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch vault file: ${response.status}`);
+        throw new Error(`Failed to fetch vault file: ${response.status} ${response.statusText}`);
       }
       
       const content = await response.text();
+      console.log('🔍 Vault file content loaded:', {
+        contentLength: content.length,
+        contentPreview: content.substring(0, 200),
+        hasJsonBlock: content.includes('```json')
+      });
       
       // Extract JSON structure from markdown
       const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+      console.log('🔍 JSON extraction:', {
+        matchFound: !!jsonMatch,
+        matchLength: jsonMatch?.[1]?.length || 0
+      });
+      
       if (!jsonMatch) {
+        console.error('❌ Could not find JSON structure in vault content');
+        console.error('❌ Content sample:', content.substring(0, 500));
         throw new Error('Could not find JSON structure in legal texts vault');
       }
       
       const vaultData = JSON.parse(jsonMatch[1]);
-      console.log('✅ Vault data loaded:', Object.keys(vaultData));
+      console.log('✅ Vault JSON parsed successfully:', {
+        topLevelKeys: Object.keys(vaultData),
+        estimateKeys: Object.keys(vaultData).filter(key => key.includes('estimate'))
+      });
       
       // Map vault keys to standardized keys for all builders
       const legalTexts = {
@@ -52,6 +80,8 @@ class LegalTextEngine {
         // Estimate Types
         'estimate_legal_loss': vaultData['estimate_אובדן_להלכה']?.text || '',
         'estimate_total_loss': vaultData['estimate_טוטלוס']?.text || '',
+        'estimate_אובדן_להלכה': vaultData['estimate_אובדן_להלכה']?.text || '',
+        'estimate_טוטלוס': vaultData['estimate_טוטלוס']?.text || '',
         
         // Additional vault data
         'assessor_credentials': vaultData.assessor_credentials?.text || '',
@@ -94,16 +124,33 @@ class LegalTextEngine {
    * @returns {Promise<string>} Legal text
    */
   async getTextForType(uiType, context = 'final_report') {
+    console.log(`🔍 getTextForType called with uiType: "${uiType}", context: "${context}"`);
+    
     const texts = await this.loadFromVault();
+    console.log('🔍 Vault texts loaded:', {
+      hasTexts: !!texts,
+      availableKeys: texts ? Object.keys(texts) : 'none'
+    });
     
     // Map UI dropdown values to vault keys
     const typeMapping = this.getTypeMapping(context);
+    console.log('🔍 Type mapping for context:', context, typeMapping);
+    
     const vaultKey = typeMapping[uiType] || typeMapping['default'];
+    console.log(`🔍 UI type "${uiType}" mapped to vault key: "${vaultKey}"`);
     
-    const legalText = texts[vaultKey] || 'טקסט משפטי לא נמצא';
+    const legalText = texts[vaultKey];
+    console.log(`🔍 Retrieved text for vault key "${vaultKey}":`, {
+      hasText: !!legalText,
+      textLength: legalText?.length || 0,
+      textPreview: legalText?.substring(0, 100) || 'empty'
+    });
     
-    console.log(`📄 Retrieved text for ${uiType} (${context}) → ${vaultKey}:`, 
-                legalText ? 'Found' : 'Not found');
+    if (!legalText || legalText.trim() === '') {
+      console.error(`❌ No legal text found for vault key: "${vaultKey}"`);
+      console.error('❌ Available vault keys:', Object.keys(texts || {}));
+      return 'טקסט משפטי לא נמצא בכספת - אנא בדוק את ההגדרות';
+    }
     
     return legalText;
   }
@@ -140,11 +187,11 @@ class LegalTextEngine {
   getTypeMapping(context = 'final_report') {
     if (context === 'estimate') {
       return {
-        'אומדן אובדן להלכה': 'estimate_legal_loss',
-        'אומדן טוטלוס': 'estimate_total_loss',
-        'אומדן ראשוני - אובדן להלכה': 'estimate_legal_loss',
-        'אומדן ראשוני - טוטלוס': 'estimate_total_loss',
-        'default': 'estimate_legal_loss'
+        'אומדן אובדן להלכה': 'estimate_אובדן_להלכה',
+        'אומדן טוטלוס': 'estimate_טוטלוס',
+        'אומדן ראשוני - אובדן להלכה': 'estimate_אובדן_להלכה',
+        'אומדן ראשוני - טוטלוס': 'estimate_טוטלוס',
+        'default': 'estimate_אובדן_להלכה'
       };
     }
     
@@ -279,8 +326,37 @@ class LegalTextEngine {
    * @returns {Promise<string>} Processed legal text
    */
   async getProcessedText(uiType, values = {}, context = 'final_report') {
-    const rawText = await this.getTextForType(uiType, context);
-    return this.replacePlaceholders(rawText, values);
+    console.log('🔍 LegalTextEngine.getProcessedText called with:', {
+      uiType,
+      context,
+      valuesKeys: Object.keys(values),
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      const rawText = await this.getTextForType(uiType, context);
+      console.log('🔍 Raw text retrieved:', {
+        hasRawText: !!rawText,
+        rawTextLength: rawText?.length || 0,
+        rawTextPreview: rawText?.substring(0, 100) || 'empty'
+      });
+      
+      if (!rawText || !rawText.trim()) {
+        console.error('❌ No raw text found for type:', uiType, 'context:', context);
+        return 'טקסט משפטי לא נמצא - אנא בדוק את הגדרות הכספת';
+      }
+      
+      const processedText = this.replacePlaceholders(rawText, values);
+      console.log('✅ Text processed successfully:', {
+        processedLength: processedText.length,
+        processedPreview: processedText.substring(0, 100)
+      });
+      
+      return processedText;
+    } catch (error) {
+      console.error('❌ Error in getProcessedText:', error);
+      return `שגיאה בעיבוד טקסט משפטי: ${error.message}`;
+    }
   }
 
   /**
