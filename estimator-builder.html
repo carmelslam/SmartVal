@@ -3109,7 +3109,7 @@
             
             // Store percentage as number
             const percentage = parseFloat(inputs[2].value) || 0;
-            helper.valuation.adjustments.features.percentage = percentage;
+            helper.valuation.adjustments.features.percent = percentage;
             
             // Store amount without formatting
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
@@ -4413,11 +4413,12 @@
               if (inputs.length >= 4) {
                 inputs[0].value = adjustments.features.value || '';
                 inputs[1].value = adjustments.features.amount >= 0 ? 'plus' : 'minus';
-                inputs[2].value = adjustments.features.percentage || '';
+                inputs[2].value = adjustments.features.percent || adjustments.features.percentage || '';
                 
                 // Calculate ערך locally if percentage exists
-                if (adjustments.features.percentage && basePrice > 0) {
-                  const percent = Math.abs(adjustments.features.percentage);
+                const percentValue = adjustments.features.percent || adjustments.features.percentage;
+                if (percentValue && basePrice > 0) {
+                  const percent = Math.abs(percentValue);
                   const calculatedAmount = (basePrice * percent) / 100;
                   const displayValue = adjustments.features.amount < 0 ? 
                     `-₪${Math.round(calculatedAmount).toLocaleString()}` : 
@@ -6099,7 +6100,7 @@
                 
                 // Use EXACT paths from your mapping
                 const amount = parseFloat(helper.valuation.adjustments.features.amount?.toString().replace(/[₪,\s]/g, '')) || 0;
-                const percent = parseFloat(helper.valuation.adjustments.features.percentage) || 0;
+                const percent = parseFloat(helper.valuation.adjustments.features.percent || helper.valuation.adjustments.features.percentage) || 0;
                 
                 if (inputs.length >= 4) {
                   // Use value from the exact path 
@@ -7280,7 +7281,7 @@
           const inputs = firstFeatureRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             helper.valuation.adjustments.features.value = inputs[0].value || ''; // UI input goes in value field
-            helper.valuation.adjustments.features.percentage = inputs[2].value || '';
+            helper.valuation.adjustments.features.percent = inputs[2].value || '';
           }
         }
         

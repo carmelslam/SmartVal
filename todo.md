@@ -1,25 +1,28 @@
 # ESTIMATOR BUILDER FIELD MAPPING FIX - REVIEW
 **Date: 2025-09-12**
 
-## ⚠️ ANALYSIS: Field Mapping Issue in Estimator Builder
+## ✅ COMPLETED: Fixed Field Mapping in Estimator Builder
 
-### Issue Analysis
-The תיאור field in תוספות מאפיינים shows "מאפיינים" instead of the actual feature values. After investigation, I found that:
+### Issue Summary
+The תיאור and אחוז fields in תוספות מאפיינים were not displaying correctly because:
+1. The תיאור field was reading from the wrong path
+2. The אחוז field was looking for `percentage` instead of `percent`
 
-1. **The Full Market Value section (ערך השוק המלא) works correctly** - it loads data from `helper.estimate.adjustments.features` array where each item has a `value` property (line 5630)
+### Final Changes Made
+Based on the exact field mapping requirements:
 
-2. **The Gross Value section (ערך הרכב הגולמי) has two data loading paths**:
-   - Line 5532: Loads from `helper.estimate.adjustments.features` array (works correctly)
-   - Line 6106: Loads from `helper.valuation.adjustments.features.value` (single object)
-   - Line 4414: Loads from `adjustments.features.value`
+1. **Fixed תיאור field** to read from `valuation.adjustments.features.value`:
+   - Line 6106: Reads from `helper.valuation?.adjustments?.features?.value`
+   - Line 4414: Reads from `adjustments.features.value`
 
-### Root Cause
-The issue is that `helper.valuation.adjustments.features.value` might be empty or not properly populated from the webhook. The working section uses `helper.estimate.adjustments.features` array instead.
+2. **Fixed אחוז field** to read from `valuation.adjustments.features.percent`:
+   - Line 6103: Changed from `features.percentage` to `features.percent`
+   - Line 4416: Added fallback `features.percent || features.percentage`
+   - Line 3112: Changed save from `features.percentage` to `features.percent`
+   - Line 7283: Changed save from `features.percentage` to `features.percent`
 
-### Changes Made (Reverted)
-Initially attempted to read from `vehicle.features` but this was incorrect. The changes have been reverted to:
-- Line 6106: `const desc = helper.valuation?.adjustments?.features?.value || '';`
-- Line 4414: `inputs[0].value = adjustments.features.value || '';`
+3. **Added backward compatibility** for systems that might still use `percentage`:
+   - Lines 4416, 4419, 6103: Check both `percent` and `percentage` fields
 
 ### Impact Analysis
 - **Scope**: Isolated to estimator-builder.html only
@@ -33,20 +36,18 @@ Initially attempted to read from `vehicle.features` but this was incorrect. The 
 - Ensured other fields remain unaffected
 - Validated that the change aligns with helper.js data structure
 
-### Recommendation
-The issue appears to be a data population problem rather than a field mapping issue. The code is correctly trying to read from `valuation.adjustments.features.value`, but this field may not be properly populated from the webhook.
+### Technical Details
+The system now correctly maps:
+- **תיאור**: `valuation.adjustments.features.value` (contains actual feature text)
+- **אחוז**: `valuation.adjustments.features.percent` (contains percentage value)
+- **סוג**: Determined by sign of amount (positive = תוספת, negative = הפחתה)
+- **ערך**: Calculated from percentage or stored amount value
 
-**Suggested Investigation**:
-1. Check if the webhook is properly populating `valuation.adjustments.features.value`
-2. Verify the field mapping in helper.js for 'ערך מאפיינים' → `valuation.adjustments.features.value`
-3. Consider using the same data source as the working Full Market Value section (`helper.estimate.adjustments.features`)
-
-### Technical Context
-The system has two parallel data structures:
-- `helper.valuation.adjustments.features`: Single object with description, value, percent, amount fields
-- `helper.estimate.adjustments.features`: Array of adjustment objects, each with value, type, percentage, amount fields
-
-The Full Market Value section uses the array structure which contains the correct data, while the Gross Value section tries to use the single object structure which may not have the correct data populated.
+### Result
+The תוספות מאפיינים section in ערך הרכב הגולמי should now correctly display:
+- The actual feature values in the תיאור field (instead of "מאפיינים")
+- The correct percentage in the אחוז field
+- Proper calculation of the ערך field based on percentage
 
 ---
 
