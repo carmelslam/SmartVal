@@ -590,7 +590,7 @@
 <body>
   <!-- Floating Toggles -->
   <div class="floating-toggles-top">
-    <div class="toggle-square" onclick="toggleFloatingScreen('levi')">
+    <div class="toggle-square" onclick="toggleFloatingScreen('leviReport')">
       <span>📄</span>
       <span>לוי יצחק</span>
     </div>
@@ -598,13 +598,17 @@
       <span>🚗</span>
       <span>פרטי רכב</span>
     </div>
-    <div class="toggle-square" onclick="toggleFloatingScreen('parts')">
+    <div class="toggle-square" onclick="toggleFloatingScreen('partsSearchResults')">
       <span>🔧</span>
       <span>חלקים</span>
     </div>
-    <div class="toggle-square" onclick="toggleFloatingScreen('invoice')">
+    <div class="toggle-square" onclick="toggleFloatingScreen('invoiceDetails')">
       <span>📋</span>
       <span>חשבונית</span>
+    </div>
+    <div class="toggle-square" onclick="toggleFloatingScreen('internalBrowser')">
+      <span>🌐</span>
+      <span>דפדפן</span>
     </div>
   </div>
 
@@ -1366,15 +1370,7 @@
       }
     }
 
-    // Toggle floating screen
-    window.toggleFloatingScreen = function(screenType) {
-      console.log('🔄 Toggle floating screen:', screenType);
-      
-      // Implementation will depend on floating screen modules
-      if (typeof window.toggleFloatingScreenOriginal === 'function') {
-        window.toggleFloatingScreenOriginal(screenType);
-      }
-    };
+    // Note: toggleFloatingScreen function is implemented later in the file
 
     // ANTI-MESH WARFARE: Continuously remove mesh patterns
     function destroyMeshPattern() {
@@ -1402,12 +1398,7 @@
     window.addEventListener('load', destroyMeshPattern);
     setInterval(destroyMeshPattern, 1000); // Check every second
 
-    // Also run when floating screens are toggled
-    const originalToggle = window.toggleFloatingScreen;
-    window.toggleFloatingScreen = function(screenType) {
-      if (originalToggle) originalToggle(screenType);
-      setTimeout(destroyMeshPattern, 100);
-    };
+    // Also run when floating screens are toggled (handled in main toggleFloatingScreen function)
 
     // Load data from helper
     function loadDataFromHelper() {
@@ -1778,6 +1769,72 @@
     function initializeFloatingScreens() {
       // This will be handled by the floating screen modules
       console.log('🖼️ Floating screens ready');
+    }
+    
+    // FIXED: Working toggle floating screen function from final-report-builder
+    window.toggleFloatingScreen = function(screenType) {
+      console.log('🔄 Toggle floating screen:', screenType);
+      
+      const screens = {
+        leviReport: () => {
+          console.log('📊 Opening Levi Report floating screen');
+          if (window.toggleLeviReport) {
+            window.toggleLeviReport();
+          } else {
+            console.warn('⚠️ toggleLeviReport function not available');
+          }
+        },
+        carDetails: () => {
+          console.log('🚗 Opening Car Details floating screen');
+          if (window.toggleCarDetails) {
+            window.toggleCarDetails();
+          } else {
+            console.warn('⚠️ toggleCarDetails function not available');
+          }
+        },
+        invoiceDetails: () => {
+          console.log('📋 Opening Invoice Details floating screen');
+          if (window.toggleInvoiceDetails) {
+            window.toggleInvoiceDetails();
+          } else {
+            console.warn('⚠️ toggleInvoiceDetails function not available');
+          }
+        },
+        partsSearchResults: () => {
+          console.log('🔧 Opening Parts Search Results floating screen');
+          if (window.togglePartsSearchResults) {
+            window.togglePartsSearchResults();
+          } else {
+            console.warn('⚠️ togglePartsSearchResults function not available');
+          }
+        },
+        internalBrowser: () => {
+          console.log('🌐 Opening Internal Browser menu');
+          if (window.showBrowserMenu) {
+            showBrowserMenuUnderToggle();
+          } else {
+            console.warn('⚠️ showBrowserMenu function not available');
+          }
+        }
+      };
+      
+      if (screens[screenType]) {
+        screens[screenType]();
+        // Run anti-mesh cleanup after opening floating screen
+        setTimeout(destroyMeshPattern, 100);
+      } else {
+        console.error('❌ Unknown screen type:', screenType);
+      }
+    };
+    
+    // Show browser menu under toggle (for internal browser functionality)
+    function showBrowserMenuUnderToggle() {
+      console.log('🌐 Showing browser menu under toggle');
+      if (window.showBrowserMenu) {
+        window.showBrowserMenu();
+      } else {
+        console.warn('⚠️ showBrowserMenu function not available');
+      }
     }
 
     // Update page title
