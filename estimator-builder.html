@@ -5535,17 +5535,21 @@
         availableMappings: Object.keys(estimateTypeMapping)
       });
       
-      // Step 4: Build placeholder values with EXACT placeholder names from screenshots
+      // Step 4: Build placeholder values
       const placeholderValues = {
-        // Exact Hebrew placeholders from the screenshots
-        'שווי שרידים': helper.estimate?.summary?.salvage_value || helper.estimate?.salvage_value || '',
-        'קוד דגם': helper.vehicle?.modelCode || helper.vehicle?.model_code || helper.car_details?.model_code || '',
-        'ניכוי ירידת ערך': helper.depreciation?.globalDepValue || helper.depreciation?.amount || helper.depreciation?.global_amount || '',
-        'ערך השוק המלא': helper.estimate?.calculations?.full_market_value || helper.calculations?.full_market_value || helper.vehicle?.market_value || '',
-        'אחוז ירידת ערך': helper.depreciation?.global_percentage || helper.depreciation?.percentage || '',
-        // Additional common placeholders that might be used
-        'שווי הרכב': helper.estimate?.calculations?.full_market_value || helper.calculations?.full_market_value || helper.vehicle?.market_value || '',
-        'ירידת ערך': helper.depreciation?.global_percentage || helper.depreciation?.percentage || ''
+        ...(helper.vehicle || {}),
+        ...(helper.depreciation || {}),
+        ...(helper.estimate || {}),
+        ...(helper.general || {}),
+        // Add specific estimate placeholders
+        דגם: helper.vehicle?.vehicle_model || '',
+        שווי_רכב: helper.vehicle?.market_value || '',
+        שווי_פיצוי: helper.estimate?.compensation_value || '',
+        ירידת_ערך: helper.depreciation?.percentage || '',
+        אחוז_נזק: helper.estimate?.damage_percentage || '',
+        ימי_מוסך: helper.estimate?.garage_days || '',
+        מוקדי_נזק: helper.estimate?.damage_centers_count || '',
+        שווי_שרידים: helper.estimate?.salvage_value || ''
       };
       
       console.log('🔍 Step 4 - Placeholder values sample:', {
