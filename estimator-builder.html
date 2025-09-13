@@ -5535,29 +5535,23 @@
         availableMappings: Object.keys(estimateTypeMapping)
       });
       
-      // Step 4: Build placeholder values
+      // Step 4: Build placeholder values (copied from final-report-builder approach)
       const placeholderValues = {
-        ...(helper.vehicle || {}),
-        ...(helper.depreciation || {}),
-        ...(helper.estimate || {}),
-        ...(helper.general || {}),
-        // Add specific estimate placeholders from screenshots
-        // Legal Loss Version placeholders:
-        'estimate.vehicle.modelCode': helper.vehicle?.modelCode || helper.vehicle?.vehicle_model || '',
-        'depreciation.global_percentage': helper.depreciation?.global_percentage || helper.depreciation?.percentage || '',
-        'depreciation.globalDepValue': helper.depreciation?.globalDepValue || helper.depreciation?.amount || '',
-        // Total Loss Version placeholders:
-        'estimate.calculations.full_market_value': helper.estimate?.calculations?.full_market_value || helper.estimate?.market_value || '',
-        'estimate.summary.salvage_value': helper.estimate?.summary?.salvage_value || helper.estimate?.salvage_value || '',
-        // Legacy placeholders for backward compatibility
-        דגם: helper.vehicle?.vehicle_model || '',
-        שווי_רכב: helper.vehicle?.market_value || '',
-        שווי_פיצוי: helper.estimate?.compensation_value || '',
-        ירידת_ערך: helper.depreciation?.percentage || '',
-        אחוז_נזק: helper.estimate?.damage_percentage || '',
-        ימי_מוסך: helper.estimate?.garage_days || '',
-        מוקדי_נזק: helper.estimate?.damage_centers_count || '',
-        שווי_שרידים: helper.estimate?.salvage_value || ''
+        // Direct DOM-based values with helper fallbacks (like final-report-builder)
+        plate: helper.vehicle?.plate || helper.meta?.plate || '',
+        manufacturer: helper.vehicle?.manufacturer || helper.car_details?.manufacturer || '',
+        model: helper.vehicle?.model || helper.car_details?.model || helper.vehicle?.vehicle_model || '',
+        year: helper.vehicle?.year || helper.car_details?.year || '',
+        ownerName: helper.client?.name || helper.general?.owner_name || '',
+        modelCode: helper.vehicle?.modelCode || helper.car_details?.model_code || helper.vehicle?.vehicle_model || '',
+        damagePercent: helper.estimate?.damage_percentage || helper.claims_data?.gross_percent || '',
+        depreciation: helper.depreciation?.global_percentage || helper.depreciation?.percentage || helper.final_report?.depreciation?.global_percent || '',
+        garageDays: helper.estimate?.garage_days || helper.final_report?.work_days || '',
+        carValue: helper.estimate?.calculations?.full_market_value || helper.calculations?.full_market_value || helper.vehicle?.market_value || '',
+        salvageValue: helper.estimate?.summary?.salvage_value || helper.estimate?.salvage_value || '',
+        // Additional estimate-specific placeholders
+        compensationValue: helper.estimate?.compensation_value || '',
+        damageCenters: helper.estimate?.damage_centers_count || ''
       };
       
       console.log('🔍 Step 4 - Placeholder values sample:', {
