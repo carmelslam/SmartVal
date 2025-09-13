@@ -6037,10 +6037,62 @@
     }
     
     function showEstimatePreviewPip() {
-      console.log('🖼️ Show PIP preview');
-      const pip = document.getElementById('pip-container');
-      if (pip) {
+      console.log('🖼️ Show PIP preview - loading estimate report');
+      
+      try {
+        // Get the PiP container
+        const pip = document.getElementById('pip-container');
+        const pipContent = document.getElementById('pip-content');
+        
+        if (!pip || !pipContent) {
+          console.error('❌ PiP container not found');
+          return;
+        }
+        
+        // Clear existing content
+        pipContent.innerHTML = '<div style="padding: 10px; text-align: center;">טוען תצוגה מקדימה...</div>';
+        
+        // Show the PiP window
         pip.style.display = 'block';
+        
+        // Create iframe to load estimate report
+        const iframe = document.createElement('iframe');
+        iframe.src = 'estimate-report-builder.html';
+        iframe.style.width = '100%';
+        iframe.style.height = '400px';
+        iframe.style.border = 'none';
+        iframe.style.borderRadius = '0 0 8px 8px';
+        
+        // Handle iframe load
+        iframe.onload = function() {
+          console.log('✅ Estimate report loaded in PiP');
+          
+          // Try to pass helper data to the iframe
+          try {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (iframe.contentWindow && helper) {
+              iframe.contentWindow.postMessage({
+                type: 'loadHelperData',
+                data: helper
+              }, '*');
+              console.log('📤 Sent helper data to estimate report PiP');
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not send data to PiP iframe:', error);
+          }
+        };
+        
+        iframe.onerror = function() {
+          console.error('❌ Failed to load estimate report in PiP');
+          pipContent.innerHTML = '<div style="padding: 10px; text-align: center; color: red;">שגיאה בטעינת התצוגה המקדימה</div>';
+        };
+        
+        // Replace loading content with iframe
+        pipContent.innerHTML = '';
+        pipContent.appendChild(iframe);
+        
+      } catch (error) {
+        console.error('❌ Error showing PiP preview:', error);
       }
     }
 
