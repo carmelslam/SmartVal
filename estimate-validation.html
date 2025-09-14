@@ -3010,47 +3010,63 @@
         totalDamageCost: helper?.estimate?.calculations?.total_damage_cost
       });
       
-      // Use EXACT same paths as validation function (no calculations, just direct mapping)
-      const worksFormatted = helper?.estimate?.totals?.damage_centers?.works?.formatted;
-      const partsFormatted = helper?.estimate?.totals?.damage_centers?.parts?.formatted;  
-      const repairsFormatted = helper?.estimate?.totals?.damage_centers?.repairs?.formatted;
-      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted;
-      const totalDamageCost = helper?.estimate?.calculations?.total_damage_cost;
-
-      console.log('🔍 Display function - Same paths as validation:', {
-        worksFormatted, partsFormatted, repairsFormatted, totalBeforeVat, totalDamageCost
+      // Use direct data source like working sections - calculate from raw expertise.damage_blocks
+      const damageBlocks = helper?.expertise?.damage_blocks || [];
+      let totalParts = 0, totalWorks = 0, totalRepairs = 0;
+      
+      // Simple calculation from raw data (always available)
+      damageBlocks.forEach(block => {
+        totalParts += block.parts_cost || 0;
+        totalWorks += block.work_cost || 0; 
+        totalRepairs += block.repairs_cost || 0;
       });
       
-      // Simple direct field mapping - same as other working sections
+      const totalBeforeVat = totalParts + totalWorks + totalRepairs;
+      const totalWithVat = Math.round(totalBeforeVat * 1.17); // 17% VAT
+      
+      // Format values (same as working sections)
+      const partsFormatted = totalParts > 0 ? `₪${totalParts.toLocaleString()}` : 'לא זמין';
+      const worksFormatted = totalWorks > 0 ? `₪${totalWorks.toLocaleString()}` : 'לא זמין';  
+      const repairsFormatted = totalRepairs > 0 ? `₪${totalRepairs.toLocaleString()}` : 'לא זמין';
+      const totalBeforeVatFormatted = totalBeforeVat > 0 ? `₪${totalBeforeVat.toLocaleString()}` : 'לא זמין';
+      const totalDamageCost = totalWithVat > 0 ? `₪${totalWithVat.toLocaleString()}` : 'לא זמין';
+
+      console.log('🔍 Display function - Direct from damage_blocks:', {
+        damageBlocksCount: damageBlocks.length,
+        totalParts, totalWorks, totalRepairs, totalBeforeVat, totalWithVat,
+        partsFormatted, worksFormatted, repairsFormatted, totalBeforeVatFormatted, totalDamageCost
+      });
+      
+      // Simple direct field mapping with calculated values
       const damageHTML = 
         createEnhancedValidationItem(
           'סה"כ עבודות',
-          worksFormatted || 'לא זמין',
-          worksFormatted || 'לא זמין',
+          worksFormatted,
+          worksFormatted,
           'damage_works'
         ) +
         createEnhancedValidationItem(
           'סה"כ חלקים',
-          partsFormatted || 'לא זמין',
-          partsFormatted || 'לא זמין',
+          partsFormatted,
+          partsFormatted,
           'damage_parts'
         ) +
         createEnhancedValidationItem(
           'סה"כ תיקונים',
-          repairsFormatted || 'לא זמין',
-          repairsFormatted || 'לא זמין',
+          repairsFormatted,
+          repairsFormatted,
           'damage_repairs'
         ) +
         createEnhancedValidationItem(
           'סך הכל נקודות לפני מע"מ',
-          totalBeforeVat || 'לא זמין',
-          totalBeforeVat || 'לא זמין',
+          totalBeforeVatFormatted,
+          totalBeforeVatFormatted,
           'damage_total_before_vat'
         ) +
         createEnhancedValidationItem(
           'סך הכל כולל מע"מ',
-          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
-          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
+          totalDamageCost,
+          totalDamageCost,
           'damage_total_with_vat'
         );
       
