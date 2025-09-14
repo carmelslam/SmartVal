@@ -5802,6 +5802,20 @@ window.getHelperVatRate = function(forceRefresh = false) {
       }
     }
     
+    // PROTECTION: Don't override manual session overrides even with forceRefresh
+    if (window.helper.calculations.vat_rate_source === 'manual_session_override') {
+      console.log('🛡️ PRESERVING manual session override during getHelperVatRate()');
+      console.log('💡 Manual VAT rate protected:', window.helper.calculations.vat_rate + '%');
+      return window.helper.calculations.vat_rate;
+    }
+    
+    // Also check estimate structure for manual overrides
+    if (window.helper?.estimate?.summary?.vat_rate?.source === 'manual_session_override') {
+      console.log('🛡️ PRESERVING manual estimate override during getHelperVatRate()');
+      console.log('💡 Manual VAT rate protected:', window.helper.estimate.summary.vat_rate.current + '%');
+      return window.helper.estimate.summary.vat_rate.current;
+    }
+    
     // Update helper if admin rate changed or if forced refresh
     if (forceRefresh || !window.helper.calculations.vat_rate || window.helper.calculations.vat_rate !== currentAdminVatRate) {
       const oldRate = window.helper.calculations.vat_rate;
