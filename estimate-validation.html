@@ -1963,93 +1963,57 @@
       const issues = [];
       const validItems = [];
       
-      console.log('🔍 Depreciation validation - checking builder data');
+      console.log('🔍 Depreciation validation - checking helper.estimate data');
       
-      const data = currentValidationData;
-      const helper = data.raw_helper;
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Populate depreciation validation items
       populateDepreciationValidationItems();
       
-      // Validate gross market value and gross damage percentage
-      const grossMarketValue = helper.claims_data?.gross_value || helper.grossMarketValueResult || helper.gross_market_value || '';
-      const grossDamagePercent = helper.claims_data?.gross_percent || helper.grossPercent || helper.gross_damage_percent || '';
+      // Validate the fields we actually mapped (matching the screenshot)
+      const bulkItems = helper?.estimate?.depreciation?.bulk_items || [];
+      const globalDep1 = helper?.estimate?.depreciation?.globalDep1;
+      const globalDepValue = helper?.estimate?.depreciation?.globalDepValue;
+      const garageDays = helper?.estimate?.depreciation?.garageDays;
       
       console.log('🔍 Validation debug:', {
-        grossMarketValue,
-        grossDamagePercent,
-        grossMarketValueBoolean: !!grossMarketValue,
-        grossDamagePercentBoolean: !!grossDamagePercent
+        bulkItems: bulkItems.length,
+        globalDep1,
+        globalDepValue,
+        garageDays
       });
       
-      if (grossMarketValue && grossMarketValue !== 'לא זמין') {
-        validItems.push('gross_market_value');
-      } else {
-        issues.push('ערך הרכב לנזק גולמי חסר');
-      }
-      
-      if (grossDamagePercent && grossDamagePercent !== 'לא זמין') {
-        validItems.push('gross_damage_percent');
-      } else {
-        issues.push('אחוז הנזק הגולמי חסר');
-      }
-      
-      // Validate global depreciation
-      const globalPercent = helper.estimate_depreciation?.global_percent || helper.global_percent || '';
-      const globalValue = helper.estimate_depreciation?.global_value || helper.global_value || '';
-      
-      if (globalPercent && globalPercent !== 'לא זמין') {
-        validItems.push('depreciation_global_percent');
-        
-        if (globalValue && globalValue !== 'לא זמין') {
-          validItems.push('depreciation_global_value');
-        } else {
-          issues.push('ירידת ערך גלובלי חסר ערך בשקלים');
-        }
-      } else {
-        issues.push('ירידת ערך גלובלי חסר אחוז');
-      }
-      
-      // Validate bulk depreciation items
-      const bulkItems = helper.estimate_depreciation?.bulk_items || helper.bulk_items || [];
-      
+      // Validate bulk items (first two rows in screenshot)
       if (bulkItems && bulkItems.length > 0) {
-        let hasCompleteItems = 0;
-        let hasIncompleteItems = 0;
-        
-        bulkItems.forEach((item, index) => {
-          const isComplete = item.damaged_part && item.repair_type && item.percent && item.value;
-          
-          if (isComplete) {
-            hasCompleteItems++;
-            validItems.push(`depreciation_bulk_${index}_complete`);
-          } else {
-            hasIncompleteItems++;
-            issues.push(`מוקד נזק ${index + 1}: חסרים נתונים (${item.damaged_part || 'חלק ניזוק'}) - אזהרה`);
-          }
-        });
-        
-        if (hasCompleteItems > 0) {
-          validItems.push('depreciation_bulk_items');
-        }
-        
-        console.log(`📊 Depreciation validation: ${hasCompleteItems} complete items, ${hasIncompleteItems} incomplete items`);
+        validItems.push('depreciation_bulk_items');
       } else {
-        issues.push('פריטי ירידת ערך לפי מוקדים חסרים');
+        issues.push('מוקדי ירידת ערך חסרים');
       }
       
-      // Validate work days
-      const workDays = helper.estimate_work_days || helper.work_days || '';
-      if (workDays && workDays !== 'לא זמין') {
-        validItems.push('depreciation_work_days');
+      // Validate global depreciation values
+      if (globalDep1 && globalDep1 !== 'לא זמין') {
+        validItems.push('global_dep1');
       } else {
-        issues.push('ימי מוסך חסרים');
+        issues.push('ירידת ערך גלובלי חסר');
       }
       
-      // Check if all required data is available
-      const hasRequiredData = (grossMarketValue && grossMarketValue !== 'לא זמין') && 
-                             (grossDamagePercent && grossDamagePercent !== 'לא זמין') &&
-                             (globalPercent && globalPercent !== 'לא זמין');
+      if (globalDepValue && globalDepValue !== 'לא זמין') {
+        validItems.push('global_dep_value');
+      } else {
+        issues.push('ירידת ערך גלובלי (ערך) חסר');
+      }
+      
+      // Validate garage days
+      if (garageDays && garageDays !== 'לא זמין') {
+        validItems.push('garage_days');
+      } else {
+        issues.push('ימי מוסך משוערים חסרים');
+      }
+      
+      // Check if all required data is available (simplified for our 3 fields)
+      const hasRequiredData = (bulkItems.length > 0) && 
+                             (globalDep1 && globalDep1 !== 'לא זמין') &&
+                             (garageDays && garageDays !== 'לא זמין');
       
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
