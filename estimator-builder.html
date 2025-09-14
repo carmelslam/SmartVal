@@ -5542,38 +5542,40 @@
         availableMappings: Object.keys(estimateTypeMapping)
       });
       
-      // Step 4: Build placeholder values with CORRECTED helper paths
+      // Step 4: Ensure helper structure exists and populate required nested paths
+      if (!helper.estimate) helper.estimate = {};
+      if (!helper.estimate.vehicle) helper.estimate.vehicle = {};
+      if (!helper.estimate.depreciation) helper.estimate.depreciation = {};
+      if (!helper.estimate.summary) helper.estimate.summary = {};
+      if (!helper.damage_assessment) helper.damage_assessment = {};
+      if (!helper.damage_assessment.damage_centers_summary) helper.damage_assessment.damage_centers_summary = {};
+      
+      // Map existing data to the required placeholder paths
+      helper.estimate.vehicle.modelCode = helper.car_details?.model_code || helper.vehicle?.model_code || '';
+      helper.estimate.depreciation.globalDep1 = helper.depreciation?.globalDep1 || '';
+      helper.estimate.depreciation.globalDepValue = helper.depreciation?.globalDepValue || '';
+      helper.estimate.depreciation.garageDays = helper.depreciation?.garageDays || '';
+      helper.estimate.summary.salvage_value = helper.claims_data?.salvage_value || '';
+      helper.damage_assessment.damage_centers_summary.centers_count = 
+        helper.damage_assessment?.summary?.total_centers || 
+        Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length || '';
+      
+      // Save updated helper structure
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Build placeholder values using EXACT user-specified paths
       const placeholderValues = {
         ...(helper.vehicle || {}),
         ...(helper.depreciation || {}),
         ...(helper.estimate || {}),
         ...(helper.general || {}),
-        // CORRECTED mappings using actual helper structure with proper formatting
-        'קוד_דגם': helper.car_details?.model_code || helper.vehicle?.model_code || '[קוד דגם לא זמין]',
-        'אחוז_נזק': (helper.estimate?.depreciation?.globalDep1 || 
-                     helper.depreciation?.globalDep1 || 
-                     (helper.depreciation?.global_percentage ? helper.depreciation.global_percentage + '%' : '') ||
-                     '[אחוז נזק לא זמין]'),
-        'ירידת_ערך': (helper.estimate?.depreciation?.globalDepValue ||
-                      helper.depreciation?.globalDepValue ||
-                      (helper.depreciation?.global_amount ? 
-                       (typeof helper.depreciation.global_amount === 'number' ? 
-                        helper.depreciation.global_amount.toLocaleString('he-IL') + ' ₪' :
-                        helper.depreciation.global_amount) : '') ||
-                      '[ירידת ערך לא זמינה]'),
-        'מוקדי_נזק': (helper.damage_assessment?.summary?.total_centers ||
-                      Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length ||
-                      '[מספר מוקדי נזק לא זמין]').toString(),
-        'ימי_מוסך': (helper.estimate?.depreciation?.garageDays ||
-                    helper.depreciation?.garageDays ||
-                    helper.depreciation?.work_days_impact ||
-                    '[ימי מוסך לא זמינים]').toString(),
-        // Total loss placeholders
-        'שווי רכב': helper.estimate?.vehicle?.marketValue || helper.estimate?.calculations?.full_market_value || '',
-        'שווי_שרידים': (helper.claims_data?.salvage_value ? 
-                      (typeof helper.claims_data.salvage_value === 'number' ? 
-                       helper.claims_data.salvage_value.toLocaleString('he-IL') + ' ₪' :
-                       helper.claims_data.salvage_value) : '[שווי שרידים לא זמין]')
+        // EXACT mappings as specified by user - using the provided helper paths
+        'קוד_דגם': helper.estimate?.vehicle?.modelCode || '',
+        'אחוז_נזק': helper.estimate?.depreciation?.globalDep1 || '',
+        'ירידת_ערך': helper.estimate?.depreciation?.globalDepValue || '',
+        'מוקדי_נזק': helper.damage_assessment?.damage_centers_summary?.centers_count || '',
+        'ימי_מוסך': helper.estimate?.depreciation?.garageDays || '',
+        'שווי_שרידים': helper.estimate?.summary?.salvage_value || ''
       };
       
       console.log('🔍 Step 4 - Placeholder values sample:', {
@@ -5583,14 +5585,23 @@
           שווי_רכב: placeholderValues.שווי_רכב,
           ירידת_ערך: placeholderValues.ירידת_ערך
         },
-        // Debug critical placeholder mappings
+        // Debug critical placeholder mappings using EXACT user-specified paths
         criticalMappings: {
           קוד_דגם: placeholderValues['קוד_דגם'],
           אחוז_נזק: placeholderValues['אחוז_נזק'],
-          ירידת_ערך_mapped: placeholderValues['ירידת_ערך'],
+          ירידת_ערך: placeholderValues['ירידת_ערך'],
           מוקדי_נזק: placeholderValues['מוקדי_נזק'],
           ימי_מוסך: placeholderValues['ימי_מוסך'],
           שווי_שרידים: placeholderValues['שווי_שרידים']
+        },
+        // Debug helper structure for troubleshooting
+        helperStructureCheck: {
+          'helper.estimate exists': !!helper.estimate,
+          'helper.estimate.vehicle exists': !!helper.estimate?.vehicle,
+          'helper.estimate.depreciation exists': !!helper.estimate?.depreciation,
+          'helper.estimate.summary exists': !!helper.estimate?.summary,
+          'helper.damage_assessment exists': !!helper.damage_assessment,
+          'helper.damage_assessment.damage_centers_summary exists': !!helper.damage_assessment?.damage_centers_summary
         }
       });
       
