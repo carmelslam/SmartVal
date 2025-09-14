@@ -1250,6 +1250,35 @@
   <script src="invoice-details-floating.js"></script>
   
   <script>
+    // DEFINE CRITICAL FUNCTIONS EARLY TO PREVENT REFERENCE ERRORS
+    window.updateHelperFromContactField = function(element) {
+      try {
+        console.log('📞 Contact field changed:', element.id, element.value);
+        
+        // Create synthetic event for updateHelperFromField
+        const event = { target: element };
+        
+        // Call updateHelperFromField if it exists, otherwise defer
+        if (typeof updateHelperFromField === 'function') {
+          updateHelperFromField(event);
+        } else {
+          console.warn('updateHelperFromField not yet available, storing for later');
+          
+          // Store update for later execution
+          setTimeout(() => {
+            if (typeof updateHelperFromField === 'function') {
+              console.log('📞 Executing deferred contact field update:', element.id);
+              updateHelperFromField(event);
+            } else {
+              console.error('❌ updateHelperFromField still not available after delay');
+            }
+          }, 500);
+        }
+      } catch (error) {
+        console.error('❌ Error in updateHelperFromContactField:', error);
+      }
+    };
+    
     // Global state object to avoid conflicts
     const EstimateBuilderState = {
       isUpdating: false,
@@ -1730,12 +1759,7 @@
       }
     }
 
-    // Update helper from contact field
-    window.updateHelperFromContactField = function(element) {
-      // Similar to updateHelperFromField but for contact fields
-      const event = { target: element };
-      updateHelperFromField(event);
-    }
+    // updateHelperFromContactField function moved to top of file to prevent reference errors
 
     // Add event listeners
     function addEventListeners() {
@@ -6533,46 +6557,6 @@
           resolve(null);
         }
       });
-    }
-          
-          // Restore MathEngine to admin rate
-          if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
-            MathEngine.setVatRate(adminRate);
-            console.log('✅ MathEngine VAT rate restored to admin:', adminRate + '%');
-          }
-          
-          // Update window.helper and save
-          window.helper = helper;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          
-          console.log(`✅ VAT reset complete: ${oldRate}% → ${adminRate}% (admin)`);
-          
-          // Update display
-          initVatDisplay();
-          
-          // Trigger complete recalculation
-          if (typeof refreshAllCalculations === 'function') {
-            refreshAllCalculations();
-          } else {
-            // Fallback recalculations
-            if (typeof updateAllCostDisplays === 'function') {
-              updateAllCostDisplays();
-            }
-            if (typeof updateDamageCentersSubtotal === 'function') {
-              updateDamageCentersSubtotal();
-            }
-            if (typeof calculateSummaryTotals === 'function') {
-              calculateSummaryTotals();
-            }
-          }
-          
-          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
-          
-        } catch (error) {
-          console.error('❌ Error resetting VAT rate:', error);
-          alert('שגיאה באיפוס שיעור המע"מ');
-        }
-      }
     }
     
     // COMPLETE RECALCULATION SYSTEM - LIKE FINAL REPORT BUILDER
