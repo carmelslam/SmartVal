@@ -2029,85 +2029,105 @@
     async function validateDamageSection() {
       const issues = [];
       const validItems = [];
-      const damageBlocks = currentValidationData.damage_blocks;
-      const totals = currentValidationData.estimate_totals;
       
-      // Validate damage centers count
-      if (damageBlocks && damageBlocks.length > 0) {
-        validItems.push('damage-centers-count');
-        updateElementIfExists('damage-centers-count', `✓ (${damageBlocks.length})`);
+      console.log('🔍 Damage validation - checking helper.estimate data');
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Populate damage validation items
+      populateDamageValidationItems();
+      
+      // Validate the fields we actually mapped (matching the screenshot)
+      const worksFormatted = helper?.estimate?.totals?.damage_centers?.works?.formatted;
+      const partsFormatted = helper?.estimate?.totals?.damage_centers?.parts?.formatted;
+      const repairsFormatted = helper?.estimate?.totals?.damage_centers?.repairs?.formatted;
+      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted;
+      const totalDamageCost = helper?.estimate?.calculations?.total_damage_cost;
+      
+      console.log('🔍 Validation debug:', {
+        worksFormatted,
+        partsFormatted,
+        repairsFormatted,
+        totalBeforeVat,
+        totalDamageCost
+      });
+      
+      // Validate works
+      if (worksFormatted && worksFormatted !== 'לא זמין') {
+        validItems.push('damage_works');
       } else {
-        issues.push('לא נמצאו מוקדי נזק');
-        updateElementIfExists('damage-centers-count', '❌');
+        issues.push('סה"כ עבודות חסר');
       }
       
-      let hasWorks = false, hasParts = false, hasRepairs = false;
+      // Validate parts  
+      if (partsFormatted && partsFormatted !== 'לא זמין') {
+        validItems.push('damage_parts');
+      } else {
+        issues.push('סה"כ חלקים חסר');
+      }
       
-      // Validate each damage center and check for content
-      if (damageBlocks && damageBlocks.length > 0) {
-        displayDamageCentersEnhanced(damageBlocks);
+      // Validate repairs
+      if (repairsFormatted && repairsFormatted !== 'לא זמין') {
+        validItems.push('damage_repairs');
+      } else {
+        issues.push('סה"כ תיקונים חסר');
+      }
+      
+      // Validate total before VAT
+      if (totalBeforeVat && totalBeforeVat !== 'לא זמין') {
+        validItems.push('damage_total_before_vat');
+      } else {
+        issues.push('סך הכל לפני מע"מ חסר');
+      }
+      
+      // Validate total damage cost
+      if (totalDamageCost && totalDamageCost !== 'לא זמין') {
+        validItems.push('damage_total_with_vat');
+      } else {
+        issues.push('סך הכל כולל מע"מ חסר');
+      }
+      
+      // AUTO-DETECTION: Check if calculations are correct
+      if (worksFormatted && partsFormatted && repairsFormatted && totalBeforeVat && totalDamageCost) {
+        // Extract numeric values for calculation validation
+        const worksValue = parseFloat(worksFormatted.replace(/[₪,]/g, '')) || 0;
+        const partsValue = parseFloat(partsFormatted.replace(/[₪,]/g, '')) || 0;
+        const repairsValue = parseFloat(repairsFormatted.replace(/[₪,]/g, '')) || 0;
+        const beforeVatValue = parseFloat(totalBeforeVat.replace(/[₪,]/g, '')) || 0;
+        const withVatValue = parseFloat(totalDamageCost.replace(/[₪,]/g, '')) || 0;
         
-        damageBlocks.forEach(center => {
-          if (center.works && center.works.length > 0) {
-            hasWorks = true;
-          }
-          if (center.parts && center.parts.length > 0) {
-            hasParts = true;
-          }
-          if (center.repairs && center.repairs.length > 0) {
-            hasRepairs = true;
-          }
-        });
+        const expectedTotal = worksValue + partsValue + repairsValue;
+        const expectedWithVat = beforeVatValue * 1.17; // 17% VAT
+        
+        // Check if totals match (within 1 shekel tolerance)
+        const totalMatches = Math.abs(expectedTotal - beforeVatValue) <= 1;
+        const vatMatches = Math.abs(expectedWithVat - withVatValue) <= 1;
+        
+        if (totalMatches && vatMatches) {
+          validItems.push('calculations_correct');
+          console.log('✅ Auto-detection: Calculations are correct');
+        } else {
+          issues.push('חישובים לא מדויקים - נדרש בדיקה ידנית');
+          console.log('⚠️ Auto-detection: Calculation mismatch', {
+            expected: expectedTotal,
+            actual: beforeVatValue,
+            expectedWithVat,
+            actualWithVat: withVatValue
+          });
+        }
       }
       
-      // Validate works (warning only)
-      if (hasWorks) {
-        validItems.push('damage-works');
-        updateElementIfExists('damage-works', '✓');
-      } else {
-        issues.push('לא נמצאו פרטי עבודות (אזהרה)');
-        updateElementIfExists('damage-works', '⚠️');
-      }
-      
-      // Validate parts (warning only)
-      if (hasParts) {
-        validItems.push('damage-parts');
-        updateElementIfExists('damage-parts', '✓');
-      } else {
-        issues.push('לא נמצאו חלקים (אזהרה)');
-        updateElementIfExists('damage-parts', '⚠️');
-      }
-      
-      // Validate costs using extracted totals (critical error if no costs)
-      if (totals && totals.total_before_vat > 0) {
-        validItems.push('damage-costs');
-        updateElementIfExists('damage-costs', '✓');
-      } else {
-        issues.push('לא נמצאו עלויות חישוב');
-        updateElementIfExists('damage-costs', '❌');
-      }
-      
-      // Update cost display using extracted totals with safe fallbacks
-      const safeTotals = totals || { work_cost: 0, parts_cost: 0, repairs_cost: 0, total_before_vat: 0, total_with_vat: 0 };
-      updateElementIfExists('damage-total-works', MathEngine.formatCurrency(safeTotals.work_cost));
-      updateElementIfExists('damage-total-parts', MathEngine.formatCurrency(safeTotals.parts_cost));
-      updateElementIfExists('damage-total-repairs', MathEngine.formatCurrency(safeTotals.repairs_cost));
-      updateElementIfExists('damage-total-before-vat', MathEngine.formatCurrency(safeTotals.total_before_vat));
-      updateElementIfExists('damage-total-with-vat', MathEngine.formatCurrency(safeTotals.total_with_vat));
-      
-      // Check if we have the basic requirements for damage section
-      const hasBasicDamageData = (damageBlocks && damageBlocks.length > 0) && 
-                                (totals && totals.total_before_vat > 0);
+      // Check if all required data is available  
+      const hasRequiredData = validItems.length >= 4; // At least works, parts, repairs, and one total
       
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
       return {
-        success: criticalErrors === 0 && hasBasicDamageData,
+        success: criticalErrors === 0 && hasRequiredData,
         warnings: issues.filter(i => i.includes('אזהרה')).length,
         errors: criticalErrors,
         issues: issues,
-        validItems: validItems.length,
-        totalDamage: safeTotals.total_before_vat
+        validItems: validItems.length
       };
     }
 
@@ -2961,92 +2981,46 @@
     }
 
     function populateDamageValidationItems() {
-      console.log('🔧 Populating damage validation items with comprehensive data sources');
+      const container = document.getElementById('damage-validation-items');
+      if (!container) return;
       
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const validationItemsContainer = document.getElementById('damage-validation-items');
-        
-        if (!validationItemsContainer) {
-          console.log('⚠️ No damage validation items container found');
-          return;
-        }
-        
-        // Extract damage data using comprehensive approach
-        const damageData = extractDamageDataFromMultipleSources();
-        
-        let validationHTML = '';
-        
-        // Create validation rows for each type of cost
-        const costTypes = [
-          { key: 'parts_cost', label: 'סה"כ חלקים', description: 'עלות חלקי חילוף' },
-          { key: 'work_cost', label: 'סה"כ עבודות', description: 'עלות עבודה' },
-          { key: 'repairs_cost', label: 'סה"כ תיקונים', description: 'עלות תיקונים' }
-        ];
-        
-        costTypes.forEach(type => {
-          const currentValue = damageData[type.key] || 0;
-          const helperValue = helper.expertise?.totals?.[type.key] || 0;
-          const formatted = MathEngine.formatCurrency(currentValue);
-          
-          validationHTML += `
-            <div class="validation-item" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; padding: 8px; border-bottom: 1px solid #e2e8f0; align-items: center;">
-              <div>
-                <div style="font-weight: 600; color: #1e3a8a;">${type.label}</div>
-                <div style="font-size: 12px; color: #64748b;">${type.description}</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 14px; font-weight: 600; color: ${currentValue > 0 ? '#059669' : '#dc2626'};">\u20aa${currentValue.toLocaleString()}</div>
-                <div style="font-size: 11px; color: #64748b;">נוכחי</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 14px; color: #6b7280;">\u20aa${helperValue.toLocaleString()}</div>
-                <div style="font-size: 11px; color: #64748b;">שמור</div>
-              </div>
-              <button class="btn-auto-check" onclick="validateDamageItem('${type.key}')" 
-                      style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                בדוק אוטומטית
-              </button>
-            </div>
-          `;
-        });
-        
-        // Add total validation row
-        const totalBeforeVat = damageData.total_before_vat || 0;
-        const totalWithVat = damageData.total_with_vat || 0;
-        
-        validationHTML += `
-          <div class="validation-item validation-total" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; padding: 12px; background: #f8fafc; border-top: 2px solid #e2e8f0; align-items: center;">
-            <div>
-              <div style="font-weight: 700; color: #1e3a8a; font-size: 16px;">סה"כ כללי</div>
-              <div style="font-size: 12px; color: #64748b;">סך כל העלויות לפני מע"מ</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 16px; font-weight: 700; color: #059669;">\u20aa${totalBeforeVat.toLocaleString()}</div>
-              <div style="font-size: 12px; color: #6b7280;">+ מע"מ: \u20aa${(totalWithVat - totalBeforeVat).toLocaleString()}</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 16px; font-weight: 700; color: #1e3a8a;">\u20aa${totalWithVat.toLocaleString()}</div>
-              <div style="font-size: 11px; color: #64748b;">כולל מע"מ</div>
-            </div>
-            <button class="btn-auto-check" onclick="validateAllDamageItems()" 
-                    style="background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-              אשר הכל
-            </button>
-          </div>
-        `;
-        
-        validationItemsContainer.innerHTML = validationHTML;
-        
-        console.log('✅ Damage validation items populated successfully');
-        console.log('Damage data extracted:', damageData);
-        
-      } catch (error) {
-        console.error('Error populating damage validation items:', error);
-        if (document.getElementById('damage-validation-items')) {
-          document.getElementById('damage-validation-items').innerHTML = '<div style="color: #dc2626; text-align: center; padding: 20px;">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05e0\u05ea\u05d5\u05e0\u05d9 \u05e0\u05d6\u05e7\u05d9\u05dd</div>';
-        }
-      }
+      // Get helper data directly
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Simple direct field mapping to helper.estimate - matching screenshot mappings
+      const damageHTML = 
+        createEnhancedValidationItem(
+          'סה"כ עבודות',
+          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
+          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
+          'damage_works'
+        ) +
+        createEnhancedValidationItem(
+          'סה"כ חלקים',
+          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
+          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
+          'damage_parts'
+        ) +
+        createEnhancedValidationItem(
+          'סה"כ תיקונים',
+          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
+          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
+          'damage_repairs'
+        ) +
+        createEnhancedValidationItem(
+          'סך הכל נקודות לפני מע"מ',
+          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
+          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
+          'damage_total_before_vat'
+        ) +
+        createEnhancedValidationItem(
+          'סך הכל כולל מע"מ',
+          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
+          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
+          'damage_total_with_vat'
+        );
+      
+      container.innerHTML = damageHTML;
     }
 
     // DAMAGE VALIDATION HELPER FUNCTIONS
