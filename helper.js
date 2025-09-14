@@ -5832,7 +5832,22 @@ window.getHelperVatRate = function(forceRefresh = false) {
 // 🔄 VAT RATE REFRESH FUNCTION - Call this when admin VAT rate changes
 window.refreshHelperVatRate = function() {
   console.log('🔄 Refreshing helper VAT rate from admin hub...');
-  const newRate = window.getHelperVatRate(true); // Force refresh
+  
+  // PROTECTION: Don't override manual session overrides
+  if (window.helper?.calculations?.vat_rate_source === 'manual_session_override') {
+    console.log('🛡️ IGNORING admin hub refresh - manual session override active');
+    console.log('💡 Manual VAT rate preserved:', window.helper.calculations.vat_rate + '%');
+    return window.helper.calculations.vat_rate;
+  }
+  
+  // Also check estimate structure for manual overrides
+  if (window.helper?.estimate?.summary?.vat_rate?.source === 'manual_session_override') {
+    console.log('🛡️ IGNORING admin hub refresh - manual estimate override active');
+    console.log('💡 Manual VAT rate preserved:', window.helper.estimate.summary.vat_rate.current + '%');
+    return window.helper.estimate.summary.vat_rate.current;
+  }
+  
+  const newRate = window.getHelperVatRate(true); // Force refresh from admin hub
   
   // Broadcast VAT rate change event for other modules to listen
   try {
