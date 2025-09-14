@@ -5715,11 +5715,24 @@
           rawTextPreview: rawText?.substring(0, 300) || 'empty'
         });
         
-        // BYPASS LegalTextEngine and load directly from vault to avoid cache issues
+        // BYPASS LegalTextEngine and load directly from vault with AGGRESSIVE cache busting
         let legalText = '';
         try {
-          console.log('🔄 BYPASS: Loading directly from vault file...');
-          const vaultResponse = await fetch('final report legal texts vault.md');
+          console.log('🔄 BYPASS: Loading directly from vault file with cache busting...');
+          // Add cache-busting timestamp and random parameter
+          const timestamp = new Date().getTime();
+          const random = Math.random().toString(36).substring(7);
+          const vaultUrl = `final report legal texts vault.md?t=${timestamp}&r=${random}&nocache=true`;
+          
+          const vaultResponse = await fetch(vaultUrl, {
+            method: 'GET',
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
           const vaultContent = await vaultResponse.text();
           const jsonMatch = vaultContent.match(/```json\s*(\{[\s\S]*?\})\s*```/);
           
@@ -5775,6 +5788,14 @@
         }
         
         if (legalText && legalText.trim()) {
+          // Final check before setting
+          console.log('🔍 FINAL CHECK before setting textarea:', {
+            containsPlaceholder: legalText.includes('%ימי_מוסך%'),
+            containsHardcoded12: legalText.includes('12 ימי עבודה'),
+            textAroundGarageDays: legalText.includes('ימי עבודה') ? 
+              legalText.substring(legalText.indexOf('ימי עבודה') - 20, legalText.indexOf('ימי עבודה') + 20) : 'Not found'
+          });
+          
           // Set the text
           legalTextElement.value = legalText;
           
@@ -5787,6 +5808,15 @@
             textAroundHardcoded: immediateCheck.includes('12 ימי עבודה') ? 
               immediateCheck.substring(immediateCheck.indexOf('12 ימי עבודה') - 50, immediateCheck.indexOf('12 ימי עבודה') + 50) : 'Not found'
           });
+          
+          // Wait a bit and check again to see if something is overriding the text
+          setTimeout(() => {
+            const delayedCheck = legalTextElement.value;
+            if (delayedCheck.includes('12 ימי עבודה')) {
+              console.error('🚨 CRITICAL: Text was modified AFTER setting! Something is overriding our text.');
+              console.error('🚨 This suggests an event listener or other code is changing the textarea content.');
+            }
+          }, 500);
           
           console.log('✅ SUCCESS: Estimate legal text loaded from vault for:', uiType);
           
