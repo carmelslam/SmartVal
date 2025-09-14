@@ -2811,122 +2811,31 @@
       const container = document.getElementById('levi-validation-items');
       if (!container) return;
       
-      console.log('📄 Populating Levi validation - using comprehensive data sources');
+      // Get helper data directly
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get data from all available sources
-      const leviData = getLeviDataFromSources();
-      const { basePrice, marketValue, helper } = leviData;
-      
-      console.log('📄 DEBUGGING: Full helper structure for adjustments:', {
-        helper_levi_report_adjustments: helper?.levi_report?.adjustments,
-        helper_levi_custom_adjustments: helper?.levi?.custom_adjustments,
-        helper_manual_full_market_value: helper?.manual_full_market_value,
-        helper_keys: Object.keys(helper || {})
-      });
-      
-      // Debug market value adjustments specifically
-      if (helper?.custom_adjustments?.full_market_adjustments) {
-        console.log('📄 Market value adjustments detailed:', helper.custom_adjustments.full_market_adjustments.map(adj => ({
-          description: adj.description,
-          percentage: adj.percentage,
-          value: adj.value,
-          adjustmentType: adj.adjustmentType,
-          type: adj.type,
-          allKeys: Object.keys(adj)
-        })));
-      }
-      
-      // Debug ALL possible adjustment sources
-      console.log('📄 ALL ADJUSTMENT SOURCES:', {
-        manual_full_market_value: helper?.manual_full_market_value,
-        levi_report_adjustments: helper?.levi_report?.adjustments,
-        levi_custom_adjustments: helper?.levi?.custom_adjustments
-      });
-      
-      let leviHTML = '';
-      
-      // 1. Base Price validation (using estimate.vehicle.basePrice)
-      const estimateBasePrice = helper?.estimate?.vehicle?.basePrice || basePrice;
-      leviHTML += createEnhancedValidationItem(
-        'מחיר בסיס', 
-        estimateBasePrice ? `₪${parseFloat(estimateBasePrice).toLocaleString()}` : 'לא זמין', 
-        estimateBasePrice ? `₪${parseFloat(estimateBasePrice).toLocaleString()}` : 'לא זמין', 
-        'levi_base_price'
-      );
-      
-      // 2. Load adjustments ONLY from market value section (חישוב ערך השוק של הרכב)
-      let adjustmentCount = 0;
-      
-      // ONLY load from market value section - this is what shows in the builder
-      if (helper?.custom_adjustments?.full_market_adjustments && helper.custom_adjustments.full_market_adjustments.length > 0) {
-        console.log('📄 Found market value adjustments:', helper.custom_adjustments.full_market_adjustments.length);
-        helper.custom_adjustments.full_market_adjustments.forEach((adjustment, index) => {
-          // Read type directly from builder data structure (plus/minus)
-          const isAddition = adjustment.type === 'plus';
-          const adjustmentType = isAddition ? 'תוספת למחיר' : 'הפחתה מהמחיר';
-          const adjustmentSymbol = isAddition ? '+' : '-';
-          
-          // Handle percentage - try multiple sources and formats
-          let percentageValue = null;
-          if (adjustment.percentage && !isNaN(adjustment.percentage) && adjustment.percentage !== '') {
-            percentageValue = parseFloat(adjustment.percentage);
-          } else if (adjustment.percent && !isNaN(adjustment.percent) && adjustment.percent !== '') {
-            percentageValue = parseFloat(adjustment.percent);
-          }
-          
-          // Handle value - try multiple sources and formats  
-          let valueAmount = null;
-          if (adjustment.value && !isNaN(adjustment.value) && adjustment.value !== '') {
-            valueAmount = parseFloat(adjustment.value);
-          } else if (adjustment.amount && !isNaN(adjustment.amount) && adjustment.amount !== '') {
-            valueAmount = parseFloat(adjustment.amount);
-          }
-          
-          const percentageDisplay = percentageValue ? `${adjustmentSymbol}${Math.abs(percentageValue)}%` : '';
-          const valueDisplay = valueAmount ? `${adjustmentSymbol}₪${Math.abs(valueAmount).toLocaleString()}` : '';
-          
-          // Always show both percentage and value when available, otherwise show what we have
-          let combinedDisplay = '';
-          if (percentageDisplay && valueDisplay) {
-            combinedDisplay = `${percentageDisplay}, ${valueDisplay}`;
-          } else if (percentageDisplay) {
-            combinedDisplay = `${percentageDisplay}, ערך לא מוגדר`;
-          } else if (valueDisplay) {
-            combinedDisplay = `אחוז לא מוגדר, ${valueDisplay}`;
-          } else {
-            combinedDisplay = 'לא מוגדר';
-          }
-          
-          leviHTML += createEnhancedValidationItem(
-            `${adjustment.description || 'התאמת ערך השוק'} - ${adjustmentType}`, 
-            combinedDisplay,
-            combinedDisplay,
-            `levi_adj_market_${index}`
-          );
-          adjustmentCount++;
-        });
-      }
-      
-      // 2. Total Adjustments from valuation.adjustments_value
-      const valuationAdjustments = helper?.valuation?.adjustments_value;
-      leviHTML += createEnhancedValidationItem(
-        'סה"כ התאמות', 
-        valuationAdjustments || 'לא זמין',
-        valuationAdjustments || 'לא זמין', 
-        'levi_total_adjustments'
-      );
-      
-      // 3. Final Market Value from estimate.calculations.full_market_value
-      const finalMarketValue = helper?.estimate?.calculations?.full_market_value;
-      leviHTML += createEnhancedValidationItem(
-        'שווי שוק סופי', 
-        finalMarketValue ? `₪${parseFloat(finalMarketValue).toLocaleString()}` : 'לא זמין',
-        finalMarketValue ? `₪${parseFloat(finalMarketValue).toLocaleString()}` : 'לא זמין', 
-        'levi_market_value'
-      );
+      // Simple direct field mapping
+      const leviHTML = 
+        createEnhancedValidationItem(
+          'מחיר בסיס', 
+          helper?.estimate?.vehicle?.basePrice || 'לא זמין',
+          helper?.estimate?.vehicle?.basePrice || 'לא זמין', 
+          'levi_base_price'
+        ) +
+        createEnhancedValidationItem(
+          'סה"כ התאמות', 
+          helper?.valuation?.adjustments_value || 'לא זמין',
+          helper?.valuation?.adjustments_value || 'לא זמין', 
+          'levi_adjustments'
+        ) +
+        createEnhancedValidationItem(
+          'שווי שוק סופי', 
+          helper?.estimate?.calculations?.full_market_value || 'לא זמין',
+          helper?.estimate?.calculations?.full_market_value || 'לא זמין', 
+          'levi_final_value'
+        );
       
       container.innerHTML = leviHTML;
-      console.log('✅ Levi validation items populated from comprehensive sources');
     }
     
     // Helper function to get field value from builder DOM or current session state
