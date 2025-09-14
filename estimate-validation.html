@@ -949,6 +949,9 @@
         <button class="btn btn-success" id="final-approve-btn" onclick="reviewEstimateReport()" disabled>
           📋 בדיקת אומדן סופי
         </button>
+        <button class="btn btn-secondary" id="skip-validation-btn" onclick="skipValidationAndProceed()" style="display: none;">
+          ⏭️ דלג על אימות והמשך
+        </button>
       </div>
     </div>
     
@@ -963,6 +966,25 @@
     
     // Debug: Check if imports loaded successfully
     console.log('🔍 Debug: Imports loaded', { helper, updateHelper, loadLegalText, MathEngine, sendToWebhook });
+    
+    // Global error handlers to prevent page crashes
+    window.addEventListener('error', function(event) {
+      console.error('❌ Global error caught:', event.error);
+      console.error('Error details:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error?.stack
+      });
+      // Don't prevent default - let the error be logged, but don't crash
+    });
+    
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('❌ Unhandled promise rejection:', event.reason);
+      // Prevent the default behavior (which would crash the page)
+      event.preventDefault();
+    });
     
     let validationProgress = {
       vehicle: false,
@@ -1006,30 +1028,83 @@
     });
 
     function initializeValidationSystem() {
-      loadValidationData();
-      loadLegalTextValidation();
-      populateEnhancedValidationItems();
-      
-      // Check if this is a fresh start (no saved progress from current session)
-      const hasUserApprovedSections = sessionStorage.getItem('hasUserApprovedSections');
-      if (!hasUserApprovedSections) {
-        console.log('🔄 Fresh start - clearing validation progress');
-        clearValidationProgress();
-      } else {
-        // Load previously saved validation progress
-        loadSavedValidationProgress();
+      try {
+        console.log('🔄 Initializing validation system...');
+        
+        // Initialize data with error handling
+        loadValidationData();
+        
+        // Initialize legal text with error handling
+        try {
+          loadLegalTextValidation();
+        } catch (legalError) {
+          console.error('⚠️ Error loading legal text validation:', legalError);
+          // Continue without legal text validation
+        }
+        
+        // Populate validation items with error handling
+        try {
+          populateEnhancedValidationItems();
+        } catch (populateError) {
+          console.error('⚠️ Error populating validation items:', populateError);
+          showAlert('חלק מנתוני האימות לא נטענו כראוי, אך הדף יכול לפעול.', 'warning');
+        }
+        
+        // Check if this is a fresh start (no saved progress from current session)
+        const hasUserApprovedSections = sessionStorage.getItem('hasUserApprovedSections');
+        if (!hasUserApprovedSections) {
+          console.log('🔄 Fresh start - clearing validation progress');
+          try {
+            clearValidationProgress();
+          } catch (clearError) {
+            console.warn('⚠️ Error clearing validation progress:', clearError);
+          }
+        } else {
+          // Load previously saved validation progress
+          try {
+            loadSavedValidationProgress();
+          } catch (loadError) {
+            console.warn('⚠️ Error loading saved validation progress:', loadError);
+          }
+        }
+        
+        // Initialize damage validation items  
+        setTimeout(() => {
+          try {
+            console.log('🔧 Initializing damage validation items...');
+            populateDamageValidationItems();
+          } catch (damageError) {
+            console.error('⚠️ Error populating damage validation items:', damageError);
+          }
+        }, 200);
+        
+        // Initialize progress bar to 0%
+        try {
+          updateValidationProgress();
+        } catch (progressError) {
+          console.warn('⚠️ Error updating validation progress:', progressError);
+        }
+        
+        // Start initial validation
+        try {
+          startInitialValidation();
+        } catch (validationError) {
+          console.error('⚠️ Error starting initial validation:', validationError);
+        }
+        
+        console.log('✅ Validation system initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ Critical error initializing validation system:', error);
+        showAlert('שגיאה באתחול מערכת האימות. הדף עשוי לא לפעול כראוי.', 'error');
+        
+        // Try to at least show basic UI
+        try {
+          updateValidationProgress();
+        } catch (fallbackError) {
+          console.error('❌ Even fallback progress update failed:', fallbackError);
+        }
       }
-      
-      // Initialize damage validation items  
-      setTimeout(() => {
-        console.log('🔧 Initializing damage validation items...');
-        populateDamageValidationItems();
-      }, 200);
-      
-      // Initialize progress bar to 0%
-      updateValidationProgress();
-      
-      startInitialValidation();
     }
 
     // Create enhanced validation item with 3-column display
@@ -1138,62 +1213,114 @@
     function loadValidationData() {
       console.log('📊 Loading validation data from builder state...');
       
-      // ✅ OPTIMAL FLOW: Validation reads from builder state, not helper directly
-      // Helper → Builder → Validation (this validation reads from builder current state)
-      
-      // Priority 1: Get builder current state (what user is currently working on)
-      const builderState = getBuilderCurrentState();
-      if (!builderState || Object.keys(builderState).length === 0) {
-        alert('לא נמצאה טיוטה מהבונה. חזור לעריכת האומדן.');
-        window.location.href = 'estimate-builder.html';
-        return;
-      }
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      try {
+        // ✅ OPTIMAL FLOW: Validation reads from builder state, not helper directly
+        // Helper → Builder → Validation (this validation reads from builder current state)
+        
+        // Priority 1: Get builder current state (what user is currently working on)
+        const builderState = getBuilderCurrentState();
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Initialize helper structure if missing
+        if (!helper) {
+          console.warn('⚠️ Helper data missing, initializing defaults');
+          helper = {};
+        }
+        
+        // Ensure basic helper structure exists
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.car_details) helper.car_details = {};
+        if (!helper.client) helper.client = {};
+        if (!helper.meta) helper.meta = {};
+        
+        if (!builderState || Object.keys(builderState).length === 0) {
+          console.warn('⚠️ No builder state found, using helper data directly');
+          // Don't redirect immediately - try to work with helper data
+        }
 
-      currentValidationData = {
-        meta: builderState.meta || {},
-        plate: builderState.plate || '',
+        currentValidationData = {
+          meta: (builderState && builderState.meta) || helper?.meta || {},
+          plate: (builderState && builderState.plate) || helper?.plate || helper?.meta?.plate || '',
+          
+          // Car details (builder state overrides helper with safe navigation)
+          car_details: {
+            plate: (builderState && builderState.plate) || helper?.plate || helper?.car_details?.plate || '',
+            manufacturer: (builderState && builderState.manufacturer) || helper?.manufacturer || helper?.car_details?.manufacturer || '',
+            model: (builderState && builderState.model) || helper?.model || helper?.car_details?.model || '',
+            year: (builderState && builderState.year) || helper?.year || helper?.car_details?.year || '',
+            vin: (builderState && builderState.vin) || helper?.vin || helper?.car_details?.vin || '',
+            engine: (builderState && builderState.engine) || helper?.engine || helper?.car_details?.engine || ''
+          },
+          
+          // Client/owner information (builder state overrides helper with safe navigation)
+          client: {
+            name: (builderState && builderState.owner_name) || helper?.owner || helper?.client?.name || '',
+            phone_number: (builderState && builderState.owner_phone) || helper?.client?.phone_number || '',
+            address: (builderState && builderState.owner_address) || helper?.client?.address || '',
+            insurance_company: (builderState && builderState.insurance_company) || helper?.insurance_company || helper?.client?.insurance_company || ''
+          },
+          
+          // Levi report data (safe navigation)
+          levi_report: (builderState && builderState.levi_report) || helper?.levi_report || {},
+          
+          // Damage centers (safe navigation)
+          damage_blocks: (builderState && builderState.damage_blocks) || helper?.expertise?.damage_blocks || helper?.damage_blocks || [],
+          
+          // Legal text (safe navigation)
+          estimate_legal_text: (builderState && builderState.estimate_legal_text) || helper?.estimate_legal_text || helper?.estimate?.summary?.legal_text || '',
+          
+          // Estimate calculations and totals (safe navigation)
+          estimate_totals: (builderState && builderState.estimate_totals) || helper?.estimate_totals || helper?.calculations || {},
+          
+          // Depreciation data (safe navigation)
+          estimate_depreciation: (builderState && builderState.estimate_depreciation) || helper?.estimate_depreciation || helper?.estimate?.depreciation || {},
+          
+          // Store both sources for debugging
+          builder_state: builderState || {},
+          raw_helper: helper || {}
+        };
         
-        // Car details (builder state overrides helper)
-        car_details: {
-          plate: builderState.plate || '',
-          manufacturer: builderState.manufacturer || '',
-          model: builderState.model || '',
-          year: builderState.year || '',
-          vin: builderState.vin || '',
-          engine: builderState.engine || ''
-        },
+        console.log('✅ Validation data loaded from builder state:', currentValidationData);
+        console.log('🏗️ Builder state used:', builderState);
         
-        // Client/owner information (builder state overrides helper)
-        client: {
-          name: builderState.owner_name || '',
-          phone_number: builderState.owner_phone || '',
-          address: builderState.owner_address || '',
-          insurance_company: builderState.insurance_company || ''
-        },
+      } catch (error) {
+        console.error('❌ Error loading validation data:', error);
         
-        // Levi report data (READ FROM BUILDER STATE FIRST)
-        levi_report: builderState.levi_report || {},
-        
-        // Damage centers (READ FROM BUILDER STATE FIRST)
-        damage_blocks: builderState.damage_blocks || [],
-        
-        // Legal text (READ FROM BUILDER STATE FIRST)
-        estimate_legal_text: builderState.estimate_legal_text || '',
-        
-        // Estimate calculations and totals (READ FROM BUILDER STATE FIRST)
-        estimate_totals: builderState.estimate_totals || {},
-        
-        // Depreciation data (READ FROM BUILDER STATE FIRST)
-        estimate_depreciation: builderState.estimate_depreciation || {},
-        
-        // Store both sources for debugging
-        builder_state: builderState,
-        raw_helper: helper
-      };
-      
-      console.log('✅ Validation data loaded from builder state:', currentValidationData);
-      console.log('🏗️ Builder state used:', builderState);
+        // Fallback: Try to initialize with minimal data
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          currentValidationData = {
+            meta: helper?.meta || {},
+            plate: helper?.plate || helper?.meta?.plate || '',
+            car_details: helper?.car_details || {},
+            client: helper?.client || {},
+            levi_report: helper?.levi_report || {},
+            damage_blocks: helper?.expertise?.damage_blocks || helper?.damage_blocks || [],
+            estimate_legal_text: helper?.estimate_legal_text || '',
+            estimate_totals: helper?.estimate_totals || {},
+            estimate_depreciation: helper?.estimate_depreciation || {},
+            builder_state: {},
+            raw_helper: helper || {}
+          };
+          console.log('⚠️ Fallback data loaded:', currentValidationData);
+        } catch (fallbackError) {
+          console.error('❌ Fallback loading failed:', fallbackError);
+          showAlert('שגיאה בטעינת נתוני האימות. אנא חזור לבונה האומדן.', 'error');
+          currentValidationData = {
+            meta: {},
+            plate: '',
+            car_details: {},
+            client: {},
+            levi_report: {},
+            damage_blocks: [],
+            estimate_legal_text: '',
+            estimate_totals: {},
+            estimate_depreciation: {},
+            builder_state: {},
+            raw_helper: {}
+          };
+        }
+      }
     }
     
     // Get current builder state (what user is working on in builder)
@@ -1209,46 +1336,52 @@
         // Method 2: Extract current builder state from helper (what builder saved)
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Extract builder-modified data from helper
+        // Ensure helper has basic structure
+        if (!helper || typeof helper !== 'object') {
+          console.warn('⚠️ Invalid helper data in getBuilderCurrentState');
+          return {};
+        }
+        
+        // Extract builder-modified data from helper with safe navigation
         const builderState = {
           // Car details (if modified by builder)
-          plate: helper.plate || helper.meta?.plate,
-          manufacturer: helper.manufacturer || helper.car_details?.manufacturer,
-          model: helper.model || helper.car_details?.model,
-          year: helper.year || helper.car_details?.year,
-          vin: helper.vin || helper.car_details?.vin,
-          engine: helper.engine || helper.car_details?.engine,
+          plate: helper?.plate || helper?.meta?.plate || '',
+          manufacturer: helper?.manufacturer || helper?.car_details?.manufacturer || '',
+          model: helper?.model || helper?.car_details?.model || '',
+          year: helper?.year || helper?.car_details?.year || '',
+          vin: helper?.vin || helper?.car_details?.vin || '',
+          engine: helper?.engine || helper?.car_details?.engine || '',
           
           // Owner/client details (if modified by builder)
-          owner_name: helper.owner || helper.client?.name,
-          owner_phone: helper.client?.phone_number,
-          owner_address: helper.client?.address,
-          insurance_company: helper.client?.insurance_company || helper.insurance_company,
+          owner_name: helper?.owner || helper?.client?.name || '',
+          owner_phone: helper?.client?.phone_number || '',
+          owner_address: helper?.client?.address || '',
+          insurance_company: helper?.client?.insurance_company || helper?.insurance_company || '',
           
-          // Estimate-specific data (saved by builder)
-          estimate_type: helper.estimate_type,
-          estimate_notes: helper.estimate_notes,
-          estimate_work_days: helper.estimate_work_days,
-          estimate_legal_text: helper.estimate_legal_text,
-          estimate_attachments: helper.estimate_attachments,
-          estimate_depreciation: helper.estimate_depreciation,
-          estimate_adjustments: helper.estimate_adjustments,
+          // Estimate-specific data (saved by builder) with safe navigation
+          estimate_type: helper?.estimate_type || '',
+          estimate_notes: helper?.estimate_notes || '',
+          estimate_work_days: helper?.estimate_work_days || '',
+          estimate_legal_text: helper?.estimate_legal_text || helper?.estimate?.summary?.legal_text || '',
+          estimate_attachments: helper?.estimate_attachments || helper?.estimate?.summary?.attachments || [],
+          estimate_depreciation: helper?.estimate_depreciation || helper?.estimate?.depreciation || {},
+          estimate_adjustments: helper?.estimate_adjustments || helper?.estimate?.adjustments || [],
           
-          // Levi data (if modified by builder)
-          levi_report: helper.levi_report,
-          levi: helper.levi,
+          // Levi data (if modified by builder) with safe navigation
+          levi_report: helper?.levi_report || {},
+          levi: helper?.levi || {},
           
-          // Damage data (if modified by builder)
-          damage_blocks: helper.expertise?.damage_blocks,
+          // Damage data (if modified by builder) with safe navigation
+          damage_blocks: helper?.expertise?.damage_blocks || helper?.damage_blocks || [],
           
-          // Calculations (computed by builder)
-          calculations: helper.calculations,
-          claims_data: helper.claims_data,
-          estimate_totals: helper.estimate_totals,
-          summary_totals: helper.summary_totals,
+          // Calculations (computed by builder) with safe navigation
+          calculations: helper?.calculations || {},
+          claims_data: helper?.claims_data || {},
+          estimate_totals: helper?.estimate_totals || {},
+          summary_totals: helper?.summary_totals || {},
           
           // Timestamp of last builder modification
-          last_builder_update: helper.last_builder_update || new Date().toISOString()
+          last_builder_update: helper?.last_builder_update || new Date().toISOString()
         };
         
         console.log('🏗️ Extracted builder state from helper modifications');
@@ -2456,17 +2589,36 @@
       // Save validation progress to sessionStorage
       sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
       
-      // Enable final approval if all sections are validated
+      // Always enable final approval - validation is optional quality check
       const finalBtn = document.getElementById('final-approve-btn');
-      finalBtn.disabled = progressPercent < 100;
+      const skipBtn = document.getElementById('skip-validation-btn');
+      finalBtn.disabled = false; // Always allow proceeding to report
       
+      // Update button text and skip button visibility based on validation progress
       if (progressPercent === 100) {
         console.log('✅ All validations completed successfully');
+        finalBtn.textContent = '📋 בדיקת אומדן סופי (כל האימותים הושלמו)';
+        finalBtn.className = 'btn btn-success';
+        skipBtn.style.display = 'none'; // Hide skip button when all validations complete
+        
         // Only show alert if user has actually approved sections, not during auto-validation
         const hasUserApprovedSections = sessionStorage.getItem('hasUserApprovedSections');
         if (hasUserApprovedSections) {
           showAlert('כל האימותים הושלמו בהצלחה! ניתן להמשיך לאישור סופי.', 'success');
         }
+      } else if (progressPercent > 50) {
+        finalBtn.textContent = `📋 בדיקת אומדן סופי (${progressPercent}% מהאימותים הושלמו)`;
+        finalBtn.className = 'btn btn-warning';
+        skipBtn.style.display = 'inline-block'; // Show skip option
+      } else if (progressPercent > 0) {
+        finalBtn.textContent = `📋 בדיקת אומדן סופי (${progressPercent}% מהאימותים הושלמו)`;
+        finalBtn.className = 'btn btn-warning';
+        skipBtn.style.display = 'inline-block'; // Show skip option
+      } else {
+        finalBtn.textContent = '📋 בדיקת אומדן סופי';
+        finalBtn.className = 'btn btn-secondary';
+        skipBtn.style.display = 'inline-block'; // Show skip option prominently
+        skipBtn.textContent = '⏭️ דלג על כל האימותים והמשך';
       }
     }
 
@@ -3247,6 +3399,44 @@
         finalBtn.disabled = false;
         finalBtn.textContent = '📋 בדיקת אומדן סופי';
         showAlert('שגיאה במעבר לבדיקת אומדן: ' + error.message, 'error');
+      }
+    };
+
+    // Skip validation and proceed directly to report generation
+    window.skipValidationAndProceed = function() {
+      const skipBtn = document.getElementById('skip-validation-btn');
+      
+      try {
+        // Confirm with user
+        if (!confirm('האם אתה בטוח שברצונך לדלג על האימות ולהמשיך ישירות ליצירת הדוח?\n\nהדוח ייווצר ללא אימות איכות מלא.')) {
+          return;
+        }
+        
+        console.log('⏭️ User chose to skip validation and proceed to report');
+        
+        // Save current data without validation
+        saveValidationData();
+        
+        // Mark as validation skipped (not completed)
+        sessionStorage.setItem('estimateValidationSkipped', 'true');
+        sessionStorage.removeItem('estimateValidationCompleted');
+        
+        // Show loading state
+        skipBtn.disabled = true;
+        skipBtn.textContent = 'דולג על אימות ועובר לדוח...';
+        
+        showAlert('דולג על אימות ומעבר ישיר ליצירת הדוח...', 'warning');
+        
+        // Redirect to estimate report builder
+        setTimeout(() => {
+          window.location.href = 'estimate-report-builder.html';
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error skipping validation:', error);
+        skipBtn.disabled = false;
+        skipBtn.textContent = '⏭️ דלג על אימות והמשך';
+        showAlert('שגיאה בדילוג על אימות: ' + error.message, 'error');
       }
     };
 
