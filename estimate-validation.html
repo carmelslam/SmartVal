@@ -2961,131 +2961,43 @@
       const container = document.getElementById('depreciation-validation-items');
       if (!container) return;
       
-      console.log('📄 Populating Depreciation validation items');
+      // Get helper data directly
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      const data = currentValidationData;
-      const helper = data.raw_helper;
-      
-      let depreciationHTML = '';
-      let globalDepreciation = 0;
-      let centerDepreciation = 0;
-      
-      // 1. Global depreciation validation - read from correct builder structure
-      const globalPercent = helper.estimate_depreciation?.global_percent || '';
-      const globalValue = helper.estimate_depreciation?.global_value || '';
-      
-      // Try to also get from helper root level as backup
-      const globalPercentBackup = helper.global_percent || '';
-      const globalValueBackup = helper.global_value || '';
-      
-      const finalGlobalPercent = globalPercent || globalPercentBackup;
-      const finalGlobalValue = globalValue || globalValueBackup;
-      
-      // Add gross market value and gross damage percentage first
-      console.log('🔍 Helper data for gross values:', {
-        claims_data: helper.claims_data,
-        grossMarketValueResult: helper.grossMarketValueResult,
-        grossPercent: helper.grossPercent,
-        helperKeys: Object.keys(helper)
-      });
-      
-      const grossMarketValue = helper.claims_data?.gross_value || helper.grossMarketValueResult || helper.gross_market_value || '';
-      const grossDamagePercent = helper.claims_data?.gross_percent || helper.grossPercent || helper.gross_damage_percent || '';
-      
-      depreciationHTML += createEnhancedValidationItem(
-        'ערך הרכב לנזק גולמי כולל מע"מ',
-        grossMarketValue || 'לא מוגדר',
-        grossMarketValue ? grossMarketValue : 'נדרש ערך',
-        'gross_market_value'
-      );
-      
-      depreciationHTML += createEnhancedValidationItem(
-        'אחוז הנזק הגולמי',
-        grossDamagePercent || 'לא מוגדר',
-        grossDamagePercent ? grossDamagePercent : 'נדרש אחוז',
-        'gross_damage_percent'
-      );
-      
-      // Always show depreciation items regardless of whether they have values
-      depreciationHTML += createEnhancedValidationItem(
-        'ירידת ערך גלובלי (%)', 
-        finalGlobalPercent || 'לא מוגדר',
-        finalGlobalPercent ? finalGlobalPercent : 'נדרש אחוז',
-        'depreciation_global_percent'
-      );
-      
-      depreciationHTML += createEnhancedValidationItem(
-        'ירידת ערך גלובלי (₪)', 
-        finalGlobalValue || 'לא מוגדר',
-        finalGlobalValue ? finalGlobalValue : 'נדרש ערך',
-        'depreciation_global_value'
-      );
-      
-      if (finalGlobalValue) {
-        globalDepreciation = parseFloat((finalGlobalValue || '').replace(/[₪,]/g, '')) || 0;
-      }
-      
-      // 2. Bulk depreciation items validation - read from correct builder structure
-      const bulkItems = helper.estimate_depreciation?.bulk_items || helper.bulk_items || [];
-      
-      if (bulkItems && bulkItems.length > 0) {
-        bulkItems.forEach((item, index) => {
-          const itemKey = `depreciation_bulk_${index}`;
-          const percentValue = item.percent || 'לא מוגדר';
-          const valueAmount = item.value || 'לא מוגדר';
-          const description = `${item.damaged_part || 'מוקד נזק'} - ${item.repair_type || 'מהות התיקון'}`;
-          const combinedValue = `${percentValue}, ${valueAmount}`;
-          
-          // Check if item has validation issues (missing data)
-          const hasValidationIssues = !item.percent || !item.value || !item.damaged_part || !item.repair_type;
-          const storedValue = hasValidationIssues ? 'נתונים חסרים' : combinedValue;
-          
-          depreciationHTML += createEnhancedValidationItem(
-            description, 
-            combinedValue,
-            storedValue,
-            itemKey
-          );
-          
-          // Add to center depreciation total
-          if (item.value) {
-            centerDepreciation += parseFloat(String(item.value).replace(/[₪,]/g, '')) || 0;
-          }
-        });
-      } else {
-        // Show missing bulk items as validation issue
-        depreciationHTML += createEnhancedValidationItem(
-          'פריטי ירידת ערך לפי מוקדים', 
-          'לא מוגדרים',
-          'נדרשים נתונים',
-          'depreciation_bulk_missing'
+      // Simple direct field mapping to helper.estimate
+      const depreciationHTML = 
+        createEnhancedValidationItem(
+          'ערך הרכב לנזק גולמי כולל מע"מ',
+          helper?.estimate?.gross_market_value || 'לא זמין',
+          helper?.estimate?.gross_market_value || 'לא זמין',
+          'gross_market_value'
+        ) +
+        createEnhancedValidationItem(
+          'אחוז הנזק הגולמי',
+          helper?.estimate?.gross_damage_percent || 'לא זמין',
+          helper?.estimate?.gross_damage_percent || 'לא זמין',
+          'gross_damage_percent'
+        ) +
+        createEnhancedValidationItem(
+          'ירידת ערך גלובלי (%)',
+          helper?.estimate?.depreciation?.global_percent || 'לא זמין',
+          helper?.estimate?.depreciation?.global_percent || 'לא זמין',
+          'depreciation_global_percent'
+        ) +
+        createEnhancedValidationItem(
+          'ירידת ערך גלובלי (₪)',
+          helper?.estimate?.depreciation?.global_value || 'לא זמין',
+          helper?.estimate?.depreciation?.global_value || 'לא זמין',
+          'depreciation_global_value'
+        ) +
+        createEnhancedValidationItem(
+          'ימי מוסך משוערים',
+          helper?.estimate?.work_days || 'לא זמין',
+          helper?.estimate?.work_days || 'לא זמין',
+          'work_days'
         );
-      }
-      
-      // 3. Work days validation - read from correct builder structure
-      const workDays = helper.estimate_work_days || helper.work_days || '';
-      const workDaysDisplay = workDays ? `${workDays} ימים` : 'לא מוגדר';
-      const workDaysStored = workDays ? `${workDays} ימים` : 'נדרש מספר ימים';
-      
-      depreciationHTML += createEnhancedValidationItem(
-        'ימי מוסך משוערים', 
-        workDaysDisplay,
-        workDaysStored,
-        'depreciation_work_days'
-      );
       
       container.innerHTML = depreciationHTML;
-      
-      // Update depreciation summary display
-      document.getElementById('depreciation-display-global').textContent = globalDepreciation ? `₪${globalDepreciation.toLocaleString()}` : '₪0';
-      document.getElementById('depreciation-display-centers').textContent = centerDepreciation ? `₪${centerDepreciation.toLocaleString()}` : '₪0';
-      document.getElementById('depreciation-display-total').textContent = `₪${(globalDepreciation + centerDepreciation).toLocaleString()}`;
-      
-      console.log('✅ Depreciation validation items populated', {
-        globalDepreciation,
-        centerDepreciation,
-        totalItems: helper.estimate_depreciation?.bulk_items?.length || 0
-      });
     }
 
     function populateDamageValidationItems() {
