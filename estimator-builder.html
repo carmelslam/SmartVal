@@ -5558,14 +5558,20 @@
         'depreciation.globalDepValue': helper.depreciation?.globalDepValue,
         'depreciation.garageDays': helper.depreciation?.garageDays,
         'claims_data.salvage_value': helper.claims_data?.salvage_value,
-        'damage_assessment structure': helper.damage_assessment
+        'damage_assessment.total_centers': helper.damage_assessment?.total_centers,
+        'GARAGE DAYS FROM ALL SOURCES': {
+          'helper.depreciation?.garageDays': helper.depreciation?.garageDays,
+          'helper.estimate?.depreciation?.garageDays': helper.estimate?.depreciation?.garageDays,
+          'from form field garageDays': document.getElementById('garageDays')?.value
+        }
       });
       
       // Map existing data to the required placeholder paths
       helper.estimate.vehicle.modelCode = helper.car_details?.model_code || helper.vehicle?.model_code || '';
       helper.estimate.depreciation.globalDep1 = helper.depreciation?.globalDep1 || '';
       helper.estimate.depreciation.globalDepValue = helper.depreciation?.globalDepValue || '';
-      helper.estimate.depreciation.garageDays = helper.depreciation?.garageDays || '';
+      helper.estimate.depreciation.garageDays = helper.depreciation?.garageDays || 
+                                               document.getElementById('garageDays')?.value || '';
       helper.estimate.summary.salvage_value = helper.claims_data?.salvage_value || '';
       // Debug damage centers calculation - use exact path specified by user
       const damageCentersCount = helper.damage_assessment?.total_centers || '';
@@ -5647,6 +5653,19 @@
       
       // Clear any existing content to ensure fresh load
       legalTextElement.value = '';
+      legalTextElement.innerHTML = '';
+      
+      // Clear any cached legal text from helper
+      if (helper.estimate && helper.estimate.summary) {
+        helper.estimate.summary.legal_text = '';
+      }
+      
+      // Clear from sessionStorage to prevent old data
+      let tempHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (tempHelper.estimate && tempHelper.estimate.summary) {
+        tempHelper.estimate.summary.legal_text = '';
+        sessionStorage.setItem('helper', JSON.stringify(tempHelper));
+      }
       
       try {
         console.log('🔍 Step 6 - Calling LegalTextEngine.getProcessedText...');
@@ -5676,6 +5695,12 @@
         const remainingPlaceholders = (legalText || '').match(/%[^%]+%/g);
         if (remainingPlaceholders) {
           console.warn('⚠️ WARNING: Unreplaced placeholders found:', remainingPlaceholders);
+        }
+        
+        // Check for hardcoded values that shouldn't be there
+        if (legalText && legalText.includes('12 ימי עבודה')) {
+          console.error('❌ CRITICAL: Found hardcoded "12 ימי עבודה" in legal text!');
+          console.error('❌ This suggests old cached data or incorrect vault loading');
         }
         
         if (legalText && legalText.trim()) {
