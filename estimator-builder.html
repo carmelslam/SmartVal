@@ -5651,21 +5651,37 @@
         return;
       }
       
-      // Clear any existing content to ensure fresh load
+      // AGGRESSIVE CLEARING - Remove all possible sources of old data
+      console.log('🧹 BEFORE CLEARING - Current textarea content:', legalTextElement.value?.substring(0, 200));
+      
+      // Clear textarea completely
       legalTextElement.value = '';
       legalTextElement.innerHTML = '';
+      legalTextElement.textContent = '';
+      legalTextElement.defaultValue = '';
       
       // Clear any cached legal text from helper
       if (helper.estimate && helper.estimate.summary) {
-        helper.estimate.summary.legal_text = '';
+        delete helper.estimate.summary.legal_text;
       }
       
-      // Clear from sessionStorage to prevent old data
+      // Clear from sessionStorage completely
       let tempHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (tempHelper.estimate && tempHelper.estimate.summary) {
-        tempHelper.estimate.summary.legal_text = '';
+        delete tempHelper.estimate.summary.legal_text;
         sessionStorage.setItem('helper', JSON.stringify(tempHelper));
       }
+      
+      // Clear any browser cache for this page
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            caches.delete(name);
+          });
+        });
+      }
+      
+      console.log('🧹 AFTER CLEARING - Textarea should be empty:', legalTextElement.value?.length || 0);
       
       try {
         console.log('🔍 Step 6 - Calling LegalTextEngine.getProcessedText...');
@@ -5759,7 +5775,19 @@
         }
         
         if (legalText && legalText.trim()) {
+          // Set the text
           legalTextElement.value = legalText;
+          
+          // Immediate check after setting - see if anything changes the text
+          const immediateCheck = legalTextElement.value;
+          console.log('📋 IMMEDIATE CHECK after setting textarea:', {
+            textLength: immediateCheck.length,
+            containsHardcoded12: immediateCheck.includes('12 ימי עבודה'),
+            firstOccurrenceOf12: immediateCheck.indexOf('12 ימי עבודה'),
+            textAroundHardcoded: immediateCheck.includes('12 ימי עבודה') ? 
+              immediateCheck.substring(immediateCheck.indexOf('12 ימי עבודה') - 50, immediateCheck.indexOf('12 ימי עבודה') + 50) : 'Not found'
+          });
+          
           console.log('✅ SUCCESS: Estimate legal text loaded from vault for:', uiType);
           
           // SAVE ACTUAL CONTENT to NEW STRUCTURE: helper.estimate.summary.legal_text
