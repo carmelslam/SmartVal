@@ -5671,11 +5671,33 @@
         console.log('🔍 Step 6 - Calling LegalTextEngine.getProcessedText...');
         console.log('🔍 Placeholder values being passed to engine:', placeholderValues);
         
-        // Force refresh of LegalTextEngine cache to ensure fresh data
-        if (window.LegalTextEngine && typeof window.LegalTextEngine.refresh === 'function') {
-          await window.LegalTextEngine.refresh();
-          console.log('🔄 LegalTextEngine cache refreshed');
+        // Force complete refresh of LegalTextEngine cache to ensure fresh data
+        if (window.LegalTextEngine) {
+          // Clear the cache completely
+          window.LegalTextEngine.cachedTexts = null;
+          window.LegalTextEngine.lastModified = null;
+          
+          if (typeof window.LegalTextEngine.refresh === 'function') {
+            await window.LegalTextEngine.refresh();
+            console.log('🔄 LegalTextEngine cache completely cleared and refreshed');
+          }
+          
+          // Force reload from vault file
+          if (typeof window.LegalTextEngine.loadFromVault === 'function') {
+            await window.LegalTextEngine.loadFromVault();
+            console.log('🔄 Forced vault reload');
+          }
         }
+        
+        // First get RAW text without placeholder replacement to debug
+        const rawText = await window.LegalTextEngine.getTextForType(uiType, 'estimate');
+        console.log('🔍 DEBUG - RAW text from vault BEFORE placeholder replacement:', {
+          hasRawText: !!rawText,
+          textLength: rawText?.length || 0,
+          containsPlaceholder: rawText?.includes('%ימי_מוסך%'),
+          containsHardcoded12: rawText?.includes('12 ימי'),
+          rawTextPreview: rawText?.substring(0, 300) || 'empty'
+        });
         
         // Use the centralized legal text engine for estimates
         const legalText = await window.LegalTextEngine.getProcessedText(
