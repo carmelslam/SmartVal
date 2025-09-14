@@ -2992,43 +2992,59 @@
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // DEBUG: Log the helper structure to see what's actually available
-      console.log('🔍 FULL Helper data structure:', helper);
-      console.log('🔍 totals:', helper.totals);
-      console.log('🔍 damage_centers:', helper.totals?.damage_centers);
-      console.log('🔍 total_damage_cost:', helper.total_damage_cost);
-      console.log('🔍 total_before_vat:', helper.total_before_vat);
+      // DEBUG: Log the specific paths to see what exists
+      console.log('🔍 helper.estimate.totals:', helper.estimate?.totals);
+      console.log('🔍 helper.estimate.calculations:', helper.estimate?.calculations);  
+      console.log('🔍 helper.expertise.damage_blocks:', helper.expertise?.damage_blocks);
+      console.log('🔍 Direct values from validation function:', {
+        worksFormatted: helper?.estimate?.totals?.damage_centers?.works?.formatted,
+        partsFormatted: helper?.estimate?.totals?.damage_centers?.parts?.formatted,
+        repairsFormatted: helper?.estimate?.totals?.damage_centers?.repairs?.formatted,
+        totalBeforeVat: helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted,
+        totalDamageCost: helper?.estimate?.calculations?.total_damage_cost
+      });
       
-      // Simple direct field mapping using the EXACT paths you specified in screenshots
+      // Use the SAME logic as validation function that works correctly
+      const worksFormatted = helper?.estimate?.totals?.damage_centers?.works?.formatted;
+      const partsFormatted = helper?.estimate?.totals?.damage_centers?.parts?.formatted;  
+      const repairsFormatted = helper?.estimate?.totals?.damage_centers?.repairs?.formatted;
+      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted;
+      const totalDamageCost = helper?.estimate?.calculations?.total_damage_cost;
+
+      console.log('🔍 Display function - Same values as validation:', {
+        worksFormatted, partsFormatted, repairsFormatted, totalBeforeVat, totalDamageCost
+      });
+      
+      // Simple direct field mapping with values that actually work
       const damageHTML = 
         createEnhancedValidationItem(
           'סה"כ עבודות',
-          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
+          worksFormatted || 'לא זמין',
+          worksFormatted || 'לא זמין',
           'damage_works'
         ) +
         createEnhancedValidationItem(
           'סה"כ חלקים',
-          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
+          partsFormatted || 'לא זמין',
+          partsFormatted || 'לא זמין',
           'damage_parts'
         ) +
         createEnhancedValidationItem(
           'סה"כ תיקונים',
-          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
+          repairsFormatted || 'לא זמין',
+          repairsFormatted || 'לא זמין',
           'damage_repairs'
         ) +
         createEnhancedValidationItem(
           'סך הכל נקודות לפני מע"מ',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
+          totalBeforeVat || 'לא זמין',
+          totalBeforeVat || 'לא זמין',
           'damage_total_before_vat'
         ) +
         createEnhancedValidationItem(
           'סך הכל כולל מע"מ',
-          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
-          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
+          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
+          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
           'damage_total_with_vat'
         );
       
