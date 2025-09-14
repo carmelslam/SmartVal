@@ -5639,7 +5639,51 @@
       }
       
       helper.estimate.depreciation.garageDays = garageDaysValue;
-      helper.estimate.summary.salvage_value = helper.claims_data?.salvage_value || '';
+      
+      // CRITICAL: Enhanced salvage value mapping from multiple sources
+      let salvageValue = '';
+      
+      // Priority 1: Get from UI form field (most current value)
+      const salvageField = document.getElementById('salvageValue');
+      if (salvageField && salvageField.value && salvageField.value.trim() !== '') {
+        // Extract numeric value from formatted text (remove ₪ and commas)
+        const salvageFieldValue = salvageField.value.replace(/[₪,\s]/g, '');
+        if (salvageFieldValue && !isNaN(salvageFieldValue) && salvageFieldValue !== '0') {
+          salvageValue = salvageFieldValue;
+          console.log('✅ Using salvage value from UI field:', salvageValue, '(original:', salvageField.value + ')');
+        }
+      }
+      
+      // Priority 2: Fallback to helper data if UI field is empty
+      if (!salvageValue) {
+        salvageValue = helper.claims_data?.salvage_value || helper.estimate?.summary?.salvage_value || '';
+        if (salvageValue) {
+          console.log('✅ Using salvage value from helper data:', salvageValue);
+        }
+      }
+      
+      // Priority 3: Try alternative field names as last resort
+      if (!salvageValue) {
+        const altSalvageField = document.getElementById('salvage_value') || document.getElementById('salvage-value');
+        if (altSalvageField && altSalvageField.value && altSalvageField.value.trim() !== '') {
+          const altSalvageValue = altSalvageField.value.replace(/[₪,\s]/g, '');
+          if (altSalvageValue && !isNaN(altSalvageValue) && altSalvageValue !== '0') {
+            salvageValue = altSalvageValue;
+            console.log('✅ Using salvage value from alternative UI field:', salvageValue);
+          }
+        }
+      }
+      
+      // Debug what we found
+      console.log('🔍 SALVAGE VALUE MAPPING DEBUG:', {
+        'Final salvage value': salvageValue,
+        'UI field value (raw)': salvageField?.value,
+        'UI field value (processed)': salvageField?.value?.replace(/[₪,\s]/g, ''),
+        'Helper claims_data.salvage_value': helper.claims_data?.salvage_value,
+        'Helper estimate.summary.salvage_value': helper.estimate?.summary?.salvage_value
+      });
+      
+      helper.estimate.summary.salvage_value = salvageValue;
       // Debug damage centers calculation - use exact path specified by user
       const damageCentersCount = helper.damage_assessment?.total_centers || '';
       
@@ -5658,7 +5702,14 @@
         'helper.estimate.summary.salvage_value': helper.estimate.summary.salvage_value,
         'helper.damage_assessment.damage_centers_summary.centers_count': helper.damage_assessment.damage_centers_summary.centers_count,
         // CRITICAL: Debug market value mapping for טוטאל-לוסט
-        'helper.estimate.vehicle.marketValue': helper.estimate.vehicle.marketValue
+        'helper.estimate.vehicle.marketValue': helper.estimate.vehicle.marketValue,
+        // CRITICAL: Debug salvage value sources
+        'salvage_value_sources': {
+          'helper.claims_data.salvage_value': helper.claims_data?.salvage_value,
+          'UI_field_salvageValue': document.getElementById('salvageValue')?.value,
+          'UI_field_salvage_value': document.getElementById('salvage_value')?.value,
+          'final_salvage_value': helper.estimate.summary.salvage_value
+        }
       });
       
       // Save updated helper structure
@@ -5883,10 +5934,18 @@
               'Market Value (שווי רכב)': placeholderValues.marketValue,
               'Salvage Value (שווי שרידים)': placeholderValues.salvageValue,
               'Market value source': helper.estimate?.vehicle?.marketValue,
+              'Salvage value source': helper.estimate?.summary?.salvage_value,
               'Helper data check': {
                 'helper.vehicle.market_value': helper.vehicle?.market_value,
                 'helper.claims_data.market_value': helper.claims_data?.market_value,
-                'helper.estimate.summary.market_value': helper.estimate?.summary?.market_value
+                'helper.estimate.summary.market_value': helper.estimate?.summary?.market_value,
+                'helper.claims_data.salvage_value': helper.claims_data?.salvage_value,
+                'helper.estimate.summary.salvage_value': helper.estimate?.summary?.salvage_value
+              },
+              'UI fields check': {
+                'salvageValue field': document.getElementById('salvageValue')?.value,
+                'salvage_value field': document.getElementById('salvage_value')?.value,
+                'salvage-value field': document.getElementById('salvage-value')?.value
               }
             });
             
