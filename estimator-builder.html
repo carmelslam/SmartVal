@@ -1137,23 +1137,35 @@
       💡 ניתן לערוך ולהתאים את רשימת הנספחים בהתאם לצרכים הספציפיים של הדוח.
     </div>
 
-    <!-- VAT Settings Section -->
+    <!-- VAT Settings Section - ENHANCED -->
     <div class="form-section" id="vat-settings" style="background: #fff3cd; border-left: 4px solid #ffc107;">
       <h3>הגדרות מע"מ</h3>
-      <div class="form-grid">
-        <div>
-          <label>אחוז מע"מ נוכחי:</label>
-          <input type="text" id="current-vat-rate" readonly style="font-weight: bold;" />
-        </div>
-        <div>
-          <label>עדכון ידני (למקרים חריגים):</label>
-          <input type="number" id="manual-vat-rate" placeholder="17" min="0" max="100" step="0.1" />
-          <button type="button" class="btn btn-secondary" onclick="updateVatRateEstimate()">עדכן</button>
-        </div>
+      
+      <!-- VAT Source Info -->
+      <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 13px; color: #495057;">
+        <strong>מקור שיעור מע"מ נוכחי:</strong> <span id="vat-source-display">טוען...</span><br>
+        <strong>עדכון אחרון:</strong> <span id="vat-updated-display">טוען...</span>
       </div>
-      <div style="margin-top: 10px; font-size: 14px; color: #856404;">
-        <strong>הערה:</strong> שינוי אחוז המע"מ ישפיע על כל החישובים בדף זה.
+      
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+        <label style="font-weight: bold; color: #495057;">שיעור מע"מ (%):</label>
+        <input type="number" id="vat-rate-input" min="0" max="100" step="0.1" 
+               style="width: 80px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" 
+               value="" placeholder="18">
+        <button type="button" onclick="updateVatRateEstimate()" 
+                style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+          עדכן מע"מ
+        </button>
+        <button type="button" onclick="resetVatRateFromAdmin()" 
+                style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+          אפס לערך מנהל
+        </button>
       </div>
+      
+      <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
+        💡 שינוי שיעור המע"מ ישפיע על כל החישובים באומדן זה. השינוי לא ישפיע על המקרים האחרים.
+      </div>
+      
       <div style="display: flex; justify-content: flex-start; gap: 15px; margin-top: 15px;">
         <button type="button" class="btn save-btn" onclick="saveWithFeedback(event, 'vat-settings')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">שמור</button>
       </div>
@@ -1324,6 +1336,67 @@
       
       // CRITICAL: Clean contaminated data first
       cleanContaminatedCachedData();
+      
+      // ADMIN HUB MESSAGE LISTENER - FOR VAT RATE UPDATES
+      window.addEventListener('message', (event) => {
+        if (event.data && typeof event.data === 'object') {
+          switch (event.data.type) {
+            case 'VAT_RATE_UPDATED':
+              // Admin hub notifies us of VAT rate change
+              const newVatRate = event.data.vatRate;
+              console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
+              
+              // Update helper.calculations.vat_rate directly (source of truth)
+              if (typeof window.setHelperVatRateFromAdmin === 'function') {
+                console.log('🎯 Calling setHelperVatRateFromAdmin with rate:', newVatRate);
+                const success = window.setHelperVatRateFromAdmin(newVatRate, 'admin_hub');
+                console.log(success ? '✅ Helper VAT rate updated successfully' : '❌ Failed to update helper VAT rate');
+              } else {
+                console.warn('⚠️ setHelperVatRateFromAdmin function not available');
+                // Fallback direct update
+                try {
+                  let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                  if (!helper.calculations) helper.calculations = {};
+                  helper.calculations.vat_rate = newVatRate;
+                  helper.calculations.vat_rate_source = 'admin_hub';
+                  helper.calculations.vat_rate_updated = new Date().toISOString();
+                  window.helper = helper;
+                  sessionStorage.setItem('helper', JSON.stringify(helper));
+                  console.log('✅ Fallback: Updated helper VAT rate directly');
+                } catch (error) {
+                  console.error('❌ Fallback VAT update failed:', error);
+                }
+              }
+              
+              // Refresh VAT display
+              if (typeof initVatDisplay === 'function') {
+                initVatDisplay();
+              }
+              
+              // Refresh all calculations
+              if (typeof refreshAllCalculations === 'function') {
+                refreshAllCalculations();
+              }
+              
+              break;
+              
+            case 'GET_VAT_RATE':
+              // Admin hub requests current VAT rate
+              const currentVat = window.getHelperVatRate ? window.getHelperVatRate() : 18;
+              event.source.postMessage({
+                type: 'VAT_RATE_RESPONSE',
+                vatRate: currentVat
+              }, event.origin);
+              break;
+              
+            default:
+              // Ignore unknown messages
+              break;
+          }
+        }
+      });
+      
+      console.log('✅ Admin hub message listener initialized');
       
       // Wait for MathEngine to be ready
       const waitForMathEngine = () => {
@@ -6176,81 +6249,280 @@
       }
     }
 
+    // ENHANCED VAT SYSTEM - COMPLETE RECALCULATION LIKE FINAL REPORT BUILDER
     function updateVatRateEstimate() {
       try {
-        console.log('💰 Update VAT rate');
+        const vatInput = document.getElementById('vat-rate-input');
+        const newRate = parseFloat(vatInput.value);
         
-        const manualVatField = document.getElementById('manual-vat-rate');
-        const currentVatField = document.getElementById('current-vat-rate');
-        
-        if (!manualVatField || !currentVatField) {
-          console.error('❌ VAT rate fields not found');
+        if (isNaN(newRate) || newRate < 0 || newRate > 100) {
+          alert('אנא הזן שיעור מע"מ חוקי (0-100)');
           return;
         }
         
-        const newRate = parseFloat(manualVatField.value) || 18;
+        console.log('💰 Updating VAT rate to:', newRate + '%');
         
         // Get current helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         helper = initializeEstimateSummaryStructure(helper);
         
-        // Store original rate if not already stored
-        if (helper.estimate.summary.vat_rate.original === 18 && newRate !== 18) {
-          // This is the first modification, store the original
-          helper.estimate.summary.vat_rate.original = 18;
-        }
+        const oldRate = helper.estimate.summary.vat_rate.current;
         
-        // Update VAT rate tracking in NEW STRUCTURE
+        // Update VAT rate in helper structure
         helper.estimate.summary.vat_rate.modified = newRate !== 18 ? newRate : null;
         helper.estimate.summary.vat_rate.current = newRate;
+        helper.estimate.summary.vat_rate.source = 'manual_session_override';
+        helper.estimate.summary.vat_rate.updated = new Date().toISOString();
         
-        // Update display
-        currentVatField.value = `${newRate}%`;
+        // CRITICAL: Update global calculations.vat_rate for getHelperVatRate() function
+        if (!helper.calculations) helper.calculations = {};
+        helper.calculations.vat_rate = newRate;
+        helper.calculations.vat_rate_source = 'manual_session_override';
+        helper.calculations.vat_rate_updated = new Date().toISOString();
         
-        // Save to helper
+        // Update MathEngine with session override
+        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+          MathEngine.setVatRate(newRate);
+          console.log('✅ MathEngine VAT rate updated to:', newRate + '%');
+        }
+        
+        // Update window.helper and sessionStorage
+        window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Update helper through function if available
-        if (typeof updateHelper === 'function') {
-          updateHelper('estimate.summary.vat_rate', helper.estimate.summary.vat_rate, 'vat_rate_update');
-        }
-        
-        console.log('✅ VAT rate updated in NEW STRUCTURE:', {
-          path: 'helper.estimate.summary.vat_rate',
-          original: helper.estimate.summary.vat_rate.original,
-          modified: helper.estimate.summary.vat_rate.modified,
-          current: helper.estimate.summary.vat_rate.current
+        console.log('✅ VAT rate updated:', {
+          old: oldRate,
+          new: newRate,
+          helper_path: 'estimate.summary.vat_rate.current',
+          calculations_path: 'calculations.vat_rate'
         });
         
-        // Trigger recalculation of any dependent fields if needed
-        if (typeof calculateSummaryTotals === 'function') {
-          calculateSummaryTotals();
+        // Update display
+        if (typeof initVatDisplay === 'function') {
+          initVatDisplay();
         }
         
-        // Clear manual input
-        manualVatField.value = '';
+        // CRITICAL: Trigger complete recalculation
+        if (typeof refreshAllCalculations === 'function') {
+          refreshAllCalculations();
+        } else {
+          // Fallback recalculations
+          if (typeof updateAllCostDisplays === 'function') {
+            updateAllCostDisplays();
+          }
+          if (typeof updateDamageCentersSubtotal === 'function') {
+            updateDamageCentersSubtotal();
+          }
+          if (typeof calculateSummaryTotals === 'function') {
+            calculateSummaryTotals();
+          }
+        }
         
-        alert(`אחוז המע"מ עודכן ל-${newRate}%`);
+        alert(`שיעור המע"מ עודכן ל-${newRate}%`);
         
       } catch (error) {
         console.error('❌ Error updating VAT rate:', error);
+        alert('שגיאה בעדכון שיעור המע"מ');
       }
     }
     
-    // LOAD VAT RATE FROM NEW STRUCTURE
+    // INIT VAT DISPLAY - ENHANCED LIKE FINAL REPORT BUILDER
+    function initVatDisplay() {
+      try {
+        console.log('🔄 Initializing VAT display...');
+        
+        // Get VAT rate from multiple sources with priority
+        let adminVatRate = null;
+        let vatSource = 'default';
+        
+        // Priority 1: Check admin hub rate
+        if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+          adminVatRate = MathEngine.getVatRate();
+          vatSource = 'admin_hub';
+        }
+        
+        // Priority 2: Check sessionStorage admin rate
+        if (adminVatRate === null) {
+          const storedRate = sessionStorage.getItem('globalVAT') || localStorage.getItem('globalVAT');
+          if (storedRate) {
+            adminVatRate = parseFloat(storedRate);
+            vatSource = 'stored_admin';
+          }
+        }
+        
+        // Priority 3: Check helper calculations
+        if (adminVatRate === null && window.helper?.calculations?.vat_rate) {
+          adminVatRate = window.helper.calculations.vat_rate;
+          vatSource = window.helper.calculations.vat_rate_source || 'helper';
+        }
+        
+        // Priority 4: Check estimate structure
+        if (adminVatRate === null && window.helper?.estimate?.summary?.vat_rate?.current) {
+          adminVatRate = window.helper.estimate.summary.vat_rate.current;
+          vatSource = 'estimate_structure';
+        }
+        
+        // Fallback to default
+        if (adminVatRate === null) {
+          adminVatRate = 18;
+          vatSource = 'default';
+        }
+        
+        // Update display elements
+        const vatInput = document.getElementById('vat-rate-input');
+        const sourceDisplay = document.getElementById('vat-source-display');
+        const updatedDisplay = document.getElementById('vat-updated-display');
+        
+        if (vatInput) vatInput.value = adminVatRate;
+        if (sourceDisplay) {
+          const sourceText = {
+            'admin_hub': 'מנהל מערכת',
+            'stored_admin': 'מנהל מערכת (מאוחסן)',
+            'manual_session_override': 'עודכן ידנית',
+            'helper': 'נתוני מערכת',
+            'estimate_structure': 'מבנה אומדן',
+            'default': 'ברירת מחדל'
+          };
+          sourceDisplay.textContent = sourceText[vatSource] || vatSource;
+        }
+        if (updatedDisplay) {
+          const updateTime = window.helper?.calculations?.vat_rate_updated || 
+                           window.helper?.estimate?.summary?.vat_rate?.updated;
+          updatedDisplay.textContent = updateTime ? 
+            new Date(updateTime).toLocaleString('he-IL') : 'לא עודכן';
+        }
+        
+        console.log(`✅ VAT display initialized: ${adminVatRate}% (${vatSource})`);
+        
+      } catch (error) {
+        console.warn('⚠️ Could not initialize VAT display:', error);
+        // Fallback initialization
+        const vatInput = document.getElementById('vat-rate-input');
+        if (vatInput) vatInput.value = 18;
+      }
+    }
+    
+    // RESET VAT RATE TO ADMIN VALUE
+    function resetVatRateFromAdmin() {
+      if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
+        try {
+          console.log('🔄 Resetting VAT rate to admin value...');
+          
+          // Get true admin rate (not from MathEngine which might have overrides)
+          let adminRate = 18; // Default admin rate
+          
+          // Check stored admin rate
+          const storedRate = sessionStorage.getItem('globalVAT') || localStorage.getItem('globalVAT');
+          if (storedRate) {
+            adminRate = parseFloat(storedRate);
+          }
+          
+          // Update both helper structures
+          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper = initializeEstimateSummaryStructure(helper);
+          
+          const oldRate = helper.estimate.summary.vat_rate.current;
+          
+          // Restore to admin rate
+          helper.estimate.summary.vat_rate.current = adminRate;
+          helper.estimate.summary.vat_rate.modified = null; // Clear override
+          helper.estimate.summary.vat_rate.source = 'admin_hub_restored';
+          helper.estimate.summary.vat_rate.updated = new Date().toISOString();
+          
+          // Update global calculations
+          if (!helper.calculations) helper.calculations = {};
+          helper.calculations.vat_rate = adminRate;
+          helper.calculations.vat_rate_source = 'admin_hub_restored';
+          helper.calculations.vat_rate_updated = new Date().toISOString();
+          
+          // Restore MathEngine to admin rate
+          if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+            MathEngine.setVatRate(adminRate);
+            console.log('✅ MathEngine VAT rate restored to admin:', adminRate + '%');
+          }
+          
+          // Update window.helper and save
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          console.log(`✅ VAT reset complete: ${oldRate}% → ${adminRate}% (admin)`);
+          
+          // Update display
+          initVatDisplay();
+          
+          // Trigger complete recalculation
+          if (typeof refreshAllCalculations === 'function') {
+            refreshAllCalculations();
+          } else {
+            // Fallback recalculations
+            if (typeof updateAllCostDisplays === 'function') {
+              updateAllCostDisplays();
+            }
+            if (typeof updateDamageCentersSubtotal === 'function') {
+              updateDamageCentersSubtotal();
+            }
+            if (typeof calculateSummaryTotals === 'function') {
+              calculateSummaryTotals();
+            }
+          }
+          
+          alert(`שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+          
+        } catch (error) {
+          console.error('❌ Error resetting VAT rate:', error);
+          alert('שגיאה באיפוס שיעור המע"מ');
+        }
+      }
+    }
+    
+    // COMPLETE RECALCULATION SYSTEM - LIKE FINAL REPORT BUILDER
+    function refreshAllCalculations() {
+      try {
+        console.log('🔄 Starting complete recalculation...');
+        
+        // 1. Update all damage center cost displays with new VAT rate
+        if (typeof updateAllCostDisplays === 'function') {
+          updateAllCostDisplays();
+          console.log('✅ Updated all damage center cost displays');
+        }
+        
+        // 2. Update damage centers subtotal with new VAT rate
+        if (typeof updateDamageCentersSubtotal === 'function') {
+          updateDamageCentersSubtotal();
+          console.log('✅ Updated damage centers subtotal');
+        }
+        
+        // 3. Update summary calculations
+        if (typeof calculateSummaryTotals === 'function') {
+          calculateSummaryTotals();
+          console.log('✅ Updated summary totals');
+        }
+        
+        // 4. Force refresh any visible calculation displays
+        setTimeout(() => {
+          // Trigger display updates for all cost fields
+          document.querySelectorAll('.total-with-vat-display, .cost-display').forEach(display => {
+            if (display.id && typeof updateCostDisplay === 'function') {
+              updateCostDisplay(display.id);
+            }
+          });
+          console.log('✅ Refreshed all calculation displays');
+        }, 100);
+        
+        console.log('✅ Complete recalculation finished');
+        
+      } catch (error) {
+        console.error('❌ Error during complete recalculation:', error);
+      }
+    }
+    
+    // LOAD VAT RATE SETTINGS - UPDATED FOR NEW UI
     function loadVatRateSettings(helper) {
       try {
-        const currentVatField = document.getElementById('current-vat-rate');
-        if (!currentVatField) return;
+        // Use new initialization function
+        initVatDisplay();
         
-        const vatRate = helper.estimate?.summary?.vat_rate?.current || 18;
-        currentVatField.value = `${vatRate}%`;
-        
-        console.log('✅ VAT rate loaded from NEW STRUCTURE:', {
-          current: vatRate,
-          original: helper.estimate?.summary?.vat_rate?.original,
-          modified: helper.estimate?.summary?.vat_rate?.modified
-        });
+        console.log('✅ VAT rate settings loaded');
         
       } catch (error) {
         console.error('❌ Error loading VAT rate settings:', error);
