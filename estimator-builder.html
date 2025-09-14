@@ -1322,6 +1322,9 @@
     function initializeEstimateBuilder() {
       console.log('🚀 Initializing Estimate Builder (Clean Version)');
       
+      // CRITICAL: Clean contaminated data first
+      cleanContaminatedCachedData();
+      
       // Wait for MathEngine to be ready
       const waitForMathEngine = () => {
         return new Promise((resolve) => {
@@ -5505,6 +5508,45 @@
     async function loadLegalText() {
       console.log('🚀 === STARTING loadLegalText() DEBUG ===');
       
+      // Step 0: CRITICAL - Clear all cached data that might contain hardcoded text
+      console.log('🧹 STEP 0 - Clearing potentially contaminated cached data');
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let needsClearing = false;
+        
+        // Check for contaminated legal text in helper
+        if (helper.estimate?.summary?.legal_text?.includes('12 ימי עבודה')) {
+          console.warn('🧹 Found contaminated legal text in helper.estimate.summary.legal_text - clearing');
+          delete helper.estimate.summary.legal_text;
+          needsClearing = true;
+        }
+        
+        // Check other potential locations
+        if (helper.legal_text?.includes('12 ימי עבודה')) {
+          console.warn('🧹 Found contaminated legal text in helper.legal_text - clearing');
+          delete helper.legal_text;
+          needsClearing = true;
+        }
+        
+        // Save cleaned helper back
+        if (needsClearing) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('✅ Cleaned contaminated cached data');
+        }
+        
+        // Clear LegalTextEngine cache to force fresh load
+        if (window.LegalTextEngine?.cachedTexts) {
+          window.LegalTextEngine.cachedTexts = null;
+          console.log('🧹 Cleared LegalTextEngine cache');
+        }
+        
+        // Mark that legal text is being updated (prevent force-populator interference)
+        sessionStorage.setItem('legalTextUpdating', 'true');
+        
+      } catch (error) {
+        console.error('⚠️ Error during cache cleaning:', error);
+      }
+      
       // Step 1: Check if LegalTextEngine exists
       console.log('🔍 Step 1 - LegalTextEngine availability:', {
         exists: !!window.LegalTextEngine,
@@ -5853,9 +5895,63 @@
           name: error.name
         });
         alert(`שגיאה בטעינת טקסט משפטי: ${error.message}`);
+      } finally {
+        // CRITICAL: Remove the flag that prevents force-populator interference
+        // But only after a delay to ensure our text has been set
+        setTimeout(() => {
+          sessionStorage.removeItem('legalTextUpdating');
+          console.log('🔓 Legal text update protection released');
+        }, 1000);
       }
       
       console.log('🏁 === END loadLegalText() DEBUG ===');
+    }
+    
+    // CRITICAL: Clean contaminated cached data function
+    function cleanContaminatedCachedData() {
+      console.log('🧹 === CLEANING CONTAMINATED CACHED DATA ===');
+      try {
+        let needsCleaning = false;
+        
+        // Clean helper data
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.estimate?.summary?.legal_text?.includes('12 ימי עבודה')) {
+          console.warn('🧹 Found contaminated legal text in helper - clearing');
+          delete helper.estimate.summary.legal_text;
+          needsCleaning = true;
+        }
+        
+        if (helper.legal_text?.includes('12 ימי עבודה')) {
+          console.warn('🧹 Found contaminated legal text in helper.legal_text - clearing');
+          delete helper.legal_text;
+          needsCleaning = true;
+        }
+        
+        if (needsCleaning) {
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('✅ Cleaned contaminated helper data');
+        }
+        
+        // Clear any cached legal texts in localStorage/sessionStorage
+        const storedLegalTexts = sessionStorage.getItem('legalTexts');
+        if (storedLegalTexts && storedLegalTexts.includes('12 ימי עבודה')) {
+          console.warn('🧹 Found contaminated legalTexts in sessionStorage - clearing');
+          sessionStorage.removeItem('legalTexts');
+        }
+        
+        // Clear LegalTextEngine cache if it exists and is contaminated
+        if (window.LegalTextEngine?.cachedTexts) {
+          const cachedTextsString = JSON.stringify(window.LegalTextEngine.cachedTexts);
+          if (cachedTextsString.includes('12 ימי עבודה')) {
+            console.warn('🧹 Found contaminated LegalTextEngine cache - clearing');
+            window.LegalTextEngine.cachedTexts = null;
+          }
+        }
+        
+        console.log('✅ Contaminated data cleanup complete');
+      } catch (error) {
+        console.error('❌ Error during contaminated data cleanup:', error);
+      }
     }
     
     // LOAD ESTIMATE ATTACHMENTS BASED ON TYPE

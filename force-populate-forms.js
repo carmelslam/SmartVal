@@ -74,6 +74,14 @@ class ForceFormPopulator {
 
   populateFormsFromHelper(isPeriodicCheck = false) {
     try {
+      // CRITICAL: Check if legal text is being updated - if so, skip this round to prevent interference
+      if (sessionStorage.getItem('legalTextUpdating') === 'true') {
+        if (!isPeriodicCheck) {
+          console.log('🔒 Skipping form population - legal text is being updated');
+        }
+        return;
+      }
+      
       if (!isPeriodicCheck) {
         console.log(`🔄 Force populating forms (attempt ${this.retryCount + 1}/${this.maxRetries})`);
       }
@@ -124,6 +132,12 @@ class ForceFormPopulator {
         
         if (element) {
           fieldsFound++;
+          
+          // CRITICAL: Never populate legal text field - it's managed by its own system
+          if (fieldId === 'legal-text-content') {
+            // Skip legal text field completely - it's managed by loadLegalText()
+            return;
+          }
           
           // Only populate if field is empty and we have a value
           // Special protection for damage_date_new - never override if user has manually set it
