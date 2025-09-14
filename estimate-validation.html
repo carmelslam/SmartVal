@@ -2044,25 +2044,48 @@
         damageBlocksCount: damageBlocks.length
       });
       
-      // Validate works - use calculated values (same as display)
+      // Validate works - use calculated values and update status
       if (totalWorks > 0) {
         validItems.push('damage_works');
+        document.getElementById('damage-works').textContent = '✓';
+        document.getElementById('damage-works').className = 'validation-status status-success';
       } else {
         issues.push('סה"כ עבודות חסר או אפס');
+        document.getElementById('damage-works').textContent = '✗';
+        document.getElementById('damage-works').className = 'validation-status status-error';
       }
       
-      // Validate parts - use calculated values (same as display) 
+      // Validate parts - use calculated values and update status 
       if (totalParts > 0) {
         validItems.push('damage_parts');
+        document.getElementById('damage-parts').textContent = '✓';
+        document.getElementById('damage-parts').className = 'validation-status status-success';
       } else {
         issues.push('סה"כ חלקים חסר או אפס');
+        document.getElementById('damage-parts').textContent = '✗';
+        document.getElementById('damage-parts').className = 'validation-status status-error';
       }
       
-      // Validate repairs - use calculated values (same as display)
-      if (totalRepairs > 0) {
-        validItems.push('damage_repairs');
+      // Validate centers count
+      if (damageBlocks.length > 0) {
+        validItems.push('damage_centers_count');
+        document.getElementById('damage-centers-count').textContent = '✓';
+        document.getElementById('damage-centers-count').className = 'validation-status status-success';
       } else {
-        issues.push('סה"כ תיקונים חסר או אפס');
+        issues.push('לא נמצאו מוקדי נזק מוגדרים');
+        document.getElementById('damage-centers-count').textContent = '✗';
+        document.getElementById('damage-centers-count').className = 'validation-status status-error';
+      }
+      
+      // Validate overall costs calculation
+      if (totalBeforeVat > 0) {
+        validItems.push('damage_costs');
+        document.getElementById('damage-costs').textContent = '✓';
+        document.getElementById('damage-costs').className = 'validation-status status-success';
+      } else {
+        issues.push('חישוב עלויות כולל נכשל');
+        document.getElementById('damage-costs').textContent = '✗';
+        document.getElementById('damage-costs').className = 'validation-status status-error';
       }
       
       // Validate total before VAT - use calculated values
@@ -2101,13 +2124,29 @@
         });
       }
       
-      // Check if all required data is available  
-      const hasRequiredData = validItems.length >= 4; // At least works, parts, repairs, and one total
+      // Check that ALL individual validation status elements show success
+      const damageWorksStatus = document.getElementById('damage-works')?.textContent;
+      const damagePartsStatus = document.getElementById('damage-parts')?.textContent;
+      const damageCentersStatus = document.getElementById('damage-centers-count')?.textContent;
+      const damageCostsStatus = document.getElementById('damage-costs')?.textContent;
       
+      const allIndividualItemsValid = damageWorksStatus === '✓' && 
+                                    damagePartsStatus === '✓' && 
+                                    damageCentersStatus === '✓' && 
+                                    damageCostsStatus === '✓';
+      
+      const hasRequiredData = validItems.length >= 4; // At least works, parts, repairs, and one total
       const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
       
+      console.log('🔍 Final validation check:', {
+        criticalErrors,
+        hasRequiredData,
+        allIndividualItemsValid,
+        individualStatus: { damageWorksStatus, damagePartsStatus, damageCentersStatus, damageCostsStatus }
+      });
+      
       return {
-        success: criticalErrors === 0 && hasRequiredData,
+        success: criticalErrors === 0 && hasRequiredData && allIndividualItemsValid,
         warnings: issues.filter(i => i.includes('אזהרה')).length,
         errors: criticalErrors,
         issues: issues,
