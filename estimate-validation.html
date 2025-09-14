@@ -2845,11 +2845,12 @@
       
       let leviHTML = '';
       
-      // 1. Base Price validation (using best available source)
+      // 1. Base Price validation (using estimate.vehicle.basePrice)
+      const estimateBasePrice = helper?.estimate?.vehicle?.basePrice || basePrice;
       leviHTML += createEnhancedValidationItem(
         'מחיר בסיס', 
-        basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : 'לא זמין', 
-        basePrice ? `₪${parseFloat(basePrice).toLocaleString()}` : 'לא זמין', 
+        estimateBasePrice ? `₪${parseFloat(estimateBasePrice).toLocaleString()}` : 'לא זמין', 
+        estimateBasePrice ? `₪${parseFloat(estimateBasePrice).toLocaleString()}` : 'לא זמין', 
         'levi_base_price'
       );
       
@@ -2906,13 +2907,14 @@
         });
       }
       
-      // Show placeholder if no adjustments found
+      // Show adjustments from valuation.adjustments_value or placeholder if not found
+      const valuationAdjustments = helper?.valuation?.adjustments_value;
       if (adjustmentCount === 0) {
-        console.log('📄 No adjustments found in market value section');
+        console.log('📄 No adjustments found in market value section, checking valuation.adjustments_value');
         leviHTML += createEnhancedValidationItem(
           'התאמות מחיר', 
-          'לא זמין',
-          'לא קיים בעזר', 
+          valuationAdjustments || 'לא זמין',
+          valuationAdjustments || 'לא קיים בעזר', 
           'levi_no_adjustments'
         );
       }
