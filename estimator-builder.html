@@ -6112,11 +6112,17 @@
           salvageValueField.value = `₪${summary.salvage_value.toLocaleString()}`;
         }
         
-        // Load legal text from new structure
+        // Load legal text from new structure - BUT CHECK FOR HARDCODED VALUES FIRST
         const legalTextField = document.getElementById('legal-text-content');
         if (legalTextField && summary.legal_text) {
-          legalTextField.value = summary.legal_text;
-          console.log('✅ Loaded legal text from NEW STRUCTURE');
+          // Check if the cached legal text contains hardcoded "12" - if so, don't load it
+          if (summary.legal_text.includes('12 ימי עבודה')) {
+            console.warn('⚠️ SKIPPING legal text from helper - contains hardcoded "12 ימי עבודה"');
+            console.warn('⚠️ This prevents overriding fresh legal text with stale cached data');
+          } else {
+            legalTextField.value = summary.legal_text;
+            console.log('✅ Loaded legal text from NEW STRUCTURE (clean content)');
+          }
         }
         
         // Load attachments from new structure
