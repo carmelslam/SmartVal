@@ -5618,22 +5618,20 @@
       
       // If the value is hardcoded "12", try to get actual dynamic value
       if (garageDaysValue === '12' || garageDaysValue === 12) {
-        console.warn('🚨 DETECTED HARDCODED garage days "12" in helper data - seeking dynamic value');
-        
         // Try alternative sources for garage days (in priority order)
         const formGarageDays = document.getElementById('garageDays')?.value;
         const altGarageDays = helper.estimate?.depreciation?.garageDays;
         
         if (formGarageDays && formGarageDays !== '12' && formGarageDays.trim() !== '') {
           garageDaysValue = formGarageDays;
-          console.log('✅ Using garage days from form field:', garageDaysValue);
+          console.log('🔧 Replaced hardcoded garage days with form value:', garageDaysValue);
         } else if (altGarageDays && altGarageDays !== '12' && altGarageDays !== 12) {
           garageDaysValue = altGarageDays;
-          console.log('✅ Using garage days from alternative helper path:', garageDaysValue);
+          console.log('🔧 Replaced hardcoded garage days with alternative value:', garageDaysValue);
         } else {
           // Clear the hardcoded value and leave empty for user to fill
           garageDaysValue = '';
-          console.warn('⚠️ Cleared hardcoded garage days "12" - field left empty for user input');
+          console.log('🔧 Cleared hardcoded garage days - field available for user input');
         }
       }
       
@@ -5834,7 +5832,6 @@
             // If garageDays is hardcoded "12", use dynamic value instead
             let actualGarageDays = placeholderValues.garageDays;
             if (actualGarageDays === '12' || actualGarageDays === 12) {
-              console.warn('🚨 DETECTED HARDCODED garageDays value "12" - fetching dynamic value');
               // Try to get actual garage days from form field or other sources
               const formGarageDays = document.getElementById('garageDays')?.value;
               const helperGarageDays = helper.depreciation?.garageDays;
@@ -5842,14 +5839,14 @@
               // Use form field if available and not hardcoded
               if (formGarageDays && formGarageDays !== '12' && formGarageDays.trim() !== '') {
                 actualGarageDays = formGarageDays;
-                console.log('✅ Using garage days from form field:', actualGarageDays);
+                console.log('🔧 Final garage days replacement - using form field:', actualGarageDays);
               } else if (helperGarageDays && helperGarageDays !== '12' && helperGarageDays !== 12) {
                 actualGarageDays = String(helperGarageDays);
-                console.log('✅ Using garage days from helper.depreciation:', actualGarageDays);
+                console.log('🔧 Final garage days replacement - using helper data:', actualGarageDays);
               } else {
                 // Last resort: leave as empty string to show placeholder wasn't replaced
                 actualGarageDays = '[ימי מוסך לא זמין]';
-                console.warn('⚠️ No valid garage days found - using fallback placeholder');
+                console.log('🔧 Final garage days replacement - using fallback placeholder');
               }
             }
             
@@ -5978,29 +5975,36 @@
         
         // Clean helper data
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let cleanedItems = [];
+        
         if (helper.estimate?.summary?.legal_text?.includes('12 ימי עבודה')) {
-          console.warn('🧹 Found contaminated legal text in helper - clearing');
           delete helper.estimate.summary.legal_text;
+          cleanedItems.push('legal text (estimate.summary)');
           needsCleaning = true;
         }
         
         if (helper.legal_text?.includes('12 ימי עבודה')) {
-          console.warn('🧹 Found contaminated legal text in helper.legal_text - clearing');
           delete helper.legal_text;
+          cleanedItems.push('legal text (root)');
           needsCleaning = true;
         }
         
         // CRITICAL: Also clean hardcoded "12" garage days values from helper
         if (helper.depreciation?.garageDays === '12' || helper.depreciation?.garageDays === 12) {
-          console.warn('🧹 Found hardcoded garage days "12" in helper.depreciation - clearing');
           delete helper.depreciation.garageDays;
+          cleanedItems.push('garage days (depreciation)');
           needsCleaning = true;
         }
         
         if (helper.estimate?.depreciation?.garageDays === '12' || helper.estimate?.depreciation?.garageDays === 12) {
-          console.warn('🧹 Found hardcoded garage days "12" in helper.estimate.depreciation - clearing');
           delete helper.estimate.depreciation.garageDays;
+          cleanedItems.push('garage days (estimate.depreciation)');
           needsCleaning = true;
+        }
+        
+        // Only show one consolidated message if items were cleaned
+        if (cleanedItems.length > 0) {
+          console.log(`🧹 Cleaned contaminated cached data: ${cleanedItems.join(', ')}`);
         }
         
         if (needsCleaning) {
