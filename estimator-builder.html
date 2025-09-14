@@ -1282,17 +1282,14 @@
     // CRITICAL: Define getHelperVatRate function - used by ALL calculations
     window.getHelperVatRate = function() {
       try {
-        // Priority 0: ALWAYS check the UI input first (most reliable)
-        const vatInput = document.getElementById('vat-rate-input');
-        if (vatInput && vatInput.value && parseFloat(vatInput.value) !== 18) {
-          const uiVatRate = parseFloat(vatInput.value);
-          if (!isNaN(uiVatRate) && uiVatRate >= 0 && uiVatRate <= 100) {
-            console.log('🎯 getHelperVatRate: Using UI input rate (highest priority):', uiVatRate + '%');
-            return uiVatRate;
-          }
+        // Priority 1: Manual session override in calculations (primary source)
+        if (window.helper?.calculations?.vat_rate && 
+            window.helper?.calculations?.vat_rate_source === 'manual_session_override') {
+          console.log('🎯 getHelperVatRate: Using manual override from calculations:', window.helper.calculations.vat_rate + '%');
+          return window.helper.calculations.vat_rate;
         }
         
-        // Priority 1: Manual session override in estimate structure
+        // Priority 2: Manual session override in estimate structure
         if (window.helper?.estimate?.summary?.vat_rate?.modified) {
           console.log('🎯 getHelperVatRate: Using manual override:', window.helper.estimate.summary.vat_rate.modified + '%');
           return window.helper.estimate.summary.vat_rate.modified;
@@ -6485,6 +6482,21 @@
           }
         }
         
+        // IMMEDIATE TEST: Check if calculations.vat_rate was actually updated
+        const immediateCheck = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🧪 IMMEDIATE TEST after VAT update:');
+        console.log('  Expected VAT rate:', newRate);
+        console.log('  calculations.vat_rate in storage:', immediateCheck.calculations?.vat_rate);
+        console.log('  window.helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+        
+        if (immediateCheck.calculations?.vat_rate !== newRate) {
+          console.error('🚨 CRITICAL: calculations.vat_rate was NOT updated correctly!');
+          console.error('  Expected:', newRate);
+          console.error('  Actual:', immediateCheck.calculations?.vat_rate);
+        } else {
+          console.log('✅ calculations.vat_rate updated correctly');
+        }
+        
         alert(`שיעור המע"מ עודכן ל-${newRate}%`);
         
         // FINAL VERIFICATION - Check if VAT rate persists after a short delay
@@ -6725,6 +6737,11 @@
     function refreshAllCalculations() {
       try {
         console.log('🔄 Starting complete recalculation...');
+        
+        // Debug: Check what VAT rate will be used for recalculations
+        console.log('🔍 VAT rate for recalculations:');
+        console.log('  getHelperVatRate():', window.getHelperVatRate ? window.getHelperVatRate() : 'function not available');
+        console.log('  calculations.vat_rate:', window.helper?.calculations?.vat_rate);
         
         // 1. Update all damage center cost displays with new VAT rate
         if (typeof updateAllCostDisplays === 'function') {
