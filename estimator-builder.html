@@ -5567,9 +5567,19 @@
       helper.estimate.depreciation.globalDepValue = helper.depreciation?.globalDepValue || '';
       helper.estimate.depreciation.garageDays = helper.depreciation?.garageDays || '';
       helper.estimate.summary.salvage_value = helper.claims_data?.salvage_value || '';
-      helper.damage_assessment.damage_centers_summary.centers_count = 
-        helper.damage_assessment?.summary?.total_centers || 
-        Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length || '';
+      // Debug damage centers calculation
+      const damageCentersCount = helper.damage_assessment?.summary?.total_centers || 
+                                Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length || 
+                                Object.keys(helper.damage_assessment?.centers || {}).length || '';
+      
+      console.log('🔍 DEBUG - Damage centers calculation:', {
+        'helper.damage_assessment?.summary?.total_centers': helper.damage_assessment?.summary?.total_centers,
+        'Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length': Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length,
+        'Object.keys(helper.damage_assessment?.centers || {}).length': Object.keys(helper.damage_assessment?.centers || {}).length,
+        'Final centers_count': damageCentersCount
+      });
+      
+      helper.damage_assessment.damage_centers_summary.centers_count = damageCentersCount;
         
       console.log('🔍 DEBUG - After mapping:', {
         'helper.estimate.vehicle.modelCode': helper.estimate.vehicle.modelCode,
@@ -5625,12 +5635,12 @@
         }
       });
       
-      // Step 5: Check DOM element
+      // Step 5: Check DOM element and clear any existing content
       const legalTextElement = document.getElementById('legal-text-content');
       console.log('🔍 Step 5 - DOM element check:', {
         elementExists: !!legalTextElement,
         elementType: legalTextElement?.tagName,
-        elementValue: legalTextElement?.value?.substring(0, 50) || 'empty'
+        currentValue: legalTextElement?.value?.substring(0, 100) || 'empty'
       });
       
       if (!legalTextElement) {
@@ -5639,8 +5649,18 @@
         return;
       }
       
+      // Clear any existing content to ensure fresh load
+      legalTextElement.value = '';
+      
       try {
         console.log('🔍 Step 6 - Calling LegalTextEngine.getProcessedText...');
+        console.log('🔍 Placeholder values being passed to engine:', placeholderValues);
+        
+        // Force refresh of LegalTextEngine cache to ensure fresh data
+        if (window.LegalTextEngine && typeof window.LegalTextEngine.refresh === 'function') {
+          await window.LegalTextEngine.refresh();
+          console.log('🔄 LegalTextEngine cache refreshed');
+        }
         
         // Use the centralized legal text engine for estimates
         const legalText = await window.LegalTextEngine.getProcessedText(
@@ -5652,8 +5672,15 @@
         console.log('🔍 Step 7 - Engine response:', {
           textReceived: !!legalText,
           textLength: legalText?.length || 0,
-          textPreview: legalText?.substring(0, 100) || 'empty'
+          textPreview: legalText?.substring(0, 200) || 'empty',
+          fullText: legalText // Show full text for debugging
         });
+        
+        // Check if placeholders are still in the text (not replaced)
+        const remainingPlaceholders = (legalText || '').match(/%[^%]+%/g);
+        if (remainingPlaceholders) {
+          console.warn('⚠️ WARNING: Unreplaced placeholders found:', remainingPlaceholders);
+        }
         
         if (legalText && legalText.trim()) {
           legalTextElement.value = legalText;
