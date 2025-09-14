@@ -3010,47 +3010,62 @@
         totalDamageCost: helper?.estimate?.calculations?.total_damage_cost
       });
       
-      // Use the SAME logic as validation function that works correctly
-      const worksFormatted = helper?.estimate?.totals?.damage_centers?.works?.formatted;
-      const partsFormatted = helper?.estimate?.totals?.damage_centers?.parts?.formatted;  
-      const repairsFormatted = helper?.estimate?.totals?.damage_centers?.repairs?.formatted;
-      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted;
-      const totalDamageCost = helper?.estimate?.calculations?.total_damage_cost;
-
-      console.log('🔍 Display function - Same values as validation:', {
-        worksFormatted, partsFormatted, repairsFormatted, totalBeforeVat, totalDamageCost
+      // Calculate totals directly from raw damage_blocks data (same as validation does)
+      const damageBlocks = helper?.expertise?.damage_blocks || [];
+      let totalParts = 0, totalWorks = 0, totalRepairs = 0;
+      
+      damageBlocks.forEach(block => {
+        totalParts += block.parts_cost || 0;
+        totalWorks += block.work_cost || 0; 
+        totalRepairs += block.repairs_cost || 0;
       });
       
-      // Simple direct field mapping with values that actually work
+      const totalBeforeVat = totalParts + totalWorks + totalRepairs;
+      const totalWithVat = Math.round(totalBeforeVat * 1.17); // 17% VAT
+      
+      // Format the calculated values
+      const worksFormatted = `₪${totalWorks.toLocaleString()}`;
+      const partsFormatted = `₪${totalParts.toLocaleString()}`;  
+      const repairsFormatted = `₪${totalRepairs.toLocaleString()}`;
+      const totalBeforeVatFormatted = `₪${totalBeforeVat.toLocaleString()}`;
+      const totalDamageCost = totalWithVat;
+
+      console.log('🔍 Display function - Calculated from raw data:', {
+        damageBlocks: damageBlocks.length,
+        totalParts, totalWorks, totalRepairs, totalBeforeVat, totalWithVat,
+        worksFormatted, partsFormatted, repairsFormatted, totalBeforeVatFormatted, totalDamageCost
+      });
+      
+      // Simple direct field mapping with calculated values
       const damageHTML = 
         createEnhancedValidationItem(
           'סה"כ עבודות',
-          worksFormatted || 'לא זמין',
-          worksFormatted || 'לא זמין',
+          worksFormatted,
+          worksFormatted,
           'damage_works'
         ) +
         createEnhancedValidationItem(
           'סה"כ חלקים',
-          partsFormatted || 'לא זמין',
-          partsFormatted || 'לא זמין',
+          partsFormatted,
+          partsFormatted,
           'damage_parts'
         ) +
         createEnhancedValidationItem(
           'סה"כ תיקונים',
-          repairsFormatted || 'לא זמין',
-          repairsFormatted || 'לא זמין',
+          repairsFormatted,
+          repairsFormatted,
           'damage_repairs'
         ) +
         createEnhancedValidationItem(
           'סך הכל נקודות לפני מע"מ',
-          totalBeforeVat || 'לא זמין',
-          totalBeforeVat || 'לא זמין',
+          totalBeforeVatFormatted,
+          totalBeforeVatFormatted,
           'damage_total_before_vat'
         ) +
         createEnhancedValidationItem(
           'סך הכל כולל מע"מ',
-          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
-          totalDamageCost ? `₪${totalDamageCost}` : 'לא זמין',
+          `₪${totalDamageCost.toLocaleString()}`,
+          `₪${totalDamageCost.toLocaleString()}`,
           'damage_total_with_vat'
         );
       
