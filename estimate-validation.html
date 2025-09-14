@@ -2037,12 +2037,12 @@
       // Populate damage validation items
       populateDamageValidationItems();
       
-      // Validate the fields we actually mapped (matching the screenshot)
-      const worksFormatted = helper?.estimate?.totals?.damage_centers?.works?.formatted;
-      const partsFormatted = helper?.estimate?.totals?.damage_centers?.parts?.formatted;
-      const repairsFormatted = helper?.estimate?.totals?.damage_centers?.repairs?.formatted;
-      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted;
-      const totalDamageCost = helper?.estimate?.calculations?.total_damage_cost;
+      // Validate the fields we actually mapped (using correct paths)
+      const worksFormatted = helper?.totals?.damage_centers?.works?.formatted || `₪${helper?.totals?.damage_centers?.works?.value || 0}`;
+      const partsFormatted = helper?.totals?.damage_centers?.parts?.formatted || `₪${helper?.totals?.damage_centers?.parts?.value || 0}`;
+      const repairsFormatted = helper?.totals?.damage_centers?.repairs?.formatted || `₪${helper?.totals?.damage_centers?.repairs?.value || 0}`;
+      const totalBeforeVat = helper?.total_before_vat?.formatted || `₪${helper?.total_before_vat?.value || 0}`;
+      const totalDamageCost = `₪${helper?.total_damage_cost || 0}`;
       
       console.log('🔍 Validation debug:', {
         worksFormatted,
@@ -2987,36 +2987,36 @@
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Simple direct field mapping to helper.estimate - matching screenshot mappings
+      // Simple direct field mapping to helper - using correct paths from console data
       const damageHTML = 
         createEnhancedValidationItem(
           'סה"כ עבודות',
-          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.works?.formatted || 'לא זמין',
+          helper?.totals?.damage_centers?.works?.formatted || `₪${helper?.totals?.damage_centers?.works?.value || 0}`,
+          helper?.totals?.damage_centers?.works?.formatted || `₪${helper?.totals?.damage_centers?.works?.value || 0}`,
           'damage_works'
         ) +
         createEnhancedValidationItem(
           'סה"כ חלקים',
-          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.parts?.formatted || 'לא זמין',
+          helper?.totals?.damage_centers?.parts?.formatted || `₪${helper?.totals?.damage_centers?.parts?.value || 0}`,
+          helper?.totals?.damage_centers?.parts?.formatted || `₪${helper?.totals?.damage_centers?.parts?.value || 0}`,
           'damage_parts'
         ) +
         createEnhancedValidationItem(
           'סה"כ תיקונים',
-          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.repairs?.formatted || 'לא זמין',
+          helper?.totals?.damage_centers?.repairs?.formatted || `₪${helper?.totals?.damage_centers?.repairs?.value || 0}`,
+          helper?.totals?.damage_centers?.repairs?.formatted || `₪${helper?.totals?.damage_centers?.repairs?.value || 0}`,
           'damage_repairs'
         ) +
         createEnhancedValidationItem(
           'סך הכל נקודות לפני מע"מ',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
+          helper?.total_before_vat?.formatted || `₪${helper?.total_before_vat?.value || 0}`,
+          helper?.total_before_vat?.formatted || `₪${helper?.total_before_vat?.value || 0}`,
           'damage_total_before_vat'
         ) +
         createEnhancedValidationItem(
           'סך הכל כולל מע"מ',
-          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
-          helper?.estimate?.calculations?.total_damage_cost || 'לא זמין',
+          `₪${helper?.total_damage_cost || 0}`,
+          `₪${helper?.total_damage_cost || 0}`,
           'damage_total_with_vat'
         );
       
