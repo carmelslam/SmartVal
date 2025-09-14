@@ -5699,12 +5699,45 @@
           rawTextPreview: rawText?.substring(0, 300) || 'empty'
         });
         
-        // Use the centralized legal text engine for estimates
-        const legalText = await window.LegalTextEngine.getProcessedText(
-          uiType, 
-          placeholderValues, 
-          'estimate'
-        );
+        // BYPASS LegalTextEngine and load directly from vault to avoid cache issues
+        let legalText = '';
+        try {
+          console.log('🔄 BYPASS: Loading directly from vault file...');
+          const vaultResponse = await fetch('final report legal texts vault.md');
+          const vaultContent = await vaultResponse.text();
+          const jsonMatch = vaultContent.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+          
+          if (jsonMatch) {
+            const vaultData = JSON.parse(jsonMatch[1]);
+            const vaultKey = uiType === 'אומדן ראשוני - אובדן להלכה' ? 'estimate_אובדן_להלכה' : 'estimate_טוטלוס';
+            legalText = vaultData[vaultKey]?.text || '';
+            
+            console.log('🔄 BYPASS: Raw vault text loaded:', {
+              vaultKey: vaultKey,
+              textLength: legalText.length,
+              containsPlaceholder: legalText.includes('%ימי_מוסך%'),
+              containsHardcoded12: legalText.includes('12 ימי')
+            });
+            
+            // Manual placeholder replacement
+            legalText = legalText.replace(/%קוד_דגם%/g, placeholderValues.modelCode || '');
+            legalText = legalText.replace(/%אחוז_נזק%/g, placeholderValues.damagePercent || '');
+            legalText = legalText.replace(/%ירידת_ערך%/g, placeholderValues.depreciation || '');
+            legalText = legalText.replace(/%מוקדי_נזק%/g, placeholderValues.damageCenters || '');
+            legalText = legalText.replace(/%ימי_מוסך%/g, placeholderValues.garageDays || '');
+            legalText = legalText.replace(/%שווי_שרידים%/g, placeholderValues.salvageValue || '');
+            
+            console.log('✅ BYPASS: Manual placeholder replacement complete');
+          }
+        } catch (bypassError) {
+          console.error('❌ BYPASS failed, falling back to LegalTextEngine:', bypassError);
+          // Fallback to original method
+          legalText = await window.LegalTextEngine.getProcessedText(
+            uiType, 
+            placeholderValues, 
+            'estimate'
+          );
+        }
         
         console.log('🔍 Step 7 - Engine response:', {
           textReceived: !!legalText,
