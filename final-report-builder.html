@@ -7928,6 +7928,22 @@
               const newVatRate = event.data.vatRate;
               console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
               
+              // Check if we should ignore admin updates due to recent manual override
+              const now = Date.now();
+              if (window.ignoreAdminVatUntil && now < window.ignoreAdminVatUntil) {
+                const remainingTime = Math.ceil((window.ignoreAdminVatUntil - now) / 1000);
+                console.log(`🛡️ IGNORING admin hub VAT update due to recent manual override (${remainingTime}s remaining) (final-report)`);
+                console.log('💡 Manual session override takes precedence');
+                break; // Exit without updating
+              }
+              
+              // Clear protection flags if expired
+              if (window.ignoreAdminVatUntil && now >= window.ignoreAdminVatUntil) {
+                window.ignoreAdminVatUntil = null;
+                window.lastManualVatUpdate = null;
+                console.log('🔓 Manual VAT override protection expired, admin updates allowed (final-report)');
+              }
+              
               // CRITICAL: Update helper.calculations.vat_rate directly (source of truth)
               console.log('🔍 Checking setHelperVatRateFromAdmin availability:', typeof window.setHelperVatRateFromAdmin);
               
@@ -14889,6 +14905,11 @@
       if (!helper.calculations) helper.calculations = {};
       
       const oldRate = helper.calculations.vat_rate;
+      
+      // Set protection flags to ignore admin hub updates for 10 seconds
+      window.lastManualVatUpdate = Date.now();
+      window.ignoreAdminVatUntil = Date.now() + 10000; // 10 seconds protection
+      console.log('🛡️ Manual VAT override protection activated for 10 seconds (final-report)');
       
       // CRITICAL: Create SESSION-ONLY override (NEVER touch admin hub)
       // 1. Update helper.calculations.vat_rate (session override)

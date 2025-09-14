@@ -1289,6 +1289,9 @@
         registration: [],
         allAdjustments: []
       },
+      // VAT override protection
+      lastManualVatUpdate: null,
+      ignoreAdminVatUntil: null,
       depreciation: {
         items: [],
         global: {}
@@ -1374,6 +1377,22 @@
               // Admin hub notifies us of VAT rate change
               const newVatRate = event.data.vatRate;
               console.log('📢 Received VAT rate update from admin hub:', newVatRate + '%');
+              
+              // Check if we should ignore admin updates due to recent manual override
+              const now = Date.now();
+              if (EstimateBuilderState.ignoreAdminVatUntil && now < EstimateBuilderState.ignoreAdminVatUntil) {
+                const remainingTime = Math.ceil((EstimateBuilderState.ignoreAdminVatUntil - now) / 1000);
+                console.log(`🛡️ IGNORING admin hub VAT update due to recent manual override (${remainingTime}s remaining)`);
+                console.log('💡 Manual session override takes precedence');
+                break; // Exit without updating
+              }
+              
+              // Clear protection flags if expired
+              if (EstimateBuilderState.ignoreAdminVatUntil && now >= EstimateBuilderState.ignoreAdminVatUntil) {
+                EstimateBuilderState.ignoreAdminVatUntil = null;
+                EstimateBuilderState.lastManualVatUpdate = null;
+                console.log('🔓 Manual VAT override protection expired, admin updates allowed');
+              }
               
               // Update helper.calculations.vat_rate directly (source of truth)
               if (typeof window.setHelperVatRateFromAdmin === 'function') {
@@ -6285,6 +6304,11 @@
         }
         
         console.log('💰 Updating VAT rate to:', newRate + '%');
+        
+        // Set protection flags to ignore admin hub updates for 10 seconds
+        EstimateBuilderState.lastManualVatUpdate = Date.now();
+        EstimateBuilderState.ignoreAdminVatUntil = Date.now() + 10000; // 10 seconds protection
+        console.log('🛡️ Manual VAT override protection activated for 10 seconds');
         
         // Get current helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
