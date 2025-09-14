@@ -1279,6 +1279,52 @@
       }
     };
     
+    // CRITICAL: Define getHelperVatRate function - used by ALL calculations
+    window.getHelperVatRate = function() {
+      try {
+        // Priority 1: Manual session override in estimate structure (highest priority)
+        if (window.helper?.estimate?.summary?.vat_rate?.modified) {
+          console.log('🎯 getHelperVatRate: Using manual override:', window.helper.estimate.summary.vat_rate.modified + '%');
+          return window.helper.estimate.summary.vat_rate.modified;
+        }
+        
+        // Priority 2: Manual session override in calculations
+        if (window.helper?.calculations?.vat_rate && 
+            window.helper?.calculations?.vat_rate_source === 'manual_session_override') {
+          console.log('🎯 getHelperVatRate: Using manual override from calculations:', window.helper.calculations.vat_rate + '%');
+          return window.helper.calculations.vat_rate;
+        }
+        
+        // Priority 3: Current estimate rate
+        if (window.helper?.estimate?.summary?.vat_rate?.current) {
+          return window.helper.estimate.summary.vat_rate.current;
+        }
+        
+        // Priority 4: Helper calculations (any source)
+        if (window.helper?.calculations?.vat_rate) {
+          return window.helper.calculations.vat_rate;
+        }
+        
+        // Priority 5: MathEngine
+        if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+          return MathEngine.getVatRate();
+        }
+        
+        // Priority 6: Session storage
+        const storedVat = sessionStorage.getItem('globalVAT');
+        if (storedVat) {
+          return parseFloat(storedVat);
+        }
+        
+        // Default fallback
+        return 18;
+        
+      } catch (error) {
+        console.error('❌ Error in getHelperVatRate:', error);
+        return 18;
+      }
+    };
+    
     // Global state object to avoid conflicts
     const EstimateBuilderState = {
       isUpdating: false,
@@ -1846,12 +1892,37 @@
         const attachments = document.getElementById('attachments-content')?.value || '';
         if (attachments && helper.estimate.summary) helper.estimate.summary.attachments = [attachments];
         
+        // CRITICAL: Preserve VAT rate overrides during save
+        const currentVatInput = document.getElementById('vat-rate-input');
+        if (currentVatInput && currentVatInput.value && parseFloat(currentVatInput.value) !== 18) {
+          // User has manually set VAT rate - preserve it
+          const manualVatRate = parseFloat(currentVatInput.value);
+          console.log('💰 Preserving manual VAT rate during save:', manualVatRate + '%');
+          
+          // Ensure estimate structure exists
+          if (!helper.estimate.summary) helper.estimate.summary = {};
+          if (!helper.estimate.summary.vat_rate) helper.estimate.summary.vat_rate = {};
+          
+          // Preserve manual override
+          helper.estimate.summary.vat_rate.modified = manualVatRate;
+          helper.estimate.summary.vat_rate.current = manualVatRate;
+          helper.estimate.summary.vat_rate.source = 'manual_session_override';
+          helper.estimate.summary.vat_rate.updated = new Date().toISOString();
+          
+          // Also preserve in calculations
+          if (!helper.calculations) helper.calculations = {};
+          helper.calculations.vat_rate = manualVatRate;
+          helper.calculations.vat_rate_source = 'manual_session_override';
+          helper.calculations.vat_rate_updated = new Date().toISOString();
+        }
+        
         // Preserve all existing detailed data (adjustments, calculations, damage_centers, etc.)
         console.log('✅ Preserving existing estimate data:', {
           adjustments: !!helper.estimate.adjustments,
           calculations: !!helper.estimate.calculations,
           damage_centers: !!helper.estimate.damage_centers,
-          summary: !!helper.estimate.summary
+          summary: !!helper.estimate.summary,
+          vatRate: helper.calculations?.vat_rate
         });
         helper.estimate.savedAt = new Date().toISOString();
         
@@ -6385,54 +6456,71 @@
       try {
         console.log('🔄 Initializing VAT display...');
         
-        // Get VAT rate from multiple sources with priority
-        let adminVatRate = null;
+        // Get VAT rate with CORRECT priority (manual overrides take precedence)
+        let displayVatRate = null;
         let vatSource = 'default';
         
-        // Priority 1: Check admin hub rate
-        if (typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
-          adminVatRate = MathEngine.getVatRate();
+        // Priority 1: Check for manual session override in estimate structure
+        if (window.helper?.estimate?.summary?.vat_rate?.modified) {
+          displayVatRate = window.helper.estimate.summary.vat_rate.modified;
+          vatSource = 'manual_session_override';
+          console.log('🎯 Using manual session override from estimate.summary:', displayVatRate + '%');
+        }
+        
+        // Priority 2: Check helper calculations for session override
+        if (displayVatRate === null && window.helper?.calculations?.vat_rate && 
+            window.helper?.calculations?.vat_rate_source === 'manual_session_override') {
+          displayVatRate = window.helper.calculations.vat_rate;
+          vatSource = 'manual_session_override';
+          console.log('🎯 Using manual session override from calculations:', displayVatRate + '%');
+        }
+        
+        // Priority 3: Check current estimate rate (even if not modified)
+        if (displayVatRate === null && window.helper?.estimate?.summary?.vat_rate?.current) {
+          displayVatRate = window.helper.estimate.summary.vat_rate.current;
+          vatSource = window.helper.estimate.summary.vat_rate.source || 'estimate';
+        }
+        
+        // Priority 4: Check helper calculations (non-override)
+        if (displayVatRate === null && window.helper?.calculations?.vat_rate) {
+          displayVatRate = window.helper.calculations.vat_rate;
+          vatSource = window.helper.calculations.vat_rate_source || 'helper';
+        }
+        
+        // Priority 5: Check admin hub rate
+        if (displayVatRate === null && typeof MathEngine !== 'undefined' && MathEngine.getVatRate) {
+          displayVatRate = MathEngine.getVatRate();
           vatSource = 'admin_hub';
         }
         
-        // Priority 2: Check sessionStorage admin rate
-        if (adminVatRate === null) {
+        // Priority 6: Check sessionStorage admin rate
+        if (displayVatRate === null) {
           const storedRate = sessionStorage.getItem('globalVAT') || localStorage.getItem('globalVAT');
           if (storedRate) {
-            adminVatRate = parseFloat(storedRate);
+            displayVatRate = parseFloat(storedRate);
             vatSource = 'stored_admin';
           }
         }
         
-        // Priority 3: Check helper calculations
-        if (adminVatRate === null && window.helper?.calculations?.vat_rate) {
-          adminVatRate = window.helper.calculations.vat_rate;
-          vatSource = window.helper.calculations.vat_rate_source || 'helper';
-        }
-        
-        // Priority 4: Check estimate structure
-        if (adminVatRate === null && window.helper?.estimate?.summary?.vat_rate?.current) {
-          adminVatRate = window.helper.estimate.summary.vat_rate.current;
-          vatSource = 'estimate_structure';
-        }
-        
-        // Fallback to default
-        if (adminVatRate === null) {
-          adminVatRate = 18;
+        // Priority 7: Default fallback
+        if (displayVatRate === null) {
+          displayVatRate = 18;
           vatSource = 'default';
         }
+        
+        console.log('📊 Final VAT rate for display:', displayVatRate + '% (source: ' + vatSource + ')');
         
         // Update display elements
         const vatInput = document.getElementById('vat-rate-input');
         const sourceDisplay = document.getElementById('vat-source-display');
         const updatedDisplay = document.getElementById('vat-updated-display');
         
-        if (vatInput) vatInput.value = adminVatRate;
+        if (vatInput) vatInput.value = displayVatRate;
         if (sourceDisplay) {
           const sourceText = {
+            'manual_session_override': 'הגדרה ידנית (הפעלה)',
             'admin_hub': 'מנהל מערכת',
             'stored_admin': 'מנהל מערכת (מאוחסן)',
-            'manual_session_override': 'עודכן ידנית',
             'helper': 'נתוני מערכת',
             'estimate_structure': 'מבנה אומדן',
             'default': 'ברירת מחדל'
