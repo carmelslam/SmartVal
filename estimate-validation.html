@@ -1195,6 +1195,14 @@
       `;
     }
 
+    // Format currency values for display
+    function formatCurrency(value) {
+      if (!value || isNaN(value)) return 'לא זמין';
+      const number = parseFloat(value);
+      if (number === 0) return 'לא זמין';
+      return `₪${number.toLocaleString('he-IL')}`;
+    }
+
     // Populate enhanced validation items for vehicle section
     function populateEnhancedValidationItems() {
       const container = document.getElementById('vehicle-validation-items');
@@ -1220,29 +1228,44 @@
       console.log('🔍 Debug validation data:', data);
       console.log('🔍 Debug helper data:', helper);
       
+      // Extract actual values from helper data structure based on session storage
+      const vehicleData = helper?.vehicle || {};
+      const leviData = helper?.levi_report || {};
+      const estimateData = helper?.estimate_summary || {};
+      
+      // Debug: Show actual data structure for mapping
+      console.log('🔍 Vehicle data extraction:', {
+        vehicleData,
+        leviData,
+        estimateData,
+        basePrice: vehicleData?.basePrice || leviData?.base_price || estimateData?.base_price,
+        marketValue: vehicleData?.marketValue || leviData?.final_price || leviData?.market_value,
+        adjustments: leviData?.adjustments
+      });
+      
       container.innerHTML = 
         createEnhancedValidationItem(
           'מספר רכב', 
-          data?.plate || data?.car_details?.plate || '', 
-          helper?.plate || helper?.meta?.plate || helper?.car_details?.plate || 'לא מוגדר', 
+          data?.plate || vehicleData?.plate || '', 
+          vehicleData?.plate || helper?.plate || helper?.meta?.plate || 'לא מוגדר', 
           'plate'
         ) +
         createEnhancedValidationItem(
           'יצרן', 
-          data?.car_details?.manufacturer || '', 
-          helper?.manufacturer || helper?.car_details?.manufacturer || helper?.vehicle?.manufacturer || 'לא מוגדר', 
+          data?.car_details?.manufacturer || vehicleData?.manufacturer || '', 
+          vehicleData?.manufacturer || helper?.manufacturer || 'לא מוגדר', 
           'manufacturer'
         ) +
         createEnhancedValidationItem(
           'דגם', 
-          data?.car_details?.model || '', 
-          helper?.model || helper?.car_details?.model || helper?.vehicle?.model || 'לא מוגדר', 
+          data?.car_details?.model || vehicleData?.model || '', 
+          vehicleData?.model || helper?.model || 'לא מוגדר', 
           'model'
         ) +
         createEnhancedValidationItem(
           'שנת יצור', 
-          data?.car_details?.year || '', 
-          helper?.year || helper?.car_details?.year || helper?.vehicle?.year || 'לא מוגדר', 
+          data?.car_details?.year || vehicleData?.year || '', 
+          vehicleData?.year || helper?.year || 'לא מוגדר', 
           'year'
         ) +
         createEnhancedValidationItem(
@@ -1256,6 +1279,24 @@
           data?.client?.insurance_company || '', 
           helper?.insurance_company || helper?.client?.insurance_company || 'לא מוגדר', 
           'insurance'
+        ) +
+        createEnhancedValidationItem(
+          'מחיר בסיס', 
+          formatCurrency(vehicleData?.basePrice || leviData?.base_price || estimateData?.base_price || 0),
+          formatCurrency(vehicleData?.basePrice || leviData?.base_price || estimateData?.base_price || helper?.base_price || 0), 
+          'base_price'
+        ) +
+        createEnhancedValidationItem(
+          'שווי שוק קופני', 
+          formatCurrency(vehicleData?.marketValue || leviData?.final_price || leviData?.market_value || estimateData?.market_value || 0),
+          formatCurrency(vehicleData?.marketValue || leviData?.final_price || leviData?.market_value || estimateData?.market_value || helper?.market_value || 0), 
+          'market_value'
+        ) +
+        createEnhancedValidationItem(
+          'התאמות מחיר', 
+          (leviData?.adjustments && leviData.adjustments.length > 0) ? `${leviData.adjustments.length} התאמות` : 'לא זמין',
+          (leviData?.adjustments && leviData.adjustments.length > 0) ? `${leviData.adjustments.length} התאמות נטענו` : 'לא זמין', 
+          'price_adjustments'
         );
     }
 
