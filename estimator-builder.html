@@ -6422,14 +6422,24 @@
           calculations_path: 'calculations.vat_rate'
         });
         
+        // DEBUGGING: Verify the update was successful
+        console.log('🔍 Verification after update:');
+        console.log('  window.helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+        console.log('  helper.calculations.vat_rate:', helper.calculations?.vat_rate);
+        console.log('  getHelperVatRate():', window.getHelperVatRate ? window.getHelperVatRate() : 'function not available');
+        
         // Update display
         if (typeof initVatDisplay === 'function') {
+          console.log('🔄 Calling initVatDisplay...');
           initVatDisplay();
+          console.log('🔍 After initVatDisplay - calculations.vat_rate:', window.helper?.calculations?.vat_rate);
         }
         
         // CRITICAL: Trigger complete recalculation
         if (typeof refreshAllCalculations === 'function') {
+          console.log('🔄 Calling refreshAllCalculations...');
           refreshAllCalculations();
+          console.log('🔍 After refreshAllCalculations - calculations.vat_rate:', window.helper?.calculations?.vat_rate);
         } else {
           // Fallback recalculations
           if (typeof updateAllCostDisplays === 'function') {
@@ -6445,9 +6455,17 @@
         
         alert(`שיעור המע"מ עודכן ל-${newRate}%`);
         
+        // FINAL VERIFICATION - Check if VAT rate persists after a short delay
+        setTimeout(() => {
+          console.log('🕐 Final verification (1 second later):');
+          console.log('  sessionStorage calculations.vat_rate:', JSON.parse(sessionStorage.getItem('helper') || '{}').calculations?.vat_rate);
+          console.log('  window.helper calculations.vat_rate:', window.helper?.calculations?.vat_rate);
+          console.log('  getHelperVatRate():', window.getHelperVatRate ? window.getHelperVatRate() : 'function not available');
+        }, 1000);
+        
       } catch (error) {
         console.error('❌ Error updating VAT rate:', error);
-        alert('שגיאה בעדכון שיעור המע"מ');
+        alert('שגיאה בעדכון שיעור המع"מ');
       }
     }
     
