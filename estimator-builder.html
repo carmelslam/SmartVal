@@ -5550,6 +5550,17 @@
       if (!helper.damage_assessment) helper.damage_assessment = {};
       if (!helper.damage_assessment.damage_centers_summary) helper.damage_assessment.damage_centers_summary = {};
       
+      // Debug current helper data before mapping
+      console.log('🔍 DEBUG - Current helper data:', {
+        'car_details.model_code': helper.car_details?.model_code,
+        'vehicle.model_code': helper.vehicle?.model_code,
+        'depreciation.globalDep1': helper.depreciation?.globalDep1,
+        'depreciation.globalDepValue': helper.depreciation?.globalDepValue,
+        'depreciation.garageDays': helper.depreciation?.garageDays,
+        'claims_data.salvage_value': helper.claims_data?.salvage_value,
+        'damage_assessment structure': helper.damage_assessment
+      });
+      
       // Map existing data to the required placeholder paths
       helper.estimate.vehicle.modelCode = helper.car_details?.model_code || helper.vehicle?.model_code || '';
       helper.estimate.depreciation.globalDep1 = helper.depreciation?.globalDep1 || '';
@@ -5559,23 +5570,32 @@
       helper.damage_assessment.damage_centers_summary.centers_count = 
         helper.damage_assessment?.summary?.total_centers || 
         Object.keys(helper.damage_assessment?.damage_centers_summary || {}).length || '';
+        
+      console.log('🔍 DEBUG - After mapping:', {
+        'helper.estimate.vehicle.modelCode': helper.estimate.vehicle.modelCode,
+        'helper.estimate.depreciation.globalDep1': helper.estimate.depreciation.globalDep1,
+        'helper.estimate.depreciation.globalDepValue': helper.estimate.depreciation.globalDepValue,
+        'helper.estimate.depreciation.garageDays': helper.estimate.depreciation.garageDays,
+        'helper.estimate.summary.salvage_value': helper.estimate.summary.salvage_value,
+        'helper.damage_assessment.damage_centers_summary.centers_count': helper.damage_assessment.damage_centers_summary.centers_count
+      });
       
       // Save updated helper structure
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      // Build placeholder values using EXACT user-specified paths
+      // Build placeholder values with property names that LegalTextEngine expects
       const placeholderValues = {
         ...(helper.vehicle || {}),
         ...(helper.depreciation || {}),
         ...(helper.estimate || {}),
         ...(helper.general || {}),
-        // EXACT mappings as specified by user - using the provided helper paths
-        'קוד_דגם': helper.estimate?.vehicle?.modelCode || '',
-        'אחוז_נזק': helper.estimate?.depreciation?.globalDep1 || '',
-        'ירידת_ערך': helper.estimate?.depreciation?.globalDepValue || '',
-        'מוקדי_נזק': helper.damage_assessment?.damage_centers_summary?.centers_count || '',
-        'ימי_מוסך': helper.estimate?.depreciation?.garageDays || '',
-        'שווי_שרידים': helper.estimate?.summary?.salvage_value || ''
+        // Map helper data to the property names LegalTextEngine expects - ensure strings
+        modelCode: String(helper.estimate?.vehicle?.modelCode || ''),
+        damagePercent: String(helper.estimate?.depreciation?.globalDep1 || ''),
+        depreciation: String(helper.estimate?.depreciation?.globalDepValue || ''),
+        damageCenters: String(helper.damage_assessment?.damage_centers_summary?.centers_count || ''),
+        garageDays: String(helper.estimate?.depreciation?.garageDays || ''),
+        salvageValue: String(helper.estimate?.summary?.salvage_value || '')
       };
       
       console.log('🔍 Step 4 - Placeholder values sample:', {
@@ -5585,14 +5605,14 @@
           שווי_רכב: placeholderValues.שווי_רכב,
           ירידת_ערך: placeholderValues.ירידת_ערך
         },
-        // Debug critical placeholder mappings using EXACT user-specified paths
+        // Debug critical placeholder mappings for LegalTextEngine
         criticalMappings: {
-          קוד_דגם: placeholderValues['קוד_דגם'],
-          אחוז_נזק: placeholderValues['אחוז_נזק'],
-          ירידת_ערך: placeholderValues['ירידת_ערך'],
-          מוקדי_נזק: placeholderValues['מוקדי_נזק'],
-          ימי_מוסך: placeholderValues['ימי_מוסך'],
-          שווי_שרידים: placeholderValues['שווי_שרידים']
+          modelCode: placeholderValues.modelCode,
+          damagePercent: placeholderValues.damagePercent,
+          depreciation: placeholderValues.depreciation,
+          damageCenters: placeholderValues.damageCenters,
+          garageDays: placeholderValues.garageDays,
+          salvageValue: placeholderValues.salvageValue
         },
         // Debug helper structure for troubleshooting
         helperStructureCheck: {
