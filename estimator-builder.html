@@ -1282,7 +1282,17 @@
     // CRITICAL: Define getHelperVatRate function - used by ALL calculations
     window.getHelperVatRate = function() {
       try {
-        // Priority 1: Manual session override in estimate structure (highest priority)
+        // Priority 0: ALWAYS check the UI input first (most reliable)
+        const vatInput = document.getElementById('vat-rate-input');
+        if (vatInput && vatInput.value && parseFloat(vatInput.value) !== 18) {
+          const uiVatRate = parseFloat(vatInput.value);
+          if (!isNaN(uiVatRate) && uiVatRate >= 0 && uiVatRate <= 100) {
+            console.log('🎯 getHelperVatRate: Using UI input rate (highest priority):', uiVatRate + '%');
+            return uiVatRate;
+          }
+        }
+        
+        // Priority 1: Manual session override in estimate structure
         if (window.helper?.estimate?.summary?.vat_rate?.modified) {
           console.log('🎯 getHelperVatRate: Using manual override:', window.helper.estimate.summary.vat_rate.modified + '%');
           return window.helper.estimate.summary.vat_rate.modified;
@@ -6399,6 +6409,18 @@
         helper.calculations.vat_rate_source = 'manual_session_override';
         helper.calculations.vat_rate_updated = new Date().toISOString();
         
+        // FORCE UPDATE: Ensure the change is immediately applied everywhere
+        console.log('🔥 FORCING calculations.vat_rate update to:', newRate + '%');
+        
+        // Update in sessionStorage immediately with force
+        const currentSession = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (!currentSession.calculations) currentSession.calculations = {};
+        currentSession.calculations.vat_rate = newRate;
+        currentSession.calculations.vat_rate_source = 'manual_session_override';
+        currentSession.calculations.vat_rate_updated = new Date().toISOString();
+        sessionStorage.setItem('helper', JSON.stringify(currentSession));
+        console.log('🔥 FORCED sessionStorage update - calculations.vat_rate:', currentSession.calculations.vat_rate);
+        
         // Update MathEngine with session override (DO NOT update admin hub core rate)
         if (typeof MathEngine !== 'undefined' && MathEngine.setSessionVatRate) {
           // Use the session-only VAT rate update method
@@ -6414,6 +6436,16 @@
         // Update window.helper and sessionStorage
         window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // DOUBLE-CHECK: Force window.helper.calculations.vat_rate to be correct
+        if (window.helper && (!window.helper.calculations || window.helper.calculations.vat_rate !== newRate)) {
+          console.log('🔥 FORCING window.helper.calculations.vat_rate correction');
+          if (!window.helper.calculations) window.helper.calculations = {};
+          window.helper.calculations.vat_rate = newRate;
+          window.helper.calculations.vat_rate_source = 'manual_session_override';
+          window.helper.calculations.vat_rate_updated = new Date().toISOString();
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        }
         
         console.log('✅ VAT rate updated:', {
           old: oldRate,
