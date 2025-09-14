@@ -235,7 +235,8 @@ class LegalTextEngine {
       '%סיכום%': values.summary || '[סיכום]',
       '%סיכום_גלובלי%': values.globalSummary || '[סיכום גלובלי]',
       '%ימי_מוסך%': values.garageDays || '[ימי מוסך]',
-      '%שווי_רכב%': values.carValue || '[שווי רכב]',
+      '%שווי_רכב%': values.marketValue || values.carValue || '[שווי רכב]',
+      '%שווי רכב%': values.marketValue || values.carValue || '[שווי רכב]', // Alternative with space
       '%שווי_שרידים%': values.salvageValue || '[שווי שרידים]',
       '%שווי_פיצוי%': values.compensation || '[שווי פיצוי]',
       '%מחיר_מכירה%': values.salePrice || '[מחיר מכירה]',

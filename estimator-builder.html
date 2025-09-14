@@ -5613,6 +5613,9 @@
       helper.estimate.depreciation.globalDep1 = helper.depreciation?.globalDep1 || '';
       helper.estimate.depreciation.globalDepValue = helper.depreciation?.globalDepValue || '';
       
+      // CRITICAL: Map market value for אומדן טוטאל-לוסט
+      helper.estimate.vehicle.marketValue = helper.vehicle?.market_value || helper.claims_data?.market_value || helper.estimate?.summary?.market_value || '';
+      
       // CRITICAL FIX: Prevent hardcoded "12" from being used for garage days
       let garageDaysValue = helper.depreciation?.garageDays || document.getElementById('garageDays')?.value || '';
       
@@ -5653,7 +5656,9 @@
         'helper.estimate.depreciation.globalDepValue': helper.estimate.depreciation.globalDepValue,
         'helper.estimate.depreciation.garageDays': helper.estimate.depreciation.garageDays,
         'helper.estimate.summary.salvage_value': helper.estimate.summary.salvage_value,
-        'helper.damage_assessment.damage_centers_summary.centers_count': helper.damage_assessment.damage_centers_summary.centers_count
+        'helper.damage_assessment.damage_centers_summary.centers_count': helper.damage_assessment.damage_centers_summary.centers_count,
+        // CRITICAL: Debug market value mapping for טוטאל-לוסט
+        'helper.estimate.vehicle.marketValue': helper.estimate.vehicle.marketValue
       });
       
       // Save updated helper structure
@@ -5671,7 +5676,16 @@
         depreciation: String(helper.estimate?.depreciation?.globalDepValue || ''),
         damageCenters: String(helper.damage_assessment?.damage_centers_summary?.centers_count || ''),
         garageDays: String(helper.estimate?.depreciation?.garageDays || ''),
-        salvageValue: String(helper.estimate?.summary?.salvage_value || '')
+        salvageValue: String(helper.estimate?.summary?.salvage_value || ''),
+        // CRITICAL: Add market value for אומדן טוטאל-לוסט
+        marketValue: String(helper.estimate?.vehicle?.marketValue || ''),
+        carValue: String(helper.estimate?.vehicle?.marketValue || ''), // Alternative name
+        // Hebrew placeholders - ensure all are mapped
+        שווי_רכב: String(helper.estimate?.vehicle?.marketValue || ''),
+        שווי_שרידים: String(helper.estimate?.summary?.salvage_value || ''),
+        ירידת_ערך: String(helper.estimate?.depreciation?.globalDepValue || ''),
+        מוקדי_נזק: String(helper.damage_assessment?.damage_centers_summary?.centers_count || ''),
+        ימי_מוסך: String(helper.estimate?.depreciation?.garageDays || '')
       };
       
       console.log('🔍 Step 4 - Placeholder values sample:', {
@@ -5688,7 +5702,11 @@
           depreciation: placeholderValues.depreciation,
           damageCenters: placeholderValues.damageCenters,
           garageDays: placeholderValues.garageDays,
-          salvageValue: placeholderValues.salvageValue
+          salvageValue: placeholderValues.salvageValue,
+          // CRITICAL: Debug Hebrew placeholders for טוטאל-לוסט
+          marketValue: placeholderValues.marketValue,
+          'שווי_רכב': placeholderValues.שווי_רכב,
+          'שווי_שרידים': placeholderValues.שווי_שרידים
         },
         // Debug helper structure for troubleshooting
         helperStructureCheck: {
@@ -5857,6 +5875,20 @@
             legalText = legalText.replace(/%מוקדי_נזק%/g, placeholderValues.damageCenters || '');
             legalText = legalText.replace(/%ימי_מוסך%/g, actualGarageDays || '');
             legalText = legalText.replace(/%שווי_שרידים%/g, placeholderValues.salvageValue || '');
+            // CRITICAL: Add missing Hebrew placeholders for טוטאל-לוסט
+            legalText = legalText.replace(/%שווי רכב%/g, placeholderValues.marketValue || '');
+            legalText = legalText.replace(/%שווי_רכב%/g, placeholderValues.marketValue || '');
+            
+            console.log('🔍 PLACEHOLDER REPLACEMENT DEBUG:', {
+              'Market Value (שווי רכב)': placeholderValues.marketValue,
+              'Salvage Value (שווי שרידים)': placeholderValues.salvageValue,
+              'Market value source': helper.estimate?.vehicle?.marketValue,
+              'Helper data check': {
+                'helper.vehicle.market_value': helper.vehicle?.market_value,
+                'helper.claims_data.market_value': helper.claims_data?.market_value,
+                'helper.estimate.summary.market_value': helper.estimate?.summary?.market_value
+              }
+            });
             
             console.log('✅ BYPASS: Manual placeholder replacement complete with corrected garage days:', actualGarageDays);
           }
