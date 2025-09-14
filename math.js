@@ -180,6 +180,26 @@ export const MathEngine = {
     }
   },
 
+  // Session-only VAT rate update (does NOT update admin hub core rate)
+  setSessionVatRate(rate) {
+    if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
+      _vatRate = rate;
+      // Keep admin hub cache but don't update core admin rate
+      sessionStorage.setItem('globalVAT', rate);
+      console.log(`🎯 Session VAT rate updated to ${rate}% (admin hub core rate preserved)`);
+      
+      // Update Helper only
+      if (window.Helper?.updateMeta) {
+        Helper.updateMeta({ global_vat: rate });
+      }
+      
+      // Broadcast to other modules (but not admin hub)
+      if (typeof window.refreshHelperVatRate === 'function') {
+        window.refreshHelperVatRate();
+      }
+    }
+  },
+
   // Load VAT rate from admin hub
   loadAdminHubVatRate() {
     // Check for admin hub communication methods

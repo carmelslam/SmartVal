@@ -207,11 +207,43 @@ window.addEventListener('message', function(event) {
       }
       break;
       
+    case 'GET_ADMIN_VAT_RATE':
+      console.log('🏛️ ORIGINAL admin VAT rate requested by module');
+      if (event.source) {
+        // This is the TRUE admin hub rate (not session-modified)
+        let originalAdminRate = adminHubVatRate;
+        
+        // If requestOriginal flag is set, get the pure admin rate
+        if (event.data.requestOriginal) {
+          // Try to get the original rate from localStorage (admin hub storage)
+          try {
+            const storedOriginalRate = localStorage.getItem('adminHubVatRate');
+            if (storedOriginalRate) {
+              originalAdminRate = parseFloat(storedOriginalRate);
+              console.log('📂 Retrieved original admin rate from localStorage:', originalAdminRate + '%');
+            }
+          } catch (e) {
+            console.warn('Could not access localStorage for original admin rate:', e);
+          }
+        }
+        
+        console.log('📤 Sending original admin VAT rate:', originalAdminRate + '%');
+        event.source.postMessage({
+          type: 'ADMIN_VAT_RATE_RESPONSE',
+          vatRate: originalAdminRate,
+          original: true,
+          timestamp: Date.now()
+        }, event.origin);
+      }
+      break;
+      
     case 'UPDATE_VAT_RATE':
       console.log('📥 VAT rate update from module:', event.data.vatRate + '%');
-      // Module is informing admin of manual VAT change
-      adminHubVatRate = event.data.vatRate;
-      updateAdminVatUI(adminHubVatRate);
+      console.log('⚠️ IGNORED: Modules should not update admin hub core rate');
+      console.log('💡 Admin hub core rate remains:', adminHubVatRate + '%');
+      // Do NOT update admin hub rate - modules should only create session overrides
+      // adminHubVatRate = event.data.vatRate; // COMMENTED OUT
+      // updateAdminVatUI(adminHubVatRate); // COMMENTED OUT
       break;
       
     case 'VAT_RATE_RESPONSE':

@@ -6280,10 +6280,16 @@
         helper.calculations.vat_rate_source = 'manual_session_override';
         helper.calculations.vat_rate_updated = new Date().toISOString();
         
-        // Update MathEngine with session override
-        if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
-          MathEngine.setVatRate(newRate);
-          console.log('✅ MathEngine VAT rate updated to:', newRate + '%');
+        // Update MathEngine with session override (DO NOT update admin hub core rate)
+        if (typeof MathEngine !== 'undefined' && MathEngine.setSessionVatRate) {
+          // Use the session-only VAT rate update method
+          MathEngine.setSessionVatRate(newRate);
+          console.log('✅ MathEngine session VAT rate updated to:', newRate + '%');
+          console.log('⚠️ Admin hub core rate preserved (session override only)');
+        } else {
+          // Fallback for direct update without admin hub communication
+          sessionStorage.setItem('globalVAT', newRate);
+          console.log('✅ Session VAT rate stored, admin hub core rate preserved');
         }
         
         // Update window.helper and sessionStorage
@@ -6406,34 +6412,128 @@
     function resetVatRateFromAdmin() {
       if (confirm('האם לאפס את שיעור המע"מ לערך מנהל המערכת?')) {
         try {
-          console.log('🔄 Resetting VAT rate to admin value...');
+          console.log('🔄 Requesting true admin VAT rate...');
           
-          // Get true admin rate (not from MathEngine which might have overrides)
-          let adminRate = 18; // Default admin rate
+          // Request the ORIGINAL admin hub VAT rate (not session-modified)
+          requestTrueAdminVatRate().then(adminRate => {
+            if (adminRate === null) {
+              console.warn('⚠️ Could not get admin rate, using stored fallback');
+              // Fallback to stored admin rate or default
+              const storedRate = localStorage.getItem('adminHubVatRate') || sessionStorage.getItem('adminHubVatRate');
+              adminRate = storedRate ? parseFloat(storedRate) : 18;
+            }
+            
+            console.log('🏛️ True admin VAT rate retrieved:', adminRate + '%');
+            
+            // Update both helper structures
+            let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            helper = initializeEstimateSummaryStructure(helper);
+            
+            const oldRate = helper.estimate.summary.vat_rate.current;
+            
+            // Restore to admin rate and clear session overrides
+            helper.estimate.summary.vat_rate.current = adminRate;
+            helper.estimate.summary.vat_rate.modified = null; // Clear override
+            helper.estimate.summary.vat_rate.source = 'admin_hub_restored';
+            helper.estimate.summary.vat_rate.updated = new Date().toISOString();
+            
+            // Update global calculations - this is the key path for getHelperVatRate()
+            if (!helper.calculations) helper.calculations = {};
+            helper.calculations.vat_rate = adminRate;
+            helper.calculations.vat_rate_source = 'admin_hub_restored';
+            helper.calculations.vat_rate_updated = new Date().toISOString();
+            
+            // Clear session storage overrides 
+            sessionStorage.removeItem('globalVAT');
+            
+            // Update MathEngine to admin rate (not session override)
+            if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
+              MathEngine.setVatRate(adminRate);
+              console.log('✅ MathEngine reset to admin VAT rate:', adminRate + '%');
+            }
+            
+            // Update window.helper and save
+            window.helper = helper;
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            console.log('✅ VAT rate reset completed:', {
+              old: oldRate,
+              admin: adminRate,
+              source: 'admin_hub_restored'
+            });
+            
+            // Update display and recalculate
+            initVatDisplay();
+            if (typeof refreshAllCalculations === 'function') {
+              refreshAllCalculations();
+            }
+            
+            alert(`✅ שיעור המע"מ אופס לערך מנהל המערכת: ${adminRate}%`);
+            
+          }).catch(error => {
+            console.error('❌ Failed to reset VAT rate:', error);
+            alert('❌ שגיאה באיפוס שיעור המע"מ: ' + error.message);
+          });
           
-          // Check stored admin rate
-          const storedRate = sessionStorage.getItem('globalVAT') || localStorage.getItem('globalVAT');
-          if (storedRate) {
-            adminRate = parseFloat(storedRate);
+        } catch (error) {
+          console.error('❌ Error in resetVatRateFromAdmin:', error);
+          alert('❌ שגיאה באיפוס שיעור המע"מ: ' + error.message);
+        }
+      }
+    }
+    
+    // Function to request the TRUE admin hub VAT rate (not session-modified)
+    function requestTrueAdminVatRate() {
+      return new Promise((resolve, reject) => {
+        console.log('📡 Requesting true admin VAT rate from parent frame...');
+        
+        // Try parent frame communication first (admin hub)
+        if (window.parent && window.parent !== window) {
+          const timeout = setTimeout(() => {
+            console.warn('⏰ Timeout waiting for admin hub response');
+            resolve(null); // Will trigger fallback
+          }, 3000);
+          
+          const messageHandler = (event) => {
+            if (event.data && event.data.type === 'ADMIN_VAT_RATE_RESPONSE') {
+              window.removeEventListener('message', messageHandler);
+              clearTimeout(timeout);
+              
+              console.log('📥 Received admin VAT rate:', event.data.vatRate + '%');
+              resolve(event.data.vatRate);
+            }
+          };
+          
+          window.addEventListener('message', messageHandler);
+          
+          // Request TRUE admin rate (not session-modified)
+          window.parent.postMessage({ 
+            type: 'GET_ADMIN_VAT_RATE',
+            requestOriginal: true,  // Flag to get original admin rate
+            timestamp: Date.now()
+          }, '*');
+          
+        } else {
+          // No parent frame - try other methods
+          console.log('🔍 No parent frame, trying other methods...');
+          
+          // Try AdminHubAPI if available
+          if (typeof window.AdminHubAPI !== 'undefined' && window.AdminHubAPI.getOriginalVatRate) {
+            try {
+              const adminRate = window.AdminHubAPI.getOriginalVatRate();
+              console.log('📊 Got admin rate from API:', adminRate + '%');
+              resolve(adminRate);
+              return;
+            } catch (e) {
+              console.warn('⚠️ AdminHubAPI failed:', e);
+            }
           }
           
-          // Update both helper structures
-          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper = initializeEstimateSummaryStructure(helper);
-          
-          const oldRate = helper.estimate.summary.vat_rate.current;
-          
-          // Restore to admin rate
-          helper.estimate.summary.vat_rate.current = adminRate;
-          helper.estimate.summary.vat_rate.modified = null; // Clear override
-          helper.estimate.summary.vat_rate.source = 'admin_hub_restored';
-          helper.estimate.summary.vat_rate.updated = new Date().toISOString();
-          
-          // Update global calculations
-          if (!helper.calculations) helper.calculations = {};
-          helper.calculations.vat_rate = adminRate;
-          helper.calculations.vat_rate_source = 'admin_hub_restored';
-          helper.calculations.vat_rate_updated = new Date().toISOString();
+          // Fallback to stored admin rate
+          resolve(null);
+        }
+      });
+    }
           
           // Restore MathEngine to admin rate
           if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {

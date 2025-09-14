@@ -14896,10 +14896,14 @@
       helper.calculations.vat_rate_source = 'manual_session_override';
       helper.calculations.vat_rate_updated = new Date().toISOString();
       
-      // 2. Update MathEngine with session override (admin hub stays unchanged)
-      if (typeof MathEngine !== 'undefined' && MathEngine.setVatRate) {
-        MathEngine.setVatRate(newRate);
-        console.log('SESSION OVERRIDE: MathEngine now uses:', newRate + '% (admin hub unchanged)');
+      // 2. Update MathEngine with session override (DO NOT update admin hub core rate)
+      if (typeof MathEngine !== 'undefined' && MathEngine.setSessionVatRate) {
+        MathEngine.setSessionVatRate(newRate);
+        console.log('SESSION OVERRIDE: MathEngine now uses:', newRate + '% (admin hub core rate preserved)');
+      } else if (typeof MathEngine !== 'undefined') {
+        // Fallback: direct update without admin hub communication
+        sessionStorage.setItem('globalVAT', newRate);
+        console.log('SESSION OVERRIDE: VAT rate stored in session, admin hub core rate preserved');
       }
       
       // Update window.helper in memory AND sessionStorage
