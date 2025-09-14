@@ -1014,16 +1014,50 @@
       const helperData = sessionStorage.getItem('helper');
       const selectedReportType = sessionStorage.getItem('selectedReportType');
       
-      if (!helperData || selectedReportType !== 'estimate') {
-        console.error('❌ Missing required data for validation');
-        showAlert('שגיאה: נתונים חסרים לאימות. חוזר לדף הבחירה...', 'error');
+      // More flexible validation - if helper data exists, allow validation
+      if (!helperData) {
+        console.error('❌ No helper data found for validation');
+        showAlert('שגיאה: לא נמצאו נתוני אומדן. חוזר לדף הבחירה...', 'error');
         setTimeout(() => {
           window.location.href = 'selection.html';
         }, 2000);
         return;
       }
+      
+      // If selectedReportType is missing, set it to 'estimate' for validation page
+      if (!selectedReportType) {
+        console.log('📝 selectedReportType missing, setting to estimate for validation');
+        sessionStorage.setItem('selectedReportType', 'estimate');
+      }
+      
+      // Warn if report type is not estimate, but don't block
+      if (selectedReportType && selectedReportType !== 'estimate') {
+        console.warn('⚠️ Selected report type is not estimate:', selectedReportType, 'but proceeding with validation');
+        showAlert(`מזוהה סוג דוח: ${selectedReportType}. הדף יתמודד עם האומדן בכל מקרה.`, 'warning');
+      }
 
       console.log('✅ Estimate Validation: Authentication and data validated');
+      
+      // Debug: Log session storage contents to understand data structure
+      console.log('🔍 Debug: Session storage contents:');
+      console.log('- helper:', helperData ? 'EXISTS' : 'MISSING');
+      console.log('- selectedReportType:', selectedReportType);
+      console.log('- builderCurrentState:', sessionStorage.getItem('builderCurrentState') ? 'EXISTS' : 'MISSING');
+      
+      try {
+        const helper = JSON.parse(helperData);
+        console.log('🔍 Helper data structure:', {
+          hasEstimate: !!helper.estimate,
+          hasCarDetails: !!helper.car_details,
+          hasClient: !!helper.client,
+          hasMeta: !!helper.meta,
+          hasExpertise: !!helper.expertise,
+          keys: Object.keys(helper)
+        });
+      } catch (e) {
+        console.error('❌ Error parsing helper data:', e);
+      }
+      
       initializeValidationSystem();
     });
 
@@ -1164,48 +1198,63 @@
     // Populate enhanced validation items for vehicle section
     function populateEnhancedValidationItems() {
       const container = document.getElementById('vehicle-validation-items');
-      if (!container) return;
+      if (!container) {
+        console.warn('⚠️ Vehicle validation items container not found');
+        return;
+      }
+      
+      // Ensure currentValidationData exists and has required structure
+      if (!currentValidationData || typeof currentValidationData !== 'object') {
+        console.error('❌ currentValidationData is not available, initializing with defaults');
+        currentValidationData = {
+          plate: '',
+          car_details: {},
+          client: {},
+          raw_helper: JSON.parse(sessionStorage.getItem('helper') || '{}')
+        };
+      }
       
       const data = currentValidationData;
-      const helper = data.raw_helper;
+      const helper = data.raw_helper || {};
       
-      console.log('🔍 Debug helper data:', helper); // Debug log
+      console.log('🔍 Debug validation data:', data);
+      console.log('🔍 Debug helper data:', helper);
       
       container.innerHTML = 
         createEnhancedValidationItem(
           'מספר רכב', 
-          data.plate || data.car_details?.plate, 
-          helper.plate || helper.meta?.plate || helper.car_details?.plate || 'לא מוגדר', 
+          data?.plate || data?.car_details?.plate || '', 
+          helper?.plate || helper?.meta?.plate || helper?.car_details?.plate || 'לא מוגדר', 
           'plate'
         ) +
         createEnhancedValidationItem(
           'יצרן', 
-          data.car_details?.manufacturer, 
-          helper.manufacturer || helper.car_details?.manufacturer || helper.vehicle?.manufacturer || 'לא מוגדר', 
+          data?.car_details?.manufacturer || '', 
+          helper?.manufacturer || helper?.car_details?.manufacturer || helper?.vehicle?.manufacturer || 'לא מוגדר', 
           'manufacturer'
         ) +
         createEnhancedValidationItem(
           'דגם', 
-          data.car_details?.model, 
-          helper.model || helper.car_details?.model || helper.vehicle?.model || 'לא מוגדר', 
+          data?.car_details?.model || '', 
+          helper?.model || helper?.car_details?.model || helper?.vehicle?.model || 'לא מוגדר', 
           'model'
         ) +
         createEnhancedValidationItem(
           'שנת יצור', 
-          data.car_details?.year, 
-          helper.year || helper.car_details?.year || helper.vehicle?.year || 'לא מוגדר', 
+          data?.car_details?.year || '', 
+          helper?.year || helper?.car_details?.year || helper?.vehicle?.year || 'לא מוגדר', 
           'year'
         ) +
         createEnhancedValidationItem(
           'שם בעלים', 
-          data.client?.name, 
-          helper.owner || helper.client?.name || helper.meta?.owner || 'לא מוגדר', 
+          data?.client?.name || '', 
+          helper?.owner || helper?.client?.name || helper?.meta?.owner || 'לא מוגדר', 
           'owner_name'
         ) +
         createEnhancedValidationItem(
           'חברת ביטוח', 
-          data.client?.insurance_company, 
-          helper.insurance_company || helper.client?.insurance_company || 'לא מוגדר', 
+          data?.client?.insurance_company || '', 
+          helper?.insurance_company || helper?.client?.insurance_company || 'לא מוגדר', 
           'insurance'
         );
     }
@@ -3562,14 +3611,30 @@
       estimate: false
     };
     
-    // Force re-populate all validation items
+    // Force re-populate all validation items with error handling
     setTimeout(() => {
-      populateEnhancedValidationItems();
-      populateLeviValidationItems();
-      if (typeof populateDepreciationValidationItems === 'function') {
-        populateDepreciationValidationItems();
+      try {
+        console.log('🔧 Attempting to re-populate validation items...');
+        populateEnhancedValidationItems();
+      } catch (error) {
+        console.error('⚠️ Error in populateEnhancedValidationItems during refresh:', error);
       }
-      console.log('🔧 Validation refresh completed');
+      
+      try {
+        populateLeviValidationItems();
+      } catch (error) {
+        console.error('⚠️ Error in populateLeviValidationItems during refresh:', error);
+      }
+      
+      try {
+        if (typeof populateDepreciationValidationItems === 'function') {
+          populateDepreciationValidationItems();
+        }
+      } catch (error) {
+        console.error('⚠️ Error in populateDepreciationValidationItems during refresh:', error);
+      }
+      
+      console.log('🔧 Validation refresh completed (with error handling)');
     }, 500);
     
     // Test all validation page buttons functionality on page load
