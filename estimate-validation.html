@@ -2964,38 +2964,49 @@
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Simple direct field mapping to helper.estimate
-      const depreciationHTML = 
-        createEnhancedValidationItem(
-          'ערך הרכב לנזק גולמי כולל מע"מ',
-          helper?.estimate?.gross_market_value || 'לא זמין',
-          helper?.estimate?.gross_market_value || 'לא זמין',
-          'gross_market_value'
-        ) +
-        createEnhancedValidationItem(
-          'אחוז הנזק הגולמי',
-          helper?.estimate?.gross_damage_percent || 'לא זמין',
-          helper?.estimate?.gross_damage_percent || 'לא זמין',
-          'gross_damage_percent'
-        ) +
-        createEnhancedValidationItem(
-          'ירידת ערך גלובלי (%)',
-          helper?.estimate?.depreciation?.global_percent || 'לא זמין',
-          helper?.estimate?.depreciation?.global_percent || 'לא זמין',
-          'depreciation_global_percent'
-        ) +
-        createEnhancedValidationItem(
-          'ירידת ערך גלובלי (₪)',
-          helper?.estimate?.depreciation?.global_value || 'לא זמין',
-          helper?.estimate?.depreciation?.global_value || 'לא זמין',
-          'depreciation_global_value'
-        ) +
-        createEnhancedValidationItem(
-          'ימי מוסך משוערים',
-          helper?.estimate?.work_days || 'לא זמין',
-          helper?.estimate?.work_days || 'לא זמין',
-          'work_days'
+      // Simple direct field mapping to helper.estimate - matching final-report-builder.html structure
+      let depreciationHTML = '';
+      
+      // 1. מוקדי נזק (bulk depreciation items)
+      const bulkItems = helper?.estimate?.depreciation?.bulk_items || [];
+      if (bulkItems && bulkItems.length > 0) {
+        bulkItems.forEach((item, index) => {
+          const description = `מוקד ${index + 1}: ${item.damaged_part || 'לא זמין'} - ${item.repair_type || 'לא זמין'}`;
+          const percentValue = item.percent || 'לא זמין';
+          const shekelValue = item.value || 'לא זמין';
+          const combinedValue = `${percentValue}%, ₪${shekelValue}`;
+          
+          depreciationHTML += createEnhancedValidationItem(
+            description,
+            combinedValue,
+            combinedValue,
+            `depreciation_bulk_${index}`
+          );
+        });
+      } else {
+        depreciationHTML += createEnhancedValidationItem(
+          'מוקדי ירידת ערך',
+          'לא זמין',
+          'לא זמין',
+          'depreciation_bulk_missing'
         );
+      }
+      
+      // 2. ירידת ערך גלובלי
+      depreciationHTML += createEnhancedValidationItem(
+        'ירידת ערך גלובלי',
+        helper?.estimate?.depreciation?.global_value || 'לא זמין',
+        helper?.estimate?.depreciation?.global_value || 'לא זמין',
+        'depreciation_global'
+      );
+      
+      // 3. ימי מוסך משוערים  
+      depreciationHTML += createEnhancedValidationItem(
+        'ימי מוסך משוערים',
+        helper?.estimate?.work_days || 'לא זמין',
+        helper?.estimate?.work_days || 'לא זמין',
+        'work_days'
+      );
       
       container.innerHTML = depreciationHTML;
     }
