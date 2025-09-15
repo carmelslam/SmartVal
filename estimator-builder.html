@@ -1252,6 +1252,142 @@
   <script src="parts-search-results-floating.js"></script>
   <script src="invoice-details-floating.js"></script>
   
+  <!-- PiP Synchronization Script -->
+  <script>
+    // Picture-in-Picture mode data synchronization
+    let isPiPMode = window.opener && window.opener !== window;
+    let parentWindow = isPiPMode ? window.opener : null;
+    
+    if (isPiPMode) {
+      console.log('🖼️ Estimator Builder running in PiP mode');
+      
+      // Listen for data sync from parent window
+      window.addEventListener('message', (event) => {
+        if (event.source === parentWindow && event.data.type === 'SYNC_HELPER_DATA') {
+          try {
+            // Update helper data from parent
+            sessionStorage.setItem('helper', JSON.stringify(event.data.data));
+            console.log('📥 Received helper data sync in PiP mode');
+            
+            // Trigger data refresh in UI
+            if (typeof refreshUIFromHelper === 'function') {
+              refreshUIFromHelper();
+            }
+            
+            // Refresh specific sections if they exist
+            const refreshFunctions = ['populateFormFromHelper', 'loadCalculationFromHelper', 'displayDamageCenters'];
+            refreshFunctions.forEach(funcName => {
+              if (typeof window[funcName] === 'function') {
+                try {
+                  window[funcName]();
+                } catch (error) {
+                  console.warn(`⚠️ Error refreshing ${funcName}:`, error);
+                }
+              }
+            });
+            
+          } catch (error) {
+            console.error('❌ Error processing sync data:', error);
+          }
+        }
+      });
+      
+      // Send updates back to parent when helper changes
+      const originalSetHelper = window.updateHelper;
+      window.updateHelper = function(updatedData, options = {}) {
+        // Call original function
+        if (originalSetHelper) {
+          originalSetHelper(updatedData, options);
+        }
+        
+        // Send update to parent window
+        if (parentWindow && !parentWindow.closed) {
+          try {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            parentWindow.postMessage({
+              type: 'UPDATE_HELPER_DATA',
+              data: helper,
+              updatedSections: options.updatedSections || []
+            }, '*');
+            console.log('📤 Sent helper data update to parent window');
+          } catch (error) {
+            console.error('❌ Error sending update to parent:', error);
+          }
+        }
+      };
+      
+      // Enhanced helper update function for form fields
+      const originalUpdateHelperFromField = window.updateHelperFromField;
+      window.updateHelperFromField = function(event, section) {
+        // Call original function
+        if (originalUpdateHelperFromField) {
+          originalUpdateHelperFromField(event, section);
+        }
+        
+        // Determine which section was updated
+        const updatedSections = [];
+        const fieldId = event.target.id;
+        
+        if (fieldId.includes('car') || fieldId.includes('vehicle') || fieldId.includes('plate')) {
+          updatedSections.push('vehicle');
+        }
+        if (fieldId.includes('levi') || fieldId.includes('base') || fieldId.includes('market')) {
+          updatedSections.push('levi');
+        }
+        if (fieldId.includes('damage') || fieldId.includes('center')) {
+          updatedSections.push('damage');
+        }
+        if (fieldId.includes('depreciation') || fieldId.includes('dep')) {
+          updatedSections.push('depreciation');
+        }
+        if (fieldId.includes('estimate') || fieldId.includes('type')) {
+          updatedSections.push('estimate');
+        }
+        if (fieldId.includes('legal')) {
+          updatedSections.push('legal_text');
+        }
+        
+        // Send update with affected sections
+        if (parentWindow && !parentWindow.closed && updatedSections.length > 0) {
+          try {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            parentWindow.postMessage({
+              type: 'UPDATE_HELPER_DATA',
+              data: helper,
+              updatedSections: updatedSections
+            }, '*');
+            console.log('📤 Sent field update to parent for sections:', updatedSections);
+          } catch (error) {
+            console.error('❌ Error sending field update to parent:', error);
+          }
+        }
+      };
+      
+      // Add visual indicator for PiP mode
+      document.addEventListener('DOMContentLoaded', () => {
+        const indicator = document.createElement('div');
+        indicator.innerHTML = '🖼️ מצב עריכה';
+        indicator.style.cssText = `
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          background: #007bff;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: bold;
+          z-index: 10000;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(indicator);
+      });
+      
+    } else {
+      console.log('📄 Estimator Builder running in normal mode');
+    }
+  </script>
+  
   <script>
     // DEFINE CRITICAL FUNCTIONS EARLY TO PREVENT REFERENCE ERRORS
     window.updateHelperFromContactField = function(element) {

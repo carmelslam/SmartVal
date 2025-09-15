@@ -874,7 +874,7 @@
         לאחר האישור הסופי ייוצר האומדן ויישלח לעיבוד. לא ניתן יהיה לערוך את הנתונים לאחר מכן.
       </div>
       <div class="validation-buttons" style="justify-content: center; max-width: 600px; margin: 0 auto;">
-        <button class="btn btn-edit" onclick="window.location.href='estimate-builder.html'">
+        <button class="btn btn-edit" onclick="if (typeof openEstimatorBuilderPiP === 'function') { openEstimatorBuilderPiP(); } else { window.location.href='estimator-builder.html'; }">
           ⬅️ חזור לעריכה
         </button>
         <button class="btn btn-validate" onclick="saveValidationData()">
@@ -2326,7 +2326,11 @@
     // Add edit damage center function
     window.editDamageCenter = function(index) {
       sessionStorage.setItem('editDamageCenterIndex', index);
-      window.location.href = 'estimate-builder.html#damage-centers';
+      if (typeof openEstimatorSection === 'function') {
+        openEstimatorSection('damage');
+      } else {
+        window.location.href = 'estimator-builder.html#damageCentersSummary';
+      }
     };
 
     // ENHANCED VALIDATION EDITING FUNCTIONS
@@ -2473,7 +2477,11 @@
     // Edit in builder (redirect to builder)
     window.editInBuilder = function(fieldKey) {
       sessionStorage.setItem('editField', fieldKey);
-      window.location.href = 'estimate-builder.html#vehicle-details';
+      if (typeof openEstimatorSection === 'function') {
+        openEstimatorSection('vehicle');
+      } else {
+        window.location.href = 'estimator-builder.html#vehicleData';
+      }
     };
 
     // Ignore discrepancy
@@ -2700,29 +2708,41 @@
       // Save updated validation progress
       sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
       updateValidationProgress();
-      switch(sectionName) {
-        case 'vehicle':
-          window.location.href = 'estimate-builder.html#vehicle-details';
-          break;
-        case 'levi':
-          window.location.href = 'estimate-builder.html#levi-details';
-          break;
-        case 'depreciation':
-          window.location.href = 'estimate-builder.html#depreciationSection';
-          break;
-        case 'damage':
-          window.location.href = 'estimate-builder.html#damage-centers';
-          break;
-        case 'estimate':
-          window.location.href = 'estimate-builder.html#estimate-type';
-          break;
-        case 'legal_text':
-          window.location.href = 'estimate-builder.html#legal-text';
-          break;
-        default:
-          console.error('❌ Unknown section for editing:', sectionName);
-          showAlert('שגיאה: קטע לא מוכר לעריכה', 'error');
-          break;
+      
+      // Open estimator-builder.html in PiP mode with correct section anchor
+      if (typeof openEstimatorSection === 'function') {
+        console.log('🏗️ Opening estimator builder in PiP for section:', sectionName);
+        const success = openEstimatorSection(sectionName);
+        if (success) {
+          showAlert(`פותח עורך האומדן עבור ${getSectionTitle(sectionName)}`, 'info');
+        }
+      } else {
+        // Fallback to regular navigation if PiP not available
+        console.warn('⚠️ PiP functionality not available, using regular navigation');
+        switch(sectionName) {
+          case 'vehicle':
+            window.location.href = 'estimator-builder.html#vehicleData';
+            break;
+          case 'levi':
+            window.location.href = 'estimator-builder.html#vehicleData';
+            break;
+          case 'damage':
+            window.location.href = 'estimator-builder.html#damageCentersSummary';
+            break;
+          case 'depreciation':
+            window.location.href = 'estimator-builder.html#depreciationSection';
+            break;
+          case 'estimate':
+            window.location.href = 'estimator-builder.html#estimate-type';
+            break;
+          case 'legal_text':
+            window.location.href = 'estimator-builder.html#legal-text';
+            break;
+          default:
+            console.error('❌ Unknown section for editing:', sectionName);
+            showAlert('שגיאה: קטע לא מוכר לעריכה', 'error');
+            break;
+        }
       }
     };
 
@@ -3283,7 +3303,11 @@
 
     // Other Actions
     window.editLegalText = function() {
-      window.location.href = 'estimate-builder.html#legal-text';
+      if (typeof openEstimatorSection === 'function') {
+        openEstimatorSection('legal_text');
+      } else {
+        window.location.href = 'estimator-builder.html#legal-text';
+      }
     };
 
     window.requestManualReview = function() {
@@ -3646,5 +3670,6 @@
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
   <script src="car-details-floating.js"></script>
+  <script src="estimator-builder-floating.js"></script>
 </body>
 </html>
