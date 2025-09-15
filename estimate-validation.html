@@ -727,36 +727,6 @@
       </div>
     </div>
 
-    <!-- Depreciation Validation -->
-    <div class="validation-section" id="section-depreciation">
-      <div class="section-header">
-        <div class="section-title">חישוב ירידת ערך לפי מוקדי נזק</div>
-        <div class="section-status status-pending">ממתין</div>
-      </div>
-      <div class="section-content">
-        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
-          <strong>הנחיות:</strong> בדיקת נתוני ירידת ערך כפי שהוזנו בבנאי האומדן | נתונים מתומת מהבנאי ומוצגים לאימות
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
-          <div>שדה</div>
-          <div style="text-align: center;">ערך נוכחי</div>
-          <div style="text-align: center;">נתונים מאוחסנים</div>
-          <div style="text-align: center;">פעולות</div>
-        </div>
-        
-        <div id="depreciation-validation-items">
-          <!-- Depreciation validation items will be populated here -->
-        </div>
-        
-      </div>
-      <div class="validation-buttons">
-        <button class="btn btn-validate" onclick="validateSection('depreciation')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('depreciation')">עריכה ידנית</button>
-        <button class="btn btn-success" onclick="approveSection('depreciation')" disabled>אימות ירידת ערך</button>
-      </div>
-    </div>
-
     <!-- Damage Centers Validation -->
     <div class="validation-section" id="section-damage">
       <div class="section-header">
@@ -796,6 +766,36 @@
         <button class="btn btn-validate" onclick="validateSection('damage')">בדוק אוטומטית</button>
         <button class="btn btn-edit" onclick="editSection('damage')">עריכה ידנית</button>
         <button class="btn btn-success" onclick="approveSection('damage')" disabled>אימות מוקדי נזק</button>
+      </div>
+    </div>
+
+    <!-- Depreciation Validation -->
+    <div class="validation-section" id="section-depreciation">
+      <div class="section-header">
+        <div class="section-title">חישוב ירידת ערך לפי מוקדי נזק</div>
+        <div class="section-status status-pending">ממתין</div>
+      </div>
+      <div class="section-content">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #64748b;">
+          <strong>הנחיות:</strong> בדיקת נתוני ירידת ערך כפי שהוזנו בבנאי האומדן | נתונים מתומת מהבנאי ומוצגים לאימות
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 8px; background: #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 12px; color: #374151;">
+          <div>שדה</div>
+          <div style="text-align: center;">ערך נוכחי</div>
+          <div style="text-align: center;">נתונים מאוחסנים</div>
+          <div style="text-align: center;">פעולות</div>
+        </div>
+        
+        <div id="depreciation-validation-items">
+          <!-- Depreciation validation items will be populated here -->
+        </div>
+        
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('depreciation')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('depreciation')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('depreciation')" disabled>אימות ירידת ערך</button>
       </div>
     </div>
 
@@ -923,8 +923,8 @@
     let validationProgress = {
       vehicle: false,
       levi: false,
-      depreciation: false,
       damage: false,
+      depreciation: false,
       estimate: false,
       legal_text: false
     };
@@ -1553,7 +1553,7 @@
 
     function startInitialValidation() {
       // Auto-validate all sections on page load
-      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
       
       sections.forEach((sectionName, index) => {
         setTimeout(() => {
@@ -2667,8 +2667,8 @@
       validationProgress = {
         vehicle: false,
         levi: false,
-        depreciation: false,
         damage: false,
+        depreciation: false,
         estimate: false,
         legal_text: false
       };
@@ -2745,7 +2745,7 @@
       sessionStorage.setItem('hasUserApprovedSections', 'true');
       
       // Enable and move to next section
-      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex < sections.length - 1) {
@@ -2767,10 +2767,10 @@
         // If next section needs enhanced display, populate it
         if (nextSectionName === 'levi') {
           populateLeviValidationItems();
-        } else if (nextSectionName === 'depreciation') {
-          populateDepreciationValidationItems();
         } else if (nextSectionName === 'damage') {
           populateDamageValidationItems();
+        } else if (nextSectionName === 'depreciation') {
+          populateDepreciationValidationItems();
         } else if (nextSectionName === 'estimate') {
           populateEstimateValidationItems();
         }
@@ -3496,9 +3496,10 @@
     validationProgress = {
       vehicle: false,
       levi: false,
-      depreciation: false,
       damage: false,
-      estimate: false
+      depreciation: false,
+      estimate: false,
+      legal_text: false
     };
     
     // Force re-populate all validation items with error handling
@@ -3565,7 +3566,7 @@
     });
     
     // Test section validation buttons
-    const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
+    const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
     sections.forEach(section => {
       const validateBtn = document.querySelector(`[onclick="validateSection('${section}')"]`);
       const editBtn = document.querySelector(`[onclick="editSection('${section}')"]`);
