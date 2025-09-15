@@ -1849,17 +1849,12 @@
     function generateMarketValueTable() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get base price - check multiple possible locations
-      const basePrice = helper.estimate?.vehicle?.basePrice || 
-                       helper.vehicle?.base_price || 
-                       helper.car_details?.base_price ||
-                       helper.levi_report?.base_price ||
-                       helper.expertise?.levi_report?.base_price ||
-                       helper.levisummary?.base_price ||
-                       helper.calculations?.base_price || 0;
+      // Get base price from estimate.vehicle.basePrice
+      const basePrice = helper.estimate?.vehicle?.basePrice || 0;
       
       let rows = [];
-      let cumulativeValue = basePrice;
+      // Get total from estimate.gross_market_value
+      const totalValue = helper.estimate?.gross_market_value || 0;
       
       // Add base price row
       rows.push(`
@@ -1880,12 +1875,7 @@
         const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-'; // אחוז
         const amount = adjustment.amount || 0; // ערך
         
-        // Update cumulative value (local calculation)
-        if (adjustment.type === 'plus') {
-          cumulativeValue += amount;
-        } else {
-          cumulativeValue -= amount;
-        }
+        // No need to calculate cumulative value - use estimate.gross_market_value
         
         rows.push(`
           <tr>
@@ -1906,12 +1896,7 @@
         const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-'; // אחוז  
         const amount = adjustment.amount || 0; // ערך
         
-        // Update cumulative value (local calculation)
-        if (adjustment.type === 'plus') {
-          cumulativeValue += amount;
-        } else {
-          cumulativeValue -= amount;
-        }
+        // No need to calculate cumulative value - use estimate.gross_market_value
         
         rows.push(`
           <tr>
@@ -1927,7 +1912,7 @@
       rows.push(`
         <tr style="background: #e8f4f8; font-weight: bold;">
           <td colspan="3" style="padding: 8px; text-align: center; font-weight: bold;"><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
-          <td style="padding: 8px; text-align: center; font-weight: bold;"><strong>${formatCurrency(cumulativeValue)}</strong></td>
+          <td style="padding: 8px; text-align: center; font-weight: bold;"><strong>${formatCurrency(totalValue)}</strong></td>
         </tr>
       `);
       
@@ -1935,10 +1920,8 @@
     }
     
     function generateLeviAdjustments(helper) {
-      // Get base price
-      const basePrice = helper.estimate?.vehicle?.basePrice || 
-                       helper.vehicle?.base_price || 
-                       helper.car_details?.base_price || 0;
+      // Get base price from estimate.vehicle.basePrice
+      const basePrice = helper.estimate?.vehicle?.basePrice || 0;
       
       if (!basePrice) {
         return `
@@ -1951,7 +1934,8 @@
         `;
       }
       
-      let cumulativeValue = basePrice;
+      // Get total from estimate.gross_market_value
+      const totalValue = helper.estimate?.gross_market_value || 0;
       const adjustmentRows = [];
       
       // Process adjustments in specific order: features, registration, mileage, ownership_type, ownership_history
@@ -1972,12 +1956,7 @@
           const amount = adjustment.amount || 0;
           const label = categoryLabels[category] || adjustment.value || category;
           
-          // Update cumulative value
-          if (adjustment.type === 'plus') {
-            cumulativeValue += amount;
-          } else {
-            cumulativeValue -= amount;
-          }
+          // No need to calculate cumulative value - use estimate.gross_market_value
           
           adjustmentRows.push(`
             <tr>
@@ -1997,7 +1976,7 @@
               <tr><th style="width: 50%;">תיאור</th><th style="width: 20%;">אחוז</th><th style="width: 30%;">ערך</th></tr>
               <tr><td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td></tr>
               ${adjustmentRows.join('')}
-              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(cumulativeValue)}</strong></td></tr>
+              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalValue)}</strong></td></tr>
             </table>
           </div>
         </div>
