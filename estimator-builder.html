@@ -2723,14 +2723,31 @@
             }
           });
           
-          // Collect repairs
+          // Collect repairs - PRESERVE EXISTING DATA
           const repairs = [];
-          card.querySelectorAll('.repair-row').forEach(row => {
+          const existingCenter = window.helper.centers ? window.helper.centers[index] : null;
+          const existingRepairs = existingCenter?.Repairs?.repairs || [];
+          
+          card.querySelectorAll('.repair-row').forEach((row, repairIndex) => {
+            const name = row.querySelector('.repair-name').value;
             const text = row.querySelector('.repair-text').value;
+            const hours = parseFloat(row.querySelector('.repair-hours').value) || 0;
             const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
             
-            if (text.trim()) {
-              repairs.push({ description: text, cost });
+            if (text.trim() || name.trim()) {
+              // Get existing repair data to preserve all fields
+              const existingRepair = existingRepairs[repairIndex] || {};
+              
+              // Merge existing data with new data (preserve all fields)
+              const repairObject = {
+                ...existingRepair,           // Preserve all existing fields
+                name: name,                  // Update name from UI
+                description: text,           // Update description from UI
+                hours: hours,                // Update hours from UI
+                cost: cost                   // Update cost from UI
+              };
+              
+              repairs.push(repairObject);
             }
           });
           
@@ -8753,12 +8770,22 @@
     function createEditableRepairRow(repair, centerIndex, repairIndex) {
       const repairText = typeof repair === 'object' ? repair.description : repair;
       const repairCost = typeof repair === 'object' ? repair.cost : 0;
+      const repairName = typeof repair === 'object' ? repair.name || '' : '';
+      const repairHours = typeof repair === 'object' ? repair.hours || 0 : 0;
       
       return `
-        <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 3fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם התיקון:</label>
+            <input type="text" value="${repairName}" placeholder="שם התיקון" class="repair-name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור התיקון:</label>
             <textarea placeholder="תיאור התיקון" class="repair-text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-height: 60px; resize: vertical;">${repairText}</textarea>
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שעות:</label>
+            <input type="number" value="${repairHours}" placeholder="0" class="repair-hours" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.1" />
           </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
@@ -8886,7 +8913,7 @@
 
     // ADD DAMAGE CENTER EVENT LISTENERS - AUTO-SAVE ON CHANGE
     function addDamageCenterEventListeners() {
-      const selectors = '.damage-center-number, .damage-center-location, .damage-center-description, .damage-center-repair-nature, .part-name, .part-desc, .part-price, .part-source, .work-type, .work-type-other, .work-note, .work-cost, .repair-text, .repair-cost';
+      const selectors = '.damage-center-number, .damage-center-location, .damage-center-description, .damage-center-repair-nature, .part-name, .part-desc, .part-price, .part-source, .work-type, .work-type-other, .work-note, .work-cost, .repair-name, .repair-text, .repair-hours, .repair-cost';
       
       document.querySelectorAll(selectors).forEach(input => {
         // Check if already has listeners
