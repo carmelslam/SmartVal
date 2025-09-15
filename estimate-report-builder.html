@@ -868,8 +868,16 @@
       helper.meta = helper.meta || {};
       helper.vehicle = helper.vehicle || helper.car_details || {};
       helper.calculations = helper.calculations || {};
+      // Ensure estimate damage centers structure exists
+      if (!helper.estimate.damage_centers) {
+        helper.estimate.damage_centers = helper.damage_sections || [];
+      }
       helper.damage_sections = helper.damage_sections || [];
       helper.expertise = helper.expertise || {};
+      // Ensure estimate depreciation structure exists
+      if (!helper.estimate.depreciation) {
+        helper.estimate.depreciation = helper.depreciation || {};
+      }
       helper.depreciation = helper.depreciation || {};
       
       // Ensure meta fields have defaults
@@ -878,6 +886,15 @@
       helper.meta.inspection_date = helper.meta.inspection_date || new Date().toLocaleDateString('he-IL');
       helper.meta.location = helper.meta.location || '';
       helper.meta.damage = helper.meta.damage || '';
+      // Ensure estimate contact structure exists
+      if (!helper.estimate.contact) {
+        helper.estimate.contact = {
+          name: helper.meta.client_name || helper.client?.name || '',
+          address: helper.meta.address || helper.client?.address || '',
+          phone_number: helper.meta.phone_number || helper.client?.phone_number || ''
+        };
+      }
+      
       helper.meta.address = helper.meta.address || '';
       helper.meta.phone_number = helper.meta.phone_number || '';
       
@@ -899,7 +916,7 @@
       helper.estimate_details_title = helper.estimate_details_title || 'פרטי הרכב הנבדק';
       
       // Ensure estimate calculations are up to date
-      if (!helper.calculations || !helper.calculations.total_estimate) {
+      if (!helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
         calculateEstimateTotals(helper);
       }
       
@@ -924,23 +941,32 @@
     }
 
     function calculateEstimateTotals(helper) {
-      // Get base damage from expertise or validation
-      const baseDamage = helper.expertise?.calculations?.base_damage || 
-                        helper.damage_sections?.reduce((total, section) => {
-                          return total + (section.works_total || 0) + (section.parts_total || 0) + (section.repairs_total || 0);
-                        }, 0) || 0;
+      // Get base damage from helper.estimate structure
+      const baseDamage = helper.estimate?.calculations?.total_damage_cost || 
+                        helper.estimate?.totals?.damage_centers?.total_before_vat?.value || 0;
 
-      // Get VAT rate from helper, not from external source
-      const vatRate = helper.calculations?.vat_rate || helper.fees?.vat_rate || helper.vat_rate || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
-      const vatAmount = Math.round(baseDamage * vatRate / 100);
-      const totalEstimate = baseDamage + vatAmount;
+      // Get VAT rate from helper.estimate structure  
+      const vatRate = helper.estimate?.summary?.vat_rate?.current || 
+                     helper.estimate?.totals?.damage_centers?.vat_rate || 18;
+      const vatAmount = helper.estimate?.totals?.damage_centers?.vat_amount || 
+                       Math.round(baseDamage * vatRate / 100);
+      const totalEstimate = helper.estimate?.totals?.damage_centers?.total_with_vat?.value || 
+                           (baseDamage + vatAmount);
 
-      // Update helper with calculations
+      // Update helper with calculations (maintain backward compatibility)
       helper.calculations = helper.calculations || {};
       helper.calculations.base_damage = baseDamage;
-      helper.calculations.vat_rate = vatRate;
+      // Store VAT rate in estimate structure
+      if (!helper.estimate.summary) helper.estimate.summary = {};
+      if (!helper.estimate.summary.vat_rate) helper.estimate.summary.vat_rate = {};
+      helper.estimate.summary.vat_rate.current = vatRate;
       helper.calculations.vat_amount = vatAmount;
-      helper.calculations.total_estimate = totalEstimate;
+      // Store total estimate in estimate structure
+      if (!helper.estimate.totals) helper.estimate.totals = {};
+      if (!helper.estimate.totals.damage_centers) helper.estimate.totals.damage_centers = {};
+      helper.estimate.totals.damage_centers.total_with_vat = { value: totalEstimate };
+      helper.estimate.totals.damage_centers.total_before_vat = { value: baseDamage };
+      helper.estimate.totals.damage_centers.vat_amount = vatAmount;
       
       // Calculate depreciation values
       calculateDepreciationValues(helper);
@@ -968,10 +994,20 @@
         });
       }
 
-      // Calculate global depreciation
-      if (helper.depreciation) {
-        const globalPercent = parseFloat(helper.depreciation.global_percent) || 0;
-        helper.depreciation.global_amount = Math.round(marketValue * globalPercent / 100);
+      // Calculate global depreciation using estimate structure
+      const depreciationData = helper.estimate.depreciation || helper.depreciation || {};
+      if (depreciationData.global_percent) {
+        const globalPercent = parseFloat(depreciationData.global_percent) || 0;
+        const globalAmount = Math.round(marketValue * globalPercent / 100);
+        
+        // Store in estimate structure
+        helper.estimate.depreciation.global_percent = globalPercent;
+        helper.estimate.depreciation.global_amount = globalAmount;
+        
+        // Maintain backward compatibility
+        if (helper.depreciation) {
+          helper.depreciation.global_amount = globalAmount;
+        }
       }
       
       // Calculate global estimate depreciation
@@ -1000,9 +1036,9 @@
 
       try {
         // Get data from helper with proper mapping
-        const clientName = helper.client?.name || helper.car_details?.owner || helper.meta?.client_name || '';
-        const clientAddress = helper.client?.address || helper.car_details?.ownerAddress || helper.meta?.address || '';
-        const clientPhone = helper.client?.phone_number || helper.car_details?.ownerPhone || helper.meta?.phone_number || '';
+        const clientName = helper.estimate?.contact?.name || helper.client?.name || helper.car_details?.owner || helper.meta?.client_name || '';
+        const clientAddress = helper.estimate?.contact?.address || helper.client?.address || helper.car_details?.ownerAddress || helper.meta?.address || '';
+        const clientPhone = helper.estimate?.contact?.phone_number || helper.client?.phone_number || helper.car_details?.ownerPhone || helper.meta?.phone_number || '';
         const plate = helper.meta?.plate || helper.car_details?.plate || helper.vehicle?.plate_number || '';
         const inspectionDate = helper.meta?.inspection_date || new Date().toLocaleDateString('he-IL');
         const location = helper.meta?.location || helper.meta?.inspection_location || helper.car_details?.location || '';
@@ -1017,14 +1053,19 @@
         const km = vehicle.km || vehicle.odo || vehicle.odometer || vehicle.mileage || helper.meta?.km || '';
         const ownershipType = vehicle.ownership_type || vehicle.type || vehicle.category || helper.meta?.ownership_type || '';
         
-        // Calculations
-        const calc = helper.calculations || helper.expertise?.calculations || {};
-        const baseDamage = calc.base_damage || calc.total_damage || 0;
-        const vatRate = calc.vat_rate || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
-        const vatAmount = calc.vat_amount || Math.round(baseDamage * vatRate / 100);
-        const totalEstimate = calc.total_estimate || calc.total_compensation || (baseDamage + vatAmount);
-        const marketValue = calc.market_value || helper.expertise?.levi_report?.final_price || helper.levisummary?.final_price || 0;
-        const damagePercent = calc.damage_percent || (marketValue > 0 ? Math.round((baseDamage / marketValue) * 100) : 0);
+        // Calculations - Use helper.estimate structure
+        const baseDamage = helper.estimate?.calculations?.total_damage_cost || 
+                          helper.estimate?.totals?.damage_centers?.total_before_vat?.value || 0;
+        const vatRate = helper.estimate?.summary?.vat_rate?.current || 
+                       helper.estimate?.totals?.damage_centers?.vat_rate || 18;
+        const vatAmount = helper.estimate?.totals?.damage_centers?.vat_amount || 
+                         Math.round(baseDamage * vatRate / 100);
+        const totalEstimate = helper.estimate?.totals?.damage_centers?.total_with_vat?.value || 
+                             helper.estimate?.summary?.sum_claim || (baseDamage + vatAmount);
+        const marketValue = helper.estimate?.calculations?.full_market_value || 
+                           helper.estimate?.vehicle?.marketValue?.replace(/[₪,\s]/g, '') || 0;
+        const damagePercent = helper.estimate?.calculations?.gross_damage_percentage || 
+                             (marketValue > 0 ? Math.round((baseDamage / marketValue) * 100) : 0);
         
         // Damage description - check multiple sources
         let damageDescription = '';
@@ -1215,7 +1256,7 @@
                 </tr>
                 <tr>
                   <td style="padding: 8px;">פיצוי בגין ירידת ערך</td>
-                  <td style="padding: 8px; text-align: center;">${formatCurrency(helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || helper.estimate_depreciation?.global_value || 0)}</td>
+                  <td style="padding: 8px; text-align: center;">${formatCurrency(helper.estimate?.depreciation?.global_amount || helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || helper.estimate_depreciation?.global_value || 0)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px;">מע"מ (${vatRate}%)</td>
@@ -1223,7 +1264,7 @@
                 </tr>
                 <tr>
                   <td style="padding: 8px;"><strong>סה"כ נכלל באומדן</strong></td>
-                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalEstimate + (helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || helper.estimate_depreciation?.global_value || 0))}</strong></td>
+                  <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalEstimate + (helper.estimate?.depreciation?.global_amount || helper.expertise?.depreciation?.global_amount || helper.depreciation?.global_amount || helper.estimate_depreciation?.global_value || 0))}</strong></td>
                 </tr>
               </table>
             </div>
@@ -1421,7 +1462,7 @@
     }
     
     function generateDamageAnalysis(helper, damageDescription = '') {
-      const damageBlocks = helper.expertise?.damage_blocks || helper.damage_sections || [];
+      const damageBlocks = helper.estimate?.damage_centers || helper.expertise?.damage_blocks || helper.damage_sections || [];
       
       // Create introduction section
       const introSection = `
@@ -1922,7 +1963,7 @@
     
     function generateDepreciationAnalysis(helper) {
       // Check both depreciation data sources
-      const depreciation = helper.expertise?.depreciation || helper.depreciation || {};
+      const depreciation = helper.estimate?.depreciation || helper.expertise?.depreciation || helper.depreciation || {};
       const estimateDepreciation = helper.estimate_depreciation || {};
       
       // Get centers from multiple sources
@@ -1951,7 +1992,7 @@
       }
       
       // Depreciation introduction
-      const damageBlocks = helper.expertise?.damage_blocks || [];
+      const damageBlocks = helper.estimate?.damage_centers || helper.expertise?.damage_blocks || [];
       const damageWorkRows = damageBlocks.map((block, index) => `
         <tr>
           <td style="padding: 8px;">${block.location || block.center || block.name || `מוקד ${index + 1}`}</td>
@@ -2198,8 +2239,10 @@
         validation.warnings.push('דגם רכב חסר');
       }
       
-      // Check for damage calculations in multiple possible structures
-      const baseDamage = helper.calculations?.base_damage || 
+      // Use unified estimate structure for damage calculations  
+      const baseDamage = helper.estimate?.calculations?.total_damage_cost ||
+                        helper.estimate?.totals?.damage_centers?.total_before_vat?.value ||
+                        helper.calculations?.base_damage || 
                         helper.calculations?.total_damage ||
                         helper.calculations?.total_before_depreciation ||
                         helper.levi_report?.total_damage ||
@@ -2211,7 +2254,8 @@
       }
       
       // Check for depreciation data
-      const depreciationPercent = helper.depreciation?.global_percent || 
+      const depreciationPercent = helper.estimate?.depreciation?.global_percent ||
+                                 helper.depreciation?.global_percent || 
                                  helper.depreciation?.percentage ||
                                  helper.calculations?.depreciation_percent;
       if (!depreciationPercent) {
