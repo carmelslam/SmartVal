@@ -1,123 +1,202 @@
-// Estimator Builder Floating Window
-// This script provides PiP functionality for the estimator-builder.html
+// Estimator Builder Inline Frame
+// This script provides inline iframe functionality for the estimator-builder.html
 
-let estimatorBuilderWindow = null;
+let estimatorBuilderFrame = null;
+let estimatorBuilderOverlay = null;
 
 window.openEstimatorBuilderPiP = function(section = '') {
-  console.log('🏗️ Opening Estimator Builder in PiP mode with section:', section);
+  console.log('🏗️ Opening Estimator Builder in inline frame with section:', section);
 
-  const screenWidth = window.screen.width;
-  const screenHeight = window.screen.height;
-  
-  // Calculate PiP window dimensions (80% of screen)
-  const pipWidth = Math.round(screenWidth * 0.8);
-  const pipHeight = Math.round(screenHeight * 0.8);
-  
-  // Center the window
-  const left = Math.round((screenWidth - pipWidth) / 2);
-  const top = Math.round((screenHeight - pipHeight) / 2);
-  
+  // Close existing frame if open
+  if (estimatorBuilderOverlay) {
+    closeEstimatorBuilderPiP();
+  }
+
+  // Create overlay container
+  estimatorBuilderOverlay = document.createElement('div');
+  estimatorBuilderOverlay.id = 'estimator-builder-overlay';
+  estimatorBuilderOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  `;
+
+  // Create frame container
+  const frameContainer = document.createElement('div');
+  frameContainer.style.cssText = `
+    width: 90%;
+    height: 85%;
+    max-width: 1100px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  `;
+
+  // Create header with title and close button
+  const frameHeader = document.createElement('div');
+  frameHeader.style.cssText = `
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  `;
+
+  const frameTitle = document.createElement('div');
+  frameTitle.innerHTML = '🏗️ עורך האומדן';
+  frameTitle.style.cssText = `
+    font-size: 16px;
+    font-weight: bold;
+    flex-grow: 1;
+  `;
+
+  const closeButton = document.createElement('button');
+  closeButton.innerHTML = '✕';
+  closeButton.style.cssText = `
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  `;
+
+  closeButton.addEventListener('mouseenter', () => {
+    closeButton.style.background = 'rgba(255, 255, 255, 0.3)';
+  });
+
+  closeButton.addEventListener('mouseleave', () => {
+    closeButton.style.background = 'rgba(255, 255, 255, 0.2)';
+  });
+
+  closeButton.addEventListener('click', () => {
+    closeEstimatorBuilderPiP();
+  });
+
+  frameHeader.appendChild(frameTitle);
+  frameHeader.appendChild(closeButton);
+
   // Build URL with section anchor if provided
   let url = './estimator-builder.html';
   if (section) {
     url += '#' + section;
   }
-  
-  // Window features for PiP mode
-  const features = [
-    `width=${pipWidth}`,
-    `height=${pipHeight}`,
-    `left=${left}`,
-    `top=${top}`,
-    'resizable=yes',
-    'scrollbars=yes',
-    'status=yes',
-    'menubar=no',
-    'toolbar=no',
-    'location=no',
-    'directories=no'
-  ].join(',');
-  
-  try {
-    // Close existing window if open
-    if (estimatorBuilderWindow && !estimatorBuilderWindow.closed) {
-      estimatorBuilderWindow.close();
+
+  // Create iframe
+  estimatorBuilderFrame = document.createElement('iframe');
+  estimatorBuilderFrame.src = url;
+  estimatorBuilderFrame.style.cssText = `
+    width: 100%;
+    height: 100%;
+    border: none;
+    flex-grow: 1;
+  `;
+
+  // Assembly
+  frameContainer.appendChild(frameHeader);
+  frameContainer.appendChild(estimatorBuilderFrame);
+  estimatorBuilderOverlay.appendChild(frameContainer);
+  document.body.appendChild(estimatorBuilderOverlay);
+
+  // Set up data sync
+  setupDataSync();
+
+  // Close on overlay click (but not on frame click)
+  estimatorBuilderOverlay.addEventListener('click', (e) => {
+    if (e.target === estimatorBuilderOverlay) {
+      closeEstimatorBuilderPiP();
     }
-    
-    // Open new PiP window
-    estimatorBuilderWindow = window.open(url, 'estimatorBuilder', features);
-    
-    if (estimatorBuilderWindow) {
-      console.log('✅ Estimator Builder PiP window opened successfully');
-      
-      // Focus the new window
-      estimatorBuilderWindow.focus();
-      
-      // Set up message passing for data synchronization
-      setupDataSync();
-      
-      // Set up window close handler
-      const checkClosed = setInterval(() => {
-        if (estimatorBuilderWindow.closed) {
-          console.log('🔒 Estimator Builder PiP window closed');
-          clearInterval(checkClosed);
-          estimatorBuilderWindow = null;
-          
-          // Refresh validation data when window closes
-          if (typeof refreshValidationData === 'function') {
-            refreshValidationData();
-          }
-        }
-      }, 1000);
-      
-      return true;
-    } else {
-      console.error('❌ Failed to open Estimator Builder PiP window');
-      showAlert('לא ניתן לפתוח חלון עריכה. אנא בדוק את הגדרות החסימה של הדפדפן.', 'error');
-      return false;
-    }
-    
-  } catch (error) {
-    console.error('❌ Error opening Estimator Builder PiP:', error);
-    showAlert('שגיאה בפתיחת חלון עריכה: ' + error.message, 'error');
-    return false;
-  }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', escapeHandler);
+
+  console.log('✅ Estimator Builder inline frame opened successfully');
+  return true;
 };
 
-// Set up bidirectional data synchronization between windows
+// Close inline frame
+function closeEstimatorBuilderPiP() {
+  if (estimatorBuilderOverlay) {
+    document.removeEventListener('keydown', escapeHandler);
+    document.body.removeChild(estimatorBuilderOverlay);
+    estimatorBuilderOverlay = null;
+    estimatorBuilderFrame = null;
+    
+    console.log('🔒 Estimator Builder inline frame closed');
+    
+    // Refresh validation data when frame closes
+    if (typeof refreshValidationData === 'function') {
+      refreshValidationData();
+    }
+  }
+}
+
+// Escape key handler
+function escapeHandler(e) {
+  if (e.key === 'Escape') {
+    closeEstimatorBuilderPiP();
+  }
+}
+
+// Set up bidirectional data synchronization between iframe and parent
 function setupDataSync() {
-  if (!estimatorBuilderWindow) return;
+  if (!estimatorBuilderFrame) return;
   
-  // Send current helper data to the PiP window
+  // Send current helper data to the iframe
   const syncData = () => {
-    if (estimatorBuilderWindow && !estimatorBuilderWindow.closed) {
+    if (estimatorBuilderFrame && estimatorBuilderFrame.contentWindow) {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Send data via postMessage
-        estimatorBuilderWindow.postMessage({
+        // Send data via postMessage to iframe
+        estimatorBuilderFrame.contentWindow.postMessage({
           type: 'SYNC_HELPER_DATA',
           data: helper
         }, '*');
         
-        console.log('📤 Sent helper data to Estimator Builder PiP');
+        console.log('📤 Sent helper data to Estimator Builder iframe');
       } catch (error) {
-        console.error('❌ Error syncing data to PiP:', error);
+        console.error('❌ Error syncing data to iframe:', error);
       }
     }
   };
   
-  // Initial sync after a short delay to ensure window is loaded
-  setTimeout(syncData, 1000);
+  // Initial sync after iframe loads
+  estimatorBuilderFrame.onload = () => {
+    setTimeout(syncData, 500);
+  };
   
-  // Listen for data updates from PiP window
+  // Listen for data updates from iframe
   window.addEventListener('message', (event) => {
-    if (event.source === estimatorBuilderWindow) {
+    if (event.source === estimatorBuilderFrame.contentWindow) {
       if (event.data.type === 'UPDATE_HELPER_DATA') {
         try {
           // Update local helper data
           sessionStorage.setItem('helper', JSON.stringify(event.data.data));
-          console.log('📥 Received helper data update from Estimator Builder PiP');
+          console.log('📥 Received helper data update from Estimator Builder iframe');
           
           // Refresh validation display if function exists
           if (typeof refreshValidationDisplay === 'function') {
@@ -141,12 +220,11 @@ function setupDataSync() {
   });
 }
 
-// Toggle Estimator Builder PiP window
+// Toggle Estimator Builder inline frame
 window.toggleEstimatorBuilderPiP = function(section = '') {
-  if (estimatorBuilderWindow && !estimatorBuilderWindow.closed) {
-    console.log('🔒 Closing existing Estimator Builder PiP window');
-    estimatorBuilderWindow.close();
-    estimatorBuilderWindow = null;
+  if (estimatorBuilderOverlay) {
+    console.log('🔒 Closing existing Estimator Builder inline frame');
+    closeEstimatorBuilderPiP();
   } else {
     openEstimatorBuilderPiP(section);
   }
