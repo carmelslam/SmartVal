@@ -866,7 +866,7 @@
       </div>
       
       <div class="validation-buttons">
-        <button class="btn btn-edit" onclick="requestManualReview()">דרוש סקירה נוספת</button>
+        <button class="btn btn-edit" onclick="requestManualReview()">🔄 התחל מחדש</button>
         <button class="btn btn-validate" onclick="saveValidationData()">שמור שינויים</button>
       </div>
     </div>
@@ -3416,8 +3416,69 @@
       }
     };
 
+    // Reset all sections UI to initial state
+    function resetAllSectionsUI() {
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
+      
+      sections.forEach(sectionName => {
+        const section = document.getElementById(`section-${sectionName}`);
+        const status = section?.querySelector('.section-status');
+        const buttons = section?.querySelectorAll('button');
+        
+        if (section && status) {
+          // Reset section classes
+          section.classList.remove('completed', 'current', 'warning', 'error', 'disabled');
+          
+          // Reset status  
+          if (sectionName === 'vehicle') {
+            // First section starts as current
+            section.classList.add('current');
+            status.textContent = 'בבדיקה';
+            status.className = 'section-status status-current';
+          } else {
+            // All other sections start as pending
+            status.textContent = 'ממתין';
+            status.className = 'section-status status-pending';
+          }
+          
+          // Reset buttons
+          if (buttons && buttons.length >= 3) {
+            // Validate button
+            buttons[0].disabled = sectionName !== 'vehicle'; // Only first section enabled
+            buttons[0].textContent = 'בדוק אוטומטית';
+            
+            // Edit button  
+            buttons[1].disabled = sectionName !== 'vehicle'; // Only first section enabled
+            buttons[1].textContent = 'עריכה ידנית';
+            
+            // Approve button
+            buttons[2].disabled = true;
+            buttons[2].textContent = sectionName === 'legal_text' ? 'אמת טקסט' : 
+                                   sectionName === 'calculations' ? 'אימות חישובים' :
+                                   sectionName === 'depreciation' ? 'אימות ירידת ערך' :
+                                   sectionName === 'damage' ? 'אמת נזקים' :
+                                   sectionName === 'levi' ? 'אמת דוח לוי' : 'אמת פרטים';
+          }
+        }
+      });
+    }
+
     window.requestManualReview = function() {
       const reviewBtn = document.querySelector(`[onclick*="requestManualReview"]`);
+      
+      // Confirmation dialog
+      const currentProgress = Math.round((Object.values(estimateValidationProgress).filter(v => v).length / Object.keys(estimateValidationProgress).length) * 100);
+      
+      const confirmed = confirm(`🔄 אתה עומד לאפס את כל תהליך האימות ולהתחיל מחדש
+      
+📊 התקדמות נוכחית: ${currentProgress}% (תימחק)
+🔄 לאחר האיפוס תצטרך לאמת את כל הסעיפים מחדש
+
+❓ האם אתה בטוח שברצונך להתחיל מחדש?`);
+      
+      if (!confirmed) {
+        return;
+      }
       
       try {
         // Show loading state
@@ -3425,68 +3486,67 @@
           reviewBtn.disabled = true;
           reviewBtn.style.opacity = '0.7';
           const originalText = reviewBtn.textContent;
-          reviewBtn.textContent = '📤 שולח בקשה...';
+          reviewBtn.textContent = '🔄 מאפס...';
           reviewBtn.dataset.originalText = originalText;
         }
         
+        // Reset validation progress completely
+        estimateValidationProgress = {
+          vehicle: false,
+          levi: false,
+          damage: false,
+          depreciation: false,
+          calculations: false,
+          legal_text: false
+        };
+        
+        // Clear stored validation data
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Ensure estimate object exists
-        if (!helper.estimate) helper.estimate = {};
+        // Remove any existing validation data
+        if (helper.estimate?.validation) {
+          delete helper.estimate.validation;
+        }
         
-        // Create manual review request with current validation state
-        const reviewRequest = {
-          request_id: 'review_' + Date.now(),
-          requested_at: new Date().toISOString(),
-          requested_by: 'estimate_user',
-          workflow_type: 'estimate',
-          current_validation_state: {
-            completed_sections: Object.keys(estimateValidationProgress).filter(k => estimateValidationProgress[k]),
-            validation_progress: estimateValidationProgress,
-            total_progress: Math.round((Object.values(estimateValidationProgress).filter(v => v).length / Object.keys(estimateValidationProgress).length) * 100)
-          },
-          estimate_data: {
-            estimate_type: helper?.estimate?.type || 'לא מוגדר',
-            total_before_vat: helper?.estimate?.totals?.damage_centers?.total_before_vat?.value || 0,
-            total_with_vat: helper?.estimate?.totals?.damage_centers?.total_with_vat?.value || 0,
-            damage_centers_count: (helper?.expertise?.damage_blocks || []).length,
-            vehicle_info: {
-              license_plate: helper?.car_details?.license_plate || 'לא זמין',
-              manufacturer: helper?.car_details?.manufacturer || 'לא זמין',
-              model: helper?.car_details?.model || 'לא זמין'
-            }
-          },
-          review_reason: 'User requested additional manual review during estimate validation',
-          status: 'pending_review',
-          priority: 'normal'
-        };
+        // Clear session storage validation
+        sessionStorage.removeItem('estimateValidationProgress');
+        sessionStorage.removeItem('hasUserApprovedSections');
         
-        // Save review request in helper structure
-        if (!helper.estimate.manual_reviews) helper.estimate.manual_reviews = [];
-        helper.estimate.manual_reviews.push(reviewRequest);
-        
-        // Also save current validation state for reviewer context
-        if (!helper.estimate.validation) helper.estimate.validation = {};
-        helper.estimate.validation.manual_review_requested = {
-          requested_at: new Date().toISOString(),
-          request_id: reviewRequest.request_id,
-          validation_state_at_request: estimateValidationProgress
-        };
-        
+        // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Log for debugging and potential webhook integration
-        console.log('📋 Manual review request created:', reviewRequest);
+        // Reset all sections UI
+        resetAllSectionsUI();
+        
+        // Update progress bar to 0%
+        updateValidationProgress();
+        updateSectionAccessibility();
+        
+        // Clear validation items in all sections
+        const validationContainers = [
+          'vehicle-validation-items',
+          'levi-validation-items', 
+          'damage-validation-items',
+          'depreciation-validation-items',
+          'calculations-validation-items'
+        ];
+        
+        validationContainers.forEach(containerId => {
+          const container = document.getElementById(containerId);
+          if (container) {
+            container.innerHTML = '<div class="validation-item"><span class="validation-status">⏳ ממתין לאימות</span></div>';
+          }
+        });
         
         // Success feedback
         setTimeout(() => {
-          showAlert(`✅ בקשה לסקירה ידנית נרשמה במערכת
+          showAlert(`✅ תהליך האימות אופס בהצלחה!
           
-🔍 מספר בקשה: ${reviewRequest.request_id.slice(-8)}
-📊 התקדמות נוכחית: ${reviewRequest.current_validation_state.total_progress}%
-⏰ זמן הבקשה: ${new Date().toLocaleString('he-IL')}
+🔄 כל הסעיפים חזרו למצב התחלתי
+📊 התקדמות: 0%
+🎯 התחל מהסעיף הראשון - "נתוני רכב"
           
-הבקשה תתבצע ותקבל מענה בהקדם.`, 'success');
+עכשיו תוכל לאמת את האומדן מחדש בצורה מלאה.`, 'success');
           
           // Restore button
           if (reviewBtn) {
@@ -3494,23 +3554,28 @@
             reviewBtn.style.opacity = '1';
             reviewBtn.style.backgroundColor = '#16a34a';
             reviewBtn.style.color = 'white';
-            reviewBtn.textContent = '✅ בקשה נשלחה';
+            reviewBtn.textContent = '✅ אופס בהצלחה';
             
             // Return to original state after 3 seconds
             setTimeout(() => {
               reviewBtn.style.backgroundColor = '';
               reviewBtn.style.color = '';
-              reviewBtn.textContent = reviewBtn.dataset.originalText || 'דרוש סקירה נוספת';
+              reviewBtn.textContent = reviewBtn.dataset.originalText || 'התחל מחדש';
             }, 3000);
           }
+          
+          // Auto-start validation on first section
+          setTimeout(() => {
+            validateSection('vehicle');
+          }, 1000);
+          
         }, 800);
         
-        // Future: Could send to webhook for external review system
-        // fetch('/api/manual-review', { method: 'POST', body: JSON.stringify(reviewRequest) });
+        console.log('🔄 Validation flow reset - starting fresh');
         
       } catch (error) {
-        console.error('❌ Error creating manual review request:', error);
-        showAlert('❌ שגיאה ביצירת בקשת סקירה ידנית: ' + error.message, 'error');
+        console.error('❌ Error resetting validation:', error);
+        showAlert('❌ שגיאה באיפוס תהליך האימות: ' + error.message, 'error');
         
         // Restore button on error
         if (reviewBtn) {
@@ -3523,7 +3588,7 @@
           setTimeout(() => {
             reviewBtn.style.backgroundColor = '';
             reviewBtn.style.color = '';
-            reviewBtn.textContent = reviewBtn.dataset.originalText || 'דרוש סקירה נוספת';
+            reviewBtn.textContent = reviewBtn.dataset.originalText || 'התחל מחדש';
           }, 3000);
         }
       }
