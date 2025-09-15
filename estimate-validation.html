@@ -3421,24 +3421,83 @@
     };
 
     window.saveValidationData = function() {
+      // Find all save buttons to update them
+      const saveButtons = document.querySelectorAll(`[onclick*="saveValidationData"]`);
+      
       try {
+        // Show loading state on buttons
+        saveButtons.forEach(btn => {
+          btn.disabled = true;
+          btn.style.transition = 'all 0.3s ease';
+          const originalText = btn.textContent;
+          btn.textContent = btn.textContent.includes('💾') ? '💾 שומר...' : 'שומר נתונים...';
+          btn.style.opacity = '0.7';
+          btn.dataset.originalText = originalText;
+        });
+        
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Count completed sections for better feedback
+        const completedSections = Object.keys(validationProgress).filter(k => validationProgress[k]);
+        const totalSections = Object.keys(validationProgress).length;
         
         // Update validation data
         helper.validation = {
-          completed_sections: Object.keys(validationProgress).filter(k => validationProgress[k]),
-          legal_text: document.getElementById('legal-text-content').value,
+          completed_sections: completedSections,
+          legal_text: document.getElementById('legal-text-content')?.value || '',
           validated_at: new Date().toISOString(),
           validated_by: 'user',
           validation_progress: validationProgress
         };
 
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        showAlert('נתוני האימות נשמרו בהצלחה', 'success');
+        
+        // Enhanced success message with progress info
+        const progressText = `${completedSections.length}/${totalSections} סעיפים אומתו`;
+        showAlert(`✅ נתוני האימות נשמרו בהצלחה (${progressText})`, 'success');
+        
+        // Restore buttons with success indication
+        setTimeout(() => {
+          saveButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.backgroundColor = '#16a34a';
+            btn.style.color = 'white';
+            btn.textContent = btn.dataset.originalText?.includes('💾') ? '✅ נשמר' : '✅ נשמר בהצלחה';
+          });
+          
+          // Return to normal state after 2 seconds
+          setTimeout(() => {
+            saveButtons.forEach(btn => {
+              btn.style.backgroundColor = '';
+              btn.style.color = '';
+              btn.textContent = btn.dataset.originalText || btn.textContent;
+            });
+          }, 2000);
+        }, 500);
+        
+        console.log(`📁 Validation data saved: ${completedSections.length}/${totalSections} sections completed`);
         
       } catch (error) {
         console.error('Error saving validation data:', error);
-        showAlert('שגיאה בשמירת נתוני האימות', 'error');
+        showAlert('❌ שגיאה בשמירת נתוני האימות: ' + error.message, 'error');
+        
+        // Restore buttons on error
+        saveButtons.forEach(btn => {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.backgroundColor = '#dc2626';
+          btn.style.color = 'white';
+          btn.textContent = '❌ שגיאה';
+        });
+        
+        setTimeout(() => {
+          saveButtons.forEach(btn => {
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.textContent = btn.dataset.originalText || '💾 שמור אימות';
+          });
+        }, 3000);
       }
     };
 
