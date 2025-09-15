@@ -2690,22 +2690,44 @@
           const centerDescription = card.querySelector('.damage-center-description').value;
           const centerRepairNature = card.querySelector('.damage-center-repair-nature')?.value || '';
           
-          // Collect parts
+          // Collect parts - PRESERVE EXISTING DATA  
           const parts = [];
-          card.querySelectorAll('.part-row').forEach(row => {
+          const existingCenter = window.helper.centers ? window.helper.centers[index] : null;
+          const existingParts = existingCenter?.Parts?.parts || [];
+          
+          card.querySelectorAll('.part-row').forEach((row, partIndex) => {
             const name = row.querySelector('.part-name').value;
             const desc = row.querySelector('.part-desc').value;
             const price = row.querySelector('.part-price').value;
             const source = row.querySelector('.part-source')?.value || 'תחליפי';
             
             if (name.trim()) {
-              parts.push({ name, desc, price: parseFloat(price) || 0, source });
+              // Get existing part data to preserve all fields (including Hebrew keys)
+              const existingPart = existingParts[partIndex] || {};
+              
+              // Merge existing data with new data (preserve all fields)
+              const partObject = {
+                ...existingPart,                     // Preserve all existing fields (Hebrew keys, etc.)
+                name: name,                          // Update name from UI
+                desc: desc,                          // Update description from UI
+                price: parseFloat(price) || 0,       // Update price from UI
+                source: source,                      // Update source from UI
+                // Also update Hebrew key equivalents if they exist
+                "שם חלק": name,                      // Hebrew: Part name
+                "תיאור": desc,                       // Hebrew: Description
+                "עלות": parseFloat(price) || 0,      // Hebrew: Cost
+                "מקור": source                       // Hebrew: Source
+              };
+              
+              parts.push(partObject);
             }
           });
           
-          // Collect works
+          // Collect works - PRESERVE EXISTING DATA
           const works = [];
-          card.querySelectorAll('.work-row').forEach(row => {
+          const existingWorks = existingCenter?.Works?.works || [];
+          
+          card.querySelectorAll('.work-row').forEach((row, workIndex) => {
             let type = row.querySelector('.work-type').value;
             const note = row.querySelector('.work-note')?.value || '';
             const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
@@ -2719,7 +2741,18 @@
             }
             
             if (type) {
-              works.push({ category: type, comments: note, cost });
+              // Get existing work data to preserve all fields
+              const existingWork = existingWorks[workIndex] || {};
+              
+              // Merge existing data with new data (preserve all fields)
+              const workObject = {
+                ...existingWork,           // Preserve all existing fields
+                category: type,            // Update category from UI
+                comments: note,            // Update comments from UI
+                cost: cost                 // Update cost from UI
+              };
+              
+              works.push(workObject);
             }
           });
           
@@ -2757,37 +2790,60 @@
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
           
-          // Create center object in helper.centers format (source of truth)
+          // Create center object in helper.centers format - PRESERVE EXISTING DATA
+          // Get existing center to preserve all fields
+          const existingCenterData = existingCenter || {};
+          
           const centerObject = {
-            Id: `dc_${Date.now()}_${index + 1}`, // Generate unique ID
+            // Preserve all existing fields first
+            ...existingCenterData,
+            
+            // Update core fields from UI
             "Damage center Number": centerNumber || (index + 1),
             Location: centerLocation,
             Description: centerDescription,
             RepairNature: centerRepairNature,
+            
+            // Update data sections with preserved field structures
             Parts: {
+              // Preserve existing parts metadata and structure
+              ...(existingCenterData.Parts || {}),
               parts_required: parts,
+              parts: parts,  // Also support 'parts' key
               parts_meta: {
+                ...(existingCenterData.Parts?.parts_meta || {}),
                 total_items: parts.length,
                 total_cost: partsCost
               }
             },
             Works: {
+              // Preserve existing works metadata and structure
+              ...(existingCenterData.Works || {}),
               works: works,
               works_meta: {
+                ...(existingCenterData.Works?.works_meta || {}),
                 total_items: works.length,
                 total_cost: workCost
               }
             },
             Repairs: {
+              // Preserve existing repairs metadata and structure
+              ...(existingCenterData.Repairs || {}),
               repairs: repairs,
               repairs_meta: {
+                ...(existingCenterData.Repairs?.repairs_meta || {}),
                 total_items: repairs.length,
                 total_cost: repairsCost
               }
             },
             Summary: {
+              // Preserve existing summary fields
+              ...(existingCenterData.Summary || {}),
               "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : 18) / 100)
-            }
+            },
+            
+            // Ensure ID exists (generate only if not present)
+            Id: existingCenterData.Id || `dc_${Date.now()}_${index + 1}`
           };
           
           // 🔥 Add to temporary collections (not directly to helper)
