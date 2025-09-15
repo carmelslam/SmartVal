@@ -1871,33 +1871,56 @@
         </tr>
       `);
       
-      // Process adjustments in specific order: features first, then registration
-      const adjustmentCategories = ['features', 'registration'];
+      // Process features adjustments first
+      const featuresAdjustments = helper.estimate?.adjustments?.features || [];
       
-      adjustmentCategories.forEach(category => {
-        const adjustments = helper.estimate?.adjustments?.[category] || [];
+      featuresAdjustments.forEach(adjustment => {
+        const componentValue = adjustment.value || ''; // מרכיב
+        const typeDisplay = adjustment.type === 'plus' ? 'תוספת' : 'הפחתה'; // תוספת\הפחתה  
+        const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-'; // אחוז
+        const amount = adjustment.amount || 0; // ערך
         
-        adjustments.forEach(adjustment => {
-          const typeDisplay = adjustment.type === 'plus' ? 'תוספת' : 'הפחתה';
-          const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
-          const amount = adjustment.amount || 0;
-          
-          // Update cumulative value
-          if (adjustment.type === 'plus') {
-            cumulativeValue += amount;
-          } else {
-            cumulativeValue -= amount;
-          }
-          
-          rows.push(`
-            <tr>
-              <td style="padding: 8px;">${adjustment.value}</td>
-              <td style="padding: 8px; text-align: center;">${typeDisplay}</td>
-              <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
-              <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
-            </tr>
-          `);
-        });
+        // Update cumulative value (local calculation)
+        if (adjustment.type === 'plus') {
+          cumulativeValue += amount;
+        } else {
+          cumulativeValue -= amount;
+        }
+        
+        rows.push(`
+          <tr>
+            <td style="padding: 8px;">${componentValue}</td>
+            <td style="padding: 8px; text-align: center;">${typeDisplay}</td>
+            <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
+          </tr>
+        `);
+      });
+      
+      // Process registration adjustments second
+      const registrationAdjustments = helper.estimate?.adjustments?.registration || [];
+      
+      registrationAdjustments.forEach(adjustment => {
+        const componentValue = adjustment.value || ''; // מרכיב
+        const typeDisplay = adjustment.type === 'plus' ? 'תוספת' : 'הפחתה'; // תוספת\הפחתה
+        const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-'; // אחוז  
+        const amount = adjustment.amount || 0; // ערך
+        
+        // Update cumulative value (local calculation)
+        if (adjustment.type === 'plus') {
+          cumulativeValue += amount;
+        } else {
+          cumulativeValue -= amount;
+        }
+        
+        rows.push(`
+          <tr>
+            <td style="padding: 8px;">${componentValue}</td>
+            <td style="padding: 8px; text-align: center;">${typeDisplay}</td>
+            <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
+            <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
+          </tr>
+        `);
       });
       
       // Add final cumulative value row
