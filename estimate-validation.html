@@ -2981,8 +2981,18 @@
         bulkItems.forEach((item, index) => {
           const description = `מוקד ${index + 1}: ${item.damaged_part || 'לא זמין'} - ${item.repair_type || 'לא זמין'}`;
           const percentValue = item.percent || 'לא זמין';
-          const shekelValue = item.value || 'לא זמין';
-          const combinedValue = `${percentValue}%, ₪${shekelValue}`;
+          let shekelValue = item.value || 'לא זמין';
+          
+          // Format the shekel value properly - avoid double currency symbols
+          if (shekelValue !== 'לא זמין') {
+            // Remove any existing currency symbols and format properly
+            const numValue = parseFloat(String(shekelValue).replace(/[₪,]/g, ''));
+            if (!isNaN(numValue)) {
+              shekelValue = MathEngine.formatCurrency(numValue);
+            }
+          }
+          
+          const combinedValue = `${percentValue}%, ${shekelValue}`;
           
           depreciationHTML += createEnhancedValidationItem(
             description,
@@ -3002,11 +3012,20 @@
       
       // 2. ירידת ערך גלובלי - using the correct mappings from screenshot
       const globalDep1 = helper?.estimate?.depreciation?.globalDep1 || 'לא זמין';
-      const globalDepValue = helper?.estimate?.depreciation?.globalDepValue || 'לא זמין';
+      let globalDepValue = helper?.estimate?.depreciation?.globalDepValue || 'לא זמין';
+      
+      // Format global depreciation value properly - avoid double currency symbols
+      if (globalDepValue !== 'לא זמין') {
+        const numValue = parseFloat(String(globalDepValue).replace(/[₪,]/g, ''));
+        if (!isNaN(numValue)) {
+          globalDepValue = MathEngine.formatCurrency(numValue);
+        }
+      }
+      
       depreciationHTML += createEnhancedValidationItem(
         'ירידת ערך גלובלי',
-        `${globalDep1}%, ₪${globalDepValue}`,
-        `${globalDep1}%, ₪${globalDepValue}`,
+        `${globalDep1}%, ${globalDepValue}`,
+        `${globalDep1}%, ${globalDepValue}`,
         'depreciation_global'
       );
       
