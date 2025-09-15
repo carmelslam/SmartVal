@@ -3469,12 +3469,13 @@
       // Confirmation dialog
       const currentProgress = Math.round((Object.values(estimateValidationProgress).filter(v => v).length / Object.keys(estimateValidationProgress).length) * 100);
       
-      const confirmed = confirm(`🔄 אתה עומד לאפס את כל תהליך האימות ולהתחיל מחדש
+      const confirmed = confirm(`🔄 אתה עומד לאפס את תהליך האימות ולטעון את הנתונים מחדש
       
-📊 התקדמות נוכחית: ${currentProgress}% (תימחק)
-🔄 לאחר האיפוס תצטרך לאמת את כל הסעיפים מחדש
+📊 התקדמות נוכחית: ${currentProgress}% (תאופס)
+🔄 הנתונים יטענו מחדש מהמערכת והאימות יתחיל מהתחלה
+📋 שימושי לאחר עדכונים משמעותיים בבנאי האומדן
 
-❓ האם אתה בטוח שברצונך להתחיל מחדש?`);
+❓ האם אתה בטוח שברצונך לטעון הכל מחדש?`);
       
       if (!confirmed) {
         return;
@@ -3486,7 +3487,7 @@
           reviewBtn.disabled = true;
           reviewBtn.style.opacity = '0.7';
           const originalText = reviewBtn.textContent;
-          reviewBtn.textContent = '🔄 מאפס...';
+          reviewBtn.textContent = '🔄 טוען נתונים...';
           reviewBtn.dataset.originalText = originalText;
         }
         
@@ -3522,31 +3523,56 @@
         updateValidationProgress();
         updateSectionAccessibility();
         
-        // Clear validation items in all sections
-        const validationContainers = [
-          'vehicle-validation-items',
-          'levi-validation-items', 
-          'damage-validation-items',
-          'depreciation-validation-items',
-          'calculations-validation-items'
+        // Reload validation data for all sections (don't clear - refresh!)
+        console.log('🔄 Reloading validation data for all sections...');
+        
+        // Reload validation data from helper
+        try {
+          loadValidationData();
+          console.log('✅ Validation data reloaded');
+        } catch (dataError) {
+          console.warn('⚠️ Error reloading validation data:', dataError);
+        }
+        
+        // Repopulate all validation items with fresh data
+        const populateFunctions = [
+          { name: 'populateEnhancedValidationItems', container: 'vehicle-validation-items' },
+          { name: 'populateLeviValidationItems', container: 'levi-validation-items' },
+          { name: 'populateDamageValidationItems', container: 'damage-validation-items' },
+          { name: 'populateDepreciationValidationItems', container: 'depreciation-validation-items' },
+          { name: 'populateCalculationsValidationItems', container: 'calculations-validation-items' }
         ];
         
-        validationContainers.forEach(containerId => {
-          const container = document.getElementById(containerId);
-          if (container) {
-            container.innerHTML = '<div class="validation-item"><span class="validation-status">⏳ ממתין לאימות</span></div>';
+        populateFunctions.forEach(func => {
+          try {
+            if (typeof window[func.name] === 'function') {
+              console.log(`🔄 Repopulating ${func.name}...`);
+              window[func.name]();
+            } else {
+              console.warn(`⚠️ Function ${func.name} not found`);
+            }
+          } catch (error) {
+            console.error(`❌ Error in ${func.name}:`, error);
           }
         });
         
+        // Reload legal text validation
+        try {
+          loadLegalTextValidation();
+          console.log('✅ Legal text validation reloaded');
+        } catch (legalError) {
+          console.warn('⚠️ Error reloading legal text:', legalError);
+        }
+        
         // Success feedback
         setTimeout(() => {
-          showAlert(`✅ תהליך האימות אופס בהצלחה!
+          showAlert(`✅ תהליך האימות אופס והנתונים נטענו מחדש!
           
-🔄 כל הסעיפים חזרו למצב התחלתי
-📊 התקדמות: 0%
+🔄 כל הסעיפים חזרו למצב התחלתי עם הנתונים העדכניים
+📊 התקדמות: 0% (נתונים טעונים מחדש)
 🎯 התחל מהסעיף הראשון - "נתוני רכב"
           
-עכשיו תוכל לאמת את האומדן מחדש בצורה מלאה.`, 'success');
+עכשיו תוכל לאמת את האומדן מחדש עם הנתונים המעודכנים.`, 'success');
           
           // Restore button
           if (reviewBtn) {
@@ -3554,7 +3580,7 @@
             reviewBtn.style.opacity = '1';
             reviewBtn.style.backgroundColor = '#16a34a';
             reviewBtn.style.color = 'white';
-            reviewBtn.textContent = '✅ אופס בהצלחה';
+            reviewBtn.textContent = '✅ נתונים נטענו מחדש';
             
             // Return to original state after 3 seconds
             setTimeout(() => {
