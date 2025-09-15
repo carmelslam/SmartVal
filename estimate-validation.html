@@ -819,16 +819,21 @@
     </div>
 
     <!-- Legal Text Validation -->
-    <div class="legal-text-section">
-      <div class="legal-text-header">אימות טקסט משפטי</div>
-      <div style="margin-bottom: 15px; color: #92400e;">
-        הטקסט המשפטי להלן ייכלל באומדן. ניתן לערוך ולהתאים לפי הצורך. המערכת בדקה את התאמת הטקסט לסוג האומדן.
+    <div class="validation-section" id="section-legal_text">
+      <div class="section-header">
+        <div class="section-title">אימות טקסט משפטי</div>
+        <div class="section-status status-pending">ממתין</div>
       </div>
-      <textarea class="legal-text-content" id="legal-text-content" placeholder="טקסט משפטי ייטען כאן..."></textarea>
-      <div class="validation-buttons" style="margin-top: 15px;">
-        <button class="btn btn-validate" onclick="validateLegalText(); return false;">בדוק טקסט משפטי</button>
-        <button class="btn btn-edit" onclick="editLegalText()">עריכה מתקדמת</button>
-        <button class="btn btn-success" onclick="approveLegalText()" disabled>אימות טקסט משפטי</button>
+      <div class="section-content">
+        <div style="margin-bottom: 15px; color: #92400e;">
+          הטקסט המשפטי להלן ייכלל באומדן. ניתן לערוך ולהתאים לפי הצורך. המערכת בדקה את התאמת הטקסט לסוג האומדן.
+        </div>
+        <textarea class="legal-text-content" id="legal-text-content" placeholder="טקסט משפטי ייטען כאן..."></textarea>
+      </div>
+      <div class="validation-buttons">
+        <button class="btn btn-validate" onclick="validateSection('legal_text')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('legal_text')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('legal_text')" disabled>אימות טקסט משפטי</button>
       </div>
     </div>
 
@@ -1518,39 +1523,36 @@
 
     async function loadLegalTextValidation() {
       try {
-        // Load legal text from BUILDER, not from vault
+        // Load legal text from estimate.summary.legal_text
         const helper = currentValidationData.raw_helper;
-        let builderLegalText = '';
+        let legalText = '';
         
-        // Try to get legal text from builder's saved state
-        if (helper.estimate_legal_text) {
-          builderLegalText = helper.estimate_legal_text;
-          console.log('✅ Found legal text from builder in helper.estimate_legal_text');
-        } else if (helper.legal_text) {
-          builderLegalText = helper.legal_text;
-          console.log('✅ Found legal text from builder in helper.legal_text');
-        } else if (helper.builder_legal_text) {
-          builderLegalText = helper.builder_legal_text;
-          console.log('✅ Found legal text from builder in helper.builder_legal_text');
+        // Try to get legal text from estimate.summary.legal_text
+        if (helper.estimate && helper.estimate.summary && helper.estimate.summary.legal_text) {
+          legalText = helper.estimate.summary.legal_text;
+          console.log('✅ Found legal text from estimate.summary.legal_text');
+        } else {
+          console.log('⚠️ No legal text found in estimate.summary.legal_text');
         }
         
-        if (builderLegalText && builderLegalText.length > 50) {
-          document.getElementById('legal-text-content').value = builderLegalText;
-          console.log('✅ Loaded legal text from builder successfully');
+        if (legalText && legalText.length > 10) {
+          // Display as normal text (not markdown)
+          document.getElementById('legal-text-content').value = legalText;
+          console.log('✅ Loaded legal text from estimate.summary.legal_text successfully');
         } else {
-          // If no builder text found, show message instead of vault fallback
-          document.getElementById('legal-text-content').value = 'טקסט משפטי לא נמצא בבנאי האומדן. אנא עבור לבנאי האומדן כדי לבחור טקסט משפטי.';
-          console.log('⚠️ No legal text found in builder - user needs to select text in builder first');
+          // If no legal text found, show message
+          document.getElementById('legal-text-content').value = 'טקסט משפטי לא נמצא ב-estimate.summary.legal_text. אנא עבור לבנאי האומדן כדי לבחור טקסט משפטי.';
+          console.log('⚠️ No legal text found in estimate.summary.legal_text');
         }
       } catch (error) {
         console.error('Error loading legal text:', error);
-        document.getElementById('legal-text-content').value = 'שגיאה בטעינת הטקסט המשפטי מהבנאי';
+        document.getElementById('legal-text-content').value = 'שגיאה בטעינת הטקסט המשפטי מ-estimate.summary.legal_text';
       }
     }
 
     function startInitialValidation() {
       // Auto-validate all sections on page load
-      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
+      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
       
       sections.forEach((sectionName, index) => {
         setTimeout(() => {
@@ -1588,6 +1590,9 @@
             break;
           case 'estimate':
             validationResult = await validateEstimateSection();
+            break;
+          case 'legal_text':
+            validationResult = await validateLegalTextSection();
             break;
         }
         
@@ -2207,6 +2212,48 @@
       };
     }
 
+    async function validateLegalTextSection() {
+      console.log('🔍 Validating legal text section...');
+      const issues = [];
+      const validItems = [];
+      
+      // Get legal text from textarea
+      const legalTextElement = document.getElementById('legal-text-content');
+      const legalText = legalTextElement ? legalTextElement.value.trim() : '';
+      
+      // Basic validation checks
+      if (!legalText) {
+        issues.push('טקסט משפטי חסר');
+      } else if (legalText.length < 50) {
+        issues.push('טקסט משפטי קצר מדי (פחות מ-50 תווים)');
+      } else if (legalText.includes('שגיאה') || legalText.includes('לא נמצא')) {
+        issues.push('טקסט משפטי מכיל הודעות שגיאה');
+      } else {
+        validItems.push('legal_text_exists');
+        validItems.push('legal_text_valid_length');
+        console.log('✅ Legal text validation passed');
+      }
+      
+      // Check if text was loaded from estimate.summary.legal_text
+      const helper = currentValidationData.raw_helper;
+      if (helper?.estimate?.summary?.legal_text) {
+        validItems.push('legal_text_from_estimate');
+      } else {
+        issues.push('טקסט משפטי לא נמצא ב-estimate.summary.legal_text (אזהרה)');
+      }
+      
+      const criticalErrors = issues.filter(i => !i.includes('אזהרה')).length;
+      const hasValidLegalText = legalText && legalText.length >= 50 && !legalText.includes('שגיאה');
+      
+      return {
+        success: criticalErrors === 0 && hasValidLegalText,
+        warnings: issues.filter(i => i.includes('אזהרה')).length,
+        errors: criticalErrors,
+        issues: issues,
+        validItems: validItems.length
+      };
+    }
+
     function displayLeviAdjustments(adjustments) {
       const container = document.getElementById('levi-adjustments-content');
       container.innerHTML = '';
@@ -2534,14 +2581,7 @@
                 button.textContent = '✓ אושר';
               }
               
-              // Handle legal text section separately
-              if (sectionName === 'legal_text') {
-                const legalApproveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
-                if (legalApproveBtn) {
-                  legalApproveBtn.disabled = true;
-                  legalApproveBtn.textContent = '✓ אושר';
-                }
-              }
+              // Handle legal text section - now uses standard validation flow
             }
           });
           
@@ -2675,6 +2715,9 @@
         case 'estimate':
           window.location.href = 'estimate-builder.html#estimate-type';
           break;
+        case 'legal_text':
+          window.location.href = 'estimate-builder.html#legal-text';
+          break;
         default:
           console.error('❌ Unknown section for editing:', sectionName);
           showAlert('שגיאה: קטע לא מוכר לעריכה', 'error');
@@ -2701,7 +2744,7 @@
       sessionStorage.setItem('hasUserApprovedSections', 'true');
       
       // Enable and move to next section
-      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
+      const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex < sections.length - 1) {
@@ -2751,7 +2794,8 @@
         'levi': 'דו"ח לוי יצחק',
         'depreciation': 'ירידת ערך',
         'damage': 'מוקדי נזק',
-        'estimate': 'חישובי אומדן'
+        'estimate': 'חישובי אומדן',
+        'legal_text': 'טקסט משפטי'
       };
       return titles[sectionName] || sectionName;
     }
@@ -3205,83 +3249,8 @@
     }
 
     // Other Actions
-    window.validateLegalText = function() {
-      try {
-        console.log('🔍 Validating legal text...');
-        const legalTextElement = document.getElementById('legal-text-content');
-        
-        if (!legalTextElement) {
-          console.error('❌ Legal text element not found');
-          showAlert('שגיאה: אלמנט הטקסט המשפטי לא נמצא', 'error');
-          return false;
-        }
-        
-        const legalText = legalTextElement.value;
-        console.log('📄 Legal text length:', legalText ? legalText.length : 0);
-        
-        if (legalText && legalText.length > 50 && !legalText.includes('שגיאה') && !legalText.includes('לא נמצא')) {
-          console.log('✅ Legal text validation passed');
-          showAlert('הטקסט המשפטי תקין ומוכן לשימוש', 'success');
-          
-          // Update the validation status in the estimate section
-          updateElementIfExists('estimate-legal-text', '✓');
-          
-          // Enable the approve button
-          const approveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
-          if (approveBtn) {
-            approveBtn.disabled = false;
-          }
-          
-          return true;
-        } else {
-          console.log('⚠️ Legal text validation failed');
-          if (!legalText || legalText.length === 0) {
-            showAlert('הטקסט המשפטי חסר - אנא עבור לבנאי האומדן לבחירת טקסט משפטי', 'warning');
-          } else if (legalText.includes('שגיאה') || legalText.includes('לא נמצא')) {
-            showAlert('הטקסט המשפטי לא נטען כראוי - אנא עבור לבנאי האומדן', 'warning');
-          } else {
-            showAlert('הטקסט המשפטי קצר מדי (נדרש לפחות 50 תווים)', 'warning');
-          }
-          
-          // Update the validation status in the estimate section
-          updateElementIfExists('estimate-legal-text', '⚠️');
-          
-          // Update validation progress
-          validationProgress.legal_text = false;
-          updateValidationProgress();
-          
-          return false;
-        }
-      } catch (error) {
-        console.error('❌ Error validating legal text:', error);
-        showAlert('שגיאה באימות הטקסט המשפטי', 'error');
-        return false;
-      }
-    };
-
     window.editLegalText = function() {
       window.location.href = 'estimate-builder.html#legal-text';
-    };
-
-    window.approveLegalText = function() {
-      console.log('✅ Legal text approved');
-      showAlert('הטקסט המשפטי אושר בהצלחה', 'success');
-      
-      // Update validation progress
-      validationProgress.legal_text = true;
-      
-      // Save validation progress to sessionStorage
-      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
-      sessionStorage.setItem('hasUserApprovedSections', 'true');
-      
-      // Disable the approve button
-      const approveBtn = document.querySelector(`[onclick="approveLegalText()"]`);
-      if (approveBtn) {
-        approveBtn.disabled = true;
-        approveBtn.textContent = '✓ אושר';
-      }
-      
-      updateValidationProgress();
     };
 
     window.requestManualReview = function() {
@@ -3484,7 +3453,6 @@
     window.validateSection = validateSection;
     window.editSection = editSection;
     window.approveSection = approveSection;
-    window.validateLegalText = validateLegalText;
     window.editLegalText = editLegalText;
     console.log('✅ Debug: Functions assigned to window', { validateSection, editSection, approveSection });
     
@@ -3533,7 +3501,6 @@
       'validateSection',
       'editSection', 
       'approveSection',
-      'validateLegalText',
       'editLegalText',
       'requestManualReview',
       'saveValidationData',
@@ -3565,7 +3532,7 @@
     });
     
     // Test section validation buttons
-    const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate'];
+    const sections = ['vehicle', 'levi', 'depreciation', 'damage', 'estimate', 'legal_text'];
     sections.forEach(section => {
       const validateBtn = document.querySelector(`[onclick="validateSection('${section}')"]`);
       const editBtn = document.querySelector(`[onclick="editSection('${section}')"]`);
@@ -3580,13 +3547,12 @@
     });
     
     // Test other critical buttons
-    const legalTextBtn = document.querySelector(`[onclick*="validateLegalText"]`);
     const editLegalBtn = document.querySelector(`[onclick*="editLegalText"]`);
     const manualReviewBtn = document.querySelector(`[onclick*="requestManualReview"]`);
     const saveBtn = document.querySelector(`[onclick*="saveValidationData"]`);
     const finalApproveBtn = document.getElementById('final-approve-btn');
     
-    if (legalTextBtn && editLegalBtn && manualReviewBtn && saveBtn && finalApproveBtn) {
+    if (editLegalBtn && manualReviewBtn && saveBtn && finalApproveBtn) {
       console.log('✅ All critical buttons found');
     } else {
       console.error('❌ Some critical buttons are missing');
@@ -3622,7 +3588,6 @@
     window.requestManualReview = requestManualReview;
     window.saveValidationData = saveValidationData;
     window.reviewEstimateReport = reviewEstimateReport;
-    window.approveLegalText = approveLegalText;
     
     // FLOATING SCREENS FUNCTIONALITY
     // toggleFloatingScreen function is already defined above
