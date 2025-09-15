@@ -1993,14 +1993,25 @@
       const depreciation = helper.estimate?.depreciation || helper.expertise?.depreciation || helper.depreciation || {};
       const estimateDepreciation = helper.estimate_depreciation || {};
       
-      // Get centers from multiple sources
-      const centers = depreciation.centers || 
+      // Get centers from estimate.depreciation.bulk_items (primary) and fallback sources
+      const bulkItems = helper.estimate?.depreciation?.bulk_items || [];
+      const centers = bulkItems.length > 0 ? 
+                     bulkItems.map(item => ({
+                       center_number: item.center_number || item.center || '',
+                       damaged_part: item.damaged_part || item.part || '',
+                       repair_type: item.repair_type || item.repair || '',
+                       percent: item.percent || 0,
+                       value: item.value || item.depreciation_value || 0,
+                       center: item.center || item.location || ''
+                     })) : 
+                     // Fallback to legacy sources
+                     depreciation.centers || 
                      (estimateDepreciation.bulk_items || []).map(item => ({
-                       part: item.damaged_part,
-                       repair: item.repair_type,
-                       percent: item.percent,
-                       value: item.value,
-                       center: item.center || item.location
+                       center_number: item.center || '',
+                       damaged_part: item.damaged_part || item.part || '',
+                       repair_type: item.repair_type || item.repair || '',
+                       percent: item.percent || 0,
+                       value: item.value || 0
                      })) || [];
       
       const globalPercent = depreciation.global_percent || estimateDepreciation.global_percent || 0;
